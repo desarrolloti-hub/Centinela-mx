@@ -1,11 +1,8 @@
-// navbar-complete.js - Corregido para responsive y modo oscuro
+// navbar-complete.js - Versión simplificada solo para colores
 (function () {
     'use strict';
 
-    // =============================================
-    // CONFIGURACIÓN INICIAL
-    // =============================================
-
+    // Evitar carga duplicada
     if (window.NavbarCompleteLoaded) {
         console.log('🔄 Navbar completo ya cargado, omitiendo...');
         return;
@@ -14,6 +11,7 @@
 
     console.log('🚀 Iniciando navbar completo...');
 
+    // Inicializar cuando el DOM esté listo
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -25,7 +23,6 @@
             removeOriginalNavbar();
             await createCompleteNavbar();
             setupAllFunctionalities();
-            applyDarkModeFromStorage();
             console.log('✅ Navbar completo inicializado correctamente');
         } catch (error) {
             console.error('❌ Error al inicializar navbar:', error);
@@ -40,29 +37,11 @@
         }
     }
 
-    // =============================================
-    // CREAR NAVBAR COMPLETO
-    // =============================================
-
+    // Crear navbar completo
     async function createCompleteNavbar() {
         addCompleteStyles();
         createNavbarHTML();
         adjustBodyPadding();
-    }
-
-    function applyDarkModeFromStorage() {
-        // Esta función ya no es necesaria porque ThemeManager se inicializa primero
-        // Pero la mantenemos por compatibilidad
-        if (window.ThemeManager) {
-            // ThemeManager ya aplicó el tema, solo actualizamos el icono
-            const isDarkMode = window.ThemeManager.isDarkMode();
-            const darkModeBtn = document.getElementById('darkModeToggle');
-            if (darkModeBtn) {
-                darkModeBtn.innerHTML = isDarkMode ?
-                    '<i class="fas fa-sun"></i>' :
-                    '<i class="fas fa-moon"></i>';
-            }
-        }
     }
 
     function addCompleteStyles() {
@@ -71,49 +50,23 @@
 
         const styles = document.createElement('style');
         styles.id = styleId;
-        styles.textContent =/*css*/ `
-            /* ====== VARIABLES DE COLOR ====== */
-            :root {
-                --primary: #fdfbfb;
-                --primary-light: #000000;
-                --primary-dark: #000000;
-                --accent: #c0c0c0;
-                --accent-footer: #ffffff;
-                --accent-light: #fcfbf9;
-                --text: #ffffff;
-                --text-light: #ffffff;
-                --light: #ffffff;
-                --white: #000000;
-                --gray: #3d8ad6;
-                --dark-gray: #ffffff;
-                --text-shadow: 
-                    0 0 10px rgb(255, 255, 255),
-                    0 0 20px rgb(255, 255, 255),  
-                    0 0 30px rgb(255, 255, 255),   
-                    0 0 40px rgb(255, 255, 255);  
-                --shadow: 0 5px 15px rgba(255, 255, 255, 0.55);
-                --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
-                --transition: all 0.3s ease-in-out;
-                --border-radius: 8px;
-                --border-radius-lg: 12px;
-            }
-            
-            /* ====== NAVBAR COMPLETO ====== */
+        styles.textContent = /*css*/ `
+            /* NAVBAR COMPLETO - Estilos específicos */
             #complete-navbar {
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100%;
                 z-index: 1000;
-                background-color: #000000;
-                box-shadow: 0 2px 10px #ffffff00;
-                transition: var(--transition);
-                font-family: 'Orbitron', sans-serif;
+                background-color: var(--navbar-bg);
+                box-shadow: 0 2px 10px transparent;
+                transition: var(--transition-default);
+                font-family: var(--font-family-primary);
             }
             
             #complete-navbar.scrolled {
-                background-color: var(--white);
-                box-shadow: var(--shadow);
+                background-color: var(--navbar-scrolled-bg);
+                box-shadow: var(--navbar-scrolled-shadow);
             }
             
             .navbar-main-container {
@@ -139,18 +92,99 @@
                 align-items: center;
                 gap: 10px;
                 font-weight: 700;
-                font-size: 20px;
-                color: var(--primary);
+                font-size: 26px;
+                color: var(--navbar-logo-text);
                 text-decoration: none;
                 z-index: 1003;
-                text-shadow: var(--text-shadow); 
-            }
-            
-            .navbar-logo-img {
-                height: 40px;
-                transition: var(--transition);
+                text-shadow: var(--text-shadow-effect);
+                position: relative; /* Para posicionar el efecto de luz */
             }
 
+            .navbar-logo-img {
+                height: 50px; /* Aumentado de 40px a 50px */
+                transition: var(--transition-default);
+                position: relative;
+                z-index: 2; /* Asegura que el logo esté sobre el efecto */
+            }
+
+            /* Efecto de luz circular parpadeante detrás del logo */
+            .navbar-brand::before {
+                content: '';
+                position: absolute;
+                left: -3px; /* Ajusta según el tamaño de tu logo */
+                top: 50%;
+                transform: translateY(0%);
+                width: 60px; /* Tamaño del círculo de luz */
+                height: 60px;
+                background: radial-gradient(
+                    circle,
+                    rgb(255, 255, 255) 0%,
+                    rgba(255, 255, 255, 0.5) 30%,
+                    rgba(255, 255, 255, 0.05) 65%,
+                    transparent 70%
+                );
+                border-radius: 50%;
+                z-index: 1;
+                animation: parpadeo-luz 3s infinite ease-in-out;
+                opacity: 0.7;
+            }
+
+            /* Para logos con fondo oscuro - versión con color */
+            .navbar-brand.luz-color::before {
+                background: radial-gradient(
+                    circle,
+                    rgba(0, 150, 255, 0.4) 0%,
+                    rgba(0, 150, 255, 0.2) 30%,
+                    rgba(0, 150, 255, 0.1) 50%,
+                    transparent 70%
+                );
+            }
+
+            /* Animación de parpadeo */
+            @keyframes parpadeo-luz {
+                0%, 100% {
+                    opacity: 0.3;
+                    transform: translateY(-50%) scale(0.95);
+                }
+                25% {
+                    opacity: 0.7;
+                    transform: translateY(-50%) scale(1.05);
+                }
+                50% {
+                    opacity: 0.4;
+                    transform: translateY(-50%) scale(1);
+                }
+                75% {
+                    opacity: 0.8;
+                    transform: translateY(-50%) scale(1.02);
+                }
+            }
+
+            /* Versión alternativa con efecto más sutil */
+            .navbar-brand.luz-sutil::before {
+                animation: parpadeo-sutil 4s infinite ease-in-out;
+            }
+
+            @keyframes parpadeo-sutil {
+                0%, 100% {
+                    opacity: 0.2;
+                    transform: translateY(-50%) scale(1);
+                }
+                50% {
+                    opacity: 0.5;
+                    transform: translateY(-50%) scale(1.1);
+                }
+            }
+
+            /* Efecto hover opcional */
+            .navbar-brand:hover .navbar-logo-img {
+                transform: scale(1.05);
+            }
+
+            .navbar-brand:hover::before {
+                opacity: 0.8;
+                animation-duration: 2s;
+            }
             
             /* Menú principal - DESKTOP */
             .navbar-main-menu {
@@ -162,33 +196,26 @@
             }
             
             .navbar-main-menu a {
-                color: var(--primary);
+                color: var(--navbar-text);
                 text-decoration: none;
                 font-weight: 500;
                 font-size: 16px;
-                transition: var(--transition);
+                transition: var(--transition-default);
                 display: flex;
                 align-items: center;
                 gap: 8px;
             }
             
-            .navbar-main-menu a span {
-                display: inline-block;
-            }
-            
             .navbar-main-menu a:hover {
-                text-shadow: var(--text-shadow); 
+                text-shadow: var(--navbar-link-hover);
             }
             
             .navbar-main-menu a.active {
-                color: var(--accent);
+                color: var(--color-active);
                 font-weight: 600;
             }
-    
             
-            
-            
-            /* BOTÓN HAMBURGUESA - POSICIONADO A LA DERECHA */
+            /* BOTÓN HAMBURGUESA */
             .navbar-hamburger-btn {
                 display: none;
                 background: none;
@@ -206,10 +233,10 @@
                 display: block;
                 width: 25px;
                 height: 3px;
-                background-color: var(--primary);
+                background-color: var(--navbar-text);
                 margin: 5px 0;
-                border-radius: 3px;
-                transition: var(--transition);
+                border-radius: var(--border-radius-small);
+                transition: var(--transition-default);
             }
             
             .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
@@ -242,23 +269,18 @@
             
             /* ====== RESPONSIVE - MÓVIL ====== */
             @media (max-width: 992px) {
-                /* NAVBAR SUPERIOR - REORGANIZADO */
                 .navbar-top-section {
                     padding: 15px 8px;
                     position: relative;
                     flex-wrap: nowrap;
-                    
                 }
                 
-                /* BOTÓN HAMBURGUESA A LA IZQUIERDA */
                 .navbar-hamburger-btn {
                     display: block;
                     order: 3;
                     margin-right: 15px;
-                    margin-left: 0;
                 }
                 
-                /* LOGO CENTRADO */
                 .navbar-brand {
                     order: 2;
                     flex: 1;
@@ -266,15 +288,14 @@
                     justify-content: center;
                 }
                 
-                /* MENÚ MÓVIL - SE OCULTA COMPLETAMENTE */
                 .navbar-main-menu {
                     position: fixed;
                     top: 0;
                     right: -100%;
-                    left:auto;
+                    left: auto;
                     width: 100%;
                     height: 100vh;
-                    background-color: var(--white);
+                    background-color: var(--navbar-scrolled-bg);
                     flex-direction: column;
                     align-items: center;
                     justify-content: flex-start;
@@ -294,14 +315,13 @@
                     opacity: 1;
                 }
                 
-                /* Animación elementos del menú */
                 .navbar-main-menu li {
                     width: 100%;
                     max-width: 300px;
-                    border-bottom: 1px solid rgba(249, 249, 249, 0.1);
+                    border-bottom: 1px solid var(--color-border-light);
                     opacity: 0;
                     transform: translateX(20px);
-                    transition: var(--transition);
+                    transition: var(--transition-default);
                 }
                 
                 .navbar-main-menu.active li {
@@ -309,14 +329,6 @@
                     transform: translateX(0);
                 }
                 
-                .navbar-main-menu li:nth-child(1) { transition-delay: 0.1s; }
-                .navbar-main-menu li:nth-child(2) { transition-delay: 0.15s; }
-                .navbar-main-menu li:nth-child(3) { transition-delay: 0.2s; }
-                .navbar-main-menu li:nth-child(4) { transition-delay: 0.25s; }
-                .navbar-main-menu li:nth-child(5) { transition-delay: 0.3s; }
-                .navbar-main-menu li:nth-child(6) { transition-delay: 0.35s; }
-                
-                /* Alineación correcta de iconos en móvil */
                 .navbar-main-menu a {
                     padding: 15px 20px;
                     font-size: 18px;
@@ -326,33 +338,21 @@
                     gap: 15px;
                     justify-content: flex-start;
                     text-align: left;
-                    border-radius: var(--border-radius);
+                    border-radius: var(--border-radius-medium);
                     margin: 5px 0;
-                }
-                
-                .navbar-main-menu a i {
-                    width: 24px;
-                    text-align: center;
-                    font-size: 1.2rem;
-                }
-                
-                .navbar-main-menu a span {
-                    flex: 1;
+                    color: var(--color-text-light);
                 }
                 
                 .navbar-main-menu a:hover {
-                    background-color: rgba(245, 215, 66, 0.1);
+                    background-color: var(--color-hover);
                     padding-left: 25px;
                 }
                 
-                
-                /* Bloquear scroll cuando menú está abierto */
                 body.mobile-menu-open {
                     overflow: hidden;
                 }
             }
             
-            /* Pantallas muy pequeñas */
             @media (max-width: 480px) {
                 .navbar-brand span {
                     font-size: 18px;
@@ -370,62 +370,7 @@
                     font-size: 16px;
                     padding: 14px 15px;
                 }
-                
-                .navbar-main-menu a i {
-                    font-size: 1.1rem;
-                }
-                
-                .navbar-hamburger-btn {
-                    width: 35px;
-                    height: 35px;
-                    margin-right: 10px;
-                }
-                
             }
-            
-            
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            
-            .result-thumbnail {
-                width: 50px;
-                height: 50px;
-                object-fit: contain;
-                border-radius: 6px;
-                border: 1px solid #eee;
-                background-color: #fafafa;
-            }
-            
-            .result-info {
-                flex: 1;
-                min-width: 0;
-            }
-            
-            .result-info h4 {
-                margin: 0;
-                font-size: 0.95rem;
-                color: var(--text);
-                font-weight: 500;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            
-            .result-brand {
-                font-weight: 500;
-                color: #555;
-                font-size: 0.85rem;
-                margin: 2px 0;
-            }
-            
-            .result-category {
-                color: var(--text-light);
-                font-size: 0.75rem;
-                margin: 2px 0 0 0;
-            }
-            
         `;
 
         document.head.appendChild(styles);
@@ -435,18 +380,14 @@
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
 
-        navbar.innerHTML =/*html*/ `
+        navbar.innerHTML = /*html*/ `
             <div class="navbar-main-container">
-                <!-- Parte superior: logo, menú y botones -->
                 <div class="navbar-top-section">
-                    
-                    <!-- Logo -->
                     <a href="/index.html" class="navbar-brand">
                         <img src="/assets/images/logo.png" alt="" class="navbar-logo-img">
                         <span>CENTINELA</span>
                     </a>
                     
-                    <!-- Menú principal SIN el botón modo oscuro -->
                     <ul class="navbar-main-menu" id="navbarMainMenu">
                         <li><a href="/index.html" class="active"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
                         <li><a href="/visitors/products/products.html"><i class="fas fa-box-open"></i> <span>¿Quienes somos?</span></a></li>
@@ -455,7 +396,6 @@
                         <li><a href="/visitors/login/login.html"><i class="fas fa-envelope"></i> <span>Inicio de sesion</span></a></li>
                     </ul>
 
-                    <!-- Botón hamburguesa a la IZQUIERDA -->
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
                         <span class="hamburger-line"></span>
                         <span class="hamburger-line"></span>
@@ -463,7 +403,6 @@
                     </button>
                 </div>
                 
-                <!-- Overlay para móvil -->
                 <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
             </div>
         `;
@@ -484,22 +423,11 @@
         });
 
         resizeObserver.observe(navbar);
-
-        window.addEventListener('resize', () => {
-            const currentHeight = navbar.offsetHeight;
-            document.body.style.paddingTop = currentHeight + 'px';
-        });
     }
-
-    // =============================================
-    // CONFIGURAR TODAS LAS FUNCIONALIDADES
-    // =============================================
 
     function setupAllFunctionalities() {
         setupResponsiveMenu();
-        setupDarkMode();
         setupScrollEffects();
-        setupPredictiveSearch();
         markActiveLink();
     }
 
@@ -518,11 +446,6 @@
             overlay.classList.add('active');
             document.body.classList.add('mobile-menu-open');
             isMenuOpen = true;
-
-            const menuItems = mainMenu.querySelectorAll('li');
-            menuItems.forEach((item, index) => {
-                item.style.transitionDelay = `${0.1 + (index * 0.05)}s`;
-            });
         }
 
         function closeMobileMenu() {
@@ -531,11 +454,6 @@
             overlay.classList.remove('active');
             document.body.classList.remove('mobile-menu-open');
             isMenuOpen = false;
-
-            const menuItems = mainMenu.querySelectorAll('li');
-            menuItems.forEach(item => {
-                item.style.transitionDelay = '0s';
-            });
         }
 
         function toggleMobileMenu() {
@@ -549,19 +467,12 @@
         hamburgerBtn.addEventListener('click', toggleMobileMenu);
         overlay.addEventListener('click', closeMobileMenu);
 
-        // Cerrar menú al hacer clic en enlaces (móvil)
         mainMenu.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
                 if (window.innerWidth <= 992) {
                     setTimeout(closeMobileMenu, 300);
                 }
             });
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && isMenuOpen) {
-                closeMobileMenu();
-            }
         });
 
         window.addEventListener('resize', () => {
@@ -584,9 +495,16 @@
         });
     }
 
-    // =============================================
-    // API PÚBLICA
-    // =============================================
+    function markActiveLink() {
+        const currentPage = window.location.pathname;
+        const menuLinks = document.querySelectorAll('.navbar-main-menu a');
+
+        menuLinks.forEach(link => {
+            if (link.getAttribute('href') === currentPage) {
+                link.classList.add('active');
+            }
+        });
+    }
 
     window.NavbarComplete = {
         toggleMenu: function () {
@@ -595,22 +513,11 @@
         },
     };
 
-    // =============================================
-    // CARGAR RECURSOS NECESARIOS
-    // =============================================
-
+    // Cargar recursos necesarios
     if (!document.querySelector('link[href*="font-awesome"]')) {
         const faLink = document.createElement('link');
         faLink.rel = 'stylesheet';
         faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
         document.head.appendChild(faLink);
     }
-
-    if (!document.querySelector('link[href*="poppins"]')) {
-        const fontLink = document.createElement('link');
-        fontLink.rel = 'stylesheet';
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap';
-        document.head.appendChild(fontLink);
-    }
-
 })();

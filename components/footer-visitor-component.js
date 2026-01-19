@@ -1,11 +1,8 @@
-// footer-component.js - Componente autónomo de footer (CORREGIDO para modo oscuro)
+// footer-component.js - Componente autónomo de footer (VERSIÓN SIMPLIFICADA)
 (function () {
     'use strict';
 
-    // =============================================
-    // CONFIGURACIÓN INICIAL
-    // =============================================
-
+    // Evitar carga duplicada
     if (window.FooterComponentLoaded) {
         console.log('🔄 Footer component ya cargado, omitiendo...');
         return;
@@ -14,6 +11,7 @@
 
     console.log('🚀 Iniciando footer component...');
 
+    // Inicializar cuando el DOM esté listo
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -25,7 +23,6 @@
             removeOriginalFooter();
             await createFooterComponent();
             setupFooterFunctionalities();
-            observeDarkMode();
             console.log('✅ Footer component inicializado correctamente');
         } catch (error) {
             console.error('❌ Error al inicializar footer:', error);
@@ -40,10 +37,7 @@
         }
     }
 
-    // =============================================
-    // CREAR FOOTER COMPONENT
-    // =============================================
-
+    // Crear footer component
     async function createFooterComponent() {
         addFooterStyles();
         createFooterHTML();
@@ -55,23 +49,24 @@
 
         const styles = document.createElement('style');
         styles.id = styleId;
-        styles.textContent =/*css*/ `
+        styles.textContent = /*css*/ `
             /* ====== ESTILOS DEL FOOTER ====== */
             * {
                 box-sizing: border-box;
-                    margin: 0;
+                margin: 0;
                 padding: 0;
             }
+            
             .footer-component {
-                background-color:  #00000000;
-                color: #00000000;
+                background-color: transparent;
+                color: var(--footer-text-primary);
                 width: 100%;
-                font-family: 'Orbitron', sans-serif;
+                font-family: var(--font-family-primary);
             }
             
             /* Contenido principal del footer */
             .footer-content {
-                background-color: #000000c1;
+                background-color: var(--footer-bg-primary);
                 padding: 80px 0 40px;
             }
             
@@ -95,7 +90,7 @@
                 margin-bottom: 25px;
                 position: relative;
                 padding-bottom: 10px;
-                color: var( #ffffff) !important;
+                color: var(--footer-text-primary);
             }
             
             .footer-col h3::after {
@@ -105,7 +100,7 @@
                 left: 0;
                 width: 50px;
                 height: 2px;
-                background-color: var(--accent-footer);
+                background-color: var(--footer-border-accent);
             }
             
             /* Logo en el footer */
@@ -123,7 +118,7 @@
             .footer-logo span {
                 font-weight: 700;
                 font-size: 20px;
-                color: var(--white, #ffffff) !important;
+                color: var(--footer-text-primary);
             }
             
             /* Texto "about" */
@@ -132,7 +127,7 @@
                 opacity: 0.8;
                 font-size: 15px;
                 line-height: 1.6;
-                color: rgba(255, 255, 255, 0.8) !important;
+                color: var(--footer-text-secondary);
             }
             
             /* Social icons */
@@ -145,28 +140,27 @@
             .footer-social a {
                 width: 40px;
                 height: 40px;
-                background-color: rgb(255, 255, 255);
-                color: var(--white, #ffffff) !important;
-                border-radius: 50%;
+                background-color: var(--footer-social-bg);
+                color: var(--footer-text-primary);
+                border-radius: var(--border-radius-circle);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.3s ease-in-out;
+                transition: var(--transition-default);
                 text-decoration: none;
             }
             
             .footer-social a:hover {
-                background-color: var( #f5d742);
-                color: var(--primary, #0a2540) !important;
+                background-color: var(--footer-social-hover);
+                color: var(--color-bg-primary);
                 transform: translateY(-3px);
-                shadow: white;
             }
             
             /* Links del footer */
             .footer-links {
                 list-style: none;
                 padding: 0;
-                margin: 0; 
+                margin: 0;
             }
             
             .footer-links li {
@@ -174,26 +168,24 @@
             }
             
             .footer-links a {
-                color: rgba(255, 255, 255, 0.7) !important;
+                color: var(--footer-text-secondary);
                 text-decoration: none;
-                transition: all 0.3s ease-in-out;
+                transition: var(--transition-default);
                 display: flex;
                 align-items: center;
                 font-size: 15px;
             }
             
             .footer-links a:hover {
-                text-shadow: var(--text-shadow); 
+                text-shadow: var(--footer-link-hover);
                 padding-left: 5px;
             }
             
             .footer-links a i {
                 margin-right: 8px;
                 font-size: 12px;
-                color: rgba(255, 255, 255, 0.7) !important;
+                color: var(--footer-text-secondary);
             }
-            
-            
             
             /* Información de contacto */
             .footer-contact {
@@ -208,12 +200,12 @@
                 margin-bottom: 15px;
                 font-size: 15px;
                 line-height: 1.5;
-                color: rgba(255, 255, 255, 0.8) !important;
+                color: var(--footer-text-secondary);
             }
             
             .footer-contact i {
                 margin-right: 15px;
-                color: var(--accent, #f5d742) !important;
+                color: var(--color-icon-primary);
                 font-size: 18px;
                 margin-top: 3px;
                 min-width: 20px;
@@ -222,12 +214,12 @@
             .footer-contact span {
                 flex: 1;
                 opacity: 0.8;
-                color: rgba(255, 255, 255, 0.8) !important;
+                color: var(--footer-text-secondary);
             }
             
             /* Sección inferior del footer */
             .footer-bottom {
-                background-color: #00000051;
+                background-color: var(--footer-bg-secondary);
                 padding: 20px 0;
             }
             
@@ -247,16 +239,16 @@
             .copyright {
                 font-size: 14px;
                 opacity: 0.8;
-                color: rgba(255, 255, 255, 0.8) !important;
+                color: var(--footer-text-secondary);
             }
             
             .copyright a {
-                color: rgba(255, 255, 255, 0.9) !important;
+                color: var(--footer-text-primary);
                 text-decoration: underline;
             }
             
             .copyright a:hover {
-                text-shadow: var(--text-shadow); 
+                text-shadow: var(--footer-link-hover);
             }
             
             .footer-legal {
@@ -265,18 +257,14 @@
             }
             
             .footer-legal a {
-                color: rgba(255, 255, 255, 0.7) !important;
+                color: var(--footer-text-secondary);
                 text-decoration: none;
                 font-size: 14px;
-                transition: all 0.3s ease-in-out;
+                transition: var(--transition-default);
             }
             
             .footer-legal a:hover {
-                text-shadow: 
-                0 0 10px rgb(255, 255, 255),
-                0 0 20px rgb(255, 255, 255),  
-                0 0 30px rgb(255, 255, 255),   
-                0 0 40px rgb(255, 255, 255);   
+                text-shadow: var(--footer-link-hover);
             }
             
             /* ====== RESPONSIVE ====== */
@@ -337,13 +325,16 @@
         const footer = document.createElement('footer');
         footer.className = 'footer-component';
 
-        footer.innerHTML =/*html*/ `
+        footer.innerHTML = /*html*/ `
         <div class="footer-content">
             <div class="footer-container">
                 <div class="footer-grid">
                     <!-- Columna 1: Descripción -->
                     <div class="footer-col">
-                    
+                        <div class="footer-logo">
+                            <img src="/assets/images/logo.png" alt="Centinela Logo" class="footer-logo-img">
+                            <span>CENTINELA</span>
+                        </div>
                         <p class="footer-about">Líderes en soluciones de seguridad electrónica en México.</p>
                         <div class="footer-social">
                             <a href="" target="_blank" title="Facebook">
@@ -422,10 +413,7 @@
         document.body.appendChild(footer);
     }
 
-    // =============================================
-    // CONFIGURAR FUNCIONALIDADES DEL FOOTER
-    // =============================================
-
+    // Configurar funcionalidades del footer
     function setupFooterFunctionalities() {
         // Asegurar que los enlaces externos se abran en nueva pestaña
         const externalLinks = document.querySelectorAll('.footer-component a[href^="http"]');
@@ -436,116 +424,25 @@
             }
         });
 
-        // Aplicar modo oscuro inicial si está activo
-        applyDarkModeInitial();
-
         console.log('🔧 Funcionalidades del footer configuradas');
     }
 
-    function applyDarkModeInitial() {
-        if (document.body.classList.contains('dark-mode')) {
-            // Forzar colores de texto en modo oscuro
-            const footer = document.querySelector('.footer-component');
-            if (footer) {
-                footer.classList.add('dark-mode');
-            }
-        }
-    }
-
-    // REEMPLAZA esta función en footer-visitor-component.js
-    function observeDarkMode() {
-        // Usar ThemeManager si está disponible
-        if (window.ThemeManager) {
-            window.ThemeManager.onThemeChange((isDarkMode) => {
-                const footer = document.querySelector('.footer-component');
-                if (footer) {
-                    if (isDarkMode) {
-                        footer.classList.add('dark-mode');
-                    } else {
-                        footer.classList.remove('dark-mode');
-                    }
-                }
-            });
-
-            // Aplicar estado inicial
-            const isDarkMode = window.ThemeManager.isDarkMode();
-            const footer = document.querySelector('.footer-component');
-            if (footer && isDarkMode) {
-                footer.classList.add('dark-mode');
-            }
-        } else {
-            // Fallback al método anterior
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.attributeName === 'class') {
-                        const footer = document.querySelector('.footer-component');
-                        if (footer) {
-                            if (document.body.classList.contains('dark-mode')) {
-                                footer.classList.add('dark-mode');
-                            } else {
-                                footer.classList.remove('dark-mode');
-                            }
-                        }
-                    }
-                });
-            });
-
-            observer.observe(document.body, { attributes: true });
-        }
-    }
-
-    // =============================================
-    // API PÚBLICA
-    // =============================================
-
+    // API pública
     window.FooterComponent = {
         refresh: function () {
-            // Método para refrescar el footer si es necesario
             console.log('🔄 Footer actualizado');
-            // Re-aplicar modo oscuro si está activo
-            if (document.body.classList.contains('dark-mode')) {
-                const footer = document.querySelector('.footer-component');
-                if (footer) {
-                    footer.classList.add('dark-mode');
-                }
-            }
         },
-
         getVersion: function () {
-            return '1.1.0'; // Versión actualizada
-        },
-
-        // En footer-visitor-component.js, dentro de window.FooterComponent
-        applyDarkMode: function (enable) {
-            const footer = document.querySelector('.footer-component');
-            if (footer) {
-                if (enable) {
-                    footer.classList.add('dark-mode');
-                } else {
-                    footer.classList.remove('dark-mode');
-                }
-            }
+            return '1.1.0-simplified';
         }
     };
 
-    // =============================================
-    // CARGAR RECURSOS NECESARIOS
-    // =============================================
-
-    // Verificar si Font Awesome ya está cargado
+    // Cargar recursos necesarios
     if (!document.querySelector('link[href*="font-awesome"]')) {
         const faLink = document.createElement('link');
         faLink.rel = 'stylesheet';
         faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
         document.head.appendChild(faLink);
-    }
-
-    // Verificar si la fuente Poppins ya está cargada
-    if (!document.querySelector('link[href*="poppins"]')) {
-        const fontLink = document.createElement('link');
-        fontLink.rel = 'stylesheet';
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap';
-        document.head.appendChild(fontLink);
     }
 
     console.log('✅ Footer component cargado y listo');
