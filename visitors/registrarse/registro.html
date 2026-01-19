@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro | Centinela</title>
+    <link rel="stylesheet" href="/components/particulas/particulas.css">
+    <link rel="stylesheet" href="registro.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- REGISTRO CONTAINER -->
+    <div class="register-main-container">
+        <div class="register-wrapper">
+            <!-- LEFT PANEL - FORMULARIO DE REGISTRO -->
+            <div class="register-left-panel">
+                <!-- Icono de usuario más pequeño -->
+                <div class="user-icon-form-container">
+                    <div class="user-icon-form">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                </div>
+                
+                <div class="form-header">
+                    <h2 class="form-main-title">CREAR CUENTA</h2>
+                    <p class="form-sub-title">Regístrate para acceder al sistema de seguridad</p>
+                </div>
+
+                <form class="register-form-container" action="#" method="post">
+                    <!-- Campo Nombre Completo -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="fullname">
+                            <i class="fas fa-user"></i> NOMBRE COMPLETO
+                        </label>
+                        <div class="input-wrapper">
+                            <input class="form-input-field" type="text" id="fullname" name="fullname"
+                                placeholder="Ingresa tu nombre completo" required>
+                        </div>
+                    </div>
+
+                    <!-- Campo Correo Electrónico -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="email">
+                            <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
+                        </label>
+                        <div class="input-wrapper">
+                            <input class="form-input-field" type="email" id="email" name="email"
+                                placeholder="ejemplo@correo.com" required>
+                        </div>
+                    </div>
+
+                    <!-- Campo Contraseña -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="password">
+                            <i class="fas fa-key"></i> CONTRASEÑA
+                        </label>
+                        <div class="input-wrapper password-field">
+                            <input class="form-input-field" type="password" id="password" name="password"
+                                placeholder="********" required>
+                            <button type="button" class="password-toggle-btn" data-target="password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Campo Confirmar Contraseña -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="confirmPassword">
+                            <i class="fas fa-key"></i> CONFIRMAR CONTRASEÑA
+                        </label>
+                        <div class="input-wrapper password-field">
+                            <input class="form-input-field" type="password" id="confirmPassword" name="confirmPassword"
+                                placeholder="********" required>
+                            <button type="button" class="password-toggle-btn" data-target="confirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Línea divisoria -->
+                    <div class="form-divider"></div>
+
+                    <!-- Enlace para iniciar sesión -->
+                    <div class="form-help-links">
+                        <a href="login.html" class="help-link">
+                            <i class="fas fa-sign-in-alt"></i> ¿YA TIENES CUENTA? INICIA SESIÓN
+                        </a>
+                    </div>
+
+                    <button type="submit" class="submit-register-btn">
+                        <i class="fas fa-user-plus"></i> REGISTRARSE
+                    </button>
+                </form>
+            </div>
+
+            <!-- RIGHT PANEL - INFORMACIÓN DE LA MARCA -->
+            <div class="register-right-panel">
+                <div class="brand-container">
+                    <!-- LOGO CENTINELA -->
+                    <div id="logo">
+                        <img src="/assets/images/logo.png" alt="Logo Centinela" class="centinela-logo">
+                    </div>
+                    
+                    <h1 class="brand-name">CENTINELA</h1>
+                    <p class="brand-description">Sistema de seguridad y monitoreo empresarial</p>
+                    
+                    <!-- Botón para volver al login -->
+                    <a href="login.html" class="back-to-login-btn">
+                        <i class="fas fa-arrow-left"></i> VOLVER AL LOGIN
+                    </a>
+
+                    <!-- Características del sistema -->
+                    <div class="features-container">
+                        <div class="feature-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Protección de datos garantizada</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-bolt"></i>
+                            <span>Acceso inmediato después del registro</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-headset"></i>
+                            <span>Soporte técnico 24/7</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPONENTES -->
+    <script src="/components/theme-manager.js"></script>
+    <script src="/components/particulas/particulas.js"></script>
+
+    <!-- REGISTER SCRIPT -->
+    <script src="js/register.js"></script>
+</body>
+
+</html>

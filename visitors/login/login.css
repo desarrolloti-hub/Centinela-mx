@@ -1,440 +1,749 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* PALETA DE COLORES GRISES (RESPETANDO LA ORIGINAL) */
+:root {
+    --dark-bg: #151515;
+    --darker-bg: #0a0a0a;
+    --card-bg: rgba(21, 21, 21, 0.95);
+    --panel-left: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%);
+    --panel-right: rgba(21, 21, 21, 0.95);
+    --text-white: #ffffff;
+    --text-light: #f0f0f0;
+    --text-gray: #b0b0b0;
+    --text-dark-gray: #a0a0a0;
+    --border-color: #2b2b2b;
+    --border-light: #3a3a3a;
+    --accent-gray: #c0c0c0;
+    --hover-gray: #d0d0d0;
+    --glass-border: rgba(43, 43, 43, 0.5);
+    
+    /* NUEVAS VARIABLES PARA EL ESTILO DEL BOTÓN DE CONTACTO */
+    --contact-btn-gradient: linear-gradient(135deg, #545454, #d6cdcd);
+    --contact-btn-hover: linear-gradient(135deg, #5a5a5a, #e0d7d7);
+    --contact-btn-shadow: rgba(192, 192, 192, 0.3);
 }
 
+/* ESTILOS GENERALES */
 body {
-    background: #0d0d0d;
-    font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
-    color: #e0e0e0;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
+    margin: 0;
+    padding: 0;
+    background: var(--dark-bg);
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--text-light);
+    overflow-x: hidden;
 }
 
 /* CONTENEDOR PRINCIPAL */
-.login-container {
+.login-main-container {
+    position: relative;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    padding: 20px;
+}
+
+/* WRAPPER DEL LOGIN */
+.login-wrapper {
     display: flex;
     width: 100%;
-    max-width: 1200px;
-    min-height: 700px;
-    background: #151515;
+    max-width: 1100px;
+    min-height: 650px;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
-    position: relative;
-    z-index: 10;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    animation: fadeInUp 0.6s ease-out;
 }
 
-/* PANEL IZQUIERDO */
-.login-left {
-    flex: 1.2;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    padding: 40px;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.login-left::before {
-    content: '';
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(196, 0, 0, 0.1) 0%, transparent 70%);
-    top: -100px;
-    right: -100px;
-    border-radius: 50%;
-}
-
-.login-left::after {
-    content: '';
-    position: absolute;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(192, 192, 192, 0.1) 0%, transparent 70%);
-    bottom: -50px;
-    left: -50px;
-    border-radius: 50%;
-}
-
-/* SECCIÓN DE MARCA */
-.brand-section {
-    margin-bottom: 40px;
-    z-index: 1;
-}
-
-.brand-logo {
-    font-size: 50px;
-    color: #c0c0c0;
-    margin-bottom: 15px;
-    text-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
-}
-
-.brand-title {
-    font-size: 32px;
-    font-weight: 700;
-    color: #ffffff;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-}
-
-.brand-subtitle {
-    font-size: 15px;
-    color: #b0b0b0;
-    max-width: 350px;
-    line-height: 1.5;
-}
-
-/* SECCIÓN DE SEGURIDAD */
-.security-section {
-    margin-bottom: 30px;
-    z-index: 1;
-}
-
-.section-title {
-    font-size: 18px;
-    color: #c0c0c0;
-    margin-bottom: 15px;
-    font-weight: 600;
-}
-
-.security-features {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.feature {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: #a0a0a0;
-    font-size: 14px;
-}
-
-.feature i {
-    color: #c0c0c0;
-    font-size: 16px;
-}
-
-/* SEPARADOR */
-.separator {
-    height: 1px;
-    background: #3a3a3a;
-    margin: 25px 0;
-    z-index: 1;
-}
-
-/* SECCIÓN DE INFORMACIÓN */
-.info-section {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-    z-index: 1;
-}
-
-.info-links,
-.services-links {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.info-links a,
-.services-links a {
-    color: #a0a0a0;
-    text-decoration: none;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: color 0.3s;
-}
-
-.info-links a:hover,
-.services-links a:hover {
-    color: #c0c0c0;
-}
-
-.info-links a i,
-.services-links a i {
-    color: #c0c0c0;
-    width: 20px;
-}
-
-.services-section {
-    margin-top: 10px;
-}
-
-.services-title {
-    font-size: 16px;
-    color: #c0c0c0;
-    margin-bottom: 15px;
-    font-weight: 600;
-}
-
-/* SECCIÓN DE CONTACTO */
-.contact-section {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.contact-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 15px;
-    color: #a0a0a0;
-    font-size: 14px;
-}
-
-.contact-item i {
-    color: #c0c0c0;
-    margin-top: 2px;
-    min-width: 16px;
-}
-
-/* PANEL DERECHO - FORMULARIO */
-.login-right {
-    flex: 1;
-    background: #151515;
-    padding: 50px 40px;
+/* PANEL IZQUIERDO SIMPLIFICADO */
+.login-left-panel {
+    flex: 0.8;
+    background: var(--panel-left);
+    padding: 60px 40px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    border-left: 1px solid #2b2b2b;
-}
-
-.login-header {
-    text-align: center;
-    margin-bottom: 40px;
-}
-
-.login-title {
-    font-size: 36px;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 15px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-.login-subtitle {
-    color: #b0b0b0;
-    font-size: 15px;
-    max-width: 400px;
-    margin: 0 auto;
-    line-height: 1.5;
-}
-
-/* FORMULARIO */
-.login-form {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-    max-width: 400px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.form-label {
-    color: #d0d0d0;
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.input-container {
+    align-items: center;
     position: relative;
+    overflow: hidden;
+    border-right: 1px solid var(--border-color);
 }
 
-.form-input {
+.login-left-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #545454, #c0c0c0, #545454);
+}
+
+/* LOGO Y MARCA */
+.brand-container {
+    text-align: center;
     width: 100%;
-    background: #1e1e1e;
-    border: 2px solid #2b2b2b;
-    border-radius: 8px;
-    padding: 16px 20px;
-    color: #ffffff;
-    font-size: 16px;
-    font-family: 'Segoe UI', sans-serif;
+    animation: slideInLeft 0.6s ease-out;
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* LOGO CENTINELA */
+#logo {
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.centinela-logo {
+    max-width: 180px;
+    height: auto;
+    filter: drop-shadow(0 0 15px rgba(192, 192, 192, 0.3));
     transition: all 0.3s ease;
 }
 
-.form-input:focus {
+.centinela-logo:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 25px rgba(192, 192, 192, 0.5));
+}
+
+/* Si la imagen no carga, mostrar un placeholder con estilo */
+.centinela-logo:not([src]),
+.centinela-logo[src=""] {
+    content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="%23c0c0c0"><path d="M100 20L140 60H160V140H140L100 180L60 140H40V60H60L100 20Z"/></svg>');
+    width: 180px;
+    height: 180px;
+    border-radius: 10px;
+    background: rgba(43, 43, 43, 0.5);
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.brand-name {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--text-white);
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    position: relative;
+    display: inline-block;
+}
+
+.brand-name::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -10px;
+    width: 80px;
+    height: 3px;
+    background: var(--accent-gray);
+    border-radius: 2px;
+}
+
+.brand-description {
+    font-size: 15px;
+    color: var(--text-gray);
+    max-width: 300px;
+    line-height: 1.6;
+    margin: 0 auto 40px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* PANEL DERECHO - FORMULARIO */
+.login-right-panel {
+    flex: 1.2;
+    background: var(--panel-right);
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+
+/* =================================================== */
+/* ICONO DE USUARIO ARRIBA DEL TÍTULO */
+/* =================================================== */
+.user-icon-form-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 25px;
+    width: 100%;
+    order: 1; /* Primero en el flujo */
+}
+
+.user-icon-form {
+    width: 100px;
+    height: 100px;
+    background: var(--contact-btn-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    color: var(--text-white);
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.7),
+        inset 0 0 25px rgba(255, 255, 255, 0.2),
+        0 0 40px rgba(192, 192, 192, 0.4);
+    border: 4px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    animation: floatIcon 3s ease-in-out infinite;
+}
+
+/* Animación flotante para el icono */
+@keyframes floatIcon {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Efecto de brillo alrededor del icono */
+.user-icon-form::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    background: linear-gradient(45deg, 
+        rgba(255, 255, 255, 0.15),
+        rgba(192, 192, 192, 0.3),
+        rgba(255, 255, 255, 0.15));
+    border-radius: 50%;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+.user-icon-form:hover {
+    transform: scale(1.15) rotate(10deg);
+    background: var(--contact-btn-hover);
+    box-shadow: 
+        0 15px 40px rgba(0, 0, 0, 0.9),
+        inset 0 0 30px rgba(255, 255, 255, 0.25),
+        0 0 60px rgba(192, 192, 192, 0.5);
+    animation: none; /* Detiene la animación flotante al hacer hover */
+}
+
+.user-icon-form:hover::before {
+    opacity: 1;
+}
+
+/* Animación del icono dentro */
+.user-icon-form i {
+    transition: transform 0.4s ease;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
+.user-icon-form:hover i {
+    transform: scale(1.2);
+}
+
+/* ENCABEZADO DEL FORMULARIO - DEBAJO DEL ICONO */
+.form-header {
+    text-align: center;
+    margin-bottom: 40px;
+    max-width: 500px;
+    align-self: center;
+    width: 100%;
+    order: 2; /* Segundo en el flujo */
+}
+
+.form-main-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-white);
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif;
+    position: relative;
+    display: inline-block;
+}
+
+.form-main-title::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -10px;
+    width: 80px;
+    height: 3px;
+    background: var(--accent-gray);
+    border-radius: 2px;
+}
+
+.form-sub-title {
+    color: var(--text-gray);
+    font-size: 15px;
+    line-height: 1.6;
+    margin-top: 25px;
+    text-align: center;
+}
+
+/* FORMULARIO */
+.login-form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    max-width: 450px;
+    width: 100%;
+    margin: 0 auto;
+    animation: slideInRight 0.6s ease-out 0.2s both;
+    order: 3; /* Tercero en el flujo */
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Ajustar el orden de los elementos en el panel derecho */
+.login-right-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.field-label {
+    color: var(--text-dark-gray);
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.field-label i {
+    color: var(--accent-gray);
+    font-size: 16px;
+}
+
+/* INPUTS */
+.input-wrapper {
+    position: relative;
+}
+
+.form-input-field {
+    width: 100%;
+    background: #1e1e1e;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 18px 25px;
+    color: var(--text-white);
+    font-size: 16px;
+    font-family: 'Rajdhani', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.form-input-field:focus {
     outline: none;
-    border-color: #c0c0c0;
+    border-color: var(--accent-gray);
+    background: #242424;
     box-shadow: 0 0 0 3px rgba(192, 192, 192, 0.1);
 }
 
-.password-container .form-input {
-    padding-right: 50px;
+.form-input-field::placeholder {
+    color: rgba(160, 160, 160, 0.7);
 }
 
-.toggle-password {
+/* PASSWORD FIELD */
+.password-field .form-input-field {
+    padding-right: 60px;
+}
+
+.password-toggle-btn {
     position: absolute;
-    right: 16px;
+    right: 20px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: #c0c0c0;
+    color: var(--text-dark-gray);
     cursor: pointer;
     font-size: 18px;
-    padding: 5px;
+    padding: 8px;
+    transition: all 0.3s ease;
 }
 
-.help-links {
+.password-toggle-btn:hover {
+    color: var(--accent-gray);
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* ENLACES DE AYUDA */
+.form-help-links {
     display: flex;
     justify-content: space-between;
-    margin-top: 10px;
+    margin-top: 15px;
 }
 
 .help-link {
-    color: #c0c0c0;
+    color: var(--accent-gray);
     font-size: 14px;
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.3s;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border-radius: 4px;
 }
 
 .help-link:hover {
-    color: #ffffff;
-    text-decoration: underline;
+    color: var(--text-white);
+    background: rgba(192, 192, 192, 0.1);
 }
 
-/* BOTÓN DE LOGIN */
-.login-btn {
-    background: linear-gradient(135deg, #545454 0%, #3a3a3a 100%);
+.help-link i {
+    font-size: 14px;
+}
+
+/* =================================================== */
+/* BOTÓN INICIAR SESIÓN - ESTILO COMO "ENVIAR REPORTE" */
+/* =================================================== */
+.submit-login-btn {
+    background: var(--contact-btn-gradient);
     border: none;
-    border-radius: 8px;
+    border-radius: 14px;
     padding: 18px;
     color: #ffffff;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 10px;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
+    width: 100%;
+    min-height: 50px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 20px;
+    font-family: 'Rajdhani', sans-serif;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
 }
 
-.login-btn:hover {
-    background: linear-gradient(135deg, #5a5a5a 0%, #404040 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+/* Efecto de brillo en hover (como el botón de contacto) */
+.submit-login-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px var(--contact-btn-shadow);
+    background: var(--contact-btn-hover);
 }
 
-/* SECCIÓN DE REGISTRO */
-.register-section {
-    margin-top: 30px;
-    text-align: center;
-}
-
-.register-text {
-    color: #a0a0a0;
-    font-size: 14px;
-    margin-bottom: 15px;
-}
-
-.register-btn {
-    background: transparent;
-    border: 2px solid #3a3a3a;
-    border-radius: 8px;
-    padding: 16px 30px;
+/* Icono en el botón - Mismo estilo que contacto */
+.submit-login-btn i {
+    font-size: 18px;
     color: #c0c0c0;
+    transition: transform 0.3s ease;
+}
+
+/* Animación del icono en hover */
+.submit-login-btn:hover i {
+    transform: translateX(5px);
+}
+
+/* Estado activo (click) */
+.submit-login-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px var(--contact-btn-shadow);
+}
+
+/* =================================================== */
+/* BOTÓN REGISTRARSE - MISMO ESTILO QUE "ENVIAR REPORTE" */
+/* =================================================== */
+.register-account-btn {
+    background: var(--contact-btn-gradient);
+    border: none;
+    border-radius: 14px;
+    padding: 18px 35px;
+    color: #ffffff;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
+    width: 100%;
+    max-width: 300px;
     margin: 0 auto;
+    min-height: 50px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-family: 'Rajdhani', sans-serif;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
 }
 
-.register-btn:hover {
-    border-color: #c0c0c0;
-    color: #ffffff;
-    transform: translateY(-2px);
+/* Efecto hover idéntico al botón de contacto */
+.register-account-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px var(--contact-btn-shadow);
+    background: var(--contact-btn-hover);
 }
 
-/* RESPONSIVE */
+/* Icono en el botón de registro */
+.register-account-btn i {
+    font-size: 18px;
+    color: #c0c0c0;
+    transition: transform 0.3s ease;
+}
+
+/* Animación del icono en hover */
+.register-account-btn:hover i {
+    transform: translateX(5px);
+}
+
+/* Estado activo (click) */
+.register-account-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px var(--contact-btn-shadow);
+}
+
+/* Efecto de brillo sutil en ambos botones */
+.submit-login-btn::after,
+.register-account-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.1),
+        transparent
+    );
+    transition: left 0.7s ease;
+}
+
+.submit-login-btn:hover::after,
+.register-account-btn:hover::after {
+    left: 100%;
+}
+
+/* =================================================== */
+/* RESPONSIVE - FORMULARIO PRIMERO EN MÓVIL */
+/* =================================================== */
 @media (max-width: 900px) {
-    .login-container {
+    .login-wrapper {
         flex-direction: column;
         max-width: 500px;
         min-height: auto;
     }
 
-    .login-left {
-        padding: 30px;
-        order: 2;
-    }
-
-    .login-right {
+    /* INVERTIR EL ORDEN: Formulario primero, luego logo */
+    .login-left-panel {
         padding: 40px 30px;
-        border-left: none;
-        border-bottom: 1px solid #2b2b2b;
-        order: 1;
+        order: 2; /* Cambiado de 1 a 2 - Ahora va DESPUÉS */
+        border-right: none;
+        border-top: 1px solid var(--border-color);
+        border-bottom: none;
     }
 
-    .login-title {
-        font-size: 28px;
+    .login-right-panel {
+        padding: 40px 30px;
+        order: 1; /* Cambiado de 2 a 1 - Ahora va PRIMERO */
+        position: relative;
     }
 
-    .brand-title {
-        font-size: 26px;
+    /* Agregar una línea separadora entre formulario y logo */
+    .login-right-panel::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 30px;
+        right: 30px;
+        height: 1px;
+        background: var(--border-color);
+    }
+
+    /* Ocultar la línea superior del panel izquierdo en móvil */
+    .login-left-panel::before {
+        display: none;
+    }
+
+    .form-header {
+        margin-bottom: 30px;
+    }
+
+    .brand-name {
+        font-size: 32px;
+    }
+
+    .form-main-title {
+        font-size: 32px;
+    }
+
+    .centinela-logo {
+        max-width: 150px;
+    }
+
+    .user-icon-form {
+        width: 90px;
+        height: 90px;
+        font-size: 36px;
+        margin-bottom: 20px;
+    }
+
+    .submit-login-btn,
+    .register-account-btn {
+        padding: 16px;
+        font-size: 15px;
+        min-height: 48px;
     }
 }
 
+/* PARA PANTALLAS MUY PEQUEÑAS (MÓVILES) */
 @media (max-width: 480px) {
-    body {
+    .login-main-container {
         padding: 10px;
     }
 
-    .login-container {
+    .login-wrapper {
         border-radius: 15px;
     }
 
-    .login-left,
-    .login-right {
-        padding: 25px 20px;
+    .login-left-panel,
+    .login-right-panel {
+        padding: 30px 20px;
     }
 
-    .login-title {
-        font-size: 24px;
+    /* En móviles muy pequeños, hacer el icono de usuario más prominente */
+    .user-icon-form-container {
+        margin-bottom: 20px;
     }
 
-    .brand-title {
-        font-size: 22px;
+    .user-icon-form {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+        margin-bottom: 15px;
+        border-width: 3px;
     }
 
-    .help-links {
+    .brand-name {
+        font-size: 26px;
+        letter-spacing: 2px;
+        margin-top: 10px; /* Espacio extra arriba del logo en móvil */
+    }
+
+    .form-main-title {
+        font-size: 26px;
+        margin-top: 5px; /* Menos espacio arriba del título en móvil */
+    }
+
+    .centinela-logo {
+        max-width: 120px;
+        margin-top: 10px; /* Espacio arriba del logo */
+    }
+
+    .form-help-links {
         flex-direction: column;
-        gap: 10px;
+        gap: 15px;
+        align-items: flex-start;
     }
 
-    .login-btn,
-    .register-btn {
-        padding: 16px;
+    .submit-login-btn,
+    .register-account-btn {
+        padding: 15px;
+        font-size: 14px;
+        min-height: 45px;
+        border-radius: 12px;
+    }
+    
+    .register-account-btn {
+        max-width: 100%;
+        margin-top: 20px; /* Espacio extra arriba del botón registrar */
+    }
+}
+
+/* OPCIÓN ADICIONAL: Para tablets medianas (600px - 900px) */
+@media (min-width: 600px) and (max-width: 900px) {
+    .login-wrapper {
+        max-width: 550px;
+    }
+    
+    /* En tablets, el formulario puede tener un poco más de espacio */
+    .login-right-panel {
+        padding: 50px 40px;
+    }
+    
+    .login-left-panel {
+        padding: 40px;
+    }
+    
+    /* Hacer el icono de usuario un poco más grande en tablets */
+    .user-icon-form {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
     }
 }
