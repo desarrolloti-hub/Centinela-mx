@@ -1,575 +1,172 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planes de Pago - Dark Mode</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
+    <title>Planes de Pago - Centinela</title>
     
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            padding: 2rem;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .container {
-            max-width: 1200px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        /* Logo Centinela Principal */
-        #logo {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        #logo img {
-            max-width: 200px;
-            height: auto;
-            filter: brightness(0.9);
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            color: var(--text-max-importance);
-            margin-bottom: 0.5rem;
-            font-weight: 700;
-        }
-
-        .header p {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.5;
-        }
-
-        .plans-container {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
-        }
-
-        .plan-card {
-            background-color: var(--surface);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: var(--shadow-light);
-            width: 100%;
-            max-width: 350px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 1px solid var(--border-normal);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .plan-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-medium);
-            border-color: var(--accent);
-        }
-
-        .plan-card:focus-within {
-            box-shadow: var(--shadow-focus);
-            outline: none;
-        }
-
-        .plan-image-section {
-            padding: 2rem 1.5rem 1rem 1.5rem;
-            text-align: center;
-            border-bottom: 1px solid var(--border-normal);
-        }
-
-        .plan-image-container {
-            width: 100%;
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .plan-image {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            max-width: 200px;
-            transition: transform 0.3s ease;
-        }
-
-        .plan-content {
-            padding: 1.5rem;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .plan-title-section {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .plan-type {
-            font-size: 1.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 0.5rem;
-        }
-
-        .price-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1rem;
-        }
-
-        .currency {
-            font-size: 1.8rem;
-            font-weight: 600;
-            align-self: flex-start;
-            margin-top: 0.5rem;
-            color: var(--text-important);
-            margin-right: 0.2rem;
-        }
-
-        .price {
-            font-size: 3.5rem;
-            font-weight: 800;
-            line-height: 1;
-            color: var(--text-max-importance);
-        }
-
-        .plan-name {
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-        }
-
-        .popular-badge {
-            background-color: var(--accent);
-            color: var(--surface);
-            padding: 0.5rem 1.2rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            display: inline-block;
-            margin-top: 0.5rem;
-            letter-spacing: 0.5px;
-        }
-
-        .plan-details {
-            margin-bottom: 1.5rem;
-            flex-grow: 1;
-        }
-
-        .plan-details h3 {
-            font-size: 1.3rem;
-            margin-bottom: 1.2rem;
-            color: var(--text-important);
-            font-weight: 600;
-            text-align: center;
-        }
-
-        .features {
-            list-style-type: none;
-        }
-
-        .features li {
-            padding: 0.6rem 0;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: flex-start;
-            border-bottom: 1px solid var(--border-normal);
-            transition: background-color 0.2s ease;
-        }
-
-        .features li:hover {
-            background-color: var(--hover-bg);
-        }
-
-        .features li:last-child {
-            border-bottom: none;
-        }
-
-        .features li i {
-            margin-right: 0.75rem;
-            color: var(--accent);
-            margin-top: 0.2rem;
-            font-size: 0.9rem;
-        }
-
-        .order-btn {
-            display: block;
-            width: 100%;
-            padding: 1rem;
-            text-align: center;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            text-decoration: none;
-            font-weight: 700;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            border: 2px solid var(--border-normal);
-            cursor: pointer;
-            font-size: 1.1rem;
-            letter-spacing: 0.5px;
-            margin-top: auto;
-        }
-
-        .order-btn:hover,
-        .order-btn:focus {
-            background-color: var(--hover-bg);
-            border-color: var(--accent);
-            color: var(--text-max-importance);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-light);
-            outline: none;
-        }
-
-        .order-btn:active {
-            transform: translateY(0);
-        }
-
-        /* Colores específicos para cada plan */
-        .regular .plan-type {
-            color: var(--bronze);
-        }
-
-        .business .plan-type {
-            color: var(--silver);
-        }
-
-        .advanced .plan-type {
-            color: var(--gold);
-        }
-
-        /* Colores para los botones */
-        .regular .order-btn {
-            border-color: var(--bronze);
-        }
-
-        .business .order-btn {
-            border-color: var(--silver);
-        }
-
-        .advanced .order-btn {
-            border-color: var(--gold);
-        }
-
-        .regular .order-btn:hover,
-        .regular .order-btn:focus {
-            background-color: rgba(205, 127, 50, 0.1);
-            border-color: var(--bronze);
-        }
-
-        .business .order-btn:hover,
-        .business .order-btn:focus {
-            background-color: rgba(192, 192, 192, 0.1);
-            border-color: var(--silver);
-        }
-
-        .advanced .order-btn:hover,
-        .advanced .order-btn:focus {
-            background-color: rgba(255, 215, 0, 0.1);
-            border-color: var(--gold);
-        }
-
-        /* Filtros para las imágenes */
-        .regular .plan-image {
-            filter: sepia(0.7) saturate(2) hue-rotate(-10deg) brightness(0.9) contrast(1.2);
-        }
-
-        .business .plan-image {
-            filter: grayscale(1) brightness(1.3) contrast(1.1);
-        }
-
-        .advanced .plan-image {
-            filter: sepia(1) saturate(3) hue-rotate(5deg) brightness(0.9) contrast(1.3);
-        }
-
-        /* Efecto hover en imágenes */
-        .plan-card:hover .plan-image {
-            transform: scale(1.05);
-        }
-
-        .regular .plan-card:hover .plan-image {
-            filter: sepia(0.7) saturate(2.5) hue-rotate(-10deg) brightness(1) contrast(1.3) drop-shadow(0 0 8px rgba(205, 127, 50, 0.6));
-        }
-
-        .business .plan-card:hover .plan-image {
-            filter: grayscale(1) brightness(1.5) contrast(1.2) drop-shadow(0 0 8px rgba(192, 192, 192, 0.6));
-        }
-
-        .advanced .plan-card:hover .plan-image {
-            filter: sepia(1) saturate(3.5) hue-rotate(5deg) brightness(1) contrast(1.4) drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 3rem;
-            color: var(--text-tertiary);
-            font-size: 0.9rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border-normal);
-            width: 100%;
-        }
-
-        .footer a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.2s ease;
-        }
-
-        .footer a:hover {
-            color: var(--accent);
-            text-decoration: underline;
-        }
-
-        /* Placeholder para logo cuando no se carga la imagen */
-        .logo-placeholder {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #1a1a1a, #2b2b2b);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--accent);
-            font-weight: bold;
-            text-align: center;
-            font-size: 1.2rem;
-            padding: 5px;
-            border: 2px solid var(--border-normal);
-        }
-
-        .image-placeholder {
-            width: 100%;
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #1a1a1a, #2b2b2b);
-            border-radius: 12px;
-            border: 2px solid var(--border-normal);
-            color: var(--text-secondary);
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-
-        @media (max-width: 768px) {
-            .plans-container {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .plan-card {
-                max-width: 100%;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            body {
-                padding: 1.5rem;
-            }
-
-            .plan-image-container {
-                height: 100px;
-            }
-
-            .price {
-                font-size: 3rem;
-            }
-
-            .plan-type {
-                font-size: 1.5rem;
-            }
-        }
-    </style>
+    <!-- Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Estilos específicos de planes -->
+    <link rel="stylesheet" href="planes.css">
+    
+    <!-- Sistema de colores globales -->
+    <link rel="stylesheet" href="/components/personalizacion/personalizacion.css">
+     <!-- Sistema de particulas -->
     <link rel="stylesheet" href="/components/particulas/particulas.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
-
+    <!-- Canvas para partículas -->
     <canvas id="particle-canvas"></canvas>
     
-    <div class="container">
-        <!-- Logo Centinela principal -->
-        <div id="logo">
-            <!-- IMAGEN REAL DEL LOGO - Reemplaza esto con tu imagen -->
-            <div class="logo-placeholder">
-                LOGO<br>CENTINELA
-            </div>
-            <!-- Para usar tu imagen, descomenta la línea siguiente y ajusta la ruta -->
-            <!-- <img src="assets/images/logo.png" alt="Logo Centinela"> -->
-        </div>
-
-        <div class="header">
-            <h1>Planes de Pago</h1>
-            <p>Elige el plan que mejor se adapte a tus necesidades. Todos incluyen características esenciales y soporte
-                técnico premium.</p>
-        </div>
-
-        <div class="plans-container">
-            <!-- Plan Regular - Bronce -->
-            <div class="plan-card regular">
-                <div class="plan-image-section">
-                    <div class="plan-image-container">
-                        <!-- IMAGEN PARA EL PLAN BRONCE -->
-                        <img src="/assets/images/logo.png" alt="Plan Bronce" class="plan-image">
-                        <!-- Placeholder si no hay imagen -->
-                        <!-- <div class="image-placeholder">BRONCE</div> -->
-                    </div>
+    <!-- Contenedor principal de planes -->
+    <main class="planes-main-container">
+        <div class="planes-wrapper">
+            
+            <!-- Logo Centinela principal -->
+            <div class="planes-logo-section">
+                <!-- IMAGEN REAL DEL LOGO - Reemplaza esto con tu imagen -->
+                <div class="planes-logo-placeholder">
+                    LOGO<br>CENTINELA
                 </div>
+                <!-- Para usar tu imagen, descomenta la línea siguiente y ajusta la ruta -->
+                <!-- <img src="/assets/images/logo.png" alt="Logo Centinela" class="planes-logo"> -->
+            </div>
 
-                <div class="plan-content">
-                    <div class="plan-title-section">
-                        <div class="plan-type">BRONCE</div>
-                        <div class="price-container">
-                            <div class="currency">$</div>
-                            <div class="price">29</div>
+            <!-- Header con título y descripción -->
+            <div class="planes-header">
+                <h1>Planes de Pago</h1>
+                <p>Elige el plan que mejor se adapte a tus necesidades. Todos incluyen características esenciales y soporte técnico premium.</p>
+            </div>
+
+            <!-- Contenedor de tarjetas de planes -->
+            <div class="plan-cards-container">
+                
+                <!-- Plan Regular - Bronce -->
+                <div class="plan-card regular">
+                    <div class="plan-image-section">
+                        <div class="plan-image-container">
+                            <!-- IMAGEN PARA EL PLAN BRONCE -->
+                            <img src="/assets/images/logo.png" alt="Plan Bronce" class="plan-image">
+                            <!-- Placeholder si no hay imagen -->
+                            <!-- <div class="image-placeholder">BRONCE</div> -->
                         </div>
-                        <div class="plan-name">REGULAR</div>
                     </div>
 
-                    <div class="plan-details">
-                        <h3>Características Básicas</h3>
-                        <ul class="features">
-                            <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing
-                                elit.</li>
-                            <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
-                            <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing
-                                elit.</li>
-                            <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
-                        </ul>
-                    </div>
-
-                    <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
-                </div>
-            </div>
-
-            <!-- Plan Avanzado - Dorado -->
-            <div class="plan-card advanced">
-                <div class="plan-image-section">
-                    <div class="plan-image-container">
-                        <!-- IMAGEN PARA EL PLAN DORADO -->
-                        <img src="/assets/images/logo.png" alt="Plan Dorado" class="plan-image">
-                        <!-- Placeholder si no hay imagen -->
-                        <!-- <div class="image-placeholder">DORADO</div> -->
-                    </div>
-                </div>
-
-                <div class="plan-content">
-                    <div class="plan-title-section">
-                        <div class="plan-type">DORADO</div>
-                        <div class="price-container">
-                            <div class="currency">$</div>
-                            <div class="price">99</div>
+                    <div class="plan-content">
+                        <div class="plan-title-section">
+                            <div class="plan-type">BRONCE</div>
+                            <div class="price-container">
+                                <div class="currency">$</div>
+                                <div class="price">499</div>
+                            </div>
+                            <div class="plan-name">REGULAR</div>
                         </div>
-                        <div class="plan-name">ADVANCED</div>
-                        <div class="popular-badge">MOST POPULAR</div>
-                    </div>
 
-                    <div class="plan-details">
-                        <h3>Características Premium</h3>
-                        <ul class="features">
-                            <li><i class="fas fa-star"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                            </li>
-                            <li><i class="fas fa-star"></i> Consectetur adipiscing elit.</li>
-                            <li><i class="fas fa-star"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                            </li>
-                            <li><i class="fas fa-star"></i> Consectetur adipiscing elit.</li>
-                            <li><i class="fas fa-star"></i> Acceso prioritario a nuevas funciones</li>
-                            <li><i class="fas fa-star"></i> Soporte 24/7 por teléfono y chat</li>
-                        </ul>
-                    </div>
-
-                    <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
-                </div>
-            </div>
-
-            <!-- Plan Business - Plateado -->
-            <div class="plan-card business">
-                <div class="plan-image-section">
-                    <div class="plan-image-container">
-                        <!-- IMAGEN PARA EL PLAN PLATEADO -->
-                        <img src="/assets/images/logo.png" alt="Plan Plateado" class="plan-image">
-                        <!-- Placeholder si no hay imagen -->
-                        <!-- <div class="image-placeholder">PLATEADO</div> -->
-                    </div>
-                </div>
-
-                <div class="plan-content">
-                    <div class="plan-title-section">
-                        <div class="plan-type">PLATEADO</div>
-                        <div class="price-container">
-                            <div class="currency">$</div>
-                            <div class="price">59</div>
+                        <div class="plan-details">
+                            <h3>Características Básicas</h3>
+                            <ul class="features">
+                                <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
+                            </ul>
                         </div>
-                        <div class="plan-name">BUSINESS</div>
+
+                        <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
+                    </div>
+                </div>
+
+                <!-- Plan Avanzado - Dorado -->
+                <div class="plan-card advanced">
+                    <div class="plan-image-section">
+                        <div class="plan-image-container">
+                            <!-- IMAGEN PARA EL PLAN DORADO -->
+                            <img src="/assets/images/logo.png" alt="Plan Dorado" class="plan-image">
+                            <!-- Placeholder si no hay imagen -->
+                            <!-- <div class="image-placeholder">DORADO</div> -->
+                        </div>
                     </div>
 
-                    <div class="plan-details">
-                        <h3>Características Empresariales</h3>
-                        <ul class="features">
-                            <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing
-                                elit.</li>
-                            <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
-                            <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing
-                                elit.</li>
-                            <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
-                            <li><i class="fas fa-check-circle"></i> Integraciones con herramientas empresariales</li>
-                        </ul>
+                    <div class="plan-content">
+                        <div class="plan-title-section">
+                            <div class="plan-type">DORADO</div>
+                            <div class="price-container">
+                                <div class="currency">$</div>
+                                <div class="price">999.99</div>
+                            </div>
+                            <div class="plan-name">ADVANCED</div>
+                            <div class="popular-badge">MOST POPULAR</div>
+                        </div>
+
+                        <div class="plan-details">
+                            <h3>Características Premium</h3>
+                            <ul class="features">
+                                <li><i class="fas fa-star"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-star"></i> Consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-star"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-star"></i> Consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-star"></i> Acceso prioritario a nuevas funciones</li>
+                                <li><i class="fas fa-star"></i> Soporte 24/7 por teléfono y chat</li>
+                            </ul>
+                        </div>
+
+                        <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
+                    </div>
+                </div>
+
+                <!-- Plan Business - Plateado -->
+                <div class="plan-card business">
+                    <div class="plan-image-section">
+                        <div class="plan-image-container">
+                            <!-- IMAGEN PARA EL PLAN PLATEADO -->
+                            <img src="/assets/images/logo.png" alt="Plan Plateado" class="plan-image">
+                            <!-- Placeholder si no hay imagen -->
+                            <!-- <div class="image-placeholder">PLATEADO</div> -->
+                        </div>
                     </div>
 
-                    <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
+                    <div class="plan-content">
+                        <div class="plan-title-section">
+                            <div class="plan-type">PLATINO</div>
+                            <div class="price-container">
+                                <div class="currency">$</div>
+                                <div class="price">1999.99</div>
+                            </div>
+                            <div class="plan-name">BUSINESS</div>
+                        </div>
+
+                        <div class="plan-details">
+                            <h3>Características Empresariales</h3>
+                            <ul class="features">
+                                <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-check-circle"></i> Integraciones con herramientas empresariales</li>
+                            </ul>
+                        </div>
+
+                        <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
+                    </div>
                 </div>
             </div>
         </div>
+    </main>
 
-        <div class="footer">
-            <p>Diseño inspirado en <a href="https://freepik.com" target="_blank">Freepik</a> | Implementado con íconos
-                de FontAwesome</p>
-            <p style="margin-top: 0.5rem; font-size: 0.8rem;">Paleta de colores: Dark Mode Profesional | Jerarquía
-                Visual aplicada</p>
-        </div>
-    </div>
-
+    <!-- Scripts de interacción -->
     <script>
         // Añadir interactividad a los botones
         document.querySelectorAll('.order-btn').forEach(button => {
             button.addEventListener('click', function (e) {
                 e.preventDefault();
-                const planType = this.closest('.plan-card').querySelector('.plan-type').textContent;
-                const planPrice = this.closest('.plan-card').querySelector('.price').textContent;
+                const planCard = this.closest('.plan-card');
+                const planType = planCard.querySelector('.plan-type').textContent;
+                const planPrice = planCard.querySelector('.price').textContent;
 
                 // Efecto visual al hacer clic
                 this.style.transform = 'scale(0.98)';
@@ -623,24 +220,22 @@
         console.log("   - Colócalos en /assets/images/");
         console.log("   - Actualiza las rutas en cada tarjeta:");
         console.log("");
-        console.log("   Plan Bronce (línea ~298):");
+        console.log("   Plan Bronce (línea ~127):");
         console.log("   Cambiar: <img src='/assets/images/logo.png'>");
         console.log("   Por: <img src='/assets/images/bronce.png'>");
         console.log("");
-        console.log("   Plan Dorado (línea ~323):");
+        console.log("   Plan Dorado (línea ~152):");
         console.log("   Cambiar: <img src='/assets/images/logo.png'>");
         console.log("   Por: <img src='/assets/images/dorado.png'>");
         console.log("");
-        console.log("   Plan Plateado (línea ~348):");
+        console.log("   Plan Plateado (línea ~177):");
         console.log("   Cambiar: <img src='/assets/images/logo.png'>");
         console.log("   Por: <img src='/assets/images/plateado.png'>");
     </script>
 
     <!-- COMPONENTES -->
-    <script src="/components/theme-manager.js"></script>
     <script src="/components/navbar-visitor-component.js"></script>
     <script src="/components/footer-visitor-component.js"></script>
     <script src="/components/particulas/particulas.js"></script>
 </body>
-
 </html>

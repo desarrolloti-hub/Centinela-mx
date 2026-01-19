@@ -1,0 +1,236 @@
+/**
+ * GLOBAL COLORS SYSTEM - Sistema de colores global para Centinela
+ * 
+ * Este archivo centraliza todas las variables de color utilizadas en:
+ * - Navbar (navbar-complete.js)
+ * - Footer (footer-component.js)
+ * 
+ * NO incluye funcionalidad de modo oscuro, solo variables de color para
+ * mantener consistencia visual en toda la aplicación.
+ */
+
+/* =============================================
+   VARIABLES PRINCIPALES DE COLOR
+   ============================================= */
+
+:root {
+    /* ====== COLORES BASE ====== */
+
+    /* Colores de fondo principales */
+    --color-bg-primary: #000000;
+    /* Fondo principal (navbar, footer) */
+    --color-bg-secondary: #00000000;
+    /* Fondo secundario (contenido footer) */
+    --color-bg-tertiary: #0000007a;
+    /* Fondo terciario (inferior footer) */
+    --color-bg-light: #000000;
+    /* Fondo claro (tarjetas, elementos) */
+
+    /* ====== COLORES DE TEXTO ====== */
+
+    /* Textos principales */
+    --color-text-primary: #ffffff;
+    /* Texto principal (títulos, enlaces) */
+    --color-text-secondary: rgba(255, 255, 255, 0.8);
+    /* Texto secundario */
+    --color-text-light: #ffffff;
+    /* Texto claro para fondos oscuros */
+    --color-text-dark: #000000;
+    /* Texto oscuro para fondos claros */
+
+    /* ====== COLORES DE ACENTO Y EFECTOS ====== */
+
+    /* Acentos y resaltados */
+    --color-accent-primary: #c0c0c0;
+    /* Acento principal (bordes, hover) */
+    --color-accent-secondary: #ffffff;
+    /* Acento secundario (botones, íconos) */
+    --color-accent-footer: #ffffff;
+    /* Acento específico para footer */
+
+    /* Efectos visuales */
+    --color-shadow: rgba(255, 255, 255, 0.55);
+    /* Color de sombras */
+    --color-glow: #ffffff;
+    /* Color para efectos de brillo/resplandor */
+
+    /* ====== VARIABLES DE EFECTO ESPECÍFICAS ====== */
+
+    /* Text shadow para efectos de brillo (usado en navbar) */
+    --text-shadow-effect:
+        0 0 10px var(--color-glow),
+        0 0 20px var(--color-glow),
+        0 0 30px var(--color-glow),
+        0 0 40px var(--color-glow);
+
+    /* Sombras para elementos */
+    --shadow-normal: 0 5px 15px var(--color-shadow);
+    --shadow-large: 0 10px 25px rgba(0, 0, 0, 0.15);
+
+    /* ====== VARIABLES DE ESTADO ====== */
+
+    /* Estados de interacción */
+    --color-hover: rgba(245, 215, 66, 0);
+    /* Color de fondo en hover */
+    --color-active: #c0c0c0;
+    /* Color para elementos activos */
+
+    /* ====== VARIABLES DE BORDES ====== */
+
+    /* Colores de bordes */
+    --color-border-light: rgba(255, 255, 255, 0.1);
+    /* Bordes claros */
+    --color-border-dark: #3d8ad6;
+    /* Bordes oscuros */
+
+    /* ====== VARIABLES DE ÍCONOS ====== */
+
+    /* Colores para iconografía */
+    --color-icon-primary: var(--color-accent-secondary);
+    /* Íconos principales */
+    --color-icon-secondary: rgba(255, 255, 255, 0.7);
+    /* Íconos secundarios */
+
+    /* ====== PROPIEDADES DE DISEÑO ====== */
+
+    /* Transiciones y animaciones */
+    --transition-default: all 0.3s ease-in-out;
+
+    /* Bordes redondeados */
+    --border-radius-small: 6px;
+    --border-radius-medium: 8px;
+    --border-radius-large: 12px;
+    --border-radius-circle: 50%;
+
+    /* ====== TIPOGRAFÍA ====== */
+
+    /* Familias de fuentes */
+    --font-family-primary: 'Orbitron', sans-serif;
+    /* Fuente principal */
+    --font-family-secondary: 'Poppins', sans-serif;
+    /* Fuente secundaria */
+
+    /* ====== VARIABLES ESPECÍFICAS POR COMPONENTE ====== */
+
+    /* NAVBAR - Variables específicas */
+    --navbar-bg: var(--color-bg-secondary);
+    --navbar-text: var(--color-text-primary);
+    --navbar-logo-text: var(--color-text-primary);
+    --navbar-link-hover: var(--text-shadow-effect);
+    --navbar-scrolled-bg: var(--color-bg-light);
+    --navbar-scrolled-shadow: var(--shadow-normal);
+
+    /* FOOTER - Variables específicas */
+    --footer-bg-primary: var(--color-bg-secondary);
+    --footer-bg-secondary: var(--color-bg-tertiary);
+    --footer-text-primary: var(--color-text-primary);
+    --footer-text-secondary: var(--color-text-secondary);
+    --footer-accent: var(--color-accent-footer);
+    --footer-link-hover: var(--text-shadow-effect);
+    --footer-social-bg: rgb(3, 3, 3);
+    --footer-social-hover: var(--color-accent-secondary);
+    --footer-border-accent: var(--color-accent-footer);
+}
+
+/* =============================================
+   CLASES DE UTILIDAD PARA COLORES
+   ============================================= */
+
+/* Clases para aplicar colores de fondo */
+.bg-primary {
+    background-color: var(--color-bg-primary) !important;
+}
+
+.bg-secondary {
+    background-color: var(--color-bg-secondary) !important;
+}
+
+.bg-tertiary {
+    background-color: var(--color-bg-tertiary) !important;
+}
+
+.bg-light {
+    background-color: var(--color-bg-light) !important;
+}
+
+/* Clases para aplicar colores de texto */
+.text-primary {
+    color: var(--color-text-primary) !important;
+}
+
+.text-secondary {
+    color: var(--color-text-secondary) !important;
+}
+
+.text-light {
+    color: var(--color-text-light) !important;
+}
+
+.text-dark {
+    color: var(--color-text-dark) !important;
+}
+
+/* Clases para aplicar colores de acento */
+.accent-primary {
+    color: var(--color-accent-primary) !important;
+}
+
+.accent-secondary {
+    color: var(--color-accent-secondary) !important;
+}
+
+/* Clases para aplicar efectos de sombra */
+.text-shadow-effect {
+    text-shadow: var(--text-shadow-effect) !important;
+}
+
+.box-shadow-normal {
+    box-shadow: var(--shadow-normal) !important;
+}
+
+.box-shadow-large {
+    box-shadow: var(--shadow-large) !important;
+}
+
+/* Clases para estados de interacción */
+.hover-glow:hover {
+    text-shadow: var(--text-shadow-effect) !important;
+}
+
+.hover-accent:hover {
+    color: var(--color-accent-secondary) !important;
+}
+
+/* Clases para bordes */
+.border-accent {
+    border-color: var(--color-accent-primary) !important;
+}
+
+.border-light {
+    border-color: var(--color-border-light) !important;
+}
+
+/* =============================================
+   MEDIA QUERIES PARA RESPONSIVE
+   ============================================= */
+
+@media (max-width: 992px) {
+    :root {
+        /* Ajustes para tablets */
+        --border-radius-medium: 6px;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        /* Ajustes para móviles */
+        --border-radius-medium: 4px;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        /* Ajustes para móviles pequeños */
+        --border-radius-medium: 3px;
+    }
+}
