@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centinela Home</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="/components/particulas/particulas.css">
+</head>
+
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <main class="right-layout">
+        <!-- FILA PRINCIPAL -->
+        <section class="center-row">
+            <div class="side left">
+                <div class="lorem-box collapsible">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-location-dot"></i> Autentificación Geográfica</h3>
+                        <p>Geolocalización inteligente que verifica la ubicación de cada usuario para garantizar accesos seguros en tiempo real, minimizando riesgos de intrusión desde ubicaciones no autorizadas y permitiendo políticas de acceso diferenciadas según la región.</p>
+                    </div>
+                </div>
+
+                <div class="lorem-box collapsible">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-database"></i> Registro Híbrido de Intentos</h3>
+                        <p>Registro centralizado de accesos exitosos y fallidos, combinando bases de datos locales y en la nube para una trazabilidad completa. Permite auditorías precisas, análisis de patrones de intentos de acceso y generación automática de alertas ante comportamientos sospechosos.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="logo">
+                <img src="assets/images/logo.png" alt="Logo Centinela">
+            </div>
+
+            <div class="side right">
+                <div class="lorem-box collapsible">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-chart-line"></i> Estadísticas y Alertas</h3>
+                        <p>Monitoreo avanzado con métricas en tiempo real y alertas automáticas ante actividades sospechosas. Permite identificar patrones de comportamiento, detectar accesos anómalos y generar reportes visuales que facilitan la toma de decisiones rápidas y efectivas para la seguridad.</p>
+                    </div>
+                </div>
+
+                <div class="lorem-box collapsible">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-file-lines"></i> Reportes Cronológicos</h3>
+                        <p>Generación de reportes detallados, cronológicos y exportables para análisis exhaustivo de seguridad. Facilita auditorías internas y externas, seguimiento de incidentes y documentación histórica que respalda decisiones estratégicas y cumplimiento de normativas.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOQUE VISIÓN, MISIÓN Y OBJETIVO GENERAL -->
+        <section class="vision-mision-objetivo">
+            <div class="vmo-box">
+                <h3>Visión</h3>
+                <p>Ser la plataforma líder en seguridad inteligente, ofreciendo soluciones de geolocalización, registro y monitoreo que garanticen accesos confiables y protección proactiva en tiempo real.</p>
+            </div>
+            <div class="vmo-box">
+                <h3>Misión</h3>
+                <p>Proporcionar herramientas innovadoras de autenticación geográfica, registro híbrido de intentos, estadísticas y reportes cronológicos, permitiendo a las organizaciones controlar, analizar y prevenir riesgos de seguridad de manera eficiente y confiable.</p>
+            </div>
+            <div class="vmo-box">
+                <h3>Objetivo General</h3>
+                <p>Desarrollar un sistema integral de seguridad que combine geolocalización, trazabilidad de accesos y análisis de datos, para optimizar la protección de recursos y asegurar la toma de decisiones informada frente a incidentes de seguridad.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- COMPONENTES -->
+    <script src="/components/navbar-visitor-component.js"></script>
+    <script src="/components/footer-visitor-component.js"></script>
+    <script src="/components/particulas/particulas.js"></script>
+
+    <!-- Script acordeón -->
+    <script>
+        document.querySelectorAll('.collapsible').forEach(box => {
+            const h3 = box.querySelector('h3');
+
+            // Retraso inicial de 1 segundo antes de activar la interacción
+            setTimeout(() => {
+                h3.addEventListener('click', () => {
+                    box.classList.toggle('active');
+                });
+            }, 1000);
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,503 @@
+/* RESET BÁSICO */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* BODY */
+body {
+    background: #0d0d0d;
+    font-family: 'Orbitron', sans-serif;
+    color: #e0e0e0;
+    min-height: 100vh;
+}
+
+/* SECCIÓN PRINCIPAL */
+.contact-section {
+    padding: 80px 6%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* TÍTULO */
+.contact-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 400;
+    color: #cfcfcf;
+    margin-bottom: 60px;
+    line-height: 1.4;
+}
+
+/* CONTENEDOR - NUEVA ESTRUCTURA GRID */
+.contact-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-areas:
+        "form info"
+        "map map";
+    gap: 40px;
+    justify-content: center;
+    align-items: start;
+    /* Alinea las tarjetas desde el inicio */
+}
+
+/* ASIGNACIÓN DE ÁREAS GRID */
+.contact-card {
+    grid-area: form;
+    height: 100%;
+}
+
+.info-card {
+    grid-area: info;
+    height: 100%;
+}
+
+.map-card {
+    grid-area: map;
+}
+
+/* TARJETAS - MISMA ALTURA */
+.contact-card,
+.map-card,
+.info-card {
+    background: #151515;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* Ajuste para igualar altura de tarjetas superiores */
+.contact-card,
+.info-card {
+    width: 100%;
+    min-height: 580px;
+    /* Altura mínima igual para ambas */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Mapa ocupa el ancho completo */
+.map-card {
+    width: 100%;
+    min-height: 500px;
+}
+
+/* TITULOS DE TARJETA */
+.contact-card h2,
+.map-card h2,
+.info-card h2 {
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 24px;
+    color: #f1f1f1;
+    text-align: center;
+}
+
+/* Iconos en los títulos */
+.contact-card h2 i,
+.info-card h2 i,
+.map-card h2 i {
+    color: #c0c0c0;
+    /* Color plateado */
+    margin-right: 8px;
+    text-shadow: 0 0 5px rgba(192, 192, 192, 0.3);
+}
+
+/* FORMULARIO - OCUPA TODA LA ALTURA */
+.contact-card form {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    /* Ocupa todo el espacio disponible */
+    justify-content: space-between;
+    /* Distribuye el espacio */
+}
+
+/* Estilos para inputs con iconos */
+.input-with-icon {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.input-with-icon i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #c0c0c0;
+    /* Color plateado */
+    z-index: 1;
+}
+
+/* INPUTS */
+.contact-card input,
+.contact-card textarea {
+    background: #1e1e1e;
+    border: 1px solid #2b2b2b;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    color: #ededed;
+    font-size: 14px;
+    transition: border 0.3s, box-shadow 0.3s;
+    width: 100%;
+}
+
+/* Padding adicional para inputs con iconos */
+.input-with-icon input,
+.input-with-icon textarea {
+    padding-left: 45px !important;
+}
+
+/* Ajuste específico para el textarea con icono */
+.input-with-icon textarea {
+    padding-top: 14px !important;
+    min-height: 140px;
+    /* Textarea más alto para igualar altura */
+    resize: vertical;
+    flex-grow: 1;
+    /* Textarea crece para ocupar espacio */
+}
+
+.contact-card input::placeholder,
+.contact-card textarea::placeholder {
+    color: #9a9a9a;
+}
+
+/* FOCUS */
+.contact-card input:focus,
+.contact-card textarea:focus {
+    outline: none;
+    border-color: #c0c0c0;
+    /* Borde plateado en focus */
+    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.25);
+}
+
+/* BOTÓN */
+.contact-card button {
+    margin-top: auto;
+    /* Empuja el botón hacia abajo */
+    background: linear-gradient(135deg, #545454, #d6cdcd);
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    /* Padding aumentado */
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 50px;
+    /* Altura mínima del botón */
+}
+
+.contact-card button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(192, 192, 192, 0.3);
+    /* Sombra plateada */
+}
+
+/* Icono en el botón - PLATEADO */
+.contact-card button i {
+    font-size: 18px;
+    color: #c0c0c0;
+}
+
+/* =================================================== */
+/* ESTILOS ESPECÍFICOS PARA INFO-CARD (IGUAL ALTURA) */
+/* =================================================== */
+.info-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    /* Comienza desde arriba */
+    align-items: center;
+    text-align: center;
+}
+
+.info-subtitle {
+    color: #d4d4d4;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #3a3a3a;
+    font-size: 16px;
+    font-weight: 500;
+    width: 100%;
+    text-align: center;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    flex-grow: 1;
+    /* Ocupa el espacio restante */
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.contact-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    border: 1px solid #2b2b2b;
+    transition: transform 0.2s, background 0.3s;
+    flex-grow: 1;
+    /* Cada item crece para ocupar espacio */
+}
+
+.contact-item:hover {
+    background: #1e1e1e;
+    transform: translateY(-2px);
+}
+
+.contact-icon {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #2b2b2b, #3a3a3a);
+    border-radius: 50%;
+    border: 1px solid #3a3a3a;
+    margin-bottom: 5px;
+}
+
+/* Iconos dentro de contact-icon - PLATEADOS */
+.contact-icon i {
+    font-size: 1.6rem;
+    color: #c0c0c0;
+    /* Color plateado */
+}
+
+.contact-details {
+    flex: 1;
+    width: 100%;
+}
+
+.contact-details strong {
+    color: #f0f0f0;
+    display: block;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.contact-details p {
+    color: #b0b0b0;
+    margin: 0;
+    line-height: 1.6;
+    font-size: 15px;
+    text-align: center;
+    padding: 0 10px;
+}
+
+/* Estilo específico para el horario */
+.contact-item:last-child .contact-details p:first-child {
+    margin-bottom: 8px;
+}
+
+/* Mapa de Ubicacion - AHORA MÁS GRANDE */
+.map-card iframe {
+    width: 100%;
+    height: 400px;
+    /* Aumentado de 260px a 400px */
+    border-radius: 14px;
+    border: none;
+    filter: grayscale(100%) contrast(115%) brightness(90%);
+}
+
+/* Info de Mapa */
+.map-info {
+    margin-top: 18px;
+    background: #1b1b1b;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.map-info strong {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ffffff;
+    font-size: 16px;
+    justify-content: center;
+}
+
+.map-info p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #b0b0b0;
+    justify-content: center;
+}
+
+/* Iconos en la info del mapa - PLATEADOS */
+.map-info i {
+    color: #c0c0c0;
+    /* Color plateado */
+    font-size: 14px;
+}
+
+/* Efectos hover para iconos plateados */
+.contact-icon:hover i,
+.input-with-icon i:hover,
+.contact-card h2 i:hover,
+.map-info i:hover {
+    color: #e0e0e0;
+    /* Plateado más claro al hacer hover */
+    transition: color 0.3s ease;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+    .contact-section {
+        padding: 60px 20px;
+    }
+
+    .contact-title {
+        font-size: 24px;
+        margin-bottom: 40px;
+    }
+
+    .contact-container {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "form"
+            "info"
+            "map";
+        gap: 30px;
+    }
+
+    .contact-card,
+    .map-card,
+    .info-card {
+        width: 100%;
+        max-width: 600px;
+        padding: 28px;
+        margin: 0 auto;
+        min-height: auto;
+        /* Altura automática en móvil */
+    }
+
+    .map-card {
+        min-height: 400px;
+    }
+
+    .map-card iframe {
+        height: 350px;
+    }
+
+    .contact-info {
+        gap: 25px;
+        max-width: 100%;
+    }
+
+    .contact-item {
+        flex-direction: column;
+        align-items: center;
+        padding: 18px;
+        min-height: 140px;
+        /* Altura mínima para items */
+    }
+
+    .contact-icon {
+        width: 45px;
+        height: 45px;
+    }
+
+    .contact-icon i {
+        font-size: 1.4rem;
+    }
+
+    /* Ajuste textarea en móvil */
+    .input-with-icon textarea {
+        min-height: 120px;
+    }
+}
+
+/* Para pantallas muy pequeñas */
+@media (max-width: 480px) {
+    .contact-section {
+        padding: 40px 15px;
+    }
+
+    .contact-title {
+        font-size: 20px;
+        margin-bottom: 30px;
+    }
+
+    .contact-card,
+    .map-card,
+    .info-card {
+        padding: 22px;
+    }
+
+    .contact-card h2,
+    .map-card h2,
+    .info-card h2 {
+        font-size: 18px;
+        margin-bottom: 20px;
+    }
+
+    .map-card iframe {
+        height: 300px;
+    }
+
+    .contact-item {
+        padding: 16px;
+        gap: 10px;
+        min-height: 130px;
+    }
+
+    .contact-icon {
+        width: 42px;
+        height: 42px;
+        margin: 0 auto;
+    }
+
+    .contact-details strong {
+        text-align: center;
+        font-size: 15px;
+    }
+
+    .contact-details p {
+        text-align: center;
+        font-size: 14px;
+    }
+
+    /* Ajustes para inputs en móviles */
+    .input-with-icon input,
+    .input-with-icon textarea {
+        padding-left: 40px !important;
+    }
+
+    .input-with-icon i {
+        left: 12px;
+    }
+
+    .contact-card button {
+        padding: 14px;
+        font-size: 15px;
+        min-height: 45px;
+    }
+}
