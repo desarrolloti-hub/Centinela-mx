@@ -116,7 +116,7 @@
     --navbar-text: var(--color-text-primary);
     --navbar-logo-text: var(--color-text-primary);
     --navbar-link-hover: var(--text-shadow-effect);
-    --navbar-scrolled-bg: var(--color-bg-light);
+    --navbar-scrolled-bg: var(--color-bg-primary);
     --navbar-scrolled-shadow: var(--shadow-normal);
 
     /* FOOTER - Variables específicas */

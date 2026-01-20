@@ -1,71 +1,133 @@
-// Añadir interactividad a los botones
-document.querySelectorAll('.order-btn').forEach(button => {
-    button.addEventListener('click', function (e) {
-        e.preventDefault();
-        const planCard = this.closest('.plan-card');
-        const planType = planCard.querySelector('.plan-type').textContent;
-        const planPrice = planCard.querySelector('.price').textContent;
+//Funcionalidad de expansión
+document.addEventListener('DOMContentLoaded', function () {
+    const planCards = document.querySelectorAll('.plan-card');
 
-        // Efecto visual al hacer clic
-        this.style.transform = 'scale(0.98)';
+    // Pre-cálculo de alturas para evitar parpadeo
+    planCards.forEach(card => {
+        const expandedView = card.querySelector('.plan-expanded-view');
+        // Ocultar completamente al inicio
+        expandedView.style.display = 'none';
+    });
+
+    // Función para expandir tarjeta
+    function expandCard(card) {
+        const expandedView = card.querySelector('.plan-expanded-view');
+        const compactView = card.querySelector('.plan-compact-view');
+
+        // Mostrar la vista expandida primero
+        expandedView.style.display = 'block';
+        expandedView.style.opacity = '0';
+        expandedView.style.transform = 'translateY(20px)';
+
+        // Calcular altura necesaria
+        const compactHeight = compactView.offsetHeight;
+        const expandedHeight = expandedView.scrollHeight;
+
+        // Aplicar altura a la tarjeta
+        card.style.height = expandedHeight + 'px';
+
+        // Animación de fade-in
         setTimeout(() => {
-            this.style.transform = '';
-        }, 150);
+            expandedView.style.opacity = '1';
+            expandedView.style.transform = 'translateY(0)';
+            compactView.style.opacity = '0';
+        }, 10);
 
-        alert(`Has seleccionado el plan ${planType} por $${planPrice}. ¡Gracias por tu interés!`);
+        card.classList.add('expanded');
+        card.setAttribute('data-expanded', 'true');
+    }
+
+    // Función para contraer tarjeta
+    function collapseCard(card) {
+        const expandedView = card.querySelector('.plan-expanded-view');
+        const compactView = card.querySelector('.plan-compact-view');
+        const compactHeight = compactView.scrollHeight;
+
+        // Animación de fade-out
+        expandedView.style.opacity = '0';
+        expandedView.style.transform = 'translateY(20px)';
+        compactView.style.opacity = '1';
+
+        // Reducir altura después de la animación
+        setTimeout(() => {
+            card.style.height = compactHeight + 'px';
+            expandedView.style.display = 'none';
+            card.classList.remove('expanded');
+            card.setAttribute('data-expanded', 'false');
+        }, 300);
+    }
+
+    // Para dispositivos móviles: toggle al hacer clic
+    planCards.forEach(card => {
+        card.addEventListener('click', function (e) {
+            // Solo aplicar en móviles
+            if (window.innerWidth <= 768) {
+                // Evitar que se active al hacer clic en el botón de ordenar
+                if (!e.target.closest('.order-btn')) {
+                    const isExpanded = this.getAttribute('data-expanded') === 'true';
+
+                    // Cerrar otras tarjetas primero
+                    planCards.forEach(otherCard => {
+                        if (otherCard !== this && otherCard.getAttribute('data-expanded') === 'true') {
+                            collapseCard(otherCard);
+                        }
+                    });
+
+                    // Alternar estado actual
+                    if (isExpanded) {
+                        collapseCard(this);
+                    } else {
+                        expandCard(this);
+                    }
+                }
+            }
+        });
+
+        // Para desktop: hover
+        card.addEventListener('mouseenter', function () {
+            if (window.innerWidth > 768) {
+                expandCard(this);
+            }
+        });
+
+        card.addEventListener('mouseleave', function () {
+            if (window.innerWidth > 768) {
+                collapseCard(this);
+            }
+        });
+
+        // Soporte para teclado (accesibilidad)
+        card.addEventListener('focus', function () {
+            expandCard(this);
+        });
+
+        card.addEventListener('blur', function () {
+            // Solo contraer si no es en móvil (en móvil se maneja con click)
+            if (window.innerWidth > 768) {
+                collapseCard(this);
+            }
+        });
     });
 
-    // Manejar navegación por teclado
-    button.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            this.click();
-        }
-    });
-});
-
-// Efecto de enfoque para tarjetas
-document.querySelectorAll('.plan-card').forEach(card => {
-    card.addEventListener('mouseenter', function () {
-        this.style.zIndex = '10';
-    });
-
-    card.addEventListener('mouseleave', function () {
-        this.style.zIndex = '1';
-    });
-
-    // Permitir navegación por teclado entre tarjetas
-    card.setAttribute('tabindex', '0');
-
-    card.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            const button = this.querySelector('.order-btn');
-            if (button) {
-                button.focus();
-                button.click();
+    // Cerrar tarjeta expandida al hacer clic fuera en móviles
+    document.addEventListener('click', function (e) {
+        if (window.innerWidth <= 768) {
+            if (!e.target.closest('.plan-card')) {
+                planCards.forEach(card => {
+                    if (card.getAttribute('data-expanded') === 'true') {
+                        collapseCard(card);
+                    }
+                });
             }
         }
     });
-});
 
-// Instrucciones para imágenes
-console.log("=== INSTRUCCIONES PARA USAR IMÁGENES ===");
-console.log("");
-console.log("1. Coloca tu logo en la carpeta /assets/images/ como 'logo.png'");
-console.log("");
-console.log("2. Si quieres usar imágenes diferentes para cada plan:");
-console.log("   - Crea archivos: bronce.png, dorado.png, plateado.png");
-console.log("   - Colócalos en /assets/images/");
-console.log("   - Actualiza las rutas en cada tarjeta:");
-console.log("");
-console.log("   Plan Bronce (línea ~127):");
-console.log("   Cambiar: <img src='/assets/images/logo.png'>");
-console.log("   Por: <img src='/assets/images/bronce.png'>");
-console.log("");
-console.log("   Plan Dorado (línea ~152):");
-console.log("   Cambiar: <img src='/assets/images/logo.png'>");
-console.log("   Por: <img src='/assets/images/dorado.png'>");
-console.log("");
-console.log("   Plan Plateado (línea ~177):");
-console.log("   Cambiar: <img src='/assets/images/logo.png'>");
-console.log("   Por: <img src='/assets/images/plateado.png'>");
+    // Inicializar alturas después de cargar todo
+    window.addEventListener('load', function () {
+        planCards.forEach(card => {
+            const compactView = card.querySelector('.plan-compact-view');
+            const compactHeight = compactView.scrollHeight;
+            card.style.height = compactHeight + 'px';
+        });
+    });
+});
