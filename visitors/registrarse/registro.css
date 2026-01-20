@@ -338,7 +338,7 @@ body {
 }
 
 .centinela-logo {
-    max-width: 250px; /* Más pequeño */
+    max-width: 300px; /* Más pequeño */
     height: auto;
     filter: drop-shadow(0 0 8px rgba(192, 192, 192, 0.2)); /* Sombra más ligera */
     transition: all 0.3s ease;
@@ -358,7 +358,7 @@ body {
 }
 
 .centinela-logo {
-    max-width: 250px; /* Más pequeño */
+    max-width: 120px; /* Más pequeño */
     height: auto;
     filter: drop-shadow(0 0 8px rgba(192, 192, 192, 0.2)); /* Sombra más ligera */
     transition: all 0.3s ease;
