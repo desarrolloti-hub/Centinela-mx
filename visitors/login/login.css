@@ -1,7 +1,6 @@
-/* PALETA DE COLORES GRISES (RESPETANDO LA ORIGINAL) */
+/* PALETA DE COLORES GRISES */
 :root {
     --dark-bg: #151515;
-    --darker-bg: #0a0a0a;
     --card-bg: rgba(21, 21, 21, 0.95);
     --panel-left: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%);
     --panel-right: rgba(21, 21, 21, 0.95);
@@ -12,13 +11,9 @@
     --border-color: #2b2b2b;
     --border-light: #3a3a3a;
     --accent-gray: #c0c0c0;
-    --hover-gray: #d0d0d0;
-    --glass-border: rgba(43, 43, 43, 0.5);
-    
-    /* NUEVAS VARIABLES PARA EL ESTILO DEL BOTÓN DE CONTACTO */
-    --contact-btn-gradient: linear-gradient(135deg, #545454, #d6cdcd);
-    --contact-btn-hover: linear-gradient(135deg, #5a5a5a, #e0d7d7);
-    --contact-btn-shadow: rgba(192, 192, 192, 0.3);
+    --btn-gradient: linear-gradient(135deg, #545454, #d6cdcd);
+    --btn-hover: linear-gradient(135deg, #5a5a5a, #e0d7d7);
+    --btn-shadow: rgba(192, 192, 192, 0.2);
 }
 
 /* ESTILOS GENERALES */
@@ -40,42 +35,30 @@ body {
     align-items: center;
     min-height: 100vh;
     width: 100%;
-    padding: 20px;
+    padding: 15px;
+    box-sizing: border-box;
 }
 
-/* WRAPPER DEL LOGIN */
+/* WRAPPER COMPACTO */
 .login-wrapper {
     display: flex;
     width: 100%;
-    max-width: 1100px;
-    min-height: 650px;
+    max-width: 800px; /* Más compacto */
+    min-height: 480px; /* Más bajo */
     background: var(--card-bg);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    border-radius: 10px; /* Más redondeado */
     overflow: hidden;
-    box-shadow: 
-        0 20px 60px rgba(0, 0, 0, 0.9),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--glass-border);
-    animation: fadeInUp 0.6s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7); /* Sombra más ligera */
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
 }
 
 /* PANEL IZQUIERDO SIMPLIFICADO */
 .login-left-panel {
     flex: 0.8;
     background: var(--panel-left);
-    padding: 60px 40px;
+    padding: 30px; /* Más compacto */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -83,76 +66,53 @@ body {
     position: relative;
     overflow: hidden;
     border-right: 1px solid var(--border-color);
+    box-sizing: border-box;
 }
-
+/* LINEA IZQUIERDA ARRIBA DEL LOGO*/
 .login-left-panel::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
+    height: 3px; /* Más fino */
     background: linear-gradient(90deg, #545454, #c0c0c0, #545454);
 }
 
-/* LOGO Y MARCA */
+/* LOGO Y MARCA COMPACTO */
 .brand-container {
     text-align: center;
     width: 100%;
-    animation: slideInLeft 0.6s ease-out;
-}
-
-@keyframes slideInLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    box-sizing: border-box;
 }
 
 /* LOGO CENTINELA */
 #logo {
-    margin-bottom: 25px;
+    margin-bottom: 20px; /* Menos espacio */
     text-align: center;
 }
 
 .centinela-logo {
-    max-width: 180px;
+    max-width: 250px; /* Más pequeño */
     height: auto;
-    filter: drop-shadow(0 0 15px rgba(192, 192, 192, 0.3));
+    filter: drop-shadow(0 0 8px rgba(192, 192, 192, 0.2)); /* Sombra más ligera */
     transition: all 0.3s ease;
 }
 
 .centinela-logo:hover {
     transform: scale(1.05);
-    filter: drop-shadow(0 0 25px rgba(192, 192, 192, 0.5));
+    filter: drop-shadow(0 0 12px rgba(192, 192, 192, 0.3));
 }
 
-/* Si la imagen no carga, mostrar un placeholder con estilo */
-.centinela-logo:not([src]),
-.centinela-logo[src=""] {
-    content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="%23c0c0c0"><path d="M100 20L140 60H160V140H140L100 180L60 140H40V60H60L100 20Z"/></svg>');
-    width: 180px;
-    height: 180px;
-    border-radius: 10px;
-    background: rgba(43, 43, 43, 0.5);
-    padding: 20px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-}
 
 .brand-name {
-    font-size: 42px;
-    font-weight: 800;
+    font-size: 28px; /* Más pequeño */
+    font-weight: 700;
     color: var(--text-white);
-    letter-spacing: 3px;
-    margin-bottom: 20px;
+    letter-spacing: 2px; /* Menos espaciado */
+    margin-bottom: 15px;
     font-family: 'Orbitron', sans-serif;
     text-transform: uppercase;
-    position: relative;
-    display: inline-block;
 }
 
 .brand-name::after {
@@ -160,151 +120,110 @@ body {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    bottom: -10px;
-    width: 80px;
-    height: 3px;
+    bottom: -8px;
+    width: 60px; /* Más corto */
+    height: 2px; /* Más fino */
     background: var(--accent-gray);
-    border-radius: 2px;
+    border-radius: 1px;
 }
 
 .brand-description {
-    font-size: 15px;
+    font-size: 13px; /* Más pequeño */
     color: var(--text-gray);
-    max-width: 300px;
-    line-height: 1.6;
-    margin: 0 auto 40px;
-    padding: 20px 0;
+    max-width: 260px; /* Más compacto */
+    line-height: 1.5;
+    margin: 0 auto 30px; /* Menos espacio */
+    padding: 15px 0; /* Menos padding */
     border-top: 1px solid var(--border-light);
     border-bottom: 1px solid var(--border-light);
+    box-sizing: border-box;
 }
 
-/* PANEL DERECHO - FORMULARIO */
+/* PANEL DERECHO - FORMULARIO COMPACTO */
 .login-right-panel {
     flex: 1.2;
     background: var(--panel-right);
-    padding: 60px 50px;
+    padding: 30px; /* Más compacto */
     display: flex;
     flex-direction: column;
     justify-content: center;
     position: relative;
+    box-sizing: border-box;
 }
 
-/* =================================================== */
-/* ICONO DE USUARIO ARRIBA DEL TÍTULO */
-/* =================================================== */
+/* ===== ICONO DE USUARIO MODIFICADO (SOLUCIÓN 1) ===== */
+/* ===== CAMBIOS REALIZADOS: ===== */
+/* 1. Añadí height: 110px al contenedor */
+/* 2. Añadí padding: 10px 0 para espacio extra */
+/* 3. Añadí overflow: visible !important */
+/* 4. Reduje animación de -5px a -3px */
+/* 5. Reduje scale de 1.04 a 1.02 */
+
 .user-icon-form-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 25px;
+    margin-bottom: 100px; /* Menos espacio */
     width: 100%;
-    order: 1; /* Primero en el flujo */
+    order: 1;
+    /* ===== NUEVAS LÍNEAS AÑADIDAS ===== */
+    height: 110px; /* 20px más que el círculo */
+    padding: 10px 0; /* Espacio extra arriba y abajo */
+    overflow: visible !important; /* Permite que el círculo salga sin cortarse */
+    /* ===== FIN DE MODIFICACIONES ===== */
 }
 
 .user-icon-form {
-    width: 100px;
-    height: 100px;
-    background: var(--contact-btn-gradient);
-    border-radius: 50%;
+    width: 90px; /* Más pequeño */
+    height: 90px;
+    background: var(--btn-gradient);
+    border-radius: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 40px;
+    font-size: 40px; /* Más pequeño */
     color: var(--text-white);
-    box-shadow: 
-        0 10px 30px rgba(0, 0, 0, 0.7),
-        inset 0 0 25px rgba(255, 255, 255, 0.2),
-        0 0 40px rgba(192, 192, 192, 0.4);
-    border: 4px solid rgba(255, 255, 255, 0.15);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    animation: floatIcon 3s ease-in-out infinite;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), /* Sombra más ligera */
+        inset 0 0 15px rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.15); /* Borde más fino */
+    transition: all 0.1s ease;
 }
 
-/* Animación flotante para el icono */
 @keyframes floatIcon {
     0%, 100% {
         transform: translateY(0px);
     }
     50% {
-        transform: translateY(-10px);
-    }
-}
-
-/* Efecto de brillo alrededor del icono */
-.user-icon-form::before {
-    content: '';
-    position: absolute;
-    top: -6px;
-    left: -6px;
-    right: -6px;
-    bottom: -6px;
-    background: linear-gradient(45deg, 
-        rgba(255, 255, 255, 0.15),
-        rgba(192, 192, 192, 0.3),
-        rgba(255, 255, 255, 0.15));
-    border-radius: 50%;
-    z-index: -1;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    animation: pulseGlow 2s ease-in-out infinite;
-}
-
-@keyframes pulseGlow {
-    0%, 100% {
-        opacity: 0.5;
-    }
-    50% {
-        opacity: 0.8;
+        transform: translateY(-3px); /* ===== MODIFICADO: de -5px a -3px ===== */
     }
 }
 
 .user-icon-form:hover {
-    transform: scale(1.15) rotate(10deg);
-    background: var(--contact-btn-hover);
-    box-shadow: 
-        0 15px 40px rgba(0, 0, 0, 0.9),
-        inset 0 0 30px rgba(255, 255, 255, 0.25),
-        0 0 60px rgba(192, 192, 192, 0.5);
-    animation: none; /* Detiene la animación flotante al hacer hover */
+    transform: scale(1.02); /* ===== MODIFICADO: de 1.04 a 1.02 ===== */
+    background: var(--btn-hover);
+    animation: none;
 }
 
-.user-icon-form:hover::before {
-    opacity: 1;
-}
+/* ===== FIN DE MODIFICACIONES DEL ICONO ===== */
 
-/* Animación del icono dentro */
-.user-icon-form i {
-    transition: transform 0.4s ease;
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-}
-
-.user-icon-form:hover i {
-    transform: scale(1.2);
-}
-
-/* ENCABEZADO DEL FORMULARIO - DEBAJO DEL ICONO */
+/* ENCABEZADO COMPACTO */
 .form-header {
     text-align: center;
-    margin-bottom: 40px;
-    max-width: 500px;
-    align-self: center;
+    margin-bottom: 25px; /* Menos espacio */
     width: 100%;
-    order: 2; /* Segundo en el flujo */
+    align-self: center;
+    order: 2;
+    box-sizing: border-box;
 }
 
 .form-main-title {
-    font-size: 36px;
+    font-size: 24px; /* Más pequeño */
     font-weight: 700;
     color: var(--text-white);
-    margin-bottom: 15px;
-    letter-spacing: 2px;
+    margin-bottom: 10px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
     font-family: 'Orbitron', sans-serif;
-    position: relative;
-    display: inline-block;
 }
 
 .form-main-title::after {
@@ -312,42 +231,30 @@ body {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    bottom: -10px;
-    width: 80px;
-    height: 3px;
+    bottom: -8px;
+    width: 60px; /* Más corto */
+    height: 2px; /* Más fino */
     background: var(--accent-gray);
-    border-radius: 2px;
+    border-radius: 1px;
 }
 
 .form-sub-title {
     color: var(--text-gray);
-    font-size: 15px;
-    line-height: 1.6;
-    margin-top: 25px;
+    font-size: 13px; /* Más pequeño */
+    line-height: 1.4;
+    margin-top: 15px;
     text-align: center;
 }
 
-/* FORMULARIO */
+/* FORMULARIO COMPACTO */
 .login-form-container {
     display: flex;
     flex-direction: column;
-    gap: 30px;
-    max-width: 450px;
+    gap: 20px; /* Espacio reducido */
     width: 100%;
     margin: 0 auto;
-    animation: slideInRight 0.6s ease-out 0.2s both;
-    order: 3; /* Tercero en el flujo */
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    order: 3;
+    box-sizing: border-box;
 }
 
 /* Ajustar el orden de los elementos en el panel derecho */
@@ -359,211 +266,220 @@ body {
 .form-field-group {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px; /* Espacio reducido */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .field-label {
     color: var(--text-dark-gray);
-    font-size: 14px;
+    font-size: 11px; /* Más pequeño */
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .field-label i {
     color: var(--accent-gray);
-    font-size: 16px;
+    font-size: 12px; /* Más pequeño */
+    min-width: 16px;
 }
 
-/* INPUTS */
+/* INPUTS CON MEDIDA EXACTA - TODOS IGUALES */
 .input-wrapper {
     position: relative;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .form-input-field {
     width: 100%;
-    background: #1e1e1e;
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    padding: 18px 25px;
+    background: #1a1a1a;
+    border: 1px solid var(--border-color); /* Borde más fino */
+    border-radius: 5px; /* Esquinas más redondeadas */
+    padding: 10px 12px; /* Padding compacto */
     color: var(--text-white);
-    font-size: 16px;
+    font-size: 14px; /* Tamaño normal */
     font-family: 'Rajdhani', sans-serif;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    height: 40px; /* MEDIDA EXACTA PARA TODOS */
+    box-sizing: border-box;
+}
+
+/* Garantizar que todos los inputs sean iguales */
+.form-input-field[type="text"],
+.form-input-field[type="password"] {
+    height: 40px; /* MISMA ALTURA */
+    padding: 10px 12px; /* MISMO PADDING */
+    font-size: 14px; /* MISMO TAMAÑO DE TEXTO */
 }
 
 .form-input-field:focus {
     outline: none;
     border-color: var(--accent-gray);
-    background: #242424;
-    box-shadow: 0 0 0 3px rgba(192, 192, 192, 0.1);
+    background: #222222;
+    box-shadow: 0 0 0 1px rgba(192, 192, 192, 0.1); /* Sombra más sutil */
 }
 
 .form-input-field::placeholder {
-    color: rgba(160, 160, 160, 0.7);
+    color: rgba(160, 160, 160, 0.6);
+    font-size: 13px; /* Placeholder más pequeño */
 }
 
-/* PASSWORD FIELD */
+/* PASSWORD FIELD - MISMA MEDIDA */
 .password-field .form-input-field {
-    padding-right: 60px;
+    padding-right: 40px;
+    height: 40px; /* MISMA ALTURA */
 }
 
 .password-toggle-btn {
     position: absolute;
-    right: 20px;
+    right: 10px; /* Más cerca del borde */
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     color: var(--text-dark-gray);
     cursor: pointer;
-    font-size: 18px;
-    padding: 8px;
-    transition: all 0.3s ease;
+    font-size: 14px; /* Más pequeño */
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
 }
 
 .password-toggle-btn:hover {
     color: var(--accent-gray);
-    transform: translateY(-50%) scale(1.1);
+    background: rgba(255, 255, 255, 0.05);
 }
 
-/* ENLACES DE AYUDA */
+/* ENLACES DE AYUDA COMPACTOS */
 .form-help-links {
     display: flex;
     justify-content: space-between;
-    margin-top: 15px;
+    margin-top: 12px; /* Menos espacio */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .help-link {
     color: var(--accent-gray);
-    font-size: 14px;
+    font-size: 11px; /* Más pequeño */
     text-decoration: none;
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 5px 10px;
-    border-radius: 4px;
+    gap: 6px;
+    padding: 6px 8px; /* Padding reducido */
+    border-radius: 3px;
+    box-sizing: border-box;
 }
 
 .help-link:hover {
     color: var(--text-white);
-    background: rgba(192, 192, 192, 0.1);
+    background: rgba(192, 192, 192, 0.08); /* Efecto más sutil */
 }
 
 .help-link i {
-    font-size: 14px;
+    font-size: 11px; /* Iconos pequeños */
 }
 
-/* =================================================== */
-/* BOTÓN INICIAR SESIÓN - ESTILO COMO "ENVIAR REPORTE" */
-/* =================================================== */
+/* BOTÓN INICIAR SESIÓN - COMPACTO Y UNIFORME */
 .submit-login-btn {
-    background: var(--contact-btn-gradient);
+    background: var(--btn-gradient);
     border: none;
-    border-radius: 14px;
-    padding: 18px;
+    border-radius: 5px; /* Esquinas más redondeadas */
+    padding: 10px; /* Más compacto */
     color: #ffffff;
-    font-size: 16px;
+    font-size: 13px; /* Texto más pequeño */
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    width: 100%;
-    min-height: 50px;
+    gap: 8px;
+    width: 100%; /* MISMO ANCHO QUE LOS INPUTS */
+    height: 40px; /* MISMA ALTURA QUE LOS INPUTS */
     text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-top: 20px;
+    letter-spacing: 0.8px;
+    margin-top: 10px;
     font-family: 'Rajdhani', sans-serif;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); /* Sombra más ligera */
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
-/* Efecto de brillo en hover (como el botón de contacto) */
 .submit-login-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 30px var(--contact-btn-shadow);
-    background: var(--contact-btn-hover);
+    transform: translateY(-1px); /* Efecto más sutil */
+    box-shadow: 0 4px 8px var(--btn-shadow);
+    background: var(--btn-hover);
 }
 
-/* Icono en el botón - Mismo estilo que contacto */
 .submit-login-btn i {
-    font-size: 18px;
+    font-size: 14px; /* Icono pequeño */
     color: #c0c0c0;
-    transition: transform 0.3s ease;
 }
 
-/* Animación del icono en hover */
-.submit-login-btn:hover i {
-    transform: translateX(5px);
-}
-
-/* Estado activo (click) */
 .submit-login-btn:active {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 15px var(--contact-btn-shadow);
+    transform: translateY(0);
+    box-shadow: 0 1px 3px var(--btn-shadow);
 }
 
-/* =================================================== */
-/* BOTÓN REGISTRARSE - MISMO ESTILO QUE "ENVIAR REPORTE" */
-/* =================================================== */
+/* BOTÓN REGISTRARSE - COMPACTO Y UNIFORME */
 .register-account-btn {
-    background: var(--contact-btn-gradient);
+    background: var(--btn-gradient);
     border: none;
-    border-radius: 14px;
-    padding: 18px 35px;
+    border-radius: 5px; /* Igual que los otros botones */
+    padding: 10px 20px; /* Más compacto */
     color: #ffffff;
-    font-size: 16px;
+    font-size: 13px; /* Texto más pequeño */
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
-    max-width: 300px;
-    margin: 0 auto;
-    min-height: 50px;
+    max-width: 240px; /* Ancho máximo reducido */
+    height: 40px; /* MISMA ALTURA QUE LOS INPUTS */
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.8px;
+    margin: 0 auto;
     font-family: 'Rajdhani', sans-serif;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 6px rgba(97, 95, 95, 0.3);
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
-/* Efecto hover idéntico al botón de contacto */
 .register-account-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 30px var(--contact-btn-shadow);
-    background: var(--contact-btn-hover);
+    transform: translateY(-1px); /* Efecto más sutil */
+    box-shadow: 0 4px 8px var(--btn-shadow);
+    background: var(--btn-hover);
 }
 
-/* Icono en el botón de registro */
 .register-account-btn i {
-    font-size: 18px;
-    color: #c0c0c0;
-    transition: transform 0.3s ease;
+    font-size: 14px;
+    color: #fffcfc;
 }
 
-/* Animación del icono en hover */
-.register-account-btn:hover i {
-    transform: translateX(5px);
-}
-
-/* Estado activo (click) */
 .register-account-btn:active {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 15px var(--contact-btn-shadow);
+    transform: translateY(0);
+    box-shadow: 0 1px 3px var(--btn-shadow);
 }
 
 /* Efecto de brillo sutil en ambos botones */
@@ -578,10 +494,10 @@ body {
     background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.1),
+        rgba(255, 255, 255, 0.08), /* Más sutil */
         transparent
     );
-    transition: left 0.7s ease;
+    transition: left 0.5s ease; /* Transición más rápida */
 }
 
 .submit-login-btn:hover::after,
@@ -589,38 +505,35 @@ body {
     left: 100%;
 }
 
-/* =================================================== */
-/* RESPONSIVE - FORMULARIO PRIMERO EN MÓVIL */
-/* =================================================== */
+/* RESPONSIVE - COMPACTO */
 @media (max-width: 900px) {
     .login-wrapper {
         flex-direction: column;
-        max-width: 500px;
+        max-width: 450px; /* Más compacto */
         min-height: auto;
     }
 
     /* INVERTIR EL ORDEN: Formulario primero, luego logo */
     .login-left-panel {
-        padding: 40px 30px;
-        order: 2; /* Cambiado de 1 a 2 - Ahora va DESPUÉS */
+        padding: 25px 20px; /* Más compacto */
+        order: 2;
         border-right: none;
         border-top: 1px solid var(--border-color);
-        border-bottom: none;
     }
 
     .login-right-panel {
-        padding: 40px 30px;
-        order: 1; /* Cambiado de 2 a 1 - Ahora va PRIMERO */
+        padding: 25px 20px; /* Más compacto */
+        order: 1;
         position: relative;
     }
 
-    /* Agregar una línea separadora entre formulario y logo */
+    /* Línea separadora más fina */
     .login-right-panel::after {
         content: '';
         position: absolute;
         bottom: 0;
-        left: 30px;
-        right: 30px;
+        left: 20px;
+        right: 20px;
         height: 1px;
         background: var(--border-color);
     }
@@ -631,33 +544,41 @@ body {
     }
 
     .form-header {
-        margin-bottom: 30px;
+        margin-bottom: 20px;
     }
 
     .brand-name {
-        font-size: 32px;
+        font-size: 22px; /* Más pequeño en móvil */
     }
 
     .form-main-title {
-        font-size: 32px;
+        font-size: 22px; /* Más pequeño en móvil */
     }
 
     .centinela-logo {
-        max-width: 150px;
+        max-width: 100px; /* Más pequeño en móvil */
     }
 
     .user-icon-form {
-        width: 90px;
-        height: 90px;
-        font-size: 36px;
-        margin-bottom: 20px;
+        width: 60px; /* Más pequeño en móvil */
+        height: 60px;
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+
+    /* EN MÓVIL TAMBIÉN MISMAS MEDIDAS */
+    .form-input-field,
+    .password-field .form-input-field {
+        height: 38px; /* UNIFORME EN MÓVIL */
+        padding: 9px 11px;
+        font-size: 13px;
     }
 
     .submit-login-btn,
     .register-account-btn {
-        padding: 16px;
-        font-size: 15px;
-        min-height: 48px;
+        height: 38px; /* MISMA ALTURA QUE INPUTS */
+        font-size: 12px;
+        padding: 9px 16px;
     }
 }
 
@@ -668,82 +589,90 @@ body {
     }
 
     .login-wrapper {
-        border-radius: 15px;
+        border-radius: 8px;
     }
 
     .login-left-panel,
     .login-right-panel {
-        padding: 30px 20px;
+        padding: 20px 15px; /* Muy compacto */
     }
 
-    /* En móviles muy pequeños, hacer el icono de usuario más prominente */
-    .user-icon-form-container {
-        margin-bottom: 20px;
-    }
-
-    .user-icon-form {
-        width: 80px;
-        height: 80px;
-        font-size: 32px;
-        margin-bottom: 15px;
-        border-width: 3px;
-    }
-
-    .brand-name {
-        font-size: 26px;
-        letter-spacing: 2px;
-        margin-top: 10px; /* Espacio extra arriba del logo en móvil */
-    }
-
-    .form-main-title {
-        font-size: 26px;
-        margin-top: 5px; /* Menos espacio arriba del título en móvil */
-    }
-
-    .centinela-logo {
-        max-width: 120px;
-        margin-top: 10px; /* Espacio arriba del logo */
-    }
-
-    .form-help-links {
-        flex-direction: column;
-        gap: 15px;
-        align-items: flex-start;
+    /* MEDIDAS EXACTAS EN MÓVILES PEQUEÑOS */
+    .form-input-field,
+    .password-field .form-input-field {
+        height: 36px; /* UNIFORME */
+        padding: 8px 10px;
+        font-size: 13px;
     }
 
     .submit-login-btn,
     .register-account-btn {
-        padding: 15px;
-        font-size: 14px;
-        min-height: 45px;
-        border-radius: 12px;
+        height: 36px; /* EXACTA MISMA ALTURA */
+        font-size: 12px;
+        padding: 8px 14px;
+    }
+
+    .user-icon-form {
+        width: 50px; /* Muy pequeño en móvil */
+        height: 50px;
+        font-size: 20px;
+        margin-bottom: 12px;
+        border-width: 2px;
+    }
+
+    /* ===== ACTUALIZACIÓN RESPONSIVE PARA EL CONTENEDOR ===== */
+    .user-icon-form-container {
+        height: 80px; /* Ajustado para móvil (50px + 30px extra) */
+        padding: 5px 0; /* Menos padding en móvil */
+        margin-bottom: 80px; /* Reducir margen inferior en móvil */
+    }
+    /* ===== FIN DE MODIFICACIÓN RESPONSIVE ===== */
+
+    .brand-name {
+        font-size: 18px;
+        letter-spacing: 1.5px;
+    }
+
+    .form-main-title {
+        font-size: 18px;
+    }
+
+    .centinela-logo {
+        max-width: 80px;
+    }
+
+    .form-help-links {
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .help-link {
+        justify-content: center;
+        width: 100%;
     }
     
     .register-account-btn {
         max-width: 100%;
-        margin-top: 20px; /* Espacio extra arriba del botón registrar */
+        margin-top: 15px;
     }
 }
 
-/* OPCIÓN ADICIONAL: Para tablets medianas (600px - 900px) */
-@media (min-width: 600px) and (max-width: 900px) {
-    .login-wrapper {
-        max-width: 550px;
-    }
-    
-    /* En tablets, el formulario puede tener un poco más de espacio */
-    .login-right-panel {
-        padding: 50px 40px;
-    }
-    
-    .login-left-panel {
-        padding: 40px;
-    }
-    
-    /* Hacer el icono de usuario un poco más grande en tablets */
-    .user-icon-form {
-        width: 100px;
-        height: 100px;
-        font-size: 40px;
-    }
+/* GARANTIZAR QUE NADA SOBRESALGA */
+* {
+    box-sizing: border-box;
+}
+
+.login-left-panel > *,
+.login-right-panel > * {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* GARANTIZAR QUE LOS INPUTS NO SE SALGAN */
+.form-input-field,
+.submit-login-btn,
+.register-account-btn {
+    max-width: 100%;
+    width: 100%;
 }
