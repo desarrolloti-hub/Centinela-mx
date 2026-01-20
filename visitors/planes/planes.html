@@ -27,16 +27,6 @@
     <main class="planes-main-container">
         <div class="planes-wrapper">
             
-            <!-- Logo Centinela principal -->
-            <div class="planes-logo-section">
-                <!-- IMAGEN REAL DEL LOGO - Reemplaza esto con tu imagen -->
-                <div class="planes-logo-placeholder">
-                    LOGO<br>CENTINELA
-                </div>
-                <!-- Para usar tu imagen, descomenta la línea siguiente y ajusta la ruta -->
-                <!-- <img src="/assets/images/logo.png" alt="Logo Centinela" class="planes-logo"> -->
-            </div>
-
             <!-- Header con título y descripción -->
             <div class="planes-header">
                 <h1>Planes de Pago</h1>
@@ -68,7 +58,7 @@
                         </div>
 
                         <div class="plan-details">
-                            <h3>Características Básicas</h3>
+                            <h3>Características taltal</h3>
                             <ul class="features">
                                 <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
                                 <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
@@ -77,7 +67,44 @@
                             </ul>
                         </div>
 
-                        <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
+                        <a href="#" class="order-btn" tabindex="0">ORDENAR AHORA</a>
+                    </div>
+                </div>
+
+                <!-- Plan Business - Platino -->
+                <div class="plan-card business">
+                    <div class="plan-image-section">
+                        <div class="plan-image-container">
+                            <!-- IMAGEN PARA EL PLAN PLATEADO -->
+                            <img src="/assets/images/logo.png" alt="Plan Plateado" class="plan-image">
+                            <!-- Placeholder si no hay imagen -->
+                            <!-- <div class="image-placeholder">PLATEADO</div> -->
+                        </div>
+                    </div>
+
+                    <div class="plan-content">
+                        <div class="plan-title-section">
+                            <div class="plan-type">PLATINO</div>
+                            <div class="price-container">
+                                <div class="currency">$</div>
+                                <div class="price">1999.99</div>
+                            </div>
+                            <div class="plan-name">BUSINESS</div>
+                            <div class="popular-badge">MOST POPULAR</div>
+                        </div>
+ 
+                        <div class="plan-details">
+                            <h3>Características taltal</h3>
+                            <ul class="features">
+                                <li><i class="fas fa-star"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-star"></i> Consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-star"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-star"></i> Consectetur adipiscing elit.</li>
+                                <li><i class="fas fa-star"></i> Integraciones con herramientas empresariales</li>
+                            </ul>
+                        </div>
+
+                        <a href="#" class="order-btn" tabindex="0">ORDEAR AHORA</a>
                     </div>
                 </div>
 
@@ -100,138 +127,30 @@
                                 <div class="price">999.99</div>
                             </div>
                             <div class="plan-name">ADVANCED</div>
-                            <div class="popular-badge">MOST POPULAR</div>
+                            
                         </div>
 
                         <div class="plan-details">
-                            <h3>Características Premium</h3>
-                            <ul class="features">
-                                <li><i class="fas fa-star"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
-                                <li><i class="fas fa-star"></i> Consectetur adipiscing elit.</li>
-                                <li><i class="fas fa-star"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
-                                <li><i class="fas fa-star"></i> Consectetur adipiscing elit.</li>
-                                <li><i class="fas fa-star"></i> Acceso prioritario a nuevas funciones</li>
-                                <li><i class="fas fa-star"></i> Soporte 24/7 por teléfono y chat</li>
-                            </ul>
-                        </div>
-
-                        <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
-                    </div>
-                </div>
-
-                <!-- Plan Business - Plateado -->
-                <div class="plan-card business">
-                    <div class="plan-image-section">
-                        <div class="plan-image-container">
-                            <!-- IMAGEN PARA EL PLAN PLATEADO -->
-                            <img src="/assets/images/logo.png" alt="Plan Plateado" class="plan-image">
-                            <!-- Placeholder si no hay imagen -->
-                            <!-- <div class="image-placeholder">PLATEADO</div> -->
-                        </div>
-                    </div>
-
-                    <div class="plan-content">
-                        <div class="plan-title-section">
-                            <div class="plan-type">PLATINO</div>
-                            <div class="price-container">
-                                <div class="currency">$</div>
-                                <div class="price">1999.99</div>
-                            </div>
-                            <div class="plan-name">BUSINESS</div>
-                        </div>
-
-                        <div class="plan-details">
-                            <h3>Características Empresariales</h3>
+                            <h3>Características taltal</h3>
                             <ul class="features">
                                 <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
                                 <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
                                 <li><i class="fas fa-check-circle"></i> Lorem ipsum dolor sit amet, consectetur adipiscing elit.</li>
                                 <li><i class="fas fa-check-circle"></i> Consectetur adipiscing elit.</li>
-                                <li><i class="fas fa-check-circle"></i> Integraciones con herramientas empresariales</li>
+                                <li><i class="fas fa-check-circle"></i> Acceso prioritario a nuevas funciones</li>
+                                <li><i class="fas fa-check-circle"></i> Soporte 24/7 por teléfono y chat</li>
                             </ul>
                         </div>
 
-                        <a href="#" class="order-btn" tabindex="0">ORDER NOW</a>
+                        <a href="#" class="order-btn" tabindex="0">ORDENAR AHORA</a>
                     </div>
                 </div>
+
             </div>
         </div>
     </main>
 
-    <!-- Scripts de interacción -->
-    <script>
-        // Añadir interactividad a los botones
-        document.querySelectorAll('.order-btn').forEach(button => {
-            button.addEventListener('click', function (e) {
-                e.preventDefault();
-                const planCard = this.closest('.plan-card');
-                const planType = planCard.querySelector('.plan-type').textContent;
-                const planPrice = planCard.querySelector('.price').textContent;
-
-                // Efecto visual al hacer clic
-                this.style.transform = 'scale(0.98)';
-                setTimeout(() => {
-                    this.style.transform = '';
-                }, 150);
-
-                alert(`Has seleccionado el plan ${planType} por $${planPrice}. ¡Gracias por tu interés!`);
-            });
-
-            // Manejar navegación por teclado
-            button.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    this.click();
-                }
-            });
-        });
-
-        // Efecto de enfoque para tarjetas
-        document.querySelectorAll('.plan-card').forEach(card => {
-            card.addEventListener('mouseenter', function () {
-                this.style.zIndex = '10';
-            });
-
-            card.addEventListener('mouseleave', function () {
-                this.style.zIndex = '1';
-            });
-
-            // Permitir navegación por teclado entre tarjetas
-            card.setAttribute('tabindex', '0');
-
-            card.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    const button = this.querySelector('.order-btn');
-                    if (button) {
-                        button.focus();
-                        button.click();
-                    }
-                }
-            });
-        });
-
-        // Instrucciones para imágenes
-        console.log("=== INSTRUCCIONES PARA USAR IMÁGENES ===");
-        console.log("");
-        console.log("1. Coloca tu logo en la carpeta /assets/images/ como 'logo.png'");
-        console.log("");
-        console.log("2. Si quieres usar imágenes diferentes para cada plan:");
-        console.log("   - Crea archivos: bronce.png, dorado.png, plateado.png");
-        console.log("   - Colócalos en /assets/images/");
-        console.log("   - Actualiza las rutas en cada tarjeta:");
-        console.log("");
-        console.log("   Plan Bronce (línea ~127):");
-        console.log("   Cambiar: <img src='/assets/images/logo.png'>");
-        console.log("   Por: <img src='/assets/images/bronce.png'>");
-        console.log("");
-        console.log("   Plan Dorado (línea ~152):");
-        console.log("   Cambiar: <img src='/assets/images/logo.png'>");
-        console.log("   Por: <img src='/assets/images/dorado.png'>");
-        console.log("");
-        console.log("   Plan Plateado (línea ~177):");
-        console.log("   Cambiar: <img src='/assets/images/logo.png'>");
-        console.log("   Por: <img src='/assets/images/plateado.png'>");
-    </script>
+    
 
     <!-- COMPONENTES -->
     <script src="/components/navbar-visitor-component.js"></script>

@@ -93,9 +93,9 @@
 .plan-cards-container {
     display: flex;
     justify-content: center;
-    gap: 2rem;
+    gap: 3rem;
     flex-wrap: wrap;
-    margin-bottom: 2rem;
+    margin-bottom: 3rem;
 }
 
 /* Tarjeta de plan individual */

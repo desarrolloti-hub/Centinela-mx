@@ -1,12 +1,11 @@
 /**
- * GLOBAL COLORS SYSTEM - Sistema de colores global para Centinela
+ * Sistema de colores global para Centinela
  * 
  * Este archivo centraliza todas las variables de color utilizadas en:
  * - Navbar (navbar-complete.js)
  * - Footer (footer-component.js)
  * 
- * NO incluye funcionalidad de modo oscuro, solo variables de color para
- * mantener consistencia visual en toda la aplicación.
+ * Variables de color para mantener consistencia visual en toda la aplicación.
  */
 
 /* =============================================
@@ -23,7 +22,7 @@
     /* Fondo secundario (contenido footer) */
     --color-bg-tertiary: #0000007a;
     /* Fondo terciario (inferior footer) */
-    --color-bg-light: #000000;
+    --color-bg-light: #ffffff;
     /* Fondo claro (tarjetas, elementos) */
 
     /* ====== COLORES DE TEXTO ====== */
