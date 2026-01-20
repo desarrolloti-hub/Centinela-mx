@@ -51,7 +51,7 @@
         const styles = document.createElement('style');
         styles.id = styleId;
         styles.textContent = /*css*/ `
-            /* NAVBAR COMPLETO - Estilos específicos */
+            /* NAVBAR COMPLETO */
             #complete-navbar {
                 position: fixed;
                 top: 0;
@@ -75,15 +75,17 @@
                 padding: 0;
             }
             
-            /* Parte superior con logo y menú */
+            /* Parte superior con logo y menú - CORREGIDO */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 20px 20px;
+                padding: 15px 20px; 
+                min-height: 70px; /* Altura mínima fija */
                 width: 100%;
                 max-width: 1200px;
                 margin: 0 auto;
+                box-sizing: border-box; /* Importante */
             }
             
             /* Logo */
@@ -97,83 +99,18 @@
                 text-decoration: none;
                 z-index: 1003;
                 text-shadow: var(--text-shadow-effect);
-                position: relative; /* Para posicionar el efecto de luz */
+                position: relative;
+                height: 60px; /* Altura fija para el contenedor */
+                overflow: visible; /* Permite que los efectos salgan */
             }
 
             .navbar-logo-img {
-                height: 50px; /* Aumentado de 40px a 50px */
+                height: px; /* Aumentado a 60px */
+                width: auto; /* Mantiene proporción */
+                max-height: 90px; /* Límite máximo */
                 transition: var(--transition-default);
                 position: relative;
-                z-index: 2; /* Asegura que el logo esté sobre el efecto */
-            }
-
-            /* Efecto de luz circular parpadeante detrás del logo */
-            .navbar-brand::before {
-                content: '';
-                position: absolute;
-                left: -3px; /* Ajusta según el tamaño de tu logo */
-                top: 50%;
-                transform: translateY(0%);
-                width: 60px; /* Tamaño del círculo de luz */
-                height: 60px;
-                background: radial-gradient(
-                    circle,
-                    rgb(255, 255, 255) 0%,
-                    rgba(255, 255, 255, 0.5) 30%,
-                    rgba(255, 255, 255, 0.05) 65%,
-                    transparent 70%
-                );
-                border-radius: 50%;
-                z-index: 1;
-                animation: parpadeo-luz 3s infinite ease-in-out;
-                opacity: 0.7;
-            }
-
-            /* Para logos con fondo oscuro - versión con color */
-            .navbar-brand.luz-color::before {
-                background: radial-gradient(
-                    circle,
-                    rgba(0, 150, 255, 0.4) 0%,
-                    rgba(0, 150, 255, 0.2) 30%,
-                    rgba(0, 150, 255, 0.1) 50%,
-                    transparent 70%
-                );
-            }
-
-            /* Animación de parpadeo */
-            @keyframes parpadeo-luz {
-                0%, 100% {
-                    opacity: 0.3;
-                    transform: translateY(-50%) scale(0.95);
-                }
-                25% {
-                    opacity: 0.7;
-                    transform: translateY(-50%) scale(1.05);
-                }
-                50% {
-                    opacity: 0.4;
-                    transform: translateY(-50%) scale(1);
-                }
-                75% {
-                    opacity: 0.8;
-                    transform: translateY(-50%) scale(1.02);
-                }
-            }
-
-            /* Versión alternativa con efecto más sutil */
-            .navbar-brand.luz-sutil::before {
-                animation: parpadeo-sutil 4s infinite ease-in-out;
-            }
-
-            @keyframes parpadeo-sutil {
-                0%, 100% {
-                    opacity: 0.2;
-                    transform: translateY(-50%) scale(1);
-                }
-                50% {
-                    opacity: 0.5;
-                    transform: translateY(-50%) scale(1.1);
-                }
+                z-index: 2;
             }
 
             /* Efecto hover opcional */
@@ -270,22 +207,41 @@
             /* ====== RESPONSIVE - MÓVIL ====== */
             @media (max-width: 992px) {
                 .navbar-top-section {
-                    padding: 15px 8px;
+                    padding: 10px 15px;
+                    min-height: 60px;
                     position: relative;
-                    flex-wrap: nowrap;
+                    display: grid;
+                    grid-template-columns: 40px 1fr 40px;
+                    align-items: center;
                 }
                 
                 .navbar-hamburger-btn {
                     display: block;
-                    order: 3;
-                    margin-right: 15px;
+                    grid-column: 1;
+                    justify-self: start;
+                    margin-right: 0;
                 }
                 
                 .navbar-brand {
-                    order: 2;
-                    flex: 1;
-                    text-align: center;
-                    justify-content: center;
+                    grid-column: 2;
+                    justify-self: center;
+                    height: 50px;
+                    position: absolute;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: auto;
+                }
+                
+                .navbar-logo-img {
+                    height: 50px;
+                    max-height: 50px;
+                }
+                
+                /* Ajusta el efecto de luz para móvil */
+                .navbar-brand::before {
+                    width: 55px;
+                    height: 55px;
+                    left: -5px;
                 }
                 
                 .navbar-main-menu {
@@ -359,7 +315,14 @@
                 }
                 
                 .navbar-logo-img {
-                    height: 35px;
+                    height: 45px;
+                    max-height: 45px;
+                }
+                
+                .navbar-brand::before {
+                    width: 50px;
+                    height: 50px;
+                    left: -4px;
                 }
                 
                 .navbar-main-menu {
