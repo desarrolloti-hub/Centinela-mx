@@ -151,26 +151,17 @@ body {
     box-sizing: border-box;
 }
 
-/* ===== ICONO DE USUARIO MODIFICADO (SOLUCIÓN 1) ===== */
-/* ===== CAMBIOS REALIZADOS: ===== */
-/* 1. Añadí height: 110px al contenedor */
-/* 2. Añadí padding: 10px 0 para espacio extra */
-/* 3. Añadí overflow: visible !important */
-/* 4. Reduje animación de -5px a -3px */
-/* 5. Reduje scale de 1.04 a 1.02 */
-
+/* ICONO DE USUARIO COMPACTO - OPTIMIZADO (MENOS ESPACIO) */
 .user-icon-form-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 100px; /* Menos espacio */
+    margin-bottom: 40px; /* REDUCIDO de 100px a 40px (mucho menos espacio) */
     width: 100%;
     order: 1;
-    /* ===== NUEVAS LÍNEAS AÑADIDAS ===== */
-    height: 110px; /* 20px más que el círculo */
-    padding: 10px 0; /* Espacio extra arriba y abajo */
-    overflow: visible !important; /* Permite que el círculo salga sin cortarse */
-    /* ===== FIN DE MODIFICACIONES ===== */
+    /* Espacio mínimo necesario para evitar cortes */
+    height: 95px; /* Solo 5px más que el círculo */
+    overflow: visible;
 }
 
 .user-icon-form {
@@ -187,6 +178,8 @@ body {
         inset 0 0 15px rgba(255, 255, 255, 0.15);
     border: 2px solid rgba(255, 255, 255, 0.15); /* Borde más fino */
     transition: all 0.1s ease;
+    /* Punto de origen fijo para transformaciones */
+    transform-origin: center center;
 }
 
 @keyframes floatIcon {
@@ -194,19 +187,17 @@ body {
         transform: translateY(0px);
     }
     50% {
-        transform: translateY(-3px); /* ===== MODIFICADO: de -5px a -3px ===== */
+        transform: translateY(-3px); /* Animación más sutil */
     }
 }
 
 .user-icon-form:hover {
-    transform: scale(1.02); /* ===== MODIFICADO: de 1.04 a 1.02 ===== */
+    transform: scale(1.02); /* Efecto más sutil */
     background: var(--btn-hover);
     animation: none;
 }
 
-/* ===== FIN DE MODIFICACIONES DEL ICONO ===== */
-
-/* ENCABEZADO COMPACTO */
+/* ENCABEZADO COMPACTO - MÁS CERCA DEL ICONO */
 .form-header {
     text-align: center;
     margin-bottom: 25px; /* Menos espacio */
@@ -214,13 +205,15 @@ body {
     align-self: center;
     order: 2;
     box-sizing: border-box;
+    /* Añadir margen superior negativo para acercar más al icono */
+    margin-top: -10px; /* Esto jala el header hacia arriba */
 }
 
 .form-main-title {
     font-size: 24px; /* Más pequeño */
     font-weight: 700;
     color: var(--text-white);
-    margin-bottom: 10px;
+    margin-bottom: 8px; /* REDUCIDO de 10px a 8px */
     letter-spacing: 1.5px;
     text-transform: uppercase;
     font-family: 'Orbitron', sans-serif;
@@ -242,7 +235,7 @@ body {
     color: var(--text-gray);
     font-size: 13px; /* Más pequeño */
     line-height: 1.4;
-    margin-top: 15px;
+    margin-top: 10px; /* REDUCIDO de 15px a 10px */
     text-align: center;
 }
 
@@ -460,7 +453,7 @@ body {
     letter-spacing: 0.8px;
     margin: 0 auto;
     font-family: 'Rajdhani', sans-serif;
-    box-shadow: 0 2px 6px rgba(97, 95, 95, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
@@ -474,7 +467,7 @@ body {
 
 .register-account-btn i {
     font-size: 14px;
-    color: #fffcfc;
+    color: #c0c0c0;
 }
 
 .register-account-btn:active {
@@ -545,6 +538,7 @@ body {
 
     .form-header {
         margin-bottom: 20px;
+        margin-top: -5px; /* Ajuste para tablet */
     }
 
     .brand-name {
@@ -553,6 +547,11 @@ body {
 
     .form-main-title {
         font-size: 22px; /* Más pequeño en móvil */
+        margin-bottom: 6px; /* Más compacto en tablet */
+    }
+
+    .form-sub-title {
+        margin-top: 8px; /* Más compacto en tablet */
     }
 
     .centinela-logo {
@@ -564,6 +563,12 @@ body {
         height: 60px;
         font-size: 24px;
         margin-bottom: 15px;
+    }
+
+    /* CONTENEDOR OPTIMIZADO PARA TABLET */
+    .user-icon-form-container {
+        height: 70px; /* 60px + 10px extra */
+        margin-bottom: 30px; /* REDUCIDO para tablet */
     }
 
     /* EN MÓVIL TAMBIÉN MISMAS MEDIDAS */
@@ -620,21 +625,32 @@ body {
         border-width: 2px;
     }
 
-    /* ===== ACTUALIZACIÓN RESPONSIVE PARA EL CONTENEDOR ===== */
+    /* CONTENEDOR OPTIMIZADO PARA MÓVIL */
     .user-icon-form-container {
-        height: 80px; /* Ajustado para móvil (50px + 30px extra) */
-        padding: 5px 0; /* Menos padding en móvil */
-        margin-bottom: 80px; /* Reducir margen inferior en móvil */
+        height: 55px; /* 50px + 5px extra */
+        margin-bottom: 25px; /* REDUCIDO para móvil */
     }
-    /* ===== FIN DE MODIFICACIÓN RESPONSIVE ===== */
 
-    .brand-name {
-        font-size: 18px;
-        letter-spacing: 1.5px;
+    /* AJUSTES DE ESPACIADO PARA MÓVIL */
+    .form-header {
+        margin-top: -5px; /* Menos negativo en móvil */
+        margin-bottom: 20px;
     }
 
     .form-main-title {
         font-size: 18px;
+        margin-bottom: 5px;
+    }
+
+    .form-sub-title {
+        font-size: 12px;
+        margin-top: 8px;
+        line-height: 1.3;
+    }
+
+    .brand-name {
+        font-size: 18px;
+        letter-spacing: 1.5px;
     }
 
     .centinela-logo {
