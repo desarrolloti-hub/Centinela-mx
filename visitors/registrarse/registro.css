@@ -110,7 +110,7 @@ body {
 /* ENCABEZADO */
 .form-header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px; /* Reducido para la leyenda */
     width: 100%;
     box-sizing: border-box;
 }
@@ -123,6 +123,31 @@ body {
     letter-spacing: 1px;
     font-family: 'Orbitron', sans-serif;
     text-transform: uppercase;
+}
+
+/* LEYENDA DEL FORMULARIO */
+.form-legend {
+    color: var(--accent-gray);
+    font-size: 11px; /* Tamaño pequeño */
+    font-weight: 500;
+    text-align: center;
+    margin: 5px 0 8px 0; /* Espaciado ajustado */
+    padding: 8px 12px;
+    background: rgba(192, 192, 192, 0.08); /* Fondo sutil */
+    border-radius: 4px;
+    border-left: 3px solid var(--accent-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1.3;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-legend i {
+    font-size: 12px;
+    color: var(--accent-gray);
 }
 
 .form-sub-title {
@@ -254,40 +279,6 @@ body {
     width: 100%;
 }
 
-/* ENLACE */
-.form-help-links {
-    display: flex;
-    justify-content: center;
-    margin: 10px 0;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.help-link {
-    color: var(--accent-gray);
-    font-size: 12px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 8px 12px;
-    border-radius: 4px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.help-link:hover {
-    color: var(--text-white);
-    background: rgba(192, 192, 192, 0.08);
-}
-
-.help-link i {
-    font-size: 11px;
-}
-
 /* BOTÓN REGISTRARSE - MISMO ANCHO QUE LOS INPUTS */
 .submit-register-btn {
     background: var(--btn-gradient);
@@ -358,7 +349,7 @@ body {
 }
 
 .centinela-logo {
-    max-width: 250px; /* Tamao del logo*/
+    max-width: 250px; /* Tamaño del logo*/
     height: auto;
     filter: drop-shadow(0 0 8px rgba(192, 192, 192, 0.2)); /* Sombra más ligera */
     transition: all 0.3s ease;
@@ -468,6 +459,21 @@ body {
         padding: 25px 20px;
         order: 2;
     }
+    
+    /* RESPONSIVE PARA LA LEYENDA */
+    .form-legend {
+        font-size: 10px;
+        padding: 6px 10px;
+        margin: 4px 0 6px 0;
+    }
+    
+    .form-legend i {
+        font-size: 11px;
+    }
+    
+    .form-header {
+        margin-bottom: 12px;
+    }
 
     /* EN MÓVIL TAMBIÉN MISMAS MEDIDAS */
     .form-input-field,
@@ -509,6 +515,23 @@ body {
     .register-left-panel,
     .register-right-panel {
         padding: 20px 15px;
+    }
+    
+    /* RESPONSIVE PARA LA LEYENDA EN MÓVIL */
+    .form-legend {
+        font-size: 10px;
+        padding: 5px 8px;
+        margin: 3px 0 5px 0;
+        flex-wrap: wrap;
+        text-align: center;
+    }
+    
+    .form-legend i {
+        font-size: 10px;
+    }
+    
+    .form-header {
+        margin-bottom: 10px;
     }
 
     /* MEDIDAS EXACTAS EN MÓVILES PEQUEÑOS */

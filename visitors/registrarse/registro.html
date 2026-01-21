@@ -37,10 +37,25 @@
                 
                 <div class="form-header">
                     <h2 class="form-main-title">CREAR CUENTA</h2>
+                    <!-- LEYENDA AGREGADA -->
+                    <p class="form-legend">
+                        <i class="fas fa-info-circle"></i> Este es un registro de Administradores
+                    </p>
                     <p class="form-sub-title">Regístrate para acceder al sistema de seguridad</p>
                 </div>
 
                 <form class="register-form-container" action="#" method="post">
+                    <!-- CAMPO NUEVO: NOMBRE DE LA ORGANIZACIÓN -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="organization">
+                            <i class="fas fa-building"></i> NOMBRE DE LA ORGANIZACIÓN
+                        </label>
+                        <div class="input-wrapper">
+                            <input class="form-input-field" type="text" id="organization" name="organization"
+                                placeholder="Ingresa el nombre de tu organización" required>
+                        </div>
+                    </div>
+
                     <!-- Campo Nombre Completo -->
                     <div class="form-field-group">
                         <label class="field-label" for="fullname">
@@ -94,13 +109,6 @@
                     <!-- Línea divisoria -->
                     <div class="form-divider"></div>
 
-                    <!-- Enlace para iniciar sesión -->
-                    <div class="form-help-links">
-                        <a href="login.html" class="help-link">
-                            <i class="fas fa-sign-in-alt"></i> ¿YA TIENES CUENTA? INICIA SESIÓN
-                        </a>
-                    </div>
-
                     <button type="submit" class="submit-register-btn">
                         <i class="fas fa-user-plus"></i> REGISTRARSE
                     </button>
@@ -121,7 +129,7 @@
                     <!-- Botón para volver al login -->
                     <a href="/visitors/login/login.html" class="back-to-login-btn">
                         <i class="fas fa-arrow-left"></i> VOLVER AL LOGIN
-                    </a></a>
+                    </a>
 
                     <!-- Características del sistema -->
                     <div class="features-container">
