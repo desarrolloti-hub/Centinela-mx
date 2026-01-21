@@ -352,8 +352,9 @@
                     </a>
                     
                     <ul class="navbar-main-menu" id="navbarMainMenu">
+                    
                         <li><a href="/index.html" class="active"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
-                        <li><a href="/visitors/products/products.html"><i class="fas fa-box-open"></i> <span>¿Quienes somos?</span></a></li>
+                        <li><a href="/index.html#quienes-somos"><i class="fas fa-box-open"></i><span>¿Quiénes somos?</span></a></li>
                         <li><a href="/visitors/planes/planes.html"><i class="fas fa-box-open"></i> <span>Planes</span></a></li>
                         <li><a href="/visitors/contact/contact.html"><i class="fas fa-map-marker-alt"></i> <span>Contactanos</span></a></li>
                         <li><a href="/visitors/login/login.html"><i class="fas fa-envelope"></i> <span>Inicio de sesion</span></a></li>

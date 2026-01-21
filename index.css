@@ -71,6 +71,10 @@ body {
     min-height: 80px;
     transition: all .35s ease;
 }
+#quienes-somos {
+  scroll-margin-top: 150px;
+}
+
 
 .geografica:hover {
     background: #141414;
