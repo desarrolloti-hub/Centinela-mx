@@ -1,4 +1,4 @@
-// navbar-complete.js - Versión simplificada solo para colores
+// navbar-complete.js - Versión con menú lateral al 25%
 (function () {
     'use strict';
 
@@ -75,62 +75,164 @@
                 padding: 0;
             }
             
-            /* Parte superior con logo y menú - CORREGIDO */
+            /* Parte superior - Distribución: Logo | ADMINISTRADOR (centrado) | Botón */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 15px 20px; 
-                min-height: 70px; /* Altura mínima fija */
+                padding: 5px 10px;
+                min-height: 50px;
                 width: 100%;
                 max-width: 1200px;
                 margin: 0 auto;
-                box-sizing: border-box; /* Importante */
+                box-sizing: border-box;
+                position: relative;
             }
             
-            /* Logo */
-            .navbar-brand {
+            /* Contenedor izquierdo con logo - Pegado a la izquierda */
+            .navbar-left-container {
                 display: flex;
                 align-items: center;
-                gap: 10px;
-                font-weight: 700;
-                font-size: 26px;
-                color: var(--navbar-logo-text);
+                flex: 1;
+                justify-content: flex-start;
+                padding-left: 10px;
+            }
+            
+            /* Logo a la izquierda - MÁS GRANDE */
+            .navbar-logo-link {
+                display: flex;
+                align-items: center;
                 text-decoration: none;
                 z-index: 1003;
-                text-shadow: var(--text-shadow-effect);
-                position: relative;
-                height: 60px; /* Altura fija para el contenedor */
-                overflow: visible; /* Permite que los efectos salgan */
+                height: 70px; /* Aumentado para logo más grande */
+                overflow: visible;
+                margin-left: 0;
             }
 
             .navbar-logo-img {
-                height: px; /* Aumentado a 60px */
-                width: auto; /* Mantiene proporción */
-                max-height: 90px; /* Límite máximo */
+                height: 70px; /* Logo más grande - aumentado de 50px a 70px */
+                width: auto;
+                max-height: 90px;
                 transition: var(--transition-default);
                 position: relative;
                 z-index: 2;
             }
 
             /* Efecto hover opcional */
-            .navbar-brand:hover .navbar-logo-img {
+            .navbar-logo-link:hover .navbar-logo-img {
                 transform: scale(1.05);
             }
-
-            .navbar-brand:hover::before {
-                opacity: 0.8;
-                animation-duration: 2s;
+            
+            /* Texto ADMINISTRADOR centrado */
+            .navbar-title {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                font-weight: 700;
+                font-size: 26px;
+                color: var(--navbar-logo-text);
+                text-shadow: var(--text-shadow-effect);
+                margin: 0;
+                white-space: nowrap;
+                pointer-events: none;
+                z-index: 1;
             }
             
-            /* Menú principal - DESKTOP */
-            .navbar-main-menu {
+            /* Contenedor derecho con botón hamburguesa - Pegado a la derecha */
+            .navbar-right-container {
                 display: flex;
-                list-style: none;
-                gap: 25px;
-                margin: 0;
-                padding: 0;
+                align-items: center;
+                flex: 1;
+                justify-content: flex-end;
+                padding-right: 10px;
             }
+            
+            /* BOTÓN HAMBURGUESA - SIEMPRE VISIBLE - Pegado a la derecha */
+            .navbar-hamburger-btn {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background: none;
+                border: none;
+                cursor: pointer;
+                width: 40px;
+                height: 40px;
+                padding: 0;
+                position: relative;
+                z-index: 1002;
+                transition: var(--transition-default);
+                margin-right: 0;
+            }
+            
+            .hamburger-line {
+                display: block;
+                width: 25px;
+                height: 3px;
+                background-color: var(--navbar-text);
+                margin: 3px 0;
+                border-radius: var(--border-radius-small);
+                transition: var(--transition-default);
+            }
+            
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
+                transform: rotate(45deg) translate(5px, 5px);
+            }
+            
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(2) {
+                opacity: 0;
+            }
+            
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(3) {
+                transform: rotate(-45deg) translate(5px, -5px);
+            }
+            
+            /* MENÚ LATERAL - 25% EN DESKTOP - COMPLETAMENTE OCULTO POR DEFECTO */
+            .navbar-main-menu {
+                position: fixed;
+                top: 0;
+                right: -100%; /* COMPLETAMENTE OCULTO POR DEFECTO */
+                width: 25%;
+                height: 100vh;
+                background-color: var(--navbar-scrolled-bg);
+                list-style: none;
+                margin: 0;
+                padding: 100px 30px 30px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1001;
+                overflow-y: auto;
+                box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+                visibility: hidden; /* Oculta completamente cuando no está activo */
+                opacity: 0; /* Transparencia completa cuando no está activo */
+            }
+            
+            .navbar-main-menu.active {
+                right: 0;
+                visibility: visible; /* Visible cuando está activo */
+                opacity: 1; /* Opaco cuando está activo */
+            }
+            
+            .navbar-main-menu li {
+                opacity: 0;
+                transform: translateX(20px);
+                transition: var(--transition-default);
+            }
+            
+            .navbar-main-menu.active li {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            
+            /* Animación escalonada para los items del menú */
+            .navbar-main-menu.active li:nth-child(1) { transition-delay: 0.1s; }
+            .navbar-main-menu.active li:nth-child(2) { transition-delay: 0.15s; }
+            .navbar-main-menu.active li:nth-child(3) { transition-delay: 0.2s; }
+            .navbar-main-menu.active li:nth-child(4) { transition-delay: 0.25s; }
+            .navbar-main-menu.active li:nth-child(5) { transition-delay: 0.3s; }
             
             .navbar-main-menu a {
                 color: var(--navbar-text);
@@ -140,55 +242,25 @@
                 transition: var(--transition-default);
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 12px;
+                padding: 15px 20px;
+                border-radius: var(--border-radius-medium);
+                width: 100%;
+                box-sizing: border-box;
             }
             
             .navbar-main-menu a:hover {
-                text-shadow: var(--navbar-link-hover);
+                background-color: var(--color-hover);
+                padding-left: 25px;
             }
             
             .navbar-main-menu a.active {
                 color: var(--color-active);
                 font-weight: 600;
+                background-color: var(--color-hover-light);
             }
             
-            /* BOTÓN HAMBURGUESA */
-            .navbar-hamburger-btn {
-                display: none;
-                background: none;
-                border: none;
-                cursor: pointer;
-                width: 40px;
-                height: 40px;
-                padding: 0;
-                position: relative;
-                z-index: 1002;
-                margin: 0 15px 0 0;
-            }
-            
-            .hamburger-line {
-                display: block;
-                width: 25px;
-                height: 3px;
-                background-color: var(--navbar-text);
-                margin: 5px 0;
-                border-radius: var(--border-radius-small);
-                transition: var(--transition-default);
-            }
-            
-            .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
-                transform: rotate(45deg) translate(6px, 6px);
-            }
-            
-            .navbar-hamburger-btn.active .hamburger-line:nth-child(2) {
-                opacity: 0;
-            }
-            
-            .navbar-hamburger-btn.active .hamburger-line:nth-child(3) {
-                transform: rotate(-45deg) translate(6px, -6px);
-            }
-            
-            /* Overlay para móvil */
+            /* Overlay para móvil/desktop */
             .navbar-mobile-overlay {
                 position: fixed;
                 top: 0;
@@ -196,142 +268,117 @@
                 width: 100%;
                 height: 100%;
                 background: rgba(0, 0, 0, 0.5);
-                z-index: 999;
+                z-index: 1000;
                 display: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
             }
             
             .navbar-mobile-overlay.active {
                 display: block;
+                opacity: 1;
             }
             
             /* ====== RESPONSIVE - MÓVIL ====== */
             @media (max-width: 992px) {
                 .navbar-top-section {
-                    padding: 10px 15px;
+                    padding: 5px 10px;
                     min-height: 60px;
-                    position: relative;
-                    display: grid;
-                    grid-template-columns: 40px 1fr 40px;
-                    align-items: center;
                 }
                 
-                .navbar-hamburger-btn {
-                    display: block;
-                    grid-column: 1;
-                    justify-self: start;
-                    margin-right: 0;
+                .navbar-left-container {
+                    flex: none;
+                    width: auto;
+                    padding-left: 5px;
                 }
                 
-                .navbar-brand {
-                    grid-column: 2;
-                    justify-self: center;
-                    height: 50px;
-                    position: absolute;
+                .navbar-title {
+                    font-size: 22px;
                     left: 50%;
                     transform: translateX(-50%);
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                }
+                
+                .navbar-right-container {
+                    flex: none;
                     width: auto;
+                    padding-right: 5px;
                 }
                 
                 .navbar-logo-img {
-                    height: 50px;
-                    max-height: 50px;
+                    height: 60px; /* Mantener grande en móvil también */
+                    max-height: 60px;
                 }
                 
-                /* Ajusta el efecto de luz para móvil */
-                .navbar-brand::before {
-                    width: 55px;
-                    height: 55px;
-                    left: -5px;
-                }
-                
+                /* MENÚ OCUPA 100% EN MÓVIL */
                 .navbar-main-menu {
-                    position: fixed;
-                    top: 0;
-                    right: -100%;
-                    left: auto;
-                    width: 100%;
-                    height: 100vh;
-                    background-color: var(--navbar-scrolled-bg);
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: flex-start;
-                    padding: 100px 20px 30px;
-                    gap: 0;
-                    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                    z-index: 1001;
-                    overflow-y: auto;
-                    box-shadow: none;
-                    opacity: 0;
-                    display: flex !important;
+                    width: 85%;
+                    right: -100%; /* Siempre completamente oculto */
+                    padding: 90px 20px 30px;
                 }
                 
                 .navbar-main-menu.active {
                     right: 0;
-                    left: auto;
+                    visibility: visible;
                     opacity: 1;
-                }
-                
-                .navbar-main-menu li {
-                    width: 100%;
-                    max-width: 300px;
-                    border-bottom: 1px solid var(--color-border-light);
-                    opacity: 0;
-                    transform: translateX(20px);
-                    transition: var(--transition-default);
-                }
-                
-                .navbar-main-menu.active li {
-                    opacity: 1;
-                    transform: translateX(0);
                 }
                 
                 .navbar-main-menu a {
-                    padding: 15px 20px;
                     font-size: 18px;
-                    width: 100%;
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    justify-content: flex-start;
-                    text-align: left;
-                    border-radius: var(--border-radius-medium);
-                    margin: 5px 0;
-                    color: var(--color-text-light);
+                    padding: 18px 20px;
                 }
                 
-                .navbar-main-menu a:hover {
-                    background-color: var(--color-hover);
-                    padding-left: 25px;
-                }
-                
-                body.mobile-menu-open {
+                body.menu-open {
                     overflow: hidden;
                 }
             }
             
+            @media (max-width: 768px) {
+                .navbar-title {
+                    font-size: 20px;
+                }
+                
+                .navbar-logo-img {
+                    height: 55px;
+                }
+                
+                .navbar-main-menu {
+                    width: 90%;
+                }
+            }
+            
             @media (max-width: 480px) {
-                .navbar-brand span {
+                .navbar-title {
                     font-size: 18px;
                 }
                 
                 .navbar-logo-img {
-                    height: 45px;
-                    max-height: 45px;
-                }
-                
-                .navbar-brand::before {
-                    width: 50px;
                     height: 50px;
-                    left: -4px;
                 }
                 
                 .navbar-main-menu {
-                    padding: 90px 15px 20px;
+                    width: 100%;
+                    padding: 80px 15px 20px;
                 }
                 
                 .navbar-main-menu a {
                     font-size: 16px;
-                    padding: 14px 15px;
+                    padding: 16px 15px;
+                }
+            }
+            
+            /* Desktop grande */
+            @media (min-width: 1400px) {
+                .navbar-main-menu {
+                    width: 400px; /* Máximo 400px */
+                }
+            }
+            
+            /* Desktop pequeño */
+            @media (min-width: 993px) and (max-width: 1399px) {
+                .navbar-main-menu {
+                    width: 30%; /* Un poco más en pantallas medianas */
                 }
             }
         `;
@@ -346,28 +393,37 @@
         navbar.innerHTML = /*html*/ `
             <div class="navbar-main-container">
                 <div class="navbar-top-section">
-                    <a href="/index.html" class="navbar-brand">
-                        <img src="/assets/images/logo.png" alt="" class="navbar-logo-img">
-                        <span>CENTINELA</span>
-                    </a>
+                    <!-- Contenedor izquierdo con logo - PEGADO A LA IZQUIERDA -->
+                    <div class="navbar-left-container">
+                        <a href="/index.html" class="navbar-logo-link">
+                            <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
+                        </a>
+                    </div>
                     
-                    <ul class="navbar-main-menu" id="navbarMainMenu">
+                    <!-- Texto ADMINISTRADOR centrado -->
+                    <h1 class="navbar-title">ADMINISTRADOR</h1>
                     
-                        <li><a href="/index.html" class="active"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
-                        <li><a href="/index.html#quienes-somos"><i class="fas fa-box-open"></i><span>¿Quiénes somos?</span></a></li>
-                        <li><a href="/visitors/planes/planes.html"><i class="fas fa-box-open"></i> <span>Planes</span></a></li>
-                        <li><a href="/visitors/contact/contact.html"><i class="fas fa-map-marker-alt"></i> <span>Contactanos</span></a></li>
-                        <li><a href="/visitors/login/login.html"><i class="fas fa-envelope"></i> <span>Inicio de sesion</span></a></li>
-                    </ul>
-
-                    <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
-                        <span class="hamburger-line"></span>
-                        <span class="hamburger-line"></span>
-                        <span class="hamburger-line"></span>
-                    </button>
+                    <!-- Contenedor derecho con botón hamburguesa - PEGADO A LA DERECHA -->
+                    <div class="navbar-right-container">
+                        <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
+                            <span class="hamburger-line"></span>
+                            <span class="hamburger-line"></span>
+                            <span class="hamburger-line"></span>
+                        </button>
+                    </div>
                 </div>
                 
+                <!-- Overlay para cerrar menú -->
                 <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
+                
+                <!-- Menú lateral - INICIALMENTE OCULTO -->
+                <ul class="navbar-main-menu" id="navbarMainMenu">
+                    <li><a href="/index.html"><i class="fas fa-home"></i> Inicio</a></li>
+                    <li><a href="/quienes-somos.html"><i class="fas fa-users"></i> Quiénes Somos</a></li>
+                    <li><a href="/servicios.html"><i class="fas fa-concierge-bell"></i> Servicios</a></li>
+                    <li><a href="/capacitacion.html"><i class="fas fa-graduation-cap"></i> Capacitación</a></li>
+                    <li><a href="/contacto.html"><i class="fas fa-envelope"></i> Contacto</a></li>
+                </ul>
             </div>
         `;
 
@@ -404,44 +460,63 @@
 
         let isMenuOpen = false;
 
-        function openMobileMenu() {
+        function openMenu() {
             mainMenu.classList.add('active');
             hamburgerBtn.classList.add('active');
             overlay.classList.add('active');
-            document.body.classList.add('mobile-menu-open');
+            document.body.classList.add('menu-open');
             isMenuOpen = true;
+
+            // Animar items del menú
+            const menuItems = mainMenu.querySelectorAll('li');
+            menuItems.forEach((item, index) => {
+                item.style.transitionDelay = `${0.1 + (index * 0.05)}s`;
+            });
         }
 
-        function closeMobileMenu() {
+        function closeMenu() {
             mainMenu.classList.remove('active');
             hamburgerBtn.classList.remove('active');
             overlay.classList.remove('active');
-            document.body.classList.remove('mobile-menu-open');
+            document.body.classList.remove('menu-open');
             isMenuOpen = false;
+
+            // Resetear delays
+            const menuItems = mainMenu.querySelectorAll('li');
+            menuItems.forEach(item => {
+                item.style.transitionDelay = '0s';
+            });
         }
 
-        function toggleMobileMenu() {
+        function toggleMenu() {
             if (isMenuOpen) {
-                closeMobileMenu();
+                closeMenu();
             } else {
-                openMobileMenu();
+                openMenu();
             }
         }
 
-        hamburgerBtn.addEventListener('click', toggleMobileMenu);
-        overlay.addEventListener('click', closeMobileMenu);
+        hamburgerBtn.addEventListener('click', toggleMenu);
+        overlay.addEventListener('click', closeMenu);
 
+        // Cerrar menú al hacer clic en un enlace
         mainMenu.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
-                if (window.innerWidth <= 992) {
-                    setTimeout(closeMobileMenu, 300);
-                }
+                setTimeout(closeMenu, 300);
             });
         });
 
+        // Cerrar menú con Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isMenuOpen) {
+                closeMenu();
+            }
+        });
+
+        // Cerrar menú al redimensionar a desktop
         window.addEventListener('resize', () => {
             if (window.innerWidth > 992 && isMenuOpen) {
-                closeMobileMenu();
+                closeMenu();
             }
         });
     }
@@ -460,11 +535,21 @@
     }
 
     function markActiveLink() {
-        const currentPage = window.location.pathname;
+        const currentPage = window.location.pathname.split('/').pop();
         const menuLinks = document.querySelectorAll('.navbar-main-menu a');
 
         menuLinks.forEach(link => {
-            if (link.getAttribute('href') === currentPage) {
+            const linkHref = link.getAttribute('href');
+            const linkPage = linkHref.split('/').pop();
+
+            // Para la página de inicio
+            if (currentPage === '' || currentPage === 'index.html' || currentPage === '/') {
+                if (linkHref === '/index.html' || linkHref === '/') {
+                    link.classList.add('active');
+                }
+            }
+            // Para otras páginas
+            else if (linkPage === currentPage) {
                 link.classList.add('active');
             }
         });
@@ -475,9 +560,21 @@
             const hamburgerBtn = document.getElementById('navbarHamburger');
             if (hamburgerBtn) hamburgerBtn.click();
         },
+        openMenu: function () {
+            const hamburgerBtn = document.getElementById('navbarHamburger');
+            if (hamburgerBtn && !hamburgerBtn.classList.contains('active')) {
+                hamburgerBtn.click();
+            }
+        },
+        closeMenu: function () {
+            const hamburgerBtn = document.getElementById('navbarHamburger');
+            if (hamburgerBtn && hamburgerBtn.classList.contains('active')) {
+                hamburgerBtn.click();
+            }
+        }
     };
 
-    // Cargar recursos necesarios
+    // Cargar Font Awesome si no está cargado
     if (!document.querySelector('link[href*="font-awesome"]')) {
         const faLink = document.createElement('link');
         faLink.rel = 'stylesheet';
