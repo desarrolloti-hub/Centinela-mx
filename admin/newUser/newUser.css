@@ -1,0 +1,652 @@
+    /* PALETA DE COLORES GRISES */
+    :root {
+        --dark-bg: #151515;
+        --card-bg: rgba(21, 21, 21, 0.95);
+        --panel-left: rgba(21, 21, 21, 0.95);
+        --panel-right: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%);
+        --text-white: #ffffff;
+        --text-light: #f0f0f0;
+        --text-gray: #b0b0b0;
+        --text-dark-gray: #a0a0a0;
+        --border-color: #2b2b2b;
+        --border-light: #3a3a3a;
+        --accent-gray: #c0c0c0;
+        --btn-gradient: linear-gradient(135deg, #545454, #d6cdcd);
+        --btn-hover: linear-gradient(135deg, #5a5a5a, #e0d7d7);
+        --btn-shadow: rgba(192, 192, 192, 0.2);
+    }
+
+    /* ESTILOS GENERALES */
+    body {
+        margin: 0;
+        padding: 0;
+        background: var(--dark-bg);
+        font-family: 'Rajdhani', sans-serif;
+        color: var(--text-light);
+        overflow-x: hidden;
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .register-main-container {
+        position: relative;
+        z-index: 100;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        width: 100%;
+        padding: 15px;
+        box-sizing: border-box;
+    }
+
+    /* WRAPPER CON TAMAÑO FIJO */
+    .register-wrapper {
+        display: flex;
+        width: 100%;
+        max-width: 900px;
+        min-height: 480px;
+        background: var(--card-bg);
+        backdrop-filter: blur(8px);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+        border: 1px solid var(--border-color);
+        box-sizing: border-box;
+    }
+
+    /* PANEL IZQUIERDO - FORMULARIO */
+    .register-left-panel {
+        flex: 1;
+        background: var(--panel-left);
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        border-right: 1px solid var(--border-color);
+        box-sizing: border-box;
+    }
+
+    /* PANEL DERECHO */
+    .register-right-panel {
+        flex: 0.8;
+        background: var(--panel-right);
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    /* ICONO DE USUARIO */
+    .user-icon-form-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+        flex-shrink: 0;
+    }
+
+    .user-icon-form {
+        width: 60px;
+        height: 60px;
+        background: var(--btn-gradient);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: var(--text-white);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.2s ease;
+    }
+
+    .user-icon-form:hover {
+        transform: scale(1.05);
+        background: var(--btn-hover);
+    }
+
+    /* ENCABEZADO */
+    .form-header {
+        text-align: center;
+        margin-bottom: 20px;
+        width: 100%;
+        box-sizing: border-box;
+        flex-shrink: 0;
+    }
+
+    .form-main-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-white);
+        margin-bottom: 8px;
+        letter-spacing: 1px;
+        font-family: 'Orbitron', sans-serif;
+        text-transform: uppercase;
+    }
+
+    .form-sub-title {
+        color: var(--text-gray);
+        font-size: 13px;
+        line-height: 1.4;
+        margin-top: 8px;
+    }
+
+    /* FORMULARIO */
+    .register-form-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+        margin: 0 auto;
+        box-sizing: border-box;
+        flex: 1;
+    }
+
+    .form-field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* LABELS UNIFORMES */
+    .field-label {
+        color: var(--text-dark-gray);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .field-label i {
+        color: var(--accent-gray);
+        font-size: 12px;
+        min-width: 16px;
+    }
+
+    /* INPUTS CON MEDIDA EXACTA - TODOS IGUALES */
+    .input-wrapper {
+        position: relative;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .form-input-field {
+        width: 100%;
+        background: #1a1a1a;
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 10px 12px;
+        color: var(--text-white);
+        font-size: 14px;
+        font-family: 'Rajdhani', sans-serif;
+        transition: all 0.2s ease;
+        height: 40px;
+        box-sizing: border-box;
+        display: block;
+    }
+
+    /* Garantizar que todos los inputs sean iguales */
+    .form-input-field[type="text"],
+    .form-input-field[type="email"] {
+        height: 40px;
+        padding: 10px 12px;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    /* ESTILOS MEJORADOS PARA FILE INPUT - BOTÓN BLANCO PERSONALIZADO */
+    .file-input-wrapper {
+        position: relative;
+        width: 100%;
+        display: flex;
+        gap: 10px;
+    }
+
+    .file-input-field {
+        display: none;
+    }
+
+    /* BOTÓN BLANCO PERSONALIZADO PARA EXAMINAR */
+    .custom-file-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: #ffffff; /* FONDO BLANCO */
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 10px 20px;
+        color: #333333; /* TEXTO OSCURO */
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: 'Rajdhani', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        height: 40px;
+        min-width: 140px;
+        box-sizing: border-box;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .custom-file-button:hover {
+        background: #f5f5f5; /* BLANCO MÁS CLARO EN HOVER */
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        border-color: #c0c0c0;
+    }
+
+    .custom-file-button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .custom-file-button i {
+        font-size: 14px;
+        color: #666666;
+    }
+
+    .custom-file-button:hover i {
+        color: #333333;
+    }
+
+    /* Botón cuando está cargado */
+    .custom-file-button.loaded {
+        background: #f0fff0;
+        border-color: #4CAF50;
+        color: #2E7D32;
+    }
+
+    .custom-file-button.loaded i {
+        color: #4CAF50;
+    }
+
+    .custom-file-button.loaded:hover {
+        background: #e8f5e8;
+    }
+
+    /* ÁREA PARA MOSTRAR NOMBRE DEL ARCHIVO */
+    .file-name-display {
+        flex: 1;
+        background: #1a1a1a;
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 10px 12px;
+        color: var(--text-gray);
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .file-name-display.empty {
+        color: #666;
+        font-style: italic;
+    }
+
+    /* PREVIEW DE IMAGEN - DISEÑO MEJORADO */
+    .image-preview-container {
+        position: absolute;
+        top: 50px;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 12px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
+        display: none;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .image-preview-container.show {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .preview-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent-gray);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .close-preview {
+        background: none;
+        border: none;
+        color: var(--text-gray);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        transition: all 0.2s ease;
+    }
+
+    .close-preview:hover {
+        color: var(--text-white);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .image-preview {
+        width: 100%;
+        max-height: 200px;
+        object-fit: contain;
+        border-radius: 3px;
+        display: block;
+        border: 1px solid var(--border-light);
+    }
+
+    .preview-info {
+        margin-top: 10px;
+        font-size: 11px;
+        color: var(--text-gray);
+        display: flex;
+        justify-content: space-between;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Mostrar preview al pasar mouse sobre el campo de archivo */
+    .file-field-group:hover .image-preview-container.show {
+        display: block;
+    }
+
+    /* BOTÓN REGISTRARSE */
+    .submit-button-container {
+        margin-top: 20px;
+        flex-shrink: 0;
+    }
+
+    .submit-register-btn {
+        background: var(--btn-gradient);
+        border: none;
+        border-radius: 5px;
+        padding: 10px;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        height: 40px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-family: 'Rajdhani', sans-serif;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        box-sizing: border-box;
+    }
+
+    .submit-register-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px var(--btn-shadow);
+        background: var(--btn-hover);
+    }
+
+    .submit-register-btn i {
+        font-size: 14px;
+        color: #c0c0c0;
+    }
+
+    /* PANEL DERECHO */
+    .brand-container {
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* LOGO CENTINELA */
+    #logo {
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .centinela-logo {
+        max-width: 250px;
+        height: auto;
+        filter: drop-shadow(0 0 8px rgba(192, 192, 192, 0.2));
+        transition: all 0.3s ease;
+        margin-bottom: 12px;
+    }
+
+    .centinela-logo:hover {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 12px rgba(192, 192, 192, 0.3));
+    }
+
+    .brand-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-white);
+        letter-spacing: 1.5px;
+        margin-bottom: 10px;
+        font-family: 'Orbitron', sans-serif;
+        text-transform: uppercase;
+    }
+
+    .brand-description {
+        font-size: 12px;
+        color: var(--text-gray);
+        max-width: 240px;
+        line-height: 1.4;
+        margin: 0 auto 20px;
+        padding: 12px 0;
+        border-top: 1px solid var(--border-light);
+        border-bottom: 1px solid var(--border-light);
+        box-sizing: border-box;
+    }
+
+    .features-container {
+        margin-top: 20px;
+        max-width: 220px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        color: var(--text-gray);
+        font-size: 11px;
+        line-height: 1.3;
+        padding: 6px;
+        box-sizing: border-box;
+    }
+
+    .feature-item i {
+        color: var(--accent-gray);
+        font-size: 13px;
+        min-width: 18px;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+        .register-wrapper {
+            max-width: 450px;
+            min-height: auto;
+            flex-direction: column;
+            border-radius: 8px;
+        }
+
+        .register-left-panel {
+            padding: 25px 20px;
+            order: 1;
+            border-right: none;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .register-right-panel {
+            padding: 25px 20px;
+            order: 2;
+        }
+
+        .form-input-field {
+            height: 38px;
+            font-size: 13px;
+        }
+
+        .custom-file-button, .file-name-display {
+            height: 38px;
+            font-size: 12px;
+        }
+
+        .custom-file-button {
+            min-width: 120px;
+        }
+
+        .submit-register-btn {
+            height: 38px;
+            font-size: 12px;
+            padding: 9px;
+        }
+
+        .form-main-title {
+            font-size: 20px;
+        }
+
+        .brand-name {
+            font-size: 20px;
+        }
+
+        .centinela-logo {
+            max-width: 80px;
+        }
+
+        .image-preview-container {
+            max-height: 150px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .register-main-container {
+            padding: 10px;
+        }
+
+        .register-wrapper {
+            border-radius: 6px;
+        }
+
+        .register-left-panel,
+        .register-right-panel {
+            padding: 20px 15px;
+        }
+
+        .file-input-wrapper {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .custom-file-button {
+            width: 100%;
+            min-width: auto;
+            margin-right: 0;
+        }
+
+        .file-name-display {
+            width: 100%;
+        }
+
+        .form-input-field {
+            height: 36px;
+            font-size: 13px;
+        }
+
+        .custom-file-button, .file-name-display {
+            height: 36px;
+            font-size: 12px;
+        }
+
+        .custom-file-button {
+            padding: 10px 15px;
+        }
+
+        .submit-register-btn {
+            height: 36px;
+            font-size: 12px;
+            padding: 8px;
+        }
+
+        .user-icon-form {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+        }
+
+        .form-main-title {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .form-sub-title {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .brand-name {
+            font-size: 18px;
+        }
+
+        .field-label {
+            font-size: 10px;
+        }
+
+        .image-preview-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 300px;
+            z-index: 1000;
+        }
+    }
+
+    /* GARANTIZAR QUE NADA SOBRESALGA */
+    * {
+        box-sizing: border-box;
+    }
+
+    .register-left-panel > *,
+    .register-right-panel > * {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    /* GARANTIZAR QUE LOS INPUTS NO SE SALGAN */
+    .form-input-field,
+    .submit-register-btn {
+        max-width: 100%;
+        width: 100%;
+    }
