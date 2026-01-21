@@ -4,30 +4,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Perfil Administrador</title>
+
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalizacion/personalizacion.css">
     <!-- Particulas -->
     <link rel="stylesheet" href="/components/particulas/particulas.css">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
     <!-- Icono en barra de titulo -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <!-- Archivo para PWA -->
     <link rel="manifest" href="/manifest.json">
     <!-- Estilos modulo -->
-    <link rel="stylesheet" href="index.css">
+    
+    <link rel="stylesheet" href="/admin/dashAdmin/dashAdmin.css">
+    <!-- SEO Básico -->
+<meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+<meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+<meta name="author" content="Centinela-MX">
+<link rel="canonical" href="https://centinela-mx.web.app/" />
+
+<!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://centinela-mx.web.app">
+<meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
+<meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+<meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Centinela-MX">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://centinela-mx.web.app">
+<meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
+<meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+<meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+<meta name="twitter:creator" content="@CentinelaMX">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Centinela-MX",
+  "operatingSystem": "Web",
+  "applicationCategory": "SecurityApplication",
+  "description": "Centinela-MX es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
+  "url": "https://centinela-mx.web.app",
+  "publisher": {
+    "@type": "Organization",
+    "name": "Centinela-MX"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+
 </head>
 
 <body>
+
     <canvas id="particle-canvas"></canvas>
+
+    <main class="right-layout">
+
+        <section class="center-row">
+
+            <!-- PERFIL ADMIN - LADO IZQUIERDO -->
+            <div class="side left">
+
+                <div class="profile">
+                    <div class="" style="text-align:center;">
+                        <img src="/assets/images/logo.png" alt="Foto Usuario"
+                            style="width:120px;border-radius:50%;margin-bottom:10px;">
+                        <h3>Administrador</h3>
+                    </div>
+                </div>
+
+                <div class="profile">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-id-card"></i> ID</h3>
+                        <p>ADM-001</p>
+                    </div>
+                </div>
+
+                <div class="profile">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-envelope"></i> Correo</h3>
+                        <p>admin@centinela.com</p>
+                    </div>
+                </div>
+
+                <div class="geografica">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-phone"></i> Teléfono</h3>
+                        <p>+52 55 1234 5678</p>
+                    </div>
+                </div>
+
+                <div class="geografica">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-clock"></i> Último acceso</h3>
+                        <p>20/01/2026 · 22:41</p>
+                    </div>
+                </div>
+
+                <div class="geografica">
+                    <div class="text-content">
+                        <h3><i class="fa-solid fa-calendar"></i> Cuenta creada</h3>
+                        <p>15/03/2025</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
 
     <!-- COMPONENTES -->
     <script src="/components/particulas/particulas.js"></script>
     <script src="/components/navbar-visitor-component.js"></script>
     <script src="/components/footer-visitor-component.js"></script>
+
 </body>
 
 </html>

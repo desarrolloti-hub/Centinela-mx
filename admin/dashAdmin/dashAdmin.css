@@ -1,0 +1,57 @@
+/* PERFIL USUARIO */
+.profile-box {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    max-width: 420px;
+}
+
+main {
+    position: relative;
+    z-index: 2;
+}
+
+
+/* FOTO */
+.profile-photo {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 1px solid #545454;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow:
+        0 0 12px rgba(214,214,214,.25);
+}
+
+.profile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* INFO */
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.profile-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    color: #ffffff;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.profile-info p {
+    font-size: 13px;
+    line-height: 1.4;
+    color: #a5a5a5;
+}
+
+.profile-info strong {
+    color: #ffffff;
+    font-weight: 600;
+}
