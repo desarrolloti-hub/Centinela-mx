@@ -68,6 +68,7 @@ body {
     border-right: 1px solid var(--border-color);
     box-sizing: border-box;
 }
+
 /* LINEA IZQUIERDA ARRIBA DEL LOGO*/
 .login-left-panel::before {
     content: '';
@@ -113,6 +114,7 @@ body {
     margin-bottom: 15px;
     font-family: 'Orbitron', sans-serif;
     text-transform: uppercase;
+    position: relative;
 }
 
 .brand-name::after {
@@ -217,6 +219,7 @@ body {
     letter-spacing: 1.5px;
     text-transform: uppercase;
     font-family: 'Orbitron', sans-serif;
+    position: relative;
 }
 
 .form-main-title::after {
@@ -368,7 +371,7 @@ body {
 .help-link {
     color: #fffefe;
     font-size: 11px; /* Más pequeño */
-    text-decoration: none;
+    text-decoration: none; /* Sin subrayado */
     font-weight: 500;
     transition: all 0.2s ease;
     display: flex;
@@ -382,6 +385,7 @@ body {
 .help-link:hover {
     color: var(--text-white);
     background: rgba(192, 192, 192, 0.08); /* Efecto más sutil */
+    text-decoration: none; /* Sin subrayado en hover */
 }
 
 .help-link i {
@@ -433,6 +437,10 @@ body {
 
 /* BOTÓN REGISTRARSE - COMPACTO Y UNIFORME */
 .register-account-btn {
+    /* IMPORTANTE: Estos estilos son para un enlace <a>, no para un botón <button> */
+    display: inline-block;
+    text-decoration: none; /* QUITA EL SUBRAYADO */
+    text-align: center;
     background: var(--btn-gradient);
     border: none;
     border-radius: 5px; /* Igual que los otros botones */
@@ -442,7 +450,6 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -463,6 +470,7 @@ body {
     transform: translateY(-1px); /* Efecto más sutil */
     box-shadow: 0 4px 8px var(--btn-shadow);
     background: var(--btn-hover);
+    text-decoration: none; /* Asegurar que no aparezca subrayado en hover */
 }
 
 .register-account-btn i {
