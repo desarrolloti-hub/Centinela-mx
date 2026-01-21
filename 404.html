@@ -1,78 +1,146 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Centinela</title>
-     <!-- Estilos -->
-    <link rel="stylesheet" href="/components/personalizacion/personalizacion.css">
-    <!--Particulas-->
-    <link rel="stylesheet" href="/components/particulas/particulas.css">
+    <title>Centinela-MX | Mantenimiento</title>
+
+    <!-- FUENTES -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+
+    <!-- ICONOS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Icono en barra de titulo -->
+
+    <!-- FAVICON -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    <!-- Archivo para PWA -->
-    <link rel="manifest" href="/manifest.json">
-    <!-- Estilos modulo -->
-    <link rel="stylesheet" href="index.css">
 
-    <!-- SEO Básico -->
-    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
-    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
-    <meta name="author" content="Centinela-MX">
-    <link rel="canonical" href="https://centinela-mx.web.app/" />
-
-    <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://centinela-mx.web.app">
-    <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
-    <meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
-    <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:site_name" content="Centinela-MX">
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://centinela-mx.web.app">
-    <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
-    <meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
-    <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
-    <meta name="twitter:creator" content="@CentinelaMX">
-     <script type="application/ld+json">
-        {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "Centinela-MX",
-        "operatingSystem": "Web",
-        "applicationCategory": "SecurityApplication",
-        "description": "Centinela-MX es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
-        "url": "https://centinela-mx.web.app",
-        "publisher": {
-            "@type": "Organization",
-            "name": "Centinela-MX"
-        },
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            background: #000;
+            color: #a5a5a5;
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
         }
-    </script>
+
+        .error-layout {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .error-box {
+            background: #000;
+            border: 1px solid #545454;
+            border-radius: 16px;
+            padding: 42px 38px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            animation: glow-cycle 6s infinite;
+        }
+
+        .error-logo {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 22px;
+        }
+
+        .error-logo img {
+            width: 110px;
+            filter: drop-shadow(0 0 12px rgba(214,214,214,.45));
+        }
+
+        .error-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 26px;
+            color: #fff;
+            margin-bottom: 14px;
+            text-transform: uppercase;
+        }
+
+        .error-text {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 18px;
+        }
+
+        .error-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 26px;
+            border-radius: 30px;
+            background: #000;
+            border: 1px solid #545454;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            text-decoration: none;
+            transition: .35s;
+        }
+
+        .error-btn:hover {
+            border-color: #d6d6d6;
+            box-shadow: 0 0 18px rgba(214,214,214,.45);
+        }
+
+        @keyframes glow-cycle {
+            0%,100% {
+                box-shadow: 0 0 12px rgba(214,214,214,.15);
+                border-color: #545454;
+            }
+            50% {
+                box-shadow: 0 0 26px rgba(214,214,214,.75);
+                border-color: #d6d6d6;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-    <canvas id="particle-canvas"></canvas>
-    
-    <h1>mantenimiento</h1>
+<main class="error-layout">
+    <section class="error-box">
 
-    <!-- COMPONENTES -->
-    <script src="/components/navbar-visitor-component.js"></script>
-    <script src="/components/footer-visitor-component.js"></script>
-    <script src="/components/particulas/particulas.js"></script>
+        <div class="error-logo">
+            <img src="/assets/images/logo.png" alt="Centinela-MX">
+        </div>
+
+        <h1 class="error-title">En mantenimiento</h1>
+
+        <p class="error-text">
+            Esta sección se encuentra temporalmente en mantenimiento.<br>
+            Nuestros desarrolladores están trabajando en ello.
+        </p>
+
+        <!-- BOTÓN VOLVER -->
+        <a href="#" class="error-btn" onclick="goBack(event)">
+            <i class="fa-solid fa-arrow-left"></i>
+            Volver
+        </a>
+
+    </section>
+</main>
+
+<!-- SCRIPT VOLVER -->
+<script>
+function goBack(e) {
+    e.preventDefault();
+    if (document.referrer) {
+        history.back();
+    } else {
+        window.location.href = "/index.html";
+    }
+}
+</script>
+
 </body>
-
 </html>
