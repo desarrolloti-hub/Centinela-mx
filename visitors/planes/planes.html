@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Planes de Pago - Centinela</title>
-    
+
     <!-- Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Estilos específicos de planes -->
@@ -13,25 +14,35 @@
     <link rel="stylesheet" href="/components/personalizacion/personalizacion.css">
     <!-- Sistema de partículas -->
     <link rel="stylesheet" href="/components/particulas/particulas.css">
-     <!-- Icono en barra de titulo -->
+    <!-- Icono en barra de titulo -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <!-- Archivo para PWA -->
     <link rel="manifest" href="/manifest.json">
 
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
+
     <style>
-        /* Estilos inline para evitar el parpadeo inicial */
-        .plan-expanded-view {
+        .planes-main-container {
             opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
+            animation: fadeIn 0.3s ease forwards;
         }
-        
-        .plan-card.expanded .plan-expanded-view {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: all;
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .plan-expanded-view {
+            display: none;
+        }
+
+        html,
+        body {
+            overflow-x: hidden;
+            width: 100%;
         }
     </style>
 </head>
@@ -39,24 +50,24 @@
 <body>
     <!-- Canvas para partículas -->
     <canvas id="particle-canvas"></canvas>
-    
+
     <!-- Contenedor principal de planes -->
     <main class="planes-main-container">
         <div class="planes-wrapper">
-            
+
             <!-- Header con título y descripción -->
             <div class="planes-header">
                 <h1>Planes de Pago</h1>
-                <p>Pasa el cursor sobre cada plan para ver más detalles. Todos incluyen características esenciales y soporte técnico premium.</p>
-                <!-- Instrucción para móviles -->
+                <p>Haz clic en cada plan para ver todos los detalles. El plan Platino es el más completo y recomendado.
+                </p>
                 <p class="mobile-instruction">Toca cada plan para expandir/contraer</p>
             </div>
 
             <!-- Contenedor de tarjetas de planes -->
             <div class="plan-cards-container">
-                
+
                 <!-- Plan Regular - Bronce -->
-                <div class="plan-card regular" tabindex="0" data-expanded="false">
+                <div class="plan-card regular" tabindex="0" data-expanded="false" data-card-index="0">
                     <!-- Sección compacta (vista inicial) -->
                     <div class="plan-compact-view">
                         <div class="compact-image">
@@ -71,8 +82,8 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Sección expandida (se muestra al hacer hover) -->
+
+                    <!-- Sección expandida (se muestra al hacer clic) -->
                     <div class="plan-expanded-view">
                         <div class="plan-content">
                             <div class="plan-title-section">
@@ -92,6 +103,9 @@
                                     <li><i class="fas fa-check-circle"></i> Informes semanales</li>
                                     <li><i class="fas fa-check-circle"></i> Soporte técnico por correo</li>
                                     <li><i class="fas fa-check-circle"></i> Acceso a dashboard básico</li>
+                                    <li><i class="fas fa-check-circle"></i> Actualizaciones de seguridad</li>
+                                    <li><i class="fas fa-check-circle"></i> Encriptación básica</li>
+                                    <li><i class="fas fa-check-circle"></i> Hasta 3 dispositivos</li>
                                 </ul>
                             </div>
 
@@ -101,7 +115,7 @@
                 </div>
 
                 <!-- Plan Business - Platino -->
-                <div class="plan-card business" tabindex="0" data-expanded="false">
+                <div class="plan-card business" tabindex="0" data-expanded="false" data-card-index="1">
                     <div class="plan-compact-view">
                         <div class="compact-image">
                             <img src="/assets/images/logo.png" alt="Plan Platino" loading="lazy">
@@ -109,24 +123,24 @@
                         <div class="compact-info">
                             <div class="compact-type">PLATINO</div>
                             <div class="compact-name">BUSINESS</div>
-                            <div class="compact-price">$1999.99</div>
-                            <div class="popular-badge">POPULAR</div>
+                            <div class="compact-price">$1999</div>
+                            <div class="popular-badge">RECOMENDADO</div>
                             <div class="compact-arrow">
                                 <i class="fas fa-chevron-down"></i>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="plan-expanded-view">
                         <div class="plan-content">
                             <div class="plan-title-section">
                                 <div class="plan-type">PLATINO</div>
                                 <div class="price-container">
                                     <div class="currency">$</div>
-                                    <div class="price">1999.99</div>
+                                    <div class="price">1999</div>
                                 </div>
                                 <div class="plan-name">BUSINESS</div>
-                                <div class="popular-badge">MOST POPULAR</div>
+                                <div class="popular-badge">MEJOR PLAN</div>
                             </div>
 
                             <div class="plan-details">
@@ -139,6 +153,9 @@
                                     <li><i class="fas fa-star"></i> Integraciones empresariales</li>
                                     <li><i class="fas fa-star"></i> Dashboard avanzado</li>
                                     <li><i class="fas fa-star"></i> Hasta 10 dispositivos</li>
+                                    <li><i class="fas fa-star"></i> Encriptación AES-256</li>
+                                    <li><i class="fas fa-star"></i> Backup automático diario</li>
+                                    <li><i class="fas fa-star"></i> Auditoría de seguridad mensual</li>
                                 </ul>
                             </div>
 
@@ -148,7 +165,7 @@
                 </div>
 
                 <!-- Plan Avanzado - Dorado -->
-                <div class="plan-card advanced" tabindex="0" data-expanded="false">
+                <div class="plan-card advanced" tabindex="0" data-expanded="false" data-card-index="2">
                     <div class="plan-compact-view">
                         <div class="compact-image">
                             <img src="/assets/images/logo.png" alt="Plan Dorado" loading="lazy">
@@ -156,20 +173,20 @@
                         <div class="compact-info">
                             <div class="compact-type">DORADO</div>
                             <div class="compact-name">ADVANCED</div>
-                            <div class="compact-price">$999.99</div>
+                            <div class="compact-price">$999</div>
                             <div class="compact-arrow">
                                 <i class="fas fa-chevron-down"></i>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="plan-expanded-view">
                         <div class="plan-content">
                             <div class="plan-title-section">
                                 <div class="plan-type">DORADO</div>
                                 <div class="price-container">
                                     <div class="currency">$</div>
-                                    <div class="price">999.99</div>
+                                    <div class="price">999</div>
                                 </div>
                                 <div class="plan-name">ADVANCED</div>
                             </div>
@@ -178,12 +195,15 @@
                                 <h3>Características avanzadas</h3>
                                 <ul class="features">
                                     <li><i class="fas fa-check-circle"></i> Monitoreo premium 24/7</li>
-                                    <li><i class="fas fa-check-circle"></i> Alertas inmediatas por múltiples canales</li>
+                                    <li><i class="fas fa-check-circle"></i> Alertas inmediatas por múltiples canales
+                                    </li>
                                     <li><i class="fas fa-check-circle"></i> Informes en tiempo real</li>
                                     <li><i class="fas fa-check-circle"></i> Soporte prioritario 24/7</li>
                                     <li><i class="fas fa-check-circle"></i> Acceso anticipado a nuevas funciones</li>
                                     <li><i class="fas fa-check-circle"></i> Dashboard personalizable</li>
                                     <li><i class="fas fa-check-circle"></i> Hasta 5 dispositivos</li>
+                                    <li><i class="fas fa-check-circle"></i> Encriptación avanzada</li>
+                                    <li><i class="fas fa-check-circle"></i> Análisis predictivo</li>
                                 </ul>
                             </div>
 
@@ -193,7 +213,14 @@
                 </div>
 
             </div>
-            
+
+            <!-- Información adicional -->
+            <div class="plan-footer-info">
+                <p><i class="fas fa-shield-alt"></i> Todos los planes incluyen seguridad</p>
+                <p><i class="fas fa-sync-alt"></i> Cambia de plan en cualquier momento sin costo adicional</p>
+                <p><i class="fas fa-handshake"></i> Garantía de satisfacción</p>
+            </div>
+
         </div>
     </main>
 
@@ -202,5 +229,14 @@
     <script src="/components/footer-visitor-component.js"></script>
     <script src="/components/particulas/particulas.js"></script>
     <script src="/visitors/planes/planes.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(function () {
+                document.querySelector('.planes-main-container').style.opacity = '1';
+            }, 50);
+        });
+    </script>
 </body>
+
 </html>

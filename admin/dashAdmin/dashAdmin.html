@@ -1,33 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <!-- Estilos -->
+    <title>Perfil Administrador</title>
+
+    <!-- Estilos globales -->
     <link rel="stylesheet" href="/components/personalizacion/personalizacion.css">
-    <!-- Particulas -->
     <link rel="stylesheet" href="/components/particulas/particulas.css">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
-        rel="stylesheet">
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Icono en barra de titulo -->
+    <!-- Icono -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    <!-- Archivo para PWA -->
+    <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
-    <!-- Estilos modulo -->
-    <link rel="stylesheet" href="index.css">
+    <!-- CSS del módulo -->
+    <link rel="stylesheet" href="/admin/dashAdmin/dashAdmin.css">
 </head>
 
 <body>
+
     <canvas id="particle-canvas"></canvas>
+
+    <main class="right-layout">
+        <section class="center-row">
+
+            <!--Admin-->
+            <div class="side left">
+                <div class="admin-card">
+
+                    <div class="profile-photo">
+                        <img src="/assets/images/logo.png" alt="Administrador">
+                    </div>
+
+                    <form class="admin-form">
+                        <h2><i class="fa-solid fa-user-shield"></i> Perfil Administrador</h2>
+
+                        <div class="input-group">
+                            <i class="fa-solid fa-id-card"></i>
+                            <input type="text" placeholder="ID Administrador">
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fa-solid fa-user"></i>
+                            <input type="text" placeholder="Nombre completo">
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fa-solid fa-envelope"></i>
+                            <input type="email" placeholder="Correo electrónico">
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fa-solid fa-phone"></i>
+                            <input type="tel" placeholder="Teléfono">
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fa-solid fa-clock"></i>
+                            <input type="text" placeholder="Último acceso">
+                        </div>
+
+                        <div class="input-group">
+                            <i class="fa-solid fa-calendar"></i>
+                            <input type="text" placeholder="Fecha de creación de cuenta">
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- PANEL DERECHO -->
+            <div class="side right">
+                <div class="kpi-row">
+                    <div class="kpi-card danger">
+                        <i class="fa-solid fa-exclamation"></i>
+                        <h3>Reportar Incidencia</h3>
+                        <p>Nuevo reporte</p>
+                    </div>
+
+                    <div class="kpi-card">
+                        <span class="kpi-number">6</span>
+                        <h3>Incidentes</h3>
+                        <p>Reportados hoy</p>
+                    </div>
+
+                    <div class="kpi-card">
+                        <span class="kpi-number">0</span>
+                        <h3>Novedades</h3>
+                        <p>Del día</p>
+                    </div>
+
+                    <div class="kpi-card">
+                        <span class="kpi-number">34</span>
+                        <h3>Operadores</h3>
+                        <p>Activos</p>
+                    </div>
+
+                </div>
+                <div class="dashboard-card">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <div>
+                        <h3>Gráficas de Incidencias</h3>
+                        <p>Haga clic para acceder</p>
+                    </div>
+                    <span>→</span>
+                </div>
+
+                <div class="dashboard-card">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <div>
+                        <h3>Mapa</h3>
+                        <p>Haga clic para acceder</p>
+                    </div>
+                    <span>→</span>
+                </div>
+
+                <div class="dashboard-card">
+                    <i class="fa-solid fa-bell"></i>
+                    <div>
+                        <h3>Novedades</h3>
+                        <p>Haga clic para acceder</p>
+                    </div>
+                    <span>→</span>
+                </div>
+
+                <div class="dashboard-card">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <div>
+                        <h3>Recuperación Mensual</h3>
+                        <p>Haga clic para acceder</p>
+                    </div>
+                    <span>→</span>
+                </div>
+
+            </div>
+
+        </section>
+    </main>
 
     <!-- COMPONENTES -->
     <script src="/components/particulas/particulas.js"></script>
     <script src="/components/navbar-visitor-component.js"></script>
     <script src="/components/footer-visitor-component.js"></script>
-</body>
 
+</body>
 </html>
