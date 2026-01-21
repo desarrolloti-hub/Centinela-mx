@@ -1,44 +1,23 @@
 /* =============================================
-   ESTILOS ESPECÍFICOS PARA PÁGINA DE PLANES
-   CON EFECTO DE EXPANSIÓN AL HOVER - VERSIÓN CORREGIDA
+   ESTILOS PARA PLANES - VERSIÓN DEFINITIVA
    ============================================= */
 
-/* Variables específicas para planes */
 :root {
-    /* Colores específicos para planes */
     --color-bronze: #CD7F32;
     --color-silver: #C0C0C0;
     --color-gold: #FFD700;
-    --color-diamond: #B9F2FF;
-    
-    /* Espaciado y bordes */
-    --spacing-large: 3rem;
-    --spacing-medium: 2rem;
-    --spacing-small: 1rem;
-    --border-radius-card: 12px;
-    --border-radius-button: 8px;
-    
-    /* Transiciones */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: all 0.25s ease;
-}
-
-/* Reset de estilos para evitar scroll */
-html, body {
-    overflow-x: hidden;
+    --transition-card: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Contenedor principal */
 .planes-main-container {
     background-color: transparent;
-    color: var(--color-text-primary);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 100px; /* Espacio para el navbar */
+    padding-top: 100px;
     padding-bottom: 2rem;
     width: 100%;
-    overflow: hidden; /* Evitar scroll horizontal */
 }
 
 .planes-wrapper {
@@ -46,10 +25,9 @@ html, body {
     width: 100%;
     margin: 0 auto;
     padding: 0 1rem;
-    overflow: visible; /* Permitir que las tarjetas se expandan */
 }
 
-/* Header de planes */
+/* Header */
 .planes-header {
     text-align: center;
     margin-bottom: 3rem;
@@ -57,110 +35,90 @@ html, body {
 
 .planes-header h1 {
     font-size: 2.5rem;
+    margin-bottom: 1rem;
+    font-family: 'Orbitron', sans-serif;
     color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-    text-shadow: var(--text-shadow-effect);
 }
 
 .planes-header p {
     color: var(--color-text-secondary);
     font-size: 1.1rem;
     max-width: 600px;
-    margin: 0 auto;
+    margin: 0 auto 1rem;
     line-height: 1.5;
 }
 
-/* Instrucción para móviles */
 .mobile-instruction {
     font-size: 0.9rem;
     color: var(--color-accent-secondary);
-    margin-top: 0.5rem;
-    font-style: italic;
     display: none;
 }
 
-/* Contenedor de tarjetas de planes */
+/* Contenedor de tarjetas */
 .plan-cards-container {
     display: flex;
     justify-content: center;
-    gap: 1.5rem; /* Reducido para mejor apilamiento */
+    gap: 1.5rem;
     flex-wrap: wrap;
     margin-bottom: 3rem;
-    align-items: flex-start; /* Alinear en la parte superior */
 }
 
-/* =============================================
-   TARJETA DE PLAN - ESTRUCTURA CORREGIDA
-   ============================================= */
+/* Tarjeta de plan */
 .plan-card {
     background-color: var(--color-bg-secondary);
-    border-radius: var(--border-radius-card);
+    border-radius: 12px;
     box-shadow: var(--shadow-normal);
-    width: 100%;
-    max-width: 320px;
-    transition: var(--transition-smooth);
     border: 1px solid var(--color-border-light);
-    position: relative;
     cursor: pointer;
-    overflow: hidden; /* Ocultar contenido que se sale */
-    will-change: height, transform; /* Optimizar animaciones */
-    transform-origin: top center; /* Origen de transformación */
-    backface-visibility: hidden; /* Mejorar rendimiento */
-    -webkit-font-smoothing: antialiased;
-    margin-bottom: 0; /* Eliminar margen inferior */
-    flex-shrink: 0; /* Evitar que se reduzca */
+    overflow: hidden;
+    transition: var(--transition-card);
+    width: 100%;
+    max-width: 350px;
+    min-height: 160px;
+    position: relative;
 }
 
-/* Estado expandido de la tarjeta - DESKTOP */
-@media (min-width: 769px) {
-    .plan-card.expanded {
-        transform: translateY(-8px);
-        box-shadow: var(--shadow-large);
-        z-index: 5;
-    }
+.plan-card.expanded {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-large);
+    z-index: 10;
 }
 
-/* Estado expandido de la tarjeta - MOBILE */
-@media (max-width: 768px) {
-    .plan-card.expanded {
-        z-index: 10;
-        box-shadow: var(--shadow-large);
-    }
-}
-
-/* Accesibilidad: focus */
-.plan-card:focus {
-    outline: 2px solid var(--color-accent-secondary);
-    outline-offset: 2px;
-}
-
-/* =============================================
-   VISTA COMPACTA (ESTADO INICIAL)
-   ============================================= */
+/* Vista compacta - OCULTAR CUANDO SE EXPANDE */
 .plan-compact-view {
     display: flex;
     align-items: center;
     padding: 1.5rem;
     width: 100%;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.3s ease;
+    opacity: 1;
+    visibility: visible;
+    min-height: 160px;
 }
 
-/* Cuando la tarjeta está expandida, ocultar vista compacta */
+/* IMPORTANTE: Cuando está expandida, la vista compacta DESAPARECE */
 .plan-card.expanded .plan-compact-view {
     opacity: 0;
+    visibility: hidden;
     position: absolute;
+    top: 0;
+    left: 0;
+    height: 0;
+    overflow: hidden;
     pointer-events: none;
 }
 
-/* Imagen en vista compacta */
+/* Contenido compacto */
 .compact-image {
-    width: 70px; /* Reducido para más compacto */
+    width: 70px;
     height: 70px;
     margin-right: 1.2rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: var(--color-bg-primary);
+    border-radius: 50%;
+    padding: 8px;
     flex-shrink: 0;
 }
 
@@ -168,45 +126,36 @@ html, body {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    filter: brightness(0.9);
-    transition: var(--transition-normal);
 }
 
-/* Información en vista compacta */
 .compact-info {
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-width: 0; /* Permitir que se reduzca */
+    text-align: left;
 }
 
 .compact-type {
-    font-size: 1.3rem; /* Reducido */
+    font-size: 1.3rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
     margin-bottom: 0.2rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-family: 'Orbitron', sans-serif;
+    color: var(--color-text-primary);
 }
 
 .compact-name {
-    font-size: 0.9rem; /* Reducido */
+    font-size: 0.95rem;
     color: var(--color-text-secondary);
     margin-bottom: 0.4rem;
-    text-transform: uppercase;
 }
 
 .compact-price {
-    font-size: 1.6rem; /* Reducido */
+    font-size: 1.6rem;
     font-weight: 800;
     color: var(--color-text-primary);
     margin-bottom: 0.3rem;
+    font-family: 'Rajdhani', sans-serif;
 }
 
-/* Badge de popular en vista compacta */
 .compact-info .popular-badge {
     background-color: var(--color-accent-secondary);
     color: var(--color-bg-primary);
@@ -215,54 +164,44 @@ html, body {
     font-size: 0.7rem;
     font-weight: 700;
     display: inline-block;
-    width: fit-content;
-    letter-spacing: 0.5px;
 }
 
-/* Flecha indicadora en vista compacta */
 .compact-arrow {
     position: absolute;
-    right: 1.2rem;
-    bottom: 1.2rem;
+    right: 1.5rem;
+    bottom: 1.5rem;
     color: var(--color-text-secondary);
     font-size: 0.9rem;
-    transition: var(--transition-normal);
+    transition: transform 0.4s ease;
 }
 
 .plan-card.expanded .compact-arrow {
     transform: rotate(180deg);
     color: var(--color-accent-secondary);
-    bottom: auto;
-    top: 1.2rem;
 }
 
-/* =============================================
-   VISTA EXPANDIDA (SE MUESTRA AL HOVER/CLICK)
-   ============================================= */
+/* Vista expandida - MOSTRAR CUANDO SE EXPANDE */
 .plan-expanded-view {
     width: 100%;
     padding: 1.5rem;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px);
-    transition: var(--transition-smooth);
+    transition: opacity 0.3s ease;
 }
 
-/* Mostrar vista expandida cuando la tarjeta está expandida */
+/* IMPORTANTE: Cuando está expandida, la vista expandida APARECE */
 .plan-card.expanded .plan-expanded-view {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
 }
 
-/* Contenido de la vista expandida */
+/* Contenido expandido */
 .plan-content {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 300px; /* Altura mínima para contenido expandido */
 }
 
-/* Sección de título en vista expandida */
 .plan-title-section {
     text-align: center;
     margin-bottom: 1.5rem;
@@ -271,11 +210,12 @@ html, body {
 }
 
 .plan-type {
-    font-size: 1.6rem; /* Reducido */
+    font-size: 1.6rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
     margin-bottom: 0.5rem;
+    font-family: 'Orbitron', sans-serif;
+    color: var(--color-text-primary);
 }
 
 .price-container {
@@ -286,29 +226,26 @@ html, body {
 }
 
 .currency {
-    font-size: 1.5rem; /* Reducido */
+    font-size: 1.5rem;
     font-weight: 600;
-    align-self: flex-start;
-    margin-top: 0.5rem;
     color: var(--color-accent-secondary);
     margin-right: 0.2rem;
 }
 
 .price {
-    font-size: 2.8rem; /* Reducido */
+    font-size: 2.5rem;
     font-weight: 800;
-    line-height: 1;
+    font-family: 'Rajdhani', sans-serif;
     color: var(--color-text-primary);
 }
 
 .plan-name {
-    font-size: 1.2rem; /* Reducido */
+    font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    text-transform: uppercase;
+    color: var(--color-text-primary);
 }
 
-/* Badge de popular en vista expandida */
 .plan-content .popular-badge {
     background-color: var(--color-accent-secondary);
     color: var(--color-bg-primary);
@@ -318,53 +255,34 @@ html, body {
     font-weight: 700;
     display: inline-block;
     margin-top: 0.5rem;
-    letter-spacing: 0.5px;
 }
 
-/* Detalles del plan */
 .plan-details {
-    margin-bottom: 1.2rem;
+    margin-bottom: 1.5rem;
     flex-grow: 1;
 }
 
 .plan-details h3 {
-    font-size: 1.1rem; /* Reducido */
+    font-size: 1.1rem;
     margin-bottom: 1rem;
+    text-align: center;
     color: var(--color-text-primary);
     font-weight: 600;
-    text-align: center;
 }
 
 .features {
     list-style-type: none;
-    margin-bottom: 1.2rem;
-    max-height: 300px; /* Limitar altura máxima */
-    overflow-y: auto; /* Scroll interno si es necesario */
-    padding-right: 5px; /* Espacio para scroll */
-}
-
-/* Estilos para scrollbar */
-.features::-webkit-scrollbar {
-    width: 4px;
-}
-
-.features::-webkit-scrollbar-track {
-    background: var(--color-bg-primary);
-    border-radius: 2px;
-}
-
-.features::-webkit-scrollbar-thumb {
-    background: var(--color-border-light);
-    border-radius: 2px;
+    margin: 0;
+    padding: 0;
 }
 
 .features li {
-    padding: 0.5rem 0;
+    padding: 0.6rem 0;
     color: var(--color-text-secondary);
     display: flex;
     align-items: flex-start;
     border-bottom: 1px solid var(--color-border-light);
-    font-size: 0.9rem; /* Reducido */
+    font-size: 0.95rem;
     line-height: 1.4;
 }
 
@@ -373,51 +291,39 @@ html, body {
 }
 
 .features li i {
-    margin-right: 0.6rem;
+    margin-right: 0.8rem;
     color: var(--color-accent-secondary);
     margin-top: 0.15rem;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     flex-shrink: 0;
 }
 
-/* Botón de ordenar */
+/* Botón */
 .order-btn {
     display: block;
     width: 100%;
-    padding: 0.9rem; /* Reducido */
+    padding: 0.9rem;
     text-align: center;
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
     text-decoration: none;
     font-weight: 700;
-    border-radius: var(--border-radius-button);
-    transition: var(--transition-normal);
+    border-radius: 8px;
     border: 2px solid var(--color-border-light);
     cursor: pointer;
-    font-size: 1rem; /* Reducido */
-    letter-spacing: 0.5px;
-    margin-top: auto;
+    font-size: 1rem;
+    margin-top: 1rem;
+    font-family: 'Rajdhani', sans-serif;
+    transition: all 0.3s ease;
 }
 
-.order-btn:hover,
-.order-btn:focus {
+.order-btn:hover {
     background-color: var(--color-hover);
-    border-color: var(--color-accent-primary);
-    color: var(--color-text-primary);
     transform: translateY(-2px);
     box-shadow: var(--shadow-normal);
-    outline: none;
 }
 
-.order-btn:active {
-    transform: translateY(0);
-}
-
-/* =============================================
-   COLORES ESPECÍFICOS PARA CADA PLAN
-   ============================================= */
-
-/* Plan Regular - Bronce */
+/* Colores específicos */
 .regular {
     border-color: rgba(205, 127, 50, 0.3);
 }
@@ -435,13 +341,15 @@ html, body {
     border-color: var(--color-bronze);
 }
 
-.regular .order-btn:hover,
-.regular .order-btn:focus {
+.regular .order-btn:hover {
     background-color: rgba(205, 127, 50, 0.1);
-    border-color: var(--color-bronze);
 }
 
-/* Plan Business - Platino */
+.plan-card.expanded.regular {
+    border-color: var(--color-bronze);
+    box-shadow: 0 8px 25px rgba(205, 127, 50, 0.2);
+}
+
 .business {
     border-color: rgba(192, 192, 192, 0.3);
 }
@@ -459,13 +367,15 @@ html, body {
     border-color: var(--color-silver);
 }
 
-.business .order-btn:hover,
-.business .order-btn:focus {
+.business .order-btn:hover {
     background-color: rgba(192, 192, 192, 0.1);
-    border-color: var(--color-silver);
 }
 
-/* Plan Avanzado - Dorado */
+.plan-card.expanded.business {
+    border-color: var(--color-silver);
+    box-shadow: 0 8px 25px rgba(192, 192, 192, 0.2);
+}
+
 .advanced {
     border-color: rgba(255, 215, 0, 0.3);
 }
@@ -483,81 +393,68 @@ html, body {
     border-color: var(--color-gold);
 }
 
-.advanced .order-btn:hover,
-.advanced .order-btn:focus {
+.advanced .order-btn:hover {
     background-color: rgba(255, 215, 0, 0.1);
-    border-color: var(--color-gold);
-}
-
-/* Efectos al expandir */
-.plan-card.expanded.regular {
-    border-color: var(--color-bronze);
-    box-shadow: 0 8px 25px rgba(205, 127, 50, 0.15);
-}
-
-.plan-card.expanded.business {
-    border-color: var(--color-silver);
-    box-shadow: 0 8px 25px rgba(192, 192, 192, 0.15);
 }
 
 .plan-card.expanded.advanced {
     border-color: var(--color-gold);
-    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.15);
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.2);
 }
 
-/* Información del footer */
+/* Footer info */
 .plan-footer-info {
     text-align: center;
     padding: 1.2rem;
     background-color: var(--color-bg-secondary);
-    border-radius: var(--border-radius-card);
+    border-radius: 12px;
     border: 1px solid var(--color-border-light);
     max-width: 800px;
-    margin: 0 auto;
-    margin-top: 1.5rem; /* Separación de las tarjetas */
+    margin: 2rem auto 0;
 }
 
 .plan-footer-info p {
     color: var(--color-text-secondary);
     font-size: 0.95rem;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.plan-footer-info i {
-    color: var(--color-accent-secondary);
-    font-size: 1.1rem;
+    margin: 0.5rem 0;
 }
 
 /* =============================================
-   MEDIA QUERIES RESPONSIVE
+   RESPONSIVE
    ============================================= */
 
+/* Móvil */
 @media (max-width: 768px) {
+    .planes-main-container {
+        padding: 80px 0.5rem 1.5rem;
+    }
+    
+    .planes-header h1 {
+        font-size: 2rem;
+    }
+    
+    .planes-header p {
+        font-size: 1rem;
+    }
+    
+    .mobile-instruction {
+        display: block;
+    }
+    
     .plan-cards-container {
         flex-direction: column;
         align-items: center;
         gap: 1rem;
     }
-
+    
     .plan-card {
         max-width: 100%;
         width: 100%;
     }
     
-    .plan-card.expanded {
-        margin-bottom: 0.5rem;
-    }
-
-    .planes-header h1 {
-        font-size: 2rem;
-    }
-
-    .planes-main-container {
-        padding: 80px 1rem 1.5rem;
+    .plan-compact-view {
+        min-height: 140px;
+        padding: 1.2rem;
     }
     
     .compact-image {
@@ -567,116 +464,45 @@ html, body {
     }
     
     .compact-type {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
     }
     
     .compact-price {
         font-size: 1.4rem;
     }
     
-    .mobile-instruction {
-        display: block;
-    }
-    
-    .plan-footer-info {
-        padding: 1rem;
-        margin-top: 1rem;
-    }
-    
-    .plan-footer-info p {
-        font-size: 0.85rem;
-        flex-direction: column;
-        text-align: center;
-        gap: 0.3rem;
-    }
-    
-    /* Asegurar que no haya espacio blanco debajo en móvil */
-    .plan-card:not(.expanded) {
-        margin-bottom: 0;
-    }
-    
-    /* Ajustar altura del contenedor principal */
-    .planes-main-container {
-        min-height: auto;
-        padding-bottom: 1rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .planes-main-container {
-        padding: 80px 0.75rem 1rem;
-    }
-    
-    .plan-compact-view {
-        padding: 1.2rem;
+    .compact-arrow {
+        right: 1.2rem;
+        bottom: 1.2rem;
     }
     
     .plan-expanded-view {
         padding: 1.2rem;
     }
     
-    .price {
-        font-size: 2.5rem;
-    }
-    
     .plan-type {
         font-size: 1.4rem;
     }
     
-    .plan-name {
-        font-size: 1.1rem;
+    .price {
+        font-size: 2.2rem;
     }
     
     .features li {
-        font-size: 0.85rem;
-    }
-    
-    .compact-arrow {
-        right: 1rem;
-        bottom: 1rem;
+        font-size: 0.9rem;
     }
 }
 
-/* =============================================
-   ANIMACIONES SUAVES
-   ============================================= */
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .plan-card {
+        max-width: calc(50% - 1rem);
     }
 }
 
-.plan-card.expanded .plan-expanded-view {
-    animation: fadeInUp 0.3s ease forwards;
-}
-
-/* =============================================
-   COMPATIBILIDAD CON COMPONENTES
-   ============================================= */
-
-/* Asegurar que el contenido no se superponga con el navbar */
-body {
-    padding-top: 0 !important;
-}
-
-/* Asegurar que el footer esté visible */
-body {
-    padding-bottom: 0 !important;
-}
-
-/* El navbar tiene z-index: 1000, así que el contenido debe estar debajo */
-.planes-main-container {
-    position: relative;
-    z-index: 1;
-}
-
-/* Evitar que el contenedor principal cause scroll */
-.planes-wrapper {
-    min-height: auto;
+/* Desktop */
+@media (min-width: 1025px) {
+    .plan-card {
+        max-width: 350px;
+    }
 }
