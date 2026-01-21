@@ -1,113 +1,119 @@
-<!DOCTYPE html>
-<html lang="es">
+    <!DOCTYPE html>
+    <html lang="es">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contacto | Centinela</title>
-    <!-- Sistema de colores globales -->
-    <link rel="stylesheet" href="/components/personalizacion/personalizacion.css">
-     <!-- Sistema de particulas -->
-    <link rel="stylesheet" href="/components/particulas/particulas.css">
-    <link rel="stylesheet" href="contact.css">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
-        rel="stylesheet" />
-         <!-- Icono en barra de titulo -->
-    <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    <!-- Archivo para PWA -->
-    <link rel="manifest" href="/manifest.json">
-    <!-- Kit de Font Awesome ya incluido -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Contacto | Centinela</title>
+        <!-- Sistema de colores globales -->
+        <link rel="stylesheet" href="/components/personalizacion/personalizacion.css">
+        <!-- Sistema de particulas -->
+        <link rel="stylesheet" href="/components/particulas/particulas.css">
+        <link rel="stylesheet" href="contact.css">
+        <link
+            href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+            rel="stylesheet" />
+            <!-- Icono en barra de titulo -->
+        <link rel="icon" href="/assets/images/logo.png" type="image/png">
+        <!-- Archivo para PWA -->
+        <link rel="manifest" href="/manifest.json">
+        <!-- Kit de Font Awesome ya incluido -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
 
-<body>
-    <canvas id="particle-canvas"></canvas>
+    <body>
+        <canvas id="particle-canvas"></canvas>
 
-    <!-- Sección de contacto -->
-    <section class="contact-section">
-        <h1 class="contact-title">
-            Puedes encontrarnos en distintos puntos dentro de la República Mexicana
-        </h1>
+        <!-- Sección de contacto -->
+        <section class="contact-section">
+            <h1 class="contact-title">
+                Puedes encontrarnos en distintos puntos dentro de la República Mexicana
+            </h1>
 
-        <div class="contact-container">
-            <!-- FORMULARIO -->
-            <div class="contact-card">
-                <h2><i class="fas fa-comment-dots fa-xs" style="margin-right: 8px;"></i> Contáctanos</h2>
-                <form action="#" method="post">
-                    <div class="input-with-icon">
-                        <i class="fas fa-user"></i>
-                        <input type="text" name="nombre" placeholder="Nombre completo" required>
-                    </div>
-                    <div class="input-with-icon">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" name="correo" placeholder="Correo electrónico" required>
-                    </div>
-                    <div class="input-with-icon">
-                        <i class="fas fa-phone"></i>
-                        <input type="number" name="telefono" placeholder="Teléfono" required>
-                    </div>
-                    <div class="input-with-icon">
-                        <i class="fas fa-pen"></i>
-                        <textarea name="mensaje" rows="4" placeholder="Escribe tu mensaje" required></textarea>
-                    </div>
-                    <button type="submit">
-                        <i class="fas fa-paper-plane"></i> Enviar reporte
-                    </button>
-                </form>
-            </div>
-
-            <!-- INFORMACIÓN DE CONTACTO -->
-            <div class="info-card">
-                <h2><i class="fas fa-headset fa-xs" style="margin-right: 8px;"></i> Nos encontramos a tus órdenes</h2>
-                <p class="info-subtitle"><strong>En los siguientes medios:</strong></p>
-
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <span class="contact-icon"><i class="fas fa-phone"></i></span>
-                        <div class="contact-details">
-                            <strong>Teléfono:</strong>
-                            <p>+52 55 7690 8248</p>
+            <div class="contact-container">
+                <!-- FORMULARIO -->
+                <div class="contact-card">
+                    <h2><i class="fas fa-comment-dots fa-xs" style="margin-right: 8px;"></i> Contáctanos</h2>
+                    <form action="#" method="post">
+                        <div class="input-with-icon">
+                            <i class="fas fa-user"></i>
+                            <input type="text" name="nombre" placeholder="Nombre completo" required>
                         </div>
-                    </div>
-
-                    <div class="contact-item">
-                        <span class="contact-icon"><i class="fas fa-envelope"></i></span>
-                        <div class="contact-details">
-                            <strong>Correo Electrónico:</strong>
-                            <p>mitiendaenlinea@rhafasoluciones.com</p>
+                        <div class="input-with-icon">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" name="correo" placeholder="Correo electrónico" required>
                         </div>
-                    </div>
+                        <div class="input-with-icon">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" name="telefono" placeholder="Teléfono" pattern="[0-9]{10}" inputmode="numeric" required>
+                        </div>
+                        <div class="input-with-icon">
+                            <i class="fas fa-pen"></i>
+                            <textarea name="mensaje" rows="4" placeholder="Escribe tu mensaje" required></textarea>
+                        </div>
+                        <button type="submit">
+                            <i class="fas fa-paper-plane"></i> Enviar reporte
+                        </button>
+                    </form>
+                </div>
 
-                    <div class="contact-item">
-                        <span class="contact-icon"><i class="fas fa-clock"></i></span>
-                        <div class="contact-details">
-                            <strong>Horario de Atención:</strong>
-                            <p>Lunes a Viernes: 9:00 AM - 6:00 PM</p>
-                            <p>Sábados: 10:00 AM - 2:00 PM</p>
+                <!-- INFORMACIÓN DE CONTACTO -->
+                <div class="info-card">
+                    <h2><i class="fas fa-headset fa-xs" style="margin-right: 8px;"></i> Nos encontramos a tus órdenes</h2>
+                    <p class="info-subtitle"><strong>En los siguientes medios:</strong></p>
+
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <span class="contact-icon"><i class="fas fa-phone"></i></span>
+                            <div class="contact-details">
+                                <strong>Teléfono:</strong>
+                                <p>+52 55 7690 8248</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-item">
+                            <span class="contact-icon"><i class="fas fa-envelope"></i></span>
+                            <div class="contact-details">
+                                <strong>Correo Electrónico:</strong>
+                                <p>mitiendaenlinea@rhafasoluciones.com</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-item">
+                            <span class="contact-icon"><i class="fas fa-clock"></i></span>
+                            <div class="contact-details">
+                                <strong>Horario de Atención:</strong>
+                                <p>Lunes a Viernes: 9:00 AM - 6:00 PM</p>
+                                <p>Sábados: 10:00 AM - 2:00 PM</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- MAPA -->
-            <div class="map-card">
-                <h2><i class="fas fa-map-location-dot fa-xs" style="margin-right: 8px;"></i> Mapa</h2>
-                <iframe src="https://www.google.com/maps?q=Nezahualcóyotl,Estado%20de%20México&output=embed"
-                    loading="lazy" referrerpolicy="no-referrer-when-downgrade">
-                </iframe>
-                <div class="map-info">
-                    <strong><i class="fas fa-building"></i> RSI Enterprise México</strong>
-                    <p><i class="fas fa-location-dot"></i> Nezahualcóyotl, Estado de México</p>
+                <!-- MAPA (AHORA CON COLOR) -->
+                <div class="map-card">
+                    <h2><i class="fas fa-map-location-dot fa-xs" style="margin-right: 8px;"></i> Mapa</h2>
+                    <iframe 
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d240357.73279776322!2d-99.14323435!3d19.400378!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1f92b75aa014d%3A0x17d810d20b5d5b5f!2sNezahualc%C3%B3yotl%2C%20State%20of%20Mexico!5e0!3m2!1sen!2smx!4v1690832084924!5m2!1sen!2smx" 
+                        width="100%" 
+                        height="400" 
+                        style="border:0;" 
+                        allowfullscreen="" 
+                        loading="lazy" 
+                        referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
+                    <div class="map-info">
+                        <strong><i class="fas fa-building"></i> RSI Enterprise México</strong>
+                        <p><i class="fas fa-location-dot"></i> Nezahualcóyotl, Estado de México</p>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- components -->
-    <script src="/components/navbar-visitor-component.js"></script>
-    <script src="/components/footer-visitor-component.js"></script>
-    <script src="/components/particulas/particulas.js"></script>
-</body>
+        <!-- components -->
+        <script src="/components/navbar-visitor-component.js"></script>
+        <script src="/components/footer-visitor-component.js"></script>
+        <script src="/components/particulas/particulas.js"></script>
+    </body>
 
-</html>
+    </html>
