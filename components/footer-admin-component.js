@@ -181,21 +181,20 @@
                 
                 .footer-left {
                     flex: 0 0 auto;
-                    width: 40%;
+                    width: 30%;
                     justify-content: flex-start;
                 }
                 
                 .footer-center {
                     flex: 0 0 auto;
-                    width: 100%;
-                    order: 3;
-                    margin-top: 5px;
-                    padding: 0;
+                    width: 40%;
+                    order: 2;
+                    padding: 0 5px;
                 }
                 
                 .footer-right {
                     flex: 0 0 auto;
-                    width: 60%;
+                    width: 30%;
                     justify-content: flex-end;
                 }
                 
@@ -224,63 +223,71 @@
                 }
                 
                 .footer-bottom-content {
-                    flex-direction: column;
-                    align-items: stretch;
-                    gap: 6px;
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 4px;
                 }
                 
                 .footer-left, .footer-center, .footer-right {
-                    width: 100%;
+                    width: auto;
                     flex: none;
-                    justify-content: center;
-                    text-align: center;
                 }
                 
                 .footer-left {
                     order: 1;
+                    width: 30%;
+                    justify-content: flex-start;
                 }
                 
                 .footer-center {
                     order: 3;
-                    margin-top: 4px;
+                    width: 100%;
+                    margin-top: 3px;
+                    padding: 0;
                 }
                 
                 .footer-right {
                     order: 2;
+                    width: 40%;
+                    justify-content: flex-end;
                 }
                 
                 .footer-logo-link {
-                    justify-content: center;
+                    justify-content: flex-start;
                 }
                 
                 .datetime-container {
-                    align-items: center;
+                    align-items: flex-end;
                 }
                 
                 .footer-logo {
-                    height: 20px;
+                    height: 18px;
                 }
                 
                 .footer-logo-text {
-                    font-size: 10px;
+                    font-size: 9px;
                 }
                 
                 .copyright {
-                    font-size: 10px;
-                    line-height: 1.3;
+                    font-size: 9px;
+                    line-height: 1.2;
                 }
                 
                 .date-display, .time-display {
-                    font-size: 9px;
-                    text-align: center;
+                    font-size: 8px;
+                    text-align: right;
                 }
                 
+                /* GARANTIZAR QUE LA FECHA Y HORA SE VEAN EN MÓVIL */
                 .date-display {
-                    display: none;
+                    display: block !important;
+                    font-size: 7px;
                 }
                 
                 .time-display {
-                    font-size: 10px;
+                    font-size: 9px;
                     font-weight: 700;
                 }
             }
@@ -291,17 +298,40 @@
                     padding: 5px 0;
                 }
                 
+                .footer-bottom-content {
+                    gap: 3px;
+                }
+                
+                .footer-left {
+                    width: 25%;
+                }
+                
+                .footer-right {
+                    width: 45%;
+                }
+                
                 .footer-logo-text {
                     display: none;
                 }
                 
                 .copyright {
-                    font-size: 9px;
+                    font-size: 8px;
+                }
+                
+                .date-display {
+                    font-size: 6px;
                 }
                 
                 .time-display {
-                    font-size: 9px;
+                    font-size: 8px;
                 }
+            }
+            
+            /* ====== GARANTIZAR QUE FECHA Y HORA SEAN VISIBLES ====== */
+            #currentDate, #currentTime {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
             }
         `;
 
@@ -364,9 +394,9 @@
     // Función para formatear fecha en español
     function formatDate(date) {
         const options = {
-            weekday: 'long',
+            weekday: 'short', // 'short' en lugar de 'long' para móvil
             year: 'numeric',
-            month: 'long',
+            month: 'short',   // 'short' en lugar de 'long' para móvil
             day: 'numeric',
             timeZone: 'America/Mexico_City'
         };
@@ -374,13 +404,13 @@
         return date.toLocaleDateString('es-MX', options);
     }
 
-    // Función para formatear fecha abreviada (para móvil)
-    function formatShortDate(date) {
+    // Función para formatear fecha más corta (para móvil)
+    function formatVeryShortDate(date) {
         const options = {
-            weekday: 'short',
-            year: '2-digit',
-            month: 'short',
+            weekday: 'narrow', // Solo inicial del día
             day: 'numeric',
+            month: 'short',
+            year: '2-digit',
             timeZone: 'America/Mexico_City'
         };
 
@@ -424,21 +454,31 @@
             const width = window.innerWidth;
 
             // Ajustar formato según tamaño de pantalla
-            if (width <= 480) {
-                // Móvil: mostrar solo hora, fecha oculta
-                dateElement.style.display = 'none';
+            if (width <= 320) {
+                // Móvil muy pequeño: fecha muy corta, hora sin segundos
+                dateElement.textContent = formatVeryShortDate(now);
+                timeElement.textContent = formatShortTime(now);
+            } else if (width <= 480) {
+                // Móvil: fecha corta, hora sin segundos
+                dateElement.textContent = formatDate(now);
                 timeElement.textContent = formatShortTime(now);
             } else if (width <= 768) {
-                // Tablet: fecha abreviada
-                dateElement.style.display = 'block';
-                dateElement.textContent = formatShortDate(now);
+                // Tablet: fecha corta, hora sin segundos
+                dateElement.textContent = formatDate(now);
                 timeElement.textContent = formatShortTime(now);
             } else {
                 // Desktop: formato completo
-                dateElement.style.display = 'block';
                 dateElement.textContent = formatDate(now);
                 timeElement.textContent = formatTime(now);
             }
+            
+            // GARANTIZAR que siempre sean visibles
+            dateElement.style.display = 'block';
+            dateElement.style.visibility = 'visible';
+            dateElement.style.opacity = '1';
+            timeElement.style.display = 'block';
+            timeElement.style.visibility = 'visible';
+            timeElement.style.opacity = '1';
         }
 
         // Actualizar inmediatamente
@@ -468,10 +508,20 @@
                 time: formatTime(new Date())
             };
         },
-        toggleResponsiveMode: function (enabled) {
+        // Forzar visualización de fecha y hora
+        forceDateTimeVisibility: function() {
             const dateElement = document.getElementById('currentDate');
+            const timeElement = document.getElementById('currentTime');
+            
             if (dateElement) {
-                dateElement.style.display = enabled ? 'none' : 'block';
+                dateElement.style.display = 'block';
+                dateElement.style.visibility = 'visible';
+                dateElement.style.opacity = '1';
+            }
+            if (timeElement) {
+                timeElement.style.display = 'block';
+                timeElement.style.visibility = 'visible';
+                timeElement.style.opacity = '1';
             }
         }
     };
