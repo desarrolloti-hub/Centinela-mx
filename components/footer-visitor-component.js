@@ -120,6 +120,26 @@
                 font-size: 20px;
                 color: var(--footer-text-primary);
             }
+
+            /* Logo en el simple del footer*/
+            .footer-logo-simple {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                margin-bottom: 5px;
+            }
+            
+            .footer-logo-simple-img {
+                height: 40px;
+            }
+            
+            .footer-logo-simple span {
+                color: var(--footer-text-secondary);
+                text-decoration: none;
+                font-size: 14px;
+                transition: var(--transition-default);
+            }
+
             
             /* Texto "about" */
             .footer-about {
@@ -398,6 +418,10 @@
         <div class="footer-bottom">
             <div class="footer-bottom-container">
                 <div class="footer-bottom-content">
+                    <div class="footer-logo-simple">
+                            <img src="/assets/images/logoApp.png" alt="Centinela Logo" class="footer-logo-img">
+                            <span>RSI Enterprise.</span>
+                        </div>
                     <p class="copyright">
                         © ${new Date().getFullYear()} RSI Enterprise. Todos los derechos reservados.
                     </p>

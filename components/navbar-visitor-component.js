@@ -213,23 +213,29 @@
                     display: grid;
                     grid-template-columns: 40px 1fr 40px;
                     align-items: center;
+                    justify-items:center;
                 }
                 
                 .navbar-hamburger-btn {
                     display: block;
-                    grid-column: 1;
-                    justify-self: start;
-                    margin-right: 0;
+                    grid-column: 3;
+                    justify-self: end;
+                    margin-left: 0;
+                    margin-right: 5;
                 }
                 
                 .navbar-brand {
-                    grid-column: 2;
+                    grid-column: 2 / span 1;
+                    grid-row: 1;
                     justify-self: center;
+                    align-self: center;
                     height: 50px;
-                    position: absolute;
-                    left: 50%;
-                    transform: translateX(-50%);
+                    position: relative;
+                    left: 0;
+                    transform: none;
                     width: auto;
+                    z-index: 1003;
+                    text-align: center;
                 }
                 
                 .navbar-logo-img {
@@ -350,7 +356,7 @@
                         <img src="/assets/images/logo.png" alt="" class="navbar-logo-img">
                         <span>CENTINELA</span>
                     </a>
-                    
+
                     <ul class="navbar-main-menu" id="navbarMainMenu">
                     
                         <li><a href="/index.html" class="active"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
