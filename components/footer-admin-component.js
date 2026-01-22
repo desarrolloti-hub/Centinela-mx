@@ -1,70 +1,74 @@
-// footer-component.js - Footer con fecha y hora en tiempo real
-(function () {
-    'use strict';
+// footer-component.js
 
-    // Evitar carga duplicada
-    if (window.FooterComponentLoaded) {
-        return;
-    }
-    window.FooterComponentLoaded = true;
-
-    // Inicializar cuando el DOM esté listo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+class FooterComponent {
+    constructor() {
+        this.init();
     }
 
-    function init() {
+    // Inicializa el componente evitando duplicados
+    init() {
+        if (window.FooterComponentLoaded) return;
+        window.FooterComponentLoaded = true;
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setup());
+        } else {
+            this.setup();
+        }
+    }
+
+    // Configuración principal del footer
+    setup() {
         try {
-            removeOriginalFooter();
-            createFooterComponent();
-            updateDateTime(); // Inicializar fecha y hora
+            this.removeOriginalFooter();  
+            this.createFooter();          
+            this.updateDateTime();       
+            console.log('✅ Footer inicializado');
         } catch (error) {
-            console.error('Error al inicializar footer:', error);
+            console.error('❌ Error:', error);
         }
     }
 
-    function removeOriginalFooter() {
+    // Remueve cualquier footer existente
+    removeOriginalFooter() {
         const originalFooter = document.querySelector('footer');
-        if (originalFooter) {
-            originalFooter.remove();
-        }
+        originalFooter?.remove();
     }
 
-    // Crear footer component
-    function createFooterComponent() {
-        addFooterStyles();
-        createFooterHTML();
+    // Crea el footer completo
+    createFooter() {
+        this.addStyles();  
+        this.insertHTML();
     }
 
-    function addFooterStyles() {
-        const styleId = 'footer-component-styles';
-        if (document.getElementById(styleId)) return;
+    // Agrega estilos CSS para el footer
+    addStyles() {
+        if (document.getElementById('footer-component-styles')) return;
 
-        const styles = document.createElement('style');
-        styles.id = styleId;
-        styles.textContent = /*css*/ `
-            /* FOOTER CON MISMO ESTILO QUE NAVBAR */
+        const styles = `
+            /* Footer fijo en la parte inferior */
             .footer-component {
-                position: relative;
+                position: fixed;
                 bottom: 0;
                 left: 0;
                 width: 100%;
-                background-color: var(--navbar-bg);
+                background-color: var(--color-bg-primary);
                 color: var(--navbar-text);
-                font-family: var(--font-family-primary, sans-serif);
-                padding: 10px 0;
-                font-size: 13px;
-                box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+                font-family: var(--font-family-primary);
+                padding: 8px 0;
+                font-size: 14px;
+                box-shadow: 0 -2px 10px rgb(0, 0, 0);
                 z-index: 900;
+                border-top: 1px solid var(--color-border-light);
             }
             
+            /* Efecto al hacer scroll */
             .footer-component.scrolled {
                 background-color: var(--navbar-scrolled-bg);
                 box-shadow: var(--navbar-scrolled-shadow);
             }
             
+            /* Contenedor principal centrado */
             .footer-bottom-container {
                 width: 100%;
                 max-width: 1200px;
@@ -72,25 +76,25 @@
                 padding: 0 15px;
             }
             
-            /* ESTRUCTURA PRINCIPAL - DESKTOP */
+            /* Layout principal: Logo | Copyright | Fecha/Hora */
             .footer-bottom-content {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 width: 100%;
-                min-height: 40px;
+                min-height: 35px;
             }
             
-            /* LOGO - IZQUIERDA */
+            /* Sección izquierda - Logo */
             .footer-left {
                 display: flex;
                 align-items: center;
                 gap: 8px;
                 flex: 1;
                 justify-content: flex-start;
-                min-width: 0;
             }
             
+            /* Enlace del logo */
             .footer-logo-link {
                 display: flex;
                 align-items: center;
@@ -99,53 +103,44 @@
                 transition: var(--transition-default);
             }
             
-            .footer-logo-link:hover {
-                opacity: 0.8;
-            }
-            
+            /* Logo */
             .footer-logo {
-                height: 25px;
+                height: 22px;
                 width: auto;
                 object-fit: contain;
-                filter: brightness(0) invert(1);
             }
             
+            /* Texto del logo */
             .footer-logo-text {
                 color: var(--navbar-logo-text);
                 font-weight: 500;
-                font-size: 12px;
+                font-size: 14px;
                 white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                text-shadow: var(--text-shadow-effect);
             }
             
-            /* COPYRIGHT - CENTRO */
+            /* Sección central - Copyright */
             .footer-center {
                 flex: 1;
                 text-align: center;
-                min-width: 0;
                 padding: 0 10px;
             }
             
             .copyright {
                 color: var(--navbar-text);
                 margin: 0;
-                font-size: 12px;
+                font-size: 14px;
                 white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
             }
             
-            /* FECHA Y HORA - DERECHA */
+            /* Sección derecha - Fecha y Hora */
             .footer-right {
                 display: flex;
                 align-items: center;
                 flex: 1;
                 justify-content: flex-end;
-                min-width: 0;
             }
             
+            /* Contenedor para fecha y hora apilados */
             .datetime-container {
                 display: flex;
                 flex-direction: column;
@@ -153,181 +148,63 @@
                 gap: 2px;
             }
             
+            /* Estilos para fecha y hora */
             .date-display, .time-display {
                 white-space: nowrap;
                 color: var(--navbar-text);
-                font-size: 11px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 100%;
+                font-size: 14px;
             }
             
+            /* Hora con estilo de reloj digital */
             .time-display {
                 font-weight: 600;
                 font-family: 'Courier New', monospace;
             }
             
-            /* ====== RESPONSIVE - TABLET (768px - 480px) ====== */
+            /* Ajuste del body para espacio del footer fijo */
+            body {
+                padding-bottom: 50px !important;
+            }
+            
+            /* === RESPONSIVE PARA TABLET === */
             @media (max-width: 768px) {
-                .footer-component {
-                    padding: 8px 0;
-                }
-                
-                .footer-bottom-content {
-                    flex-wrap: wrap;
-                    justify-content: space-between;
-                    gap: 8px;
-                }
-                
-                .footer-left {
-                    flex: 0 0 auto;
-                    width: 30%;
-                    justify-content: flex-start;
-                }
-                
-                .footer-center {
-                    flex: 0 0 auto;
-                    width: 40%;
-                    order: 2;
-                    padding: 0 5px;
-                }
-                
-                .footer-right {
-                    flex: 0 0 auto;
-                    width: 30%;
-                    justify-content: flex-end;
-                }
-                
-                .footer-logo {
-                    height: 22px;
-                }
-                
-                .footer-logo-text {
-                    font-size: 11px;
-                }
-                
-                .copyright {
-                    font-size: 11px;
-                }
-                
-                .date-display, .time-display {
-                    font-size: 10px;
-                }
+                .footer-component { padding: 6px 0; }
+                .footer-bottom-content { flex-wrap: wrap; gap: 6px; }
+                .footer-left { width: 30%; }
+                .footer-center { width: 40%; order: 2; }
+                .footer-right { width: 30%; }
+                .footer-logo { height: 20px; }
+                .footer-logo-text, .copyright, .date-display, .time-display { font-size: 12px; }
+                body { padding-bottom: 40px !important; }
             }
             
-            /* ====== RESPONSIVE - MÓVIL (480px - 320px) ====== */
+            /* === RESPONSIVE PARA MÓVIL === */
             @media (max-width: 480px) {
-                .footer-component {
-                    padding: 6px 0;
-                    font-size: 11px;
-                }
-                
-                .footer-bottom-content {
-                    flex-direction: row;
-                    flex-wrap: wrap;
-                    justify-content: space-between;
-                    align-items: center;
-                    gap: 4px;
-                }
-                
-                .footer-left, .footer-center, .footer-right {
-                    width: auto;
-                    flex: none;
-                }
-                
-                .footer-left {
-                    order: 1;
-                    width: 30%;
-                    justify-content: flex-start;
-                }
-                
-                .footer-center {
-                    order: 3;
-                    width: 100%;
-                    margin-top: 3px;
-                    padding: 0;
-                }
-                
-                .footer-right {
-                    order: 2;
-                    width: 40%;
-                    justify-content: flex-end;
-                }
-                
-                .footer-logo-link {
-                    justify-content: flex-start;
-                }
-                
-                .datetime-container {
-                    align-items: flex-end;
-                }
-                
-                .footer-logo {
-                    height: 18px;
-                }
-                
-                .footer-logo-text {
-                    font-size: 9px;
-                }
-                
-                .copyright {
-                    font-size: 9px;
-                    line-height: 1.2;
-                }
-                
-                .date-display, .time-display {
-                    font-size: 8px;
-                    text-align: right;
-                }
-                
-                /* GARANTIZAR QUE LA FECHA Y HORA SE VEAN EN MÓVIL */
-                .date-display {
-                    display: block !important;
-                    font-size: 7px;
-                }
-                
-                .time-display {
-                    font-size: 9px;
-                    font-weight: 700;
-                }
+                .footer-component { padding: 5px 0; font-size: 11px; }
+                .footer-bottom-content { gap: 4px; min-height: 25px; }
+                .footer-left { order: 1; width: 30%; }
+                .footer-center { order: 3; width: 100%; margin-top: 3px; }
+                .footer-right { order: 2; width: 40%; }
+                .footer-logo { height: 18px; }
+                .footer-logo-text { font-size: 11px; }
+                .copyright { font-size: 11px; }
+                .date-display, .time-display { font-size: 11px; }
+                body { padding-bottom: 35px !important; }
             }
             
-            /* ====== RESPONSIVE - MÓVIL MUY PEQUEÑO (< 320px) ====== */
+            /* === RESPONSIVE PARA MÓVIL PEQUEÑO === */
             @media (max-width: 320px) {
-                .footer-component {
-                    padding: 5px 0;
-                }
-                
-                .footer-bottom-content {
-                    gap: 3px;
-                }
-                
-                .footer-left {
-                    width: 25%;
-                }
-                
-                .footer-right {
-                    width: 45%;
-                }
-                
-                .footer-logo-text {
-                    display: none;
-                }
-                
-                .copyright {
-                    font-size: 8px;
-                }
-                
-                .date-display {
-                    font-size: 6px;
-                }
-                
-                .time-display {
-                    font-size: 8px;
-                }
+                .footer-component { padding: 4px 0; }
+                .footer-left { width: 25%; }
+                .footer-right { width: 45%; }
+                .footer-logo-text { display: none; }
+                .copyright { font-size: 9px; }
+                .date-display { font-size: 9px; }
+                .time-display { font-size: 10px; }
+                body { padding-bottom: 30px !important; }
             }
             
-            /* ====== GARANTIZAR QUE FECHA Y HORA SEAN VISIBLES ====== */
+            /* Garantizar visibilidad de fecha y hora */
             #currentDate, #currentTime {
                 display: block !important;
                 visibility: visible !important;
@@ -335,17 +212,20 @@
             }
         `;
 
-        document.head.appendChild(styles);
+        const styleElement = document.createElement('style');
+        styleElement.id = 'footer-component-styles';
+        styleElement.textContent = styles;
+        document.head.appendChild(styleElement);
     }
 
-    function createFooterHTML() {
+    // Inserta la estructura HTML del footer
+    insertHTML() {
         const footer = document.createElement('footer');
         footer.className = 'footer-component';
-
-        footer.innerHTML = /*html*/ `
+        footer.innerHTML = `
             <div class="footer-bottom-container">
                 <div class="footer-bottom-content">
-                    <!-- IZQUIERDA: Logo y RSI Enterprise -->
+                    <!-- Logo y nombre de la empresa -->
                     <div class="footer-left">
                         <a href="/index.html" class="footer-logo-link">
                             <img src="/assets/images/logoApp.png" alt="Centinela Logo" class="footer-logo">
@@ -353,14 +233,14 @@
                         </a>
                     </div>
                     
-                    <!-- CENTRO: Copyright -->
+                    <!-- Información de copyright -->
                     <div class="footer-center">
                         <p class="copyright">
                             © ${new Date().getFullYear()} RSI Enterprise. Todos los derechos reservados.
                         </p>
                     </div>
                     
-                    <!-- DERECHA: Fecha y Hora en tiempo real -->
+                    <!-- Fecha y hora en tiempo real -->
                     <div class="footer-right">
                         <div class="datetime-container">
                             <div id="currentDate" class="date-display"></div>
@@ -372,53 +252,45 @@
         `;
 
         document.body.appendChild(footer);
-        
-        // Aplicar efecto scrolled al footer también
-        setupFooterScrollEffect();
+        this.setupScrollEffect();
     }
 
-    // Función para aplicar efecto scroll al footer
-    function setupFooterScrollEffect() {
+    // Configura efecto visual al hacer scroll
+    setupScrollEffect() {
         const footer = document.querySelector('.footer-component');
         if (!footer) return;
 
         window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                footer.classList.add('scrolled');
-            } else {
-                footer.classList.remove('scrolled');
-            }
+            footer.classList.toggle('scrolled', window.scrollY > 50);
         });
     }
 
-    // Función para formatear fecha en español
-    function formatDate(date) {
+    // Formatea la fecha completa
+    formatDate(date) {
         const options = {
-            weekday: 'short', // 'short' en lugar de 'long' para móvil
+            weekday: 'short',
             year: 'numeric',
-            month: 'short',   // 'short' en lugar de 'long' para móvil
+            month: 'short',
             day: 'numeric',
             timeZone: 'America/Mexico_City'
         };
-
         return date.toLocaleDateString('es-MX', options);
     }
 
-    // Función para formatear fecha más corta (para móvil)
-    function formatVeryShortDate(date) {
+    // Formatea fecha muy corta (para móviles pequeños)
+    formatVeryShortDate(date) {
         const options = {
-            weekday: 'narrow', // Solo inicial del día
+            weekday: 'narrow',
             day: 'numeric',
             month: 'short',
             year: '2-digit',
             timeZone: 'America/Mexico_City'
         };
-
         return date.toLocaleDateString('es-MX', options);
     }
 
-    // Función para formatear hora
-    function formatTime(date) {
+    // Formatea hora completa con segundos
+    formatTime(date) {
         const options = {
             hour: '2-digit',
             minute: '2-digit',
@@ -426,103 +298,62 @@
             hour12: true,
             timeZone: 'America/Mexico_City'
         };
-
         return date.toLocaleTimeString('es-MX', options);
     }
 
-    // Función para formatear hora abreviada (sin segundos)
-    function formatShortTime(date) {
+    // Formatea hora sin segundos (para pantallas pequeñas)
+    formatShortTime(date) {
         const options = {
             hour: '2-digit',
             minute: '2-digit',
             hour12: true,
             timeZone: 'America/Mexico_City'
         };
-
         return date.toLocaleTimeString('es-MX', options);
     }
 
-    // Actualizar fecha y hora de manera responsive
-    function updateDateTime() {
+    // Actualiza fecha y hora en tiempo real
+    updateDateTime() {
         const dateElement = document.getElementById('currentDate');
         const timeElement = document.getElementById('currentTime');
 
         if (!dateElement || !timeElement) return;
 
-        function update() {
+        const update = () => {
             const now = new Date();
             const width = window.innerWidth;
 
-            // Ajustar formato según tamaño de pantalla
+            // Formato responsive según tamaño de pantalla
             if (width <= 320) {
-                // Móvil muy pequeño: fecha muy corta, hora sin segundos
-                dateElement.textContent = formatVeryShortDate(now);
-                timeElement.textContent = formatShortTime(now);
+                // Móvil muy pequeño: formato compacto
+                dateElement.textContent = this.formatVeryShortDate(now);
+                timeElement.textContent = this.formatShortTime(now);
             } else if (width <= 480) {
-                // Móvil: fecha corta, hora sin segundos
-                dateElement.textContent = formatDate(now);
-                timeElement.textContent = formatShortTime(now);
+                // Móvil: fecha normal, hora sin segundos
+                dateElement.textContent = this.formatDate(now);
+                timeElement.textContent = this.formatShortTime(now);
             } else if (width <= 768) {
-                // Tablet: fecha corta, hora sin segundos
-                dateElement.textContent = formatDate(now);
-                timeElement.textContent = formatShortTime(now);
+                // Tablet: igual que móvil
+                dateElement.textContent = this.formatDate(now);
+                timeElement.textContent = this.formatShortTime(now);
             } else {
                 // Desktop: formato completo
-                dateElement.textContent = formatDate(now);
-                timeElement.textContent = formatTime(now);
+                dateElement.textContent = this.formatDate(now);
+                timeElement.textContent = this.formatTime(now);
             }
-            
-            // GARANTIZAR que siempre sean visibles
+
+            // Asegurar visibilidad
             dateElement.style.display = 'block';
             dateElement.style.visibility = 'visible';
-            dateElement.style.opacity = '1';
             timeElement.style.display = 'block';
             timeElement.style.visibility = 'visible';
-            timeElement.style.opacity = '1';
-        }
+        };
 
-        // Actualizar inmediatamente
-        update();
-
-        // Actualizar cada segundo
-        setInterval(update, 1000);
-
-        // Actualizar al cambiar tamaño de ventana
-        window.addEventListener('resize', update);
+        update(); // Actualizar inmediatamente
+        setInterval(update, 1000); // Actualizar cada segundo
+        window.addEventListener('resize', update); // Actualizar al cambiar tamaño
     }
+}
 
-    // API mejorada
-    window.FooterComponent = {
-        refresh: function () {
-            updateDateTime();
-        },
-        updateLogo: function (newSrc) {
-            const logo = document.querySelector('.footer-logo');
-            if (logo) {
-                logo.src = newSrc;
-            }
-        },
-        getCurrentDateTime: function () {
-            return {
-                date: formatDate(new Date()),
-                time: formatTime(new Date())
-            };
-        },
-        // Forzar visualización de fecha y hora
-        forceDateTimeVisibility: function() {
-            const dateElement = document.getElementById('currentDate');
-            const timeElement = document.getElementById('currentTime');
-            
-            if (dateElement) {
-                dateElement.style.display = 'block';
-                dateElement.style.visibility = 'visible';
-                dateElement.style.opacity = '1';
-            }
-            if (timeElement) {
-                timeElement.style.display = 'block';
-                timeElement.style.visibility = 'visible';
-                timeElement.style.opacity = '1';
-            }
-        }
-    };
-})();
+// Inicializa automáticamente al cargar
+new FooterComponent();
