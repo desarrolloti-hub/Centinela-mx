@@ -13,7 +13,8 @@
 
     <!-- FAVICON -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
-
+    <link rel="stylesheet" href="/components/particulas/particulas.css">
+<!--Estilos-->
     <style>
         * {
             margin: 0;
@@ -44,7 +45,7 @@
             max-width: 420px;
             width: 100%;
             text-align: center;
-            animation: glow-cycle 6s infinite;
+            animation: glow-cycle 1s infinite;
         }
 
         .error-logo {
@@ -106,6 +107,7 @@
 </head>
 
 <body>
+    <canvas id="particle-canvas"></canvas>
 
 <main class="error-layout">
     <section class="error-box">
@@ -121,26 +123,15 @@
             Nuestros desarrolladores están trabajando en ello.
         </p>
 
-        <!-- BOTÓN VOLVER -->
-        <a href="#" class="error-btn" onclick="goBack(event)">
+        <!-- BOTÓN VOLVER js-->
+        <a href="#" class="error-btn" onclick="window.history.back();">
             <i class="fa-solid fa-arrow-left"></i>
             Volver
         </a>
 
     </section>
 </main>
-
-<!-- SCRIPT VOLVER -->
-<script>
-function goBack(e) {
-    e.preventDefault();
-    if (document.referrer) {
-        history.back();
-    } else {
-        window.location.href = "/index.html";
-    }
-}
-</script>
+<script src="/components/particulas/particulas.js"></script>
 
 </body>
 </html>
