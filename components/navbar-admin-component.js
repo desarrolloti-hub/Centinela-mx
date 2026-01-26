@@ -3,6 +3,7 @@
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
+        this.isAdminDropdownOpen = false;
         this.init();      
     }
 
@@ -178,11 +179,11 @@ class NavbarComplete {
                 transform: rotate(-45deg) translate(5px, -5px);
             }
             
-            /* Menú lateral (ocupa 25% en desktop, 85-100% en móvil) */
+            /* Menú lateral */
             .navbar-main-menu {
                 position: fixed;
                 top: 0;
-                right: -100%;  /* Oculto por defecto */
+                right: -100%;
                 width: 25%;
                 height: 100vh;
                 background-color: var(--navbar-scrolled-bg);
@@ -205,27 +206,19 @@ class NavbarComplete {
                 opacity: 1;
             }
             
-            /* Sección del perfil del administrador */
-            .admin-section {
+            /* Sección superior del menú: Perfil del administrador */
+            .admin-profile-section {
                 padding: 30px 25px 20px;
                 background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
                 color: var(--color-text-primary);
                 border-bottom: 1px solid var(--color-border-light);
+                text-align: center;
             }
             
-            /* Tarjeta del administrador */
-            .admin-card {
-                background: var(--color-bg-tertiary);
-                border-radius: var(--border-radius-medium);
-                padding: 20px;
-                backdrop-filter: blur(10px);
-                border: 1px solid var(--color-border-light);
-            }
-            
-            /* Foto de perfil circular */
-            .profile-photo {
-                width: 80px;
-                height: 80px;
+            /* Círculo de imagen del administrador */
+            .admin-profile-circle {
+                width: 100px;
+                height: 100px;
                 margin: 0 auto 20px;
                 border-radius: var(--border-radius-circle);
                 overflow: hidden;
@@ -233,31 +226,208 @@ class NavbarComplete {
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                background-color: var(--color-bg-secondary);
             }
             
-            /* Formulario de perfil del administrador */
-            .admin-form h2 {
-                font-size: 18px;
+            .admin-profile-img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            
+            /* Información del administrador */
+            .admin-info {
                 margin-bottom: 20px;
-                text-align: center;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
+            }
+            
+            .admin-name {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 5px;
                 color: var(--color-text-primary);
             }
             
-            /* Campos del formulario */
-            .input-group {
+            .admin-role {
+                font-size: 14px;
+                color: var(--color-text-secondary);
+                margin-bottom: 10px;
+            }
+            
+            .admin-email {
+                font-size: 13px;
+                color: var(--color-text-tertiary);
+            }
+            
+            /* Botón desplegable de administración */
+            .admin-dropdown {
                 position: relative;
-                margin-bottom: 15px;
+                width: 100%;
+            }
+            
+            .admin-dropdown-btn {
                 display: flex;
                 align-items: center;
-                background: var(--color-bg-tertiary);
-                border-radius: var(--border-radius-small);
-                padding: 10px 15px;
+                justify-content: space-between;
+                width: 100%;
+                padding: 12px 15px;
+                background-color: var(--color-bg-tertiary);
                 border: 1px solid var(--color-border-light);
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
                 transition: var(--transition-default);
+                font-size: 15px;
+                font-weight: 500;
+                color: var(--color-text-primary);
+            }
+            
+            .admin-dropdown-btn:hover {
+                background-color: var(--color-bg-secondary);
+            }
+            
+            .admin-dropdown-btn i {
+                transition: transform var(--transition-default);
+            }
+            
+            .admin-dropdown-btn.active i {
+                transform: rotate(180deg);
+            }
+            
+            /* Opciones del dropdown */
+            .admin-dropdown-options {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background-color: var(--color-bg-tertiary);
+                border: 1px solid var(--color-border-light);
+                border-radius: var(--border-radius-small);
+                margin-top: 5px;
+                overflow: hidden;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(-10px);
+                transition: all var(--transition-default);
+                z-index: 1002;
+            }
+            
+            .admin-dropdown-options.active {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+            
+            .admin-dropdown-option {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 15px;
+                cursor: pointer;
+                transition: var(--transition-default);
+                color: var(--color-text-primary);
+                text-decoration: none;
+                border-bottom: 1px solid var(--color-border-light);
+            }
+            
+            .admin-dropdown-option:last-child {
+                border-bottom: none;
+            }
+            
+            .admin-dropdown-option:hover {
+                background-color: var(--color-bg-secondary);
+            }
+            
+            /* Sección de navegación */
+            .nav-section {
+                padding: 20px 25px;
+                border-bottom: 1px solid var(--color-border-light);
+            }
+            
+            .nav-section-title {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 15px;
+                color: var(--color-text-secondary);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            .nav-items-container {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .nav-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 15px;
+                border-radius: var(--border-radius-small);
+                transition: var(--transition-default);
+                cursor: pointer;
+                text-decoration: none;
+                color: var(--color-text-primary);
+            }
+            
+            .nav-item:hover {
+                background-color: var(--color-bg-secondary);
+            }
+            
+            .nav-item i {
+                width: 20px;
+                text-align: center;
+                font-size: 16px;
+            }
+            
+            .nav-item-text {
+                font-size: 15px;
+                flex-grow: 1;
+            }
+            
+            .nav-item-percentage {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--color-accent-primary);
+            }
+            
+            .nav-item-priority {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 5px;
+            }
+            
+            .priority-item {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 13px;
+            }
+            
+            /* Sección inferior del menú */
+            .menu-bottom-section {
+                margin-top: auto;
+                padding: 20px 25px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .menu-bottom-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 15px;
+                border-radius: var(--border-radius-small);
+                transition: var(--transition-default);
+                cursor: pointer;
+                text-decoration: none;
+                color: var(--color-text-primary);
+            }
+            
+            .menu-bottom-item:hover {
+                background-color: var(--color-bg-secondary);
             }
             
             /* Overlay para cerrar el menú (en móvil) */
@@ -274,21 +444,31 @@ class NavbarComplete {
                 transition: opacity 0.3s ease;
             }
             
+            .navbar-mobile-overlay.active {
+                display: block;
+                opacity: 1;
+            }
+            
             /* Responsive para tablet */
             @media (max-width: 992px) {
                 .navbar-main-menu {
-                    width: 85%;  /* Menú más ancho en tablet */
+                    width: 85%;
                 }
                 
                 body.menu-open {
-                    overflow: hidden;  /* Bloquear scroll cuando menú está abierto */
+                    overflow: hidden;
                 }
             }
             
             /* Responsive para móvil */
             @media (max-width: 480px) {
                 .navbar-main-menu {
-                    width: 100%;  /* Menú ocupa todo el ancho en móvil */
+                    width: 100%;
+                }
+                
+                .admin-profile-circle {
+                    width: 80px;
+                    height: 80px;
                 }
             }
         `;
@@ -299,7 +479,7 @@ class NavbarComplete {
         document.head.appendChild(styleElement);
     }
 
-    // Inserta la estructura HTML del navbar
+    // Inserta la estructura HTML del navbar con el perfil y dropdown
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
@@ -326,59 +506,128 @@ class NavbarComplete {
             <!-- Overlay para cerrar menú en móvil -->
             <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
             
-            <!-- Menú lateral con perfil del administrador -->
+            <!-- Menú lateral con perfil y secciones -->
             <div class="navbar-main-menu" id="navbarMainMenu">
-                <div class="admin-section">
-                    <div class="admin-card">
-                        <div class="profile-photo">
-                            <img src="/assets/images/logo.png" alt="Administrador">
-                        </div>
-                        
-                        <form class="admin-form">
-                            <h2><i class="fa-solid fa-user-shield"></i> Perfil Administrador</h2>
-                            
-                            <!-- Campos de información del administrador -->
-                            <div class="input-group">
-                                <i class="fa-solid fa-id-card"></i>
-                                <input type="text" placeholder="ID Administrador" readonly>
-                            </div>
-                            
-                            <div class="input-group">
-                                <i class="fa-solid fa-user"></i>
-                                <input type="text" placeholder="Nombre completo" readonly>
-                            </div>
-                            
-                            <div class="input-group">
-                                <i class="fa-solid fa-envelope"></i>
-                                <input type="email" placeholder="Correo electrónico" readonly>
-                            </div>
-                            
-                            <div class="input-group">
-                                <i class="fa-solid fa-phone"></i>
-                                <input type="tel" placeholder="Teléfono" readonly>
-                            </div>
-                            
-                            <div class="input-group">
-                                <i class="fa-solid fa-clock"></i>
-                                <input type="text" placeholder="Último acceso" readonly>
-                            </div>
-                            
-                            <div class="input-group">
-                                <i class="fa-solid fa-calendar"></i>
-                                <input type="text" placeholder="Fecha de creación" readonly>
-                            </div>
-
-                            <div class="input-group">
-                                <i class="fa-solid fa-users-cog"></i>
-                                <input type="text" placeholder="Gestión de cuentas" readonly>
-                            </div>
-                        </form>
+                
+                <!-- Sección superior: Perfil del administrador -->
+                <div class="admin-profile-section">
+                    <!-- Círculo con imagen del administrador -->
+                    <div class="admin-profile-circle">
+                        <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img">
                     </div>
+                    
+                    <!-- Información del administrador -->
+                    <div class="admin-info">
+                        <div class="admin-name">Bryan Vazquez Segura</div>
+                        <div class="admin-role">Administrador</div>
+                        <div class="admin-email">bryan@ejemplo.com</div>
+                    </div>
+                    
+                    <!-- Botón desplegable de administración -->
+                    <div class="admin-dropdown">
+                        <button class="admin-dropdown-btn" id="adminDropdownBtn">
+                            <span>Opciones de Administración</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        
+                        <div class="admin-dropdown-options" id="adminDropdownOptions">
+                            <a href="#" class="admin-dropdown-option">
+                                <i class="fa-solid fa-gears"></i>
+                                <span>Administración</span>
+                            </a>
+                            <a href="#" class="admin-dropdown-option">
+                                <i class="fa-solid fa-users-gear"></i>
+                                <span>Gestionar Usuarios</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección de navegación: Estado de tickets -->
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fa-solid fa-ticket"></i>
+                        <span>Estado de mis tickets</span>
+                    </div>
+                    <div class="nav-items-container">
+                        <div class="nav-item">
+                            <i class="fa-solid fa-check-circle"></i>
+                            <span class="nav-item-text">Finalizados</span>
+                            <span class="nav-item-percentage">18%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección de navegación: Tickets por Prioridad -->
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fa-solid fa-flag"></i>
+                        <span>Tickets por Prioridad</span>
+                    </div>
+                    <div class="nav-items-container">
+                        <div class="nav-item">
+                            <div class="nav-item-priority">
+                                <div class="priority-item">
+                                    <i class="fa-solid fa-circle" style="color: #FFA500;"></i>
+                                    <span>Media</span>
+                                    <span class="nav-item-percentage">88%</span>
+                                </div>
+                                <div class="priority-item">
+                                    <i class="fa-solid fa-circle" style="color: #008000;"></i>
+                                    <span>Baja</span>
+                                    <span class="nav-item-percentage">13%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección inferior del menú -->
+                <div class="menu-bottom-section">
+                    <a href="#" class="menu-bottom-item">
+                        <i class="fa-solid fa-eye"></i>
+                        <span>Ver Mis Tickets</span>
+                    </a>
+                    
+                    <a href="#" class="menu-bottom-item">
+                        <i class="fa-solid fa-note-sticky"></i>
+                        <span>Ver mis notas</span>
+                    </a>
+                    
+                    <a href="#" class="menu-bottom-item">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                        <span>Reembolsos</span>
+                    </a>
+                    
+                    <a href="#" class="menu-bottom-item">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Ver manuales</span>
+                    </a>
+                    
+                    <a href="#" class="menu-bottom-item">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>Ver mis Checklists</span>
+                    </a>
+                    
+                    <a href="#" class="menu-bottom-item">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Personalizar Interfaz</span>
+                    </a>
+                    
+                    <a href="#" class="menu-bottom-item">
+                        <i class="fa-solid fa-stopwatch"></i>
+                        <span>Terminar Asistencia</span>
+                    </a>
+                    
+                    <a href="#" class="menu-bottom-item">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Cerrar Sesión</span>
+                    </a>
                 </div>
             </div>
         `;
 
-        document.body.prepend(navbar);  // Inserta al inicio del body
+        document.body.prepend(navbar);
     }
 
     // Ajusta el padding del body para que el contenido no quede debajo del navbar
@@ -390,9 +639,8 @@ class NavbarComplete {
             document.body.style.paddingTop = `${navbar.offsetHeight}px`;
         };
 
-        updatePadding();  // Ajustar inicialmente
+        updatePadding();
 
-        // Observar cambios de tamaño del navbar
         const resizeObserver = new ResizeObserver(updatePadding);
         resizeObserver.observe(navbar);
     }
@@ -402,6 +650,7 @@ class NavbarComplete {
         this.setupMenu();  
         this.setupScroll();
         this.loadFontAwesome();
+        this.setupAdminDropdown();
     }
 
     // Configura la funcionalidad del menú hamburguesa
@@ -412,7 +661,6 @@ class NavbarComplete {
 
         if (!hamburgerBtn || !mainMenu || !overlay) return;
 
-        // Alternar apertura/cierre del menú
         const toggleMenu = () => {
             this.isMenuOpen = !this.isMenuOpen;
 
@@ -420,9 +668,13 @@ class NavbarComplete {
             hamburgerBtn.classList.toggle('active', this.isMenuOpen);
             overlay.classList.toggle('active', this.isMenuOpen);
             document.body.classList.toggle('menu-open', this.isMenuOpen);
+            
+            // Cerrar dropdown si está abierto cuando se cierra el menú
+            if (!this.isMenuOpen && this.isAdminDropdownOpen) {
+                this.toggleAdminDropdown(false);
+            }
         };
 
-        // Cerrar menú
         const closeMenu = () => {
             if (this.isMenuOpen) {
                 this.isMenuOpen = false;
@@ -430,22 +682,91 @@ class NavbarComplete {
                 hamburgerBtn.classList.remove('active');
                 overlay.classList.remove('active');
                 document.body.classList.remove('menu-open');
+                
+                // Cerrar dropdown también
+                if (this.isAdminDropdownOpen) {
+                    this.toggleAdminDropdown(false);
+                }
             }
         };
 
-        // Event listeners
         hamburgerBtn.addEventListener('click', toggleMenu);
         overlay.addEventListener('click', closeMenu);
         
-        // Cerrar con tecla Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isMenuOpen) closeMenu();
         });
 
-        // Cerrar menú al redimensionar a desktop
         window.addEventListener('resize', () => {
             if (window.innerWidth > 992 && this.isMenuOpen) closeMenu();
         });
+    }
+
+    // Configura el dropdown de administración
+    setupAdminDropdown() {
+        const dropdownBtn = document.getElementById('adminDropdownBtn');
+        const dropdownOptions = document.getElementById('adminDropdownOptions');
+
+        if (!dropdownBtn || !dropdownOptions) return;
+
+        const toggleDropdown = () => {
+            this.isAdminDropdownOpen = !this.isAdminDropdownOpen;
+            this.toggleAdminDropdown(this.isAdminDropdownOpen);
+        };
+
+        const closeDropdown = () => {
+            if (this.isAdminDropdownOpen) {
+                this.isAdminDropdownOpen = false;
+                this.toggleAdminDropdown(false);
+            }
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) && !dropdownOptions.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+
+        // Cerrar dropdown al presionar Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isAdminDropdownOpen) {
+                closeDropdown();
+            }
+        });
+
+        // Cerrar dropdown cuando se cierra el menú lateral
+        const mainMenu = document.getElementById('navbarMainMenu');
+        if (mainMenu) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'class' && 
+                        !mainMenu.classList.contains('active') && 
+                        this.isAdminDropdownOpen) {
+                        closeDropdown();
+                    }
+                });
+            });
+            
+            observer.observe(mainMenu, { attributes: true });
+        }
+    }
+
+    // Alterna la visibilidad del dropdown de administración
+    toggleAdminDropdown(show) {
+        const dropdownBtn = document.getElementById('adminDropdownBtn');
+        const dropdownOptions = document.getElementById('adminDropdownOptions');
+        
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isAdminDropdownOpen = show;
+        }
     }
 
     // Configura efecto visual al hacer scroll
