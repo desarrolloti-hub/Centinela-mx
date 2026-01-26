@@ -63,7 +63,7 @@
     margin-bottom: 3rem;
 }
 
-/* Tarjeta de plan */
+/* Tarjeta de plan - ALTURA FIJA PARA TODAS */
 .plan-card {
     background-color: var(--color-bg-secondary);
     border-radius: 12px;
@@ -74,14 +74,19 @@
     transition: var(--transition-card);
     width: 100%;
     max-width: 350px;
-    min-height: 160px;
+    min-height: 160px; /* Altura fija para estado compacto */
     position: relative;
+    /* NUEVO: Altura fija para mantener consistencia */
+    height: 160px;
 }
 
 .plan-card.expanded {
     transform: translateY(-8px);
     box-shadow: var(--shadow-large);
     z-index: 10;
+    /* NUEVO: Altura automática cuando se expande */
+    height: auto;
+    min-height: auto;
 }
 
 /* Vista compacta - OCULTAR CUANDO SE EXPANDE */
@@ -93,7 +98,9 @@
     transition: opacity 0.3s ease;
     opacity: 1;
     visibility: visible;
-    min-height: 160px;
+    min-height: 160px; /* Coincide con la altura de la tarjeta */
+    height: 100%;
+    box-sizing: border-box;
 }
 
 /* IMPORTANTE: Cuando está expandida, la vista compacta DESAPARECE */
@@ -187,6 +194,8 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease;
+    /* NUEVO: Asegurar que ocupa todo el espacio cuando se expande */
+    height: 100%;
 }
 
 /* IMPORTANTE: Cuando está expandida, la vista expandida APARECE */
@@ -450,6 +459,8 @@
     .plan-card {
         max-width: 100%;
         width: 100%;
+        height: 140px; /* Altura fija para móvil */
+        min-height: 140px;
     }
     
     .plan-compact-view {
@@ -497,6 +508,9 @@
 @media (min-width: 769px) and (max-width: 1024px) {
     .plan-card {
         max-width: calc(50% - 1rem);
+        /* Altura fija también en tablet */
+        height: 160px;
+        min-height: 160px;
     }
 }
 
@@ -504,5 +518,8 @@
 @media (min-width: 1025px) {
     .plan-card {
         max-width: 350px;
+        /* Altura fija también en desktop */
+        height: 160px;
+        min-height: 160px;
     }
 }
