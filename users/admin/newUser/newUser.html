@@ -58,36 +58,34 @@
                                 placeholder="ejemplo@correo.com" required>
                         </div>
                     </div>
-                    <!-- Campo Foto de Usuario - ÚNICO CAMPO DE ARCHIVO -->
-                    <div class="form-field-group file-field-group" id="usuarioGroup">
-                        <label class="field-label" for="fotoUsuario">
-                            <i class="fas fa-camera"></i> FOTO DE PERFIL
-                        </label>
-                        <div class="file-input-wrapper">
-                            <button type="button" class="custom-file-button" id="usuarioButton">
-                                <i class="fas fa-folder-open"></i> EXAMINAR
-                            </button>
-                            <div class="file-name-display empty" id="usuarioFileName">
-                                Ningún archivo seleccionado
+                    
+                    <!-- SECCIÓN PARA SUBIR LOGO DE EMPRESA (SOLO ESTA QUEDA) -->
+                    <div class="logo-upload-section">
+                        <div class="logo-preview-container">
+                            <!-- Circulo para mostrar el logo -->
+                            <div class="logo-preview-circle" id="logoPreview">
+                                <div class="logo-placeholder" id="logoPlaceholder">
+                                    <i class="fas fa-user-circle"></i>
+                                    <span>Foto de perfil</span>
+                                </div>
+                                <!-- La imagen se insertará aquí dinámicamente -->
                             </div>
-                            <input class="file-input-field" type="file" id="fotoUsuario" name="fotoUsuario"
-                                accept="image/*">
                         </div>
-                        <!-- Preview que aparece al pasar el mouse -->
-                        <div class="image-preview-container" id="previewContainerUsuario">
-                            <div class="preview-header">
-                                <span class="preview-title">Vista Previa - Foto de Perfil</span>
-                                <button type="button" class="close-preview" onclick="closePreview('usuario')">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <img id="previewUsuario" class="image-preview" alt="Vista previa del usuario">
-                            <div class="preview-info">
-                                <span id="usuarioSize"></span>
-                                <span id="usuarioDimensions"></span>
-                            </div>
+                        
+                        <!-- Botón para seleccionar imagen (ocultamos el input real) -->
+                        <div class="logo-upload-controls">
+                            <input type="file" id="fotoPerfil" name="fotoPerfil" class="logo-file-input" 
+                                   accept="image/*" style="display: none;">
+                            <button type="button" class="logo-select-btn" id="logoSelectBtn">
+                                <i class="fas fa-upload"></i> SELECCIONAR FOTO
+                            </button>
+                            <button type="button" class="logo-remove-btn" id="logoRemoveBtn" style="display: none;">
+                                <i class="fas fa-trash"></i> REMOVER
+                            </button>
+                            <p class="logo-instructions">Formato: JPG, PNG (Máx. 2MB)</p>
                         </div>
                     </div>
+                    
                     <!-- Botón Registrarse -->
                     <div class="submit-button-container">
                         <button type="submit" class="submit-register-btn">
@@ -104,5 +102,6 @@
     <script src="/components/particulas/particulas.js"></script>
     <!-- SCRIPT PARA MANEJO DE ARCHIVOS Y FORMULARIO-->
     <script src="/admin/newUser/newUser.js"></script>
+    <script src="./newUser.js"></script>
 </body>
 </html>
