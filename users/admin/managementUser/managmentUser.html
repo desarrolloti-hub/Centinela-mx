@@ -1,31 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perfil Administrador</title>
-    <!-- Estilos globales -->
+
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     <link rel="stylesheet" href="/components/particulas/particulas.css">
-    <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <!-- Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Icono -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
-    <!-- CSS del módulo -->
-    <link rel="stylesheet" href="/users/admin/dashAdmin/dashAdmin.css">
+    <link rel="stylesheet" href="managmentUser.css">
 </head>
 <body>
-    <canvas id="particle-canvas"></canvas>
 
+<canvas id="particle-canvas"></canvas>
+<script src="/components/navbar-admin-component.js"></script>
 
-    <!-- COMPONENTES -->
-    <script src="/components/particulas/particulas.js"></script>
-    <script src="/components/navbar-admin-component.js"></script>
-    <script src="/components/footer-admin-component.js"></script>
+<div class="admin-container">
+
+    <div class="dashboard-header">
+        <div class="header-left">
+           
+        </div>
+
+        <button class="add-btn">
+            <i class="fas fa-user-plus"></i> Agregar Colaborador
+        </button>
+    </div>
+
+    <div class="section-title">
+        <i class="fas fa-users"></i> Gestión de Colaboradores
+    </div>
+
+    <div class="table-wrapper">
+        <table class="collaborators-table">
+            <thead>
+                <tr>
+                    <th>NOMBRE</th>
+                    <th>APELLIDO</th>
+                    <th>CORREO</th>
+                    <th>ESTADO</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+                        <tbody>
+
+            <tr>
+                <td data-label="Nombre">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span>Carlos</span>
+                    </div>
+                </td>
+                <td data-label="Apellido">Ramírez</td>
+                <td data-label="Correo">carlos@centinela.mx</td>
+                <td data-label="Estado"><span class="status active">Activo</span></td>
+                <td data-label="Acciones" class="actions-cell">
+                    <button class="row-btn enable"><i class="fas fa-check"></i> Inhabilitar</button>
+                    <button class="row-btn disable"><i class="fas fa-user-slash"></i> Editar</button>
+                    <button class="row-btn view"><i class="fas fa-eye"></i> Ver</button>
+                </td>
+            </tr>
+
+            <tr>
+                <td data-label="Nombre">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span>Ana</span>
+                    </div>
+                </td>
+                <td data-label="Apellido">Torres</td>
+                <td data-label="Correo">ana@centinela.mx</td>
+                <td data-label="Estado"><span class="status inactive">Inactivo</span></td>
+                <td data-label="Acciones" class="actions-cell">
+                    <button class="row-btn enable"><i class="fas fa-check"></i> Inhabilitar</button>
+                    <button class="row-btn disable"><i class="fas fa-user-slash"></i> Editar</button>
+                    <button class="row-btn view"><i class="fas fa-eye"></i> Ver</button>
+                </td>
+            </tr>
+
+            <tr>
+                <td data-label="Nombre">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span>Luis</span>
+                    </div>
+                </td>
+                <td data-label="Apellido">Hernández</td>
+                <td data-label="Correo">luis@centinela.mx</td>
+                <td data-label="Estado"><span class="status active">Activo</span></td>
+                <td data-label="Acciones" class="actions-cell">
+                    <button class="row-btn enable"><i class="fas fa-check"></i> Inhabilitar</button>
+                    <button class="row-btn disable"><i class="fas fa-user-slash"></i> Editar</button>
+                    <button class="row-btn view"><i class="fas fa-eye"></i> Ver</button>
+                </td>
+            </tr>
+
+            </tbody>
+
+        </table>
+    </div>
+</div>
+
+<script src="/components/footer-admin-component.js"></script>
+<script src="/components/particulas/particulas.js"></script>
 
 </body>
 </html>
