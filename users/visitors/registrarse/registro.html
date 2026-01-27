@@ -45,7 +45,7 @@
                 </div>
 
                 <form class="register-form-container" action="#" method="post">
-                    <!-- CAMPO NUEVO: NOMBRE DE LA ORGANIZACIÓN -->
+                    <!-- CAMPO NOMBRE DE LA ORGANIZACIÓN -->
                     <div class="form-field-group">
                         <label class="field-label" for="organization">
                             <i class="fas fa-building"></i> NOMBRE DE LA ORGANIZACIÓN
@@ -109,6 +109,33 @@
                     <!-- Línea divisoria -->
                     <div class="form-divider"></div>
 
+                    <!-- SECCIÓN PARA SUBIR LOGO DE LA EMPRESA (AHORA AL FINAL) -->
+                    <div class="logo-upload-section">
+                        <div class="logo-preview-container">
+                            <!-- Circulo para mostrar el logo -->
+                            <div class="logo-preview-circle" id="logoPreview">
+                                <div class="logo-placeholder" id="logoPlaceholder">
+                                    <i class="fas fa-building"></i>
+                                    <span>Logo de la empresa</span>
+                                </div>
+                                <!-- La imagen se insertará aquí dinámicamente -->
+                            </div>
+                        </div>
+                        
+                        <!-- Botón para seleccionar imagen (ocultamos el input real) -->
+                        <div class="logo-upload-controls">
+                            <input type="file" id="companyLogo" name="companyLogo" class="logo-file-input" 
+                                   accept="image/*" style="display: none;">
+                            <button type="button" class="logo-select-btn" id="logoSelectBtn">
+                                <i class="fas fa-upload"></i> SELECCIONAR LOGO
+                            </button>
+                            <button type="button" class="logo-remove-btn" id="logoRemoveBtn" style="display: none;">
+                                <i class="fas fa-trash"></i> REMOVER
+                            </button>
+                            <p class="logo-instructions">Formato: JPG, PNG (Máx. 2MB)</p>
+                        </div>
+                    </div>
+
                     <button type="submit" class="submit-register-btn">
                         <i class="fas fa-user-plus"></i> REGISTRARSE
                     </button>
@@ -127,7 +154,7 @@
                     <p class="brand-description">Sistema de seguridad y monitoreo empresarial</p>
                     
                     <!-- Botón para volver al login -->
-                    <a href="/visitors/login/login.html" class="back-to-login-btn">
+                    <a href="/users/visitors/login/login.html" class="back-to-login-btn">
                         <i class="fas fa-arrow-left"></i> VOLVER AL LOGIN
                     </a>
 
@@ -159,6 +186,11 @@
 
     <!-- LOGIN SCRIPT -->
     <script src="js/login.js"></script>
+
+    <!-- SCRIPT PARA SUBIR LOGO DE EMPRESA -->
+    <script src="js/logo-upload.js"></script>
+    <!-- Script de funcionalidad de cargar imagen -->
+    <script src="registro.js"></script>
 </body>
 
 </html>
