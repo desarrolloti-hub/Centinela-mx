@@ -1,0 +1,58 @@
+/* =============================================
+   THEME MANAGER - Vista Administrador
+   ============================================= */
+
+/* Notificaciones */
+.theme-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--color-accent-primary);
+    color: var(--color-text-dark);
+    padding: 15px 25px;
+    border-radius: var(--border-radius-medium);
+    box-shadow: var(--shadow-large);
+    z-index: 10000;
+    font-weight: 600;
+    font-family: var(--font-family-primary, 'Orbitron');
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.3s ease;
+}
+
+.theme-notification.error {
+    background: #ff4444;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
+/* Responsive adicional */
+@media (max-width: 768px) {
+    .theme-notification {
+        left: 20px;
+        right: 20px;
+        text-align: center;
+        justify-content: center;
+    }
+}

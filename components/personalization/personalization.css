@@ -1,13 +1,3 @@
-/**
- * Sistema de colores global para Centinela
- * 
- * Este archivo centraliza todas las variables de color utilizadas en:
- * - Navbar (navbar-complete.js)
- * - Footer (footer-component.js)
- * 
- * Variables de color para mantener consistencia visual en toda la aplicación.
- */
-
 /* =============================================
    VARIABLES PRINCIPALES DE COLOR
    ============================================= */
@@ -65,6 +55,9 @@
     /* Sombras para elementos */
     --shadow-normal: 0 5px 15px var(--color-shadow);
     --shadow-large: 0 10px 25px rgba(0, 0, 0, 0.15);
+    
+    /* Agregar estas sombras para completar */
+    --shadow-small: 0 2px 8px var(--color-shadow);
 
     /* ====== VARIABLES DE ESTADO ====== */
 
@@ -94,6 +87,8 @@
 
     /* Transiciones y animaciones */
     --transition-default: all 0.3s ease-in-out;
+    --transition-fast: all 0.15s ease;      /* Agregar */
+    --transition-slow: all 0.5s ease;       /* Agregar */
 
     /* Bordes redondeados */
     --border-radius-small: 6px;
@@ -129,107 +124,4 @@
     --footer-social-bg: rgb(3, 3, 3);
     --footer-social-hover: var(--color-accent-secondary);
     --footer-border-accent: var(--color-accent-footer);
-}
-
-/* =============================================
-   CLASES DE UTILIDAD PARA COLORES
-   ============================================= */
-
-/* Clases para aplicar colores de fondo */
-.bg-primary {
-    background-color: var(--color-bg-primary) !important;
-}
-
-.bg-secondary {
-    background-color: var(--color-bg-secondary) !important;
-}
-
-.bg-tertiary {
-    background-color: var(--color-bg-tertiary) !important;
-}
-
-.bg-light {
-    background-color: var(--color-bg-light) !important;
-}
-
-/* Clases para aplicar colores de texto */
-.text-primary {
-    color: var(--color-text-primary) !important;
-}
-
-.text-secondary {
-    color: var(--color-text-secondary) !important;
-}
-
-.text-light {
-    color: var(--color-text-light) !important;
-}
-
-.text-dark {
-    color: var(--color-text-dark) !important;
-}
-
-/* Clases para aplicar colores de acento */
-.accent-primary {
-    color: var(--color-accent-primary) !important;
-}
-
-.accent-secondary {
-    color: var(--color-accent-secondary) !important;
-}
-
-/* Clases para aplicar efectos de sombra */
-.text-shadow-effect {
-    text-shadow: var(--text-shadow-effect) !important;
-}
-
-.box-shadow-normal {
-    box-shadow: var(--shadow-normal) !important;
-}
-
-.box-shadow-large {
-    box-shadow: var(--shadow-large) !important;
-}
-
-/* Clases para estados de interacción */
-.hover-glow:hover {
-    text-shadow: var(--text-shadow-effect) !important;
-}
-
-.hover-accent:hover {
-    color: var(--color-accent-secondary) !important;
-}
-
-/* Clases para bordes */
-.border-accent {
-    border-color: var(--color-accent-primary) !important;
-}
-
-.border-light {
-    border-color: var(--color-border-light) !important;
-}
-
-/* =============================================
-   MEDIA QUERIES PARA RESPONSIVE
-   ============================================= */
-
-@media (max-width: 992px) {
-    :root {
-        /* Ajustes para tablets */
-        --border-radius-medium: 6px;
-    }
-}
-
-@media (max-width: 768px) {
-    :root {
-        /* Ajustes para móviles */
-        --border-radius-medium: 4px;
-    }
-}
-
-@media (max-width: 480px) {
-    :root {
-        /* Ajustes para móviles pequeños */
-        --border-radius-medium: 3px;
-    }
 }
