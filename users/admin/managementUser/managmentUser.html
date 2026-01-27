@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,10 +22,7 @@
 <div class="admin-container">
 
     <div class="dashboard-header">
-        <div class="header-left">
-           
-        </div>
-
+        <div class="header-left"></div>
         <button class="add-btn">
             <i class="fas fa-user-plus"></i> Agregar Colaborador
         </button>
@@ -45,73 +43,157 @@
                     <th>ACCIONES</th>
                 </tr>
             </thead>
-                        <tbody>
+            <tbody>
 
-            <tr>
-                <td data-label="Nombre">
-                    <div class="user-info">
-                        <div class="user-avatar">
-                            <i class="fas fa-user"></i>
+                <tr>
+                    <td>
+                        <div class="user-info">
+                            <div class="user-avatar"><i class="fas fa-user"></i></div>
+                            Carlos
                         </div>
-                        <span>Carlos</span>
-                    </div>
-                </td>
-                <td data-label="Apellido">Ramírez</td>
-                <td data-label="Correo">carlos@centinela.mx</td>
-                <td data-label="Estado"><span class="status active">Activo</span></td>
-                <td data-label="Acciones" class="actions-cell">
-                    <button class="row-btn enable"><i class="fas fa-check"></i> Inhabilitar</button>
-                    <button class="row-btn disable"><i class="fas fa-user-slash"></i> Editar</button>
-                    <button class="row-btn view"><i class="fas fa-eye"></i> Ver</button>
-                </td>
-            </tr>
+                    </td>
+                    <td>Ramírez</td>
+                    <td>carlos@centinela.mx</td>
+                    <td><span class="status active">Activo</span></td>
+                    <td class="actions-cell">
+                        <button class="row-btn enable">Inhabilitar</button>
+                        <button class="row-btn edit">Editar</button>
+                        <button class="row-btn view">Ver</button>
+                    </td>
+                </tr>
 
-            <tr>
-                <td data-label="Nombre">
-                    <div class="user-info">
-                        <div class="user-avatar">
-                            <i class="fas fa-user"></i>
+                <tr>
+                    <td>
+                        <div class="user-info">
+                            <div class="user-avatar"><i class="fas fa-user"></i></div>
+                            Ana
                         </div>
-                        <span>Ana</span>
-                    </div>
-                </td>
-                <td data-label="Apellido">Torres</td>
-                <td data-label="Correo">ana@centinela.mx</td>
-                <td data-label="Estado"><span class="status inactive">Inactivo</span></td>
-                <td data-label="Acciones" class="actions-cell">
-                    <button class="row-btn enable"><i class="fas fa-check"></i> Inhabilitar</button>
-                    <button class="row-btn disable"><i class="fas fa-user-slash"></i> Editar</button>
-                    <button class="row-btn view"><i class="fas fa-eye"></i> Ver</button>
-                </td>
-            </tr>
+                    </td>
+                    <td>Torres</td>
+                    <td>ana@centinela.mx</td>
+                    <td><span class="status inactive">Inactivo</span></td>
+                    <td class="actions-cell">
+                        <button class="row-btn enable">Inhabilitar</button>
+                        <button class="row-btn edit">Editar</button>
+                        <button class="row-btn view">Ver</button>
+                    </td>
+                </tr>
 
-            <tr>
-                <td data-label="Nombre">
-                    <div class="user-info">
-                        <div class="user-avatar">
-                            <i class="fas fa-user"></i>
+                <tr>
+                    <td>
+                        <div class="user-info">
+                            <div class="user-avatar"><i class="fas fa-user"></i></div>
+                            Luis
                         </div>
-                        <span>Luis</span>
-                    </div>
-                </td>
-                <td data-label="Apellido">Hernández</td>
-                <td data-label="Correo">luis@centinela.mx</td>
-                <td data-label="Estado"><span class="status active">Activo</span></td>
-                <td data-label="Acciones" class="actions-cell">
-                    <button class="row-btn enable"><i class="fas fa-check"></i> Inhabilitar</button>
-                    <button class="row-btn disable"><i class="fas fa-user-slash"></i> Editar</button>
-                    <button class="row-btn view"><i class="fas fa-eye"></i> Ver</button>
-                </td>
-            </tr>
+                    </td>
+                    <td>Hernández</td>
+                    <td>luis@centinela.mx</td>
+                    <td><span class="status active">Activo</span></td>
+                    <td class="actions-cell">
+                        <button class="row-btn enable">Inhabilitar</button>
+                        <button class="row-btn edit">Editar</button>
+                        <button class="row-btn view">Ver</button>
+                    </td>
+                </tr>
 
             </tbody>
-
         </table>
+    </div>
+</div>
+
+<!-- ===== MODAL VER ===== -->
+<div id="viewModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div class="modal-avatar"><i class="fas fa-user"></i></div>
+        <div class="modal-header">
+            <h2 id="viewName">Nombre</h2>
+            <p id="viewEmail">correo@ejemplo.com</p>
+        </div>
+        <div class="modal-info">
+            <span id="viewStatus">Estado</span>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL EDITAR ===== -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Editar Colaborador</h2>
+        <label>Nombre</label>
+        <input type="text" id="editName">
+        <label>Apellido</label>
+        <input type="text" id="editLastName">
+        <label>Correo</label>
+        <input type="email" id="editEmail">
+        <label>Estado</label>
+        <select id="editStatus">
+            <option>Activo</option>
+            <option>Inactivo</option>
+        </select>
+        <button class="save-btn">Guardar Cambios</button>
     </div>
 </div>
 
 <script src="/components/footer-admin-component.js"></script>
 <script src="/components/particulas/particulas.js"></script>
+
+<script>
+const viewModal = document.getElementById("viewModal");
+const editModal = document.getElementById("editModal");
+
+const closeBtns = document.querySelectorAll(".close-modal");
+
+// BOTONES VER
+document.querySelectorAll(".view").forEach(btn => {
+    btn.addEventListener("click", function () {
+        const row = this.closest("tr");
+        const name = row.children[0].innerText.trim();
+        const email = row.children[2].innerText.trim();
+        const status = row.children[3].innerText.trim();
+
+        document.getElementById("viewName").innerText = name;
+        document.getElementById("viewEmail").innerText = email;
+        document.getElementById("viewStatus").innerText = status;
+
+        viewModal.style.display = "flex";
+    });
+});
+
+// BOTONES EDITAR
+document.querySelectorAll(".edit").forEach(btn => {
+    btn.addEventListener("click", function () {
+        const row = this.closest("tr");
+        const name = row.children[0].innerText.trim();
+        const last = row.children[1].innerText.trim();
+        const email = row.children[2].innerText.trim();
+        const status = row.children[3].innerText.trim();
+
+        document.getElementById("editName").value = name;
+        document.getElementById("editLastName").value = last;
+        document.getElementById("editEmail").value = email;
+        document.getElementById("editStatus").value = status;
+
+        editModal.style.display = "flex";
+    });
+});
+
+// CERRAR MODALES
+closeBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+        viewModal.style.display = "none";
+        editModal.style.display = "none";
+    });
+});
+
+// CERRAR AL DAR CLIC FUERA
+window.addEventListener("click", e => {
+    if (e.target === viewModal) viewModal.style.display = "none";
+    if (e.target === editModal) editModal.style.display = "none";
+});
+</script>
+
 
 </body>
 </html>

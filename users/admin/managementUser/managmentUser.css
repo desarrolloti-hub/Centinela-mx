@@ -57,14 +57,6 @@
     padding: 14px;
     border-bottom: 1px solid var(--border-main);
     letter-spacing: 1px;
-    text-align: center;
-}
-
-/* ===== ALINEACIÓN DE COLUMNAS ===== */
-.collaborators-table th:first-child,
-.collaborators-table td:first-child {
-    text-align: left;
-    padding-left: 22px;
 }
 
 /* FILAS */
@@ -73,7 +65,6 @@
     border-bottom: 1px solid #1f1f1f;
     font-size: 14px;
     color: var(--text-main);
-    text-align: center;
 }
 
 .collaborators-table tr:hover {
@@ -81,39 +72,24 @@
     box-shadow: inset 0 0 12px rgba(214,214,214,.15);
 }
 
-/* ===== USUARIO CON AVATAR ===== */
+/* ===== USUARIO CON ICONO ===== */
 .user-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .user-avatar {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: #000;
     border: 1px solid var(--border-main);
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #000;
     color: var(--text-main);
     font-size: 14px;
-    transition: all .3s ease;
-}
-
-.user-avatar img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.collaborators-table tr:hover .user-avatar {
-    border-color: var(--border-glow);
-    box-shadow: 0 0 10px rgba(214,214,214,.6);
-    color: #fff;
 }
 
 /* ESTADO */
@@ -136,19 +112,13 @@
     border: 1px solid #ff4d4d;
 }
 
-/* ===== COLUMNA ACCIONES AJUSTADA ===== */
+/* BOTONES FILA */
 .actions-cell {
     display: flex;
     gap: 8px;
-    justify-content: center;
-    align-items: center;
+    flex-wrap: wrap;
 }
 
-.collaborators-table td:last-child {
-    padding-right: 10px;
-}
-
-/* BOTONES FILA */
 .row-btn {
     background: #000;
     border: 1px solid var(--border-main);
@@ -158,22 +128,6 @@
     font-size: 12px;
     cursor: pointer;
     transition: all .3s ease;
-}
-
-/* HOVER EFECTOS BOTONES */
-.enable:hover {
-    color: #ffffff;
-    box-shadow: 0 0 10px #f70f0f;
-}
-
-.disable:hover {
-    color: #fff;
-    box-shadow: 0 0 10px #fbc337;
-}
-
-.view:hover {
-    color: #fff;
-    box-shadow: 0 0 10px #172eff;
 }
 
 /* BOTÓN AGREGAR */
@@ -203,4 +157,146 @@
         box-shadow: 0 0 24px rgba(214,214,214,.5);
         border-color: #d6d6d6;
     }
+}
+
+/* ===== MODAL BASE (para ver y editar) ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: #000;
+    border: 1px solid var(--border-main);
+    width: 350px;
+    border-radius: 14px;
+    padding: 25px;
+    text-align: center;
+    animation: modalGlow 5s infinite;
+    position: relative;
+}
+
+@keyframes modalGlow {
+    0%,100% { box-shadow: 0 0 12px rgba(214,214,214,.2); }
+    50% { box-shadow: 0 0 24px rgba(214,214,214,.6); }
+}
+
+/* ====== 🔥 AÑADIDO FINAL: ILUMINACIÓN DE BOTONES ====== */
+.row-btn.enable:hover {
+    border-color: #ff2e2e !important;
+    box-shadow: 0 0 10px #ff2e2e;
+}
+
+.row-btn.disable:hover {
+    border-color: #fbc337 !important;
+    box-shadow: 0 0 10px #fbc337;
+}
+
+.row-btn.view:hover {
+    border-color: #2f5bff !important;
+    box-shadow: 0 0 10px #2f5bff;
+}
+
+.row-btn.edit:hover {
+    border-color: #00e0ff !important;
+    box-shadow: 0 0 10px #00e0ff;
+}
+
+/* ===== FIX VISUAL MODALES ===== */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.modal.show {
+    display: flex;
+}
+
+/* CONTENIDO */
+.modal-content {
+    background: #000000;
+    border: 1px solid #545454;
+    border-radius: 14px;
+    padding: 22px;
+    width: 340px;
+    color: #a5a5a5;
+    font-family: 'Rajdhani', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    animation: modalGlow 4s infinite alternate;
+}
+
+@keyframes modalGlow {
+    from { box-shadow: 0 0 10px rgba(214,214,214,.2); }
+    to   { box-shadow: 0 0 24px rgba(214,214,214,.6); }
+}
+
+/* BOTÓN CERRAR */
+.close-modal {
+    position: absolute;
+    right: 12px;
+    top: 8px;
+    font-size: 20px;
+    cursor: pointer;
+    color: #a5a5a5;
+}
+.close-modal:hover { color: #fff; }
+
+/* AVATAR MODAL */
+.modal-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 1px solid #545454;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px;
+    font-size: 24px;
+    color: #a5a5a5;
+}
+
+/* TITULOS */
+.modal-content h2 {
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    text-align: center;
+    font-size: 16px;
+}
+
+/* INPUTS EDITAR */
+.modal-content input,
+.modal-content select {
+    background: #000;
+    border: 1px solid #545454;
+    border-radius: 6px;
+    padding: 7px;
+    color: #a5a5a5;
+}
+
+/* BOTÓN GUARDAR */
+.save-btn {
+    background: #000;
+    border: 1px solid #545454;
+    color: #fff;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.save-btn:hover {
+    border-color: #d6d6d6;
 }
