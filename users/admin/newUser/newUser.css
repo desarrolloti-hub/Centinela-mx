@@ -203,196 +203,182 @@ body {
     line-height: 1.4;
 }
 
-/* ESTILOS MEJORADOS PARA FILE INPUT - BOTÓN BLANCO PERSONALIZADO */
-.file-input-wrapper {
-    position: relative;
-    width: 100%;
+/* ============================= */
+/* ESTILOS PARA SUBIR FOTO DE PERFIL (CÍRCULO) */
+/* ============================= */
+
+/* Contenedor principal */
+.logo-upload-section {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin: 15px 0 25px 0;
+    padding: 20px;
+    background: rgba(26, 26, 26, 0.7);
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Circulo para mostrar la foto */
+.logo-preview-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+}
+
+.logo-preview-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: #1a1a1a;
+    border: 3px solid var(--accent-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    transition: all 0.3s ease;
+}
+
+.logo-preview-circle:hover {
+    border-color: var(--text-white);
+    transform: scale(1.03);
+}
+
+/* Placeholder cuando no hay imagen */
+.logo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-gray);
+    text-align: center;
+    padding: 20px;
+}
+
+.logo-placeholder i {
+    font-size: 40px;
+    color: var(--accent-gray);
+    margin-bottom: 5px;
+}
+
+.logo-placeholder span {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    max-width: 120px;
+    color: var(--accent-gray);
+}
+
+/* Imagen dentro del círculo */
+.logo-preview-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none; /* Oculto por defecto */
+}
+
+/* Controles de subida */
+.logo-upload-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 12px;
+    width: 100%;
 }
 
-.file-input-field {
-    display: none;
-}
-
-/* BOTÓN BLANCO PERSONALIZADO PARA EXAMINAR */
-.custom-file-button {
+/* Botón para seleccionar foto */
+.logo-select-btn {
+    background: var(--btn-gradient);
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    color: var(--text-white);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: #ffffff; /* FONDO BLANCO */
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    padding: 12px 20px;
-    color: #333333; /* TEXTO OSCURO */
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    height: 40px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
     font-family: 'Rajdhani', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    height: 45px;
-    min-width: 140px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     box-sizing: border-box;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* ELIMINAR BORDE AZUL DEL BOTÓN */
-.custom-file-button:focus {
-    outline: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.custom-file-button:hover {
-    background: #f5f5f5; /* BLANCO MÁS CLARO EN HOVER */
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    border-color: #c0c0c0;
-}
-
-.custom-file-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.custom-file-button i {
-    font-size: 15px;
-    color: #666666;
-}
-
-.custom-file-button:hover i {
-    color: #333333;
-}
-
-/* Botón cuando está cargado */
-.custom-file-button.loaded {
-    background: #f0fff0;
-    border-color: #4CAF50;
-    color: #2E7D32;
-}
-
-.custom-file-button.loaded i {
-    color: #4CAF50;
-}
-
-.custom-file-button.loaded:hover {
-    background: #e8f5e8;
-}
-
-/* ÁREA PARA MOSTRAR NOMBRE DEL ARCHIVO */
-.file-name-display {
-    flex: 1;
-    background: #1a1a1a;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    padding: 12px 15px;
-    color: var(--text-gray);
-    font-size: 14px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    height: 45px;
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-}
-
-.file-name-display.empty {
-    color: #666;
-    font-style: italic;
-}
-
-/* PREVIEW DE IMAGEN - DISEÑO MEJORADO */
-.image-preview-container {
-    position: absolute;
-    top: 55px;
-    left: 0;
     width: 100%;
-    z-index: 100;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    padding: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
-    display: none;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    max-width: 220px;
+    margin: 0 auto;
 }
 
-.image-preview-container.show {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
+.logo-select-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px var(--btn-shadow);
+    background: var(--btn-hover);
 }
 
-.preview-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.preview-title {
+.logo-select-btn i {
     font-size: 13px;
+    color: #c0c0c0;
+}
+
+/* Botón para remover foto */
+.logo-remove-btn {
+    background: rgba(255, 50, 50, 0.1);
+    border: 1px solid rgba(255, 50, 50, 0.3);
+    border-radius: 5px;
+    padding: 8px 16px;
+    color: #ff6b6b;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--accent-gray);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.close-preview {
-    background: none;
-    border: none;
-    color: var(--text-gray);
     cursor: pointer;
-    font-size: 14px;
-    padding: 2px 6px;
-    border-radius: 3px;
     transition: all 0.2s ease;
-}
-
-/* ELIMINAR BORDE AZUL DEL BOTÓN CERRAR */
-.close-preview:focus {
-    outline: none;
-}
-
-.close-preview:hover {
-    color: var(--text-white);
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.image-preview {
-    width: 100%;
-    max-height: 200px;
-    object-fit: contain;
-    border-radius: 3px;
-    display: block;
-    border: 1px solid var(--border-light);
-}
-
-.preview-info {
-    margin-top: 10px;
-    font-size: 11px;
-    color: var(--text-gray);
     display: flex;
-    justify-content: space-between;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 35px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-family: 'Rajdhani', sans-serif;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 160px;
+    margin: 0 auto;
 }
 
-/* Mostrar preview al pasar mouse sobre el campo de archivo */
-.file-field-group:hover .image-preview-container.show {
-    display: block;
+.logo-remove-btn:hover {
+    background: rgba(255, 50, 50, 0.2);
+    border-color: rgba(255, 50, 50, 0.5);
+}
+
+.logo-remove-btn i {
+    font-size: 12px;
+}
+
+/* Instrucciones */
+.logo-instructions {
+    color: var(--text-dark-gray);
+    font-size: 12px;
+    text-align: center;
+    margin-top: 10px;
+    line-height: 1.3;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    width: 100%;
+    max-width: 250px;
 }
 
 /* BOTÓN REGISTRARSE */
 .submit-button-container {
-    margin-top: 30px;
+    margin-top: 20px;
     flex-shrink: 0;
 }
 
@@ -436,7 +422,7 @@ body {
     color: #c0c0c0;
 }
 
-/* ELIMINAR BORDES AZULES DE TODOS LOS ELEMENTOS (POR SI ACASO) */
+/* ELIMINAR BORDES AZULES DE TODOS LOS ELEMENTOS */
 button:focus,
 input:focus,
 textarea:focus,
@@ -444,7 +430,119 @@ select:focus {
     outline: none !important;
 }
 
-/* RESPONSIVE */
+/* ============================= */
+/* RESPONSIVE PARA LOGO UPLOAD */
+/* ============================= */
+@media (max-width: 900px) {
+    .logo-upload-section {
+        padding: 15px;
+        margin-top: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .logo-preview-container {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .logo-preview-circle {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .logo-placeholder i {
+        font-size: 35px;
+    }
+    
+    .logo-placeholder span {
+        font-size: 12px;
+        max-width: 100px;
+    }
+    
+    .logo-select-btn {
+        height: 38px;
+        font-size: 12px;
+        padding: 9px 18px;
+        max-width: 200px;
+    }
+    
+    .logo-remove-btn {
+        height: 34px;
+        font-size: 11px;
+        padding: 7px 14px;
+        max-width: 150px;
+    }
+    
+    .logo-instructions {
+        font-size: 11px;
+        max-width: 230px;
+    }
+}
+
+@media (max-width: 480px) {
+    .register-wrapper {
+        max-width: 95%;
+    }
+    
+    .register-form-panel {
+        padding: 30px 20px;
+    }
+    
+    .logo-upload-section {
+        padding: 15px;
+        margin-bottom: 15px;
+        margin-top: 5px;
+    }
+    
+    .logo-preview-container {
+        width: 110px;
+        height: 110px;
+    }
+    
+    .logo-preview-circle {
+        width: 110px;
+        height: 110px;
+    }
+    
+    .logo-placeholder {
+        gap: 8px;
+    }
+    
+    .logo-placeholder i {
+        font-size: 32px;
+    }
+    
+    .logo-placeholder span {
+        font-size: 11px;
+        max-width: 90px;
+    }
+    
+    .logo-upload-controls {
+        gap: 10px;
+    }
+    
+    .logo-select-btn {
+        height: 36px;
+        font-size: 12px;
+        padding: 8px 16px;
+        max-width: 180px;
+    }
+    
+    .logo-remove-btn {
+        height: 32px;
+        font-size: 11px;
+        padding: 6px 12px;
+        max-width: 140px;
+    }
+    
+    .logo-instructions {
+        font-size: 10px;
+        padding: 7px;
+        max-width: 200px;
+    }
+}
+
+/* RESPONSIVE GENERAL */
 @media (max-width: 900px) {
     .register-wrapper {
         max-width: 450px;
@@ -459,15 +557,6 @@ select:focus {
     .form-input-field {
         height: 42px;
         font-size: 14px;
-    }
-
-    .custom-file-button, .file-name-display {
-        height: 42px;
-        font-size: 13px;
-    }
-
-    .custom-file-button {
-        min-width: 120px;
     }
 
     .submit-register-btn {
@@ -489,10 +578,6 @@ select:focus {
         height: 60px;
         font-size: 24px;
     }
-
-    .image-preview-container {
-        max-height: 150px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -502,40 +587,15 @@ select:focus {
 
     .register-wrapper {
         border-radius: 6px;
-        max-width: 95%;
     }
 
     .register-form-panel {
         padding: 25px 20px;
     }
 
-    .file-input-wrapper {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .custom-file-button {
-        width: 100%;
-        min-width: auto;
-        margin-right: 0;
-    }
-
-    .file-name-display {
-        width: 100%;
-    }
-
     .form-input-field {
         height: 40px;
         font-size: 14px;
-    }
-
-    .custom-file-button, .file-name-display {
-        height: 40px;
-        font-size: 13px;
-    }
-
-    .custom-file-button {
-        padding: 10px 15px;
     }
 
     .submit-register-btn {
@@ -562,16 +622,6 @@ select:focus {
 
     .field-label {
         font-size: 11px;
-    }
-
-    .image-preview-container {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 300px;
-        z-index: 1000;
     }
 }
 

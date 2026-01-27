@@ -49,7 +49,7 @@ class NavbarComplete {
         this.adjustBodyPadding();
     }
 
-    // Agrega todos los estilos CSS necesarios
+    // Agrega todos los estilos CSS necesarios (MODIFICADO para lápiz simple)
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
@@ -128,6 +128,7 @@ class NavbarComplete {
                 white-space: nowrap;
                 pointer-events: none;
                 z-index: 1;
+                font-family: 'Orbitron', sans-serif;
             }
             
             /* Contenedor derecho para el botón hamburguesa */
@@ -206,33 +207,71 @@ class NavbarComplete {
                 opacity: 1;
             }
             
-            /* Sección superior del menú: Perfil del administrador */
+            /* Sección superior del menú: Perfil del administrador (MODIFICADO) */
             .admin-profile-section {
                 padding: 30px 25px 20px;
                 background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
                 color: var(--color-text-primary);
                 border-bottom: 1px solid var(--color-border-light);
                 text-align: center;
+                position: relative;
+            }
+            
+            /* Contenedor para la foto de perfil con lápiz */
+            .profile-photo-container {
+                position: relative;
+                width: 120px;
+                height: 120px;
+                margin: 0 auto 20px;
+                display: inline-block;
             }
             
             /* Círculo de imagen del administrador */
             .admin-profile-circle {
-                width: 100px;
-                height: 100px;
-                margin: 0 auto 20px;
+                width: 100%;
+                height: 100%;
                 border-radius: var(--border-radius-circle);
                 overflow: hidden;
                 border: 3px solid var(--color-accent-primary);
-                display: flex;
-                align-items: center;
-                justify-content: center;
                 background-color: var(--color-bg-secondary);
+                transition: all 0.3s ease;
             }
             
             .admin-profile-img {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
+            }
+            
+            /* Ícono de lápiz para editar (NUEVO - SOLO ESTO) */
+            .edit-profile-icon {
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                background-color: var(--color-accent-primary);
+                width: 35px;
+                height: 35px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                border: 2px solid white;
+                z-index: 10;
+                text-decoration: none;
+                color: white;
+            }
+            
+            .edit-profile-icon:hover {
+                background-color: var(--color-accent-secondary);
+                transform: scale(1.1) rotate(10deg);
+                color: white;
+            }
+            
+            .edit-profile-icon i {
+                font-size: 14px;
             }
             
             /* Información del administrador */
@@ -245,95 +284,19 @@ class NavbarComplete {
                 font-weight: 600;
                 margin-bottom: 5px;
                 color: var(--color-text-primary);
+                font-family: 'Orbitron', sans-serif;
             }
             
             .admin-role {
                 font-size: 14px;
                 color: var(--color-text-secondary);
                 margin-bottom: 10px;
+                font-family: 'Orbitron', sans-serif;
             }
             
             .admin-email {
                 font-size: 13px;
                 color: var(--color-text-tertiary);
-            }
-            
-            /* Botón desplegable de administración */
-            .admin-dropdown {
-                position: relative;
-                width: 100%;
-            }
-            
-            .admin-dropdown-btn {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                width: 100%;
-                padding: 12px 15px;
-                background-color: var(--color-bg-tertiary);
-                border: 1px solid var(--color-border-light);
-                border-radius: var(--border-radius-small);
-                cursor: pointer;
-                transition: var(--transition-default);
-                font-size: 15px;
-                font-weight: 500;
-                color: var(--color-text-primary);
-            }
-            
-            .admin-dropdown-btn:hover {
-                background-color: var(--color-bg-secondary);
-            }
-            
-            .admin-dropdown-btn i {
-                transition: transform var(--transition-default);
-            }
-            
-            .admin-dropdown-btn.active i {
-                transform: rotate(180deg);
-            }
-            
-            /* Opciones del dropdown */
-            .admin-dropdown-options {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                width: 100%;
-                background-color: var(--color-bg-tertiary);
-                border: 1px solid var(--color-border-light);
-                border-radius: var(--border-radius-small);
-                margin-top: 5px;
-                overflow: hidden;
-                opacity: 0;
-                visibility: hidden;
-                transform: translateY(-10px);
-                transition: all var(--transition-default);
-                z-index: 1002;
-            }
-            
-            .admin-dropdown-options.active {
-                opacity: 1;
-                visibility: visible;
-                transform: translateY(0);
-            }
-            
-            .admin-dropdown-option {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 12px 15px;
-                cursor: pointer;
-                transition: var(--transition-default);
-                color: var(--color-text-primary);
-                text-decoration: none;
-                border-bottom: 1px solid var(--color-border-light);
-            }
-            
-            .admin-dropdown-option:last-child {
-                border-bottom: none;
-            }
-            
-            .admin-dropdown-option:hover {
-                background-color: var(--color-bg-secondary);
             }
             
             /* Sección de navegación */
@@ -350,6 +313,7 @@ class NavbarComplete {
                 display: flex;
                 align-items: center;
                 gap: 10px;
+                font-family: 'Orbitron', sans-serif;
             }
             
             .nav-items-container {
@@ -383,12 +347,14 @@ class NavbarComplete {
             .nav-item-text {
                 font-size: 15px;
                 flex-grow: 1;
+                font-family: 'Orbitron', sans-serif;
             }
             
             .nav-item-percentage {
                 font-size: 14px;
                 font-weight: 600;
                 color: var(--color-accent-primary);
+                font-family: 'Orbitron', sans-serif;
             }
             
             .nav-item-priority {
@@ -403,31 +369,123 @@ class NavbarComplete {
                 align-items: center;
                 gap: 5px;
                 font-size: 13px;
+                font-family: 'Orbitron', sans-serif;
             }
             
-            /* Sección inferior del menú */
-            .menu-bottom-section {
-                margin-top: auto;
+            /* Sección de espacios vacíos (sin texto) */
+            .menu-section {
                 padding: 20px 25px;
+                border-bottom: 1px solid var(--color-border-light);
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
             }
             
-            .menu-bottom-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
+            .empty-menu-item {
                 padding: 10px 15px;
                 border-radius: var(--border-radius-small);
                 transition: var(--transition-default);
-                cursor: pointer;
-                text-decoration: none;
-                color: var(--color-text-primary);
+                height: 40px;
+                background-color: transparent;
+                border: none;
+                cursor: default;
             }
             
-            .menu-bottom-item:hover {
+            /* Sección de opciones de administración (al final) */
+            .admin-options-section {
+                padding: 20px 25px;
+                border-top: 1px solid var(--color-border-light);
+                margin-top: auto;
+            }
+            
+            /* Botón desplegable de administración CON FUENTE ORBITRON */
+            .admin-dropdown-btn {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 14px 16px;
+                background-color: var(--color-bg-primary);
+                border: 2px solid var(--color-border-medium);
+                border-radius: var(--border-radius-medium);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text-primary);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+                font-family: 'Orbitron', sans-serif;
+            }
+            
+            .admin-dropdown-btn:hover {
                 background-color: var(--color-bg-secondary);
+                transform: translateY(-2px);
+                box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+            }
+            
+            .admin-dropdown-btn:active {
+                transform: translateY(0);
+            }
+            
+            .admin-dropdown-btn i {
+                transition: transform 0.3s ease;
+                font-size: 14px;
+            }
+            
+            .admin-dropdown-btn.active i {
+                transform: rotate(180deg);
+            }
+            
+            /* Contenedor de opciones expandido */
+            .admin-dropdown-options {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 15px;
+                padding: 15px;
+                background-color: var(--color-bg-tertiary);
+                border-radius: var(--border-radius-medium);
+                border: 1px solid var(--color-border-light);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .admin-dropdown-options.active {
+                max-height: 200px;
+                opacity: 1;
+                overflow: visible;
+            }
+            
+            .admin-dropdown-option {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 15px;
+                background-color: var(--color-bg-primary);
+                border: 1px solid var(--color-border-light);
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                color: var(--color-text-primary);
+                font-weight: 500;
+                font-family: 'Orbitron', sans-serif;
+            }
+            
+            .admin-dropdown-option:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateX(5px);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            }
+            
+            .admin-dropdown-option i {
+                width: 20px;
+                text-align: center;
+                font-size: 16px;
+                color: var(--color-accent-primary);
             }
             
             /* Overlay para cerrar el menú (en móvil) */
@@ -466,9 +524,19 @@ class NavbarComplete {
                     width: 100%;
                 }
                 
-                .admin-profile-circle {
-                    width: 80px;
-                    height: 80px;
+                .profile-photo-container {
+                    width: 100px;
+                    height: 100px;
+                }
+                
+                .edit-profile-icon {
+                    width: 30px;
+                    height: 30px;
+                }
+                
+                .admin-dropdown-btn {
+                    padding: 12px 14px;
+                    font-size: 15px;
                 }
             }
         `;
@@ -479,7 +547,7 @@ class NavbarComplete {
         document.head.appendChild(styleElement);
     }
 
-    // Inserta la estructura HTML del navbar con el perfil y dropdown
+    // Inserta la estructura HTML del navbar (MODIFICADO para lápiz simple)
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
@@ -506,40 +574,28 @@ class NavbarComplete {
             <!-- Overlay para cerrar menú en móvil -->
             <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
             
-            <!-- Menú lateral con perfil y secciones -->
+            <!-- Menú lateral -->
             <div class="navbar-main-menu" id="navbarMainMenu">
                 
-                <!-- Sección superior: Perfil del administrador -->
+                <!-- Sección superior: Perfil del administrador (MODIFICADO) -->
                 <div class="admin-profile-section">
-                    <!-- Círculo con imagen del administrador -->
-                    <div class="admin-profile-circle">
-                        <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img">
+                    <!-- Contenedor para la foto con ícono de lápiz -->
+                    <div class="profile-photo-container">
+                        <!-- Círculo con imagen del administrador -->
+                        <div class="admin-profile-circle">
+                            <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
+                        </div>
+                        <!-- Ícono de lápiz para editar (ENLACE a página de edición) -->
+                        <a href="/editar-perfil.html" class="edit-profile-icon" id="editProfileIcon">
+                            <i class="fas fa-pencil-alt"></i>
+                        </a>
                     </div>
                     
                     <!-- Información del administrador -->
                     <div class="admin-info">
-                        <div class="admin-name">Bryan Vazquez Segura</div>
+                        <div class="admin-name" id="adminName">Bryan Vazquez Segura</div>
                         <div class="admin-role">Administrador</div>
-                        <div class="admin-email">bryan@ejemplo.com</div>
-                    </div>
-                    
-                    <!-- Botón desplegable de administración -->
-                    <div class="admin-dropdown">
-                        <button class="admin-dropdown-btn" id="adminDropdownBtn">
-                            <span>Opciones de Administración</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        
-                        <div class="admin-dropdown-options" id="adminDropdownOptions">
-                            <a href="#" class="admin-dropdown-option">
-                                <i class="fa-solid fa-gears"></i>
-                                <span>Administración</span>
-                            </a>
-                            <a href="#" class="admin-dropdown-option">
-                                <i class="fa-solid fa-users-gear"></i>
-                                <span>Gestionar Usuarios</span>
-                            </a>
-                        </div>
+                        <div class="admin-email" id="adminEmail">bryan@ejemplo.com</div>
                     </div>
                 </div>
                 
@@ -582,47 +638,28 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- Sección inferior del menú -->
-                <div class="menu-bottom-section">
-                    <a href="#" class="menu-bottom-item">
-                        <i class="fa-solid fa-eye"></i>
-                        <span>Ver Mis Tickets</span>
-                    </a>
+                <!-- Sección de espacios vacíos (8 espacios sin texto) -->
+                <div class="menu-section">
+                    <div class="empty-menu-item"></div>
+                </div>
+                
+                <!-- Sección de opciones de administración (AL FINAL) -->
+                <div class="admin-options-section">
+                    <button class="admin-dropdown-btn" id="adminDropdownBtn">
+                        <span>Opciones de Administración</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
                     
-                    <a href="#" class="menu-bottom-item">
-                        <i class="fa-solid fa-note-sticky"></i>
-                        <span>Ver mis notas</span>
-                    </a>
-                    
-                    <a href="#" class="menu-bottom-item">
-                        <i class="fa-solid fa-money-bill-wave"></i>
-                        <span>Reembolsos</span>
-                    </a>
-                    
-                    <a href="#" class="menu-bottom-item">
-                        <i class="fa-solid fa-book"></i>
-                        <span>Ver manuales</span>
-                    </a>
-                    
-                    <a href="#" class="menu-bottom-item">
-                        <i class="fa-solid fa-list-check"></i>
-                        <span>Ver mis Checklists</span>
-                    </a>
-                    
-                    <a href="#" class="menu-bottom-item">
-                        <i class="fa-solid fa-sliders"></i>
-                        <span>Personalizar Interfaz</span>
-                    </a>
-                    
-                    <a href="#" class="menu-bottom-item">
-                        <i class="fa-solid fa-stopwatch"></i>
-                        <span>Terminar Asistencia</span>
-                    </a>
-                    
-                    <a href="#" class="menu-bottom-item">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Cerrar Sesión</span>
-                    </a>
+                    <div class="admin-dropdown-options" id="adminDropdownOptions">
+                        <a href="#" class="admin-dropdown-option">
+                            <i class="fa-solid fa-gears"></i>
+                            <span>Administración</span>
+                        </a>
+                        <a href="#" class="admin-dropdown-option">
+                            <i class="fa-solid fa-users-gear"></i>
+                            <span>Gestionar Usuarios</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         `;
@@ -630,7 +667,7 @@ class NavbarComplete {
         document.body.prepend(navbar);
     }
 
-    // Ajusta el padding del body para que el contenido no quede debajo del navbar
+    // Ajusta el padding del body
     adjustBodyPadding() {
         const navbar = document.getElementById('complete-navbar');
         if (!navbar) return;
@@ -645,15 +682,16 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // Configura todas las funcionalidades del navbar
+    // Configura todas las funcionalidades (SIMPLIFICADO)
     setupFunctionalities() {
         this.setupMenu();  
         this.setupScroll();
         this.loadFontAwesome();
         this.setupAdminDropdown();
+        this.loadOrbitronFont();
     }
 
-    // Configura la funcionalidad del menú hamburguesa
+    // Configura el menú hamburguesa
     setupMenu() {
         const hamburgerBtn = document.getElementById('navbarHamburger');
         const mainMenu = document.getElementById('navbarMainMenu');
@@ -669,7 +707,7 @@ class NavbarComplete {
             overlay.classList.toggle('active', this.isMenuOpen);
             document.body.classList.toggle('menu-open', this.isMenuOpen);
             
-            // Cerrar dropdown si está abierto cuando se cierra el menú
+            // Cerrar dropdown si está abierto
             if (!this.isMenuOpen && this.isAdminDropdownOpen) {
                 this.toggleAdminDropdown(false);
             }
@@ -683,7 +721,6 @@ class NavbarComplete {
                 overlay.classList.remove('active');
                 document.body.classList.remove('menu-open');
                 
-                // Cerrar dropdown también
                 if (this.isAdminDropdownOpen) {
                     this.toggleAdminDropdown(false);
                 }
@@ -714,13 +751,6 @@ class NavbarComplete {
             this.toggleAdminDropdown(this.isAdminDropdownOpen);
         };
 
-        const closeDropdown = () => {
-            if (this.isAdminDropdownOpen) {
-                this.isAdminDropdownOpen = false;
-                this.toggleAdminDropdown(false);
-            }
-        };
-
         dropdownBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             toggleDropdown();
@@ -728,36 +758,22 @@ class NavbarComplete {
 
         // Cerrar dropdown al hacer clic fuera
         document.addEventListener('click', (e) => {
-            if (!dropdownBtn.contains(e.target) && !dropdownOptions.contains(e.target)) {
-                closeDropdown();
+            if (!dropdownBtn.contains(e.target) && 
+                !dropdownOptions.contains(e.target) && 
+                this.isAdminDropdownOpen) {
+                this.toggleAdminDropdown(false);
             }
         });
 
         // Cerrar dropdown al presionar Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isAdminDropdownOpen) {
-                closeDropdown();
+                this.toggleAdminDropdown(false);
             }
         });
-
-        // Cerrar dropdown cuando se cierra el menú lateral
-        const mainMenu = document.getElementById('navbarMainMenu');
-        if (mainMenu) {
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.attributeName === 'class' && 
-                        !mainMenu.classList.contains('active') && 
-                        this.isAdminDropdownOpen) {
-                        closeDropdown();
-                    }
-                });
-            });
-            
-            observer.observe(mainMenu, { attributes: true });
-        }
     }
 
-    // Alterna la visibilidad del dropdown de administración
+    // Alterna la visibilidad del dropdown
     toggleAdminDropdown(show) {
         const dropdownBtn = document.getElementById('adminDropdownBtn');
         const dropdownOptions = document.getElementById('adminDropdownOptions');
@@ -779,13 +795,23 @@ class NavbarComplete {
         });
     }
 
-    // Carga Font Awesome si no está disponible
+    // Carga Font Awesome
     loadFontAwesome() {
         if (!document.querySelector('link[href*="font-awesome"]')) {
             const faLink = document.createElement('link');
             faLink.rel = 'stylesheet';
             faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
             document.head.appendChild(faLink);
+        }
+    }
+
+    // Carga la fuente Orbitron desde Google Fonts
+    loadOrbitronFont() {
+        if (!document.querySelector('link[href*="orbitron"]')) {
+            const orbitronLink = document.createElement('link');
+            orbitronLink.rel = 'stylesheet';
+            orbitronLink.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap';
+            document.head.appendChild(orbitronLink);
         }
     }
 }
