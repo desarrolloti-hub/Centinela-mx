@@ -1,19 +1,25 @@
-/* PALETA DE COLORES GRISES */
+/* Variables específicas para login basadas en las variables principales */
 :root {
-    --dark-bg: #010101;
+    /* Paleta de grises usando variables principales */
+    --dark-bg: var(--color-bg-primary, #010101);
     --card-bg: rgba(0, 0, 0, 0.995);
     --panel-left: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%);
     --panel-right: rgba(6, 6, 6, 0.995);
-    --text-white: #ffffff;
-    --text-light: #f0f0f0;
-    --text-gray: #b0b0b0;
-    --text-dark-gray: #a0a0a0;
-    --border-color: #2b2b2b;
-    --border-light: #3a3a3a;
-    --accent-gray: #c0c0c0;
-    --btn-gradient: linear-gradient(135deg, #545454, #d6cdcd);
-    --btn-hover: linear-gradient(135deg, #5a5a5a, #e0d7d7);
+    --text-white: var(--color-text-primary, #ffffff);
+    --text-light: var(--color-text-primary, #ffffff);
+    --text-gray: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+    --text-dark-gray: rgba(160, 160, 160, 0.8);
+    --border-color: var(--color-border-light, rgba(255, 255, 255, 0.1));
+    --border-light: rgba(255, 255, 255, 0.2);
+    --accent-gray: var(--color-accent-primary, #c0c0c0);
+    --btn-gradient: linear-gradient(135deg, var(--color-accent-primary, #545454), var(--color-accent-secondary, #d6cdcd));
+    --btn-hover: linear-gradient(135deg, var(--color-accent-secondary, #d6cdcd), var(--color-accent-primary, #545454));
     --btn-shadow: rgba(192, 192, 192, 0.2);
+    
+    /* Dimensiones específicas para login */
+    --login-max-width: 800px;
+    --login-min-height: 480px;
+    --input-height: 40px;
 }
 
 /* ESTILOS GENERALES */
@@ -21,7 +27,7 @@ body {
     margin: 0;
     padding: 0;
     background: var(--dark-bg);
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
     color: var(--text-light);
     overflow-x: hidden;
 }
@@ -43,13 +49,13 @@ body {
 .login-wrapper {
     display: flex;
     width: 100%;
-    max-width: 800px; /* Más compacto */
-    min-height: 480px; /* Más bajo */
+    max-width: var(--login-max-width, 800px);
+    min-height: var(--login-min-height, 480px);
     background: var(--card-bg);
     backdrop-filter: blur(8px);
-    border-radius: 10px; /* Más redondeado */
+    border-radius: var(--border-radius-medium, 10px);
     overflow: hidden;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7); /* Sombra más ligera */
+    box-shadow: var(--shadow-large, 0 6px 20px rgba(0, 0, 0, 0.7));
     border: 1px solid var(--border-color);
     box-sizing: border-box;
 }
@@ -58,7 +64,7 @@ body {
 .login-left-panel {
     flex: 0.8;
     background: var(--panel-left);
-    padding: 30px; /* Más compacto */
+    padding: 30px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -69,15 +75,18 @@ body {
     box-sizing: border-box;
 }
 
-/* LINEA IZQUIERDA ARRIBA DEL LOGO*/
+/* LINEA IZQUIERDA ARRIBA DEL LOGO */
 .login-left-panel::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 3px; /* Más fino */
-    background: linear-gradient(90deg, #545454, #c0c0c0, #545454);
+    height: 3px;
+    background: linear-gradient(90deg, 
+        var(--color-accent-primary, #545454), 
+        var(--color-accent-secondary, #c0c0c0), 
+        var(--color-accent-primary, #545454));
 }
 
 /* LOGO Y MARCA COMPACTO */
@@ -89,30 +98,29 @@ body {
 
 /* LOGO CENTINELA */
 #logo {
-    margin-bottom: 20px; /* Menos espacio */
+    margin-bottom: 20px;
     text-align: center;
 }
 
 .centinela-logo {
-    max-width: 250px; /* Más pequeño */
+    max-width: 250px;
     height: auto;
-    filter: drop-shadow(0 0 8px rgba(192, 192, 192, 0.2)); /* Sombra más ligera */
-    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 8px var(--color-shadow, rgba(192, 192, 192, 0.2)));
+    transition: var(--transition-default, all 0.3s ease);
 }
 
 .centinela-logo:hover {
     transform: scale(1.05);
-    filter: drop-shadow(0 0 12px rgba(192, 192, 192, 0.3));
+    filter: drop-shadow(0 0 12px var(--color-shadow, rgba(192, 192, 192, 0.3)));
 }
 
-
 .brand-name {
-    font-size: 28px; /* Más pequeño */
+    font-size: 28px;
     font-weight: 700;
     color: var(--text-white);
-    letter-spacing: 2px; /* Menos espaciado */
+    letter-spacing: 2px;
     margin-bottom: 15px;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
     text-transform: uppercase;
     position: relative;
 }
@@ -123,29 +131,30 @@ body {
     left: 50%;
     transform: translateX(-50%);
     bottom: -8px;
-    width: 60px; /* Más corto */
-    height: 2px; /* Más fino */
+    width: 60px;
+    height: 2px;
     background: var(--accent-gray);
     border-radius: 1px;
 }
 
 .brand-description {
-    font-size: 13px; /* Más pequeño */
+    font-size: 13px;
     color: var(--text-gray);
-    max-width: 260px; /* Más compacto */
+    max-width: 260px;
     line-height: 1.5;
-    margin: 0 auto 30px; /* Menos espacio */
-    padding: 15px 0; /* Menos padding */
+    margin: 0 auto 30px;
+    padding: 15px 0;
     border-top: 1px solid var(--border-light);
     border-bottom: 1px solid var(--border-light);
     box-sizing: border-box;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 /* PANEL DERECHO - FORMULARIO COMPACTO */
 .login-right-panel {
     flex: 1.2;
     background: var(--panel-right);
-    padding: 30px; /* Más compacto */
+    padding: 30px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -153,34 +162,31 @@ body {
     box-sizing: border-box;
 }
 
-/* ICONO DE USUARIO COMPACTO - OPTIMIZADO (MENOS ESPACIO) */
+/* ICONO DE USUARIO COMPACTO */
 .user-icon-form-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 40px; /* REDUCIDO de 100px a 40px (mucho menos espacio) */
+    margin-bottom: 40px;
     width: 100%;
     order: 1;
-    /* Espacio mínimo necesario para evitar cortes */
-    height: 95px; /* Solo 5px más que el círculo */
+    height: 95px;
     overflow: visible;
 }
 
 .user-icon-form {
-    width: 90px; /* Más pequeño */
+    width: 90px;
     height: 90px;
     background: var(--btn-gradient);
-    border-radius: 100%;
+    border-radius: var(--border-radius-circle, 50%);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 40px; /* Más pequeño */
+    font-size: 40px;
     color: var(--text-white);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), /* Sombra más ligera */
-        inset 0 0 15px rgba(255, 255, 255, 0.15);
-    border: 2px solid rgba(255, 255, 255, 0.15); /* Borde más fino */
-    transition: all 0.1s ease;
-    /* Punto de origen fijo para transformaciones */
+    
+    border: 2px solid var(--border-light);
+    transition: var(--transition-default, all 0.3s ease);
     transform-origin: center center;
 }
 
@@ -189,36 +195,35 @@ body {
         transform: translateY(0px);
     }
     50% {
-        transform: translateY(-3px); /* Animación más sutil */
+        transform: translateY(-3px);
     }
 }
 
 .user-icon-form:hover {
-    transform: scale(1.02); /* Efecto más sutil */
+    transform: scale(1.02);
     background: var(--btn-hover);
     animation: none;
 }
 
-/* ENCABEZADO COMPACTO - MÁS CERCA DEL ICONO */
+/* ENCABEZADO COMPACTO */
 .form-header {
     text-align: center;
-    margin-bottom: 25px; /* Menos espacio */
+    margin-bottom: 25px;
     width: 100%;
     align-self: center;
     order: 2;
     box-sizing: border-box;
-    /* Añadir margen superior negativo para acercar más al icono */
-    margin-top: -10px; /* Esto jala el header hacia arriba */
+    margin-top: -10px;
 }
 
 .form-main-title {
-    font-size: 24px; /* Más pequeño */
+    font-size: 24px;
     font-weight: 700;
     color: var(--text-white);
-    margin-bottom: 8px; /* REDUCIDO de 10px a 8px */
+    margin-bottom: 8px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
     position: relative;
 }
 
@@ -228,32 +233,32 @@ body {
     left: 50%;
     transform: translateX(-50%);
     bottom: -8px;
-    width: 60px; /* Más corto */
-    height: 2px; /* Más fino */
+    width: 60px;
+    height: 2px;
     background: var(--accent-gray);
     border-radius: 1px;
 }
 
 .form-sub-title {
     color: var(--text-gray);
-    font-size: 13px; /* Más pequeño */
+    font-size: 13px;
     line-height: 1.4;
-    margin-top: 10px; /* REDUCIDO de 15px a 10px */
+    margin-top: 10px;
     text-align: center;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 /* FORMULARIO COMPACTO */
 .login-form-container {
     display: flex;
     flex-direction: column;
-    gap: 20px; /* Espacio reducido */
+    gap: 20px;
     width: 100%;
     margin: 0 auto;
     order: 3;
     box-sizing: border-box;
 }
 
-/* Ajustar el orden de los elementos en el panel derecho */
 .login-right-panel {
     display: flex;
     flex-direction: column;
@@ -262,14 +267,14 @@ body {
 .form-field-group {
     display: flex;
     flex-direction: column;
-    gap: 8px; /* Espacio reducido */
+    gap: 8px;
     width: 100%;
     box-sizing: border-box;
 }
 
 .field-label {
     color: var(--text-dark-gray);
-    font-size: 11px; /* Más pequeño */
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -278,15 +283,16 @@ body {
     gap: 6px;
     width: 100%;
     box-sizing: border-box;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 .field-label i {
-    color: var(--accent-gray);
-    font-size: 12px; /* Más pequeño */
+    color: var(--color-icon-primary, var(--color-accent-secondary));
+    font-size: 12px;
     min-width: 16px;
 }
 
-/* INPUTS CON MEDIDA EXACTA - TODOS IGUALES */
+/* INPUTS CON MEDIDA EXACTA */
 .input-wrapper {
     position: relative;
     width: 100%;
@@ -295,192 +301,192 @@ body {
 
 .form-input-field {
     width: 100%;
-    background: #1a1a1a;
-    border: 1px solid var(--border-color); /* Borde más fino */
-    border-radius: 5px; /* Esquinas más redondeadas */
-    padding: 10px 12px; /* Padding compacto */
+    background: var(--color-bg-tertiary, #1a1a1a);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small, 5px);
+    padding: 10px 12px;
     color: var(--text-white);
-    font-size: 14px; /* Tamaño normal */
-    font-family: 'Rajdhani', sans-serif;
-    transition: all 0.2s ease;
-    height: 40px; /* MEDIDA EXACTA PARA TODOS */
+    font-size: 14px;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    transition: var(--transition-default, all 0.3s ease);
+    height: var(--input-height, 40px);
     box-sizing: border-box;
 }
 
-/* Garantizar que todos los inputs sean iguales */
 .form-input-field[type="text"],
 .form-input-field[type="password"] {
-    height: 40px; /* MISMA ALTURA */
-    padding: 10px 12px; /* MISMO PADDING */
-    font-size: 14px; /* MISMO TAMAÑO DE TEXTO */
+    height: var(--input-height, 40px);
+    padding: 10px 12px;
+    font-size: 14px;
 }
 
 .form-input-field:focus {
     outline: none;
     border-color: var(--accent-gray);
-    background: #222222;
-    box-shadow: 0 0 0 1px rgba(192, 192, 192, 0.1); /* Sombra más sutil */
+    background: var(--color-hover, rgba(255, 255, 255, 0.05));
+    box-shadow: 0 0 0 1px var(--color-shadow, rgba(192, 192, 192, 0.1));
 }
 
 .form-input-field::placeholder {
-    color: rgba(160, 160, 160, 0.6);
-    font-size: 13px; /* Placeholder más pequeño */
+    color: var(--text-gray);
+    font-size: 13px;
 }
 
-/* PASSWORD FIELD - MISMA MEDIDA */
+/* PASSWORD FIELD */
 .password-field .form-input-field {
     padding-right: 40px;
-    height: 40px; /* MISMA ALTURA */
+    height: var(--input-height, 40px);
 }
 
 .password-toggle-btn {
     position: absolute;
-    right: 10px; /* Más cerca del borde */
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     color: var(--text-dark-gray);
     cursor: pointer;
-    font-size: 14px; /* Más pequeño */
+    font-size: 14px;
     padding: 0;
     width: 24px;
     height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 3px;
-    transition: all 0.2s ease;
+    border-radius: var(--border-radius-small, 3px);
+    transition: var(--transition-default, all 0.3s ease);
     box-sizing: border-box;
 }
 
 .password-toggle-btn:hover {
-    color: var(--accent-gray);
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-icon-primary, var(--color-accent-secondary));
+    background: var(--color-hover, rgba(255, 255, 255, 0.05));
 }
 
 /* ENLACES DE AYUDA COMPACTOS */
 .form-help-links {
     display: flex;
     justify-content: space-between;
-    margin-top: 12px; /* Menos espacio */
+    margin-top: 12px;
     width: 100%;
     box-sizing: border-box;
 }
 
 .help-link {
-    color: #fffefe;
-    font-size: 11px; /* Más pequeño */
-    text-decoration: none; /* Sin subrayado */
+    color: var(--text-light);
+    font-size: 11px;
+    text-decoration: none;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: var(--transition-default, all 0.3s ease);
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 8px; /* Padding reducido */
-    border-radius: 3px;
+    padding: 6px 8px;
+    border-radius: var(--border-radius-small, 3px);
     box-sizing: border-box;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 .help-link:hover {
     color: var(--text-white);
-    background: rgba(192, 192, 192, 0.08); /* Efecto más sutil */
-    text-decoration: none; /* Sin subrayado en hover */
+    background: var(--color-hover, rgba(192, 192, 192, 0.08));
+    text-decoration: none;
 }
 
 .help-link i {
-    font-size: 11px; /* Iconos pequeños */
+    font-size: 11px;
+    color: var(--color-icon-primary, var(--color-accent-secondary));
 }
 
-/* BOTÓN INICIAR SESIÓN - COMPACTO Y UNIFORME */
+/* BOTÓN INICIAR SESIÓN */
 .submit-login-btn {
     background: var(--btn-gradient);
     border: none;
-    border-radius: 5px; /* Esquinas más redondeadas */
-    padding: 10px; /* Más compacto */
-    color: #ffffff;
-    font-size: 13px; /* Texto más pequeño */
+    border-radius: var(--border-radius-small, 5px);
+    padding: 10px;
+    color: var(--text-white);
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: var(--transition-default, all 0.3s ease);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: 100%; /* MISMO ANCHO QUE LOS INPUTS */
-    height: 40px; /* MISMA ALTURA QUE LOS INPUTS */
+    width: 100%;
+    height: var(--input-height, 40px);
     text-transform: uppercase;
     letter-spacing: 0.8px;
     margin-top: 10px;
-    font-family: 'Rajdhani', sans-serif;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); /* Sombra más ligera */
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    box-shadow: var(--shadow-small, 0 2px 6px rgba(0, 0, 0, 0.3));
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
 }
 
 .submit-login-btn:hover {
-    transform: translateY(-1px); /* Efecto más sutil */
-    box-shadow: 0 4px 8px var(--btn-shadow);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-normal, 0 4px 8px var(--btn-shadow));
     background: var(--btn-hover);
 }
 
 .submit-login-btn i {
-    font-size: 14px; /* Icono pequeño */
-    color: #c0c0c0;
+    font-size: 14px;
+    color: var(--color-icon-primary, var(--color-accent-secondary));
 }
 
 .submit-login-btn:active {
     transform: translateY(0);
-    box-shadow: 0 1px 3px var(--btn-shadow);
+    box-shadow: var(--shadow-small, 0 1px 3px var(--btn-shadow));
 }
 
-/* BOTÓN REGISTRARSE - COMPACTO Y UNIFORME */
+/* BOTÓN REGISTRARSE */
 .register-account-btn {
-    /* IMPORTANTE: Estos estilos son para un enlace <a>, no para un botón <button> */
     display: inline-block;
-    text-decoration: none; /* QUITA EL SUBRAYADO */
+    text-decoration: none;
     text-align: center;
     background: var(--btn-gradient);
     border: none;
-    border-radius: 5px; /* Igual que los otros botones */
-    padding: 10px 20px; /* Más compacto */
-    color: #ffffff;
-    font-size: 13px; /* Texto más pequeño */
+    border-radius: var(--border-radius-small, 5px);
+    padding: 10px 20px;
+    color: var(--text-white);
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: var(--transition-default, all 0.3s ease);
     align-items: center;
     justify-content: center;
     gap: 8px;
     width: 100%;
-    max-width: 240px; /* Ancho máximo reducido */
-    height: 40px; /* MISMA ALTURA QUE LOS INPUTS */
+    max-width: 240px;
+    height: var(--input-height, 40px);
     text-transform: uppercase;
     letter-spacing: 0.8px;
     margin: 0 auto;
-    font-family: 'Rajdhani', sans-serif;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    box-shadow: var(--shadow-small, 0 2px 6px rgba(0, 0, 0, 0.3));
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
 }
 
 .register-account-btn:hover {
-    transform: translateY(-1px); /* Efecto más sutil */
-    box-shadow: 0 4px 8px var(--btn-shadow);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-normal, 0 4px 8px var(--btn-shadow));
     background: var(--btn-hover);
-    text-decoration: none; /* Asegurar que no aparezca subrayado en hover */
+    text-decoration: none;
 }
 
 .register-account-btn i {
     font-size: 14px;
-    color: #c0c0c0;
+    color: var(--color-icon-primary, var(--color-accent-secondary));
 }
 
 .register-account-btn:active {
     transform: translateY(0);
-    box-shadow: 0 1px 3px var(--btn-shadow);
+    box-shadow: var(--shadow-small, 0 1px 3px var(--btn-shadow));
 }
 
 /* Efecto de brillo sutil en ambos botones */
@@ -495,10 +501,10 @@ body {
     background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.08), /* Más sutil */
+        rgba(255, 255, 255, 0.08),
         transparent
     );
-    transition: left 0.5s ease; /* Transición más rápida */
+    transition: var(--transition-slow, left 0.5s ease);
 }
 
 .submit-login-btn:hover::after,
@@ -510,25 +516,23 @@ body {
 @media (max-width: 900px) {
     .login-wrapper {
         flex-direction: column;
-        max-width: 450px; /* Más compacto */
+        max-width: 450px;
         min-height: auto;
     }
 
-    /* INVERTIR EL ORDEN: Formulario primero, luego logo */
     .login-left-panel {
-        padding: 25px 20px; /* Más compacto */
+        padding: 25px 20px;
         order: 2;
         border-right: none;
         border-top: 1px solid var(--border-color);
     }
 
     .login-right-panel {
-        padding: 25px 20px; /* Más compacto */
+        padding: 25px 20px;
         order: 1;
         position: relative;
     }
 
-    /* Línea separadora más fina */
     .login-right-panel::after {
         content: '';
         position: absolute;
@@ -539,57 +543,54 @@ body {
         background: var(--border-color);
     }
 
-    /* Ocultar la línea superior del panel izquierdo en móvil */
     .login-left-panel::before {
         display: none;
     }
 
     .form-header {
         margin-bottom: 20px;
-        margin-top: -5px; /* Ajuste para tablet */
+        margin-top: -5px;
     }
 
     .brand-name {
-        font-size: 22px; /* Más pequeño en móvil */
+        font-size: 22px;
     }
 
     .form-main-title {
-        font-size: 22px; /* Más pequeño en móvil */
-        margin-bottom: 6px; /* Más compacto en tablet */
+        font-size: 22px;
+        margin-bottom: 6px;
     }
 
     .form-sub-title {
-        margin-top: 8px; /* Más compacto en tablet */
+        margin-top: 8px;
     }
 
     .centinela-logo {
-        max-width: 100px; /* Más pequeño en móvil */
+        max-width: 100px;
     }
 
     .user-icon-form {
-        width: 60px; /* Más pequeño en móvil */
+        width: 60px;
         height: 60px;
         font-size: 24px;
         margin-bottom: 15px;
     }
 
-    /* CONTENEDOR OPTIMIZADO PARA TABLET */
     .user-icon-form-container {
-        height: 70px; /* 60px + 10px extra */
-        margin-bottom: 30px; /* REDUCIDO para tablet */
+        height: 70px;
+        margin-bottom: 30px;
     }
 
-    /* EN MÓVIL TAMBIÉN MISMAS MEDIDAS */
     .form-input-field,
     .password-field .form-input-field {
-        height: 38px; /* UNIFORME EN MÓVIL */
+        height: 38px;
         padding: 9px 11px;
         font-size: 13px;
     }
 
     .submit-login-btn,
     .register-account-btn {
-        height: 38px; /* MISMA ALTURA QUE INPUTS */
+        height: 38px;
         font-size: 12px;
         padding: 9px 16px;
     }
@@ -602,46 +603,43 @@ body {
     }
 
     .login-wrapper {
-        border-radius: 8px;
+        border-radius: var(--border-radius-medium, 8px);
     }
 
     .login-left-panel,
     .login-right-panel {
-        padding: 20px 15px; /* Muy compacto */
+        padding: 20px 15px;
     }
 
-    /* MEDIDAS EXACTAS EN MÓVILES PEQUEÑOS */
     .form-input-field,
     .password-field .form-input-field {
-        height: 36px; /* UNIFORME */
+        height: 36px;
         padding: 8px 10px;
         font-size: 13px;
     }
 
     .submit-login-btn,
     .register-account-btn {
-        height: 36px; /* EXACTA MISMA ALTURA */
+        height: 36px;
         font-size: 12px;
         padding: 8px 14px;
     }
 
     .user-icon-form {
-        width: 50px; /* Muy pequeño en móvil */
+        width: 50px;
         height: 50px;
         font-size: 20px;
         margin-bottom: 12px;
         border-width: 2px;
     }
 
-    /* CONTENEDOR OPTIMIZADO PARA MÓVIL */
     .user-icon-form-container {
-        height: 55px; /* 50px + 5px extra */
-        margin-bottom: 25px; /* REDUCIDO para móvil */
+        height: 55px;
+        margin-bottom: 25px;
     }
 
-    /* AJUSTES DE ESPACIADO PARA MÓVIL */
     .form-header {
-        margin-top: -5px; /* Menos negativo en móvil */
+        margin-top: -5px;
         margin-bottom: 20px;
     }
 

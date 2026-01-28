@@ -1,19 +1,25 @@
-/* PALETA DE COLORES GRISES */
+/* Variables específicas para registro basadas en las variables principales */
 :root {
-    --dark-bg: #000000;
+    /* Paleta de grises usando variables principales */
+    --dark-bg: var(--color-bg-primary, #000000);
     --card-bg: rgb(21, 21, 21);
     --panel-left: rgba(21, 21, 21, 0.95);
     --panel-right: linear-gradient(135deg, rgb(26, 26, 26) 0%, rgba(45, 45, 45, 0.95) 100%);
-    --text-white: #ffffff;
-    --text-light: #f0f0f0;
-    --text-gray: #b0b0b0;
-    --text-dark-gray: #a0a0a0;
-    --border-color: #2b2b2b;
-    --border-light: #3a3a3a;
-    --accent-gray: #c0c0c0;
-    --btn-gradient: linear-gradient(135deg, #545454, #d6cdcd);
-    --btn-hover: linear-gradient(135deg, #5a5a5a, #e0d7d7);
+    --text-white: var(--color-text-primary, #ffffff);
+    --text-light: var(--color-text-primary, #ffffff);
+    --text-gray: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+    --text-dark-gray: rgba(160, 160, 160, 0.8);
+    --border-color: var(--color-border-light, rgba(255, 255, 255, 0.1));
+    --border-light: rgba(255, 255, 255, 0.2);
+    --accent-gray: var(--color-accent-primary, #c0c0c0);
+    --btn-gradient: linear-gradient(135deg, var(--color-accent-primary, #545454), var(--color-accent-secondary, #d6cdcd));
+    --btn-hover: linear-gradient(135deg, var(--color-accent-secondary, #d6cdcd), var(--color-accent-primary, #545454));
     --btn-shadow: rgba(192, 192, 192, 0.14);
+    
+    /* Dimensiones específicas para registro */
+    --register-max-width: 800px;
+    --register-min-height: 480px;
+    --input-height: 40px;
 }
 
 /* ESTILOS GENERALES */
@@ -21,7 +27,7 @@ body {
     margin: 0;
     padding: 0;
     background: var(--dark-bg);
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
     color: var(--text-light);
     overflow-x: hidden;
 }
@@ -43,13 +49,13 @@ body {
 .register-wrapper {
     display: flex;
     width: 100%;
-    max-width: 800px;
-    min-height: 480px;
+    max-width: var(--register-max-width, 800px);
+    min-height: var(--register-min-height, 480px);
     background: var(--card-bg);
     backdrop-filter: blur(8px);
-    border-radius: 10px;
+    border-radius: var(--border-radius-medium, 10px);
     overflow: hidden;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+    box-shadow: var(--shadow-large, 0 6px 20px rgba(0, 0, 0, 0.7));
     border: 1px solid var(--border-color);
     box-sizing: border-box;
 }
@@ -91,15 +97,15 @@ body {
     width: 60px;
     height: 60px;
     background: var(--btn-gradient);
-    border-radius: 50%;
+    border-radius: var(--border-radius-circle, 50%);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
     color: var(--text-white);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    transition: all 0.2s ease;
+    
+    border: 2px solid var(--border-light);
+    transition: var(--transition-default, all 0.3s ease);
 }
 
 .user-icon-form:hover {
@@ -110,7 +116,7 @@ body {
 /* ENCABEZADO */
 .form-header {
     text-align: center;
-    margin-bottom: 15px; /* Reducido para la leyenda */
+    margin-bottom: 15px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -121,20 +127,20 @@ body {
     color: var(--text-white);
     margin-bottom: 8px;
     letter-spacing: 1px;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
     text-transform: uppercase;
 }
 
 /* LEYENDA DEL FORMULARIO */
 .form-legend {
     color: var(--accent-gray);
-    font-size: 11px; /* Tamaño pequeño */
+    font-size: 11px;
     font-weight: 500;
     text-align: center;
-    margin: 5px 0 8px 0; /* Espaciado ajustado */
+    margin: 5px 0 8px 0;
     padding: 8px 12px;
-    background: rgba(192, 192, 192, 0.08); /* Fondo sutil */
-    border-radius: 4px;
+    background: var(--color-hover, rgba(192, 192, 192, 0.08));
+    border-radius: var(--border-radius-small, 4px);
     border-left: 3px solid var(--accent-gray);
     display: flex;
     align-items: center;
@@ -143,6 +149,7 @@ body {
     line-height: 1.3;
     width: 100%;
     box-sizing: border-box;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 .form-legend i {
@@ -155,13 +162,14 @@ body {
     font-size: 13px;
     line-height: 1.4;
     margin-top: 8px;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 /* FORMULARIO - TODOS LOS CUADROS CON LA MISMA MEDIDA */
 .register-form-container {
     display: flex;
     flex-direction: column;
-    gap: 16px; /* Espacio uniforme */
+    gap: 16px;
     width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
@@ -187,10 +195,11 @@ body {
     gap: 6px;
     width: 100%;
     box-sizing: border-box;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 .field-label i {
-    color: var(--accent-gray);
+    color: var(--color-icon-primary, var(--color-accent-secondary));
     font-size: 12px;
     min-width: 16px;
 }
@@ -204,15 +213,15 @@ body {
 
 .form-input-field {
     width: 100%;
-    background: #1a1a1a;
+    background: var(--color-bg-tertiary, #1a1a1a);
     border: 1px solid var(--border-color);
-    border-radius: 5px;
+    border-radius: var(--border-radius-small, 5px);
     padding: 10px 12px;
     color: var(--text-white);
     font-size: 14px;
-    font-family: 'Rajdhani', sans-serif;
-    transition: all 0.2s ease;
-    height: 40px; /* MEDIDA EXACTA PARA TODOS */
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    transition: var(--transition-default, all 0.3s ease);
+    height: var(--input-height, 40px);
     box-sizing: border-box;
     display: block;
 }
@@ -221,28 +230,28 @@ body {
 .form-input-field[type="text"],
 .form-input-field[type="email"],
 .form-input-field[type="password"] {
-    height: 40px; /* MISMA ALTURA */
-    padding: 10px 12px; /* MISMO PADDING */
-    font-size: 14px; /* MISMO TAMAÑO DE TEXTO */
-    line-height: 1.4; /* MISMA ALTURA DE LÍNEA */
+    height: var(--input-height, 40px);
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 .form-input-field:focus {
     outline: none;
     border-color: var(--accent-gray);
-    background: #222222;
-    box-shadow: 0 0 0 1px rgba(192, 192, 192, 0.1);
+    background: var(--color-hover, rgba(255, 255, 255, 0.05));
+    box-shadow: 0 0 0 1px var(--color-shadow, rgba(192, 192, 192, 0.1));
 }
 
 .form-input-field::placeholder {
-    color: rgba(160, 160, 160, 0.6);
+    color: var(--text-gray);
     font-size: 13px;
 }
 
 /* PASSWORD FIELD - MISMA MEDIDA */
 .password-field .form-input-field {
     padding-right: 40px;
-    height: 40px; /* MISMA ALTURA */
+    height: var(--input-height, 40px);
 }
 
 .password-toggle-btn {
@@ -261,14 +270,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 3px;
-    transition: all 0.2s ease;
+    border-radius: var(--border-radius-small, 3px);
+    transition: var(--transition-default, all 0.3s ease);
     box-sizing: border-box;
 }
 
 .password-toggle-btn:hover {
-    color: var(--accent-gray);
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-icon-primary, var(--color-accent-secondary));
+    background: var(--color-hover, rgba(255, 255, 255, 0.05));
 }
 
 /* LÍNEA DIVISORIA */
@@ -291,8 +300,8 @@ body {
     gap: 15px;
     margin: 15px 0 20px 0;
     padding: 20px;
-    background: rgba(26, 26, 26, 0.7);
-    border-radius: 8px;
+    background: var(--color-bg-tertiary, rgba(26, 26, 26, 0.7));
+    border-radius: var(--border-radius-medium, 8px);
     border: 1px solid var(--border-light);
     width: 100%;
     box-sizing: border-box;
@@ -308,15 +317,15 @@ body {
 .logo-preview-circle {
     width: 120px;
     height: 120px;
-    border-radius: 50%;
-    background: #1a1a1a;
+    border-radius: var(--border-radius-circle, 50%);
+    background: var(--color-bg-tertiary, #1a1a1a);
     border: 3px solid var(--accent-gray);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    transition: all 0.3s ease;
+    box-shadow: var(--shadow-normal, 0 4px 10px rgba(0, 0, 0, 0.5));
+    transition: var(--transition-default, all 0.3s ease);
 }
 
 .logo-preview-circle:hover {
@@ -338,7 +347,7 @@ body {
 
 .logo-placeholder i {
     font-size: 28px;
-    color: var(--accent-gray);
+    color: var(--color-icon-primary, var(--color-accent-secondary));
     margin-bottom: 5px;
 }
 
@@ -348,6 +357,7 @@ body {
     line-height: 1.2;
     max-width: 90px;
     color: var(--accent-gray);
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 /* Imagen dentro del círculo */
@@ -355,7 +365,7 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: none; /* Oculto por defecto */
+    display: none;
 }
 
 /* Controles de subida */
@@ -371,13 +381,13 @@ body {
 .logo-select-btn {
     background: var(--btn-gradient);
     border: none;
-    border-radius: 5px;
+    border-radius: var(--border-radius-small, 5px);
     padding: 8px 16px;
     color: var(--text-white);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: var(--transition-default, all 0.3s ease);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -385,8 +395,8 @@ body {
     height: 36px;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    font-family: 'Rajdhani', sans-serif;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    box-shadow: var(--shadow-small, 0 2px 6px rgba(0, 0, 0, 0.3));
     box-sizing: border-box;
     width: 100%;
     max-width: 200px;
@@ -395,26 +405,26 @@ body {
 
 .logo-select-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px var(--btn-shadow);
+    box-shadow: var(--shadow-normal, 0 4px 8px var(--btn-shadow));
     background: var(--btn-hover);
 }
 
 .logo-select-btn i {
     font-size: 12px;
-    color: #c0c0c0;
+    color: var(--color-icon-primary, var(--color-accent-secondary));
 }
 
 /* Botón para remover logo */
 .logo-remove-btn {
     background: rgba(255, 50, 50, 0.1);
     border: 1px solid rgba(255, 50, 50, 0.3);
-    border-radius: 5px;
+    border-radius: var(--border-radius-small, 5px);
     padding: 8px 16px;
     color: #ff6b6b;
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: var(--transition-default, all 0.3s ease);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -422,7 +432,7 @@ body {
     height: 32px;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
     box-sizing: border-box;
     width: 100%;
     max-width: 150px;
@@ -446,46 +456,47 @@ body {
     margin-top: 10px;
     line-height: 1.3;
     padding: 8px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
+    background: var(--color-hover, rgba(0, 0, 0, 0.2));
+    border-radius: var(--border-radius-small, 4px);
     width: 100%;
     max-width: 250px;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 /* BOTÓN REGISTRARSE - MISMO ANCHO QUE LOS INPUTS */
 .submit-register-btn {
     background: var(--btn-gradient);
     border: none;
-    border-radius: 5px;
+    border-radius: var(--border-radius-small, 5px);
     padding: 10px;
-    color: #ffffff;
+    color: var(--text-white);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: var(--transition-default, all 0.3s ease);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: 100%; /* MISMO ANCHO QUE LOS INPUTS */
-    height: 40px; /* MISMA ALTURA QUE LOS INPUTS */
+    width: 100%;
+    height: var(--input-height, 40px);
     text-transform: uppercase;
     letter-spacing: 0.8px;
     margin-top: 10px;
-    font-family: 'Rajdhani', sans-serif;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    box-shadow: var(--shadow-small, 0 2px 6px rgba(0, 0, 0, 0.3));
     box-sizing: border-box;
 }
 
 .submit-register-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px var(--btn-shadow);
+    box-shadow: var(--shadow-normal, 0 4px 8px var(--btn-shadow));
     background: var(--btn-hover);
 }
 
 .submit-register-btn i {
     font-size: 14px;
-    color: #c0c0c0;
+    color: var(--color-icon-primary, var(--color-accent-secondary));
 }
 
 /* PANEL DERECHO */
@@ -497,35 +508,27 @@ body {
 
 /* LOGO CENTINELA */
 #logo {
-    margin-bottom: 20px; /* Menos espacio */
+    margin-bottom: 20px;
     text-align: center;
 }
 
 .centinela-logo {
-    max-width: 300px; /* Más pequeño */
+    max-width: 300px;
     height: auto;
-    filter: drop-shadow(0 0 8px rgba(192, 192, 192, 0.2)); /* Sombra más ligera */
-    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 8px var(--color-shadow, rgba(192, 192, 192, 0.2)));
+    transition: var(--transition-default, all 0.3s ease);
 }
 
 .centinela-logo:hover {
     transform: scale(1.05);
-    filter: drop-shadow(0 0 12px rgba(192, 192, 192, 0.3));
-}
-
-
-.centinela-logo {
-    max-width: 100px;
-    height: auto;
-    filter: drop-shadow(0 0 6px rgba(192, 192, 192, 0.2));
-    margin-bottom: 12px;
+    filter: drop-shadow(0 0 12px var(--color-shadow, rgba(192, 192, 192, 0.3)));
 }
 
 .centinela-logo {
-    max-width: 250px; /* Tamaño del logo*/
+    max-width: 250px;
     height: auto;
-    filter: drop-shadow(0 0 8px rgba(192, 192, 192, 0.2)); /* Sombra más ligera */
-    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 8px var(--color-shadow, rgba(192, 192, 192, 0.2)));
+    transition: var(--transition-default, all 0.3s ease);
 }
 
 .brand-name {
@@ -534,7 +537,7 @@ body {
     color: var(--text-white);
     letter-spacing: 1.5px;
     margin-bottom: 10px;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
     text-transform: uppercase;
 }
 
@@ -548,43 +551,44 @@ body {
     border-top: 1px solid var(--border-light);
     border-bottom: 1px solid var(--border-light);
     box-sizing: border-box;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 .back-to-login-btn {
     background: var(--btn-gradient);
     border: none;
-    border-radius: 5px;
+    border-radius: var(--border-radius-small, 5px);
     padding: 10px;
-    color: #ffffff;
+    color: var(--text-white);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: var(--transition-default, all 0.3s ease);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     width: 100%;
     max-width: 200px;
-    height: 40px; /* MISMA ALTURA */
+    height: var(--input-height, 40px);
     text-transform: uppercase;
     letter-spacing: 0.8px;
     margin: 0 auto 20px;
-    font-family: 'Rajdhani', sans-serif;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    box-shadow: var(--shadow-small, 0 2px 6px rgba(0, 0, 0, 0.3));
     text-decoration: none;
     box-sizing: border-box;
 }
 
 .back-to-login-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px var(--btn-shadow);
+    box-shadow: var(--shadow-normal, 0 4px 8px var(--btn-shadow));
     background: var(--btn-hover);
 }
 
 .back-to-login-btn i {
     font-size: 14px;
-    color: #c0c0c0;
+    color: var(--color-icon-primary, var(--color-accent-secondary));
 }
 
 .features-container {
@@ -604,10 +608,11 @@ body {
     line-height: 1.3;
     padding: 6px;
     box-sizing: border-box;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
 }
 
 .feature-item i {
-    color: var(--accent-gray);
+    color: var(--color-icon-primary, var(--color-accent-secondary));
     font-size: 13px;
     min-width: 18px;
 }
@@ -722,7 +727,7 @@ body {
         max-width: 450px;
         min-height: auto;
         flex-direction: column;
-        border-radius: 8px;
+        border-radius: var(--border-radius-medium, 8px);
     }
 
     .register-left-panel {
@@ -737,7 +742,6 @@ body {
         order: 2;
     }
     
-    /* RESPONSIVE PARA LA LEYENDA */
     .form-legend {
         font-size: 10px;
         padding: 6px 10px;
@@ -752,17 +756,16 @@ body {
         margin-bottom: 12px;
     }
 
-    /* EN MÓVIL TAMBIÉN MISMAS MEDIDAS */
     .form-input-field,
     .password-field .form-input-field {
-        height: 38px; /* UNIFORME EN MÓVIL */
+        height: 38px;
         padding: 9px 11px;
         font-size: 13px;
     }
 
     .submit-register-btn,
     .back-to-login-btn {
-        height: 38px; /* MISMA ALTURA QUE INPUTS */
+        height: 38px;
         font-size: 12px;
         padding: 9px;
     }
@@ -786,7 +789,7 @@ body {
     }
 
     .register-wrapper {
-        border-radius: 6px;
+        border-radius: var(--border-radius-medium, 6px);
     }
 
     .register-left-panel,
@@ -794,7 +797,6 @@ body {
         padding: 20px 15px;
     }
     
-    /* RESPONSIVE PARA LA LEYENDA EN MÓVIL */
     .form-legend {
         font-size: 10px;
         padding: 5px 8px;
@@ -811,17 +813,16 @@ body {
         margin-bottom: 10px;
     }
 
-    /* MEDIDAS EXACTAS EN MÓVILES PEQUEÑOS */
     .form-input-field,
     .password-field .form-input-field {
-        height: 36px; /* UNIFORME */
+        height: 36px;
         padding: 8px 10px;
         font-size: 13px;
     }
 
     .submit-register-btn,
     .back-to-login-btn {
-        height: 36px; /* EXACTA MISMA ALTURA */
+        height: 36px;
         font-size: 12px;
         padding: 8px;
     }
