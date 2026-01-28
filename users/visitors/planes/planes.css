@@ -10,6 +10,10 @@
     --card-expanded-height: 1050px;
 }
 
+body {
+    background: var(--color-bg-primary);
+}
+
 /* Contenedor principal */
 .planes-main-container {
     display: flex;
@@ -90,7 +94,7 @@
     position: absolute;
     top: 0;
     left: 0;
-    background-color: var(--color-bg-light, #ffffff);
+    background-color: var(--color-bg-primary, #ffffff);
     transition: opacity 0.3s ease, visibility 0.3s ease;
     opacity: 1;
     visibility: visible;
@@ -169,7 +173,7 @@
     font-size: 3rem;
     font-weight: 900;
     font-family: 'Rajdhani', sans-serif;
-    color: var(--color-text-dark, #000000);
+    color: var(--color-text-light, #000000);
 }
 
 .plan-name {
@@ -210,7 +214,7 @@
     font-size: 1.3rem;
     margin-bottom: 1.2rem;
     text-align: center;
-    color: var(--color-text-dark, #000000);
+    color: var(--color-text-light, #000000);
     font-weight: 700;
     padding-bottom: 0.8rem;
     border-bottom: 2px solid var(--color-border-light, rgba(255, 255, 255, 0.1));

@@ -1,11 +1,217 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
+    <title>Editar Perfil | Centinela</title>
     
+    <!-- Fuentes y iconos -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Estilos externos -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <link rel="stylesheet" href="/components/particulas/particulas.css">
+    
+    <!-- Estilos principales -->
+    <link rel="stylesheet" href="edirAdmin.css">
+    
+    <!-- Assets -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+    <!-- Partículas de fondo -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Contenedor principal -->
+    <div class="edit-main-container">
+        <div class="edit-wrapper">
+            
+            <!-- Panel izquierdo: Fotos -->
+            <div class="edit-left-panel">
+                <header class="edit-header">
+                    <h1 class="edit-main-title">EDITAR PERFIL</h1>
+                    <p class="edit-sub-title">Administrador del Sistema Centinela</p>
+                </header>
+
+                <!-- Foto de perfil -->
+                <section class="photo-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-user"></i>FOTO DE PERFIL
+                    </h2>
+                    
+                    <div class="photo-container">
+                        <div class="profile-circle" id="profileCircle">
+                            <div class="placeholder-text" id="profilePlaceholder">
+                                <i class="fas fa-user"></i>
+                                <span>Foto de perfil</span>
+                            </div>
+                            <img src="" alt="Foto de perfil" class="profile-image" id="profileImage" style="display: none;">
+                            <div class="edit-overlay" id="editProfileOverlay">
+                                <i class="fas fa-pencil-alt edit-icon"></i>
+                            </div>
+                        </div>
+                        <input type="file" id="profile-input" class="file-input" accept="image/*">
+                    </div>
+                    
+                    <p class="photo-info">Haz clic en la foto o en el lápiz para cambiar tu imagen</p>
+                    <p class="photo-info">Formatos: JPG, PNG, GIF • Máximo: 5MB</p>
+                </section>
+
+                <!-- Logo de organización -->
+                <section class="photo-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-building"></i>LOGO ORGANIZACIÓN
+                    </h2>
+                    
+                    <div class="photo-container">
+                        <div class="profile-circle" id="orgCircle">
+                            <div class="placeholder-text" id="orgPlaceholder">
+                                <i class="fas fa-building"></i>
+                                <span>Logo organización</span>
+                            </div>
+                            <img src="" alt="Logo de la organización" class="profile-image" id="orgImage" style="display: none;">
+                            <div class="edit-overlay" id="editOrgOverlay">
+                                <i class="fas fa-pencil-alt edit-icon"></i>
+                            </div>
+                        </div>
+                        <input type="file" id="org-input" class="file-input" accept="image/*">
+                    </div>
+                    
+                    <p class="photo-info">Haz clic para cambiar el logo de tu organización</p>
+                    <p class="photo-info">Recomendado: 500x500 px • Máximo: 10MB</p>
+                </section>
+
+                <!-- Botón volver -->
+                <footer class="back-btn-container">
+                    <a href="index.html" class="back-btn">
+                        <i class="fas fa-arrow-left"></i>VOLVER AL INICIO
+                    </a>
+                </footer>
+            </div>
+
+            <!-- Panel derecho: Formulario -->
+            <div class="edit-right-panel">
+                <header class="edit-header">
+                    <h1 class="edit-main-title">DATOS PERSONALES</h1>
+                    <p class="edit-sub-title">Actualiza tu nombre y contraseña</p>
+                </header>
+
+                <form class="edit-form-container" id="editProfileForm">
+                    <!-- Nombre completo -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="fullName">
+                            <i class="fas fa-user"></i> NOMBRE COMPLETO
+                        </label>
+                        <div class="input-wrapper">
+                            <input class="form-input-field" type="text" id="fullName" 
+                                   value="Bryan Vazquez Segura" placeholder="Ingresa tu nombre completo" required>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <!-- Contraseñas -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="currentPassword">
+                            <i class="fas fa-lock"></i> CONTRASEÑA ACTUAL
+                        </label>
+                        <div class="input-wrapper password-field">
+                            <input class="form-input-field" type="password" id="currentPassword" 
+                                   placeholder="Ingresa tu contraseña actual">
+                            <button type="button" class="toggle-password" data-target="currentPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-field-group">
+                        <label class="field-label" for="newPassword">
+                            <i class="fas fa-key"></i> NUEVA CONTRASEÑA
+                        </label>
+                        <div class="input-wrapper password-field">
+                            <input class="form-input-field" type="password" id="newPassword" 
+                                   placeholder="Ingresa nueva contraseña">
+                            <button type="button" class="toggle-password" data-target="newPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-field-group">
+                        <label class="field-label" for="confirmPassword">
+                            <i class="fas fa-key"></i> CONFIRMAR CONTRASEÑA
+                        </label>
+                        <div class="input-wrapper password-field">
+                            <input class="form-input-field" type="password" id="confirmPassword" 
+                                   placeholder="Confirma la nueva contraseña">
+                            <button type="button" class="toggle-password" data-target="confirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Requisitos -->
+                    <div class="password-requirements">
+                        <div class="requirements-title">REQUISITOS DE CONTRASEÑA SEGURA:</div>
+                        <ul class="requirements-list">
+                            <li>Mínimo 8 caracteres</li>
+                            <li>Al menos una letra mayúscula</li>
+                            <li>Al menos un número</li>
+                            <li>Al menos un carácter especial (@, #, $, etc.)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Mensajes -->
+                    <div class="message-container" id="passwordMessage"></div>
+                    <div class="message-container" id="mainMessage"></div>
+
+                    <!-- Acciones -->
+                    <div class="action-buttons">
+                        <button type="button" class="action-btn save-btn" id="saveChangesBtn">
+                            <i class="fas fa-save"></i>GUARDAR CAMBIOS
+                        </button>
+                        <button type="button" class="action-btn cancel-btn" id="cancelBtn">
+                            <i class="fas fa-times"></i>CANCELAR
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para fotos -->
+    <div class="photo-modal" id="photoModal">
+        <div class="modal-content">
+            <h3 class="modal-title">
+                <i class="fas fa-camera"></i>
+                <span id="modalTitle">CAMBIAR FOTO</span>
+            </h3>
+            <div class="modal-preview">
+                <img id="previewImage" class="preview-image" src="" alt="Vista previa">
+            </div>
+            <p class="modal-message" id="modalMessage">
+                ¿Deseas usar esta imagen?
+            </p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-confirm" id="confirmChangeBtn">CONFIRMAR</button>
+                <button class="modal-btn modal-btn-cancel" id="cancelChangeBtn">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts externos -->
+    <script src="/components/themeloader.js"></script>
+    <script src="/components/navbar-admin-component.js"></script>
+    <script src="/components/footer-admin-component.js"></script>
+    <script src="/components/particulas/particulas.js"></script>
+    
+    <!-- Script principal -->
+    <script src="editAdmin.js"></script>
+    <!-- Script de sweetAlert -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>
