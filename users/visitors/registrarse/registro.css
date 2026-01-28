@@ -1,9 +1,9 @@
 /* PALETA DE COLORES GRISES */
 :root {
-    --dark-bg: #151515;
-    --card-bg: rgba(21, 21, 21, 0.95);
+    --dark-bg: #000000;
+    --card-bg: rgb(21, 21, 21);
     --panel-left: rgba(21, 21, 21, 0.95);
-    --panel-right: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%);
+    --panel-right: linear-gradient(135deg, rgb(26, 26, 26) 0%, rgba(45, 45, 45, 0.95) 100%);
     --text-white: #ffffff;
     --text-light: #f0f0f0;
     --text-gray: #b0b0b0;
@@ -13,7 +13,7 @@
     --accent-gray: #c0c0c0;
     --btn-gradient: linear-gradient(135deg, #545454, #d6cdcd);
     --btn-hover: linear-gradient(135deg, #5a5a5a, #e0d7d7);
-    --btn-shadow: rgba(192, 192, 192, 0.2);
+    --btn-shadow: rgba(192, 192, 192, 0.14);
 }
 
 /* ESTILOS GENERALES */
@@ -279,6 +279,179 @@ body {
     width: 100%;
 }
 
+/* ============================= */
+/* ESTILOS PARA SUBIR LOGO EMPRESA (AL FINAL) */
+/* ============================= */
+
+/* Contenedor principal */
+.logo-upload-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin: 15px 0 20px 0;
+    padding: 20px;
+    background: rgba(26, 26, 26, 0.7);
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Circulo para mostrar el logo */
+.logo-preview-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.logo-preview-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #1a1a1a;
+    border: 3px solid var(--accent-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.logo-preview-circle:hover {
+    border-color: var(--text-white);
+    transform: scale(1.03);
+}
+
+/* Placeholder cuando no hay imagen */
+.logo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-gray);
+    text-align: center;
+    padding: 15px;
+}
+
+.logo-placeholder i {
+    font-size: 28px;
+    color: var(--accent-gray);
+    margin-bottom: 5px;
+}
+
+.logo-placeholder span {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    max-width: 90px;
+    color: var(--accent-gray);
+}
+
+/* Imagen dentro del círculo */
+.logo-preview-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none; /* Oculto por defecto */
+}
+
+/* Controles de subida */
+.logo-upload-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+/* Botón para seleccionar logo */
+.logo-select-btn {
+    background: var(--btn-gradient);
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    color: var(--text-white);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 36px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-family: 'Rajdhani', sans-serif;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+}
+
+.logo-select-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px var(--btn-shadow);
+    background: var(--btn-hover);
+}
+
+.logo-select-btn i {
+    font-size: 12px;
+    color: #c0c0c0;
+}
+
+/* Botón para remover logo */
+.logo-remove-btn {
+    background: rgba(255, 50, 50, 0.1);
+    border: 1px solid rgba(255, 50, 50, 0.3);
+    border-radius: 5px;
+    padding: 8px 16px;
+    color: #ff6b6b;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-family: 'Rajdhani', sans-serif;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 150px;
+    margin: 0 auto;
+}
+
+.logo-remove-btn:hover {
+    background: rgba(255, 50, 50, 0.2);
+    border-color: rgba(255, 50, 50, 0.5);
+}
+
+.logo-remove-btn i {
+    font-size: 11px;
+}
+
+/* Instrucciones */
+.logo-instructions {
+    color: var(--text-dark-gray);
+    font-size: 11px;
+    text-align: center;
+    margin-top: 10px;
+    line-height: 1.3;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    width: 100%;
+    max-width: 250px;
+}
+
 /* BOTÓN REGISTRARSE - MISMO ANCHO QUE LOS INPUTS */
 .submit-register-btn {
     background: var(--btn-gradient);
@@ -298,7 +471,7 @@ body {
     height: 40px; /* MISMA ALTURA QUE LOS INPUTS */
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    margin-top: 5px;
+    margin-top: 10px;
     font-family: 'Rajdhani', sans-serif;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     box-sizing: border-box;
@@ -437,6 +610,110 @@ body {
     color: var(--accent-gray);
     font-size: 13px;
     min-width: 18px;
+}
+
+/* ============================= */
+/* RESPONSIVE PARA LOGO UPLOAD */
+/* ============================= */
+@media (max-width: 900px) {
+    .logo-upload-section {
+        padding: 15px;
+        margin-top: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .logo-preview-container {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .logo-preview-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .logo-placeholder i {
+        font-size: 24px;
+    }
+    
+    .logo-placeholder span {
+        font-size: 10px;
+        max-width: 75px;
+    }
+    
+    .logo-select-btn {
+        height: 34px;
+        font-size: 11px;
+        padding: 7px 14px;
+        max-width: 180px;
+    }
+    
+    .logo-remove-btn {
+        height: 30px;
+        font-size: 10px;
+        padding: 6px 12px;
+        max-width: 140px;
+    }
+    
+    .logo-instructions {
+        font-size: 10px;
+        max-width: 220px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-upload-section {
+        padding: 12px;
+        margin-bottom: 12px;
+        margin-top: 8px;
+    }
+    
+    .logo-preview-container {
+        width: 90px;
+        height: 90px;
+    }
+    
+    .logo-preview-circle {
+        width: 90px;
+        height: 90px;
+    }
+    
+    .logo-placeholder {
+        gap: 6px;
+    }
+    
+    .logo-placeholder i {
+        font-size: 22px;
+    }
+    
+    .logo-placeholder span {
+        font-size: 9px;
+        max-width: 70px;
+    }
+    
+    .logo-upload-controls {
+        gap: 8px;
+    }
+    
+    .logo-select-btn {
+        height: 32px;
+        font-size: 11px;
+        padding: 6px 12px;
+        max-width: 170px;
+    }
+    
+    .logo-remove-btn {
+        height: 28px;
+        font-size: 10px;
+        padding: 5px 10px;
+        max-width: 130px;
+    }
+    
+    .logo-instructions {
+        font-size: 9px;
+        padding: 6px;
+        max-width: 200px;
+    }
 }
 
 /* RESPONSIVE - MANTENER MEDIDAS UNIFORMES */

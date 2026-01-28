@@ -8,9 +8,9 @@
 }
 
 body {
-    background-color: #000000;
-    color: #a5a5a5;
-    font-family: 'Rajdhani', sans-serif;
+    background-color: var(--color-bg-primary, #000000);
+    color: var(--color-text-secondary, #000000);
+    font-family: var(--font-family-secondary, 'Rajdhani'), sans-serif;
     min-height: 100vh;
 }
 
@@ -41,53 +41,54 @@ body {
 }
 
 .logo-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
     font-size: 22px;
-    color: #ffffff;
+    color: var(--color-text-primary, #ffffff);
     text-transform: uppercase;
     letter-spacing: 2px;
     text-align: center;
-    text-shadow:
+    text-shadow: var(--text-shadow-effect, 
         0 0 6px rgba(214,214,214,.45),
-        0 0 12px rgba(214,214,214,.25);
+        0 0 12px rgba(214,214,214,.25));
 }
 
 #logo {
-    background: #000;
+    background: var(--color-bg-primary, #000);
     padding: 28px;
-    border-radius: 50%;
+    border-radius: var(--border-radius-circle, 50%);
 }
 
 #logo img {
     width: 380px;
-    border-radius: 50%;
-    filter: drop-shadow(0 0 6px rgba(220,220,220,.35));
+    border-radius: var(--border-radius-circle, 50%);
+    filter: drop-shadow(0 0 6px var(--color-shadow, rgba(220,220,220,.35)));
 }
-.geografica{
-    background: #000;
-    border: 1px solid #545454;
-    border-radius: 12px;
+
+.geografica {
+    background: var(--color-bg-primary, #000);
+    border: 1px solid var(--color-border-light, #545454);
+    border-radius: var(--border-radius-medium, 12px);
     padding: 16px 20px;
     min-height: 80px;
-    transition: all .35s ease;
-}
-#quienes-somos {
-  scroll-margin-top: 150px;
+    transition: var(--transition-default, all .35s ease);
 }
 
+#quienes-somos {
+    scroll-margin-top: 150px;
+}
 
 .geografica:hover {
-    background: #141414;
-    border-color: #d6d6d6;
-    box-shadow:
+    background: var(--color-hover, #141414);
+    border-color: var(--color-accent-primary, #d6d6d6);
+    box-shadow: var(--shadow-large,
         0 0 12px rgba(214,214,214,.45),
-        0 0 28px rgba(214,214,214,.25);
+        0 0 28px rgba(214,214,214,.25));
 }
 
 .text-content h3 {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
     font-size: 19px;
-    color: #ffffff;
+    color: var(--color-text-primary, #ffffff);
     text-transform: uppercase;
     display: flex;
     gap: 12px;
@@ -99,15 +100,18 @@ body {
     font-size: 14px;
     line-height: 1.6;
     margin-top: 12px;
+    color: var(--color-text-secondary, #a5a5a5);
     max-height: 0;
     opacity: 0;
     overflow: hidden;
     transition: max-height .5s ease, opacity .3s ease;
 }
+
 .geografica:hover p {
     max-height: 260px;
     opacity: 1;
 }
+
 .vision-mision-objetivo {
     margin-top: 60px;
     display: flex;
@@ -119,24 +123,23 @@ body {
 /* ANIMACIÓN */
 @keyframes glow-cycle {
     0%, 100% {
-        box-shadow: 0 0 12px rgba(214,214,214,.15);
-        border-color: #545454;
+        box-shadow: 0 0 12px var(--color-shadow, rgba(214,214,214,.15));
+        border-color: var(--color-border-light, #545454);
     }
     50% {
-        box-shadow: 0 0 24px rgba(214,214,214,.75);
-        border-color: #d6d6d6;
+        box-shadow: 0 0 24px var(--color-glow, rgba(214,214,214,.75));
+        border-color: var(--color-accent-primary, #d6d6d6);
     }
 }
 
 .somos,
 .about-box,
 .stat-box {
-    background: #000;
-    border: 1px solid #545454;
-    border-radius: 12px;
+    background: var(--color-bg-primary, #000);
+    border: 1px solid var(--color-border-light, #545454);
+    border-radius: var(--border-radius-medium, 12px);
     animation: glow-cycle 6s infinite;
 }
-
 
 .somos {
     padding: 25px;
@@ -144,9 +147,9 @@ body {
 }
 
 .somos h3 {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
     font-size: 14px;
-    color: #ffffff;
+    color: var(--color-text-primary, #ffffff);
     margin-bottom: 8px;
     text-transform: uppercase;
 }
@@ -154,6 +157,7 @@ body {
 .somos p {
     font-size: 13px;
     line-height: 1.6;
+    color: var(--color-text-secondary, #a5a5a5);
 }
 
 /* QUIÉNES SOMOS */
@@ -173,9 +177,9 @@ body {
 }
 
 .about-box h3 {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
     font-size: 13px;
-    color: #ffffff;
+    color: var(--color-text-primary, #ffffff);
     margin-bottom: 8px;
     text-transform: uppercase;
 }
@@ -183,9 +187,10 @@ body {
 .about-box p {
     font-size: 13px;
     line-height: 1.6;
+    color: var(--color-text-secondary, #a5a5a5);
 }
 
-/* estadisticas */
+/* ESTADÍSTICAS */
 .stats-section {
     margin-top: 60px;
     text-align: center;
@@ -193,15 +198,15 @@ body {
 }
 
 .stats-section h2 {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
     font-size: 28px;
-    color: #ffffff;
+    color: var(--color-text-primary, #ffffff);
     margin-bottom: 8px;
 }
 
 .stats-subtitle {
     font-size: 14px;
-    color: #9a9a9a;
+    color: var(--color-text-secondary, #9a9a9a);
     margin-bottom: 40px;
 }
 
@@ -212,7 +217,7 @@ body {
     flex-wrap: wrap;
 }
 
-/* cajas */
+/* CAJAS DE ESTADÍSTICAS */
 .stat-box {
     width: 240px;
     height: 160px;
@@ -223,14 +228,14 @@ body {
 }
 
 .stat-number {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
     font-size: 42px;
-    color: #ffffff;
+    color: var(--color-accent-primary, #ffffff);
 }
 
 .stat-text {
     font-size: 15px;
-    color: #d0d0d0;
+    color: var(--color-accent-secondary, #d0d0d0);
 }
 
 /* RESPONSIVE */
@@ -246,5 +251,67 @@ body {
 
     .side {
         max-width: 100%;
+    }
+}
+
+/* Clases de utilidad adicionales */
+.highlight-text {
+    color: var(--color-accent-primary, #c0c0c0) !important;
+}
+
+.accent-border {
+    border-color: var(--color-accent-primary, #c0c0c0) !important;
+}
+
+.glow-effect {
+    text-shadow: var(--text-shadow-effect) !important;
+}
+
+.card-hover {
+    transition: var(--transition-default) !important;
+}
+
+.card-hover:hover {
+    background-color: var(--color-hover, rgba(245, 215, 66, 0.1)) !important;
+    border-color: var(--color-accent-primary, #c0c0c0) !important;
+    box-shadow: var(--shadow-normal) !important;
+    transform: translateY(-5px);
+}
+
+/* Garantizar compatibilidad con Theme Manager */
+:root {
+    /* Variables específicas de esta página */
+    --stat-number-color: var(--color-accent-primary, #ffffff);
+    --card-background: var(--color-bg-primary, #000);
+    --card-border: var(--color-border-light, #545454);
+    --hover-glow-color: var(--color-glow, rgba(214,214,214,.75));
+}
+
+/* Fallback para navegadores antiguos */
+@supports not (--custom: property) {
+    body {
+        background-color: #000000;
+        color: #a5a5a5;
+    }
+    
+    .logo-title,
+    .text-content h3,
+    .somos h3,
+    .about-box h3,
+    .stats-section h2,
+    .stat-number {
+        color: #ffffff;
+    }
+    
+    .geografica,
+    .somos,
+    .about-box,
+    .stat-box {
+        background: #000;
+        border-color: #545454;
+    }
+    
+    .geografica:hover {
+        border-color: #d6d6d6;
     }
 }
