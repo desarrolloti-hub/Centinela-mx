@@ -103,7 +103,7 @@ class NavbarComplete {
             }
 
             .navbar-logo-img {
-                height: 70px;
+                height: 60px;
                 width: auto;
                 max-height: 90px;
                 transition: transform var(--transition-default);
@@ -169,7 +169,7 @@ class NavbarComplete {
             
             /* Animación a "X" cuando está activo */
             .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
-                transform: rotate(45deg) translate(5px, 5px);
+                transform: rotate(45deg) translate(6.3px, 6.3px);
             }
             
             .navbar-hamburger-btn.active .hamburger-line:nth-child(2) {
@@ -177,7 +177,7 @@ class NavbarComplete {
             }
             
             .navbar-hamburger-btn.active .hamburger-line:nth-child(3) {
-                transform: rotate(-45deg) translate(5px, -5px);
+                transform: rotate(-45deg) translate(6.3px, -6.3px);
             }
             
             /* Menú lateral */
@@ -513,6 +513,12 @@ class NavbarComplete {
                     width: 85%;
                 }
                 
+                .navbar-logo-img {
+                    height: 50px;
+                    width: auto;
+                    max-height: 50px;
+                }
+
                 body.menu-open {
                     overflow: hidden;
                 }
@@ -522,6 +528,12 @@ class NavbarComplete {
             @media (max-width: 480px) {
                 .navbar-main-menu {
                     width: 100%;
+                }
+
+                .navbar-logo-img {
+                    height: 40px;
+                    width: auto;
+                    max-height: 40px;
                 }
                 
                 .profile-photo-container {
@@ -558,9 +570,12 @@ class NavbarComplete {
                     <a href="/index.html" class="navbar-logo-link">
                         <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                     </a>
+                    <a href="" class="navbar-logo-link">
+                        <img src="/assets/images/logoApp.png" alt="RSI Enterprice" class="navbar-logo-img">
+                    </a>
                 </div>
                 
-                <h1 class="navbar-title">ADMINISTRADOR</h1>
+                <h1 class="navbar-title">CENTINELA</h1>
                 
                 <div class="navbar-right-container">
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
