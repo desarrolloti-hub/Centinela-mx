@@ -158,34 +158,26 @@ class ThemeManager {
                 name: 'Camuflaje Militar',
                 description: 'Tema inspirado en patrones de camuflaje',
                 colors: {
-                    '--color-bg-secondary': '#1a271a',      // Fondo camuflaje oscuro
-                    '--color-bg-tertiary': '#2d3d2d',       // Fondo camuflaje medio
-                    '--color-bg-light': '#e0ecd9',          // Verde claro camuflaje
-
-                    '--color-text-primary': '#c2d4c2',      // Verde gris militar
-                    '--color-text-secondary': '#7a8c7a',    // Verde militar desgastado
+                    '--color-bg-secondary': '#1a271a',    
+                    '--color-bg-tertiary': '#2d3d2d',    
+                    '--color-bg-light': '#e0ecd9',       
+                    '--color-text-primary': '#c2d4c2',
+                    '--color-text-secondary': '#7a8c7a',    
                     '--color-text-light': '#e8f0e8',
                     '--color-text-dark': '#142014',
-
-                    // PALETA CAMUFLAJE
-                    '--color-accent-primary': '#5d6b3d',    // Verde camuflaje principal
-                    '--color-accent-secondary': '#788f45',  // Verde camuflaje secundario
-                    '--color-accent-footer': '#4a5a30',     // Verde camuflaje oscuro
-
+                    '--color-accent-primary': '#5d6b3d',   
+                    '--color-accent-secondary': '#788f45', 
+                    '--color-accent-footer': '#4a5a30', 
                     '--color-shadow': 'rgba(93, 107, 61, 0.35)',
                     '--color-glow': 'rgba(120, 143, 69, 0.45)',
-
                     '--color-hover': 'rgba(93, 107, 61, 0.12)',
                     '--color-active': '#788f45',
-
                     '--color-border-light': 'rgba(120, 143, 69, 0.2)',
                     '--color-border-dark': '#4a5a30',
-
                     '--navbar-bg': 'linear-gradient(135deg, #1a271a 0%, #2d3d2d 100%)',
                     '--navbar-text': '#c2d4c2',
                     '--navbar-logo-text': '#788f45',
                     '--navbar-scrolled-bg': '#162016',
-
                     '--footer-bg-primary': '#1a271a',
                     '--footer-bg-secondary': '#2d3d2d',
                     '--footer-text-primary': '#c2d4c2',
@@ -197,34 +189,26 @@ class ThemeManager {
                 name: 'Verde Militar',
                 description: 'Tema inspirado en equipamiento militar y camuflaje',
                 colors: {
-                    '--color-bg-secondary': '#0d1c0d',      // Verde militar oscuro
-                    '--color-bg-tertiary': '#1a2c1a',       // Verde militar medio
-                    '--color-bg-light': '#e8f5e0',          // Verde claro militar
-
-                    '--color-text-primary': '#d4e8d4',      // Verde grisáceo claro
-                    '--color-text-secondary': '#8ba88b',    // Verde militar desaturado
+                    '--color-bg-secondary': '#0d1c0d', 
+                    '--color-bg-tertiary': '#1a2c1a', 
+                    '--color-bg-light': '#e8f5e0',    
+                    '--color-text-primary': '#d4e8d4', 
+                    '--color-text-secondary': '#8ba88b',   
                     '--color-text-light': '#f0f8f0',
                     '--color-text-dark': '#0a140a',
-
-                    // VERDES MILITARES AUTÉNTICOS
-                    '--color-accent-primary': '#556b2f',    // OLIVA - Verde militar clásico
-                    '--color-accent-secondary': '#6b8e23',  // OLIVE DRAB - Verde militar estándar
-                    '--color-accent-footer': '#4d5d2b',     // Verde militar oscuro
-
-                    '--color-shadow': 'rgba(85, 107, 47, 0.4)',   // Sombra verde militar
-                    '--color-glow': 'rgba(107, 142, 35, 0.5)',    // Brillo verde militar
-
-                    '--color-hover': 'rgba(85, 107, 47, 0.15)',   // Hover militar
-                    '--color-active': '#6b8e23',                  // Verde militar activo
-
-                    '--color-border-light': 'rgba(107, 142, 35, 0.25)', // Borde militar
-                    '--color-border-dark': '#4d5d2b',             // Verde militar oscuro
-
+                    '--color-accent-primary': '#556b2f',
+                    '--color-accent-secondary': '#6b8e23',
+                    '--color-accent-footer': '#4d5d2b',    
+                    '--color-shadow': 'rgba(85, 107, 47, 0.4)',
+                    '--color-glow': 'rgba(107, 142, 35, 0.5)',   
+                    '--color-hover': 'rgba(85, 107, 47, 0.15)',
+                    '--color-active': '#6b8e23', 
+                    '--color-border-light': 'rgba(107, 142, 35, 0.25)',
+                    '--color-border-dark': '#4d5d2b',
                     '--navbar-bg': '#0d1c0d',
                     '--navbar-text': '#d4e8d4',
-                    '--navbar-logo-text': '#6b8e23',              // Logo en verde militar
+                    '--navbar-logo-text': '#6b8e23', 
                     '--navbar-scrolled-bg': '#091409',
-
                     '--footer-bg-primary': '#0d1c0d',
                     '--footer-bg-secondary': '#1a2c1a',
                     '--footer-text-primary': '#d4e8d4',
