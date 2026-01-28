@@ -547,7 +547,7 @@ class NavbarComplete {
         document.head.appendChild(styleElement);
     }
 
-    // Inserta la estructura HTML del navbar (MODIFICADO para lápiz simple)
+    // Inserta la estructura HTML del navbar (MODIFICADO para lápiz simple y editAdmin.html)
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
@@ -585,8 +585,8 @@ class NavbarComplete {
                         <div class="admin-profile-circle">
                             <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
                         </div>
-                        <!-- Ícono de lápiz para editar (ENLACE a página de edición) -->
-                        <a href="/editar-perfil.html" class="edit-profile-icon" id="editProfileIcon">
+                        <!-- Ícono de lápiz para editar (ENLACE a página editAdmin.html) -->
+                        <a href="/users/admin/editAdmin/editAdmin.html" class="edit-profile-icon" id="editProfileIcon">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
                     </div>
