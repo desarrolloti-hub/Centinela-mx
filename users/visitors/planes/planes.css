@@ -12,7 +12,6 @@
 
 /* Contenedor principal */
 .planes-main-container {
-    background-color: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -37,12 +36,12 @@
 .planes-header h1 {
     font-size: 2rem;
     margin-bottom: 1rem;
-    font-family: 'Orbitron', sans-serif;
-    color: var(--color-text-primary);
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
+    color: var(--color-text-primary, #ffffff);
 }
 
 .planes-header p {
-    color: var(--color-text-secondary);
+    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
     font-size: 1.1rem;
     max-width: 600px;
     margin: 0 auto 1rem;
@@ -51,7 +50,7 @@
 
 .mobile-instruction {
     font-size: 0.9rem;
-    color: var(--color-accent-secondary);
+    color: var(--color-accent-secondary, #ffffff);
     display: none;
 }
 
@@ -67,10 +66,9 @@
 
 /* Tarjeta base */
 .plan-card {
-    background-color: var(--color-bg-secondary);
-    border-radius: 12px;
-    box-shadow: var(--shadow-normal);
-    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-large, 12px);
+    box-shadow: var(--shadow-normal, 0 5px 15px rgba(255, 255, 255, 0.55));
+    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
     cursor: pointer;
     overflow: hidden;
     transition: var(--transition-card);
@@ -92,7 +90,7 @@
     position: absolute;
     top: 0;
     left: 0;
-    background-color: var(--color-bg-secondary);
+    background-color: var(--color-bg-light, #ffffff);
     transition: opacity 0.3s ease, visibility 0.3s ease;
     opacity: 1;
     visibility: visible;
@@ -121,7 +119,7 @@
     visibility: visible;
     display: flex;
     flex-direction: column;
-    height: 100%; /* AÑADIDO: altura completa */
+    height: 100%;
 }
 
 /* =============================================
@@ -130,9 +128,9 @@
 .plan-content {
     display: flex;
     flex-direction: column;
-    height: 100%; /* Altura completa del contenedor */
+    height: 100%;
     width: 100%;
-    min-height: 0; /* Importante para flexbox */
+    min-height: 0;
 }
 
 /* Encabezado */
@@ -140,8 +138,8 @@
     text-align: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid var(--color-border-light);
-    flex-shrink: 0; /* No se reduce */
+    border-bottom: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    flex-shrink: 0;
 }
 
 .plan-type {
@@ -149,8 +147,8 @@
     font-weight: 800;
     text-transform: uppercase;
     margin-bottom: 0.8rem;
-    font-family: 'Orbitron', sans-serif;
-    color: var(--color-text-primary);
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
+    color: var(--color-text-dark, #000000);
 }
 
 .price-container {
@@ -164,26 +162,26 @@
 .currency {
     font-size: 1.6rem;
     font-weight: 600;
-    color: var(--color-accent-secondary);
+    color: var(--color-accent-secondary, #ffffff);
 }
 
 .price {
     font-size: 3rem;
     font-weight: 900;
     font-family: 'Rajdhani', sans-serif;
-    color: var(--color-text-primary);
+    color: var(--color-text-dark, #000000);
 }
 
 .plan-name {
     font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 0.8rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
 }
 
 .plan-content .popular-badge {
-    background: linear-gradient(135deg, var(--color-accent-secondary), #4a90e2);
-    color: white;
+    background: linear-gradient(135deg, var(--color-accent-secondary, #ffffff), #4a90e2);
+    color: var(--color-bg-primary, #000000);
     padding: 0.5rem 1.2rem;
     border-radius: 25px;
     font-size: 0.85rem;
@@ -194,29 +192,29 @@
 
 /* Contenedor de características - AJUSTADO */
 .features-container {
-    flex: 1 1 auto; /* Ocupa el espacio disponible */
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    min-height: 0; /* CRÍTICO para flexbox */
-    overflow: hidden; /* Contiene el contenido */
+    min-height: 0;
+    overflow: hidden;
 }
 
 .plan-details {
-    flex: 1; /* Ocupa el espacio restante */
+    flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0; /* CRÍTICO para flexbox */
+    min-height: 0;
 }
 
 .plan-details h3 {
     font-size: 1.3rem;
     margin-bottom: 1.2rem;
     text-align: center;
-    color: var(--color-text-primary);
+    color: var(--color-text-dark, #000000);
     font-weight: 700;
     padding-bottom: 0.8rem;
-    border-bottom: 2px solid var(--color-border-light);
-    flex-shrink: 0; /* No se reduce */
+    border-bottom: 2px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    flex-shrink: 0;
 }
 
 /* Lista de características */
@@ -224,16 +222,16 @@
     list-style-type: none;
     margin: 0;
     padding: 0;
-    flex: 1; /* Ocupa el espacio disponible */
-    overflow: hidden; /* Sin scroll, solo contiene */
+    flex: 1;
+    overflow: hidden;
 }
 
 .features li {
     padding: 0.9rem 0;
-    color: var(--color-text-secondary);
+    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
     display: flex;
     align-items: flex-start;
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
     font-size: 1.05rem;
     line-height: 1.5;
     min-height: 60px;
@@ -245,7 +243,7 @@
 
 .features li i {
     margin-right: 1rem;
-    color: var(--color-accent-secondary);
+    color: var(--color-accent-secondary, #ffffff);
     margin-top: 0.3rem;
     font-size: 1.1rem;
     flex-shrink: 0;
@@ -259,24 +257,24 @@
     width: 100%;
     padding: 1.1rem;
     text-align: center;
-    background-color: var(--color-bg-primary);
-    color: var(--color-text-primary);
+    background-color: var(--color-bg-primary, #000000);
+    color: var(--color-text-light, #ffffff);
     text-decoration: none;
     font-weight: 700;
-    border-radius: 10px;
-    border: 2px solid var(--color-border-light);
+    border-radius: var(--border-radius-small, 6px);
+    border: 2px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
     cursor: pointer;
     font-size: 1.1rem;
-    margin-top: auto; /* Empuja al fondo */
+    margin-top: auto;
     font-family: 'Rajdhani', sans-serif;
-    transition: all 0.3s ease;
-    flex-shrink: 0; /* No se reduce */
+    transition: var(--transition-default, all 0.3s ease);
+    flex-shrink: 0;
 }
 
 .order-btn:hover {
-    background-color: var(--color-hover);
+    background-color: var(--color-hover, rgba(245, 215, 66, 0));
     transform: translateY(-3px);
-    box-shadow: var(--shadow-large);
+    box-shadow: var(--shadow-large, 0 10px 25px rgba(0, 0, 0, 0.15));
 }
 
 /* Vista compacta */
@@ -287,8 +285,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-bg-primary);
-    border-radius: 50%;
+    background: var(--color-bg-primary, #000000);
+    border-radius: var(--border-radius-circle, 50%);
     padding: 10px;
     flex-shrink: 0;
 }
@@ -309,27 +307,27 @@
     font-weight: 800;
     text-transform: uppercase;
     margin-bottom: 0.3rem;
-    font-family: 'Orbitron', sans-serif;
-    color: var(--color-text-primary);
+    font-family: var(--font-family-primary, 'Orbitron'), sans-serif;
+    color: var(--color-text-dark, #000000);
 }
 
 .compact-name {
     font-size: 1.05rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
     margin-bottom: 0.5rem;
 }
 
 .compact-price {
     font-size: 1.8rem;
     font-weight: 900;
-    color: var(--color-text-primary);
+    color: var(--color-text-dark, #000000);
     margin-bottom: 0.4rem;
     font-family: 'Rajdhani', sans-serif;
 }
 
 .compact-info .popular-badge {
-    background-color: var(--color-accent-secondary);
-    color: var(--color-bg-primary);
+    background-color: var(--color-accent-secondary, #ffffff);
+    color: var(--color-bg-primary, #000000);
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
     font-size: 0.75rem;
@@ -341,23 +339,23 @@
     position: absolute;
     right: 1.8rem;
     bottom: 1.8rem;
-    color: var(--color-text-secondary);
+    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
     font-size: 1rem;
-    transition: transform 0.4s ease;
-    background: var(--color-bg-primary);
+    transition: var(--transition-default, all 0.3s ease);
+    background: var(--color-bg-primary, #000000);
     width: 32px;
     height: 32px;
-    border-radius: 50%;
+    border-radius: var(--border-radius-circle, 50%);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--color-border-light);
+    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
 }
 
 .plan-card.expanded .compact-arrow {
     transform: rotate(180deg);
-    color: var(--color-accent-secondary);
-    border-color: var(--color-accent-secondary);
+    color: var(--color-accent-secondary, #ffffff);
+    border-color: var(--color-accent-secondary, #ffffff);
 }
 
 /* Colores específicos */
@@ -366,16 +364,16 @@
 }
 .regular .compact-type,
 .regular .plan-type {
-    color: var(--color-bronze);
+    color: var(--color-bronze, #CD7F32);
 }
 .regular .order-btn {
-    border-color: var(--color-bronze);
+    border-color: var(--color-bronze, #CD7F32);
 }
 .regular .order-btn:hover {
     background-color: rgba(205, 127, 50, 0.1);
 }
 .plan-card.expanded.regular {
-    border-color: var(--color-bronze);
+    border-color: var(--color-bronze, #CD7F32);
     box-shadow: 0 10px 30px rgba(205, 127, 50, 0.25);
 }
 
@@ -384,16 +382,16 @@
 }
 .business .compact-type,
 .business .plan-type {
-    color: var(--color-silver);
+    color: var(--color-silver, #C0C0C0);
 }
 .business .order-btn {
-    border-color: var(--color-silver);
+    border-color: var(--color-silver, #C0C0C0);
 }
 .business .order-btn:hover {
     background-color: rgba(192, 192, 192, 0.1);
 }
 .plan-card.expanded.business {
-    border-color: var(--color-silver);
+    border-color: var(--color-silver, #C0C0C0);
     box-shadow: 0 10px 30px rgba(192, 192, 192, 0.25);
 }
 
@@ -402,16 +400,16 @@
 }
 .advanced .compact-type,
 .advanced .plan-type {
-    color: var(--color-gold);
+    color: var(--color-gold, #FFD700);
 }
 .advanced .order-btn {
-    border-color: var(--color-gold);
+    border-color: var(--color-gold, #FFD700);
 }
 .advanced .order-btn:hover {
     background-color: rgba(255, 215, 0, 0.1);
 }
 .plan-card.expanded.advanced {
-    border-color: var(--color-gold);
+    border-color: var(--color-gold, #FFD700);
     box-shadow: 0 10px 30px rgba(255, 215, 0, 0.25);
 }
 

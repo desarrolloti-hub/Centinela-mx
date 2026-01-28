@@ -1,9 +1,9 @@
 /* PALETA DE COLORES GRISES */
 :root {
-    --dark-bg: #151515;
-    --card-bg: rgba(21, 21, 21, 0.95);
+    --dark-bg: #000000;
+    --card-bg: rgb(21, 21, 21);
     --panel-left: rgba(21, 21, 21, 0.95);
-    --panel-right: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%);
+    --panel-right: linear-gradient(135deg, rgb(26, 26, 26) 0%, rgba(45, 45, 45, 0.95) 100%);
     --text-white: #ffffff;
     --text-light: #f0f0f0;
     --text-gray: #b0b0b0;
@@ -13,7 +13,7 @@
     --accent-gray: #c0c0c0;
     --btn-gradient: linear-gradient(135deg, #545454, #d6cdcd);
     --btn-hover: linear-gradient(135deg, #5a5a5a, #e0d7d7);
-    --btn-shadow: rgba(192, 192, 192, 0.2);
+    --btn-shadow: rgba(192, 192, 192, 0.14);
 }
 
 /* ESTILOS GENERALES */

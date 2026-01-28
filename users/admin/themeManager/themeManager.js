@@ -96,7 +96,6 @@ class ThemeManager {
                 name: 'Azul Profundo',
                 description: 'Azules oscuros con acentos vibrantes',
                 colors: {
-                    '--color-bg-primary': '#0a1929',
                     '--color-bg-secondary': '#0d1b2a',
                     '--color-bg-tertiary': '#1b263b',
                     '--color-bg-light': '#e0e1dd',
@@ -128,7 +127,6 @@ class ThemeManager {
                 name: 'Cyberpunk',
                 description: 'Tema neón con magenta y cian',
                 colors: {
-                    '--color-bg-primary': '#0a0a12',
                     '--color-bg-secondary': '#151522',
                     '--color-bg-tertiary': '#1a1a2e',
                     '--color-bg-light': '#ffffff',
@@ -160,7 +158,6 @@ class ThemeManager {
                 name: 'Tecnología Verde',
                 description: 'Verdes brillantes sobre fondo oscuro',
                 colors: {
-                    '--color-bg-primary': '#0a140a',
                     '--color-bg-secondary': '#121f12',
                     '--color-bg-tertiary': '#1a291a',
                     '--color-bg-light': '#e8f5e9',
@@ -192,7 +189,6 @@ class ThemeManager {
                 name: 'Oscuro Cálido',
                 description: 'Tono cálido con naranjas',
                 colors: {
-                    '--color-bg-primary': '#1a120b',
                     '--color-bg-secondary': '#2c1e0f',
                     '--color-bg-tertiary': '#3d2b13',
                     '--color-bg-light': '#f5f5f5',
@@ -224,7 +220,6 @@ class ThemeManager {
                 name: 'Matrix Púrpura',
                 description: 'Morados profundos y vibrantes',
                 colors: {
-                    '--color-bg-primary': '#0f0a1a',
                     '--color-bg-secondary': '#1a1226',
                     '--color-bg-tertiary': '#251a33',
                     '--color-bg-light': '#f3e5f5',
@@ -256,7 +251,6 @@ class ThemeManager {
                 name: 'Alerta Roja',
                 description: 'Rojos intensos para alertas',
                 colors: {
-                    '--color-bg-primary': '#1a0a0a',
                     '--color-bg-secondary': '#2a1515',
                     '--color-bg-tertiary': '#3a2020',
                     '--color-bg-light': '#ffffff',
@@ -288,7 +282,6 @@ class ThemeManager {
                 name: 'Azul Marino',
                 description: 'Azul marino profundo',
                 colors: {
-                    '--color-bg-primary': '#0a192f',
                     '--color-bg-secondary': '#172a45',
                     '--color-bg-tertiary': '#1e3a5f',
                     '--color-bg-light': '#ffffff',
@@ -320,7 +313,6 @@ class ThemeManager {
                 name: 'Dorado',
                 description: 'Tema lujoso en dorado',
                 colors: {
-                    '--color-bg-primary': '#1a140a',
                     '--color-bg-secondary': '#2c230f',
                     '--color-bg-tertiary': '#3d3213',
                     '--color-bg-light': '#fff8e1',
@@ -352,7 +344,6 @@ class ThemeManager {
                 name: 'Fuego Naranja',
                 description: 'Naranjas vibrantes y cálidos',
                 colors: {
-                    '--color-bg-primary': '#1a0f0a',
                     '--color-bg-secondary': '#2c1a0f',
                     '--color-bg-tertiary': '#3d2413',
                     '--color-bg-light': '#ffffff',
@@ -384,7 +375,6 @@ class ThemeManager {
                 name: 'Neón Rosa',
                 description: 'Rosa neón vibrante',
                 colors: {
-                    '--color-bg-primary': '#1a0a14',
                     '--color-bg-secondary': '#2a1520',
                     '--color-bg-tertiary': '#3a202c',
                     '--color-bg-light': '#ffffff',
@@ -416,7 +406,6 @@ class ThemeManager {
                 name: 'Morado Oscuro',
                 description: 'Morados profundos y oscuros',
                 colors: {
-                    '--color-bg-primary': '#140a1a',
                     '--color-bg-secondary': '#22152a',
                     '--color-bg-tertiary': '#30203a',
                     '--color-bg-light': '#f3e5f5',
