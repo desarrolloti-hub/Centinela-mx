@@ -1,202 +1,286 @@
-
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perfil Administrador</title>
-
-    <link rel="stylesheet" href="/components/particulas/particulas.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="managmentUser.css">
-    <!-- Sistema de colores base -->
+    
+    <!-- Estilos globales (ORDEN CORRECTO) -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <link rel="stylesheet" href="/components/particulas/particulas.css">
+    <link rel="stylesheet" href="/users/admin/managementUser/managmentUser.css">
+    
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Icono -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <style>
+        /* ESTILOS BASE CRÍTICOS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--color-bg-primary, #000000);
+            color: var(--color-text-primary, #ffffff);
+            min-height: 100vh;
+            margin: 0;
+        }
+        
+        /* Clase para cuando hay partículas */
+        body.particulas-active {
+            background-color: transparent;
+        }
+        
+        /* Canvas debe estar detrás de TODO */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        /* Contenedor sobre canvas */
+        .admin-container {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
 </head>
-<body>
 
-<canvas id="particle-canvas"></canvas>
-
-<div class="admin-container">
-
-    <div class="dashboard-header">
-        <div class="header-left"></div>
-        <button class="add-btn">
-            <i class="fas fa-user-plus"></i> Agregar Colaborador
-        </button>
-    </div>
-
-    <div class="section-title">
-        <i class="fas fa-users"></i> Gestión de Colaboradores
-    </div>
-
-    <div class="table-wrapper">
-        <table class="collaborators-table">
-            <thead>
-                <tr>
-                    <th>NOMBRE</th>
-                    <th>APELLIDO</th>
-                    <th>CORREO</th>
-                    <th>ESTADO</th>
-                    <th>ACCIONES</th>
-                </tr>
-            </thead>
-            <tbody>
-
-                <tr>
-                    <td>
-                        <div class="user-info">
-                            <div class="user-avatar"><i class="fas fa-user"></i></div>
-                            Carlos
-                        </div>
-                    </td>
-                    <td>Ramírez</td>
-                    <td>carlos@centinela.mx</td>
-                    <td><span class="status active">Activo</span></td>
-                    <td class="actions-cell">
-                        <button class="row-btn enable">Inhabilitar</button>
-                        <button class="row-btn edit">Editar</button>
-                        <button class="row-btn view">Ver</button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>
-                        <div class="user-info">
-                            <div class="user-avatar"><i class="fas fa-user"></i></div>
-                            Ana
-                        </div>
-                    </td>
-                    <td>Torres</td>
-                    <td>ana@centinela.mx</td>
-                    <td><span class="status inactive">Inactivo</span></td>
-                    <td class="actions-cell">
-                        <button class="row-btn enable">Inhabilitar</button>
-                        <button class="row-btn edit">Editar</button>
-                        <button class="row-btn view">Ver</button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td>
-                        <div class="user-info">
-                            <div class="user-avatar"><i class="fas fa-user"></i></div>
-                            Luis
-                        </div>
-                    </td>
-                    <td>Hernández</td>
-                    <td>luis@centinela.mx</td>
-                    <td><span class="status active">Activo</span></td>
-                    <td class="actions-cell">
-                        <button class="row-btn enable">Inhabilitar</button>
-                        <button class="row-btn edit">Editar</button>
-                        <button class="row-btn view">Ver</button>
-                    </td>
-                </tr>
-
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- ===== MODAL VER ===== -->
-<div id="viewModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <div class="modal-avatar"><i class="fas fa-user"></i></div>
-        <div class="modal-header">
-            <h2 id="viewName">Nombre</h2>
-            <p id="viewEmail">correo@ejemplo.com</p>
+<body class="particulas-active"> <!-- CLASE AÑADIDA -->
+    
+    <canvas id="particle-canvas"></canvas>
+    
+    <div class="admin-container">
+        
+        <!-- HEADER -->
+        <div class="dashboard-header">
+            <div class="header-left"></div>
+            <button class="add-btn">
+                <i class="fas fa-user-plus"></i> Agregar Colaborador
+            </button>
         </div>
-        <div class="modal-info">
-            <span id="viewStatus">Estado</span>
+
+        <!-- TITULO -->
+        <div class="section-title">
+            <i class="fas fa-users"></i> Gestión de Colaboradores
+        </div>
+
+        <!-- TABLA -->
+        <div class="table-wrapper">
+            <table class="collaborators-table">
+                <thead>
+                    <tr>
+                        <th>NOMBRE</th>
+                        <th>APELLIDO</th>
+                        <th>CORREO</th>
+                        <th>ESTADO</th>
+                        <th>ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar"><i class="fas fa-user"></i></div>
+                                Carlos
+                            </div>
+                        </td>
+                        <td>Ramírez</td>
+                        <td>carlos@centinela.mx</td>
+                        <td><span class="status active">Activo</span></td>
+                        <td class="actions-cell">
+                            <button class="row-btn enable">Inhabilitar</button>
+                            <button class="row-btn edit">Editar</button>
+                            <button class="row-btn view">Ver</button>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar"><i class="fas fa-user"></i></div>
+                                Ana
+                            </div>
+                        </td>
+                        <td>Torres</td>
+                        <td>ana@centinela.mx</td>
+                        <td><span class="status inactive">Inactivo</span></td>
+                        <td class="actions-cell">
+                            <button class="row-btn enable">Habilitar</button>
+                            <button class="row-btn edit">Editar</button>
+                            <button class="row-btn view">Ver</button>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar"><i class="fas fa-user"></i></div>
+                                Luis
+                            </div>
+                        </td>
+                        <td>Hernández</td>
+                        <td>luis@centinela.mx</td>
+                        <td><span class="status active">Activo</span></td>
+                        <td class="actions-cell">
+                            <button class="row-btn enable">Inhabilitar</button>
+                            <button class="row-btn edit">Editar</button>
+                            <button class="row-btn view">Ver</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
-</div>
 
-<!-- ===== MODAL EDITAR ===== -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>Editar Colaborador</h2>
-        <label>Nombre</label>
-        <input type="text" id="editName">
-        <label>Apellido</label>
-        <input type="text" id="editLastName">
-        <label>Correo</label>
-        <input type="email" id="editEmail">
-        <label>Estado</label>
-        <select id="editStatus">
-            <option>Activo</option>
-            <option>Inactivo</option>
-        </select>
-        <button class="save-btn">Guardar Cambios</button>
+    <!-- ===== MODALES ===== -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-avatar"><i class="fas fa-user"></i></div>
+            <div class="modal-header">
+                <h2 id="viewName">Nombre</h2>
+                <p id="viewEmail">correo@ejemplo.com</p>
+            </div>
+            <div class="modal-info">
+                <span id="viewStatus">Estado</span>
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- COMPONENTES -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Editar Colaborador</h2>
+            <label>Nombre</label>
+            <input type="text" id="editName">
+            <label>Apellido</label>
+            <input type="text" id="editLastName">
+            <label>Correo</label>
+            <input type="email" id="editEmail">
+            <label>Estado</label>
+            <select id="editStatus">
+                <option>Activo</option>
+                <option>Inactivo</option>
+            </select>
+            <button class="save-btn">Guardar Cambios</button>
+        </div>
+    </div>
+
+    <!-- SCRIPTS EN ORDEN CORRECTO -->
+    
+    <!-- 1. THEME LOADER PRIMERO (MÁS IMPORTANTE) -->
     <script src="/components/themeloader.js"></script>
+    
+    <!-- 2. Partículas -->
     <script src="/components/particulas/particulas.js"></script>
+    
+    <!-- 3. Componentes -->
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
-
-<script>
-const viewModal = document.getElementById("viewModal");
-const editModal = document.getElementById("editModal");
-
-const closeBtns = document.querySelectorAll(".close-modal");
-
-// BOTONES VER
-document.querySelectorAll(".view").forEach(btn => {
-    btn.addEventListener("click", function () {
-        const row = this.closest("tr");
-        const name = row.children[0].innerText.trim();
-        const email = row.children[2].innerText.trim();
-        const status = row.children[3].innerText.trim();
-
-        document.getElementById("viewName").innerText = name;
-        document.getElementById("viewEmail").innerText = email;
-        document.getElementById("viewStatus").innerText = status;
-
-        viewModal.style.display = "flex";
-    });
-});
-
-// BOTONES EDITAR
-document.querySelectorAll(".edit").forEach(btn => {
-    btn.addEventListener("click", function () {
-        const row = this.closest("tr");
-        const name = row.children[0].innerText.trim();
-        const last = row.children[1].innerText.trim();
-        const email = row.children[2].innerText.trim();
-        const status = row.children[3].innerText.trim();
-
-        document.getElementById("editName").value = name;
-        document.getElementById("editLastName").value = last;
-        document.getElementById("editEmail").value = email;
-        document.getElementById("editStatus").value = status;
-
-        editModal.style.display = "flex";
-    });
-});
-
-// CERRAR MODALES
-closeBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-        viewModal.style.display = "none";
-        editModal.style.display = "none";
-    });
-});
-
-// CERRAR AL DAR CLIC FUERA
-window.addEventListener("click", e => {
-    if (e.target === viewModal) viewModal.style.display = "none";
-    if (e.target === editModal) editModal.style.display = "none";
-});
-</script>
-
-
+    
+    <!-- 4. JS específico de gestión -->
+    <script>
+        // Código para los modales
+        const viewModal = document.getElementById("viewModal");
+        const editModal = document.getElementById("editModal");
+        const closeBtns = document.querySelectorAll(".close-modal");
+        
+        // Botones VER
+        document.querySelectorAll(".view").forEach(btn => {
+            btn.addEventListener("click", function() {
+                const row = this.closest("tr");
+                const name = row.children[0].innerText.trim();
+                const email = row.children[2].innerText.trim();
+                const status = row.children[3].innerText.trim();
+                
+                document.getElementById("viewName").innerText = name;
+                document.getElementById("viewEmail").innerText = email;
+                document.getElementById("viewStatus").innerText = status;
+                
+                viewModal.style.display = "flex";
+                viewModal.classList.add("show");
+            });
+        });
+        
+        // Botones EDITAR
+        document.querySelectorAll(".edit").forEach(btn => {
+            btn.addEventListener("click", function() {
+                const row = this.closest("tr");
+                const name = row.children[0].innerText.trim();
+                const last = row.children[1].innerText.trim();
+                const email = row.children[2].innerText.trim();
+                const status = row.children[3].innerText.trim();
+                
+                document.getElementById("editName").value = name;
+                document.getElementById("editLastName").value = last;
+                document.getElementById("editEmail").value = email;
+                document.getElementById("editStatus").value = status;
+                
+                editModal.style.display = "flex";
+                editModal.classList.add("show");
+            });
+        });
+        
+        // Cerrar modales
+        closeBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                viewModal.style.display = "none";
+                editModal.style.display = "none";
+                viewModal.classList.remove("show");
+                editModal.classList.remove("show");
+            });
+        });
+        
+        // Cerrar al hacer clic fuera
+        window.addEventListener("click", e => {
+            if (e.target === viewModal) {
+                viewModal.style.display = "none";
+                viewModal.classList.remove("show");
+            }
+            if (e.target === editModal) {
+                editModal.style.display = "none";
+                editModal.classList.remove("show");
+            }
+        });
+        
+        // Depuración
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Página de gestión cargada');
+            
+            // Verificar partículas
+            setTimeout(() => {
+                const canvas = document.getElementById('particle-canvas');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    // Verificar si el canvas está activo
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    console.log('🎨 Canvas de partículas verificado');
+                }
+                
+                // Verificar tema
+                if (window.themeLoader) {
+                    console.log('✅ Theme Loader detectado');
+                }
+            }, 500);
+        });
+    </script>
 </body>
 </html>
