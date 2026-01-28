@@ -48,7 +48,7 @@ body {
     min-height: 650px;
     background: var(--color-bg-tertiary);
     backdrop-filter: blur(8px);
-    border-radius: var(--border-radius-large);
+    border-radius: var(--border-radius-medium);
     overflow: hidden;
     box-shadow: var(--shadow-large);
     border: 1px solid var(--color-border-light);
@@ -135,7 +135,7 @@ body {
 .profile-circle:hover {
     transform: scale(1.05);
     border-color: var(--color-accent-secondary);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-normal);
 }
 
 .profile-image {
@@ -244,7 +244,7 @@ body {
 
 .form-input-field {
     width: 100%;
-    background: var(--color-bg-secondary);
+    background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-small);
     padding: 0.875rem 1.125rem;
@@ -258,8 +258,8 @@ body {
 .form-input-field:focus {
     outline: none;
     border-color: var(--color-accent-primary);
-    background: var(--color-bg-tertiary);
-    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.1);
+    background: var(--color-hover, rgba(255, 255, 255, 0.05));
+    box-shadow: 0 0 0 1px var(--color-shadow, rgba(192, 192, 192, 0.1));
 }
 
 .form-input-field::placeholder {
@@ -292,7 +292,7 @@ body {
 
 .toggle-password:hover {
     color: var(--color-accent-primary);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--color-hover, rgba(255, 255, 255, 0.05));
 }
 
 .divider {
@@ -329,7 +329,7 @@ body {
     margin-bottom: 0.375rem;
 }
 
-/* ========== BOTONES ========== */
+/* ========== BOTONES (ACTUALIZADOS) ========== */
 .action-buttons {
     display: flex;
     gap: 1.25rem;
@@ -341,7 +341,7 @@ body {
     border: none;
     border-radius: var(--border-radius-small);
     padding: 0.9375rem;
-    color: var(--color-text-light);
+    color: var(--color-text-primary);
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
@@ -350,40 +350,49 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.625rem;
-    height: 55px;
+    height: 50px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     font-family: 'Rajdhani', sans-serif;
     box-shadow: var(--shadow-small);
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
 }
 
 .action-btn:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-normal);
+    background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
 }
 
+/* Botón GUARDAR CAMBIOS (estilo específico) */
 .save-btn {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+    color: var(--color-text-dark);
 }
 
 .save-btn:hover {
-    background: linear-gradient(135deg, #27ae60, #219653);
+    background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
+    color: var(--color-text-dark);
 }
 
+/* Botón CANCELAR (estilo específico) */
 .cancel-btn {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary));
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-light);
 }
 
 .cancel-btn:hover {
-    background: linear-gradient(135deg, #c0392b, #a93226);
+    background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary));
+    border-color: var(--color-accent-primary);
 }
 
+/* Botón VOLVER AL INICIO (actualizado) */
 .back-btn-container {
     margin-top: auto;
 }
 
 .back-btn {
-    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
     border: none;
     border-radius: var(--border-radius-small);
     padding: 0.9375rem;
@@ -397,18 +406,23 @@ body {
     justify-content: center;
     gap: 0.75rem;
     width: 100%;
-    height: 55px;
+    height: 50px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     font-family: 'Rajdhani', sans-serif;
     text-decoration: none;
     box-shadow: var(--shadow-small);
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
 }
 
 .back-btn:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-normal);
     background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
+}
+
+.back-btn i {
+    font-size: 0.875rem;
 }
 
 /* ========== MENSAJES Y ALERTAS ========== */
@@ -479,7 +493,7 @@ body {
 .modal-content {
     background: var(--color-bg-tertiary);
     padding: 2.1875rem;
-    border-radius: var(--border-radius-large);
+    border-radius: var(--border-radius-medium);
     width: 90%;
     max-width: 450px;
     box-shadow: var(--shadow-large);
@@ -550,29 +564,31 @@ body {
     font-size: 0.875rem;
     min-width: 140px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     box-shadow: var(--shadow-small);
 }
 
 .modal-btn-confirm {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-    color: white;
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+    color: var(--color-text-dark);
 }
 
 .modal-btn-confirm:hover {
-    background: linear-gradient(135deg, #27ae60, #219653);
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-normal);
+    background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
 }
 
 .modal-btn-cancel {
-    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-text-secondary));
-    color: white;
+    background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary));
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-light);
 }
 
 .modal-btn-cancel:hover {
-    background: linear-gradient(135deg, var(--color-text-secondary), var(--color-accent-primary));
-    transform: translateY(-3px);
+    background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary));
+    border-color: var(--color-accent-primary);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-normal);
 }
 
@@ -630,11 +646,16 @@ body {
 
     .modal-buttons {
         flex-direction: column;
+        gap: 0.75rem;
     }
 
     .modal-btn {
         width: 100%;
         min-width: auto;
+    }
+    
+    .action-buttons {
+        gap: 0.75rem;
     }
 }
 
@@ -656,6 +677,12 @@ body {
     .form-input-field {
         height: 45px;
         padding: 0.75rem;
+    }
+    
+    .action-btn,
+    .back-btn {
+        height: 45px;
+        font-size: 0.8125rem;
     }
 }
 

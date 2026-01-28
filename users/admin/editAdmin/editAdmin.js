@@ -1,7 +1,175 @@
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si SweetAlert2 está cargado
+    if (typeof Swal === 'undefined') {
+        console.error('❌ SweetAlert2 no está cargado. Añade: <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>');
+        return;
+    }
+    
+    // Aplicar estilos personalizados a SweetAlert2
+    applySweetAlertStyles();
+    
+    // Inicializar el editor de perfil
     initProfileEditor();
 });
+
+// Aplicar estilos personalizados para SweetAlert2
+function applySweetAlertStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Estilos personalizados para SweetAlert2 usando variables del theme */
+        .swal2-popup {
+            background: var(--color-bg-tertiary) !important;
+            border: 1px solid var(--color-border-light) !important;
+            border-radius: var(--border-radius-medium) !important;
+            box-shadow: var(--shadow-large) !important;
+            backdrop-filter: blur(8px) !important;
+            font-family: 'Rajdhani', sans-serif !important;
+        }
+        
+        .swal2-title {
+            color: var(--color-text-primary) !important;
+            font-family: var(--font-family-primary) !important;
+            font-size: 1.5rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        .swal2-html-container {
+            color: var(--color-text-secondary) !important;
+            font-size: 1rem !important;
+        }
+        
+        .swal2-confirm {
+            background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
+            color: var(--color-text-dark) !important;
+            border: none !important;
+            border-radius: var(--border-radius-small) !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            transition: var(--transition-default) !important;
+            box-shadow: var(--shadow-small) !important;
+        }
+        
+        .swal2-confirm:hover {
+            background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary)) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-normal) !important;
+        }
+        
+        .swal2-cancel {
+            background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary)) !important;
+            color: var(--color-text-primary) !important;
+            border: 1px solid var(--color-border-light) !important;
+            border-radius: var(--border-radius-small) !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            transition: var(--transition-default) !important;
+            box-shadow: var(--shadow-small) !important;
+        }
+        
+        .swal2-cancel:hover {
+            background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary)) !important;
+            border-color: var(--color-accent-primary) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-normal) !important;
+        }
+        
+        .swal2-input {
+            background: var(--color-bg-secondary) !important;
+            border: 1px solid var(--color-border-light) !important;
+            border-radius: var(--border-radius-small) !important;
+            color: var(--color-text-primary) !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            transition: var(--transition-default) !important;
+        }
+        
+        .swal2-input:focus {
+            border-color: var(--color-accent-primary) !important;
+            box-shadow: 0 0 0 1px var(--color-shadow) !important;
+        }
+        
+        .swal2-select {
+            background: var(--color-bg-secondary) !important;
+            border: 1px solid var(--color-border-light) !important;
+            border-radius: var(--border-radius-small) !important;
+            color: var(--color-text-primary) !important;
+            font-family: 'Rajdhani', sans-serif !important;
+        }
+        
+        /* Toast notifications */
+        .swal2-toast {
+            background: var(--color-bg-tertiary) !important;
+            border: 1px solid var(--color-border-light) !important;
+            box-shadow: var(--shadow-normal) !important;
+            backdrop-filter: blur(8px) !important;
+        }
+        
+        .swal2-toast .swal2-title {
+            color: var(--color-text-primary) !important;
+            font-size: 0.875rem !important;
+        }
+        
+        /* Icon colors */
+        .swal2-success [class^="swal2-success-line"] {
+            background-color: var(--color-accent-primary) !important;
+        }
+        
+        .swal2-success .swal2-success-ring {
+            border-color: rgba(192, 192, 192, 0.3) !important;
+        }
+        
+        .swal2-icon.swal2-error {
+            border-color: #e74c3c !important;
+        }
+        
+        .swal2-icon.swal2-error [class^="swal2-x-mark-line"] {
+            background-color: #e74c3c !important;
+        }
+        
+        .swal2-icon.swal2-warning {
+            border-color: #f39c12 !important;
+            color: #f39c12 !important;
+        }
+        
+        .swal2-icon.swal2-info {
+            border-color: #3498db !important;
+            color: #3498db !important;
+        }
+        
+        .swal2-icon.swal2-question {
+            border-color: var(--color-accent-primary) !important;
+            color: var(--color-accent-primary) !important;
+        }
+        
+        /* Progress bar */
+        .swal2-progress-steps .swal2-progress-step {
+            background: var(--color-accent-primary) !important;
+            color: var(--color-text-dark) !important;
+        }
+        
+        .swal2-progress-steps .swal2-progress-step.swal2-active-progress-step {
+            background: var(--color-accent-secondary) !important;
+        }
+        
+        .swal2-progress-steps .swal2-progress-step-line {
+            background: var(--color-border-light) !important;
+        }
+        
+        /* Timer progress bar */
+        .swal2-timer-progress-bar {
+            background: var(--color-accent-primary) !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 function initProfileEditor() {
     // Elementos del DOM
@@ -69,75 +237,55 @@ function initProfileEditor() {
         }, 5000);
     }
 
-    function showAlert(message, type = 'info') {
-        const colors = {
-            'success': '#2ecc71',
-            'error': '#e74c3c',
-            'info': '#3498db'
-        };
-        
-        // Remover alertas anteriores
-        const existingAlerts = document.querySelectorAll('.floating-alert');
-        existingAlerts.forEach(alert => alert.remove());
-        
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'floating-alert';
-        alertDiv.textContent = message;
-        alertDiv.style.cssText = `
-            position: fixed;
-            top: 25px;
-            right: 25px;
-            background: ${colors[type]};
-            color: white;
-            padding: 15px 25px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            z-index: 10000;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-            animation: slideInRight 0.4s ease;
-            max-width: 350px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        `;
-        
-        document.body.appendChild(alertDiv);
-        
-        setTimeout(() => {
-            alertDiv.style.animation = 'slideOutRight 0.4s ease';
-            setTimeout(() => alertDiv.remove(), 400);
-        }, 4000);
-    }
-
-    // Agregar estilos para animaciones
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideOutRight {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-    `;
-    document.head.appendChild(style);
-
+    // ========== VALIDACIONES ==========
     function validateFile(file, maxSizeMB = 5) {
         const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         const maxSize = maxSizeMB * 1024 * 1024;
         
         if (!validTypes.includes(file.type)) {
-            showAlert('FORMATO NO VÁLIDO. USA JPG, PNG O GIF.', 'error');
+            // Usar SweetAlert2 para error de formato
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'Solo se permiten archivos JPG, PNG o GIF',
+                confirmButtonColor: '#e74c3c',
+                confirmButtonText: 'ENTENDIDO'
+            });
             return false;
         }
         
         if (file.size > maxSize) {
-            showAlert(`IMAGEN DEMASIADO GRANDE. MÁXIMO ${maxSizeMB}MB.`, 'error');
+            // Usar SweetAlert2 para error de tamaño
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: `El archivo excede el tamaño máximo permitido (${maxSizeMB}MB)`,
+                confirmButtonColor: '#e74c3c',
+                confirmButtonText: 'ENTENDIDO'
+            });
             return false;
         }
         
         return true;
+    }
+
+    function validatePassword(password) {
+        const minLength = 8;
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        
+        let errors = [];
+        
+        if (password.length < minLength) errors.push(`Mínimo ${minLength} caracteres`);
+        if (!hasUpperCase) errors.push('Al menos una letra mayúscula');
+        if (!hasNumber) errors.push('Al menos un número');
+        if (!hasSpecialChar) errors.push('Al menos un carácter especial (@, #, $, etc.)');
+        
+        return {
+            isValid: errors.length === 0,
+            errors: errors
+        };
     }
 
     function showConfirmationModal(file, type) {
@@ -206,11 +354,29 @@ function initProfileEditor() {
                 if (currentPhotoType === 'profile') {
                     updatePhoto(elements.profileImage, elements.profilePlaceholder, e.target.result);
                     localStorage.setItem('adminProfilePic', e.target.result);
-                    showAlert('FOTO DE PERFIL ACTUALIZADA', 'success');
+                    
+                    // Usar SweetAlert2 para éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Foto actualizada!',
+                        text: 'Tu foto de perfil se ha actualizado correctamente',
+                        timer: 3000,
+                        timerProgressBar: true,
+                        showConfirmButton: false
+                    });
                 } else {
                     updatePhoto(elements.orgImage, elements.orgPlaceholder, e.target.result);
                     localStorage.setItem('adminOrgPic', e.target.result);
-                    showAlert('LOGO DE ORGANIZACIÓN ACTUALIZADO', 'success');
+                    
+                    // Usar SweetAlert2 para éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Logo actualizado!',
+                        text: 'El logo de organización se ha actualizado correctamente',
+                        timer: 3000,
+                        timerProgressBar: true,
+                        showConfirmButton: false
+                    });
                 }
                 
                 elements.photoModal.style.display = 'none';
@@ -226,7 +392,16 @@ function initProfileEditor() {
         elements.photoModal.style.display = 'none';
         selectedFile = null;
         currentPhotoType = '';
-        showAlert('CAMBIO DE FOTO CANCELADO', 'info');
+        
+        // Usar SweetAlert2 para cancelación
+        Swal.fire({
+            icon: 'info',
+            title: 'Cambio cancelado',
+            text: 'No se realizaron cambios en la foto',
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false
+        });
     });
 
     elements.photoModal.addEventListener('click', (e) => {
@@ -254,34 +429,15 @@ function initProfileEditor() {
         });
     });
 
-    function validatePassword(password) {
-        const minLength = 8;
-        const hasUpperCase = /[A-Z]/.test(password);
-        const hasNumber = /\d/.test(password);
-        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-        
-        let errors = [];
-        
-        if (password.length < minLength) errors.push(`MÍNIMO ${minLength} CARACTERES`);
-        if (!hasUpperCase) errors.push('AL MENOS UNA LETRA MAYÚSCULA');
-        if (!hasNumber) errors.push('AL MENOS UN NÚMERO');
-        if (!hasSpecialChar) errors.push('AL MENOS UN CARÁCTER ESPECIAL');
-        
-        return {
-            isValid: errors.length === 0,
-            errors: errors
-        };
-    }
-
     // ========== GUARDAR CAMBIOS ==========
-    elements.saveChangesBtn.addEventListener('click', () => {
+    elements.saveChangesBtn.addEventListener('click', async () => {
         let isValid = true;
         let messages = [];
         
         // Validar nombre
         if (!elements.fullNameInput.value.trim()) {
             isValid = false;
-            messages.push('EL NOMBRE COMPLETO ES OBLIGATORIO');
+            messages.push('El nombre completo es obligatorio');
         }
         
         // Validar contraseñas
@@ -292,68 +448,124 @@ function initProfileEditor() {
         if (isChangingPassword) {
             if (!elements.currentPasswordInput.value) {
                 isValid = false;
-                messages.push('DEBES INGRESAR TU CONTRASEÑA ACTUAL');
+                messages.push('Debes ingresar tu contraseña actual');
             }
             
             if (!elements.newPasswordInput.value) {
                 isValid = false;
-                messages.push('DEBES INGRESAR UNA NUEVA CONTRASEÑA');
+                messages.push('Debes ingresar una nueva contraseña');
             }
             
             if (!elements.confirmPasswordInput.value) {
                 isValid = false;
-                messages.push('DEBES CONFIRMAR LA NUEVA CONTRASEÑA');
+                messages.push('Debes confirmar la nueva contraseña');
             }
             
             if (elements.newPasswordInput.value && 
                 elements.confirmPasswordInput.value && 
                 elements.newPasswordInput.value !== elements.confirmPasswordInput.value) {
                 isValid = false;
-                messages.push('LAS CONTRASEÑAS NO COINCIDEN');
+                messages.push('Las nuevas contraseñas no coinciden');
             }
             
             if (elements.newPasswordInput.value) {
                 const passwordValidation = validatePassword(elements.newPasswordInput.value);
                 if (!passwordValidation.isValid) {
                     isValid = false;
-                    messages.push('CONTRASEÑA INSEGURA');
-                    showMessage(elements.passwordMessage, 'error', 
-                        `ERRORES: ${passwordValidation.errors.join(', ')}`);
+                    messages.push('La contraseña no cumple con los requisitos de seguridad');
+                    
+                    // Mostrar error específico con SweetAlert2
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Contraseña insegura',
+                        html: `La contraseña debe cumplir con:<br><br>
+                               <ul style="text-align: left; padding-left: 20px;">
+                                 <li>Mínimo 8 caracteres</li>
+                                 <li>Al menos una letra mayúscula</li>
+                                 <li>Al menos un número</li>
+                                 <li>Al menos un carácter especial</li>
+                               </ul>`,
+                        confirmButtonColor: '#e74c3c'
+                    });
                 }
             }
         }
         
         if (!isValid) {
-            showMessage(elements.mainMessage, 'error', messages.join('<br>'));
+            // Mostrar errores con SweetAlert2
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de validación',
+                html: messages.map(msg => `• ${msg}`).join('<br>'),
+                confirmButtonColor: '#e74c3c',
+                confirmButtonText: 'CORREGIR'
+            });
         } else {
-            showMessage(elements.mainMessage, 'info', 'GUARDANDO CAMBIOS...');
+            // Mostrar loader de SweetAlert2
+            const swalInstance = Swal.fire({
+                title: 'Guardando cambios...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
             
-            setTimeout(() => {
+            // Simular guardado
+            setTimeout(async () => {
                 // Guardar datos
                 localStorage.setItem('adminFullName', elements.fullNameInput.value);
                 
-                // Limpiar contraseñas
+                // Cerrar loader
+                await swalInstance.close();
+                
+                // Mostrar éxito
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡Cambios guardados!',
+                    text: 'Tus modificaciones se han guardado correctamente',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                });
+                
+                // Limpiar contraseñas si se cambiaron
                 if (isChangingPassword) {
                     elements.currentPasswordInput.value = '';
                     elements.newPasswordInput.value = '';
                     elements.confirmPasswordInput.value = '';
-                    showMessage(elements.passwordMessage, 'success', 'CONTRASEÑA CAMBIADA');
+                    
+                    // Mostrar mensaje de contraseña cambiada
+                    showMessage(elements.passwordMessage, 'success', 'Contraseña cambiada exitosamente');
                 }
                 
-                showMessage(elements.mainMessage, 'success', '¡CAMBIOS GUARDADOS!');
-                showAlert('PERFIL ACTUALIZADO', 'success');
+                // Mostrar mensaje principal
+                showMessage(elements.mainMessage, 'success', '¡Todos los cambios han sido guardados exitosamente!');
+                
             }, 1500);
         }
     });
 
-    // ========== OTRAS FUNCIONALIDADES ==========
+    // ========== CANCELAR CAMBIOS ==========
     elements.cancelBtn.addEventListener('click', () => {
-        if (confirm('¿CANCELAR CAMBIOS?')) {
-            window.location.href = 'index.html';
-        }
+        Swal.fire({
+            title: '¿Cancelar cambios?',
+            text: "Se perderán todos los cambios no guardados",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, cancelar',
+            cancelButtonText: 'No, continuar editando'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = 'index.html';
+            }
+        });
     });
 
-    // Cargar datos guardados
+    // ========== CARGAR DATOS ==========
     function loadUserData() {
         const savedName = localStorage.getItem('adminFullName');
         const savedProfilePic = localStorage.getItem('adminProfilePic');
@@ -364,8 +576,12 @@ function initProfileEditor() {
         if (savedOrgPic) updatePhoto(elements.orgImage, elements.orgPlaceholder, savedOrgPic);
     }
 
-    // Inicializar
+    // ========== INICIALIZAR ==========
     loadUserData();
-    showMessage(elements.mainMessage, 'info', 
-        'EDITA TU NOMBRE, CONTRASEÑA Y FOTOS. RECUERDA GUARDAR LOS CAMBIOS.');
+    
+    // Mostrar mensaje de bienvenida con SweetAlert2 después de un breve retraso
+    setTimeout(() => {
+        showMessage(elements.mainMessage, 'info', 
+            'Puedes editar tu nombre, contraseña y fotos. Recuerda guardar los cambios.');
+    }, 1000);
 }
