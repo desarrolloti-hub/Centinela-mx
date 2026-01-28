@@ -176,8 +176,9 @@
                 transition: var(--transition-default);
             }
             
+            /* Animación a "X" cuando está activo */
             .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
-                transform: rotate(45deg) translate(6px, 6px);
+                transform: rotate(45deg) translate(6.3px, 6.3px);
             }
             
             .navbar-hamburger-btn.active .hamburger-line:nth-child(2) {
@@ -185,7 +186,7 @@
             }
             
             .navbar-hamburger-btn.active .hamburger-line:nth-child(3) {
-                transform: rotate(-45deg) translate(6px, -6px);
+                transform: rotate(-45deg) translate(6.3px, -6.3px);
             }
             
             /* Overlay para móvil */
