@@ -147,4 +147,4 @@ class User {
 // Exportar la clase
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = User;
-}
+} 
