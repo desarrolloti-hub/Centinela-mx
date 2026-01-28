@@ -154,66 +154,82 @@ class ThemeManager {
                     '--footer-social-bg': '#0a0a12'
                 }
             },
-            'green-tech': {
-                name: 'Tecnología Verde',
-                description: 'Verdes brillantes sobre fondo oscuro',
+            'camo-green': {
+                name: 'Camuflaje Militar',
+                description: 'Tema inspirado en patrones de camuflaje',
                 colors: {
-                    '--color-bg-secondary': '#121f12',
-                    '--color-bg-tertiary': '#1a291a',
-                    '--color-bg-light': '#e8f5e9',
-                    '--color-text-primary': '#e8f5e9',
-                    '--color-text-secondary': '#a5d6a7',
-                    '--color-text-light': '#ffffff',
-                    '--color-text-dark': '#0a140a',
-                    '--color-accent-primary': '#00ff88',
-                    '--color-accent-secondary': '#00ffaa',
-                    '--color-accent-footer': '#00ff88',
-                    '--color-shadow': 'rgba(0, 255, 136, 0.5)',
-                    '--color-glow': '#00ff88',
-                    '--color-hover': 'rgba(0, 255, 136, 0.2)',
-                    '--color-active': '#00ffaa',
-                    '--color-border-light': 'rgba(0, 255, 136, 0.2)',
-                    '--color-border-dark': '#00ffaa',
-                    '--navbar-bg': '#121f12',
-                    '--navbar-text': '#e8f5e9',
-                    '--navbar-logo-text': '#00ffaa',
-                    '--navbar-scrolled-bg': '#0a140a',
-                    '--footer-bg-primary': '#121f12',
-                    '--footer-bg-secondary': '#1a291a',
-                    '--footer-text-primary': '#e8f5e9',
-                    '--footer-text-secondary': '#a5d6a7',
-                    '--footer-social-bg': '#0a140a'
+                    '--color-bg-secondary': '#1a271a',      // Fondo camuflaje oscuro
+                    '--color-bg-tertiary': '#2d3d2d',       // Fondo camuflaje medio
+                    '--color-bg-light': '#e0ecd9',          // Verde claro camuflaje
+
+                    '--color-text-primary': '#c2d4c2',      // Verde gris militar
+                    '--color-text-secondary': '#7a8c7a',    // Verde militar desgastado
+                    '--color-text-light': '#e8f0e8',
+                    '--color-text-dark': '#142014',
+
+                    // PALETA CAMUFLAJE
+                    '--color-accent-primary': '#5d6b3d',    // Verde camuflaje principal
+                    '--color-accent-secondary': '#788f45',  // Verde camuflaje secundario
+                    '--color-accent-footer': '#4a5a30',     // Verde camuflaje oscuro
+
+                    '--color-shadow': 'rgba(93, 107, 61, 0.35)',
+                    '--color-glow': 'rgba(120, 143, 69, 0.45)',
+
+                    '--color-hover': 'rgba(93, 107, 61, 0.12)',
+                    '--color-active': '#788f45',
+
+                    '--color-border-light': 'rgba(120, 143, 69, 0.2)',
+                    '--color-border-dark': '#4a5a30',
+
+                    '--navbar-bg': 'linear-gradient(135deg, #1a271a 0%, #2d3d2d 100%)',
+                    '--navbar-text': '#c2d4c2',
+                    '--navbar-logo-text': '#788f45',
+                    '--navbar-scrolled-bg': '#162016',
+
+                    '--footer-bg-primary': '#1a271a',
+                    '--footer-bg-secondary': '#2d3d2d',
+                    '--footer-text-primary': '#c2d4c2',
+                    '--footer-text-secondary': '#7a8c7a',
+                    '--footer-social-bg': '#142014'
                 }
             },
-            'warm-dark': {
-                name: 'Oscuro Cálido',
-                description: 'Tono cálido con naranjas',
+            'military-green': {
+                name: 'Verde Militar',
+                description: 'Tema inspirado en equipamiento militar y camuflaje',
                 colors: {
-                    '--color-bg-secondary': '#2c1e0f',
-                    '--color-bg-tertiary': '#3d2b13',
-                    '--color-bg-light': '#f5f5f5',
-                    '--color-text-primary': '#f5f5f5',
-                    '--color-text-secondary': '#d7ccc8',
-                    '--color-text-light': '#ffffff',
-                    '--color-text-dark': '#1a120b',
-                    '--color-accent-primary': '#ff9800',
-                    '--color-accent-secondary': '#ffb74d',
-                    '--color-accent-footer': '#ff9800',
-                    '--color-shadow': 'rgba(255, 152, 0, 0.5)',
-                    '--color-glow': '#ff9800',
-                    '--color-hover': 'rgba(255, 152, 0, 0.2)',
-                    '--color-active': '#ffb74d',
-                    '--color-border-light': 'rgba(255, 152, 0, 0.2)',
-                    '--color-border-dark': '#ffb74d',
-                    '--navbar-bg': '#2c1e0f',
-                    '--navbar-text': '#f5f5f5',
-                    '--navbar-logo-text': '#ffb74d',
-                    '--navbar-scrolled-bg': '#1a120b',
-                    '--footer-bg-primary': '#2c1e0f',
-                    '--footer-bg-secondary': '#3d2b13',
-                    '--footer-text-primary': '#f5f5f5',
-                    '--footer-text-secondary': '#d7ccc8',
-                    '--footer-social-bg': '#1a120b'
+                    '--color-bg-secondary': '#0d1c0d',      // Verde militar oscuro
+                    '--color-bg-tertiary': '#1a2c1a',       // Verde militar medio
+                    '--color-bg-light': '#e8f5e0',          // Verde claro militar
+
+                    '--color-text-primary': '#d4e8d4',      // Verde grisáceo claro
+                    '--color-text-secondary': '#8ba88b',    // Verde militar desaturado
+                    '--color-text-light': '#f0f8f0',
+                    '--color-text-dark': '#0a140a',
+
+                    // VERDES MILITARES AUTÉNTICOS
+                    '--color-accent-primary': '#556b2f',    // OLIVA - Verde militar clásico
+                    '--color-accent-secondary': '#6b8e23',  // OLIVE DRAB - Verde militar estándar
+                    '--color-accent-footer': '#4d5d2b',     // Verde militar oscuro
+
+                    '--color-shadow': 'rgba(85, 107, 47, 0.4)',   // Sombra verde militar
+                    '--color-glow': 'rgba(107, 142, 35, 0.5)',    // Brillo verde militar
+
+                    '--color-hover': 'rgba(85, 107, 47, 0.15)',   // Hover militar
+                    '--color-active': '#6b8e23',                  // Verde militar activo
+
+                    '--color-border-light': 'rgba(107, 142, 35, 0.25)', // Borde militar
+                    '--color-border-dark': '#4d5d2b',             // Verde militar oscuro
+
+                    '--navbar-bg': '#0d1c0d',
+                    '--navbar-text': '#d4e8d4',
+                    '--navbar-logo-text': '#6b8e23',              // Logo en verde militar
+                    '--navbar-scrolled-bg': '#091409',
+
+                    '--footer-bg-primary': '#0d1c0d',
+                    '--footer-bg-secondary': '#1a2c1a',
+                    '--footer-text-primary': '#d4e8d4',
+                    '--footer-text-secondary': '#8ba88b',
+                    '--footer-social-bg': '#0a140a'
                 }
             },
             'purple-matrix': {
@@ -309,35 +325,36 @@ class ThemeManager {
                     '--footer-social-bg': '#0a192f'
                 }
             },
-            'golden': {
-                name: 'Dorado',
-                description: 'Tema lujoso en dorado',
+            'gold-24k': {
+                name: 'Oro 24K',
+                description: 'Tema de máximo lujo con oro puro',
                 colors: {
-                    '--color-bg-secondary': '#2c230f',
-                    '--color-bg-tertiary': '#3d3213',
-                    '--color-bg-light': '#fff8e1',
-                    '--color-text-primary': '#fff8e1',
-                    '--color-text-secondary': '#ffecb3',
-                    '--color-text-light': '#ffffff',
-                    '--color-text-dark': '#1a140a',
-                    '--color-accent-primary': '#ffd700',
-                    '--color-accent-secondary': '#ffed4e',
-                    '--color-accent-footer': '#ffd700',
-                    '--color-shadow': 'rgba(255, 215, 0, 0.5)',
-                    '--color-glow': '#ffd700',
-                    '--color-hover': 'rgba(255, 215, 0, 0.2)',
-                    '--color-active': '#ffed4e',
-                    '--color-border-light': 'rgba(255, 215, 0, 0.2)',
-                    '--color-border-dark': '#ffed4e',
-                    '--navbar-bg': '#2c230f',
-                    '--navbar-text': '#fff8e1',
-                    '--navbar-logo-text': '#ffed4e',
-                    '--navbar-scrolled-bg': '#1a140a',
-                    '--footer-bg-primary': '#2c230f',
-                    '--footer-bg-secondary': '#3d3213',
-                    '--footer-text-primary': '#fff8e1',
-                    '--footer-text-secondary': '#ffecb3',
-                    '--footer-social-bg': '#1a140a'
+                    '--color-bg-primary': '#0c0a06',     
+                    '--color-bg-secondary': '#1c170f',
+                    '--color-bg-tertiary': '#332c1f',  
+                    '--color-bg-light': '#f9efcc',  
+                    '--color-text-primary': '#ffeaa7',
+                    '--color-text-secondary': '#d4b483',
+                    '--color-text-light': '#fff4d1',       
+                    '--color-text-dark': '#1c170f',
+                    '--color-accent-primary': '#ffd166',
+                    '--color-accent-secondary': '#f9c74f',
+                    '--color-accent-footer': '#e6b422',
+                    '--color-shadow': 'rgba(255, 209, 102, 0.4)', 
+                    '--color-glow': 'rgba(249, 199, 79, 0.6)',
+                    '--color-hover': 'rgba(255, 209, 102, 0.15)',
+                    '--color-active': '#f9c74f',
+                    '--color-border-light': 'rgba(249, 199, 79, 0.3)',
+                    '--color-border-dark': '#e6b422',
+                    '--navbar-bg': 'linear-gradient(135deg, #1c170f 0%, #332c1f 100%)',
+                    '--navbar-text': '#ffeaa7',    
+                    '--navbar-logo-text': '#f9c74f',     
+                    '--navbar-scrolled-bg': '#18130c',
+                    '--footer-bg-primary': '#1c170f',
+                    '--footer-bg-secondary': '#332c1f',
+                    '--footer-text-primary': '#ffeaa7', 
+                    '--footer-text-secondary': '#d4b483',
+                    '--footer-social-bg': '#0c0a06'
                 }
             },
             'orange-fire': {
