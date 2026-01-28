@@ -1,281 +1,364 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil Administrador</title>
+    <title>Perfil Administrador - Gestión de Colaboradores</title>
     
-    <!-- Estilos globales (ORDEN CORRECTO) -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     <link rel="stylesheet" href="/components/particulas/particulas.css">
-    <link rel="stylesheet" href="/users/admin/managementUser/managmentUser.css">
+    <link rel="stylesheet" href="managmentUser.css">
     
-    <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Icono -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    
-    <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
-    
-    <style>
-        /* ESTILOS BASE CRÍTICOS */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--color-bg-primary, #000000);
-            color: var(--color-text-primary, #ffffff);
-            min-height: 100vh;
-            margin: 0;
-        }
-        
-        /* Canvas debe estar detrás de TODO */
-        #particle-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            pointer-events: none;
-        }
-        
-        /* Contenedor sobre canvas */
-        .admin-container {
-            position: relative;
-            z-index: 1;
-        }
-    </style>
 </head>
 
-<body class="particulas-active"> <!-- CLASE AÑADIDA -->
-    
-    <canvas id="particle-canvas"></canvas>
-    
-    <div class="admin-container">
-        
-        <!-- HEADER -->
-        <div class="dashboard-header">
-            <div class="header-left"></div>
-            <button class="add-btn">
-                <i class="fas fa-user-plus"></i> Agregar Colaborador
-            </button>
-        </div>
+<body class="particulas-active">
+<canvas id="particle-canvas"></canvas>
 
-        <!-- TITULO -->
-        <div class="section-title">
-            <i class="fas fa-users"></i> Gestión de Colaboradores
-        </div>
-
-        <!-- TABLA -->
-        <div class="table-wrapper">
-            <table class="collaborators-table">
-                <thead>
-                    <tr>
-                        <th>NOMBRE</th>
-                        <th>APELLIDO</th>
-                        <th>CORREO</th>
-                        <th>ESTADO</th>
-                        <th>ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <div class="user-info">
-                                <div class="user-avatar"><i class="fas fa-user"></i></div>
-                                Carlos
-                            </div>
-                        </td>
-                        <td>Ramírez</td>
-                        <td>carlos@centinela.mx</td>
-                        <td><span class="status active">Activo</span></td>
-                        <td class="actions-cell">
-                            <button class="row-btn enable">Inhabilitar</button>
-                            <button class="row-btn edit">Editar</button>
-                            <button class="row-btn view">Ver</button>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>
-                            <div class="user-info">
-                                <div class="user-avatar"><i class="fas fa-user"></i></div>
-                                Ana
-                            </div>
-                        </td>
-                        <td>Torres</td>
-                        <td>ana@centinela.mx</td>
-                        <td><span class="status inactive">Inactivo</span></td>
-                        <td class="actions-cell">
-                            <button class="row-btn enable">Habilitar</button>
-                            <button class="row-btn edit">Editar</button>
-                            <button class="row-btn view">Ver</button>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>
-                            <div class="user-info">
-                                <div class="user-avatar"><i class="fas fa-user"></i></div>
-                                Luis
-                            </div>
-                        </td>
-                        <td>Hernández</td>
-                        <td>luis@centinela.mx</td>
-                        <td><span class="status active">Activo</span></td>
-                        <td class="actions-cell">
-                            <button class="row-btn enable">Inhabilitar</button>
-                            <button class="row-btn edit">Editar</button>
-                            <button class="row-btn view">Ver</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+<div class="admin-container">
+    
+    <div class="dashboard-header">
+        <div class="header-left"></div>
+        <button class="add-btn">
+            <i class="fas fa-user-plus"></i> Agregar Colaborador
+        </button>
     </div>
 
-    <!-- ===== MODALES ===== -->
-    <div id="viewModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <div class="modal-avatar"><i class="fas fa-user"></i></div>
-            <div class="modal-header">
-                <h2 id="viewName">Nombre</h2>
-                <p id="viewEmail">correo@ejemplo.com</p>
-            </div>
-            <div class="modal-info">
-                <span id="viewStatus">Estado</span>
-            </div>
-        </div>
+    <div class="section-title">
+        <i class="fas fa-users"></i> Gestión de Colaboradores
     </div>
 
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Editar Colaborador</h2>
-            <label>Nombre</label>
-            <input type="text" id="editName">
-            <label>Apellido</label>
-            <input type="text" id="editLastName">
-            <label>Correo</label>
-            <input type="email" id="editEmail">
-            <label>Estado</label>
-            <select id="editStatus">
-                <option>Activo</option>
-                <option>Inactivo</option>
-            </select>
-            <button class="save-btn">Guardar Cambios</button>
+    <div class="table-wrapper">
+        <table class="collaborators-table">
+            <thead>
+                <tr>
+                    <th>NOMBRE</th>
+                    <th>APELLIDO</th>
+                    <th>CORREO</th>
+                    <th>ESTADO</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Carlos</div></td>
+                    <td>Ramírez</td>
+                    <td>carlos@centinela.mx</td>
+                    <td><span class="status active">Activo</span></td>
+                    <td class="actions-cell">
+                        <button class="row-btn enable" title="Inhabilitar">
+                            <i class="fas fa-user-check"></i>
+                        </button>
+                        <a href="editar-colaborador.html" class="row-btn edit" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="row-btn view" title="Ver detalles"
+                            data-org="Centinela MX"
+                            data-fullname="Carlos Ramírez"
+                            data-email="carlos@centinela.mx"
+                            data-status="Activo"
+                            data-authid="UID-928372"
+                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
+                            data-userphoto="https://i.imgur.com/6VBx3io.png"
+                            data-created="2025-01-10"
+                            data-updated="2025-02-05"
+                            data-lastlogin="2025-02-08 14:33">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Ana</div></td>
+                    <td>González</td>
+                    <td>ana@centinela.mx</td>
+                    <td><span class="status active">Activo</span></td>
+                    <td class="actions-cell">
+                        <button class="row-btn enable" title="Inhabilitar">
+                            <i class="fas fa-user-check"></i>
+                        </button>
+                        <a href="editar-colaborador.html" class="row-btn edit" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="row-btn view" title="Ver detalles"
+                            data-org="Centinela MX"
+                            data-fullname="Ana González"
+                            data-email="ana@centinela.mx"
+                            data-status="Activo"
+                            data-authid="UID-928373"
+                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
+                            data-userphoto="https://i.imgur.com/6VBx3io.png"
+                            data-created="2025-01-15"
+                            data-updated="2025-02-06"
+                            data-lastlogin="2025-02-09 09:20">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Luis</div></td>
+                    <td>Martínez</td>
+                    <td>luis@centinela.mx</td>
+                    <td><span class="status inactive">Inactivo</span></td>
+                    <td class="actions-cell">
+                        <button class="row-btn enable" title="Habilitar">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        <a href="editar-colaborador.html" class="row-btn edit" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="row-btn view" title="Ver detalles"
+                            data-org="Centinela MX"
+                            data-fullname="Luis Martínez"
+                            data-email="luis@centinela.mx"
+                            data-status="Inactivo"
+                            data-authid="UID-928374"
+                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
+                            data-userphoto="https://i.imgur.com/6VBx3io.png"
+                            data-created="2025-01-20"
+                            data-updated="2025-02-07"
+                            data-lastlogin="2025-02-10 12:45">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>María</div></td>
+                    <td>Fernández</td>
+                    <td>maria@centinela.mx</td>
+                    <td><span class="status active">Activo</span></td>
+                    <td class="actions-cell">
+                        <button class="row-btn enable" title="Inhabilitar">
+                            <i class="fas fa-user-check"></i>
+                        </button>
+                        <a href="editar-colaborador.html" class="row-btn edit" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="row-btn view" title="Ver detalles"
+                            data-org="Centinela MX"
+                            data-fullname="María Fernández"
+                            data-email="maria@centinela.mx"
+                            data-status="Activo"
+                            data-authid="UID-928375"
+                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
+                            data-userphoto="https://i.imgur.com/6VBx3io.png"
+                            data-created="2025-01-25"
+                            data-updated="2025-02-08"
+                            data-lastlogin="2025-02-12 16:10">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Jorge</div></td>
+                    <td>Hernández</td>
+                    <td>jorge@centinela.mx</td>
+                    <td><span class="status active">Activo</span></td>
+                    <td class="actions-cell">
+                        <button class="row-btn enable" title="Inhabilitar">
+                            <i class="fas fa-user-check"></i>
+                        </button>
+                        <a href="editar-colaborador.html" class="row-btn edit" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button class="row-btn view" title="Ver detalles"
+                            data-org="Centinela MX"
+                            data-fullname="Jorge Hernández"
+                            data-email="jorge@centinela.mx"
+                            data-status="Activo"
+                            data-authid="UID-928376"
+                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
+                            data-userphoto="https://i.imgur.com/6VBx3io.png"
+                            data-created="2025-02-01"
+                            data-updated="2025-02-09"
+                            data-lastlogin="2025-02-13 11:15">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL VER COMPLETO -->
+<div id="viewModal" class="modal">
+    <div class="modal-content large">
+        <span class="close-modal">&times;</span>
+
+        <div class="modal-header">
+            <img id="viewUserPhoto" class="modal-user-photo" alt="Foto del usuario">
+            <h2 id="viewFullName"></h2>
+        </div>
+
+        <div class="modal-grid">
+            <div><strong>Organización:</strong> <span id="viewOrg"></span></div>
+            <div><strong>Correo:</strong> <span id="viewEmail"></span></div>
+            <div><strong>Status:</strong> <span id="viewStatus"></span></div>
+            <div><strong>ID Auth:</strong> <span id="viewAuthId"></span></div>
+            <div><strong>Fecha creación:</strong> <span id="viewCreated"></span></div>
+            <div><strong>Fecha actualización:</strong> <span id="viewUpdated"></span></div>
+            <div><strong>Último login:</strong> <span id="viewLastLogin"></span></div>
+        </div>
+
+        <div class="org-photo-box">
+            <p><strong>Foto Organización</strong></p>
+            <img id="viewOrgPhoto" alt="Logo de la organización">
         </div>
     </div>
+</div>
 
-    <!-- SCRIPTS EN ORDEN CORRECTO -->
-    
-    <!-- 1. THEME LOADER PRIMERO (MÁS IMPORTANTE) -->
-    <script src="/components/themeloader.js"></script>
-    
-    <!-- 2. Partículas -->
-    <script src="/components/particulas/particulas.js"></script>
-    
-    <!-- 3. Componentes -->
-    <script src="/components/navbar-admin-component.js"></script>
-    <script src="/components/footer-admin-component.js"></script>
-    
-    <!-- 4. JS específico de gestión -->
-    <script>
-        // Código para los modales
-        const viewModal = document.getElementById("viewModal");
-        const editModal = document.getElementById("editModal");
-        const closeBtns = document.querySelectorAll(".close-modal");
-        
-        // Botones VER
-        document.querySelectorAll(".view").forEach(btn => {
-            btn.addEventListener("click", function() {
-                const row = this.closest("tr");
-                const name = row.children[0].innerText.trim();
-                const email = row.children[2].innerText.trim();
-                const status = row.children[3].innerText.trim();
-                
-                document.getElementById("viewName").innerText = name;
-                document.getElementById("viewEmail").innerText = email;
-                document.getElementById("viewStatus").innerText = status;
-                
-                viewModal.style.display = "flex";
-                viewModal.classList.add("show");
+<script src="/components/themeloader.js"></script>
+<script src="/components/particulas/particulas.js"></script>
+<script src="/components/navbar-admin-component.js"></script>
+<script src="/components/footer-admin-component.js"></script>
+
+<script>
+// Modal functionality
+const viewModal = document.getElementById("viewModal");
+const viewOrg = document.getElementById("viewOrg");
+const viewFullName = document.getElementById("viewFullName");
+const viewEmail = document.getElementById("viewEmail");
+const viewStatus = document.getElementById("viewStatus");
+const viewAuthId = document.getElementById("viewAuthId");
+const viewCreated = document.getElementById("viewCreated");
+const viewUpdated = document.getElementById("viewUpdated");
+const viewLastLogin = document.getElementById("viewLastLogin");
+const viewOrgPhoto = document.getElementById("viewOrgPhoto");
+const viewUserPhoto = document.getElementById("viewUserPhoto");
+
+// Open modal with user data
+document.querySelectorAll(".view").forEach(btn => {
+    btn.addEventListener("click", () => {
+        viewOrg.innerText = btn.dataset.org;
+        viewFullName.innerText = btn.dataset.fullname;
+        viewEmail.innerText = btn.dataset.email;
+        viewStatus.innerText = btn.dataset.status;
+        viewAuthId.innerText = btn.dataset.authid;
+        viewCreated.innerText = btn.dataset.created;
+        viewUpdated.innerText = btn.dataset.updated;
+        viewLastLogin.innerText = btn.dataset.lastlogin;
+        viewOrgPhoto.src = btn.dataset.orgphoto;
+        viewUserPhoto.src = btn.dataset.userphoto;
+        viewModal.classList.add("show");
+        document.body.style.overflow = "hidden";
+    });
+});
+
+// Close modal
+document.querySelector(".close-modal").onclick = () => {
+    viewModal.classList.remove("show");
+    document.body.style.overflow = "auto";
+};
+
+window.onclick = e => {
+    if (e.target === viewModal) {
+        viewModal.classList.remove("show");
+        document.body.style.overflow = "auto";
+    }
+};
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        viewModal.classList.remove("show");
+        document.body.style.overflow = "auto";
+    }
+});
+
+// Responsive table functionality
+document.addEventListener('DOMContentLoaded', function() {
+    function makeTableResponsive() {
+        if (window.innerWidth <= 600) {
+            // Add data labels for mobile view
+            const headers = [];
+            document.querySelectorAll('.collaborators-table th').forEach(th => {
+                headers.push(th.textContent);
             });
-        });
-        
-        // Botones EDITAR
-        document.querySelectorAll(".edit").forEach(btn => {
-            btn.addEventListener("click", function() {
-                const row = this.closest("tr");
-                const name = row.children[0].innerText.trim();
-                const last = row.children[1].innerText.trim();
-                const email = row.children[2].innerText.trim();
-                const status = row.children[3].innerText.trim();
-                
-                document.getElementById("editName").value = name;
-                document.getElementById("editLastName").value = last;
-                document.getElementById("editEmail").value = email;
-                document.getElementById("editStatus").value = status;
-                
-                editModal.style.display = "flex";
-                editModal.classList.add("show");
-            });
-        });
-        
-        // Cerrar modales
-        closeBtns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                viewModal.style.display = "none";
-                editModal.style.display = "none";
-                viewModal.classList.remove("show");
-                editModal.classList.remove("show");
-            });
-        });
-        
-        // Cerrar al hacer clic fuera
-        window.addEventListener("click", e => {
-            if (e.target === viewModal) {
-                viewModal.style.display = "none";
-                viewModal.classList.remove("show");
-            }
-            if (e.target === editModal) {
-                editModal.style.display = "none";
-                editModal.classList.remove("show");
-            }
-        });
-        
-        // Depuración
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('✅ Página de gestión cargada');
             
-            // Verificar partículas
+            document.querySelectorAll('.collaborators-table tbody tr').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                cells.forEach((td, index) => {
+                    if (index < headers.length) {
+                        td.setAttribute('data-label', headers[index]);
+                    }
+                });
+            });
+        } else {
+            // Remove data labels for desktop view
+            document.querySelectorAll('.collaborators-table td[data-label]').forEach(td => {
+                td.removeAttribute('data-label');
+            });
+        }
+    }
+    
+    // Initial call
+    makeTableResponsive();
+    
+    // On window resize
+    window.addEventListener('resize', makeTableResponsive);
+    
+    // Button functionality for enable/disable with icons
+    document.querySelectorAll('.row-btn.enable').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const isActive = this.closest('tr').querySelector('.status').classList.contains('active');
+            const icon = this.querySelector('i');
+            
+            // Efecto visual del clic
+            this.style.transform = 'scale(0.9)';
             setTimeout(() => {
-                const canvas = document.getElementById('particle-canvas');
-                if (canvas) {
-                    const ctx = canvas.getContext('2d');
-                    // Verificar si el canvas está activo
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
-                    console.log('🎨 Canvas de partículas verificado');
-                }
+                this.style.transform = '';
+            }, 150);
+            
+            if (isActive) {
+                // Cambiar a inactivo
+                this.title = "Habilitar";
+                icon.className = "fas fa-ban";
+                this.closest('tr').querySelector('.status').textContent = 'Inactivo';
+                this.closest('tr').querySelector('.status').className = 'status inactive';
+                this.classList.remove('active');
                 
-                // Verificar tema
-                if (window.themeLoader) {
-                    console.log('✅ Theme Loader detectado');
-                }
-            }, 500);
+                // Efecto visual
+                this.style.boxShadow = '0 0 20px rgba(255, 77, 77, 0.5)';
+                setTimeout(() => {
+                    this.style.boxShadow = '';
+                }, 500);
+            } else {
+                // Cambiar a activo
+                this.title = "Inhabilitar";
+                icon.className = "fas fa-user-check";
+                this.closest('tr').querySelector('.status').textContent = 'Activo';
+                this.closest('tr').querySelector('.status').className = 'status active';
+                this.classList.add('active');
+                
+                // Efecto visual
+                this.style.boxShadow = '0 0 20px rgba(0, 255, 149, 0.5)';
+                setTimeout(() => {
+                    this.style.boxShadow = '';
+                }, 500);
+            }
         });
-    </script>
+    });
+    
+    // Añade efecto hover a los botones
+    document.querySelectorAll('.row-btn').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            const icon = this.querySelector('i');
+            if (icon) {
+                icon.style.transition = 'all 0.3s ease';
+            }
+        });
+    });
+});
+</script>
+
 </body>
 </html>
