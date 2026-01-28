@@ -1112,23 +1112,6 @@ select.form-input-field {
         transform: rotate(360deg);
     }
 }
-
-/* ========== ESTILOS PARA ESTADOS ========== */
-:focus {
-    outline: 2px solid var(--color-accent-primary);
-    outline-offset: 1px;
-}
-
-:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-::selection {
-    background-color: var(--color-accent-primary);
-    color: var(--color-text-dark);
-}
-
 /* ========== SCROLLBAR PERSONALIZADO ========== */
 .edit-right-panel::-webkit-scrollbar {
     width: 6px;

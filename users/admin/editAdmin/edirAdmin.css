@@ -1,10 +1,6 @@
 /* =============================================
    VARIABLES DEL THEME MANAGER
    ============================================= */
-
-/* NOTA: Estas variables deben estar definidas en el themeManager.css */
-/* El archivo actual solo usa las variables, no las define */
-
 /* ========== RESET Y ESTILOS BASE ========== */
 * {
     box-sizing: border-box;

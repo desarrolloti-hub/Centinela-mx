@@ -28,8 +28,8 @@
 /* BOTÓN AGREGAR */
 .add-btn {
     background: linear-gradient(145deg, #111, #1a1a1a);
-    border: 1px solid #00e0ff;
-    color: #7be8ff;
+    border: 1px solid #000000;
+    color: #ffffff;
     padding: 10px 20px;
     border-radius: 8px;
     font-weight: 600;
@@ -42,7 +42,7 @@
 
 .add-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 15px rgba(0,224,255,.4);
+    box-shadow: 0 0 15px rgba(214, 218, 5, 0.977);
 }
 
 /* TITULO */
@@ -57,7 +57,6 @@
 /* CONTENEDOR TABLA */
 .table-wrapper {
     background: #000;
-    border: 1px solid #545454;
     border-radius: 12px;
     padding: 15px;
     overflow-x: auto;
@@ -110,7 +109,7 @@
 }
 
 /* =============================================
-   BOTONES ACCIONES (🔥 SIEMPRE HORIZONTALES)
+   BOTONES ACCIONES
    ============================================= */
 
 .actions-cell {
@@ -170,6 +169,61 @@
     width:100%;
     max-width:650px;
 }
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 26px;
+    cursor: pointer;
+    color: #fff;
+}
+
+.modal-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.modal-user-photo {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 2px solid #444;
+    margin-bottom: 10px;
+}
+
+.modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.org-photo-box {
+    text-align: center;
+}
+
+.org-photo-box img {
+    max-width: 120px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: 1px solid #444;
+}
+.modal-content {
+    position: relative;
+}
+.modal-content {
+    position: relative;
+    color: #ffffff; 
+}
+
+.modal-content strong {
+    color: #dadede; 
+}
+
+.modal-content span {
+    color: #e0e0e0; }
+
 
 /* =============================================
    RESPONSIVE
@@ -177,51 +231,5 @@
 
 @media (max-width:500px) {
     .dashboard-header { flex-direction:column; }
-    .add-btn { width:50%; justify-content:center; }
-}
-
-/* TABLA → TARJETAS EN MÓVIL */
-@media (max-width:600px) {
-
-    .collaborators-table,
-    .collaborators-table thead,
-    .collaborators-table tbody,
-    .collaborators-table th,
-    .collaborators-table td,
-    .collaborators-table tr {
-        display:block;
-        width:70%;
-    }
-
-    .collaborators-table thead { display:none; }
-
-    .collaborators-table tr {
-        background:#000;
-        border:1px solid #545454;
-        border-radius:12px;
-        padding:10px;
-        margin-bottom:10px;
-    }
-
-    .collaborators-table td {
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        border:none;
-        border-bottom:1px solid rgba(84,84,84,.2);
-    }
-
-    .collaborators-table td:last-child {
-        border-bottom:none;
-    }
-
-    .collaborators-table td::before {
-        content:attr(data-label);
-        font-weight:550;
-        color:#a5a5a5;
-        font-size:14px;
-    }
-
-    /* 🔥 QUE EL LABEL NO EMPUJE LOS ICONOS */
-    td.actions-cell::before { display:none; }
+    .add-btn { width:40%; justify-content:center; }
 }
