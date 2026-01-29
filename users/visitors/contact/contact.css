@@ -104,6 +104,26 @@ body {
     text-shadow: 0 0 5px var(--color-shadow, rgba(192, 192, 192, 0.3));
 }
 
+/* ESTILOS ESPECÍFICOS PARA EL ICONO GRANDE DE CONTÁCTANOS */
+.icono-titulo {
+    font-size: 3.5rem;
+    margin-bottom: 12px;
+    display: block;
+    color: var(--color-icon-primary, var(--color-accent-secondary));
+    text-shadow: 0 0 5px var(--color-shadow, rgba(192, 192, 192, 0.3));
+}
+
+/* Contenedor del icono y título */
+.header-contacto {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+/* Espacio adicional entre inputs del formulario */
+.input-separado {
+    margin-bottom: 22px !important;
+}
+
 /* FORMULARIO - OCUPA TODA LA ALTURA */
 .contact-card form {
     display: flex;
@@ -156,12 +176,15 @@ body {
 
 /* QUITAR FLECHAS DE AUMENTO/DISMINUCIÓN EN INPUT TEL */
 .contact-card input[type="tel"] {
+    appearance: textfield;
     -moz-appearance: textfield;
+    -webkit-appearance: textfield;
 }
 
 .contact-card input[type="tel"]::-webkit-outer-spin-button,
 .contact-card input[type="tel"]::-webkit-inner-spin-button {
     -webkit-appearance: none;
+    appearance: none;
     margin: 0;
 }
 
@@ -458,6 +481,12 @@ body {
     .input-with-icon .fa-pen {
         top: 16px;
     }
+
+    /* Ajuste para icono grande en móvil */
+    .icono-titulo {
+        font-size: 3rem;
+        margin-bottom: 10px;
+    }
 }
 
 /* Para pantallas muy pequeñas */
@@ -531,6 +560,17 @@ body {
         padding: 14px;
         font-size: 15px;
         min-height: 45px;
+    }
+
+    /* Ajuste para icono grande en móvil pequeño */
+    .icono-titulo {
+        font-size: 2.5rem;
+        margin-bottom: 8px;
+    }
+    
+    /* Reducir espacio entre inputs en móviles pequeños */
+    .input-separado {
+        margin-bottom: 18px !important;
     }
 }
 

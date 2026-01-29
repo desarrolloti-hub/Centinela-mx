@@ -547,7 +547,7 @@ function initProfileEditor() {
         }
     });
 
-    // ========== CANCELAR CAMBIOS ==========
+    // ========== CANCELAR CAMBIOS ========== 
     elements.cancelBtn.addEventListener('click', () => {
         Swal.fire({
             title: '¿Cancelar cambios?',
