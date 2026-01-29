@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,6 +19,9 @@
     <!-- Assets -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -185,31 +187,6 @@
                                    value="maria.gonzalez@techsolutions.com" placeholder="correo@organizacion.com" required>
                         </div>
                     </div>
-
-                    <!-- Status -->
-                    <div class="form-field-group">
-                        <label class="field-label">
-                            <i class="fas fa-toggle-on"></i> ESTATUS DEL COLABORADOR
-                        </label>
-                        <div class="role-selector">
-                            <div class="role-option selected" data-status="active">
-                                <i class="fas fa-check-circle"></i>
-                                <div>Activo</div>
-                            </div>
-                            <div class="role-option" data-status="inactive">
-                                <i class="fas fa-times-circle"></i>
-                                <div>Inactivo</div>
-                            </div>
-                            <div class="role-option" data-status="pending">
-                                <i class="fas fa-clock"></i>
-                                <div>Pendiente</div>
-                            </div>
-                        </div>
-                        <input type="hidden" id="status" value="active">
-                    </div>
-
-                    <div class="divider"></div>
-
                     <!-- Contraseña (opcional para reset) -->
                     <div class="form-field-group">
                         <label class="field-label" for="password">
@@ -303,7 +280,7 @@
         </div>
     </div>
 
-    <!-- Modal para fotos -->
+    <!-- Modal para fotos (fallback) -->
     <div class="photo-modal" id="photoModal">
         <div class="modal-content">
             <h3 class="modal-title">
@@ -329,277 +306,7 @@
     <script src="/components/footer-admin-component.js"></script>
     <script src="/components/particulas/particulas.js"></script>
     
-    <!-- Script principal -->
-    <script>
-        // Script específico para editar colaborador
-        document.addEventListener('DOMContentLoaded', function() {
-            // Variables
-            let currentPhotoType = '';
-            let currentFile = null;
-            
-            // Elementos de foto del colaborador
-            const collaboratorCircle = document.getElementById('collaboratorCircle');
-            const collaboratorPlaceholder = document.getElementById('collaboratorPlaceholder');
-            const collaboratorImage = document.getElementById('collaboratorImage');
-            const editCollaboratorOverlay = document.getElementById('editCollaboratorOverlay');
-            const collaboratorInput = document.getElementById('collaborator-input');
-            
-            // Modal
-            const photoModal = document.getElementById('photoModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const previewImage = document.getElementById('previewImage');
-            const modalMessage = document.getElementById('modalMessage');
-            const confirmChangeBtn = document.getElementById('confirmChangeBtn');
-            const cancelChangeBtn = document.getElementById('cancelChangeBtn');
-            
-            // Formulario
-            const editForm = document.getElementById('editCollaboratorForm');
-            const saveChangesBtn = document.getElementById('saveChangesBtn');
-            const cancelBtn = document.getElementById('cancelBtn');
-            const deleteBtn = document.getElementById('deleteBtn');
-            const generatePasswordBtn = document.getElementById('generatePasswordBtn');
-            const passwordField = document.getElementById('password');
-            const confirmPasswordField = document.getElementById('confirmPassword');
-            const statusField = document.getElementById('status');
-            
-            // Elementos de mensajes
-            const passwordMessage = document.getElementById('passwordMessage');
-            const mainMessage = document.getElementById('mainMessage');
-            
-            // Selectores de estatus
-            const statusOptions = document.querySelectorAll('.role-option');
-            
-            // Toggle de visibilidad de contraseña
-            document.querySelectorAll('.toggle-password').forEach(button => {
-                button.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    const input = document.getElementById(targetId);
-                    const icon = this.querySelector('i');
-                    
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        icon.classList.remove('fa-eye');
-                        icon.classList.add('fa-eye-slash');
-                    } else {
-                        input.type = 'password';
-                        icon.classList.remove('fa-eye-slash');
-                        icon.classList.add('fa-eye');
-                    }
-                });
-            });
-            
-            // Manejo de selección de estatus
-            statusOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    // Remover clase selected de todas las opciones
-                    statusOptions.forEach(opt => opt.classList.remove('selected'));
-                    
-                    // Agregar clase selected a la opción clickeada
-                    this.classList.add('selected');
-                    
-                    // Actualizar el valor del campo oculto
-                    const statusValue = this.getAttribute('data-status');
-                    statusField.value = statusValue;
-                });
-            });
-            
-            // Generar contraseña aleatoria
-            generatePasswordBtn.addEventListener('click', function() {
-                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-                let password = '';
-                
-                // Asegurar que la contraseña tenga al menos un carácter de cada tipo
-                password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.charAt(Math.floor(Math.random() * 26));
-                password += 'abcdefghijklmnopqrstuvwxyz'.charAt(Math.floor(Math.random() * 26));
-                password += '0123456789'.charAt(Math.floor(Math.random() * 10));
-                password += '!@#$%^&*'.charAt(Math.floor(Math.random() * 8));
-                
-                // Completar el resto de la contraseña
-                for (let i = 4; i < 12; i++) {
-                    password += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
-                
-                // Mezclar la contraseña
-                password = password.split('').sort(() => 0.5 - Math.random()).join('');
-                
-                // Asignar la contraseña generada a los campos
-                passwordField.value = password;
-                confirmPasswordField.value = password;
-                
-                // Mostrar mensaje
-                showMessage(mainMessage, `Contraseña generada: ${password}`, 'info');
-            });
-            
-            // Manejo de fotos del colaborador
-            collaboratorCircle.addEventListener('click', () => collaboratorInput.click());
-            editCollaboratorOverlay.addEventListener('click', () => collaboratorInput.click());
-            
-            collaboratorInput.addEventListener('change', function(e) {
-                if (this.files && this.files[0]) {
-                    currentPhotoType = 'collaborator';
-                    currentFile = this.files[0];
-                    
-                    // Validar tipo y tamaño
-                    if (!validateImageFile(currentFile)) return;
-                    
-                    // Crear vista previa
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        previewImage.src = e.target.result;
-                        photoModal.style.display = 'flex';
-                        modalTitle.textContent = 'CAMBIAR FOTO DEL COLABORADOR';
-                        modalMessage.textContent = '¿Deseas usar esta imagen como foto del colaborador?';
-                    };
-                    reader.readAsDataURL(currentFile);
-                }
-            });
-            
-            // Confirmar cambio de foto
-            confirmChangeBtn.addEventListener('click', function() {
-                if (currentPhotoType === 'collaborator' && currentFile) {
-                    // Aquí normalmente enviarías la imagen al servidor
-                    // Por ahora solo actualizamos la vista
-                    collaboratorImage.src = previewImage.src;
-                    collaboratorImage.style.display = 'block';
-                    collaboratorPlaceholder.style.display = 'none';
-                    
-                    showMessage(mainMessage, 'Foto del colaborador actualizada correctamente', 'success');
-                    photoModal.style.display = 'none';
-                }
-            });
-            
-            // Cancelar cambio de foto
-            cancelChangeBtn.addEventListener('click', function() {
-                photoModal.style.display = 'none';
-                currentPhotoType = '';
-                currentFile = null;
-            });
-            
-            // Guardar cambios
-            saveChangesBtn.addEventListener('click', function() {
-                if (!validateForm()) return;
-                
-                // Simular envío al servidor
-                showMessage(mainMessage, 'Guardando cambios del colaborador...', 'info');
-                
-                setTimeout(() => {
-                    showMessage(mainMessage, 'Colaborador actualizado correctamente', 'success');
-                    
-                    // Aquí iría la lógica real para enviar los datos al servidor
-                    const formData = {
-                        organization: document.getElementById('organization').value,
-                        fullName: document.getElementById('fullName').value,
-                        email: document.getElementById('email').value,
-                        status: statusField.value,
-                        password: passwordField.value || null,
-                        permissions: Array.from(document.querySelectorAll('input[name="permissions"]:checked'))
-                                        .map(checkbox => checkbox.value)
-                    };
-                    
-                    console.log('Datos a enviar:', formData);
-                }, 1500);
-            });
-            
-            // Cancelar edición
-            cancelBtn.addEventListener('click', function() {
-                if (confirm('¿Estás seguro de que deseas cancelar? Los cambios no guardados se perderán.')) {
-                    window.location.href = 'gestionColaboradores.html';
-                }
-            });
-            
-            // Eliminar colaborador
-            deleteBtn.addEventListener('click', function() {
-                if (confirm('¿Estás seguro de que deseas eliminar este colaborador? Esta acción no se puede deshacer.')) {
-                    showMessage(mainMessage, 'Eliminando colaborador...', 'info');
-                    
-                    setTimeout(() => {
-                        showMessage(mainMessage, 'Colaborador eliminado correctamente', 'success');
-                        
-                        // Redirigir después de 2 segundos
-                        setTimeout(() => {
-                            window.location.href = 'gestionColaboradores.html';
-                        }, 2000);
-                    }, 1500);
-                }
-            });
-            
-            // Funciones auxiliares
-            function validateImageFile(file) {
-                const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
-                const maxSize = 5 * 1024 * 1024; // 5MB
-                
-                if (!validTypes.includes(file.type)) {
-                    showMessage(mainMessage, 'Formato de imagen no válido. Use JPG, PNG o GIF.', 'error');
-                    return false;
-                }
-                
-                if (file.size > maxSize) {
-                    showMessage(mainMessage, 'La imagen es demasiado grande. Máximo 5MB.', 'error');
-                    return false;
-                }
-                
-                return true;
-            }
-            
-            function validateForm() {
-                const fullName = document.getElementById('fullName').value.trim();
-                const email = document.getElementById('email').value.trim();
-                const password = passwordField.value;
-                const confirmPassword = confirmPasswordField.value;
-                
-                // Validar nombre
-                if (!fullName) {
-                    showMessage(mainMessage, 'El nombre completo es requerido', 'error');
-                    return false;
-                }
-                
-                // Validar email
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    showMessage(mainMessage, 'Ingrese un correo electrónico válido', 'error');
-                    return false;
-                }
-                
-                // Validar contraseñas si se proporcionan
-                if (password || confirmPassword) {
-                    if (password !== confirmPassword) {
-                        showMessage(passwordMessage, 'Las contraseñas no coinciden', 'error');
-                        return false;
-                    }
-                    
-                    if (password.length < 8) {
-                        showMessage(passwordMessage, 'La contraseña debe tener al menos 8 caracteres', 'error');
-                        return false;
-                    }
-                    
-                    // Validar requisitos de contraseña
-                    const hasUpperCase = /[A-Z]/.test(password);
-                    const hasLowerCase = /[a-z]/.test(password);
-                    const hasNumbers = /\d/.test(password);
-                    const hasSpecialChar = /[!@#$%^&*]/.test(password);
-                    
-                    if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
-                        showMessage(passwordMessage, 'La contraseña debe contener mayúsculas, minúsculas, números y caracteres especiales', 'error');
-                        return false;
-                    }
-                    
-                    showMessage(passwordMessage, 'Contraseña válida', 'success');
-                }
-                
-                return true;
-            }
-            
-            function showMessage(element, message, type) {
-                element.textContent = message;
-                element.className = 'message-container ' + type;
-                element.style.display = 'block';
-                
-                // Ocultar mensaje después de 5 segundos
-                setTimeout(() => {
-                    element.style.display = 'none';
-                }, 5000);
-            }
-        });
-    </script>
+    <!-- Script principal con SweetAlerts -->
+    <script src="editUser.js"></script>
 </body>
 </html>

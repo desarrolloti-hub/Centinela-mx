@@ -13,6 +13,9 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
 </head>
@@ -27,7 +30,7 @@
         <i class="fas fa-users"></i> Gestión de Colaboradores
     </div>
 
-    <button class="add-btn">
+    <button class="add-btn" id="addBtn">
         <i class="fas fa-user-plus"></i> Agregar Colaborador
     </button>
 </div>
@@ -45,7 +48,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Carlos</div></td>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Pedro Carlos</div></td>
                     <td>Ramírez</td>
                     <td>carlos@centinela.mx</td>
                     <td><span class="status active">Activo</span></td>
@@ -53,16 +56,16 @@
                         <button class="row-btn enable" title="Inhabilitar">
                             <i class="fas fa-user-check"></i>
                         </button>
-                        <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
-                        <i class="fas fa-edit"></i>
-                     </a>
+                        <!-- ENLACE ORIGINAL PARA EDITAR -->
+                        <a href="/users/admin/editUser/editUser.html"class="row-btn edit" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
                         <button class="row-btn view" title="Ver detalles"
-                            data-org="Centinela MX"
                             data-fullname="Carlos Ramírez"
                             data-email="carlos@centinela.mx"
                             data-status="Activo"
                             data-authid="UID-928372"
-                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
                             data-userphoto="https://i.imgur.com/6VBx3io.png"
                             data-created="2025-01-10"
                             data-updated="2025-02-05"
@@ -73,7 +76,7 @@
                 </tr>
 
                 <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Ana</div></td>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Ana Sofia</div></td>
                     <td>González</td>
                     <td>ana@centinela.mx</td>
                     <td><span class="status active">Activo</span></td>
@@ -81,16 +84,16 @@
                         <button class="row-btn enable" title="Inhabilitar">
                             <i class="fas fa-user-check"></i>
                         </button>
+                        <!-- ENLACE ORIGINAL PARA EDITAR -->
                         <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
-                        <i class="fas fa-edit"></i>
+                            <i class="fas fa-edit"></i>
                         </a>
+                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
                         <button class="row-btn view" title="Ver detalles"
-                            data-org="Centinela MX"
                             data-fullname="Ana González"
                             data-email="ana@centinela.mx"
                             data-status="Activo"
                             data-authid="UID-928373"
-                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
                             data-userphoto="https://i.imgur.com/6VBx3io.png"
                             data-created="2025-01-15"
                             data-updated="2025-02-06"
@@ -101,7 +104,7 @@
                 </tr>
 
                 <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Luis</div></td>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Luis Lalo</div></td>
                     <td>Martínez</td>
                     <td>luis@centinela.mx</td>
                     <td><span class="status inactive">Inactivo</span></td>
@@ -109,16 +112,16 @@
                         <button class="row-btn enable" title="Habilitar">
                             <i class="fas fa-ban"></i>
                         </button>
+                        <!-- ENLACE ORIGINAL PARA EDITAR -->
                         <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
-                        <i class="fas fa-edit"></i>
+                            <i class="fas fa-edit"></i>
                         </a>
+                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
                         <button class="row-btn view" title="Ver detalles"
-                            data-org="Centinela MX"
                             data-fullname="Luis Martínez"
                             data-email="luis@centinela.mx"
                             data-status="Inactivo"
                             data-authid="UID-928374"
-                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
                             data-userphoto="https://i.imgur.com/6VBx3io.png"
                             data-created="2025-01-20"
                             data-updated="2025-02-07"
@@ -129,7 +132,7 @@
                 </tr>
 
                 <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>María</div></td>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>María Laura</div></td>
                     <td>Fernández</td>
                     <td>maria@centinela.mx</td>
                     <td><span class="status active">Activo</span></td>
@@ -137,16 +140,16 @@
                         <button class="row-btn enable" title="Inhabilitar">
                             <i class="fas fa-user-check"></i>
                         </button>
-                        <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
-                     <i class="fas fa-edit"></i>
-                     </a>
+                        <!-- ENLACE ORIGINAL PARA EDITAR -->
+                        <a href="/users/admin/editUser/editUser.html"class="row-btn edit" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
                         <button class="row-btn view" title="Ver detalles"
-                            data-org="Centinela MX"
                             data-fullname="María Fernández"
                             data-email="maria@centinela.mx"
                             data-status="Activo"
                             data-authid="UID-928375"
-                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
                             data-userphoto="https://i.imgur.com/6VBx3io.png"
                             data-created="2025-01-25"
                             data-updated="2025-02-08"
@@ -157,25 +160,24 @@
                 </tr>
 
                 <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Jorge</div></td>
-                    <td>Hernández</td>
+                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Jorge Emili</div></td>
+                    <td>El Curioso</td>
                     <td>jorge@centinela.mx</td>
                     <td><span class="status active">Activo</span></td>
                     <td class="actions-cell">
                         <button class="row-btn enable" title="Inhabilitar">
                             <i class="fas fa-user-check"></i>
                         </button>
-                     <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
-                     <i class="fas fa-edit"></i>
-                     </a>
-
+                        <!-- ENLACE ORIGINAL PARA EDITAR -->
+                        <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
                         <button class="row-btn view" title="Ver detalles"
-                            data-org="Centinela MX"
                             data-fullname="Jorge Hernández"
                             data-email="jorge@centinela.mx"
                             data-status="Activo"
                             data-authid="UID-928376"
-                            data-orgphoto="https://i.imgur.com/8Km9tLL.png"
                             data-userphoto="https://i.imgur.com/6VBx3io.png"
                             data-created="2025-02-01"
                             data-updated="2025-02-09"
@@ -189,7 +191,7 @@
     </div>
 </div>
 
-<!-- MODAL VER COMPLETO -->
+<!-- MODAL VER COMPLETO (Como fallback) -->
 <div id="viewModal" class="modal">
     <div class="modal-content large">
         <span class="close-modal">&times;</span>
@@ -208,12 +210,6 @@
             <div><strong>Fecha actualización:</strong> <span id="viewUpdated"></span></div>
             <div><strong>Último login:</strong> <span id="viewLastLogin"></span></div>
         </div>
-
-        <div class="org-photo-box">
-            <p><strong>Foto Organización</strong></p>
-            <img id="viewOrgPhoto" alt="Logo de la organización">
-        </div>
-    </div>
 </div>
 
 <script src="/components/themeloader.js"></script>
@@ -221,144 +217,8 @@
 <script src="/components/navbar-admin-component.js"></script>
 <script src="/components/footer-admin-component.js"></script>
 
-<script>
-// Modal functionality
-const viewModal = document.getElementById("viewModal");
-const viewOrg = document.getElementById("viewOrg");
-const viewFullName = document.getElementById("viewFullName");
-const viewEmail = document.getElementById("viewEmail");
-const viewStatus = document.getElementById("viewStatus");
-const viewAuthId = document.getElementById("viewAuthId");
-const viewCreated = document.getElementById("viewCreated");
-const viewUpdated = document.getElementById("viewUpdated");
-const viewLastLogin = document.getElementById("viewLastLogin");
-const viewOrgPhoto = document.getElementById("viewOrgPhoto");
-const viewUserPhoto = document.getElementById("viewUserPhoto");
-
-// Open modal with user data
-document.querySelectorAll(".view").forEach(btn => {
-    btn.addEventListener("click", () => {
-        viewOrg.innerText = btn.dataset.org;
-        viewFullName.innerText = btn.dataset.fullname;
-        viewEmail.innerText = btn.dataset.email;
-        viewStatus.innerText = btn.dataset.status;
-        viewAuthId.innerText = btn.dataset.authid;
-        viewCreated.innerText = btn.dataset.created;
-        viewUpdated.innerText = btn.dataset.updated;
-        viewLastLogin.innerText = btn.dataset.lastlogin;
-        viewOrgPhoto.src = btn.dataset.orgphoto;
-        viewUserPhoto.src = btn.dataset.userphoto;
-        viewModal.classList.add("show");
-        document.body.style.overflow = "hidden";
-    });
-});
-
-// Close modal
-document.querySelector(".close-modal").onclick = () => {
-    viewModal.classList.remove("show");
-    document.body.style.overflow = "auto";
-};
-
-window.onclick = e => {
-    if (e.target === viewModal) {
-        viewModal.classList.remove("show");
-        document.body.style.overflow = "auto";
-    }
-};
-
-// Close modal with Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        viewModal.classList.remove("show");
-        document.body.style.overflow = "auto";
-    }
-});
-
-// Responsive table functionality
-document.addEventListener('DOMContentLoaded', function() {
-    function makeTableResponsive() {
-        if (window.innerWidth <= 600) {
-            // Add data labels for mobile view
-            const headers = [];
-            document.querySelectorAll('.collaborators-table th').forEach(th => {
-                headers.push(th.textContent);
-            });
-            
-            document.querySelectorAll('.collaborators-table tbody tr').forEach(tr => {
-                const cells = tr.querySelectorAll('td');
-                cells.forEach((td, index) => {
-                    if (index < headers.length) {
-                        td.setAttribute('data-label', headers[index]);
-                    }
-                });
-            });
-        } else {
-            // Remove data labels for desktop view
-            document.querySelectorAll('.collaborators-table td[data-label]').forEach(td => {
-                td.removeAttribute('data-label');
-            });
-        }
-    }
-    
-    // Initial call
-    makeTableResponsive();
-    
-    // On window resize
-    window.addEventListener('resize', makeTableResponsive);
-    
-    // Button functionality for enable/disable with icons
-    document.querySelectorAll('.row-btn.enable').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const isActive = this.closest('tr').querySelector('.status').classList.contains('active');
-            const icon = this.querySelector('i');
-            
-            // Efecto visual del clic
-            this.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                this.style.transform = '';
-            }, 150);
-            
-            if (isActive) {
-                // Cambiar a inactivo
-                this.title = "Habilitar";
-                icon.className = "fas fa-ban";
-                this.closest('tr').querySelector('.status').textContent = 'Inactivo';
-                this.closest('tr').querySelector('.status').className = 'status inactive';
-                this.classList.remove('active');
-                
-                // Efecto visual
-                this.style.boxShadow = '0 0 20px rgba(255, 77, 77, 0.5)';
-                setTimeout(() => {
-                    this.style.boxShadow = '';
-                }, 500);
-            } else {
-                // Cambiar a activo
-                this.title = "Inhabilitar";
-                icon.className = "fas fa-user-check";
-                this.closest('tr').querySelector('.status').textContent = 'Activo';
-                this.closest('tr').querySelector('.status').className = 'status active';
-                this.classList.add('active');
-                
-                // Efecto visual
-                this.style.boxShadow = '0 0 20px rgba(0, 255, 149, 0.5)';
-                setTimeout(() => {
-                    this.style.boxShadow = '';
-                }, 500);
-            }
-        });
-    });
-    
-    // Añade efecto hover a los botones
-    document.querySelectorAll('.row-btn').forEach(btn => {
-        btn.addEventListener('mouseenter', function() {
-            const icon = this.querySelector('i');
-            if (icon) {
-                icon.style.transition = 'all 0.3s ease';
-            }
-        });
-    });
-});
-</script>
+<!-- SÓLO ESTE ARCHIVO JS -->
+<script src="managmentUser.js"></script>
 
 </body>
 </html>
