@@ -1,4 +1,5 @@
-import { UserService, Administrador } from '/clases/user.js';
+// Importar las clases correctamente desde user.js
+import { UserManager } from '/clases/user.js';
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Aplicar estilos personalizados para SweetAlert2
 function applySweetAlertStyles() {
     const style = document.createElement('style');
-    style.textContent = `
+    style.textContent =/*css*/`
         /* Estilos personalizados para SweetAlert2 */
         .swal2-popup {
             background: var(--color-bg-tertiary) !important;
@@ -85,9 +86,9 @@ function applySweetAlertStyles() {
 }
 
 function initRegistrationForm() {
-    console.log('Iniciando formulario de registro...');
+    console.log('Iniciando formulario de registro de administrador...');
     
-    // Elementos del DOM - SOLO LOS QUE EXISTEN EN TU HTML
+    // Elementos del DOM
     const elements = {
         // Fotos
         profileCircle: document.getElementById('profileCircle'),
@@ -110,14 +111,14 @@ function initRegistrationForm() {
         confirmChangeBtn: document.getElementById('confirmChangeBtn'),
         cancelChangeBtn: document.getElementById('cancelChangeBtn'),
         
-        // Formulario - SOLO LOS QUE EXISTEN
+        // Formulario
         organizationInput: document.getElementById('organization'),
         fullNameInput: document.getElementById('fullName'),
         emailInput: document.getElementById('email'),
         passwordInput: document.getElementById('password'),
         confirmPasswordInput: document.getElementById('confirmPassword'),
         
-        // Botones y mensajes - SOLO LOS QUE EXISTEN
+        // Botones y mensajes
         registerBtn: document.getElementById('registerBtn'),
         cancelBtn: document.getElementById('cancelBtn'),
         mainMessage: document.getElementById('mainMessage'),
@@ -131,9 +132,9 @@ function initRegistrationForm() {
         }
     }
 
-    // Instancia del UserService
-    const userService = new UserService();
-    console.log('UserService creado:', userService);
+    // Instancia del UserManager
+    const userManager = new UserManager();
+    console.log('UserManager creado para registro de administrador:', userManager);
     
     // Variables para imágenes
     let selectedFile = null;
@@ -401,26 +402,35 @@ function initRegistrationForm() {
         });
     });
 
-    // ========== REGISTRO CON USER SERVICE ==========
+    // ========== REGISTRO SOLO PARA ADMINISTRADORES ==========
     if (elements.registerForm) {
         elements.registerForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            console.log('Formulario enviado');
+            console.log('Formulario de registro de administrador enviado');
             
             // Validaciones básicas
             let isValid = true;
             let messages = [];
             
+            // Validar organización
             if (!elements.organizationInput || !elements.organizationInput.value.trim()) {
                 isValid = false;
                 messages.push('El nombre de la organización es obligatorio');
+            } else if (elements.organizationInput.value.trim().length < 3) {
+                isValid = false;
+                messages.push('El nombre de la organización debe tener al menos 3 caracteres');
             }
             
+            // Validar nombre completo
             if (!elements.fullNameInput || !elements.fullNameInput.value.trim()) {
                 isValid = false;
                 messages.push('El nombre completo es obligatorio');
+            } else if (elements.fullNameInput.value.trim().length < 5) {
+                isValid = false;
+                messages.push('El nombre completo debe tener al menos 5 caracteres');
             }
             
+            // Validar email
             if (!elements.emailInput || !elements.emailInput.value.trim()) {
                 isValid = false;
                 messages.push('El correo electrónico es obligatorio');
@@ -429,28 +439,38 @@ function initRegistrationForm() {
                 messages.push('El correo electrónico no es válido');
             }
             
+            // Validar contraseña
             if (!elements.passwordInput || !elements.passwordInput.value) {
                 isValid = false;
                 messages.push('La contraseña es obligatoria');
+            } else if (!validatePassword(elements.passwordInput.value)) {
+                isValid = false;
+                messages.push('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial');
             }
             
+            // Validar confirmación de contraseña
             if (!elements.confirmPasswordInput || !elements.confirmPasswordInput.value) {
                 isValid = false;
                 messages.push('Debes confirmar la contraseña');
-            }
-            
-            // Validar contraseñas coinciden
-            if (elements.passwordInput && elements.confirmPasswordInput && 
+            } else if (elements.passwordInput && elements.confirmPasswordInput && 
                 elements.passwordInput.value !== elements.confirmPasswordInput.value) {
                 isValid = false;
                 messages.push('Las contraseñas no coinciden');
             }
             
-            // Validar seguridad de contraseña
-            if (elements.passwordInput && elements.passwordInput.value) {
-                if (!validatePassword(elements.passwordInput.value)) {
-                    isValid = false;
-                    messages.push('La contraseña no cumple con los requisitos de seguridad');
+            // Validar que se haya subido logo de organización (opcional pero recomendado)
+            if (!orgImageBase64) {
+                const confirmOrgLogo = await Swal.fire({
+                    title: '¿Continuar sin logo?',
+                    text: 'No has subido un logo para tu organización. ¿Deseas continuar sin él?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'SÍ, CONTINUAR',
+                    cancelButtonText: 'SUBIR LOGO'
+                });
+                
+                if (!confirmOrgLogo.isConfirmed) {
+                    return;
                 }
             }
             
@@ -464,14 +484,25 @@ function initRegistrationForm() {
                 return;
             }
             
-            // Mostrar confirmación
+            // Mostrar confirmación final
             const confirmResult = await Swal.fire({
-                title: '¿Crear cuenta de administrador?',
-                html: 'Esta será la primera y única cuenta de administrador.',
+                title: 'CREAR CUENTA DE ADMINISTRADOR',
+                html: `
+                    <div style="text-align: left; padding: 10px 0;">
+                        <p><strong>Organización:</strong> ${elements.organizationInput.value.trim()}</p>
+                        <p><strong>Nombre:</strong> ${elements.fullNameInput.value.trim()}</p>
+                        <p><strong>Email:</strong> ${elements.emailInput.value.trim()}</p>
+                        <p style="color: #ff9800; margin-top: 15px;">
+                            <i class="fas fa-exclamation-triangle"></i> Esta será la cuenta principal de administrador del sistema.
+                        </p>
+                    </div>
+                `,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'SÍ, CREAR ADMINISTRADOR',
-                cancelButtonText: 'CANCELAR'
+                confirmButtonText: 'CONFIRMAR REGISTRO',
+                cancelButtonText: 'CANCELAR',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6'
             });
             
             if (!confirmResult.isConfirmed) {
@@ -480,8 +511,8 @@ function initRegistrationForm() {
             
             // Mostrar loader
             Swal.fire({
-                title: 'Creando cuenta...',
-                html: 'Por favor espera...',
+                title: 'Creando cuenta de administrador...',
+                html: 'Esto puede tomar unos segundos. Por favor espera...',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
@@ -491,11 +522,9 @@ function initRegistrationForm() {
             });
             
             try {
-                // Crear objeto Administrador
+                // Crear objeto de datos para el administrador
                 const organizacionCamelCase = convertToCamelCase(elements.organizationInput.value.trim());
                 
-                // IMPORTANTE: Crear el objeto Administrador CORRECTAMENTE
-                // No uses "new Administrador()" directamente, pasa los datos como objeto plano
                 const adminData = {
                     organizacion: elements.organizationInput.value.trim(),
                     organizacionCamelCase: organizacionCamelCase,
@@ -508,30 +537,55 @@ function initRegistrationForm() {
                     theme: 'light'
                 };
                 
-                console.log('Datos a registrar:', adminData);
-                console.log('Contraseña (primeros 3 chars):', elements.passwordInput.value.substring(0, 3) + '***');
+                console.log('Registrando administrador con datos:', {
+                    organizacion: adminData.organizacion,
+                    nombre: adminData.nombreCompleto,
+                    email: adminData.correoElectronico,
+                    tieneFotoUsuario: !!adminData.fotoUsuario,
+                    tieneFotoOrganizacion: !!adminData.fotoOrganizacion
+                });
                 
-                // Registrar administrador usando el UserService
-                const resultado = await userService.registrarAdministradorInicial(
+                // Registrar administrador usando UserManager
+                const resultado = await userManager.createAdministrador(
                     adminData,
                     elements.passwordInput.value
                 );
                 
+                console.log('Administrador creado exitosamente:', resultado);
+                
                 // Cerrar loader
                 Swal.close();
                 
-                // Mostrar éxito
+                // Mostrar éxito con más información
                 await Swal.fire({
                     icon: 'success',
-                    title: '¡Administrador creado!',
-                    html: `Cuenta creada exitosamente para:<br><br>
-                          <strong>${resultado.organizacion}</strong><br>
-                          ${resultado.nombreCompleto}<br>
-                          ${resultado.correoElectronico}`,
-                    confirmButtonText: 'INICIAR SESIÓN'
+                    title: '¡ADMINISTRADOR CREADO!',
+                    html: `
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 60px; color: #28a745; margin-bottom: 20px;">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
+                                Cuenta creada exitosamente
+                            </h3>
+                            <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <p><strong>Organización:</strong> ${adminData.organizacion}</p>
+                                <p><strong>Administrador:</strong> ${adminData.nombreCompleto}</p>
+                                <p><strong>Email:</strong> ${adminData.correoElectronico}</p>
+                                <p><strong>Rol:</strong> SUPER ADMINISTRADOR</p>
+                            </div>
+                            <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-top: 20px;">
+                                <i class="fas fa-info-circle"></i> 
+                                Esta es la única cuenta de administrador del sistema. 
+                                Podrás crear colaboradores desde el panel de administración.
+                            </p>
+                        </div>
+                    `,
+                    confirmButtonText: 'IR AL INICIO DE SESIÓN',
+                    confirmButtonColor: '#28a745'
                 }).then(() => {
                     // Redirigir al login
-                    window.location.href = '/users/visitors/login/login.html';
+                    window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
                 });
                 
             } catch (error) {
@@ -539,27 +593,37 @@ function initRegistrationForm() {
                 Swal.close();
                 
                 // Mostrar error específico
-                console.error('Error en registro:', error);
+                console.error('Error en registro de administrador:', error);
                 
-                let errorMessage = 'Ocurrió un error al crear la cuenta';
+                let errorMessage = 'Ocurrió un error al crear la cuenta de administrador';
+                let errorTitle = 'Error al crear cuenta';
                 
-                if (error.message.includes('Ya existe un administrador')) {
-                    errorMessage = 'Ya existe un administrador registrado. Solo se permite un administrador inicial.';
+                if (error.message.includes('Ya existe un administrador registrado')) {
+                    errorMessage = 'Ya existe un administrador registrado en el sistema. Solo se permite un administrador principal.';
+                    errorTitle = 'Administrador ya existe';
                 } else if (error.message.includes('email-already-in-use')) {
-                    errorMessage = 'Este correo electrónico ya está registrado.';
+                    errorMessage = 'Este correo electrónico ya está registrado en el sistema.';
+                    errorTitle = 'Email en uso';
                 } else if (error.message.includes('weak-password')) {
-                    errorMessage = 'La contraseña es demasiado débil. Debe tener al menos 8 caracteres, mayúsculas, minúsculas, números y caracteres especiales.';
+                    errorMessage = 'La contraseña es demasiado débil. Debe tener al menos 8 caracteres con mayúsculas, minúsculas, números y caracteres especiales.';
+                    errorTitle = 'Contraseña débil';
                 } else if (error.message.includes('network-request-failed')) {
-                    errorMessage = 'Error de conexión. Verifica tu internet.';
+                    errorMessage = 'Error de conexión. Verifica tu conexión a internet e intenta nuevamente.';
+                    errorTitle = 'Error de conexión';
                 } else if (error.message.includes('Firestore')) {
                     errorMessage = 'Error en la base de datos: ' + error.message;
+                    errorTitle = 'Error de base de datos';
+                } else if (error.message.includes('auth/')) {
+                    errorMessage = 'Error de autenticación: ' + error.message;
+                    errorTitle = 'Error de autenticación';
                 }
                 
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error al crear cuenta',
+                    title: errorTitle,
                     text: errorMessage,
-                    confirmButtonText: 'ENTENDIDO'
+                    confirmButtonText: 'ENTENDIDO',
+                    confirmButtonColor: '#d33'
                 });
             }
         });
@@ -574,7 +638,9 @@ function initRegistrationForm() {
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar'
+                cancelButtonText: 'No, continuar',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6'
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = '/users/visitors/login/login.html';
@@ -583,15 +649,21 @@ function initRegistrationForm() {
         });
     }
 
-    // Mensaje inicial
+    // Mensaje inicial específico para registro de administrador
     setTimeout(() => {
         if (elements.mainMessage) {
             showMessage(elements.mainMessage, 'info', 
-                'Bienvenido al registro de administrador. Completa todos los campos para crear tu cuenta.');
+                'REGISTRO DE ADMINISTRADOR PRINCIPAL: Completa todos los campos para crear la única cuenta de administrador del sistema.');
         }
+        
+        // También actualizar el título de la página si es necesario
+        document.querySelector('.edit-sub-title').textContent = 
+            'Crear la cuenta principal de administrador del sistema';
     }, 1000);
     
     // Aplicar estilos SweetAlert después de cargar todo
     applySweetAlertStyles();
 }
 
+// Exportar para uso en otros archivos
+export { initRegistrationForm };

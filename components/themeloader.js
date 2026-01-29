@@ -181,3 +181,115 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeLoader = new ThemeLoader();
     themeLoader.init();
 });
+
+// Función para aplicar estilos personalizados a SweetAlert2
+function applySweetAlertStyles() {
+    // Verificar si ya se aplicaron los estilos
+    if (document.getElementById('sweetalert-custom-styles')) {
+        return;
+    }
+    
+    const style = document.createElement('style');
+    style.id = 'sweetalert-custom-styles';
+    style.textContent = /*css*/`
+        /* Estilos personalizados para SweetAlert2 */
+        .swal2-popup {
+            background: var(--color-bg-tertiary) !important;
+            border: 1px solid var(--color-border-light) !important;
+            border-radius: var(--border-radius-medium) !important;
+            box-shadow: var(--shadow-large) !important;
+            backdrop-filter: blur(8px) !important;
+            font-family: 'Rajdhani', sans-serif !important;
+        }
+        
+        .swal2-title {
+            color: var(--color-text-primary) !important;
+            font-family: 'Orbitron', sans-serif !important;
+            font-size: 1.5rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        .swal2-html-container {
+            color: var(--color-text-secondary) !important;
+            font-size: 1rem !important;
+        }
+        
+        .swal2-confirm {
+            background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: var(--border-radius-small) !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            transition: var(--transition-default) !important;
+            box-shadow: var(--shadow-small) !important;
+        }
+        
+        .swal2-confirm:hover {
+            background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary)) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-normal) !important;
+        }
+        
+        .swal2-cancel {
+            background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary)) !important;
+            color: var(--color-text-primary) !important;
+            border: 1px solid var(--color-border-light) !important;
+            border-radius: var(--border-radius-small) !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            transition: var(--transition-default) !important;
+            box-shadow: var(--shadow-small) !important;
+        }
+        
+        .swal2-cancel:hover {
+            background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary)) !important;
+            border-color: var(--color-accent-primary) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-normal) !important;
+        }
+    `;
+    document.head.appendChild(style);
+    console.log('✅ Estilos de SweetAlert2 aplicados');
+}
+
+// Aplicar estilos cuando SweetAlert2 esté disponible
+function initSweetAlertStyles() {
+    // Verificar periódicamente si SweetAlert2 está disponible
+    const checkInterval = setInterval(() => {
+        if (typeof Swal !== 'undefined') {
+            clearInterval(checkInterval);
+            applySweetAlertStyles();
+            
+            // También aplicar después de que se abra un modal
+            const originalFire = Swal.fire;
+            Swal.fire = function(...args) {
+                setTimeout(applySweetAlertStyles, 10);
+                return originalFire.apply(this, args);
+            };
+        }
+    }, 100);
+    
+    // Timeout después de 5 segundos
+    setTimeout(() => {
+        clearInterval(checkInterval);
+    }, 5000);
+}
+
+// Ejecutar cuando el documento esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSweetAlertStyles);
+} else {
+    initSweetAlertStyles();
+}
+
+// Exportar la función para uso externo
+window.applySweetAlertStyles = applySweetAlertStyles;
