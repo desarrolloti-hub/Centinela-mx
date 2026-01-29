@@ -35,7 +35,7 @@ class User {
         this._fechaCreacion = data.fechaCreacion || new Date();
         this._fotoUsuario = data.fotoUsuario || '';
         this._ultimoLogin = data.ultimoLogin || null;
-        this._theme = data.theme || this._obtenerThemeDelThemeManager() || 'Predeterminado';
+        this._theme = data.theme || this._obtenerThemeDelThemeManager() || 'light';
         this._eliminado = data.eliminado || false;
     }
 
@@ -50,6 +50,11 @@ class User {
         } catch (e) {
             return 'light';
         }
+    }
+
+    _obtenerThemeDelThemeManager() {
+        // Método base que puede ser sobrescrito por las clases hijas
+        return 'light';
     }
 
     _guardarThemeEnLocalStorage() {
@@ -267,32 +272,39 @@ class UserService {
 
     /**
      * REGISTRAR ADMINISTRADOR (Solo para registro inicial - no se puede desde la app)
-     * @param {Administrador} adminData - Objeto Administrador
+     * @param {Object} adminDataObj - Objeto con datos del administrador (NO instancia)
      * @param {string} password - Contraseña
      * @returns {Promise<Object>}
      */
-    async registrarAdministradorInicial(adminData, password) {
+    async registrarAdministradorInicial(adminDataObj, password) {
         try {
-            // Verificar que no haya administradores registrados
+            console.log('Datos recibidos para registro:', adminDataObj);
+            
+            // 1. Crear instancia de Administrador
+            const adminData = new Administrador(adminDataObj);
+            
+            // 2. Verificar que no haya administradores registrados
             const adminsSnapshot = await getDocs(collection(db, this.collectionAdmins));
             
             if (!adminsSnapshot.empty) {
                 throw new Error('Ya existe un administrador registrado');
             }
 
-            // 1. Crear usuario en Firebase Authentication
+            // 3. Crear usuario en Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(
                 auth, 
                 adminData.getCorreoElectronico(), 
                 password
             );
             
-            // 2. Actualizar displayName
+            console.log('Usuario Auth creado:', userCredential.user.uid);
+            
+            // 4. Actualizar displayName
             await updateProfile(userCredential.user, {
                 displayName: adminData.getNombreCompleto()
             });
 
-            // 3. Preparar datos del administrador
+            // 5. Preparar datos del administrador
             const adminObject = adminData.toObject();
             adminObject.idAuth = userCredential.user.uid;
             adminObject.fechaCreacion = serverTimestamp();
@@ -300,18 +312,21 @@ class UserService {
             adminObject.ultimoLogin = null;
             adminObject.esSuperAdmin = true; // El primero es super admin
 
-            // 4. Guardar en colección de administradores
+            // 6. Guardar en colección de administradores
             const adminRef = doc(db, this.collectionAdmins, userCredential.user.uid);
             await setDoc(adminRef, adminObject);
 
-            console.log('Administrador inicial creado exitosamente:', userCredential.user.uid);
+            console.log('Administrador inicial creado exitosamente en colección:', this.collectionAdmins);
+            console.log('ID del documento:', userCredential.user.uid);
+            console.log('Campos guardados:', Object.keys(adminObject));
+
             return {
                 id: userCredential.user.uid,
                 ...adminObject
             };
 
         } catch (error) {
-            console.error('Error al crear administrador inicial:', error);
+            console.error('Error detallado al crear administrador inicial:', error);
             throw error;
         }
     }
