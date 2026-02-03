@@ -5,28 +5,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Centinela</title>
+    
+    <!-- =============================================
+         IMPORTANTE: SE NECESITA SWEETALERT2 PARA LOS MENSAJES
+         ============================================= -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- =============================================
+         SISTEMA DE TEMAS Y ESTILOS
+         ============================================= -->
     <!-- Sistema de colores globales -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-     <!-- Sistema de particulas -->
+    <!-- Sistema de partículas de fondo -->
     <link rel="stylesheet" href="/components/particulas/particulas.css">
+    <!-- Estilos específicos del login -->
     <link rel="stylesheet" href="login.css">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
-        rel="stylesheet" />
-         <!-- Icono en barra de titulo -->
+    
+    <!-- =============================================
+         FUENTES Y TIPOGRAFÍA
+         ============================================= -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet" />
+    
+    <!-- =============================================
+         RECURSOS Y ASSETS
+         ============================================= -->
+    <!-- Icono en barra de título -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    <!-- Archivo para PWA -->
+    <!-- Archivo para PWA (Aplicación Web Progresiva) -->
     <link rel="manifest" href="/manifest.json">
+    <!-- Iconos de Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
+    <!-- =============================================
+         CANVAS PARA PARTÍCULAS ANIMADAS DE FONDO
+         ============================================= -->
     <canvas id="particle-canvas"></canvas>
 
-    <!-- LOGIN CONTAINER -->
+    <!-- =============================================
+         CONTENEDOR PRINCIPAL DEL LOGIN
+         ============================================= -->
     <div class="login-main-container">
         <div class="login-wrapper">
-            <!-- LEFT PANEL SIMPLIFICADO -->
+            
+            <!-- =============================================
+                 PANEL IZQUIERDO: LOGO Y MARCA
+                 ============================================= -->
             <div class="login-left-panel">
                 <div class="brand-container">
                     <!-- LOGO CENTINELA -->
@@ -34,41 +59,59 @@
                         <img src="/assets/images/logo.png" alt="Logo Centinela" class="centinela-logo">
                     </div>
                     
+                    <!-- NOMBRE DE LA MARCA -->
                     <h1 class="brand-name">CENTINELA</h1>
                     <p class="brand-description">Sistema de seguridad y monitoreo empresarial</p>
                     
-                    <!-- BOTÓN DE REGISTRARSE CORREGIDO -->
-                    <a href="/users/visitors/registrarse/registro.html" class="register-account-btn">
+                    <!-- =============================================
+                         BOTÓN DE REGISTRO - IMPORTANTE: TIENE ID PARA JS
+                         ============================================= -->
+                    <a href="/users/visitors/registrarse/registro.html" class="register-account-btn" id="registerBtn">
                         <i class="fas fa-user-plus"></i> REGISTRARSE
                     </a>
                 </div>
             </div>
 
-            <!-- RIGHT PANEL - LOGIN FORM -->
+            <!-- =============================================
+                 PANEL DERECHO: FORMULARIO DE LOGIN
+                 ============================================= -->
             <div class="login-right-panel">
-                <!-- Icono de usuario ARRIBA DEL TÍTULO -->
+                <!-- ICONO DE USUARIO DECORATIVO -->
                 <div class="user-icon-form-container">
                     <div class="user-icon-form">
                         <i class="fas fa-user"></i>
                     </div>
                 </div>
                 
+                <!-- ENCABEZADO DEL FORMULARIO -->
                 <div class="form-header">
-                    <h2 class="form-main-title">INICIAR SESIÓN</h2></a>
+                    <h2 class="form-main-title">INICIAR SESIÓN</h2>
                     <p class="form-sub-title">Ingresa tus credenciales para acceder al sistema</p>
                 </div>
 
-                <form class="login-form-container" action="#" method="post">
+                <!-- =============================================
+                     FORMULARIO DE LOGIN - CRÍTICO: DEBE TENER ID="loginForm"
+                     ============================================= -->
+                <form class="login-form-container" id="loginForm">
+                    
+                    <!-- =============================================
+                         CAMPO 1: CORREO ELECTRÓNICO (NO USERNAME)
+                         IMPORTANTE: id="email" type="email" required
+                         ============================================= -->
                     <div class="form-field-group">
-                        <label class="field-label" for="username">
-                            <i class="fas fa-user-circle"></i> NOMBRE DE USUARIO
+                        <label class="field-label" for="email">
+                            <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
                         </label>
                         <div class="input-wrapper">
-                            <input class="form-input-field" type="text" id="username" name="username"
-                                placeholder="Ingresa tu nombre de usuario" required>
+                            <input class="form-input-field" type="email" id="email" name="email"
+                                placeholder="ejemplo@correo.com" required>
                         </div>
                     </div>
 
+                    <!-- =============================================
+                         CAMPO 2: CONTRASEÑA
+                         IMPORTANTE: id="password" type="password" required
+                         ============================================= -->
                     <div class="form-field-group">
                         <label class="field-label" for="password">
                             <i class="fas fa-key"></i> CONTRASEÑA
@@ -76,22 +119,35 @@
                         <div class="input-wrapper password-field">
                             <input class="form-input-field" type="password" id="password" name="password"
                                 placeholder="********" required>
+                            <!-- BOTÓN PARA MOSTRAR/OCULTAR CONTRASEÑA -->
                             <button type="button" class="password-toggle-btn" id="passwordToggle">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
 
+                        <!-- ENLACES DE AYUDA -->
                         <div class="form-help-links">
-                            <a href="#" class="help-link">
+                            <!-- =============================================
+                                 ENLACE PARA RECUPERAR CONTRASEÑA
+                                 IMPORTANTE: id="forgotPassword" para JS
+                                 ============================================= -->
+                            <a href="#" class="help-link" id="forgotPassword">
                                 <i class="fas fa-key"></i> ¿RECUPERAR CONTRASEÑA?
-                            </a>
-                            <a href="#" class="help-link">
-                                <i class="fas fa-question-circle"></i> ¿OLVIDÉ MI USUARIO?
                             </a>
                         </div>
                     </div>
 
-                    <button type="submit" class="submit-login-btn">
+                    <!-- =============================================
+                         CONTENEDOR PARA MENSAJES DE ERROR/ÉXITO
+                         IMPORTANTE: id="loginMessage" para JS
+                         ============================================= -->
+                    <div id="loginMessage" class="login-message"></div>
+
+                    <!-- =============================================
+                         BOTÓN DE ENVÍO DEL FORMULARIO
+                         IMPORTANTE: type="submit" id="loginSubmitBtn"
+                         ============================================= -->
+                    <button type="submit" class="submit-login-btn" id="loginSubmitBtn">
                         <i class="fas fa-sign-in-alt"></i> INICIAR SESIÓN
                     </button>
                 </form>
@@ -99,11 +155,23 @@
         </div>
     </div>
 
-    <!-- COMPONENTES -->
-     <script src="/components/themeloader.js"></script>
+    <!-- =============================================
+         SCRIPTS DE COMPONENTES
+         ============================================= -->
+    <!-- Cargador de temas -->
+    <script src="/components/themeloader.js"></script>
+    <!-- Componente de navbar para visitantes -->
     <script src="/components/navbar-visitor-component.js"></script>
+    <!-- Componente de footer para visitantes -->
     <script src="/components/footer-visitor-component.js"></script>
+    <!-- Script de partículas animadas -->
     <script src="/components/particulas/particulas.js"></script>
+    
+    <!-- =============================================
+         SCRIPT PRINCIPAL DEL LOGIN - MÓDULO ES6
+         IMPORTANTE: type="module" para poder usar import/export
+         ============================================= -->
+    <script type="module" src="login.js"></script>
     
 </body>
 

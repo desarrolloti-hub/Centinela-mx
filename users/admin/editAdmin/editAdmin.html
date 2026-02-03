@@ -15,11 +15,14 @@
     <link rel="stylesheet" href="/components/particulas/particulas.css">
     
     <!-- Estilos principales -->
-    <link rel="stylesheet" href="edirAdmin.css">
+    <link rel="stylesheet" href="editAdmin.css">
     
     <!-- Assets -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -37,7 +40,7 @@
                     <p class="edit-sub-title">Administrador del Sistema Centinela</p>
                 </header>
 
-                <!-- Foto de perfil -->
+                <!-- Foto de perfil (EDITABLE) -->
                 <section class="photo-section">
                     <h2 class="section-title">
                         <i class="fas fa-user"></i>FOTO DE PERFIL
@@ -61,7 +64,7 @@
                     <p class="photo-info">Formatos: JPG, PNG, GIF • Máximo: 5MB</p>
                 </section>
 
-                <!-- Logo de organización -->
+                <!-- Logo de organización (EDITABLE) -->
                 <section class="photo-section">
                     <h2 class="section-title">
                         <i class="fas fa-building"></i>LOGO ORGANIZACIÓN
@@ -87,9 +90,9 @@
 
                 <!-- Botón volver -->
                 <footer class="back-btn-container">
-                    <a href="index.html" class="back-btn">
-                        <i class="fas fa-arrow-left"></i>VOLVER AL INICIO
-                    </a>
+                    <button id="backToDashboard" class="back-btn">
+                        <i class="fas fa-arrow-left"></i>VOLVER AL DASHBOARD
+                    </button>
                 </footer>
             </div>
 
@@ -97,72 +100,136 @@
             <div class="edit-right-panel">
                 <header class="edit-header">
                     <h1 class="edit-main-title">DATOS PERSONALES</h1>
-                    <p class="edit-sub-title">Actualiza tu nombre y contraseña</p>
+                    <p class="edit-sub-title">Actualiza tu información personal</p>
                 </header>
 
                 <form class="edit-form-container" id="editProfileForm">
-                    <!-- Nombre completo -->
+                    <!-- Nombre completo (EDITABLE) -->
                     <div class="form-field-group">
                         <label class="field-label" for="fullName">
-                            <i class="fas fa-user"></i> NOMBRE COMPLETO
+                            <i class="fas fa-user"></i> NOMBRE COMPLETO *
                         </label>
                         <div class="input-wrapper">
                             <input class="form-input-field" type="text" id="fullName" 
-                                   value="Bryan Vazquez Segura" placeholder="Ingresa tu nombre completo" required>
+                                   placeholder="Ingresa tu nombre completo" required>
+                        </div>
+                    </div>
+
+                    <!-- Correo electrónico (SOLO LECTURA) -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="email">
+                            <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
+                        </label>
+                        <div class="input-wrapper">
+                            <input class="form-input-field readonly-field" type="email" id="email" 
+                                   placeholder="Tu correo electrónico" readonly>
+                            <span class="readonly-badge">
+                                <i class="fas fa-lock"></i> Solo lectura
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Nombre de empresa (SOLO LECTURA) -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="organizationName">
+                            <i class="fas fa-building"></i> ORGANIZACIÓN
+                        </label>
+                        <div class="input-wrapper">
+                            <input class="form-input-field readonly-field" type="text" id="organizationName" 
+                                   placeholder="Nombre de tu organización" readonly>
+                            <span class="readonly-badge">
+                                <i class="fas fa-lock"></i> Solo lectura
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Cargo (SOLO LECTURA) -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="position">
+                            <i class="fas fa-briefcase"></i> CARGO
+                        </label>
+                        <div class="input-wrapper">
+                            <input class="form-input-field readonly-field" type="text" id="position" 
+                                   value="Administrador" readonly>
+                            <span class="readonly-badge">
+                                <i class="fas fa-lock"></i> Solo lectura
+                            </span>
                         </div>
                     </div>
 
                     <div class="divider"></div>
 
-                    <!-- Contraseñas -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="currentPassword">
-                            <i class="fas fa-lock"></i> CONTRASEÑA ACTUAL
-                        </label>
-                        <div class="input-wrapper password-field">
-                            <input class="form-input-field" type="password" id="currentPassword" 
-                                   placeholder="Ingresa tu contraseña actual">
-                            <button type="button" class="toggle-password" data-target="currentPassword">
-                                <i class="fas fa-eye"></i>
-                            </button>
+                    <!-- Sección de cambio de contraseña -->
+                    <div class="password-section">
+                        <h3 class="section-subtitle">
+                            <i class="fas fa-key"></i> CAMBIO DE CONTRASEÑA
+                        </h3>
+                        <p class="section-description">
+                            Completa solo si deseas cambiar tu contraseña
+                        </p>
+
+                        <!-- Contraseña actual -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="currentPassword">
+                                <i class="fas fa-lock"></i> CONTRASEÑA ACTUAL
+                            </label>
+                            <div class="input-wrapper password-field">
+                                <input class="form-input-field" type="password" id="currentPassword" 
+                                       placeholder="Ingresa tu contraseña actual">
+                                <button type="button" class="toggle-password" data-target="currentPassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Nueva contraseña -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="newPassword">
+                                <i class="fas fa-key"></i> NUEVA CONTRASEÑA
+                            </label>
+                            <div class="input-wrapper password-field">
+                                <input class="form-input-field" type="password" id="newPassword" 
+                                       placeholder="Ingresa nueva contraseña">
+                                <button type="button" class="toggle-password" data-target="newPassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Confirmar contraseña -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="confirmPassword">
+                                <i class="fas fa-key"></i> CONFIRMAR CONTRASEÑA
+                            </label>
+                            <div class="input-wrapper password-field">
+                                <input class="form-input-field" type="password" id="confirmPassword" 
+                                       placeholder="Confirma la nueva contraseña">
+                                <button type="button" class="toggle-password" data-target="confirmPassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Requisitos de contraseña -->
+                        <div class="password-requirements">
+                            <div class="requirements-title">
+                                <i class="fas fa-shield-alt"></i> REQUISITOS DE CONTRASEÑA SEGURA:
+                            </div>
+                            <ul class="requirements-list">
+                                <li>Mínimo 8 caracteres</li>
+                                <li>Al menos una letra mayúscula</li>
+                                <li>Al menos una letra minúscula</li>
+                                <li>Al menos un número</li>
+                                <li>Al menos un carácter especial (@, #, $, etc.)</li>
+                            </ul>
                         </div>
                     </div>
 
-                    <div class="form-field-group">
-                        <label class="field-label" for="newPassword">
-                            <i class="fas fa-key"></i> NUEVA CONTRASEÑA
-                        </label>
-                        <div class="input-wrapper password-field">
-                            <input class="form-input-field" type="password" id="newPassword" 
-                                   placeholder="Ingresa nueva contraseña">
-                            <button type="button" class="toggle-password" data-target="newPassword">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="form-field-group">
-                        <label class="field-label" for="confirmPassword">
-                            <i class="fas fa-key"></i> CONFIRMAR CONTRASEÑA
-                        </label>
-                        <div class="input-wrapper password-field">
-                            <input class="form-input-field" type="password" id="confirmPassword" 
-                                   placeholder="Confirma la nueva contraseña">
-                            <button type="button" class="toggle-password" data-target="confirmPassword">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Requisitos -->
-                    <div class="password-requirements">
-                        <div class="requirements-title">REQUISITOS DE CONTRASEÑA SEGURA:</div>
-                        <ul class="requirements-list">
-                            <li>Mínimo 8 caracteres</li>
-                            <li>Al menos una letra mayúscula</li>
-                            <li>Al menos un número</li>
-                            <li>Al menos un carácter especial (@, #, $, etc.)</li>
-                        </ul>
+                    <!-- Nota sobre permisos -->
+                    <div class="permissions-note">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Nota sobre permisos:</strong> Algunos campos están bloqueados por políticas de seguridad. 
+                        Para modificar información restringida, contacta al administrador principal del sistema.
                     </div>
 
                     <!-- Mensajes -->
@@ -198,8 +265,7 @@
             </p>
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-confirm" id="confirmChangeBtn">CONFIRMAR</button>
-                <a href="/users/admin/dashAdmin/dashAdmin.html">
-                <button class="modal-btn modal-btn-cancel" id="cancelChangeBtn">CANCELAR</button></a>
+                <button class="modal-btn modal-btn-cancel" id="cancelChangeBtn">CANCELAR</button>
             </div>
         </div>
     </div>
@@ -210,9 +276,10 @@
     <script src="/components/footer-admin-component.js"></script>
     <script src="/components/particulas/particulas.js"></script>
     
+    <!-- Firebase -->
+    <script type="module" src="/clases/user.js"></script>
+    
     <!-- Script principal -->
-    <script src="editAdmin.js"></script>
-    <!-- Script de sweetAlert -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="module" src="editAdmin.js"></script>
 </body>
 </html>
