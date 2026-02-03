@@ -1,5 +1,5 @@
-// ARCHIVO JS COMPLETO PARA CREAR COLABORADOR
-// Basado en el código del administrador
+// ARCHIVO JS PARA CREAR COLABORADOR - VERSIÓN COMPLETA Y CORREGIDA
+// Hereda campos del administrador actual desde UserManager
 
 // Importar las clases correctamente desde user.js
 import { UserManager } from '/clases/user.js';
@@ -14,110 +14,38 @@ document.addEventListener('DOMContentLoaded', function() {
     initCollaboratorForm();
 });
 
-function applySweetAlertStyles() {
-    const style = document.createElement('style');
-    style.textContent = /*css*/`
-        /* Estilos personalizados para SweetAlert2 */
-        .swal2-popup {
-            background: var(--color-bg-tertiary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: var(--border-radius-medium) !important;
-            box-shadow: var(--shadow-large) !important;
-            backdrop-filter: blur(8px) !important;
-            font-family: 'Rajdhani', sans-serif !important;
-        }
-        
-        .swal2-title {
-            color: var(--color-text-primary) !important;
-            font-family: 'Orbitron', sans-serif !important;
-            font-size: 1.5rem !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-        }
-        
-        .swal2-html-container {
-            color: var(--color-text-secondary) !important;
-            font-size: 1rem !important;
-        }
-        
-        .swal2-confirm {
-            background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: var(--border-radius-small) !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default) !important;
-            box-shadow: var(--shadow-small) !important;
-        }
-        
-        .swal2-confirm:hover {
-            background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary)) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-normal) !important;
-        }
-        
-        .swal2-cancel {
-            background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary)) !important;
-            color: var(--color-text-primary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: var(--border-radius-small) !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default) !important;
-            box-shadow: var(--shadow-small) !important;
-        }
-        
-        .swal2-cancel:hover {
-            background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary)) !important;
-            border-color: var(--color-accent-primary) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-normal) !important;
-        }
-    `;
-    document.head.appendChild(style);
-}
-
 function initCollaboratorForm() {
     console.log('Iniciando formulario de registro de colaborador...');
     
     // Verificar que todos los elementos del DOM existan
     const elements = {
+        // Elementos del DOM según HTML actual
         // Foto de perfil
-        logoPreview: document.getElementById('logoPreview'),
-        logoPlaceholder: document.getElementById('logoPlaceholder'),
-        fotoPerfil: document.getElementById('fotoPerfil'),
-        logoSelectBtn: document.getElementById('logoSelectBtn'),
-        logoRemoveBtn: document.getElementById('logoRemoveBtn'),
+        profileCircle: document.getElementById('profileCircle'),
+        profilePlaceholder: document.getElementById('profilePlaceholder'),
+        profileImage: document.getElementById('profileImage'),
+        editProfileOverlay: document.getElementById('editProfileOverlay'),
+        profileInput: document.getElementById('profile-input'),
+        
+        // Logo de organización
+        orgCircle: document.getElementById('orgCircle'),
+        orgPlaceholder: document.getElementById('orgPlaceholder'),
+        orgImage: document.getElementById('orgImage'),
+        editOrgOverlay: document.getElementById('editOrgOverlay'),
+        orgInput: document.getElementById('org-input'),
         
         // Campos del formulario
+        organization: document.getElementById('organization'),
         nombreCompleto: document.getElementById('nombreCompleto'),
         correoElectronico: document.getElementById('correoElectronico'),
+        rol: document.getElementById('rol'),
         contrasena: document.getElementById('contrasena'),
         confirmarContrasena: document.getElementById('confirmarContrasena'),
-        rol: document.getElementById('rol'),
-        departamento: document.getElementById('departamento'),
-        fechaIngreso: document.getElementById('fechaIngreso'),
-        telefono: document.getElementById('telefono'),
-        direccion: document.getElementById('direccion'),
-        habilidades: document.getElementById('habilidades'),
-        observaciones: document.getElementById('observaciones'),
         
-        // Botones
+        // Otros elementos
         registerBtn: document.getElementById('registerBtn'),
         cancelBtn: document.getElementById('cancelBtn'),
-        
-        // Mensajes
         mainMessage: document.getElementById('mainMessage'),
-        
-        // Formulario
         registerForm: document.getElementById('registerForm')
     };
 
@@ -241,40 +169,123 @@ function initCollaboratorForm() {
                hasSpecialChar;
     }
 
+    // ========== ACTUALIZAR INTERFAZ CON DATOS DEL ADMIN ==========
+    async function updateAdminInfo(admin) {
+        console.log('Actualizando interfaz con datos del administrador:', admin);
+        
+        // 1. Mostrar organización en el campo correspondiente
+        if (elements.organization) {
+            elements.organization.value = admin.organizacion;
+            elements.organization.disabled = true; // Solo lectura
+            elements.organization.style.background = 'var(--color-bg-tertiary)';
+            elements.organization.style.color = 'var(--color-text-secondary)';
+            elements.organization.style.cursor = 'not-allowed';
+            
+            // Añadir indicador visual
+            const label = elements.organization.closest('.form-field-group').querySelector('.field-label');
+            if (label) {
+                const indicator = document.createElement('span');
+                indicator.innerHTML = ' <span style="color: var(--color-accent-primary); font-size: 0.75rem;">(Heredado del administrador)</span>';
+                label.appendChild(indicator);
+            }
+        }
+        
+        // 2. Mostrar logo de la organización si existe
+        if (admin.fotoOrganizacion && elements.orgCircle && elements.orgPlaceholder && elements.orgImage) {
+            try {
+                console.log('Cargando logo de organización del administrador');
+                
+                // Ocultar placeholder
+                elements.orgPlaceholder.style.display = 'none';
+                
+                // Mostrar imagen
+                elements.orgImage.src = admin.fotoOrganizacion;
+                elements.orgImage.style.display = 'block';
+                
+                // Cambiar texto informativo
+                const orgInfo = document.querySelectorAll('.photo-section')[1]?.querySelector('.photo-info');
+                if (orgInfo) {
+                    orgInfo.textContent = 'Logo heredado del administrador. Los colaboradores verán este logo.';
+                }
+                
+            } catch (error) {
+                console.warn('No se pudo cargar el logo de la organización:', error);
+            }
+        }
+        
+        // 3. Actualizar títulos y textos informativos
+        updateTitlesAndDescriptions(admin);
+        
+        // 4. Mostrar datos del admin en mensaje informativo
+        showAdminInfoMessage(admin);
+    }
+
+    function updateTitlesAndDescriptions(admin) {
+        // Actualizar título principal del panel derecho
+        const mainTitle = document.querySelector('.edit-right-panel .edit-main-title');
+        if (mainTitle) {
+            mainTitle.textContent = `CREAR COLABORADOR PARA ${admin.organizacion.toUpperCase()}`;
+        }
+        
+        // Actualizar subtítulo
+        const subTitle = document.querySelector('.edit-right-panel .edit-sub-title');
+        if (subTitle) {
+            subTitle.textContent = `Completa los datos para crear un colaborador en ${admin.organizacion}`;
+        }
+        
+        // Actualizar título del panel izquierdo
+        const leftTitle = document.querySelector('.edit-left-panel .edit-main-title');
+        if (leftTitle) {
+            leftTitle.textContent = 'CREAR COLABORADOR';
+        }
+        
+        // Actualizar subtítulo del panel izquierdo
+        const leftSubTitle = document.querySelector('.edit-left-panel .edit-sub-title');
+        if (leftSubTitle) {
+            leftSubTitle.textContent = `Administrador: ${admin.nombreCompleto}`;
+        }
+        
+        // Actualizar texto del botón de registro
+        if (elements.registerBtn) {
+            elements.registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> CREAR COLABORADOR';
+        }
+    }
+
+    function showAdminInfoMessage(admin) {
+        if (elements.mainMessage) {
+            const messageHTML = `
+                <div style="background: var(--color-bg-tertiary); padding: 12px; border-radius: 4px; border-left: 4px solid var(--color-accent-primary);">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <i class="fas fa-user-shield" style="color: var(--color-accent-primary);"></i>
+                        <strong style="color: var(--color-text-primary);">Creando colaborador como administrador</strong>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
+                        <div><strong>Administrador:</strong> ${admin.nombreCompleto}</div>
+                        <div><strong>Organización:</strong> ${admin.organizacion}</div>
+                        <div><strong>Plan:</strong> ${admin.plan.toUpperCase()}</div>
+                        <div><strong>Tema:</strong> ${admin.theme}</div>
+                    </div>
+                    <div style="margin-top: 8px; padding: 8px; background: var(--color-bg-secondary); border-radius: 4px; font-size: 0.8rem;">
+                        <i class="fas fa-info-circle" style="color: var(--color-accent-secondary); margin-right: 5px;"></i>
+                        El colaborador heredará estos datos de la organización.
+                    </div>
+                </div>
+            `;
+            
+            elements.mainMessage.innerHTML = messageHTML;
+            elements.mainMessage.style.display = 'block';
+        }
+    }
+
     // ========== MANEJO DE IMÁGENES ==========
-    function updatePhoto(previewElement, placeholderElement, imageSrc) {
-        if (imageSrc && previewElement && placeholderElement) {
-            // Remover imagen anterior si existe
-            const existingImg = previewElement.querySelector('img');
-            if (existingImg) {
-                existingImg.remove();
-            }
-            
-            // Crear nueva imagen
-            const img = document.createElement('img');
-            img.src = imageSrc;
-            img.alt = 'Foto de perfil';
-            img.style.display = 'block';
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.borderRadius = '50%';
-            img.style.objectFit = 'cover';
-            
-            // Agregar la imagen al círculo
-            previewElement.appendChild(img);
-            
+    function updateProfilePhoto(imageSrc) {
+        if (imageSrc && elements.profileCircle && elements.profilePlaceholder && elements.profileImage) {
             // Ocultar placeholder
-            placeholderElement.style.display = 'none';
+            elements.profilePlaceholder.style.display = 'none';
             
-            // Mostrar botón de remover
-            if (elements.logoRemoveBtn) {
-                elements.logoRemoveBtn.style.display = 'flex';
-            }
-            
-            // Cambiar texto del botón de selección
-            if (elements.logoSelectBtn) {
-                elements.logoSelectBtn.innerHTML = '<i class="fas fa-sync-alt"></i> CAMBIAR FOTO';
-            }
+            // Mostrar imagen
+            elements.profileImage.src = imageSrc;
+            elements.profileImage.style.display = 'block';
             
             // Almacenar referencia de la imagen
             profileImageBase64 = imageSrc;
@@ -290,30 +301,18 @@ function initCollaboratorForm() {
         }
     }
 
-    function removePhoto() {
-        if (elements.logoPreview && elements.logoPlaceholder) {
-            // Remover la imagen
-            const img = elements.logoPreview.querySelector('img');
-            if (img) {
-                img.remove();
-            }
+    function removeProfilePhoto() {
+        if (elements.profileCircle && elements.profilePlaceholder && elements.profileImage) {
+            // Ocultar imagen
+            elements.profileImage.style.display = 'none';
+            elements.profileImage.src = '';
             
             // Mostrar placeholder
-            elements.logoPlaceholder.style.display = 'flex';
-            
-            // Ocultar botón de remover
-            if (elements.logoRemoveBtn) {
-                elements.logoRemoveBtn.style.display = 'none';
-            }
-            
-            // Restaurar texto del botón de selección
-            if (elements.logoSelectBtn) {
-                elements.logoSelectBtn.innerHTML = '<i class="fas fa-upload"></i> SELECCIONAR FOTO';
-            }
+            elements.profilePlaceholder.style.display = 'flex';
             
             // Limpiar input de archivo
-            if (elements.fotoPerfil) {
-                elements.fotoPerfil.value = '';
+            if (elements.profileInput) {
+                elements.profileInput.value = '';
             }
             
             // Limpiar referencia
@@ -332,18 +331,22 @@ function initCollaboratorForm() {
     }
 
     // ========== EVENTOS DE IMÁGENES ==========
-    // Seleccionar foto
-    if (elements.logoSelectBtn && elements.fotoPerfil) {
-        elements.logoSelectBtn.addEventListener('click', function() {
-            elements.fotoPerfil.click();
+    // Seleccionar foto de perfil
+    if (elements.editProfileOverlay && elements.profileInput) {
+        elements.editProfileOverlay.addEventListener('click', function() {
+            elements.profileInput.click();
+        });
+        
+        elements.profileCircle.addEventListener('click', function() {
+            elements.profileInput.click();
         });
     }
     
-    // Manejar selección de archivo
-    if (elements.fotoPerfil) {
-        elements.fotoPerfil.addEventListener('change', function(event) {
+    // Manejar selección de archivo de perfil
+    if (elements.profileInput) {
+        elements.profileInput.addEventListener('change', function(event) {
             const file = event.target.files[0];
-            if (file && validateFile(file, 2)) {
+            if (file && validateFile(file, 5)) { // 5MB máximo para foto de perfil
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
@@ -365,11 +368,11 @@ function initCollaboratorForm() {
                         cancelButtonColor: '#d33'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            updatePhoto(elements.logoPreview, elements.logoPlaceholder, e.target.result);
+                            updateProfilePhoto(e.target.result);
                             selectedFile = file;
                         } else {
                             // Limpiar input
-                            elements.fotoPerfil.value = '';
+                            elements.profileInput.value = '';
                         }
                     });
                 };
@@ -377,33 +380,18 @@ function initCollaboratorForm() {
                 reader.readAsDataURL(file);
             } else {
                 // Limpiar input si no es válido
-                elements.fotoPerfil.value = '';
+                elements.profileInput.value = '';
             }
         });
     }
     
-    // Remover foto
-    if (elements.logoRemoveBtn) {
-        elements.logoRemoveBtn.addEventListener('click', function() {
-            Swal.fire({
-                title: '¿Remover foto de perfil?',
-                text: 'La foto actual será eliminada',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'SI, REMOVER',
-                cancelButtonText: 'CANCELAR',
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    removePhoto();
-                }
-            });
-        });
+    // Logo de organización (solo visualización, no se puede cambiar)
+    if (elements.editOrgOverlay) {
+        elements.editOrgOverlay.style.display = 'none'; // Ocultar botón de edición
     }
 
     // ========== MOSTRAR/OCULTAR CONTRASEÑA ==========
-    document.querySelectorAll('.toggle-password').forEach(button => {
+    document.querySelectorAll('.toggle-contrasena').forEach(button => {
         button.addEventListener('click', function() {
             const targetId = this.getAttribute('data-target');
             const input = document.getElementById(targetId);
@@ -424,10 +412,23 @@ function initCollaboratorForm() {
     // ========== OBTENER ADMINISTRADOR ACTUAL ==========
     async function loadCurrentAdmin() {
         try {
-            // Obtener el administrador actual de localStorage
-            const adminData = JSON.parse(localStorage.getItem('currentUser'));
+            // ESPERAR a que UserManager cargue el usuario actual
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
-            if (!adminData) {
+            // Obtener el administrador actual desde UserManager
+            if (!userManager.currentUser) {
+                // Intentar cargar desde localStorage como respaldo
+                try {
+                    const storedUser = JSON.parse(localStorage.getItem('centinela-currentUser'));
+                    if (storedUser && storedUser.cargo === 'administrador') {
+                        currentAdmin = storedUser;
+                        console.log('Administrador cargado desde localStorage:', currentAdmin.email);
+                        return currentAdmin;
+                    }
+                } catch (e) {
+                    console.warn('No se pudo cargar usuario desde localStorage');
+                }
+                
                 showErrorMessage('No hay sesión de administrador activa. Por favor, inicia sesión.');
                 setTimeout(() => {
                     window.location.href = '/users/visitors/login/login.html';
@@ -435,12 +436,35 @@ function initCollaboratorForm() {
                 return null;
             }
             
-            currentAdmin = adminData;
-            console.log('Administrador actual cargado:', currentAdmin.email);
-            return adminData;
+            // Verificar que sea administrador
+            if (userManager.currentUser.cargo !== 'administrador') {
+                showErrorMessage('No tienes permisos de administrador para crear colaboradores.');
+                setTimeout(() => {
+                    window.location.href = '/users/colaborador/dashboard/dashboard.html';
+                }, 3000);
+                return null;
+            }
+            
+            currentAdmin = userManager.currentUser;
+            console.log('Administrador actual cargado desde UserManager:', {
+                id: currentAdmin.id,
+                nombre: currentAdmin.nombreCompleto,
+                email: currentAdmin.correoElectronico,
+                organizacion: currentAdmin.organizacion,
+                organizacionCamelCase: currentAdmin.organizacionCamelCase,
+                fotoOrganizacion: currentAdmin.fotoOrganizacion ? 'Sí' : 'No',
+                theme: currentAdmin.theme,
+                plan: currentAdmin.plan
+            });
+            
+            // Actualizar la interfaz con los datos del admin
+            updateAdminInfo(currentAdmin);
+            
+            return currentAdmin;
+            
         } catch (error) {
             console.error('Error al cargar administrador:', error);
-            showErrorMessage('Error al cargar datos del administrador');
+            showErrorMessage('Error al cargar datos del administrador: ' + error.message);
             return null;
         }
     }
@@ -514,12 +538,6 @@ function initCollaboratorForm() {
             messages.push('Debes seleccionar un rol');
         }
         
-        // Validar fecha de ingreso
-        if (elements.fechaIngreso && !elements.fechaIngreso.value) {
-            isValid = false;
-            messages.push('La fecha de ingreso es obligatoria');
-        }
-        
         if (!isValid) {
             Swal.fire({
                 icon: 'error',
@@ -536,15 +554,19 @@ function initCollaboratorForm() {
             return;
         }
         
-        // Mostrar confirmación final
+        // Mostrar confirmación final con datos del administrador
         const confirmResult = await Swal.fire({
             title: 'CREAR COLABORADOR',
             html: `
                 <div style="text-align: left; padding: 10px 0;">
-                    <p><strong>Nombre:</strong> ${elements.nombreCompleto.value.trim()}</p>
+                    <div style="background: var(--color-bg-secondary); padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                        <p><strong>Administrador creador:</strong> ${currentAdmin.nombreCompleto}</p>
+                        <p><strong>Organización:</strong> ${currentAdmin.organizacion}</p>
+                    </div>
+                    <p><strong>Nombre del colaborador:</strong> ${elements.nombreCompleto.value.trim()}</p>
                     <p><strong>Email:</strong> ${elements.correoElectronico.value.trim()}</p>
                     <p><strong>Rol:</strong> ${elements.rol ? elements.rol.options[elements.rol.selectedIndex].text : 'No especificado'}</p>
-                    <p><strong>Organización:</strong> ${currentAdmin.organizacion || 'No especificada'}</p>
+                    <p><strong>Plan heredado:</strong> ${currentAdmin.plan.toUpperCase()}</p>
                     <p style="color: #ff9800; margin-top: 15px;">
                         <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación al colaborador.
                     </p>
@@ -581,28 +603,41 @@ function initCollaboratorForm() {
         });
         
         try {
-            // Crear objeto de datos para el colaborador
+            // Crear objeto de datos para el colaborador con campos heredados del admin
             const collaboratorData = {
                 nombreCompleto: elements.nombreCompleto.value.trim(),
                 correoElectronico: elements.correoElectronico.value.trim(),
                 fotoUsuario: profileImageBase64,
+                
+                // Campos heredados del administrador
+                organizacion: currentAdmin.organizacion,
+                organizacionCamelCase: currentAdmin.organizacionCamelCase,
+                fotoOrganizacion: currentAdmin.fotoOrganizacion,
+                theme: currentAdmin.theme || 'light',
+                plan: currentAdmin.plan || 'gratis',
+                
+                // Campos específicos del formulario
                 rol: elements.rol ? elements.rol.value : 'colaborador',
-                departamento: elements.departamento ? elements.departamento.value : '',
-                fechaIngreso: elements.fechaIngreso ? elements.fechaIngreso.value : '',
-                telefono: elements.telefono ? elements.telefono.value : '',
-                direccion: elements.direccion ? elements.direccion.value : '',
-                habilidades: elements.habilidades ? elements.habilidades.value : '',
-                observaciones: elements.observaciones ? elements.observaciones.value : '',
+                
+                // Campos de sistema
                 esSuperAdmin: false,
                 esAdminOrganizacion: false,
                 status: true,
-                theme: 'light',
-                plan: 'gratis',
-                organizacion: currentAdmin.organizacion,
-                organizacionCamelCase: currentAdmin.organizacionCamelCase,
-                creadoPor: currentAdmin.uid,
-                creadoPorEmail: currentAdmin.email,
-                fechaCreacion: new Date().toISOString()
+                
+                // Campos de trazabilidad
+                creadoPor: currentAdmin.id,
+                creadoPorEmail: currentAdmin.correoElectronico,
+                creadoPorNombre: currentAdmin.nombreCompleto,
+                fechaCreacion: new Date().toISOString(),
+                
+                // Permisos básicos para colaboradores
+                permisosPersonalizados: {
+                    leerPerfil: true,
+                    leerOrganizacion: true,
+                    actualizarPerfil: false,
+                    crearContenido: false,
+                    eliminarContenido: false
+                }
             };
             
             console.log('Registrando colaborador con datos:', {
@@ -610,14 +645,17 @@ function initCollaboratorForm() {
                 email: collaboratorData.correoElectronico,
                 organizacion: collaboratorData.organizacion,
                 tieneFotoUsuario: !!collaboratorData.fotoUsuario,
-                rol: collaboratorData.rol
+                tieneFotoOrganizacion: !!collaboratorData.fotoOrganizacion,
+                theme: collaboratorData.theme,
+                plan: collaboratorData.plan,
+                creadoPor: collaboratorData.creadoPor
             });
             
             // Registrar colaborador usando UserManager
             const resultado = await userManager.createColaborador(
                 collaboratorData,
                 elements.contrasena.value,
-                currentAdmin
+                currentAdmin.id
             );
             
             console.log('Colaborador creado exitosamente:', resultado);
@@ -642,6 +680,7 @@ function initCollaboratorForm() {
                             <p><strong>Email:</strong> ${collaboratorData.correoElectronico}</p>
                             <p><strong>Rol:</strong> ${collaboratorData.rol.toUpperCase()}</p>
                             <p><strong>Organización:</strong> ${collaboratorData.organizacion}</p>
+                            <p><strong>Creado por:</strong> ${collaboratorData.creadoPorNombre}</p>
                         </div>
                         <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-top: 20px;">
                             <h4 style="color: #0a2540; margin-bottom: 10px;">
@@ -656,14 +695,14 @@ function initCollaboratorForm() {
                         </div>
                         <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                             <p style="color: #0a2540; font-weight: bold; margin-bottom: 10px;">
-                                <i class="fas fa-lightbulb"></i> Instrucciones para el colaborador:
+                                <i class="fas fa-lightbulb"></i> Información heredada del administrador:
                             </p>
-                            <ol style="text-align: left; margin: 0; padding-left: 20px; color: #666;">
-                                <li>Revisar su bandeja de entrada (y carpeta de spam)</li>
-                                <li>Hacer clic en el enlace de verificación del correo</li>
-                                <li>Iniciar sesión con sus credenciales</li>
-                                <li>Completar su perfil si es necesario</li>
-                            </ol>
+                            <ul style="text-align: left; margin: 0; padding-left: 20px; color: #666;">
+                                <li><strong>Organización:</strong> ${collaboratorData.organizacion}</li>
+                                <li><strong>Plan:</strong> ${collaboratorData.plan.toUpperCase()}</li>
+                                <li><strong>Tema:</strong> ${collaboratorData.theme}</li>
+                                ${collaboratorData.fotoOrganizacion ? '<li><strong>Logo de organización:</strong> Heredado ✓</li>' : ''}
+                            </ul>
                         </div>
                     </div>
                 `,
@@ -677,11 +716,6 @@ function initCollaboratorForm() {
                 if (result.isConfirmed) {
                     // Limpiar formulario para nuevo registro
                     resetForm();
-                    // Rehabilitar botón
-                    if (elements.registerBtn) {
-                        elements.registerBtn.disabled = false;
-                        elements.registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> CREAR COLABORADOR';
-                    }
                 } else {
                     // Redirigir al panel de control
                     window.location.href = '/users/admin/dashboard/dashboard.html';
@@ -733,20 +767,12 @@ function initCollaboratorForm() {
                         errorTitle = 'Demasiados intentos';
                         break;
                     default:
-                        // Si es un error personalizado de nuestra lógica
-                        if (error.message.includes('El correo electrónico ya está registrado')) {
-                            errorMessage = error.message;
-                            errorTitle = 'Email duplicado';
-                        } else if (error.message.includes('Límite de colaboradores alcanzado')) {
-                            errorMessage = error.message;
-                            errorTitle = 'Límite alcanzado';
-                        } else if (error.message.includes('Firestore')) {
+                        if (error.message.includes('Firestore')) {
                             errorMessage = 'Error en la base de datos: ' + error.message;
                             errorTitle = 'Error de base de datos';
                         }
                 }
             } else if (error.message) {
-                // Errores personalizados de nuestra lógica
                 if (error.message.includes('El correo electrónico ya está registrado')) {
                     errorMessage = error.message;
                     errorTitle = 'Email duplicado';
@@ -756,6 +782,9 @@ function initCollaboratorForm() {
                 } else if (error.message.includes('No tienes permisos')) {
                     errorMessage = error.message;
                     errorTitle = 'Permisos insuficientes';
+                } else if (error.message.includes('Administrador no encontrado')) {
+                    errorMessage = 'No se encontró el administrador creador. Por favor, inicia sesión nuevamente.';
+                    errorTitle = 'Error de sesión';
                 }
             }
             
@@ -783,25 +812,24 @@ function initCollaboratorForm() {
         // Limpiar campos
         elements.nombreCompleto.value = '';
         elements.correoElectronico.value = '';
+        elements.rol.value = '';
         elements.contrasena.value = '';
         elements.confirmarContrasena.value = '';
         
-        if (elements.rol) elements.rol.value = '';
-        if (elements.departamento) elements.departamento.value = '';
-        if (elements.fechaIngreso) elements.fechaIngreso.value = '';
-        if (elements.telefono) elements.telefono.value = '';
-        if (elements.direccion) elements.direccion.value = '';
-        if (elements.habilidades) elements.habilidades.value = '';
-        if (elements.observaciones) elements.observaciones.value = '';
-        
-        // Remover foto
-        removePhoto();
+        // Remover foto de perfil
+        removeProfilePhoto();
         
         // Restablecer estilos de validación
         document.querySelectorAll('input, select, textarea').forEach(element => {
             element.style.borderColor = '';
             element.style.boxShadow = '';
         });
+        
+        // Rehabilitar botón
+        if (elements.registerBtn) {
+            elements.registerBtn.disabled = false;
+            elements.registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> CREAR COLABORADOR';
+        }
         
         // Mostrar mensaje de éxito
         if (elements.mainMessage) {
@@ -893,27 +921,9 @@ function initCollaboratorForm() {
                 
                 // Configurar evento submit
                 elements.registerForm.addEventListener('submit', registerCollaborator);
-                
-                // Establecer fecha actual por defecto
-                if (elements.fechaIngreso) {
-                    const today = new Date().toISOString().split('T')[0];
-                    elements.fechaIngreso.value = today;
-                    elements.fechaIngreso.max = today; // No permitir fechas futuras
-                }
-                
-                // Mensaje inicial
-                setTimeout(() => {
-                    if (elements.mainMessage) {
-                        showMessage(elements.mainMessage, 'info', 
-                            `REGISTRO DE COLABORADOR para ${admin.organizacion}. Completa los campos obligatorios para agregar un nuevo colaborador a tu organización.`);
-                    }
-                }, 1000);
             }
         });
     }
-    
-    // Aplicar estilos SweetAlert
-    applySweetAlertStyles();
     
     console.log('Formulario de registro de colaborador inicializado correctamente');
 }
