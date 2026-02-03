@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Email - Sistema Centinela</title>
+    <!-- Estilos externos -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <link rel="stylesheet" href="/components/particulas/particulas.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--color-bg-primary, #000000));
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            color: var(--color-text-primary, #ffffff);
+        }
+        
+        .container {
+            background: var(--color-bg-tertiary, rgba(0, 0, 0, 0.48));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+            padding: 40px 30px;
+            border-radius: var(--border-radius-large, 12px);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: var(--shadow-large, 0 10px 25px rgba(0, 0, 0, 0.15));
+        }
+        
+        h1 {
+            color: var(--color-text-primary, #ffffff);
+            margin-bottom: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .success {
+            color: #28a745;
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .error {
+            color: #dc3545;
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .loading {
+            color: var(--color-accent-secondary, #ffffff);
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .btn {
+            display: inline-block;
+            background: var(--color-bg-primary, #000000);
+            color: var(--color-text-light, #ffffff);
+            padding: 12px 24px;
+            border-radius: var(--border-radius-small, 6px);
+            text-decoration: none;
+            margin-top: 20px;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            border: 1px solid var(--color-accent-primary, #c0c0c0);
+            transition: var(--transition-default, all 0.3s ease-in-out);
+            box-shadow: var(--shadow-small, 0 2px 8px rgba(255, 255, 255, 0.55));
+        }
+        
+        .btn:hover {
+            background: var(--color-hover, rgba(245, 215, 66, 0));
+            color: var(--color-accent-secondary, #ffffff);
+            border-color: var(--color-accent-secondary, #ffffff);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-normal, 0 5px 15px rgba(255, 255, 255, 0.55));
+        }
+        
+        p {
+            color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        #message {
+            color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+            border-radius: var(--border-radius-small, 6px);
+            background: var(--color-bg-tertiary, rgba(0, 0, 0, 0.48));
+            color: var(--color-text-primary, #ffffff);
+            font-family: 'Poppins', sans-serif;
+            transition: var(--transition-default, all 0.3s ease-in-out);
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--color-accent-secondary, #ffffff);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+        
+        button {
+            background: var(--color-bg-primary, #000000);
+            color: var(--color-text-light, #ffffff);
+            border: 1px solid var(--color-accent-primary, #c0c0c0);
+            padding: 12px 24px;
+            border-radius: var(--border-radius-small, 6px);
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            transition: var(--transition-default, all 0.3s ease-in-out);
+            box-shadow: var(--shadow-small, 0 2px 8px rgba(255, 255, 255, 0.55));
+        }
+        
+        button:hover {
+            background: var(--color-hover, rgba(245, 215, 66, 0));
+            color: var(--color-accent-secondary, #ffffff);
+            border-color: var(--color-accent-secondary, #ffffff);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-normal, 0 5px 15px rgba(255, 255, 255, 0.55));
+        }
+        
+        #title {
+            color: var(--color-text-primary, #ffffff);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Partículas de fondo -->
+    <canvas id="particle-canvas"></canvas>
+    <div class="container">
+        <div id="status" class="loading">⏳</div>
+        <h1 id="title">Verificando email...</h1>
+        <p id="message">Por favor espera mientras procesamos tu verificación.</p>
+        <a href="/users/visitors/login/login.html" id="loginBtn" class="btn" style="display: none;">
+            Ir al Inicio de Sesión
+        </a>
+    </div>
+
+    <script type="module">
+        import { auth } from '/config/firebase-config.js';
+        import { applyActionCode } from 'https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js';
+
+        async function verifyEmail() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+            const actionCode = urlParams.get('oobCode');
+            const apiKey = urlParams.get('apiKey');
+            
+            const statusEl = document.getElementById('status');
+            const titleEl = document.getElementById('title');
+            const messageEl = document.getElementById('message');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if (!actionCode) {
+                showError('No se encontró código de verificación');
+                return;
+            }
+
+            try {
+                if (mode === 'verifyEmail') {
+                    await applyActionCode(auth, actionCode);
+                    showSuccess('¡Email verificado exitosamente!');
+                } else if (mode === 'resetPassword') {
+                    showResetPassword(actionCode);
+                } else {
+                    showError('Acción no reconocida');
+                }
+            } catch (error) {
+                console.error('Error en verificación:', error);
+                
+                if (error.code === 'auth/expired-action-code') {
+                    showError('El enlace ha expirado. Solicita uno nuevo.');
+                } else if (error.code === 'auth/invalid-action-code') {
+                    showError('El código de verificación no es válido.');
+                } else if (error.code === 'auth/user-disabled') {
+                    showError('Esta cuenta ha sido deshabilitada.');
+                } else if (error.code === 'auth/user-not-found') {
+                    showError('No se encontró la cuenta.');
+                } else {
+                    showError('Error: ' + error.message);
+                }
+            }
+        }
+
+        function showSuccess(message) {
+            document.getElementById('status').className = 'success';
+            document.getElementById('status').textContent = '✓';
+            document.getElementById('title').textContent = '¡Verificado!';
+            document.getElementById('message').textContent = message;
+            document.getElementById('loginBtn').style.display = 'inline-block';
+        }
+
+        function showError(message) {
+            document.getElementById('status').className = 'error';
+            document.getElementById('status').textContent = '✗';
+            document.getElementById('title').textContent = 'Error';
+            document.getElementById('message').textContent = message;
+            document.getElementById('loginBtn').style.display = 'inline-block';
+        }
+
+        function showResetPassword(actionCode) {
+            document.getElementById('status').className = 'success';
+            document.getElementById('status').textContent = '🔒';
+            document.getElementById('title').textContent = 'Restablecer Contraseña';
+            document.getElementById('message').innerHTML = `
+                <input type="password" id="newPassword" placeholder="Nueva contraseña">
+                <input type="password" id="confirmPassword" placeholder="Confirmar contraseña">
+                <button onclick="resetPassword('${actionCode}')">
+                    Cambiar Contraseña
+                </button>
+            `;
+        }
+
+        window.resetPassword = async function(actionCode) {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                alert('Las contraseñas no coinciden');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+            
+            try {
+                alert('Función de restablecimiento de contraseña no implementada');
+            } catch (error) {
+                showError('Error: ' + error.message);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', verifyEmail);
+    </script>
+    <!-- Scripts externos -->
+    <script type="module" src="/components/themeloader.js"></script>
+    <script src="/components/particulas/particulas.js"></script>
+</body>
+</html>
