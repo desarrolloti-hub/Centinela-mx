@@ -33,7 +33,7 @@
     <div class="edit-main-container">
         <div class="edit-wrapper">
             
-            <!-- Panel izquierdo: Fotos -->
+            <!-- Panel izquierdo: Fotos EDITABLES -->
             <div class="edit-left-panel">
                 <header class="edit-header">
                     <h1 class="edit-main-title">EDITAR PERFIL</h1>
@@ -43,7 +43,7 @@
                 <!-- Foto de perfil (EDITABLE) -->
                 <section class="photo-section">
                     <h2 class="section-title">
-                        <i class="fas fa-user"></i>FOTO DE PERFIL
+                        <i class="fas fa-user"></i> FOTO DE PERFIL
                     </h2>
                     
                     <div class="photo-container">
@@ -67,7 +67,7 @@
                 <!-- Logo de organización (EDITABLE) -->
                 <section class="photo-section">
                     <h2 class="section-title">
-                        <i class="fas fa-building"></i>LOGO ORGANIZACIÓN
+                        <i class="fas fa-building"></i> LOGO ORGANIZACIÓN
                     </h2>
                     
                     <div class="photo-container">
@@ -91,12 +91,12 @@
                 <!-- Botón volver -->
                 <footer class="back-btn-container">
                     <button id="backToDashboard" class="back-btn">
-                        <i class="fas fa-arrow-left"></i>VOLVER AL DASHBOARD
+                        <i class="fas fa-arrow-left"></i> VOLVER AL DASHBOARD
                     </button>
                 </footer>
             </div>
 
-            <!-- Panel derecho: Formulario -->
+            <!-- Panel derecho: Formulario OPTIMIZADO -->
             <div class="edit-right-panel">
                 <header class="edit-header">
                     <h1 class="edit-main-title">DATOS PERSONALES</h1>
@@ -104,113 +104,97 @@
                 </header>
 
                 <form class="edit-form-container" id="editProfileForm">
-                    <!-- Nombre completo (EDITABLE) -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="fullName">
-                            <i class="fas fa-user"></i> NOMBRE COMPLETO *
-                        </label>
-                        <div class="input-wrapper">
-                            <input class="form-input-field" type="text" id="fullName" 
-                                   placeholder="Ingresa tu nombre completo" required>
+                    <!-- Grid para campos del formulario -->
+                    <div class="form-grid">
+                        <!-- Nombre completo (EDITABLE) - Ocupa toda la fila -->
+                        <div class="form-field-group full-width">
+                            <label class="field-label" for="fullName">
+                                <i class="fas fa-user"></i> NOMBRE COMPLETO *
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="text" id="fullName" 
+                                       placeholder="Ingresa tu nombre completo" required>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Correo electrónico (SOLO LECTURA) -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="email">
-                            <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
-                        </label>
-                        <div class="input-wrapper">
-                            <input class="form-input-field readonly-field" type="email" id="email" 
-                                   placeholder="Tu correo electrónico" readonly>
-                            <span class="readonly-badge">
-                                <i class="fas fa-lock"></i> Solo lectura
-                            </span>
+                        <!-- Correo electrónico (SOLO LECTURA) -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="email">
+                                <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field readonly-field" type="email" id="email" 
+                                       placeholder="Tu correo electrónico" readonly>
+                                <span class="readonly-badge">
+                                    <i class="fas fa-lock"></i> Solo lectura
+                                </span>
+                            </div>
+                            <p class="field-info">No se puede modificar el correo</p>
                         </div>
-                    </div>
 
-                    <!-- Nombre de empresa (SOLO LECTURA) -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="organizationName">
-                            <i class="fas fa-building"></i> ORGANIZACIÓN
-                        </label>
-                        <div class="input-wrapper">
-                            <input class="form-input-field readonly-field" type="text" id="organizationName" 
-                                   placeholder="Nombre de tu organización" readonly>
-                            <span class="readonly-badge">
-                                <i class="fas fa-lock"></i> Solo lectura
-                            </span>
+                        <!-- Nombre de empresa (SOLO LECTURA) -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="organizationName">
+                                <i class="fas fa-building"></i> ORGANIZACIÓN
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field readonly-field" type="text" id="organizationName" 
+                                       placeholder="Nombre de tu organización" readonly>
+                                <span class="readonly-badge">
+                                    <i class="fas fa-lock"></i> Solo lectura
+                                </span>
+                            </div>
+                            <p class="field-info">Contacta al administrador principal</p>
                         </div>
-                    </div>
 
-                    <!-- Cargo (SOLO LECTURA) -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="position">
-                            <i class="fas fa-briefcase"></i> CARGO
-                        </label>
-                        <div class="input-wrapper">
-                            <input class="form-input-field readonly-field" type="text" id="position" 
-                                   value="Administrador" readonly>
-                            <span class="readonly-badge">
-                                <i class="fas fa-lock"></i> Solo lectura
-                            </span>
+                        <!-- Cargo (SOLO LECTURA) -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="position">
+                                <i class="fas fa-briefcase"></i> CARGO
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field readonly-field" type="text" id="position" 
+                                       value="Administrador" readonly>
+                                <span class="readonly-badge">
+                                    <i class="fas fa-lock"></i> Solo lectura
+                                </span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="divider"></div>
 
-                    <!-- Sección de cambio de contraseña -->
+                    <!-- Sección de cambio de contraseña ACTUALIZADA -->
                     <div class="password-section">
-                        <h3 class="section-subtitle">
-                            <i class="fas fa-key"></i> CAMBIO DE CONTRASEÑA
-                        </h3>
+                        <div class="password-header">
+                            <h3 class="section-subtitle">
+                                <i class="fas fa-key"></i> CAMBIO DE CONTRASEÑA
+                            </h3>
+                            <button type="button" id="requestPasswordChangeBtn" class="request-change-btn">
+                                <i class="fas fa-sync-alt"></i> ¿Deseas cambiar la contraseña?
+                            </button>
+                        </div>
+                        
                         <p class="section-description">
-                            Completa solo si deseas cambiar tu contraseña
+                            Para cambiar tu contraseña, haz clic en el botón superior. Te enviaremos un correo con un enlace seguro para restablecerla.
                         </p>
 
-                        <!-- Contraseña actual -->
-                        <div class="form-field-group">
-                            <label class="field-label" for="currentPassword">
-                                <i class="fas fa-lock"></i> CONTRASEÑA ACTUAL
-                            </label>
-                            <div class="input-wrapper password-field">
-                                <input class="form-input-field" type="password" id="currentPassword" 
-                                       placeholder="Ingresa tu contraseña actual">
-                                <button type="button" class="toggle-password" data-target="currentPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                        <!-- Información del proceso -->
+                        <div class="password-info-card">
+                            <div class="info-header">
+                                <i class="fas fa-envelope"></i>
+                                <h4>Proceso de cambio de contraseña:</h4>
                             </div>
+                            <ul class="info-steps">
+                                <li><strong>Paso 1:</strong> Haz clic en "¿Deseas cambiar la contraseña?"</li>
+                                <li><strong>Paso 2:</strong> Confirma tu acción en el cuadro de diálogo</li>
+                                <li><strong>Paso 3:</strong> Revisa tu correo electrónico</li>
+                                <li><strong>Paso 4:</strong> Haz clic en el enlace seguro recibido</li>
+                                <li><strong>Paso 5:</strong> Establece tu nueva contraseña</li>
+                            </ul>
                         </div>
 
-                        <!-- Nueva contraseña -->
-                        <div class="form-field-group">
-                            <label class="field-label" for="newPassword">
-                                <i class="fas fa-key"></i> NUEVA CONTRASEÑA
-                            </label>
-                            <div class="input-wrapper password-field">
-                                <input class="form-input-field" type="password" id="newPassword" 
-                                       placeholder="Ingresa nueva contraseña">
-                                <button type="button" class="toggle-password" data-target="newPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Confirmar contraseña -->
-                        <div class="form-field-group">
-                            <label class="field-label" for="confirmPassword">
-                                <i class="fas fa-key"></i> CONFIRMAR CONTRASEÑA
-                            </label>
-                            <div class="input-wrapper password-field">
-                                <input class="form-input-field" type="password" id="confirmPassword" 
-                                       placeholder="Confirma la nueva contraseña">
-                                <button type="button" class="toggle-password" data-target="confirmPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Requisitos de contraseña -->
+                        <!-- Requisitos de contraseña en 2 columnas -->
                         <div class="password-requirements">
                             <div class="requirements-title">
                                 <i class="fas fa-shield-alt"></i> REQUISITOS DE CONTRASEÑA SEGURA:
@@ -228,8 +212,8 @@
                     <!-- Nota sobre permisos -->
                     <div class="permissions-note">
                         <i class="fas fa-info-circle"></i> 
-                        <strong>Nota sobre permisos:</strong> Algunos campos están bloqueados por políticas de seguridad. 
-                        Para modificar información restringida, contacta al administrador principal del sistema.
+                        <strong>Nota sobre permisos:</strong> Los campos bloqueados están protegidos por políticas de seguridad. 
+                        Para modificar el correo o nombre de organización, contacta al administrador principal.
                     </div>
 
                     <!-- Mensajes -->
@@ -239,10 +223,10 @@
                     <!-- Acciones -->
                     <div class="action-buttons">
                         <button type="button" class="action-btn save-btn" id="saveChangesBtn">
-                            <i class="fas fa-save"></i>GUARDAR CAMBIOS
+                            <i class="fas fa-save"></i> GUARDAR CAMBIOS
                         </button>
                         <button type="button" class="action-btn cancel-btn" id="cancelBtn">
-                            <i class="fas fa-times"></i>CANCELAR
+                            <i class="fas fa-times"></i> CANCELAR
                         </button>
                     </div>
                 </form>
@@ -276,10 +260,7 @@
     <script src="/components/footer-admin-component.js"></script>
     <script src="/components/particulas/particulas.js"></script>
     
-    <!-- Firebase -->
-    <script type="module" src="/clases/user.js"></script>
-    
-    <!-- Script principal -->
+    <!-- Script principal - MÓDULO ES6 -->
     <script type="module" src="editAdmin.js"></script>
 </body>
 </html>
