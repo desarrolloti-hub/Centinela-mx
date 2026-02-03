@@ -3,20 +3,17 @@ import { UserManager } from '/clases/user.js';
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si SweetAlert2 está cargado
     if (typeof Swal === 'undefined') {
         console.error('❌ SweetAlert2 no está cargado.');
         return;
     }
     
-    // Inicializar el formulario de registro
     initRegistrationForm();
 });
 
-// Aplicar estilos personalizados para SweetAlert2
 function applySweetAlertStyles() {
     const style = document.createElement('style');
-    style.textContent =/*css*/`
+    style.textContent = /*css*/`
         /* Estilos personalizados para SweetAlert2 */
         .swal2-popup {
             background: var(--color-bg-tertiary) !important;
@@ -88,9 +85,8 @@ function applySweetAlertStyles() {
 function initRegistrationForm() {
     console.log('Iniciando formulario de registro de administrador...');
     
-    // Elementos del DOM
+    // Verificar que todos los elementos del DOM existan
     const elements = {
-        // Fotos
         profileCircle: document.getElementById('profileCircle'),
         profileImage: document.getElementById('profileImage'),
         profilePlaceholder: document.getElementById('profilePlaceholder'),
@@ -103,7 +99,6 @@ function initRegistrationForm() {
         editOrgOverlay: document.getElementById('editOrgOverlay'),
         orgInput: document.getElementById('org-input'),
         
-        // Modal
         photoModal: document.getElementById('photoModal'),
         previewImage: document.getElementById('previewImage'),
         modalTitle: document.getElementById('modalTitle'),
@@ -111,30 +106,31 @@ function initRegistrationForm() {
         confirmChangeBtn: document.getElementById('confirmChangeBtn'),
         cancelChangeBtn: document.getElementById('cancelChangeBtn'),
         
-        // Formulario
         organizationInput: document.getElementById('organization'),
         fullNameInput: document.getElementById('fullName'),
         emailInput: document.getElementById('email'),
         passwordInput: document.getElementById('password'),
         confirmPasswordInput: document.getElementById('confirmPassword'),
         
-        // Botones y mensajes
         registerBtn: document.getElementById('registerBtn'),
         cancelBtn: document.getElementById('cancelBtn'),
         mainMessage: document.getElementById('mainMessage'),
         registerForm: document.getElementById('registerForm')
     };
 
-    // Verificar que todos los elementos necesarios existan
-    for (const [key, element] of Object.entries(elements)) {
-        if (!element) {
-            console.error(`Elemento no encontrado: ${key}`);
+    // Verificar elementos críticos
+    const elementosCriticos = ['organizationInput', 'fullNameInput', 'emailInput', 'passwordInput', 'confirmPasswordInput', 'registerForm'];
+    for (const elemento of elementosCriticos) {
+        if (!elements[elemento]) {
+            console.error(`Elemento crítico no encontrado: ${elemento}`);
+            showErrorMessage(`Error: No se encontró el elemento ${elemento}. Contacta al administrador.`);
+            return;
         }
     }
 
     // Instancia del UserManager
     const userManager = new UserManager();
-    console.log('UserManager creado para registro de administrador:', userManager);
+    console.log('UserManager inicializado para registro');
     
     // Variables para imágenes
     let selectedFile = null;
@@ -177,6 +173,23 @@ function initRegistrationForm() {
             </div>
         `;
         element.style.display = 'block';
+        
+        // Auto-ocultar mensajes después de 5 segundos (excepto errores)
+        if (type !== 'error') {
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    function showErrorMessage(message) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message,
+            confirmButtonText: 'ENTENDIDO',
+            confirmButtonColor: '#d33'
+        });
     }
 
     // ========== FUNCIONES DE VALIDACIÓN ==========
@@ -240,18 +253,18 @@ function initRegistrationForm() {
         const reader = new FileReader();
         
         reader.onload = function(e) {
-            elements.previewImage.src = e.target.result;
+            if (elements.previewImage) elements.previewImage.src = e.target.result;
             currentPhotoType = type;
             
             if (type === 'profile') {
-                elements.modalTitle.textContent = 'CAMBIAR FOTO DE PERFIL';
-                elements.modalMessage.textContent = '¿Deseas usar esta imagen como tu foto de perfil?';
+                if (elements.modalTitle) elements.modalTitle.textContent = 'CAMBIAR FOTO DE PERFIL';
+                if (elements.modalMessage) elements.modalMessage.textContent = '¿Deseas usar esta imagen como tu foto de perfil?';
             } else {
-                elements.modalTitle.textContent = 'CAMBIAR LOGO DE ORGANIZACIÓN';
-                elements.modalMessage.textContent = '¿Deseas usar esta imagen como logo de tu organización?';
+                if (elements.modalTitle) elements.modalTitle.textContent = 'CAMBIAR LOGO DE ORGANIZACIÓN';
+                if (elements.modalMessage) elements.modalMessage.textContent = '¿Deseas usar esta imagen como logo de tu organización?';
             }
             
-            elements.photoModal.style.display = 'flex';
+            if (elements.photoModal) elements.photoModal.style.display = 'flex';
             selectedFile = file;
         };
         
@@ -259,19 +272,17 @@ function initRegistrationForm() {
     }
 
     function updatePhoto(imageElement, placeholderElement, imageSrc, isProfile = true) {
-        if (imageSrc) {
+        if (imageSrc && imageElement && placeholderElement) {
             imageElement.src = imageSrc;
             imageElement.style.display = 'block';
             placeholderElement.style.display = 'none';
             
             if (isProfile) {
                 profileImageBase64 = imageSrc;
-                console.log('Foto de perfil guardada (base64 length):', imageSrc.length);
             } else {
                 orgImageBase64 = imageSrc;
-                console.log('Logo de organización guardado (base64 length):', imageSrc.length);
             }
-        } else {
+        } else if (imageElement && placeholderElement) {
             imageElement.style.display = 'none';
             placeholderElement.style.display = 'flex';
             
@@ -284,11 +295,11 @@ function initRegistrationForm() {
     }
 
     // ========== EVENTOS DE IMÁGENES ==========
-    if (elements.profileCircle) {
+    if (elements.profileCircle && elements.profileInput) {
         elements.profileCircle.addEventListener('click', () => elements.profileInput.click());
     }
     
-    if (elements.editProfileOverlay) {
+    if (elements.editProfileOverlay && elements.profileInput) {
         elements.editProfileOverlay.addEventListener('click', (e) => {
             e.stopPropagation();
             elements.profileInput.click();
@@ -305,11 +316,11 @@ function initRegistrationForm() {
         });
     }
 
-    if (elements.orgCircle) {
+    if (elements.orgCircle && elements.orgInput) {
         elements.orgCircle.addEventListener('click', () => elements.orgInput.click());
     }
     
-    if (elements.editOrgOverlay) {
+    if (elements.editOrgOverlay && elements.orgInput) {
         elements.editOrgOverlay.addEventListener('click', (e) => {
             e.stopPropagation();
             elements.orgInput.click();
@@ -355,7 +366,7 @@ function initRegistrationForm() {
                         });
                     }
                     
-                    elements.photoModal.style.display = 'none';
+                    if (elements.photoModal) elements.photoModal.style.display = 'none';
                     selectedFile = null;
                     currentPhotoType = '';
                 };
@@ -365,7 +376,7 @@ function initRegistrationForm() {
         });
     }
 
-    if (elements.cancelChangeBtn) {
+    if (elements.cancelChangeBtn && elements.photoModal) {
         elements.cancelChangeBtn.addEventListener('click', () => {
             elements.photoModal.style.display = 'none';
             selectedFile = null;
@@ -402,18 +413,24 @@ function initRegistrationForm() {
         });
     });
 
-    // ========== REGISTRO SOLO PARA ADMINISTRADORES ==========
+    // ========== REGISTRO DE ADMINISTRADOR ==========
     if (elements.registerForm) {
         elements.registerForm.addEventListener('submit', async function(event) {
             event.preventDefault();
             console.log('Formulario de registro de administrador enviado');
+            
+            // Deshabilitar botón de registro para evitar doble envío
+            if (elements.registerBtn) {
+                elements.registerBtn.disabled = true;
+                elements.registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            }
             
             // Validaciones básicas
             let isValid = true;
             let messages = [];
             
             // Validar organización
-            if (!elements.organizationInput || !elements.organizationInput.value.trim()) {
+            if (!elements.organizationInput.value.trim()) {
                 isValid = false;
                 messages.push('El nombre de la organización es obligatorio');
             } else if (elements.organizationInput.value.trim().length < 3) {
@@ -422,7 +439,7 @@ function initRegistrationForm() {
             }
             
             // Validar nombre completo
-            if (!elements.fullNameInput || !elements.fullNameInput.value.trim()) {
+            if (!elements.fullNameInput.value.trim()) {
                 isValid = false;
                 messages.push('El nombre completo es obligatorio');
             } else if (elements.fullNameInput.value.trim().length < 5) {
@@ -431,7 +448,7 @@ function initRegistrationForm() {
             }
             
             // Validar email
-            if (!elements.emailInput || !elements.emailInput.value.trim()) {
+            if (!elements.emailInput.value.trim()) {
                 isValid = false;
                 messages.push('El correo electrónico es obligatorio');
             } else if (!validateEmail(elements.emailInput.value)) {
@@ -440,7 +457,7 @@ function initRegistrationForm() {
             }
             
             // Validar contraseña
-            if (!elements.passwordInput || !elements.passwordInput.value) {
+            if (!elements.passwordInput.value) {
                 isValid = false;
                 messages.push('La contraseña es obligatoria');
             } else if (!validatePassword(elements.passwordInput.value)) {
@@ -449,29 +466,12 @@ function initRegistrationForm() {
             }
             
             // Validar confirmación de contraseña
-            if (!elements.confirmPasswordInput || !elements.confirmPasswordInput.value) {
+            if (!elements.confirmPasswordInput.value) {
                 isValid = false;
                 messages.push('Debes confirmar la contraseña');
-            } else if (elements.passwordInput && elements.confirmPasswordInput && 
-                elements.passwordInput.value !== elements.confirmPasswordInput.value) {
+            } else if (elements.passwordInput.value !== elements.confirmPasswordInput.value) {
                 isValid = false;
                 messages.push('Las contraseñas no coinciden');
-            }
-            
-            // Validar que se haya subido logo de organización (opcional pero recomendado)
-            if (!orgImageBase64) {
-                const confirmOrgLogo = await Swal.fire({
-                    title: '¿Continuar sin logo?',
-                    text: 'No has subido un logo para tu organización. ¿Deseas continuar sin él?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'SÍ, CONTINUAR',
-                    cancelButtonText: 'SUBIR LOGO'
-                });
-                
-                if (!confirmOrgLogo.isConfirmed) {
-                    return;
-                }
             }
             
             if (!isValid) {
@@ -481,6 +481,12 @@ function initRegistrationForm() {
                     html: messages.map(msg => `• ${msg}`).join('<br>'),
                     confirmButtonText: 'CORREGIR'
                 });
+                
+                // Rehabilitar botón
+                if (elements.registerBtn) {
+                    elements.registerBtn.disabled = false;
+                    elements.registerBtn.innerHTML = '<i class="fas fa-user-shield"></i> CREAR CUENTA DE ADMINISTRADOR';
+                }
                 return;
             }
             
@@ -493,7 +499,7 @@ function initRegistrationForm() {
                         <p><strong>Nombre:</strong> ${elements.fullNameInput.value.trim()}</p>
                         <p><strong>Email:</strong> ${elements.emailInput.value.trim()}</p>
                         <p style="color: #ff9800; margin-top: 15px;">
-                            <i class="fas fa-exclamation-triangle"></i> Esta será la cuenta principal de administrador del sistema.
+                            <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación a tu email.
                         </p>
                     </div>
                 `,
@@ -502,10 +508,16 @@ function initRegistrationForm() {
                 confirmButtonText: 'CONFIRMAR REGISTRO',
                 cancelButtonText: 'CANCELAR',
                 confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6'
+                cancelButtonColor: '#3085d6',
+                allowOutsideClick: false
             });
             
             if (!confirmResult.isConfirmed) {
+                // Rehabilitar botón si cancela
+                if (elements.registerBtn) {
+                    elements.registerBtn.disabled = false;
+                    elements.registerBtn.innerHTML = '<i class="fas fa-user-shield"></i> CREAR CUENTA DE ADMINISTRADOR';
+                }
                 return;
             }
             
@@ -534,7 +546,8 @@ function initRegistrationForm() {
                     fotoOrganizacion: orgImageBase64,
                     esSuperAdmin: true,
                     status: true,
-                    theme: 'light'
+                    theme: 'light',
+                    plan: 'gratis'
                 };
                 
                 console.log('Registrando administrador con datos:', {
@@ -556,17 +569,17 @@ function initRegistrationForm() {
                 // Cerrar loader
                 Swal.close();
                 
-                // Mostrar éxito con más información
+                // Mostrar éxito con instrucciones de verificación
                 await Swal.fire({
                     icon: 'success',
-                    title: '¡ADMINISTRADOR CREADO!',
+                    title: '¡REGISTRO EXITOSO!',
                     html: `
                         <div style="text-align: center; padding: 20px;">
                             <div style="font-size: 60px; color: #28a745; margin-bottom: 20px;">
                                 <i class="fas fa-shield-alt"></i>
                             </div>
                             <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
-                                Cuenta creada exitosamente
+                                ¡Cuenta creada exitosamente!
                             </h3>
                             <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
                                 <p><strong>Organización:</strong> ${adminData.organizacion}</p>
@@ -574,65 +587,130 @@ function initRegistrationForm() {
                                 <p><strong>Email:</strong> ${adminData.correoElectronico}</p>
                                 <p><strong>Rol:</strong> SUPER ADMINISTRADOR</p>
                             </div>
-                            <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-top: 20px;">
-                                <i class="fas fa-info-circle"></i> 
-                                Esta es la única cuenta de administrador del sistema. 
-                                Podrás crear colaboradores desde el panel de administración.
-                            </p>
+                            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                                <h4 style="color: #0a2540; margin-bottom: 10px;">
+                                    <i class="fas fa-envelope"></i> Verificación de Email
+                                </h4>
+                                <p style="color: #666; margin-bottom: 10px;">
+                                    Se ha enviado un correo de verificación a <strong>${adminData.correoElectronico}</strong>
+                                </p>
+                                <p style="color: #666; font-size: 0.9rem;">
+                                    <i class="fas fa-info-circle"></i> Debes verificar tu email antes de iniciar sesión
+                                </p>
+                            </div>
+                            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <p style="color: #0a2540; font-weight: bold; margin-bottom: 10px;">
+                                    <i class="fas fa-lightbulb"></i> Instrucciones:
+                                </p>
+                                <ol style="text-align: left; margin: 0; padding-left: 20px; color: #666;">
+                                    <li>Revisa tu bandeja de entrada (y carpeta de spam)</li>
+                                    <li>Haz clic en el enlace de verificación del correo</li>
+                                    <li>Inicia sesión con tus credenciales</li>
+                                    <li>Una vez verificado, podrás crear colaboradores</li>
+                                </ol>
+                            </div>
                         </div>
                     `,
                     confirmButtonText: 'IR AL INICIO DE SESIÓN',
-                    confirmButtonColor: '#28a745'
+                    confirmButtonColor: '#28a745',
+                    allowOutsideClick: false
                 }).then(() => {
                     // Redirigir al login
-                    window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
+                    window.location.href = '/users/visitors/login/login.html';
                 });
                 
             } catch (error) {
                 // Cerrar loader
                 Swal.close();
                 
+                // Rehabilitar botón
+                if (elements.registerBtn) {
+                    elements.registerBtn.disabled = false;
+                    elements.registerBtn.innerHTML = '<i class="fas fa-user-shield"></i> CREAR CUENTA DE ADMINISTRADOR';
+                }
+                
                 // Mostrar error específico
                 console.error('Error en registro de administrador:', error);
                 
                 let errorMessage = 'Ocurrió un error al crear la cuenta de administrador';
+                let errorDetails = error.message || '';
                 let errorTitle = 'Error al crear cuenta';
                 
-                if (error.message.includes('Ya existe un administrador registrado')) {
-                    errorMessage = 'Ya existe un administrador registrado en el sistema. Solo se permite un administrador principal.';
-                    errorTitle = 'Administrador ya existe';
-                } else if (error.message.includes('email-already-in-use')) {
-                    errorMessage = 'Este correo electrónico ya está registrado en el sistema.';
-                    errorTitle = 'Email en uso';
-                } else if (error.message.includes('weak-password')) {
-                    errorMessage = 'La contraseña es demasiado débil. Debe tener al menos 8 caracteres con mayúsculas, minúsculas, números y caracteres especiales.';
-                    errorTitle = 'Contraseña débil';
-                } else if (error.message.includes('network-request-failed')) {
-                    errorMessage = 'Error de conexión. Verifica tu conexión a internet e intenta nuevamente.';
-                    errorTitle = 'Error de conexión';
-                } else if (error.message.includes('Firestore')) {
-                    errorMessage = 'Error en la base de datos: ' + error.message;
-                    errorTitle = 'Error de base de datos';
-                } else if (error.message.includes('auth/')) {
-                    errorMessage = 'Error de autenticación: ' + error.message;
-                    errorTitle = 'Error de autenticación';
+                // Manejar errores específicos de Firebase
+                if (error.code) {
+                    switch(error.code) {
+                        case 'auth/email-already-in-use':
+                            errorMessage = 'Este correo electrónico ya está registrado en el sistema.';
+                            errorTitle = 'Email en uso';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage = 'El correo electrónico no es válido.';
+                            errorTitle = 'Email inválido';
+                            break;
+                        case 'auth/operation-not-allowed':
+                            errorMessage = 'El registro por correo/contraseña no está habilitado. Contacta al administrador.';
+                            errorTitle = 'Registro deshabilitado';
+                            break;
+                        case 'auth/weak-password':
+                            errorMessage = 'La contraseña es demasiado débil. Debe tener al menos 8 caracteres con mayúsculas, minúsculas, números y caracteres especiales.';
+                            errorTitle = 'Contraseña débil';
+                            break;
+                        case 'auth/network-request-failed':
+                            errorMessage = 'Error de conexión a internet. Verifica tu conexión e intenta nuevamente.';
+                            errorTitle = 'Error de conexión';
+                            break;
+                        case 'auth/too-many-requests':
+                            errorMessage = 'Demasiados intentos fallidos. Por favor, intenta más tarde.';
+                            errorTitle = 'Demasiados intentos';
+                            break;
+                        default:
+                            // Si es un error personalizado de nuestra lógica
+                            if (error.message.includes('El correo electrónico ya está registrado')) {
+                                errorMessage = error.message;
+                                errorTitle = 'Email duplicado';
+                            } else if (error.message.includes('Ya existe un administrador registrado')) {
+                                errorMessage = error.message;
+                                errorTitle = 'Administrador existente';
+                            } else if (error.message.includes('Firestore')) {
+                                errorMessage = 'Error en la base de datos: ' + error.message;
+                                errorTitle = 'Error de base de datos';
+                            }
+                    }
+                } else if (error.message) {
+                    // Errores personalizados de nuestra lógica
+                    if (error.message.includes('El correo electrónico ya está registrado')) {
+                        errorMessage = error.message;
+                        errorTitle = 'Email duplicado';
+                    } else if (error.message.includes('Límite de usuarios alcanzado')) {
+                        errorMessage = error.message;
+                        errorTitle = 'Límite alcanzado';
+                    }
                 }
                 
                 Swal.fire({
                     icon: 'error',
                     title: errorTitle,
-                    text: errorMessage,
+                    html: `
+                        <div style="text-align: left;">
+                            <p>${errorMessage}</p>
+                            ${errorDetails ? `<p style="color: #666; font-size: 0.9rem; margin-top: 10px;"><strong>Detalles:</strong> ${errorDetails}</p>` : ''}
+                            <p style="color: #ff9800; margin-top: 15px; font-size: 0.9rem;">
+                                <i class="fas fa-exclamation-triangle"></i> Si el problema persiste, contacta al soporte técnico.
+                            </p>
+                        </div>
+                    `,
                     confirmButtonText: 'ENTENDIDO',
-                    confirmButtonColor: '#d33'
+                    confirmButtonColor: '#d33',
+                    allowOutsideClick: true
                 });
             }
         });
     }
 
-    // ========== CANCELAR ==========
+    // ========== CANCELAR REGISTRO ==========
     if (elements.cancelBtn) {
-        elements.cancelBtn.addEventListener('click', () => {
-            Swal.fire({
+        elements.cancelBtn.addEventListener('click', async () => {
+            const confirmResult = await Swal.fire({
                 title: '¿Cancelar registro?',
                 text: "Se perderán todos los datos ingresados",
                 icon: 'warning',
@@ -641,29 +719,59 @@ function initRegistrationForm() {
                 cancelButtonText: 'No, continuar',
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#3085d6'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/users/visitors/login/login.html';
-                }
             });
+            
+            if (confirmResult.isConfirmed) {
+                window.location.href = '/users/visitors/login/login.html';
+            }
         });
     }
 
-    // Mensaje inicial específico para registro de administrador
+    // ========== VALIDACIÓN EN TIEMPO REAL ==========
+    if (elements.passwordInput && elements.confirmPasswordInput) {
+        elements.confirmPasswordInput.addEventListener('input', function() {
+            if (elements.passwordInput.value && this.value) {
+                if (elements.passwordInput.value !== this.value) {
+                    this.style.borderColor = '#dc3545';
+                    this.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+                } else {
+                    this.style.borderColor = '#28a745';
+                    this.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                }
+            } else {
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            }
+        });
+    }
+
+    if (elements.emailInput) {
+        elements.emailInput.addEventListener('blur', function() {
+            if (this.value && !validateEmail(this.value)) {
+                this.style.borderColor = '#dc3545';
+                this.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25)';
+            } else if (this.value) {
+                this.style.borderColor = '#28a745';
+                this.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+            } else {
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+            }
+        });
+    }
+
+    // Mensaje inicial
     setTimeout(() => {
         if (elements.mainMessage) {
             showMessage(elements.mainMessage, 'info', 
-                'REGISTRO DE ADMINISTRADOR PRINCIPAL: Completa todos los campos para crear la única cuenta de administrador del sistema.');
+                'REGISTRO DE ADMINISTRADOR: Completa todos los campos para crear una nueva cuenta de administrador para tu organización.');
         }
-        
-        // También actualizar el título de la página si es necesario
-        document.querySelector('.edit-sub-title').textContent = 
-            'Crear la cuenta principal de administrador del sistema';
     }, 1000);
     
-    // Aplicar estilos SweetAlert después de cargar todo
+    // Aplicar estilos SweetAlert
     applySweetAlertStyles();
+    
+    console.log('Formulario de registro inicializado correctamente');
 }
 
-// Exportar para uso en otros archivos
 export { initRegistrationForm };
