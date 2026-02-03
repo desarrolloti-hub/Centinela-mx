@@ -1,9 +1,11 @@
-// navbar-complete.js 
+// navbar-complete.js MODIFICADO - VERSIÓN COMPLETA
 
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
         this.isAdminDropdownOpen = false;
+        this.currentAdmin = null;
+        this.userManager = null;
         this.init();      
     }
 
@@ -25,12 +27,14 @@ class NavbarComplete {
     }
 
     // Configuración principal del navbar
-    setup() {
+    async setup() {
         try {
             this.removeOriginalNavbar();
             this.createNavbar(); 
             this.setupFunctionalities(); 
-            console.log('✅ Navbar completo inicializado');
+            await this.loadAdminData(); // Cargar datos del administrador
+            this.updateNavbarWithAdminData(); // Actualizar navbar con datos
+            console.log('✅ Navbar completo inicializado con datos del admin');
         } catch (error) {
             console.error('❌ Error:', error);
         }
@@ -49,7 +53,7 @@ class NavbarComplete {
         this.adjustBodyPadding();
     }
 
-    // Agrega todos los estilos CSS necesarios (MODIFICADO para lápiz simple)
+    // Agrega todos los estilos CSS necesarios
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
@@ -100,6 +104,7 @@ class NavbarComplete {
                 text-decoration: none;
                 z-index: 1003;
                 height: 70px;
+                margin-right: 15px;
             }
 
             .navbar-logo-img {
@@ -107,6 +112,30 @@ class NavbarComplete {
                 width: auto;
                 max-height: 90px;
                 transition: transform var(--transition-default);
+                border-radius: 8px;
+            }
+
+            /* Logo de organización específico */
+            .navbar-org-logo {
+                border: 2px solid var(--color-accent-primary);
+                box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            }
+
+            /* Texto para logo de organización cuando no hay imagen */
+            .org-text-logo {
+                width: 60px;
+                height: 60px;
+                border-radius: 8px;
+                background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                text-align: center;
+                padding: 5px;
+                border: 2px solid var(--color-accent-primary);
             }
 
             /* Efecto hover en el logo */
@@ -207,7 +236,7 @@ class NavbarComplete {
                 opacity: 1;
             }
             
-            /* Sección superior del menú: Perfil del administrador (MODIFICADO) */
+            /* Sección superior del menú: Perfil del administrador */
             .admin-profile-section {
                 padding: 30px 25px 20px;
                 background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
@@ -235,6 +264,9 @@ class NavbarComplete {
                 border: 3px solid var(--color-accent-primary);
                 background-color: var(--color-bg-secondary);
                 transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .admin-profile-img {
@@ -242,8 +274,26 @@ class NavbarComplete {
                 height: 100%;
                 object-fit: cover;
             }
+
+            /* Placeholder para foto cuando no hay imagen */
+            .profile-placeholder {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: var(--color-accent-primary);
+                font-size: 40px;
+            }
+
+            .profile-placeholder span {
+                font-size: 12px;
+                margin-top: 5px;
+                font-weight: bold;
+            }
             
-            /* Ícono de lápiz para editar (NUEVO - SOLO ESTO) */
+            /* Ícono de lápiz para editar */
             .edit-profile-icon {
                 position: absolute;
                 bottom: 5px;
@@ -285,6 +335,7 @@ class NavbarComplete {
                 margin-bottom: 5px;
                 color: var(--color-text-primary);
                 font-family: 'Orbitron', sans-serif;
+                min-height: 25px;
             }
             
             .admin-role {
@@ -297,6 +348,14 @@ class NavbarComplete {
             .admin-email {
                 font-size: 13px;
                 color: var(--color-text-tertiary);
+                min-height: 20px;
+            }
+
+            .admin-organization {
+                font-size: 13px;
+                color: var(--color-accent-primary);
+                margin-top: 5px;
+                font-weight: 600;
             }
             
             /* Sección de navegación */
@@ -398,7 +457,7 @@ class NavbarComplete {
                 margin-top: auto;
             }
             
-            /* Botón desplegable de administración CON FUENTE ORBITRON */
+            /* Botón desplegable de administración */
             .admin-dropdown-btn {
                 display: flex;
                 align-items: center;
@@ -519,6 +578,12 @@ class NavbarComplete {
                     max-height: 50px;
                 }
 
+                .org-text-logo {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 12px;
+                }
+
                 body.menu-open {
                     overflow: hidden;
                 }
@@ -534,6 +599,12 @@ class NavbarComplete {
                     height: 40px;
                     width: auto;
                     max-height: 40px;
+                }
+
+                .org-text-logo {
+                    width: 40px;
+                    height: 40px;
+                    font-size: 10px;
                 }
                 
                 .profile-photo-container {
@@ -559,7 +630,7 @@ class NavbarComplete {
         document.head.appendChild(styleElement);
     }
 
-    // Inserta la estructura HTML del navbar (MODIFICADO para lápiz simple y editAdmin.html)
+    // Inserta la estructura HTML del navbar
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
@@ -567,11 +638,16 @@ class NavbarComplete {
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
+                    <!-- Logo del sistema Centinela -->
                     <a href="/index.html" class="navbar-logo-link">
                         <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                     </a>
-                    <a href="" class="navbar-logo-link">
-                        <img src="/assets/images/logoApp.png" alt="RSI Enterprice" class="navbar-logo-img">
+                    
+                    <!-- Logo de la organización (se actualizará dinámicamente) -->
+                    <a href="/users/admin/dashboard/dashboard.html" class="navbar-logo-link" id="orgLogoLink">
+                        <img src="/assets/images/logoApp.png" alt="Logo Organización" 
+                             class="navbar-logo-img navbar-org-logo" id="orgLogoImg">
+                        <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
                     </a>
                 </div>
                 
@@ -592,15 +668,19 @@ class NavbarComplete {
             <!-- Menú lateral -->
             <div class="navbar-main-menu" id="navbarMainMenu">
                 
-                <!-- Sección superior: Perfil del administrador (MODIFICADO) -->
+                <!-- Sección superior: Perfil del administrador -->
                 <div class="admin-profile-section">
                     <!-- Contenedor para la foto con ícono de lápiz -->
                     <div class="profile-photo-container">
                         <!-- Círculo con imagen del administrador -->
                         <div class="admin-profile-circle">
                             <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
+                            <div class="profile-placeholder" id="profilePlaceholder" style="display: none;">
+                                <i class="fas fa-user"></i>
+                                <span>Admin</span>
+                            </div>
                         </div>
-                        <!-- Ícono de lápiz para editar (ENLACE a página editAdmin.html) -->
+                        <!-- Ícono de lápiz para editar -->
                         <a href="/users/admin/editAdmin/editAdmin.html" class="edit-profile-icon" id="editProfileIcon">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
@@ -608,9 +688,10 @@ class NavbarComplete {
                     
                     <!-- Información del administrador -->
                     <div class="admin-info">
-                        <div class="admin-name" id="adminName">Bryan Vazquez Segura</div>
+                        <div class="admin-name" id="adminName">Cargando...</div>
                         <div class="admin-role">Administrador</div>
-                        <div class="admin-email" id="adminEmail">bryan@ejemplo.com</div>
+                        <div class="admin-email" id="adminEmail">cargando@email.com</div>
+                        <div class="admin-organization" id="adminOrganization"></div>
                     </div>
                 </div>
                 
@@ -658,7 +739,7 @@ class NavbarComplete {
                     <div class="empty-menu-item"></div>
                 </div>
                 
-                <!-- Sección de opciones de administración (AL FINAL) -->
+                <!-- Sección de opciones de administración -->
                 <div class="admin-options-section">
                     <button class="admin-dropdown-btn" id="adminDropdownBtn">
                         <span>Opciones de Administración</span>
@@ -697,7 +778,155 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // Configura todas las funcionalidades (SIMPLIFICADO)
+    // Carga los datos del administrador actual
+    async loadAdminData() {
+        try {
+            // Importar UserManager dinámicamente
+            const { UserManager } = await import('/clases/user.js');
+            this.userManager = new UserManager();
+            
+            // Esperar a que UserManager cargue el usuario
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            if (this.userManager.currentUser) {
+                this.currentAdmin = this.userManager.currentUser;
+                console.log('👤 Admin cargado en navbar:', {
+                    nombre: this.currentAdmin.nombreCompleto,
+                    email: this.currentAdmin.correoElectronico,
+                    organizacion: this.currentAdmin.organizacion,
+                    fotoUsuario: this.currentAdmin.fotoUsuario ? 'Sí' : 'No',
+                    fotoOrganizacion: this.currentAdmin.fotoOrganizacion ? 'Sí' : 'No'
+                });
+            } else {
+                // Intentar cargar desde localStorage
+                try {
+                    const storedUser = JSON.parse(localStorage.getItem('centinela-currentUser'));
+                    if (storedUser && storedUser.cargo === 'administrador') {
+                        this.currentAdmin = storedUser;
+                        console.log('👤 Admin cargado desde localStorage en navbar');
+                    }
+                } catch (e) {
+                    console.warn('No se pudo cargar admin desde localStorage');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar datos del admin en navbar:', error);
+        }
+    }
+
+    // Actualiza el navbar con los datos del administrador
+    updateNavbarWithAdminData() {
+        if (!this.currentAdmin) {
+            console.log('⚠️ No hay datos de admin para mostrar en navbar');
+            return;
+        }
+
+        console.log('🔄 Actualizando navbar con datos del admin...');
+
+        // 1. Actualizar segundo logo (logo de la organización)
+        this.updateOrganizationLogo();
+
+        // 2. Actualizar información en el menú desplegable
+        this.updateAdminMenuInfo();
+
+        // 3. Actualizar título del navbar si es necesario
+        this.updateNavbarTitle();
+    }
+
+    // Actualiza el segundo logo con el logo de la organización
+    updateOrganizationLogo() {
+        const organizationLogoImg = document.getElementById('orgLogoImg');
+        const orgTextLogo = document.getElementById('orgTextLogo');
+        const orgLogoLink = document.getElementById('orgLogoLink');
+        
+        if (!organizationLogoImg || !orgTextLogo || !orgLogoLink) return;
+
+        // Si tiene logo de organización
+        if (this.currentAdmin.fotoOrganizacion) {
+            organizationLogoImg.src = this.currentAdmin.fotoOrganizacion;
+            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion}`;
+            organizationLogoImg.style.display = 'block';
+            orgTextLogo.style.display = 'none';
+            
+            // Añadir tooltip y atributos
+            organizationLogoImg.title = this.currentAdmin.organizacion;
+            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion);
+            
+            console.log('🏢 Logo de organización actualizado:', this.currentAdmin.organizacion);
+        } else {
+            // Mostrar texto en lugar de imagen
+            organizationLogoImg.style.display = 'none';
+            orgTextLogo.style.display = 'flex';
+            
+            // Crear texto con las iniciales de la organización
+            const orgName = this.currentAdmin.organizacion || 'Organización';
+            const initials = orgName
+                .split(' ')
+                .map(word => word.charAt(0))
+                .join('')
+                .toUpperCase()
+                .substring(0, 3);
+            
+            orgTextLogo.textContent = initials;
+            orgTextLogo.title = orgName;
+            
+            console.log('🏢 Texto de organización mostrado:', initials);
+        }
+
+        // Actualizar el enlace del logo para redirigir al dashboard
+        orgLogoLink.href = '/users/admin/dashboard/dashboard.html';
+    }
+
+    // Actualiza la información del administrador en el menú
+    updateAdminMenuInfo() {
+        // Nombre del administrador
+        const adminName = document.getElementById('adminName');
+        if (adminName) {
+            adminName.textContent = this.currentAdmin.nombreCompleto || 'Administrador';
+        }
+
+        // Email del administrador
+        const adminEmail = document.getElementById('adminEmail');
+        if (adminEmail) {
+            adminEmail.textContent = this.currentAdmin.correoElectronico || 'No especificado';
+        }
+
+        // Organización del administrador
+        const adminOrganization = document.getElementById('adminOrganization');
+        if (adminOrganization) {
+            adminOrganization.textContent = this.currentAdmin.organizacion || 'Sin organización';
+        }
+
+        // Foto de perfil del administrador
+        const adminProfileImg = document.getElementById('adminProfileImg');
+        const profilePlaceholder = document.getElementById('profilePlaceholder');
+        
+        if (adminProfileImg && profilePlaceholder) {
+            if (this.currentAdmin.fotoUsuario) {
+                adminProfileImg.src = this.currentAdmin.fotoUsuario;
+                adminProfileImg.style.display = 'block';
+                profilePlaceholder.style.display = 'none';
+                console.log('👤 Foto de admin cargada');
+            } else {
+                adminProfileImg.style.display = 'none';
+                profilePlaceholder.style.display = 'flex';
+                console.log('👤 Placeholder de foto mostrado');
+            }
+        }
+
+        console.log('✅ Información del admin actualizada en el menú');
+    }
+
+    // Actualiza el título del navbar si es necesario
+    updateNavbarTitle() {
+        const navbarTitle = document.querySelector('.navbar-title');
+        if (navbarTitle && this.currentAdmin.organizacion) {
+            // Opcional: Cambiar el título para incluir el nombre de la organización
+            // navbarTitle.textContent = `CENTINELA - ${this.currentAdmin.organizacion}`;
+        }
+    }
+
+    // Configura todas las funcionalidades
     setupFunctionalities() {
         this.setupMenu();  
         this.setupScroll();
