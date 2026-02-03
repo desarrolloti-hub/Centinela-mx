@@ -1,15 +1,15 @@
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ DOM cargado, iniciando editor de colaborador...');
+    console.log('DOM cargado, iniciando editor de colaborador...');
     
     // Verificar si SweetAlert2 está cargado
     if (typeof Swal === 'undefined') {
-        console.error('❌ SweetAlert2 no está cargado');
+        console.error('SweetAlert2 no está cargado');
         loadSweetAlert();
         return;
     }
     
-    console.log('✅ SweetAlert2 ya está cargado');
+    console.log('SweetAlert2 ya está cargado');
     applySweetAlertStyles();
     initCollaboratorEditor();
 });
@@ -19,12 +19,12 @@ function loadSweetAlert() {
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
     script.onload = () => {
-        console.log('✅ SweetAlert2 cargado dinámicamente');
+        console.log('SweetAlert2 cargado dinámicamente');
         applySweetAlertStyles();
         initCollaboratorEditor();
     };
     script.onerror = () => {
-        console.error('❌ Error cargando SweetAlert2');
+        console.error('Error cargando SweetAlert2');
         alert('Error: No se pudo cargar SweetAlert2. Recarga la página.');
     };
     document.head.appendChild(script);
@@ -140,12 +140,12 @@ function applySweetAlertStyles() {
         }
     `;
     document.head.appendChild(style);
-    console.log('✅ Estilos SweetAlert aplicados');
+    console.log('Estilos SweetAlert aplicados');
 }
 
 // ========== EDITOR DE COLABORADOR ==========
 function initCollaboratorEditor() {
-    console.log('🚀 Inicializando editor de colaborador...');
+    console.log('Inicializando editor de colaborador...');
     
     // Elementos del DOM
     const elements = {
@@ -184,19 +184,19 @@ function initCollaboratorEditor() {
     
     // 1. BOTÓN GUARDAR CAMBIOS
     elements.saveChangesBtn.addEventListener('click', () => {
-        console.log('💾 Botón guardar cambios clickeado');
+        console.log('Botón guardar cambios clickeado');
         validateAndSaveChanges();
     });
     
     // 2. BOTÓN CANCELAR
     elements.cancelBtn.addEventListener('click', () => {
-        console.log('❌ Botón cancelar clickeado');
+        console.log('Botón cancelar clickeado');
         showCancelConfirmation();
     });
     
     // 3. BOTÓN ELIMINAR
     elements.deleteBtn.addEventListener('click', () => {
-        console.log('🗑️ Botón eliminar clickeado');
+        console.log('Botón eliminar clickeado');
         showDeleteConfirmation();
     });
     
@@ -249,7 +249,7 @@ function initCollaboratorEditor() {
         });
     });
     
-    console.log('✅ Event listeners asignados correctamente');
+    console.log('Event listeners asignados correctamente');
 }
 
 // ========== ALERTAS DE SWEETALERT ==========
@@ -311,7 +311,7 @@ function validateAndSaveChanges() {
     // Si hay errores, mostrar alerta
     if (errors.length > 0) {
         showErrorAlert(
-            '⚠️ ERROR DE VALIDACIÓN',
+            'ERROR DE VALIDACIÓN',
             `<div style="text-align: left;">
                 <p>Por favor corrige los siguientes errores:</p>
                 <ul style="margin: 10px 0 0 20px;">
@@ -407,7 +407,7 @@ function showSaveConfirmation(fullName, email, password, status) {
     `;
     
     Swal.fire({
-        title: '💾 ACTUALIZAR COLABORADOR',
+        title: 'ACTUALIZAR COLABORADOR',
         html: htmlContent,
         icon: 'question',
         showCancelButton: true,
@@ -430,7 +430,7 @@ function showSaveConfirmation(fullName, email, password, status) {
 function saveCollaboratorChanges() {
     // Mostrar loader
     Swal.fire({
-        title: '⏳ ACTUALIZANDO COLABORADOR',
+        title: 'ACTUALIZANDO COLABORADOR',
         text: 'Por favor espera un momento...',
         allowOutsideClick: false,
         allowEscapeKey: false,
@@ -463,7 +463,7 @@ function saveCollaboratorChanges() {
         Swal.close();
         
         showSuccessAlert(
-            '✅ COLABORADOR ACTUALIZADO',
+            'COLABORADOR ACTUALIZADO',
             `<div style="text-align: center; margin: 15px 0;">
                 <div style="display: inline-block; background: rgba(46, 204, 113, 0.2); 
                      padding: 15px; border-radius: 50%; border: 2px solid #2ecc71;">
@@ -479,7 +479,7 @@ function saveCollaboratorChanges() {
             </div>`
         );
         
-        console.log('💾 Colaborador actualizado:', formData);
+        console.log('Colaborador actualizado:', formData);
         
         // Opcional: Redirigir después de 3 segundos
         setTimeout(() => {
@@ -492,7 +492,7 @@ function saveCollaboratorChanges() {
 // 4. ALERTA DE CONFIRMACIÓN PARA CANCELAR
 function showCancelConfirmation() {
     Swal.fire({
-        title: '⚠️ ¿CANCELAR CAMBIOS?',
+        title: '¿CANCELAR CAMBIOS?',
         html: `
             <div style="text-align: center; margin: 20px 0;">
                 <div style="display: inline-block; background: rgba(231, 76, 60, 0.1); 
@@ -534,7 +534,7 @@ function showDeleteConfirmation() {
     const email = document.getElementById('email').value;
     
     Swal.fire({
-        title: '🗑️ ¿ELIMINAR COLABORADOR?',
+        title: '¿ELIMINAR COLABORADOR?',
         html: `
             <div style="text-align: center; margin: 20px 0;">
                 <div style="display: inline-block; background: rgba(231, 76, 60, 0.1); 
@@ -609,7 +609,7 @@ function deleteCollaborator() {
         Swal.close();
         
         showSuccessAlert(
-            '✅ COLABORADOR ELIMINADO',
+            'COLABORADOR ELIMINADO',
             `<div style="text-align: center; margin: 15px 0;">
                 <div style="display: inline-block; background: rgba(231, 76, 60, 0.2); 
                      padding: 15px; border-radius: 50%; border: 2px solid #e74c3c;">
@@ -625,7 +625,7 @@ function deleteCollaborator() {
             </div>`
         );
         
-        console.log(`🗑️ Colaborador eliminado: ${fullName}`);
+        console.log(`Colaborador eliminado: ${fullName}`);
         
         // Redirigir después de 3 segundos
         setTimeout(() => {
@@ -647,7 +647,7 @@ function deactivateCollaborator() {
     
     // Mostrar loader
     Swal.fire({
-        title: '⏳ DESACTIVANDO COLABORADOR',
+        title: 'DESACTIVANDO COLABORADOR',
         text: 'Actualizando estatus...',
         allowOutsideClick: false,
         showConfirmButton: false,
@@ -677,7 +677,7 @@ function deactivateCollaborator() {
             </div>`
         );
         
-        console.log(`🔴 Colaborador desactivado: ${fullName}`);
+        console.log(`Colaborador desactivado: ${fullName}`);
         
     }, 1500);
 }
@@ -709,7 +709,7 @@ function handleFileSelect(event) {
     // Validar tamaño
     if (file.size > maxSize * 1024 * 1024) {
         showErrorAlert(
-            '❌ ARCHIVO DEMASIADO GRANDE',
+            'ARCHIVO DEMASIADO GRANDE',
             `El archivo excede el tamaño máximo permitido.<br><br>
             <strong>Tamaño del archivo:</strong> ${(file.size / (1024 * 1024)).toFixed(2)} MB<br>
             <strong>Límite permitido:</strong> ${maxSize} MB<br><br>
@@ -733,7 +733,7 @@ function showImagePreview(file) {
         const imageUrl = e.target.result;
         
         Swal.fire({
-            title: '📷 FOTO DEL COLABORADOR',
+            title: 'FOTO DEL COLABORADOR',
             html: `
                 <div style="text-align: center; margin: 20px 0;">
                     <img src="${imageUrl}" alt="Preview" 
@@ -777,7 +777,7 @@ function saveCollaboratorImage(imageUrl) {
     
     // Mostrar loader
     Swal.fire({
-        title: '⏳ GUARDANDO IMAGEN',
+        title: 'GUARDANDO IMAGEN',
         text: 'Por favor espera...',
         allowOutsideClick: false,
         showConfirmButton: false,
@@ -796,7 +796,7 @@ function saveCollaboratorImage(imageUrl) {
         // Cerrar loader y mostrar éxito
         Swal.close();
         showSuccessAlert(
-            '✅ IMAGEN ACTUALIZADA',
+            'IMAGEN ACTUALIZADA',
             `La foto del colaborador se ha actualizado exitosamente.<br><br>
             <div style="text-align: center; margin: 15px 0;">
                 <div style="display: inline-block; background: rgba(46, 204, 113, 0.2); 
@@ -806,7 +806,7 @@ function saveCollaboratorImage(imageUrl) {
             </div>`
         );
         
-        console.log('📸 Imagen del colaborador actualizada');
+        console.log('Imagen del colaborador actualizada');
         
     }, 1500);
 }
@@ -841,7 +841,7 @@ function generateSecurePassword() {
     
     // Mostrar alerta con la contraseña
     Swal.fire({
-        title: '🔑 CONTRASEÑA GENERADA',
+        title: 'CONTRASEÑA GENERADA',
         html: `
             <div style="text-align: center; margin: 20px 0;">
                 <div style="display: inline-block; background: rgba(155, 89, 182, 0.1); 
@@ -943,7 +943,7 @@ window.generateSecurePassword = generateSecurePassword;
 window.showSuccessAlert = showSuccessAlert;
 window.showErrorAlert = showErrorAlert;
 
-console.log('🎯 Editor de colaborador listo. Funciones disponibles:');
+console.log('Editor de colaborador listo. Funciones disponibles:');
 console.log('- validateAndSaveChanges()');
 console.log('- showCancelConfirmation()');
 console.log('- showDeleteConfirmation()');

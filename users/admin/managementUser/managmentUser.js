@@ -1,6 +1,6 @@
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ DOM cargado, iniciando gestor de usuarios...');
+    console.log('DOM cargado, iniciando gestor de usuarios...');
     
     // Verificar si SweetAlert2 está cargado
     if (typeof Swal === 'undefined') {
@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
         script.onload = () => {
-            console.log('✅ SweetAlert2 cargado dinámicamente');
+            console.log('SweetAlert2 cargado dinámicamente');
             applyAdaptiveSweetAlertStyles();
             initUserManager();
         };
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         document.head.appendChild(script);
     } else {
-        console.log('✅ SweetAlert2 ya está cargado');
+        console.log('SweetAlert2 ya está cargado');
         applyAdaptiveSweetAlertStyles();
         initUserManager();
     }
@@ -203,32 +203,32 @@ function applyAdaptiveSweetAlertStyles() {
         }
     `;
     document.head.appendChild(style);
-    console.log('✅ Estilos SweetAlert adaptativos aplicados');
+    console.log('Estilos SweetAlert adaptativos aplicados');
 }
 
 // ========== GESTOR DE USUARIOS ==========
 function initUserManager() {
-    console.log('🚀 Inicializando gestor de usuarios...');
+    console.log('Inicializando gestor de usuarios...');
     
     // Elementos del DOM
     const addBtn = document.getElementById('addBtn');
     const collaboratorsTable = document.querySelector('.collaborators-table');
     
     if (!addBtn) {
-        console.error('❌ No se encontró el botón addBtn');
+        console.error('No se encontró el botón addBtn');
         return;
     }
     
     if (!collaboratorsTable) {
-        console.error('❌ No se encontró la tabla collaboratorsTable');
+        console.error('No se encontró la tabla collaboratorsTable');
         return;
     }
     
-    console.log('✅ Elementos DOM encontrados');
+    console.log('Elementos DOM encontrados');
     
     // ========== BOTÓN AGREGAR COLABORADOR ==========
     addBtn.addEventListener('click', () => {
-        console.log('➕ Botón agregar colaborador clickeado');
+        console.log('Botón agregar colaborador clickeado');
         showAddCollaboratorAlert();
     });
     
@@ -246,11 +246,11 @@ function initUserManager() {
             e.stopPropagation();
             
             if (button.classList.contains('enable')) {
-                console.log('🔄 Botón habilitar/inhabilitar clickeado');
+                console.log('Botón habilitar/inhabilitar clickeado');
                 toggleUserStatus(row, button);
             } 
             else if (button.classList.contains('edit')) {
-                console.log('✏️ Botón editar clickeado');
+                console.log('Botón editar clickeado');
                 editUser(row);
             } 
             else if (button.classList.contains('view')) {
@@ -260,7 +260,7 @@ function initUserManager() {
         }
     });
     
-    console.log('✅ Eventos asignados correctamente');
+    console.log('Eventos asignados correctamente');
 }
 
 // ========== ALERTAS DE SWEETALERT CON ESTILOS ADAPTATIVOS ==========
@@ -291,7 +291,7 @@ function showAddCollaboratorAlert() {
     const colors = getThemeColors();
     
     Swal.fire({
-        title: '➕ AGREGAR NUEVO COLABORADOR',
+        title: 'AGREGAR NUEVO COLABORADOR',
         html: `
             <div style="text-align: left;">
                 <div style="margin-bottom: 15px;">
@@ -371,11 +371,11 @@ function showAddCollaboratorAlert() {
     }).then((result) => {
         if (result.isConfirmed) {
             const userData = result.value;
-            console.log('📝 Datos del nuevo colaborador:', userData);
+            console.log('Datos del nuevo colaborador:', userData);
             
             // Mostrar loader
             Swal.fire({
-                title: '⏳ CREANDO COLABORADOR',
+                title: ' CREANDO COLABORADOR',
                 text: 'Por favor espera un momento...',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
@@ -393,7 +393,7 @@ function showAddCollaboratorAlert() {
                 
                 // Mostrar éxito
                 showSuccessAlert(
-                    '✅ COLABORADOR CREADO',
+                    'COLABORADOR CREADO',
                     `El colaborador <strong>${userData.name} ${userData.lastname}</strong> ha sido creado exitosamente.<br><br>
                     <strong>Correo:</strong> ${userData.email}<br>
                     <strong>Contraseña temporal:</strong> ${userData.password}<br><br>
@@ -425,7 +425,7 @@ function toggleUserStatus(row, button) {
     const confirmColor = isActive ? colors.error : colors.success;
     
     Swal.fire({
-        title: `⚠️ ${actionCapitalized} COLABORADOR`,
+        title: ` ${actionCapitalized} COLABORADOR`,
         html: `
             <div style="text-align: center; margin: 20px 0;">
                 <div style="display: inline-block; background: ${isActive ? colors.error + '15' : colors.success + '15'}; 
@@ -486,7 +486,7 @@ function toggleUserStatus(row, button) {
             
             // Mostrar mensaje de éxito
             showSuccessAlert(
-                '✅ ESTADO CAMBIADO',
+                ' ESTADO CAMBIADO',
                 `El colaborador <strong>${fullName}</strong> ha sido <strong>${action}do</strong> exitosamente.<br><br>
                 <span style="color: ${iconColor};"><i class="fas ${icon}"></i> Estado actual: <strong>${newStatus}</strong></span>`
             );
@@ -507,7 +507,7 @@ function editUser(row) {
     const fullName = `${userName} ${userLastname}`;
     
     Swal.fire({
-        title: '✏️ EDITAR COLABORADOR',
+        title: ' EDITAR COLABORADOR',
         html: `
             <div style="text-align: center; margin-bottom: 20px;">
                 <div style="display: inline-block; background: ${colors.info}15; 
@@ -545,8 +545,8 @@ function editUser(row) {
                         <i class="fas fa-toggle-on"></i> ESTADO
                     </label>
                     <select id="edit-status" class="swal2-select" style="width: 100%;">
-                        <option value="active" ${isActive ? 'selected' : ''}>🟢 Activo</option>
-                        <option value="inactive" ${!isActive ? 'selected' : ''}>🔴 Inactivo</option>
+                        <option value="active" ${isActive ? 'selected' : ''}>Activo</option>
+                        <option value="inactive" ${!isActive ? 'selected' : ''}>Inactivo</option>
                     </select>
                 </div>
                 
@@ -601,7 +601,7 @@ function editUser(row) {
             
             // Mostrar loader
             Swal.fire({
-                title: '⏳ ACTUALIZANDO DATOS',
+                title: ' ACTUALIZANDO DATOS',
                 text: 'Guardando los cambios...',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
@@ -643,13 +643,13 @@ function editUser(row) {
                 // Cerrar loader y mostrar éxito
                 Swal.close();
                 showSuccessAlert(
-                    '✅ CAMBIOS GUARDADOS',
+                    ' CAMBIOS GUARDADOS',
                     `Los datos de <strong>${data.newName} ${data.newLastname}</strong> han sido actualizados correctamente.<br><br>
                     <strong>Nuevo correo:</strong> ${data.newEmail}<br>
                     <strong>Nuevo estado:</strong> ${data.newStatus === 'active' ? '🟢 Activo' : '🔴 Inactivo'}`
                 );
                 
-                console.log(`📝 Usuario editado: ${data.newName} ${data.newLastname}`);
+                console.log(` Usuario editado: ${data.newName} ${data.newLastname}`);
                 
             }, 1500);
         }
@@ -674,7 +674,7 @@ function viewUserDetails(button) {
     const statusIcon = status === 'Activo' ? 'fa-check-circle' : 'fa-ban';
     
     Swal.fire({
-        title: '👁️ DETALLES DEL COLABORADOR',
+        title: 'DETALLES DEL COLABORADOR',
         html: `
             <div style="text-align: center; margin-bottom: 20px;">
                 <img src="${userPhoto}" alt="Foto del usuario" 
@@ -833,7 +833,7 @@ function addUserToTable(userData) {
     `;
     
     tbody.appendChild(newRow);
-    console.log(`✅ Usuario agregado a la tabla: ${userData.name} ${userData.lastname}`);
+    console.log(`Usuario agregado a la tabla: ${userData.name} ${userData.lastname}`);
     
     // Actualizar contador
     updateTableCount();
@@ -842,7 +842,7 @@ function addUserToTable(userData) {
 function updateTableCount() {
     const activeCount = document.querySelectorAll('.status.active').length;
     const totalCount = document.querySelectorAll('tbody tr').length;
-    console.log(`📊 Total colaboradores: ${totalCount}, Activos: ${activeCount}`);
+    console.log(`Total colaboradores: ${totalCount}, Activos: ${activeCount}`);
 }
 
 // ========== EXPORTAR FUNCIONES PARA USO EN HTML ==========
@@ -853,4 +853,4 @@ window.viewUserDetails = viewUserDetails;
 window.showSuccessAlert = showSuccessAlert;
 window.showErrorAlert = showErrorAlert;
 
-console.log('🎯 Gestor de usuarios listo con estilos adaptativos');
+console.log('Gestor de usuarios listo con estilos adaptativos');
