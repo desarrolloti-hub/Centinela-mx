@@ -1,180 +1,108 @@
-// ========== INICIALIZACIÓN ==========
+// editAdmin.js - Editor de perfil de administrador con Firebase
+// ==================== IMPORTS ====================
+import { getAuth, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
+    from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc } 
+    from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { firebaseConfig } from '/config/firebase-config.js';
+
+// ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si SweetAlert2 está cargado
+    console.log('📄 Editor de perfil cargado');
+    
+    // Verificar SweetAlert2
     if (typeof Swal === 'undefined') {
-        console.error('❌ SweetAlert2 no está cargado. Añade: <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>');
+        console.error('❌ SweetAlert2 no está cargado');
         return;
     }
     
-    // Aplicar estilos personalizados a SweetAlert2
+    // Aplicar estilos
     applySweetAlertStyles();
     
-    // Inicializar el editor de perfil
-    initProfileEditor();
+    // Inicializar Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    // Inicializar editor
+    initProfileEditor(auth, db);
 });
 
-// Aplicar estilos personalizados para SweetAlert2
+// ==================== FUNCIONES PRINCIPALES ====================
 function applySweetAlertStyles() {
     const style = document.createElement('style');
     style.textContent = `
-        /* Estilos personalizados para SweetAlert2 usando variables del theme */
-        .swal2-popup {
-            background: var(--color-bg-tertiary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: var(--border-radius-medium) !important;
-            box-shadow: var(--shadow-large) !important;
-            backdrop-filter: blur(8px) !important;
-            font-family: 'Rajdhani', sans-serif !important;
+        /* Estilos para campos de solo lectura */
+        .readonly-field {
+            background-color: #f5f5f5 !important;
+            border-color: #ddd !important;
+            color: #666 !important;
+            cursor: not-allowed !important;
         }
         
-        .swal2-title {
-            color: var(--color-text-primary) !important;
-            font-family: var(--font-family-primary) !important;
-            font-size: 1.5rem !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
+        .readonly-badge {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #e0e0e0;
+            color: #666;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         
-        .swal2-html-container {
-            color: var(--color-text-secondary) !important;
-            font-size: 1rem !important;
+        /* Estilos específicos del editor */
+        .password-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #e0e0e0;
         }
         
-        .swal2-confirm {
-            background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
-            color: var(--color-text-dark) !important;
-            border: none !important;
-            border-radius: var(--border-radius-small) !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default) !important;
-            box-shadow: var(--shadow-small) !important;
+        .section-subtitle {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        .swal2-confirm:hover {
-            background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary)) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-normal) !important;
+        .section-description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
         }
         
-        .swal2-cancel {
-            background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary)) !important;
-            color: var(--color-text-primary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: var(--border-radius-small) !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default) !important;
-            box-shadow: var(--shadow-small) !important;
+        .permissions-note {
+            background: #fff8e1;
+            border-left: 4px solid #ffb300;
+            padding: 12px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-size: 0.9rem;
+            color: #5d4037;
         }
         
-        .swal2-cancel:hover {
-            background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary)) !important;
-            border-color: var(--color-accent-primary) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-normal) !important;
-        }
-        
-        .swal2-input {
-            background: var(--color-bg-secondary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: var(--border-radius-small) !important;
-            color: var(--color-text-primary) !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default) !important;
-        }
-        
-        .swal2-input:focus {
-            border-color: var(--color-accent-primary) !important;
-            box-shadow: 0 0 0 1px var(--color-shadow) !important;
-        }
-        
-        .swal2-select {
-            background: var(--color-bg-secondary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: var(--border-radius-small) !important;
-            color: var(--color-text-primary) !important;
-            font-family: 'Rajdhani', sans-serif !important;
-        }
-        
-        /* Toast notifications */
-        .swal2-toast {
-            background: var(--color-bg-tertiary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            box-shadow: var(--shadow-normal) !important;
-            backdrop-filter: blur(8px) !important;
-        }
-        
-        .swal2-toast .swal2-title {
-            color: var(--color-text-primary) !important;
-            font-size: 0.875rem !important;
-        }
-        
-        /* Icon colors */
-        .swal2-success [class^="swal2-success-line"] {
-            background-color: var(--color-accent-primary) !important;
-        }
-        
-        .swal2-success .swal2-success-ring {
-            border-color: rgba(192, 192, 192, 0.3) !important;
-        }
-        
-        .swal2-icon.swal2-error {
-            border-color: #e74c3c !important;
-        }
-        
-        .swal2-icon.swal2-error [class^="swal2-x-mark-line"] {
-            background-color: #e74c3c !important;
-        }
-        
-        .swal2-icon.swal2-warning {
-            border-color: #f39c12 !important;
-            color: #f39c12 !important;
-        }
-        
-        .swal2-icon.swal2-info {
-            border-color: #3498db !important;
-            color: #3498db !important;
-        }
-        
-        .swal2-icon.swal2-question {
-            border-color: var(--color-accent-primary) !important;
-            color: var(--color-accent-primary) !important;
-        }
-        
-        /* Progress bar */
-        .swal2-progress-steps .swal2-progress-step {
-            background: var(--color-accent-primary) !important;
-            color: var(--color-text-dark) !important;
-        }
-        
-        .swal2-progress-steps .swal2-progress-step.swal2-active-progress-step {
-            background: var(--color-accent-secondary) !important;
-        }
-        
-        .swal2-progress-steps .swal2-progress-step-line {
-            background: var(--color-border-light) !important;
-        }
-        
-        /* Timer progress bar */
-        .swal2-timer-progress-bar {
-            background: var(--color-accent-primary) !important;
+        /* Animaciones */
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
         }
     `;
     document.head.appendChild(style);
 }
 
-function initProfileEditor() {
+async function initProfileEditor(auth, db) {
     // Elementos del DOM
     const elements = {
-        // Fotos
+        // Fotos (EDITABLES)
         profileCircle: document.getElementById('profileCircle'),
         profileImage: document.getElementById('profileImage'),
         profilePlaceholder: document.getElementById('profilePlaceholder'),
@@ -197,6 +125,9 @@ function initProfileEditor() {
         
         // Formulario
         fullNameInput: document.getElementById('fullName'),
+        emailInput: document.getElementById('email'),
+        organizationNameInput: document.getElementById('organizationName'),
+        positionInput: document.getElementById('position'),
         currentPasswordInput: document.getElementById('currentPassword'),
         newPasswordInput: document.getElementById('newPassword'),
         confirmPasswordInput: document.getElementById('confirmPassword'),
@@ -204,64 +135,77 @@ function initProfileEditor() {
         // Botones y mensajes
         saveChangesBtn: document.getElementById('saveChangesBtn'),
         cancelBtn: document.getElementById('cancelBtn'),
+        backToDashboard: document.getElementById('backToDashboard'),
         mainMessage: document.getElementById('mainMessage'),
         passwordMessage: document.getElementById('passwordMessage')
     };
 
+    // Variables
+    let currentUser = null;
+    let userData = {};
     let selectedFile = null;
     let currentPhotoType = '';
+    let originalData = {};
 
     // ========== FUNCIONES DE UTILIDAD ==========
     function showMessage(element, type, text) {
+        if (!element) return;
+        
         const icons = {
             'success': 'fa-check-circle',
             'error': 'fa-exclamation-circle',
-            'info': 'fa-info-circle'
+            'info': 'fa-info-circle',
+            'warning': 'fa-exclamation-triangle'
         };
         
-        element.className = `message-container ${type}`;
+        const colors = {
+            'success': '#4CAF50',
+            'error': '#F44336',
+            'info': '#2196F3',
+            'warning': '#FF9800'
+        };
+        
         element.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 5px; background: ${colors[type]}15; border-left: 4px solid ${colors[type]}">
+                <i class="fas ${icons[type]}" style="color: ${colors[type]};"></i>
                 <span>${text}</span>
             </div>
         `;
         element.style.display = 'block';
         
-        setTimeout(() => {
-            element.style.animation = 'slideOut 0.3s ease';
+        // Auto-ocultar después de 5 segundos
+        if (type !== 'error') {
             setTimeout(() => {
                 element.style.display = 'none';
-                element.style.animation = '';
-            }, 300);
-        }, 5000);
+            }, 5000);
+        }
     }
 
-    // ========== VALIDACIONES ==========
+    function clearMessages() {
+        if (elements.mainMessage) elements.mainMessage.style.display = 'none';
+        if (elements.passwordMessage) elements.passwordMessage.style.display = 'none';
+    }
+
     function validateFile(file, maxSizeMB = 5) {
         const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         const maxSize = maxSizeMB * 1024 * 1024;
         
         if (!validTypes.includes(file.type)) {
-            // Usar SweetAlert2 para error de formato
             Swal.fire({
                 icon: 'error',
                 title: 'Formato no válido',
-                text: 'Solo se permiten archivos JPG, PNG o GIF',
-                confirmButtonColor: '#e74c3c',
-                confirmButtonText: 'ENTENDIDO'
+                text: 'Solo se permiten archivos JPG, PNG, GIF o WebP',
+                confirmButtonColor: '#e74c3c'
             });
             return false;
         }
         
         if (file.size > maxSize) {
-            // Usar SweetAlert2 para error de tamaño
             Swal.fire({
                 icon: 'error',
                 title: 'Archivo demasiado grande',
                 text: `El archivo excede el tamaño máximo permitido (${maxSizeMB}MB)`,
-                confirmButtonColor: '#e74c3c',
-                confirmButtonText: 'ENTENDIDO'
+                confirmButtonColor: '#e74c3c'
             });
             return false;
         }
@@ -272,6 +216,7 @@ function initProfileEditor() {
     function validatePassword(password) {
         const minLength = 8;
         const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
         const hasNumber = /\d/.test(password);
         const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
         
@@ -279,13 +224,130 @@ function initProfileEditor() {
         
         if (password.length < minLength) errors.push(`Mínimo ${minLength} caracteres`);
         if (!hasUpperCase) errors.push('Al menos una letra mayúscula');
+        if (!hasLowerCase) errors.push('Al menos una letra minúscula');
         if (!hasNumber) errors.push('Al menos un número');
-        if (!hasSpecialChar) errors.push('Al menos un carácter especial (@, #, $, etc.)');
+        if (!hasSpecialChar) errors.push('Al menos un carácter especial');
         
         return {
             isValid: errors.length === 0,
             errors: errors
         };
+    }
+
+    function getImageUrl(base64String) {
+        if (!base64String || base64String.trim() === '') {
+            return '';
+        }
+        
+        if (base64String.startsWith('http')) {
+            return base64String;
+        }
+        
+        if (base64String.startsWith('data:')) {
+            return base64String;
+        }
+        
+        return `data:image/jpeg;base64,${base64String}`;
+    }
+
+    function updatePhoto(imageElement, placeholderElement, imageSrc) {
+        if (imageSrc) {
+            imageElement.src = imageSrc;
+            imageElement.style.display = 'block';
+            placeholderElement.style.display = 'none';
+        } else {
+            imageElement.style.display = 'none';
+            placeholderElement.style.display = 'flex';
+        }
+    }
+
+    // ========== CARGAR DATOS DEL USUARIO ==========
+    async function loadUserData(userId) {
+        try {
+            console.log('🔍 Cargando datos del usuario:', userId);
+            
+            const userRef = doc(db, "administradores", userId);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+                showMessage(elements.mainMessage, 'error', 'Usuario no encontrado en la base de datos');
+                return;
+            }
+            
+            userData = userSnap.data();
+            originalData = { ...userData };
+            
+            console.log('📊 Datos cargados:', userData);
+            
+            // Actualizar interfaz
+            updateUI(userData);
+            
+        } catch (error) {
+            console.error('❌ Error cargando datos:', error);
+            showMessage(elements.mainMessage, 'error', 'Error al cargar datos del usuario');
+        }
+    }
+
+    function updateUI(data) {
+        // Fotos
+        const profilePicUrl = getImageUrl(data.fotoUsuario);
+        const orgPicUrl = getImageUrl(data.fotoOrganizacion);
+        
+        updatePhoto(elements.profileImage, elements.profilePlaceholder, profilePicUrl);
+        updatePhoto(elements.orgImage, elements.orgPlaceholder, orgPicUrl);
+        
+        // Campos editables
+        if (elements.fullNameInput) {
+            elements.fullNameInput.value = data.nombreCompleto || '';
+        }
+        
+        // Campos de solo lectura
+        if (elements.emailInput) {
+            elements.emailInput.value = data.correoElectronico || currentUser?.email || '';
+        }
+        
+        if (elements.organizationNameInput) {
+            elements.organizationNameInput.value = data.organizacion || '';
+        }
+        
+        if (elements.positionInput) {
+            elements.positionInput.value = data.cargo || 'administrador';
+        }
+        
+        console.log('✅ Interfaz actualizada');
+    }
+
+    // ========== MANEJO DE FOTOS ==========
+    function setupPhotoHandlers() {
+        // Foto de perfil
+        elements.profileCircle.addEventListener('click', () => elements.profileInput.click());
+        elements.editProfileOverlay.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.profileInput.click();
+        });
+        
+        elements.profileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file && validateFile(file, 5)) {
+                showConfirmationModal(file, 'profile');
+            }
+            this.value = '';
+        });
+
+        // Logo de organización
+        elements.orgCircle.addEventListener('click', () => elements.orgInput.click());
+        elements.editOrgOverlay.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.orgInput.click();
+        });
+        
+        elements.orgInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file && validateFile(file, 10)) {
+                showConfirmationModal(file, 'organization');
+            }
+            this.value = '';
+        });
     }
 
     function showConfirmationModal(file, type) {
@@ -310,127 +372,112 @@ function initProfileEditor() {
         reader.readAsDataURL(file);
     }
 
-    function updatePhoto(imageElement, placeholderElement, imageSrc) {
-        imageElement.src = imageSrc;
-        imageElement.style.display = 'block';
-        placeholderElement.style.display = 'none';
+    async function savePhotoToFirestore(imageBase64, type) {
+        try {
+            const updateData = type === 'profile' 
+                ? { fotoUsuario: imageBase64 }
+                : { fotoOrganizacion: imageBase64 };
+            
+            updateData.fechaActualizacion = new Date();
+            
+            const userRef = doc(db, "administradores", currentUser.uid);
+            await updateDoc(userRef, updateData);
+            
+            // Actualizar datos locales
+            if (type === 'profile') {
+                userData.fotoUsuario = imageBase64;
+            } else {
+                userData.fotoOrganizacion = imageBase64;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error(`Error guardando ${type}:`, error);
+            return false;
+        }
     }
 
-    // ========== EVENTOS DE FOTOS ==========
-    elements.profileCircle.addEventListener('click', () => elements.profileInput.click());
-    elements.editProfileOverlay.addEventListener('click', (e) => {
-        e.stopPropagation();
-        elements.profileInput.click();
-    });
-    
-    elements.profileInput.addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if (file && validateFile(file, 5)) {
-            showConfirmationModal(file, 'profile');
-        }
-        this.value = '';
-    });
-
-    elements.orgCircle.addEventListener('click', () => elements.orgInput.click());
-    elements.editOrgOverlay.addEventListener('click', (e) => {
-        e.stopPropagation();
-        elements.orgInput.click();
-    });
-    
-    elements.orgInput.addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if (file && validateFile(file, 10)) {
-            showConfirmationModal(file, 'organization');
-        }
-        this.value = '';
-    });
-
-    // Modal
-    elements.confirmChangeBtn.addEventListener('click', () => {
-        if (selectedFile) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                if (currentPhotoType === 'profile') {
-                    updatePhoto(elements.profileImage, elements.profilePlaceholder, e.target.result);
-                    localStorage.setItem('adminProfilePic', e.target.result);
-                    
-                    // Usar SweetAlert2 para éxito
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Foto actualizada!',
-                        text: 'Tu foto de perfil se ha actualizado correctamente',
-                        timer: 3000,
-                        timerProgressBar: true,
-                        showConfirmButton: false
-                    });
-                } else {
-                    updatePhoto(elements.orgImage, elements.orgPlaceholder, e.target.result);
-                    localStorage.setItem('adminOrgPic', e.target.result);
-                    
-                    // Usar SweetAlert2 para éxito
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Logo actualizado!',
-                        text: 'El logo de organización se ha actualizado correctamente',
-                        timer: 3000,
-                        timerProgressBar: true,
-                        showConfirmButton: false
-                    });
-                }
+    // ========== MANEJO DE CONTRASEÑAS ==========
+    function setupPasswordHandlers() {
+        // Mostrar/ocultar contraseña
+        document.querySelectorAll('.toggle-password').forEach(button => {
+            button.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                const icon = this.querySelector('i');
                 
-                elements.photoModal.style.display = 'none';
-                selectedFile = null;
-                currentPhotoType = '';
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.replace('fa-eye', 'fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.replace('fa-eye-slash', 'fa-eye');
+                }
+            });
+        });
+    }
+
+    async function changePassword() {
+        if (!elements.currentPasswordInput.value || 
+            !elements.newPasswordInput.value || 
+            !elements.confirmPasswordInput.value) {
+            return { success: false, message: 'Todos los campos de contraseña son obligatorios' };
+        }
+        
+        if (elements.newPasswordInput.value !== elements.confirmPasswordInput.value) {
+            return { success: false, message: 'Las nuevas contraseñas no coinciden' };
+        }
+        
+        const passwordValidation = validatePassword(elements.newPasswordInput.value);
+        if (!passwordValidation.isValid) {
+            return { 
+                success: false, 
+                message: `La contraseña no cumple los requisitos: ${passwordValidation.errors.join(', ')}`
+            };
+        }
+        
+        try {
+            // Reautenticar usuario
+            const credential = EmailAuthProvider.credential(
+                currentUser.email, 
+                elements.currentPasswordInput.value
+            );
+            
+            await reauthenticateWithCredential(currentUser, credential);
+            
+            // Cambiar contraseña
+            await updatePassword(currentUser, elements.newPasswordInput.value);
+            
+            // Limpiar campos
+            elements.currentPasswordInput.value = '';
+            elements.newPasswordInput.value = '';
+            elements.confirmPasswordInput.value = '';
+            
+            return { 
+                success: true, 
+                message: 'Contraseña cambiada exitosamente' 
             };
             
-            reader.readAsDataURL(selectedFile);
-        }
-    });
-
-    elements.cancelChangeBtn.addEventListener('click', () => {
-        elements.photoModal.style.display = 'none';
-        selectedFile = null;
-        currentPhotoType = '';
-        
-        // Usar SweetAlert2 para cancelación
-        Swal.fire({
-            icon: 'info',
-            title: 'Cambio cancelado',
-            text: 'No se realizaron cambios en la foto',
-            timer: 2000,
-            timerProgressBar: true,
-            showConfirmButton: false
-        });
-    });
-
-    elements.photoModal.addEventListener('click', (e) => {
-        if (e.target === elements.photoModal) {
-            elements.photoModal.style.display = 'none';
-            selectedFile = null;
-            currentPhotoType = '';
-        }
-    });
-
-    // ========== CONTRASEÑAS ==========
-    document.querySelectorAll('.toggle-password').forEach(button => {
-        button.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-target');
-            const input = document.getElementById(targetId);
-            const icon = this.querySelector('i');
+        } catch (error) {
+            console.error('Error cambiando contraseña:', error);
             
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.replace('fa-eye', 'fa-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            let message = 'Error al cambiar la contraseña';
+            if (error.code === 'auth/wrong-password') {
+                message = 'La contraseña actual es incorrecta';
+            } else if (error.code === 'auth/weak-password') {
+                message = 'La nueva contraseña es demasiado débil';
+            } else if (error.code === 'auth/requires-recent-login') {
+                message = 'Debes iniciar sesión nuevamente para cambiar la contraseña';
             }
-        });
-    });
+            
+            return { success: false, message: message };
+        }
+    }
 
     // ========== GUARDAR CAMBIOS ==========
-    elements.saveChangesBtn.addEventListener('click', async () => {
+    async function saveChanges() {
+        clearMessages();
+        
         let isValid = true;
         let messages = [];
         
@@ -440,148 +487,225 @@ function initProfileEditor() {
             messages.push('El nombre completo es obligatorio');
         }
         
-        // Validar contraseñas
-        const isChangingPassword = elements.currentPasswordInput.value || 
-                                  elements.newPasswordInput.value || 
-                                  elements.confirmPasswordInput.value;
-        
-        if (isChangingPassword) {
-            if (!elements.currentPasswordInput.value) {
-                isValid = false;
-                messages.push('Debes ingresar tu contraseña actual');
-            }
-            
-            if (!elements.newPasswordInput.value) {
-                isValid = false;
-                messages.push('Debes ingresar una nueva contraseña');
-            }
-            
-            if (!elements.confirmPasswordInput.value) {
-                isValid = false;
-                messages.push('Debes confirmar la nueva contraseña');
-            }
-            
-            if (elements.newPasswordInput.value && 
-                elements.confirmPasswordInput.value && 
-                elements.newPasswordInput.value !== elements.confirmPasswordInput.value) {
-                isValid = false;
-                messages.push('Las nuevas contraseñas no coinciden');
-            }
-            
-            if (elements.newPasswordInput.value) {
-                const passwordValidation = validatePassword(elements.newPasswordInput.value);
-                if (!passwordValidation.isValid) {
-                    isValid = false;
-                    messages.push('La contraseña no cumple con los requisitos de seguridad');
-                    
-                    // Mostrar error específico con SweetAlert2
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Contraseña insegura',
-                        html: `La contraseña debe cumplir con:<br><br>
-                               <ul style="text-align: left; padding-left: 20px;">
-                                 <li>Mínimo 8 caracteres</li>
-                                 <li>Al menos una letra mayúscula</li>
-                                 <li>Al menos un número</li>
-                                 <li>Al menos un carácter especial</li>
-                               </ul>`,
-                        confirmButtonColor: '#e74c3c'
-                    });
-                }
-            }
-        }
-        
         if (!isValid) {
-            // Mostrar errores con SweetAlert2
             Swal.fire({
                 icon: 'error',
                 title: 'Error de validación',
                 html: messages.map(msg => `• ${msg}`).join('<br>'),
-                confirmButtonColor: '#e74c3c',
-                confirmButtonText: 'CORREGIR'
+                confirmButtonColor: '#e74c3c'
             });
-        } else {
-            // Mostrar loader de SweetAlert2
-            const swalInstance = Swal.fire({
-                title: 'Guardando cambios...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
+            return;
+        }
+        
+        // Mostrar loader
+        const swalInstance = Swal.fire({
+            title: 'Guardando cambios...',
+            text: 'Por favor espera',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        try {
+            // Preparar datos a actualizar
+            const updateData = {
+                nombreCompleto: elements.fullNameInput.value.trim(),
+                fechaActualizacion: new Date()
+            };
+            
+            // Verificar si hay cambios en el nombre
+            const hasNameChanged = elements.fullNameInput.value.trim() !== (originalData.nombreCompleto || '');
+            
+            // Cambiar contraseña si se proporcionó
+            let passwordChanged = false;
+            if (elements.currentPasswordInput.value || 
+                elements.newPasswordInput.value || 
+                elements.confirmPasswordInput.value) {
+                
+                const passwordResult = await changePassword();
+                if (passwordResult.success) {
+                    passwordChanged = true;
+                    showMessage(elements.passwordMessage, 'success', passwordResult.message);
+                } else {
+                    await swalInstance.close();
+                    showMessage(elements.passwordMessage, 'error', passwordResult.message);
+                    return;
                 }
+            }
+            
+            // Guardar en Firestore si hay cambios
+            if (hasNameChanged) {
+                const userRef = doc(db, "administradores", currentUser.uid);
+                await updateDoc(userRef, updateData);
+                
+                // Actualizar datos locales
+                userData.nombreCompleto = updateData.nombreCompleto;
+                originalData.nombreCompleto = updateData.nombreCompleto;
+            }
+            
+            // Cerrar loader y mostrar éxito
+            await swalInstance.close();
+            
+            let successMessage = 'Cambios guardados exitosamente';
+            if (hasNameChanged && passwordChanged) {
+                successMessage = 'Nombre y contraseña actualizados correctamente';
+            } else if (hasNameChanged) {
+                successMessage = 'Nombre actualizado correctamente';
+            } else if (passwordChanged) {
+                successMessage = 'Contraseña cambiada exitosamente';
+            }
+            
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: successMessage,
+                timer: 3000,
+                showConfirmButton: false
             });
             
-            // Simular guardado
-            setTimeout(async () => {
-                // Guardar datos
-                localStorage.setItem('adminFullName', elements.fullNameInput.value);
-                
-                // Cerrar loader
-                await swalInstance.close();
-                
-                // Mostrar éxito
-                await Swal.fire({
-                    icon: 'success',
-                    title: '¡Cambios guardados!',
-                    text: 'Tus modificaciones se han guardado correctamente',
-                    timer: 3000,
-                    timerProgressBar: true,
-                    showConfirmButton: false
-                });
-                
-                // Limpiar contraseñas si se cambiaron
-                if (isChangingPassword) {
-                    elements.currentPasswordInput.value = '';
-                    elements.newPasswordInput.value = '';
-                    elements.confirmPasswordInput.value = '';
-                    
-                    // Mostrar mensaje de contraseña cambiada
-                    showMessage(elements.passwordMessage, 'success', 'Contraseña cambiada exitosamente');
-                }
-                
-                // Mostrar mensaje principal
-                showMessage(elements.mainMessage, 'success', '¡Todos los cambios han sido guardados exitosamente!');
-                
-            }, 1500);
+            showMessage(elements.mainMessage, 'success', successMessage);
+            
+        } catch (error) {
+            console.error('Error guardando cambios:', error);
+            await swalInstance.close();
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Ocurrió un error al guardar los cambios',
+                confirmButtonColor: '#e74c3c'
+            });
         }
-    });
-
-    // ========== CANCELAR CAMBIOS ========== 
-    elements.cancelBtn.addEventListener('click', () => {
-        Swal.fire({
-            title: '¿Cancelar cambios?',
-            text: "Se perderán todos los cambios no guardados",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Sí, cancelar',
-            cancelButtonText: 'No, continuar editando'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = 'index.html';
-            }
-        });
-    });
-
-    // ========== CARGAR DATOS ==========
-    function loadUserData() {
-        const savedName = localStorage.getItem('adminFullName');
-        const savedProfilePic = localStorage.getItem('adminProfilePic');
-        const savedOrgPic = localStorage.getItem('adminOrgPic');
-        
-        if (savedName) elements.fullNameInput.value = savedName;
-        if (savedProfilePic) updatePhoto(elements.profileImage, elements.profilePlaceholder, savedProfilePic);
-        if (savedOrgPic) updatePhoto(elements.orgImage, elements.orgPlaceholder, savedOrgPic);
     }
 
-    // ========== INICIALIZAR ==========
-    loadUserData();
-    
-    // Mostrar mensaje de bienvenida con SweetAlert2 después de un breve retraso
-    setTimeout(() => {
-        showMessage(elements.mainMessage, 'info', 
-            'Puedes editar tu nombre, contraseña y fotos. Recuerda guardar los cambios.');
-    }, 1000);
+    // ========== EVENTOS DEL MODAL ==========
+    function setupModalHandlers() {
+        elements.confirmChangeBtn.addEventListener('click', async () => {
+            if (selectedFile) {
+                const reader = new FileReader();
+                
+                reader.onload = async function(e) {
+                    const imageBase64 = e.target.result;
+                    
+                    // Guardar en Firestore
+                    const success = await savePhotoToFirestore(imageBase64, currentPhotoType);
+                    
+                    if (success) {
+                        // Actualizar interfaz
+                        if (currentPhotoType === 'profile') {
+                            updatePhoto(elements.profileImage, elements.profilePlaceholder, imageBase64);
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Foto actualizada!',
+                                text: 'Tu foto de perfil se ha actualizado correctamente',
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            updatePhoto(elements.orgImage, elements.orgPlaceholder, imageBase64);
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Logo actualizado!',
+                                text: 'El logo de organización se ha actualizado correctamente',
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                        }
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo guardar la imagen',
+                            confirmButtonColor: '#e74c3c'
+                        });
+                    }
+                    
+                    elements.photoModal.style.display = 'none';
+                    selectedFile = null;
+                    currentPhotoType = '';
+                };
+                
+                reader.readAsDataURL(selectedFile);
+            }
+        });
+
+        elements.cancelChangeBtn.addEventListener('click', () => {
+            elements.photoModal.style.display = 'none';
+            selectedFile = null;
+            currentPhotoType = '';
+        });
+
+        elements.photoModal.addEventListener('click', (e) => {
+            if (e.target === elements.photoModal) {
+                elements.photoModal.style.display = 'none';
+                selectedFile = null;
+                currentPhotoType = '';
+            }
+        });
+    }
+
+    // ========== EVENTOS DE BOTONES ==========
+    function setupButtonHandlers() {
+        // Guardar cambios
+        elements.saveChangesBtn.addEventListener('click', saveChanges);
+        
+        // Cancelar
+        elements.cancelBtn.addEventListener('click', () => {
+            Swal.fire({
+                title: '¿Cancelar cambios?',
+                text: 'Se perderán los cambios no guardados',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, cancelar',
+                cancelButtonText: 'No, continuar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
+                }
+            });
+        });
+        
+        // Volver al dashboard
+        elements.backToDashboard.addEventListener('click', () => {
+            window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
+        });
+    }
+
+    // ========== INICIALIZACIÓN ==========
+    function initialize() {
+        // Verificar autenticación
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                showMessage(elements.mainMessage, 'error', 'Debes iniciar sesión para acceder');
+                setTimeout(() => {
+                    window.location.href = '/users/visitors/login/login.html';
+                }, 2000);
+                return;
+            }
+            
+            currentUser = user;
+            console.log('✅ Usuario autenticado:', user.email);
+            
+            // Cargar datos del usuario
+            await loadUserData(user.uid);
+            
+            // Configurar handlers
+            setupPhotoHandlers();
+            setupPasswordHandlers();
+            setupModalHandlers();
+            setupButtonHandlers();
+            
+            // Mostrar mensaje de bienvenida
+            setTimeout(() => {
+                showMessage(elements.mainMessage, 'info', 
+                    'Puedes editar tu nombre, fotos y contraseña. Los campos bloqueados requieren permisos especiales.');
+            }, 1000);
+        });
+    }
+
+    // Iniciar
+    initialize();
 }

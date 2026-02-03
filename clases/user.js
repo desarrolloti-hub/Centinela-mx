@@ -1284,9 +1284,72 @@ class UserManager {
      * @param {string} id - ID del usuario
      * @returns {User|undefined} Instancia del usuario o undefined
      */
-    getUserById(id) {
-        return this.users.find(user => user.id === id);
+    async getUserById(id) {
+    console.log('🔍 getUserById buscando:', id);
+    
+    // 1. Buscar primero en memoria
+    const userInMemory = this.users.find(user => user.id === id);
+    if (userInMemory) {
+        console.log('✅ Usuario encontrado en memoria');
+        return userInMemory;
     }
+    
+    console.log('❌ No encontrado en memoria, buscando en Firestore...');
+    
+    // 2. Si no está en memoria, buscar en Firestore
+    try {
+        // Buscar en administradores primero
+        const adminRef = doc(db, "administradores", id);
+        const adminSnap = await getDoc(adminRef);
+        
+        if (adminSnap.exists()) {
+            console.log('✅ Encontrado en administradores');
+            const data = adminSnap.data();
+            const user = new User(id, {
+                ...data,
+                idAuth: id,
+                cargo: 'administrador'
+            });
+            
+            // Agregar a memoria para próximas búsquedas
+            this.users.push(user);
+            return user;
+        }
+        
+        // Buscar en colaboradores
+        const organizaciones = await this.getTodasLasOrganizaciones();
+        
+        for (const org of organizaciones) {
+            const coleccion = `colaboradores_${org.camelCase}`;
+            const q = query(
+                collection(db, coleccion),
+                where("idAuth", "==", id)
+            );
+            const snapshot = await getDocs(q);
+            
+            if (!snapshot.empty) {
+                console.log(`✅ Encontrado en ${coleccion}`);
+                const docSnap = snapshot.docs[0];
+                const data = docSnap.data();
+                const user = new User(id, {
+                    ...data,
+                    idAuth: id,
+                    cargo: 'colaborador'
+                });
+                
+                this.users.push(user);
+                return user;
+            }
+        }
+        
+        console.log('❌ No encontrado en ninguna colección');
+        return null;
+        
+    } catch (error) {
+        console.error('Error en getUserById:', error);
+        return null;
+    }
+}
 
     /**
      * Verifica si el usuario actual es administrador
