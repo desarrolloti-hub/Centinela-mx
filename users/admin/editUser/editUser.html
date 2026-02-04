@@ -187,6 +187,7 @@
                                    value="maria.gonzalez@techsolutions.com" placeholder="correo@organizacion.com" required>
                         </div>
                     </div>
+
                     <!-- Contraseña (opcional para reset) -->
                     <div class="form-field-group">
                         <label class="field-label" for="password">
@@ -199,11 +200,12 @@
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
-                        <button type="button" class="generate-password-btn" id="generatePasswordBtn" style="margin-top: 0.5rem; background: none; border: 1px solid var(--color-accent-primary); color: var(--color-accent-primary); padding: 0.5rem 1rem; border-radius: var(--border-radius-small); cursor: pointer; font-size: 0.75rem; transition: var(--transition-default);">
+                        <button type="button" class="generate-password-btn" id="generatePasswordBtn">
                             <i class="fas fa-random"></i> Generar contraseña segura
                         </button>
                     </div>
 
+                    <!-- Confirmar Contraseña -->
                     <div class="form-field-group">
                         <label class="field-label" for="confirmPassword">
                             <i class="fas fa-key"></i> CONFIRMAR CONTRASEÑA
@@ -271,7 +273,7 @@
                         <button type="button" class="action-btn cancel-btn" id="cancelBtn">
                             <i class="fas fa-times"></i>CANCELAR
                         </button>
-                        <button type="button" class="action-btn delete-btn" id="deleteBtn" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                        <button type="button" class="action-btn delete-btn" id="deleteBtn">
                             <i class="fas fa-trash"></i>ELIMINAR
                         </button>
                     </div>
@@ -298,8 +300,9 @@
                 <button class="modal-btn modal-btn-cancel" id="cancelChangeBtn">CANCELAR</button>
             </div>
         </div>
+        <br>
     </div>
-
+<br>
     <!-- Scripts externos -->
     <script src="/components/themeloader.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
