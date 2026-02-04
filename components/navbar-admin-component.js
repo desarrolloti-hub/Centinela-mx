@@ -654,7 +654,7 @@ class NavbarComplete {
                     <!-- Logo de la organización - CÍRCULO -->
                     <a href="/users/admin/dashboard/dashboard.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
-                            <img src="/assets/images/logoApp.png" alt="Logo Organización" 
+                            <img src="/assets/images/logo.png" alt="Logo Organización" 
                                  class="navbar-logo-img" id="orgLogoImg">
                             <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
                         </div>
