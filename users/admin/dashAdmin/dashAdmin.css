@@ -496,22 +496,20 @@ body {
 }
 /* COLORES DE ICONOS (APLICAN A TODAS) */
 .card-icon.blue {
-    background: var(--color-bg-icon-blue);
+    
     color: var(--color-icon-blue);
 }
 
 .card-icon.cyan {
-    background: var(--color-bg-icon-cyan);
+   
     color: var(--color-icon-cyan);
 }
 
 .card-icon.yellow {
-    background: var(--color-bg-icon-yellow);
     color: var(--color-icon-yellow);
 }
 
 .card-icon.purple {
-    background: var(--color-bg-icon-purple);
     color: var(--color-icon-purple);
 }
 
@@ -788,7 +786,7 @@ body {
     border-color: var(--color-accent-primary);
     background: var(--color-dash-hover);
     animation: system-glow 2s infinite ease-in-out;
-    transform: translateY(-2px);
+    transform: translateY(-3px);
 }
 
 /* CONTENEDORES GRANDES */
@@ -799,8 +797,8 @@ body {
 
 /* ICONO BRILLA CON SU COLOR */
 .dashboard-card:hover .card-icon {
-    box-shadow: 0 0 14px currentColor;
-    transform: scale(1.08);
+    box-shadow: 0 0 13px currentColor;
+    transform: scale(1.00);
 }
 
 /* FLECHA MÁS VISIBLE */
@@ -1023,14 +1021,11 @@ TABLET
 
 .dashboard-card .card-icon {
     margin-bottom: 0.4rem !important;
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 0.9rem !important;
 }
 
 
 .dashboard-card .card-text h3 {
-    font-size: clamp(0.65rem, 1vw, 0.8rem);
+    font-size: clamp(0.85rem, 1vw, 0.9rem);
 }
 
 .dashboard-card .card-text p {

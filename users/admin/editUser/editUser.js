@@ -12,135 +12,182 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('SweetAlert2 ya está cargado');
     applySweetAlertStyles();
     initCollaboratorEditor();
+    
+    // Cargar datos del colaborador desde Firebase
+    loadCollaboratorData();
 });
 
-// ========== CARGAR SWEETALERT DINÁMICAMENTE ==========
-function loadSweetAlert() {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
-    script.onload = () => {
-        console.log('SweetAlert2 cargado dinámicamente');
-        applySweetAlertStyles();
-        initCollaboratorEditor();
-    };
-    script.onerror = () => {
-        console.error('Error cargando SweetAlert2');
-        alert('Error: No se pudo cargar SweetAlert2. Recarga la página.');
-    };
-    document.head.appendChild(script);
+// ========== CARGAR DATOS DEL COLABORADOR ==========
+async function loadCollaboratorData() {
+    console.log('Cargando datos del colaborador...');
+    
+    // Obtener parámetros de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const collaboratorId = urlParams.get('id');
+    const collectionName = urlParams.get('collection');
+    
+    if (!collaboratorId || !collectionName) {
+        console.error('❌ ID o colección no especificados en la URL');
+        showErrorAlert(
+            'ERROR',
+            'No se especificó el colaborador a editar.<br><br>Por favor, regresa a la gestión de colaboradores.'
+        );
+        return;
+    }
+    
+    console.log(`🔍 Cargando colaborador: ${collaboratorId} de ${collectionName}`);
+    
+    // Verificar Firebase
+    if (typeof firebase === 'undefined') {
+        console.error('Firebase no está disponible');
+        showFirebaseError();
+        return;
+    }
+    
+    try {
+        // Mostrar loader
+        Swal.fire({
+            title: 'CARGANDO DATOS',
+            text: 'Obteniendo información del colaborador...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        // Obtener datos de Firebase
+        const db = firebase.firestore();
+        const docRef = db.collection(collectionName).doc(collaboratorId);
+        const doc = await docRef.get();
+        
+        if (!doc.exists) {
+            Swal.close();
+            showErrorAlert(
+                'COLABORADOR NO ENCONTRADO',
+                `El colaborador con ID ${collaboratorId} no existe en la colección ${collectionName}.`
+            );
+            return;
+        }
+        
+        const collaboratorData = doc.data();
+        
+        // Actualizar interfaz con los datos
+        updateUIWithCollaboratorData(collaboratorData);
+        
+        // Guardar referencia para uso posterior
+        window.currentCollaborator = {
+            id: collaboratorId,
+            collection: collectionName,
+            data: collaboratorData
+        };
+        
+        Swal.close();
+        
+        console.log('✅ Datos del colaborador cargados:', collaboratorData);
+        
+    } catch (error) {
+        Swal.close();
+        console.error('❌ Error cargando colaborador:', error);
+        showErrorAlert(
+            'ERROR AL CARGAR',
+            `No se pudieron cargar los datos del colaborador:<br><br>
+            <code>${error.message}</code>`
+        );
+    }
 }
 
-// ========== APLICAR ESTILOS SWEETALERT ==========
-function applySweetAlertStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        /* Estilos personalizados para SweetAlert2 */
-        .swal2-popup {
-            background: var(--color-bg-tertiary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: 12px !important;
-            box-shadow: var(--shadow-large) !important;
-            backdrop-filter: blur(8px) !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            color: var(--color-text-primary) !important;
+// ========== ACTUALIZAR INTERFAZ CON DATOS ==========
+function updateUIWithCollaboratorData(data) {
+    console.log('Actualizando interfaz con datos del colaborador...');
+    
+    // Nombre completo
+    document.getElementById('fullName').value = data.nombreCompleto || '';
+    
+    // Correo electrónico
+    document.getElementById('email').value = data.correoElectronico || '';
+    
+    // Organización (si existe el campo)
+    const organizationSelect = document.getElementById('organization');
+    if (organizationSelect) {
+        organizationSelect.value = data.organizacionCamelCase || data.organizacion || '';
+    }
+    
+    // Status
+    const statusValue = data.status === true || data.status === 'active' ? 'active' : 
+                       data.status === false || data.status === 'inactive' ? 'inactive' : 'pending';
+    
+    document.getElementById('status').value = statusValue;
+    
+    // Actualizar botones de status
+    document.querySelectorAll('.role-option').forEach(opt => {
+        opt.classList.remove('selected');
+        if (opt.getAttribute('data-status') === statusValue) {
+            opt.classList.add('selected');
         }
+    });
+    
+    // Permisos
+    const permissions = data.permisos || data.permissions || [];
+    document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
+        checkbox.checked = permissions.includes(checkbox.value);
+    });
+    
+    // Foto de perfil
+    if (data.fotoUsuario || data.profileImage) {
+        const imageUrl = data.fotoUsuario || data.profileImage;
+        const collaboratorImage = document.getElementById('collaboratorImage');
+        const collaboratorPlaceholder = document.getElementById('collaboratorPlaceholder');
         
-        .swal2-title {
-            color: var(--color-text-primary) !important;
-            font-family: var(--font-family-primary) !important;
-            font-size: 1.5rem !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-            text-shadow: var(--text-shadow-effect) !important;
+        collaboratorImage.src = imageUrl;
+        collaboratorImage.style.display = 'block';
+        collaboratorPlaceholder.style.display = 'none';
+    }
+    
+    // Información del sistema
+    document.getElementById('authId').textContent = data.authId || data.id || 'N/A';
+    
+    if (data.fechaCreacion) {
+        const creationDate = formatFirebaseDate(data.fechaCreacion);
+        document.querySelector('#creationDate').textContent = creationDate.date;
+        document.querySelector('#creationTime').textContent = creationDate.time;
+    }
+    
+    if (data.fechaActualizacion) {
+        const updateDate = formatFirebaseDate(data.fechaActualizacion);
+        document.querySelector('#lastUpdateDate').textContent = updateDate.date;
+        document.querySelector('#lastUpdateTime').textContent = updateDate.time;
+    }
+    
+    if (data.ultimoLogin) {
+        const loginDate = formatFirebaseDate(data.ultimoLogin);
+        document.querySelector('#lastLoginDate').textContent = loginDate.date;
+        document.querySelector('#lastLoginTime').textContent = loginDate.time;
+    }
+    
+    console.log('✅ Interfaz actualizada con datos del colaborador');
+}
+
+// ========== FORMATAR FECHAS DE FIREBASE ==========
+function formatFirebaseDate(firebaseDate) {
+    let date = new Date();
+    
+    try {
+        if (firebaseDate.toDate) {
+            date = firebaseDate.toDate();
+        } else if (firebaseDate._seconds) {
+            date = new Date(firebaseDate._seconds * 1000);
+        } else if (typeof firebaseDate === 'string') {
+            date = new Date(firebaseDate);
         }
-        
-        .swal2-html-container {
-            color: var(--color-text-secondary) !important;
-            font-size: 1rem !important;
-            line-height: 1.5 !important;
-        }
-        
-        .swal2-confirm {
-            background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
-            color: var(--color-text-dark) !important;
-            border: none !important;
-            border-radius: var(--border-radius-small) !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default) !important;
-            box-shadow: var(--shadow-small) !important;
-        }
-        
-        .swal2-confirm:hover {
-            background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary)) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-normal) !important;
-        }
-        
-        .swal2-cancel {
-            background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary)) !important;
-            color: var(--color-text-primary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: var(--border-radius-small) !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default) !important;
-            box-shadow: var(--shadow-small) !important;
-        }
-        
-        .swal2-cancel:hover {
-            background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary)) !important;
-            border-color: var(--color-accent-primary) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-normal) !important;
-        }
-        
-        .swal2-input, .swal2-textarea, .swal2-select {
-            background: var(--color-bg-secondary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: var(--border-radius-small) !important;
-            color: var(--color-text-primary) !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default) !important;
-            padding: 10px 15px !important;
-        }
-        
-        .swal2-input:focus, .swal2-textarea:focus {
-            border-color: var(--color-accent-primary) !important;
-            box-shadow: 0 0 0 1px var(--color-shadow) !important;
-            outline: none !important;
-        }
-        
-        /* Icon colors */
-        .swal2-icon.swal2-success {
-            border-color: #2ecc71 !important;
-            color: #2ecc71 !important;
-        }
-        
-        .swal2-icon.swal2-error {
-            border-color: #e74c3c !important;
-            color: #e74c3c !important;
-        }
-        
-        .swal2-icon.swal2-warning {
-            border-color: #f39c12 !important;
-            color: #f39c12 !important;
-        }
-        
-        .swal2-icon.swal2-info {
-            border-color: #3498db !important;
-            color: #3498db !important;
-        }
-    `;
-    document.head.appendChild(style);
-    console.log('Estilos SweetAlert aplicados');
+    } catch (error) {
+        console.warn('Error formateando fecha:', error);
+    }
+    
+    return {
+        date: date.toLocaleDateString('es-MX'),
+        time: date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+    };
 }
 
 // ========== EDITOR DE COLABORADOR ==========
@@ -179,6 +226,7 @@ function initCollaboratorEditor() {
     
     // Variables globales
     let currentFile = null;
+    let collaboratorImageUrl = null;
     
     // ========== EVENT LISTENERS ==========
     
@@ -254,14 +302,15 @@ function initCollaboratorEditor() {
 
 // ========== ALERTAS DE SWEETALERT ==========
 
-// 1. VALIDAR Y GUARDAR CAMBIOS
-function validateAndSaveChanges() {
+// 1. VALIDAR Y GUARDAR CAMBIOS EN FIREBASE
+async function validateAndSaveChanges() {
     const fullName = document.getElementById('fullName').value.trim();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
     const organization = document.getElementById('organization').value;
     const status = document.getElementById('status').value;
+    const statusBoolean = status === 'active';
     
     const errors = [];
     
@@ -284,14 +333,6 @@ function validateAndSaveChanges() {
     
     // Validar contraseñas si se proporcionan
     if (password || confirmPassword) {
-        if (!password) {
-            errors.push('Debe ingresar una contraseña');
-        }
-        
-        if (!confirmPassword) {
-            errors.push('Debe confirmar la contraseña');
-        }
-        
         if (password && confirmPassword && password !== confirmPassword) {
             errors.push('Las contraseñas no coinciden');
         }
@@ -323,37 +364,21 @@ function validateAndSaveChanges() {
     }
     
     // Mostrar confirmación antes de guardar
-    showSaveConfirmation(fullName, email, password, status);
+    showSaveConfirmation(fullName, email, statusBoolean);
 }
 
 // 2. ALERTA DE CONFIRMACIÓN PARA GUARDAR
-function showSaveConfirmation(fullName, email, password, status) {
+function showSaveConfirmation(fullName, email, status) {
     // Obtener permisos seleccionados
     const selectedPermissions = Array.from(document.querySelectorAll('input[name="permissions"]:checked'))
-        .map(checkbox => {
-            const labels = {
-                'dashboard': 'Ver Dashboard',
-                'reports': 'Generar Reportes',
-                'users': 'Gestionar Usuarios',
-                'settings': 'Configuración',
-                'analytics': 'Analíticas',
-                'notifications': 'Enviar Notificaciones',
-                'export': 'Exportar Datos',
-                'admin': 'Acceso Admin'
-            };
-            return labels[checkbox.value] || checkbox.value;
-        });
+        .map(checkbox => checkbox.value);
     
     // Obtener organización seleccionada
     const organizationSelect = document.getElementById('organization');
     const selectedOrg = organizationSelect.options[organizationSelect.selectedIndex].text;
     
-    // Mapear status a texto
-    const statusText = {
-        'active': '🟢 Activo',
-        'inactive': '🔴 Inactivo',
-        'pending': '🟡 Pendiente'
-    }[status] || status;
+    // Status en español
+    const statusText = status ? '🟢 Activo' : '🔴 Inactivo';
     
     const htmlContent = `
         <div style="text-align: center; margin: 20px 0;">
@@ -361,7 +386,7 @@ function showSaveConfirmation(fullName, email, password, status) {
                  padding: 20px; border-radius: 50%; border: 3px solid #2ecc71; margin-bottom: 15px;">
                 <i class="fas fa-save" style="font-size: 2.5rem; color: #2ecc71;"></i>
             </div>
-            <h3 style="color: white; margin: 10px 0;">¿Actualizar colaborador?</h3>
+            <h3 style="color: white; margin: 10px 0;">¿Actualizar colaborador en Firebase?</h3>
             <p style="color: #b0b0d0; margin: 0;">Se actualizarán los siguientes datos:</p>
         </div>
         
@@ -375,20 +400,15 @@ function showSaveConfirmation(fullName, email, password, status) {
             <p style="margin: 0; color: white; font-weight: 500;">${email}</p>
         </div>
         
-        <div style="background: rgba(241, 196, 15, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #f1c40f; margin-bottom: 10px;">
-            <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-building"></i> ORGANIZACIÓN</p>
-            <p style="margin: 0; color: white; font-weight: 500;">${selectedOrg}</p>
-        </div>
-        
         <div style="background: rgba(46, 204, 113, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #2ecc71; margin-bottom: 10px;">
             <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-toggle-on"></i> ESTATUS</p>
             <p style="margin: 0; color: white; font-weight: 500;">${statusText}</p>
         </div>
         
-        ${password ? `
-        <div style="background: rgba(155, 89, 182, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #9b59b6; margin-bottom: 10px;">
-            <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-key"></i> CONTRASEÑA</p>
-            <p style="margin: 0; color: white; font-weight: 500;">Se actualizará la contraseña</p>
+        ${window.collaboratorImageUrl ? `
+        <div style="background: rgba(241, 196, 15, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #f1c40f; margin-bottom: 10px;">
+            <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-camera"></i> FOTO</p>
+            <p style="margin: 0; color: white; font-weight: 500;">Se actualizará la foto del colaborador</p>
         </div>
         ` : ''}
         
@@ -401,13 +421,13 @@ function showSaveConfirmation(fullName, email, password, status) {
         
         <div style="background: rgba(241, 196, 15, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #f1c40f;">
             <p style="margin: 0; color: #f1c40f; font-size: 0.8rem;">
-                <i class="fas fa-info-circle"></i> Esta acción actualizará la información del colaborador en el sistema
+                <i class="fas fa-info-circle"></i> Esta acción actualizará la información en Firebase
             </p>
         </div>
     `;
     
     Swal.fire({
-        title: 'ACTUALIZAR COLABORADOR',
+        title: 'ACTUALIZAR EN FIREBASE',
         html: htmlContent,
         icon: 'question',
         showCancelButton: true,
@@ -421,16 +441,23 @@ function showSaveConfirmation(fullName, email, password, status) {
         allowOutsideClick: false
     }).then((result) => {
         if (result.isConfirmed) {
-            saveCollaboratorChanges();
+            saveCollaboratorToFirebase();
         }
     });
 }
 
-// 3. GUARDAR CAMBIOS CON LOADER
-function saveCollaboratorChanges() {
+// 3. GUARDAR EN FIREBASE
+async function saveCollaboratorToFirebase() {
+    if (!window.currentCollaborator) {
+        showErrorAlert('ERROR', 'No hay datos del colaborador cargados');
+        return;
+    }
+    
+    const { id, collection } = window.currentCollaborator;
+    
     // Mostrar loader
     Swal.fire({
-        title: 'ACTUALIZANDO COLABORADOR',
+        title: 'ACTUALIZANDO EN FIREBASE',
         text: 'Por favor espera un momento...',
         allowOutsideClick: false,
         allowEscapeKey: false,
@@ -440,53 +467,92 @@ function saveCollaboratorChanges() {
         }
     });
     
-    // Simular guardado (2 segundos)
-    setTimeout(() => {
-        // Obtener datos del formulario
-        const formData = {
-            organization: document.getElementById('organization').value,
-            fullName: document.getElementById('fullName').value,
-            email: document.getElementById('email').value,
-            status: document.getElementById('status').value,
-            password: document.getElementById('password').value || null,
-            permissions: Array.from(document.querySelectorAll('input[name="permissions"]:checked'))
-                            .map(checkbox => checkbox.value)
+    try {
+        // Preparar datos para actualizar
+        const updateData = {
+            nombreCompleto: document.getElementById('fullName').value.trim(),
+            correoElectronico: document.getElementById('email').value.trim(),
+            status: document.getElementById('status').value === 'active',
+            permisos: Array.from(document.querySelectorAll('input[name="permissions"]:checked'))
+                          .map(checkbox => checkbox.value),
+            organizacionCamelCase: document.getElementById('organization').value,
+            fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // Limpiar contraseñas si se cambiaron
-        if (formData.password) {
-            document.getElementById('password').value = '';
-            document.getElementById('confirmPassword').value = '';
+        // Agregar foto si se cambió
+        if (window.collaboratorImageUrl) {
+            updateData.fotoUsuario = window.collaboratorImageUrl;
         }
+        
+        // Actualizar contraseña si se proporcionó una nueva
+        const password = document.getElementById('password').value;
+        if (password) {
+            // Aquí deberías actualizar la contraseña en Firebase Auth
+            // Esto requiere autenticación y manejo especial
+            console.log('Contraseña cambiada (requiere implementación de Firebase Auth)');
+        }
+        
+        // Guardar en Firebase
+        const db = firebase.firestore();
+        await db.collection(collection).doc(id).update(updateData);
+        
+        // Limpiar campos de contraseña
+        document.getElementById('password').value = '';
+        document.getElementById('confirmPassword').value = '';
         
         // Cerrar loader y mostrar éxito
         Swal.close();
         
         showSuccessAlert(
-            'COLABORADOR ACTUALIZADO',
+            '✅ COLABORADOR ACTUALIZADO',
             `<div style="text-align: center; margin: 15px 0;">
                 <div style="display: inline-block; background: rgba(46, 204, 113, 0.2); 
                      padding: 15px; border-radius: 50%; border: 2px solid #2ecc71;">
                     <i class="fas fa-check-circle" style="font-size: 2rem; color: #2ecc71;"></i>
                 </div>
-                <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${formData.fullName}</p>
-                <p style="color: #b0b0d0; margin: 5px 0;">ha sido actualizado exitosamente</p>
+                <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${updateData.nombreCompleto}</p>
+                <p style="color: #b0b0d0; margin: 5px 0;">ha sido actualizado exitosamente en Firebase</p>
             </div>
             <div style="background: rgba(52, 152, 219, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #3498db;">
                 <p style="margin: 0; color: #3498db; font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> Los cambios han sido aplicados al sistema
+                    <i class="fas fa-database"></i> Colección: <code>${collection}</code>
                 </p>
             </div>`
         );
         
-        console.log('Colaborador actualizado:', formData);
+        console.log('✅ Colaborador actualizado en Firebase:', { id, collection, updateData });
         
-        // Opcional: Redirigir después de 3 segundos
-        setTimeout(() => {
-            // window.location.href = 'gestionColaboradores.html';
-        }, 3000);
+        // Actualizar datos locales
+        window.currentCollaborator.data = { 
+            ...window.currentCollaborator.data, 
+            ...updateData 
+        };
         
-    }, 2000);
+        // Actualizar timestamp de última actualización en la UI
+        const now = new Date();
+        document.querySelector('#lastUpdateDate').textContent = now.toLocaleDateString('es-MX');
+        document.querySelector('#lastUpdateTime').textContent = now.toLocaleTimeString('es-MX', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+    } catch (error) {
+        Swal.close();
+        console.error('❌ Error actualizando en Firebase:', error);
+        
+        showErrorAlert(
+            'ERROR AL ACTUALIZAR',
+            `<div style="text-align: left;">
+                <p>No se pudo actualizar el colaborador en Firebase:</p>
+                <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; margin-top: 10px;">
+                    <code style="color: #e74c3c; font-size: 0.85rem;">${error.message}</code>
+                </div>
+                <p style="margin-top: 15px; color: #f39c12;">
+                    <i class="fas fa-exclamation-triangle"></i> Verifica tu conexión a internet.
+                </p>
+            </div>`
+        );
+    }
 }
 
 // 4. ALERTA DE CONFIRMACIÓN PARA CANCELAR
@@ -503,7 +569,7 @@ function showCancelConfirmation() {
                     ¿Estás seguro de cancelar los cambios?
                 </p>
                 <p style="color: #b0b0d0; margin: 0;">
-                    Se perderán todos los cambios no guardados
+                    Se perderán todos los cambios no guardados en Firebase
                 </p>
             </div>
             <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #e74c3c;">
@@ -528,13 +594,13 @@ function showCancelConfirmation() {
     });
 }
 
-// 5. ALERTA DE CONFIRMACIÓN PARA ELIMINAR
+// 5. ALERTA DE CONFIRMACIÓN PARA ELIMINAR DESDE FIREBASE
 function showDeleteConfirmation() {
     const fullName = document.getElementById('fullName').value;
     const email = document.getElementById('email').value;
     
     Swal.fire({
-        title: '¿ELIMINAR COLABORADOR?',
+        title: '¿ELIMINAR DE FIREBASE?',
         html: `
             <div style="text-align: center; margin: 20px 0;">
                 <div style="display: inline-block; background: rgba(231, 76, 60, 0.1); 
@@ -543,32 +609,30 @@ function showDeleteConfirmation() {
                 </div>
                 <h3 style="color: white; margin: 10px 0;">${fullName}</h3>
                 <p style="color: #b0b0d0; margin: 0;">${email}</p>
+                <p style="color: #f39c12; margin: 10px 0; font-size: 0.9rem;">
+                    <i class="fas fa-database"></i> Colección: ${window.currentCollaborator?.collection || 'No especificada'}
+                </p>
             </div>
             
             <p style="text-align: center; font-size: 1.1rem;">
-                ¿Estás seguro de <strong style="color: #e74c3c;">eliminar permanentemente</strong> a este colaborador?
+                ¿Estás seguro de <strong style="color: #e74c3c;">eliminar permanentemente</strong> 
+                este colaborador de Firebase?
             </p>
             
             <div style="background: rgba(231, 76, 60, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #e74c3c; margin-top: 15px;">
                 <p style="margin: 0 0 5px 0; color: #e74c3c; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> CONSECUENCIAS</p>
                 <ul style="margin: 0; color: #b0b0d0; font-size: 0.9rem; padding-left: 20px;">
+                    <li>Se eliminará permanentemente de la base de datos</li>
                     <li>Se perderán todos los datos del colaborador</li>
-                    <li>Se eliminará el acceso al sistema</li>
                     <li>No se podrá recuperar la información</li>
-                    <li>Esta acción es permanente</li>
+                    <li>Esta acción afecta directamente a Firebase</li>
                 </ul>
-            </div>
-            
-            <div style="background: rgba(241, 196, 15, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #f1c40f;">
-                <p style="margin: 0; color: #f1c40f; font-size: 0.8rem;">
-                    <i class="fas fa-lightbulb"></i> <strong>Recomendación:</strong> Considera desactivar al colaborador en lugar de eliminarlo
-                </p>
             </div>
         `,
         icon: 'error',
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-trash"></i> SÍ, ELIMINAR',
-        cancelButtonText: '<i class="fas fa-ban"></i> DESACTIVAR',
+        confirmButtonText: '<i class="fas fa-trash"></i> SÍ, ELIMINAR DE FIREBASE',
+        cancelButtonText: '<i class="fas fa-ban"></i> SOLO DESACTIVAR',
         showDenyButton: true,
         denyButtonText: '<i class="fas fa-times"></i> CANCELAR',
         confirmButtonColor: '#e74c3c',
@@ -579,22 +643,28 @@ function showDeleteConfirmation() {
         backdrop: 'rgba(0, 0, 0, 0.9)'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Eliminar colaborador
-            deleteCollaborator();
+            // Eliminar colaborador de Firebase
+            deleteCollaboratorFromFirebase();
         } else if (result.dismiss === Swal.DismissReason.cancel) {
-            // Desactivar colaborador
+            // Solo desactivar
             deactivateCollaborator();
         }
     });
 }
 
-// 6. ELIMINAR COLABORADOR
-function deleteCollaborator() {
+// 6. ELIMINAR COLABORADOR DE FIREBASE
+async function deleteCollaboratorFromFirebase() {
+    if (!window.currentCollaborator) {
+        showErrorAlert('ERROR', 'No hay datos del colaborador cargados');
+        return;
+    }
+    
+    const { id, collection } = window.currentCollaborator;
     const fullName = document.getElementById('fullName').value;
     
     // Mostrar loader
     Swal.fire({
-        title: '⏳ ELIMINANDO COLABORADOR',
+        title: 'ELIMINANDO DE FIREBASE',
         text: 'Por favor espera...',
         allowOutsideClick: false,
         allowEscapeKey: false,
@@ -604,38 +674,54 @@ function deleteCollaborator() {
         }
     });
     
-    // Simular eliminación (2 segundos)
-    setTimeout(() => {
+    try {
+        // Eliminar de Firebase
+        const db = firebase.firestore();
+        await db.collection(collection).doc(id).delete();
+        
         Swal.close();
         
         showSuccessAlert(
-            'COLABORADOR ELIMINADO',
+            '🗑️ COLABORADOR ELIMINADO',
             `<div style="text-align: center; margin: 15px 0;">
                 <div style="display: inline-block; background: rgba(231, 76, 60, 0.2); 
                      padding: 15px; border-radius: 50%; border: 2px solid #e74c3c;">
                     <i class="fas fa-trash-alt" style="font-size: 2rem; color: #e74c3c;"></i>
                 </div>
                 <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${fullName}</p>
-                <p style="color: #b0b0d0; margin: 5px 0;">ha sido eliminado del sistema</p>
+                <p style="color: #b0b0d0; margin: 5px 0;">ha sido eliminado de Firebase</p>
             </div>
-            <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #e74c3c;">
-                <p style="margin: 0; color: #e74c3c; font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> Redirigiendo a la gestión de colaboradores...
+            <div style="background: rgba(52, 152, 219, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #3498db;">
+                <p style="margin: 0; color: #3498db; font-size: 0.9rem;">
+                    <i class="fas fa-database"></i> Eliminado de: <code>${collection}</code>
                 </p>
             </div>`
         );
         
-        console.log(`Colaborador eliminado: ${fullName}`);
+        console.log(`✅ Colaborador eliminado de Firebase: ${id} de ${collection}`);
         
         // Redirigir después de 3 segundos
         setTimeout(() => {
             window.location.href = 'gestionColaboradores.html';
         }, 3000);
         
-    }, 2000);
+    } catch (error) {
+        Swal.close();
+        console.error('❌ Error eliminando colaborador:', error);
+        
+        showErrorAlert(
+            'ERROR AL ELIMINAR',
+            `<div style="text-align: left;">
+                <p>No se pudo eliminar el colaborador de Firebase:</p>
+                <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; margin-top: 10px;">
+                    <code style="color: #e74c3c; font-size: 0.85rem;">${error.message}</code>
+                </div>
+            </div>`
+        );
+    }
 }
 
-// 7. DESACTIVAR COLABORADOR
+// 7. DESACTIVAR COLABORADOR (SOLO CAMBIAR STATUS)
 function deactivateCollaborator() {
     const fullName = document.getElementById('fullName').value;
     
@@ -645,41 +731,25 @@ function deactivateCollaborator() {
     statusOptions.forEach(opt => opt.classList.remove('selected'));
     document.querySelector('.role-option[data-status="inactive"]').classList.add('selected');
     
-    // Mostrar loader
-    Swal.fire({
-        title: 'DESACTIVANDO COLABORADOR',
-        text: 'Actualizando estatus...',
-        allowOutsideClick: false,
-        showConfirmButton: false,
-        willOpen: () => {
-            Swal.showLoading();
-        }
-    });
-    
-    // Simular desactivación (1.5 segundos)
-    setTimeout(() => {
-        Swal.close();
-        
-        showSuccessAlert(
-            '✅ COLABORADOR DESACTIVADO',
-            `<div style="text-align: center; margin: 15px 0;">
-                <div style="display: inline-block; background: rgba(149, 165, 166, 0.2); 
-                     padding: 15px; border-radius: 50%; border: 2px solid #95a5a6;">
-                    <i class="fas fa-ban" style="font-size: 2rem; color: #95a5a6;"></i>
-                </div>
-                <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${fullName}</p>
-                <p style="color: #b0b0d0; margin: 5px 0;">ha sido desactivado del sistema</p>
+    // Mostrar mensaje
+    showSuccessAlert(
+        '✅ COLABORADOR DESACTIVADO',
+        `<div style="text-align: center; margin: 15px 0;">
+            <div style="display: inline-block; background: rgba(149, 165, 166, 0.2); 
+                 padding: 15px; border-radius: 50%; border: 2px solid #95a5a6;">
+                <i class="fas fa-ban" style="font-size: 2rem; color: #95a5a6;"></i>
             </div>
-            <div style="background: rgba(149, 165, 166, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #95a5a6;">
-                <p style="margin: 0; color: #95a5a6; font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> El colaborador ya no podrá acceder al sistema
-                </p>
-            </div>`
-        );
-        
-        console.log(`Colaborador desactivado: ${fullName}`);
-        
-    }, 1500);
+            <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${fullName}</p>
+            <p style="color: #b0b0d0; margin: 5px 0;">ha sido desactivado en el formulario</p>
+        </div>
+        <div style="background: rgba(149, 165, 166, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #95a5a6;">
+            <p style="margin: 0; color: #95a5a6; font-size: 0.9rem;">
+                <i class="fas fa-info-circle"></i> Recuerda guardar los cambios para aplicar en Firebase
+            </p>
+        </div>`
+    );
+    
+    console.log(`Colaborador desactivado: ${fullName}`);
 }
 
 // 8. MANEJO DE ARCHIVOS DE IMAGEN
@@ -688,7 +758,7 @@ function handleFileSelect(event) {
     if (!file) return;
     
     const maxSize = 5; // MB
-    const validTypes = ['image/jpeg', 'image/png'];
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     
     // Validar tipo de archivo
     if (!validTypes.includes(file.type)) {
@@ -770,7 +840,7 @@ function showImagePreview(file) {
     reader.readAsDataURL(file);
 }
 
-// 10. GUARDAR IMAGEN DEL COLABORADOR
+// 10. GUARDAR IMAGEN DEL COLABORADOR (LOCAL)
 function saveCollaboratorImage(imageUrl) {
     const collaboratorImage = document.getElementById('collaboratorImage');
     const collaboratorPlaceholder = document.getElementById('collaboratorPlaceholder');
@@ -788,25 +858,33 @@ function saveCollaboratorImage(imageUrl) {
     
     // Simular guardado
     setTimeout(() => {
-        // Actualizar imagen
+        // Actualizar imagen localmente
         collaboratorImage.src = imageUrl;
         collaboratorImage.style.display = 'block';
         collaboratorPlaceholder.style.display = 'none';
+        
+        // Guardar URL para actualizar en Firebase
+        window.collaboratorImageUrl = imageUrl;
         
         // Cerrar loader y mostrar éxito
         Swal.close();
         showSuccessAlert(
             'IMAGEN ACTUALIZADA',
-            `La foto del colaborador se ha actualizado exitosamente.<br><br>
+            `La foto del colaborador se ha actualizado localmente.<br><br>
             <div style="text-align: center; margin: 15px 0;">
                 <div style="display: inline-block; background: rgba(46, 204, 113, 0.2); 
                      padding: 15px; border-radius: 50%; border: 2px solid #2ecc71;">
                     <i class="fas fa-camera" style="font-size: 2rem; color: #2ecc71;"></i>
                 </div>
+            </div>
+            <div style="background: rgba(241, 196, 15, 0.1); padding: 10px; border-radius: 6px; margin-top: 10px;">
+                <p style="margin: 0; color: #f1c40f; font-size: 0.8rem;">
+                    <i class="fas fa-info-circle"></i> Recuerda guardar los cambios para subir la imagen a Firebase
+                </p>
             </div>`
         );
         
-        console.log('Imagen del colaborador actualizada');
+        console.log('Imagen del colaborador actualizada localmente');
         
     }, 1500);
 }
@@ -935,6 +1013,166 @@ function showErrorAlert(title, message) {
     });
 }
 
+// 16. ERROR DE FIREBASE
+function showFirebaseError() {
+    Swal.fire({
+        title: 'FIREBASE NO DISPONIBLE',
+        html: `
+            <div style="text-align: center; margin: 20px 0;">
+                <div style="display: inline-block; background: rgba(231, 76, 60, 0.1); 
+                     padding: 20px; border-radius: 50%; border: 3px solid #e74c3c; margin-bottom: 15px;">
+                    <i class="fas fa-database" style="font-size: 2.5rem; color: #e74c3c;"></i>
+                </div>
+                <p style="color: white; margin: 10px 0;">
+                    No se pudo conectar con Firebase
+                </p>
+                <p style="color: #b0b0d0; margin: 0;">
+                    Verifica tu conexión a internet y recarga la página
+                </p>
+            </div>
+        `,
+        icon: 'error',
+        confirmButtonText: '<i class="fas fa-sync-alt"></i> RECARGAR',
+        confirmButtonColor: '#3498db',
+        cancelButtonText: '<i class="fas fa-arrow-left"></i> VOLVER',
+        showCancelButton: true,
+        backdrop: 'rgba(0, 0, 0, 0.9)'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.reload();
+        } else {
+            window.history.back();
+        }
+    });
+}
+
+// ========== CARGAR SWEETALERT DINÁMICAMENTE ==========
+function loadSweetAlert() {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+    script.onload = () => {
+        console.log('SweetAlert2 cargado dinámicamente');
+        applySweetAlertStyles();
+        initCollaboratorEditor();
+        loadCollaboratorData();
+    };
+    script.onerror = () => {
+        console.error('Error cargando SweetAlert2');
+        alert('Error: No se pudo cargar SweetAlert2. Recarga la página.');
+    };
+    document.head.appendChild(script);
+}
+
+// ========== APLICAR ESTILOS SWEETALERT ==========
+function applySweetAlertStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Estilos personalizados para SweetAlert2 */
+        .swal2-popup {
+            background: #1a1a2e !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+            backdrop-filter: blur(8px) !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            color: white !important;
+        }
+        
+        .swal2-title {
+            color: white !important;
+            font-family: 'Orbitron', sans-serif !important;
+            font-size: 1.5rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+        }
+        
+        .swal2-html-container {
+            color: #b0b0d0 !important;
+            font-size: 1rem !important;
+            line-height: 1.5 !important;
+        }
+        
+        .swal2-confirm {
+            background: linear-gradient(135deg, #3498db, #2980b9) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2) !important;
+        }
+        
+        .swal2-confirm:hover {
+            background: linear-gradient(135deg, #2980b9, #3498db) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3) !important;
+        }
+        
+        .swal2-cancel {
+            background: rgba(255, 255, 255, 0.07) !important;
+            color: white !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 8px !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .swal2-cancel:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(52, 152, 219, 0.3) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        .swal2-input, .swal2-textarea, .swal2-select {
+            background: rgba(255, 255, 255, 0.07) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 8px !important;
+            color: white !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            transition: all 0.3s ease !important;
+            padding: 10px 15px !important;
+        }
+        
+        .swal2-input:focus, .swal2-textarea:focus {
+            border-color: #3498db !important;
+            box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.2) !important;
+            outline: none !important;
+        }
+        
+        /* Icon colors */
+        .swal2-icon.swal2-success {
+            border-color: #2ecc71 !important;
+            color: #2ecc71 !important;
+        }
+        
+        .swal2-icon.swal2-error {
+            border-color: #e74c3c !important;
+            color: #e74c3c !important;
+        }
+        
+        .swal2-icon.swal2-warning {
+            border-color: #f39c12 !important;
+            color: #f39c12 !important;
+        }
+        
+        .swal2-icon.swal2-info {
+            border-color: #3498db !important;
+            color: #3498db !important;
+        }
+    `;
+    document.head.appendChild(style);
+    console.log('Estilos SweetAlert aplicados');
+}
+
 // ========== EXPORTAR FUNCIONES ==========
 window.validateAndSaveChanges = validateAndSaveChanges;
 window.showCancelConfirmation = showCancelConfirmation;
@@ -943,7 +1181,7 @@ window.generateSecurePassword = generateSecurePassword;
 window.showSuccessAlert = showSuccessAlert;
 window.showErrorAlert = showErrorAlert;
 
-console.log('Editor de colaborador listo. Funciones disponibles:');
+console.log('Editor de colaborador para Firebase listo. Funciones disponibles:');
 console.log('- validateAndSaveChanges()');
 console.log('- showCancelConfirmation()');
 console.log('- showDeleteConfirmation()');
