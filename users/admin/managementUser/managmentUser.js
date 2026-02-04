@@ -1,856 +1,576 @@
 // ========== INICIALIZACIÓN ==========
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM cargado, iniciando gestor de usuarios...');
     
-    // Verificar si SweetAlert2 está cargado
-    if (typeof Swal === 'undefined') {
-        console.error('❌ SweetAlert2 no está cargado');
-        // Crear un script para cargar SweetAlert2 dinámicamente
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
-        script.onload = () => {
-            console.log('SweetAlert2 cargado dinámicamente');
-            applyAdaptiveSweetAlertStyles();
-            initUserManager();
-        };
-        script.onerror = () => {
-            console.error('❌ Error cargando SweetAlert2');
-            initUserManager(); // Iniciar sin SweetAlert2
-        };
-        document.head.appendChild(script);
-    } else {
-        console.log('SweetAlert2 ya está cargado');
-        applyAdaptiveSweetAlertStyles();
-        initUserManager();
-    }
+    // Esperar a que UserManager se cargue
+    await waitForUserManager();
+    
+    // Inicializar el gestor
+    await initUserManager();
 });
 
-// ========== APLICAR ESTILOS SWEETALERT ADAPTATIVOS ==========
-function applyAdaptiveSweetAlertStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        /* Estilos adaptativos para SweetAlert2 usando variables CSS del tema */
-        .swal2-popup {
-            background: var(--color-bg-tertiary, #1a1a2e) !important;
-            border: 1px solid var(--color-border-light, #2d2d4d) !important;
-            border-radius: var(--border-radius-medium, 12px) !important;
-            box-shadow: var(--shadow-large, 0 10px 30px rgba(0, 0, 0, 0.5)) !important;
-            backdrop-filter: blur(8px) !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            color: var(--color-text-primary, #ffffff) !important;
+// ========== ESPERAR A QUE USERMANAGER SE CARGUE ==========
+async function waitForUserManager() {
+    console.log('⏳ Esperando a que UserManager cargue el admin...');
+    
+    // Esperar un poco para que UserManager se inicialice
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Intentar importar UserManager
+    try {
+        const module = await import('/clases/user.js');
+        const UserManager = module.UserManager;
+        const userManager = new UserManager();
+        
+        // Esperar a que tenga el usuario actual
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (attempts < maxAttempts && (!userManager.currentUser || !userManager.currentUser.cargo)) {
+            console.log(`🔄 Intento ${attempts + 1}: Esperando usuario...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            attempts++;
         }
         
-        .swal2-title {
-            color: var(--color-text-primary, #ffffff) !important;
-            font-family: var(--font-family-primary, 'Orbitron'), sans-serif !important;
-            font-size: 1.5rem !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-            text-shadow: var(--text-shadow-effect, 0 2px 4px rgba(0, 0, 0, 0.5)) !important;
+        if (userManager.currentUser && userManager.currentUser.cargo) {
+            console.log('✅ UserManager listo con usuario:', userManager.currentUser.correoElectronico);
+            return userManager;
+        } else {
+            console.warn('⚠️ UserManager no cargó usuario después de esperar');
+            return null;
         }
         
-        .swal2-html-container {
-            color: var(--color-text-secondary, #b0b0d0) !important;
-            font-size: 1rem !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            line-height: 1.5 !important;
-        }
-        
-        /* Botón Confirmar */
-        .swal2-confirm {
-            background: linear-gradient(135deg, var(--color-accent-primary, #667eea), var(--color-accent-secondary, #764ba2)) !important;
-            color: var(--color-text-dark, #ffffff) !important;
-            border: none !important;
-            border-radius: var(--border-radius-small, 8px) !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default, all 0.3s ease) !important;
-            box-shadow: var(--shadow-small, 0 4px 15px rgba(102, 126, 234, 0.4)) !important;
-        }
-        
-        .swal2-confirm:hover {
-            background: linear-gradient(135deg, var(--color-accent-secondary, #764ba2), var(--color-accent-primary, #667eea)) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-normal, 0 6px 20px rgba(102, 126, 234, 0.6)) !important;
-        }
-        
-        /* Botón Cancelar */
-        .swal2-cancel {
-            background: linear-gradient(135deg, var(--color-bg-tertiary, #2d2d4d), var(--color-text-secondary, #4a4a6e)) !important;
-            color: var(--color-text-primary, #b0b0d0) !important;
-            border: 1px solid var(--color-border-light, #3d3d5d) !important;
-            border-radius: var(--border-radius-small, 8px) !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default, all 0.3s ease) !important;
-            box-shadow: var(--shadow-small, 0 4px 10px rgba(0, 0, 0, 0.3)) !important;
-        }
-        
-        .swal2-cancel:hover {
-            background: linear-gradient(135deg, var(--color-text-secondary, #4a4a6e), var(--color-bg-tertiary, #2d2d4d)) !important;
-            border-color: var(--color-accent-primary, #667eea) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-normal, 0 6px 15px rgba(0, 0, 0, 0.4)) !important;
-        }
-        
-        /* Inputs */
-        .swal2-input, .swal2-textarea, .swal2-select {
-            background: var(--color-bg-secondary, #2d2d4d) !important;
-            border: 1px solid var(--color-border-light, #3d3d5d) !important;
-            border-radius: var(--border-radius-small, 8px) !important;
-            color: var(--color-text-primary, #ffffff) !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: var(--transition-default, all 0.3s ease) !important;
-            padding: 10px 15px !important;
-        }
-        
-        .swal2-input:focus, .swal2-textarea:focus {
-            border-color: var(--color-accent-primary, #667eea) !important;
-            box-shadow: 0 0 0 3px var(--color-shadow, rgba(102, 126, 234, 0.2)) !important;
-            outline: none !important;
-        }
-        
-        /* Mensajes de validación */
-        .swal2-validation-message {
-            background: rgba(231, 76, 60, 0.1) !important;
-            color: #e74c3c !important;
-            border: 1px solid rgba(231, 76, 60, 0.3) !important;
-        }
-        
-        /* Iconos con colores adaptativos */
-        .swal2-icon.swal2-success {
-            border-color: var(--color-success, #2ecc71) !important;
-            color: var(--color-success, #2ecc71) !important;
-        }
-        
-        .swal2-icon.swal2-error {
-            border-color: var(--color-error, #e74c3c) !important;
-            color: var(--color-error, #e74c3c) !important;
-        }
-        
-        .swal2-icon.swal2-warning {
-            border-color: var(--color-warning, #f39c12) !important;
-            color: var(--color-warning, #f39c12) !important;
-        }
-        
-        .swal2-icon.swal2-info {
-            border-color: var(--color-info, #3498db) !important;
-            color: var(--color-info, #3498db) !important;
-        }
-        
-        .swal2-icon.swal2-question {
-            border-color: var(--color-accent-primary, #667eea) !important;
-            color: var(--color-accent-primary, #667eea) !important;
-        }
-        
-        /* Progress bar */
-        .swal2-progress-steps .swal2-progress-step {
-            background: var(--color-accent-primary, #667eea) !important;
-            color: var(--color-text-dark, #ffffff) !important;
-        }
-        
-        .swal2-timer-progress-bar {
-            background: linear-gradient(135deg, var(--color-accent-primary, #667eea), var(--color-accent-secondary, #764ba2)) !important;
-        }
-        
-        /* Toast notifications */
-        .swal2-toast {
-            background: var(--color-bg-tertiary, #1a1a2e) !important;
-            border: 1px solid var(--color-border-light, #2d2d4d) !important;
-            box-shadow: var(--shadow-normal, 0 5px 15px rgba(0, 0, 0, 0.5)) !important;
-            backdrop-filter: blur(8px) !important;
-        }
-        
-        /* Close button */
-        .swal2-close {
-            color: var(--color-text-secondary, #b0b0d0) !important;
-            transition: var(--transition-default, all 0.3s ease) !important;
-        }
-        
-        .swal2-close:hover {
-            color: var(--color-accent-primary, #667eea) !important;
-            transform: scale(1.1) !important;
-        }
-        
-        /* Animaciones */
-        @keyframes swal2-show {
-            0% {
-                transform: scale(0.7);
-                opacity: 0;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes swal2-hide {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(0.5);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    console.log('Estilos SweetAlert adaptativos aplicados');
+    } catch (error) {
+        console.error('❌ Error cargando UserManager:', error);
+        return null;
+    }
 }
 
 // ========== GESTOR DE USUARIOS ==========
-function initUserManager() {
-    console.log('Inicializando gestor de usuarios...');
+async function initUserManager() {
+    console.log('🚀 Inicializando gestor de usuarios...');
     
-    // Elementos del DOM
-    const addBtn = document.getElementById('addBtn');
-    const collaboratorsTable = document.querySelector('.collaborators-table');
+    // OBTENER ADMIN DESDE USERMANAGER
+    let admin = null;
+    let userManager = null;
     
-    if (!addBtn) {
-        console.error('No se encontró el botón addBtn');
+    try {
+        // 1. Intentar obtener desde UserManager
+        const module = await import('/clases/user.js');
+        const UserManager = module.UserManager;
+        userManager = new UserManager();
+        
+        // Dar tiempo a que cargue
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        if (userManager.currentUser && userManager.currentUser.cargo === 'administrador') {
+            admin = userManager.currentUser;
+            console.log('✅ Admin encontrado en UserManager:', {
+                nombre: admin.nombreCompleto,
+                organizacion: admin.organizacion,
+                id: admin.id
+            });
+        }
+    } catch (error) {
+        console.warn('⚠️ Error con UserManager:', error);
+    }
+    
+    // 2. Si UserManager no funcionó, buscar en localStorage (fallback)
+    if (!admin) {
+        console.log('🔍 Buscando admin en localStorage como fallback...');
+        admin = getAdminFromLocalStorage();
+    }
+    
+    // 3. Si aún no hay admin, mostrar error
+    if (!admin) {
+        console.error('❌ NO SE ENCONTRÓ ADMINISTRADOR');
+        showNoAdminMessage();
         return;
     }
     
-    if (!collaboratorsTable) {
-        console.error('No se encontró la tabla collaboratorsTable');
-        return;
-    }
-    
-    console.log('Elementos DOM encontrados');
-    
-    // ========== BOTÓN AGREGAR COLABORADOR ==========
-    addBtn.addEventListener('click', () => {
-        console.log('Botón agregar colaborador clickeado');
-        showAddCollaboratorAlert();
+    console.log('✅ ADMINISTRADOR FINAL:', {
+        nombre: admin.nombreCompleto,
+        email: admin.correoElectronico,
+        organizacion: admin.organizacion,
+        cargo: admin.cargo,
+        id: admin.id
     });
     
-    // ========== EVENTOS DE LA TABLA ==========
-    collaboratorsTable.addEventListener('click', (e) => {
-        const target = e.target;
-        const button = target.closest('button');
-        const row = target.closest('tr');
+    // ACTUALIZAR INTERFAZ CON DATOS DEL ADMIN
+    updatePageWithAdminInfo(admin);
+    
+    // CARGAR COLABORADORES DE ESTE ADMIN
+    const collaborators = await loadCollaboratorsForAdmin(admin);
+    
+    // CONFIGURAR EVENTOS
+    setupEvents(admin);
+    
+    console.log('✅ Gestor de usuarios inicializado correctamente');
+}
+
+// ========== OBTENER ADMIN DESDE LOCALSTORAGE (FALLBACK) ==========
+function getAdminFromLocalStorage() {
+    console.log('🔍 Buscando admin en localStorage...');
+    
+    // Ver todas las claves en localStorage para debugging
+    console.log('📋 Claves en localStorage:', Object.keys(localStorage));
+    
+    // Según tu consola, el admin NO está en localStorage, pero hay colaboradores
+    // Los colaboradores tienen info del admin que los creó
+    try {
+        const colaboradoresData = localStorage.getItem('centinela-colaboradores');
+        if (colaboradoresData) {
+            const colaboradores = JSON.parse(colaboradoresData);
+            if (colaboradores.length > 0) {
+                // Tomar la info del admin del primer colaborador
+                const primerColaborador = colaboradores[0];
+                console.log('📋 Info del admin desde colaboradores:', {
+                    creadoPor: primerColaborador.creadoPor,
+                    creadoPorNombre: primerColaborador.creadoPorNombre,
+                    creadoPorEmail: primerColaborador.creadoPorEmail,
+                    organizacion: primerColaborador.organizacion
+                });
+                
+                // Crear objeto admin basado en la info de los colaboradores
+                return {
+                    id: primerColaborador.creadoPor,
+                    nombreCompleto: primerColaborador.creadoPorNombre,
+                    correoElectronico: primerColaborador.creadoPorEmail,
+                    organizacion: primerColaborador.organizacion,
+                    organizacionCamelCase: primerColaborador.organizacionCamelCase,
+                    cargo: 'administrador',
+                    theme: primerColaborador.theme,
+                    plan: primerColaborador.plan
+                };
+            }
+        }
+    } catch (error) {
+        console.warn('⚠️ Error obteniendo admin desde colaboradores:', error);
+    }
+    
+    return null;
+}
+
+// ========== CARGAR COLABORADORES DEL ADMIN ==========
+async function loadCollaboratorsForAdmin(admin) {
+    console.log(`🔄 Cargando colaboradores para admin: ${admin.nombreCompleto}`);
+    
+    // Obtener colaboradores desde localStorage
+    const collaborators = getCollaboratorsFromStorage(admin);
+    
+    // Renderizar en tabla
+    renderCollaboratorsTable(collaborators, admin);
+    
+    // Actualizar estadísticas
+    updateStats(collaborators);
+    
+    return collaborators;
+}
+
+// ========== OBTENER COLABORADORES DESDE STORAGE ==========
+function getCollaboratorsFromStorage(admin) {
+    console.log(`🔍 Buscando colaboradores para admin ID: ${admin.id}`);
+    
+    try {
+        const colaboradoresData = localStorage.getItem('centinela-colaboradores');
+        if (colaboradoresData) {
+            const todosColaboradores = JSON.parse(colaboradoresData);
+            
+            // Filtrar solo los colaboradores de ESTE admin
+            const colaboradoresDelAdmin = todosColaboradores.filter(col => {
+                // Verificar por ID del admin creador
+                if (col.creadoPor === admin.id) {
+                    return true;
+                }
+                
+                // Verificar por email del admin creador
+                if (col.creadoPorEmail === admin.correoElectronico) {
+                    return true;
+                }
+                
+                // Verificar por organización
+                if (col.organizacion === admin.organizacion) {
+                    return true;
+                }
+                
+                return false;
+            });
+            
+            console.log(`✅ ${colaboradoresDelAdmin.length} colaboradores encontrados de ${colaboradoresDelAdmin.length} totales`);
+            
+            // Formatear para la tabla
+            return colaboradoresDelAdmin.map(col => ({
+                id: col.id,
+                name: col.nombreCompleto ? col.nombreCompleto.split(' ')[0] : 'Sin nombre',
+                lastname: col.nombreCompleto ? col.nombreCompleto.split(' ').slice(1).join(' ') : '',
+                email: col.correoElectronico || 'sin@email.com',
+                status: col.status === true ? 'active' : 'inactive',
+                role: col.rol || 'Colaborador',
+                organization: col.organizacion || admin.organizacion,
+                profileImage: col.fotoUsuario || 'https://i.imgur.com/6VBx3io.png',
+                authId: col.id || 'UID-' + Math.random().toString(36).substr(2, 6),
+                created: col.fechaCreacion ? new Date(col.fechaCreacion).toLocaleDateString() : 'Hoy',
+                updated: col.fechaCreacion ? new Date(col.fechaCreacion).toLocaleDateString() : 'Hoy',
+                lastLogin: col.ultimoLogin || 'Nunca'
+            }));
+        }
+    } catch (error) {
+        console.error('❌ Error cargando colaboradores:', error);
+    }
+    
+    console.log('📭 No se encontraron colaboradores');
+    return [];
+}
+
+// ========== ACTUALIZAR PÁGINA CON INFO DEL ADMIN ==========
+function updatePageWithAdminInfo(admin) {
+    console.log('🎨 Actualizando página con datos del admin...');
+    
+    // Actualizar título principal
+    const mainTitle = document.querySelector('.section-header h1');
+    if (mainTitle && admin.organizacion) {
+        mainTitle.innerHTML = `
+            <i class="fas fa-users"></i> COLABORADORES DE 
+            <span style="color: var(--color-accent-primary); font-weight: bold;">
+                ${admin.organizacion.toUpperCase()}
+            </span>
+        `;
+    } else if (mainTitle) {
+        mainTitle.innerHTML = `
+            <i class="fas fa-users"></i> GESTIÓN DE COLABORADORES
+        `;
+    }
+    
+    // Actualizar subtítulo
+    const subTitle = document.querySelector('.section-header p');
+    if (subTitle) {
+        subTitle.innerHTML = `
+            <i class="fas fa-user-shield" style="color: var(--color-accent-primary);"></i>
+            Administrador: <strong>${admin.nombreCompleto || 'Administrador'}</strong>
+            ${admin.correoElectronico ? ` | ${admin.correoElectronico}` : ''}
+        `;
+    }
+    
+    // Actualizar botón de agregar
+    const addBtn = document.getElementById('addBtn');
+    if (addBtn) {
+        addBtn.innerHTML = `<i class="fas fa-user-plus"></i> AGREGAR COLABORADOR A ${admin.organizacion || 'ORGANIZACIÓN'}`;
+    }
+    
+    // Crear badge del admin
+    updateAdminBadge(admin);
+    
+    console.log('✅ Interfaz actualizada con datos del admin');
+}
+
+// ========== ACTUALIZAR BADGE DEL ADMIN ==========
+function updateAdminBadge(admin) {
+    // Remover badge anterior si existe
+    const oldBadge = document.getElementById('adminBadge');
+    if (oldBadge) {
+        oldBadge.remove();
+    }
+    
+    // Crear nuevo badge
+    const badge = document.createElement('div');
+    badge.id = 'adminBadge';
+    badge.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 16px;
+        background: var(--color-bg-tertiary);
+        border-radius: 25px;
+        border: 1px solid var(--color-accent-primary);
+        font-size: 0.9rem;
+        margin-left: 15px;
+    `;
+    
+    badge.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                <i class="fas fa-user-tie" style="color: white; font-size: 0.9rem;"></i>
+            </div>
+            <div style="line-height: 1.2;">
+                <div style="font-weight: 600; color: var(--color-text-primary);">
+                    ${admin.nombreCompleto ? admin.nombreCompleto.split(' ')[0] : 'Admin'}
+                </div>
+                <div style="font-size: 0.8rem; color: var(--color-text-secondary);">
+                    ${admin.organizacion || 'Centinela MX'}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Agregar al header
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions) {
+        headerActions.appendChild(badge);
+    }
+}
+
+// ========== RENDERIZAR TABLA ==========
+function renderCollaboratorsTable(collaborators, admin) {
+    const tbody = document.querySelector('.collaborators-table tbody');
+    if (!tbody) {
+        console.error('❌ No se encontró la tabla');
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    if (collaborators.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px 20px;">
+                    <div style="color: var(--color-text-secondary);">
+                        <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.4;"></i>
+                        <h3 style="margin: 10px 0; color: var(--color-text-primary);">
+                            No hay colaboradores en ${admin.organizacion || 'tu organización'}
+                        </h3>
+                        <p style="margin-bottom: 20px;">Comienza agregando tu primer colaborador</p>
+                        <button id="addFirstCollaborator" class="add-btn" 
+                            style="margin: 0 auto; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-user-plus"></i> Agregar primer colaborador
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
         
-        if (!row) return;
+        document.getElementById('addFirstCollaborator')?.addEventListener('click', () => {
+            window.location.href = '/users/admin/crear-colaborador/crear-colaborador.html';
+        });
         
-        // Determinar qué acción ejecutar
-        if (button) {
-            e.preventDefault();
-            e.stopPropagation();
+        return;
+    }
+    
+    // Renderizar cada colaborador
+    collaborators.forEach(col => {
+        const row = document.createElement('tr');
+        
+        const statusInfo = col.status === 'active' ? 
+            { text: 'Activo', class: 'active', icon: 'fa-check-circle' } :
+            { text: 'Inactivo', class: 'inactive', icon: 'fa-ban' };
+        
+        row.innerHTML = `
+            <td>
+                <div class="user-info">
+                    <div class="user-avatar" style="background-image: url('${col.profileImage}')">
+                        ${!col.profileImage ? '<i class="fas fa-user"></i>' : ''}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">${col.name}</div>
+                        <small style="color: var(--color-text-secondary); font-size: 0.85rem;">${col.role}</small>
+                    </div>
+                </div>
+            </td>
+            <td style="font-weight: 500;">${col.lastname}</td>
+            <td style="color: var(--color-text-primary);">${col.email}</td>
+            <td>
+                <span class="status ${statusInfo.class}">
+                    <i class="fas ${statusInfo.icon}"></i> ${statusInfo.text}
+                </span>
+            </td>
+            <td class="actions-cell">
+                <button class="row-btn enable" title="${col.status === 'active' ? 'Inhabilitar' : 'Habilitar'}"
+                    data-collaborator-id="${col.id}"
+                    data-current-status="${col.status}">
+                    <i class="fas ${col.status === 'active' ? 'fa-user-check' : 'fa-ban'}"></i>
+                </button>
+                <button class="row-btn edit" title="Editar" data-collaborator-id="${col.id}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="row-btn view" title="Ver detalles" data-collaborator-id="${col.id}">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    console.log(`✅ ${collaborators.length} colaboradores renderizados en la tabla`);
+}
+
+// ========== ACTUALIZAR ESTADÍSTICAS ==========
+function updateStats(collaborators) {
+    const total = collaborators.length;
+    const active = collaborators.filter(c => c.status === 'active').length;
+    const inactive = total - active;
+    
+    // Crear o actualizar contenedor de estadísticas
+    let statsContainer = document.getElementById('collaboratorsStats');
+    if (!statsContainer) {
+        statsContainer = document.createElement('div');
+        statsContainer.id = 'collaboratorsStats';
+        statsContainer.style.cssText = `
+            margin: 20px 0;
+            padding: 20px;
+            background: var(--color-bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--color-border-light);
+        `;
+        
+        const sectionHeader = document.querySelector('.section-header');
+        if (sectionHeader) {
+            sectionHeader.parentNode.insertBefore(statsContainer, sectionHeader.nextSibling);
+        }
+    }
+    
+    statsContainer.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: var(--color-text-primary);">
+                <i class="fas fa-chart-bar"></i> ESTADÍSTICAS
+            </h3>
+            <button id="refreshStats" class="row-btn" 
+                style="background: transparent; color: var(--color-accent-primary);">
+                <i class="fas fa-sync-alt"></i> Actualizar
+            </button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+            <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 10px; border-left: 4px solid #3498db;">
+                <p style="margin: 0 0 5px 0; color: var(--color-text-secondary); font-size: 0.85rem;">
+                    <i class="fas fa-users"></i> TOTAL
+                </p>
+                <h2 style="margin: 0; font-size: 1.8rem; color: var(--color-text-primary);">${total}</h2>
+            </div>
+            
+            <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 10px; border-left: 4px solid #2ecc71;">
+                <p style="margin: 0 0 5px 0; color: var(--color-text-secondary); font-size: 0.85rem;">
+                    <i class="fas fa-check-circle"></i> ACTIVOS
+                </p>
+                <h2 style="margin: 0; font-size: 1.8rem; color: #2ecc71;">${active}</h2>
+                <small style="color: var(--color-text-secondary);">${total > 0 ? Math.round((active/total)*100) : 0}%</small>
+            </div>
+            
+            <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 10px; border-left: 4px solid #e74c3c;">
+                <p style="margin: 0 0 5px 0; color: var(--color-text-secondary); font-size: 0.85rem;">
+                    <i class="fas fa-ban"></i> INACTIVOS
+                </p>
+                <h2 style="margin: 0; font-size: 1.8rem; color: #e74c3c;">${inactive}</h2>
+                <small style="color: var(--color-text-secondary);">${total > 0 ? Math.round((inactive/total)*100) : 0}%</small>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('refreshStats')?.addEventListener('click', async () => {
+        console.log('🔄 Recargando colaboradores...');
+        const admin = await getAdminFromUserManager();
+        if (admin) {
+            loadCollaboratorsForAdmin(admin);
+        }
+    });
+}
+
+// ========== CONFIGURAR EVENTOS ==========
+function setupEvents(admin) {
+    // Botón de agregar colaborador
+    const addBtn = document.getElementById('addBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            window.location.href = '/users/admin/crear-colaborador/crear-colaborador.html';
+        });
+    }
+    
+    // Eventos de la tabla
+    const table = document.querySelector('.collaborators-table');
+    if (table) {
+        table.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            const row = e.target.closest('tr');
+            
+            if (!button || !row) return;
             
             if (button.classList.contains('enable')) {
-                console.log('Botón habilitar/inhabilitar clickeado');
-                toggleUserStatus(row, button);
+                toggleUserStatus(row, button, admin);
             } 
             else if (button.classList.contains('edit')) {
-                console.log('Botón editar clickeado');
-                editUser(row);
+                editUser(row, button, admin);
             } 
             else if (button.classList.contains('view')) {
-                console.log(' Botón ver detalles clickeado');
-                viewUserDetails(button);
+                viewUserDetails(button, admin);
             }
-        }
-    });
-    
-    console.log('Eventos asignados correctamente');
+        });
+    }
 }
 
-// ========== ALERTAS DE SWEETALERT CON ESTILOS ADAPTATIVOS ==========
-
-// Función para obtener colores dinámicos del tema
-function getThemeColors() {
-    // Intentar obtener colores de las variables CSS
-    const style = getComputedStyle(document.documentElement);
-    
-    return {
-        primary: style.getPropertyValue('--color-accent-primary').trim() || '#667eea',
-        secondary: style.getPropertyValue('--color-accent-secondary').trim() || '#764ba2',
-        success: style.getPropertyValue('--color-success').trim() || '#2ecc71',
-        error: style.getPropertyValue('--color-error').trim() || '#e74c3c',
-        warning: style.getPropertyValue('--color-warning').trim() || '#f39c12',
-        info: style.getPropertyValue('--color-info').trim() || '#3498db',
-        bgPrimary: style.getPropertyValue('--color-bg-primary').trim() || '#0f0f1e',
-        bgSecondary: style.getPropertyValue('--color-bg-secondary').trim() || '#1a1a2e',
-        bgTertiary: style.getPropertyValue('--color-bg-tertiary').trim() || '#2d2d4d',
-        textPrimary: style.getPropertyValue('--color-text-primary').trim() || '#ffffff',
-        textSecondary: style.getPropertyValue('--color-text-secondary').trim() || '#b0b0d0',
-        borderLight: style.getPropertyValue('--color-border-light').trim() || '#3d3d5d'
-    };
+// ========== FUNCIÓN AUXILIAR PARA OBTENER ADMIN DESDE USERMANAGER ==========
+async function getAdminFromUserManager() {
+    try {
+        const module = await import('/clases/user.js');
+        const UserManager = module.UserManager;
+        const userManager = new UserManager();
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        if (userManager.currentUser && userManager.currentUser.cargo === 'administrador') {
+            return userManager.currentUser;
+        }
+    } catch (error) {
+        console.warn('Error obteniendo admin:', error);
+    }
+    return null;
 }
 
-// 1. ALERTA PARA AGREGAR COLABORADOR
-function showAddCollaboratorAlert() {
-    const colors = getThemeColors();
-    
-    Swal.fire({
-        title: 'AGREGAR NUEVO COLABORADOR',
-        html: `
-            <div style="text-align: left;">
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: ${colors.textSecondary}; font-size: 0.9rem;">
-                        <i class="fas fa-user"></i> NOMBRE
-                    </label>
-                    <input type="text" id="swal-name" class="swal2-input" placeholder="Ingresa el nombre">
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: ${colors.textSecondary}; font-size: 0.9rem;">
-                        <i class="fas fa-user"></i> APELLIDO
-                    </label>
-                    <input type="text" id="swal-lastname" class="swal2-input" placeholder="Ingresa el apellido">
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: ${colors.textSecondary}; font-size: 0.9rem;">
-                        <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
-                    </label>
-                    <input type="email" id="swal-email" class="swal2-input" placeholder="ejemplo@centinela.mx">
-                </div>
-                <div style="margin-bottom: 10px;">
-                    <label style="display: block; margin-bottom: 5px; color: ${colors.textSecondary}; font-size: 0.9rem;">
-                        <i class="fas fa-lock"></i> CONTRASEÑA TEMPORAL
-                    </label>
-                    <input type="password" id="swal-password" class="swal2-input" placeholder="Mínimo 8 caracteres">
-                </div>
-                <div style="background: ${colors.primary}15; padding: 10px; border-radius: 6px; margin-top: 10px; border-left: 3px solid ${colors.primary};">
-                    <p style="margin: 0; color: ${colors.textSecondary}; font-size: 0.8rem;">
-                        <i class="fas fa-info-circle"></i> La contraseña será enviada al correo del colaborador
-                    </p>
-                </div>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-user-plus"></i> CREAR COLABORADOR',
-        cancelButtonText: '<i class="fas fa-times"></i> CANCELAR',
-        confirmButtonColor: colors.primary,
-        cancelButtonColor: colors.bgTertiary,
-        width: '500px',
-        backdrop: `rgba(0, 0, 0, 0.8)`,
-        allowOutsideClick: false,
-        customClass: {
-            popup: 'custom-swal-popup',
-            title: 'custom-swal-title',
-            confirmButton: 'custom-swal-confirm',
-            cancelButton: 'custom-swal-cancel'
-        },
-        preConfirm: () => {
-            const name = document.getElementById('swal-name').value.trim();
-            const lastname = document.getElementById('swal-lastname').value.trim();
-            const email = document.getElementById('swal-email').value.trim();
-            const password = document.getElementById('swal-password').value;
-            
-            // Validaciones
-            const errors = [];
-            
-            if (!name) errors.push('El nombre es obligatorio');
-            if (!lastname) errors.push('El apellido es obligatorio');
-            if (!email) errors.push('El correo es obligatorio');
-            if (!password) errors.push('La contraseña es obligatoria');
-            
-            if (email && !validateEmail(email)) {
-                errors.push('El correo electrónico no es válido');
-            }
-            
-            if (password && password.length < 8) {
-                errors.push('La contraseña debe tener al menos 8 caracteres');
-            }
-            
-            if (errors.length > 0) {
-                Swal.showValidationMessage(errors.join('<br>'));
-                return false;
-            }
-            
-            return { name, lastname, email, password };
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const userData = result.value;
-            console.log('Datos del nuevo colaborador:', userData);
-            
-            // Mostrar loader
-            Swal.fire({
-                title: ' CREANDO COLABORADOR',
-                text: 'Por favor espera un momento...',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                allowEnterKey: false,
-                showConfirmButton: false,
-                willOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            // Simular creación (2 segundos)
-            setTimeout(() => {
-                // Cerrar loader
-                Swal.close();
-                
-                // Mostrar éxito
-                showSuccessAlert(
-                    'COLABORADOR CREADO',
-                    `El colaborador <strong>${userData.name} ${userData.lastname}</strong> ha sido creado exitosamente.<br><br>
-                    <strong>Correo:</strong> ${userData.email}<br>
-                    <strong>Contraseña temporal:</strong> ${userData.password}<br><br>
-                    <span style="color: ${colors.warning};"><i class="fas fa-exclamation-triangle"></i> Recuerda compartir estas credenciales de forma segura.</span>`
-                );
-                
-                // Aquí puedes agregar la lógica para añadir a la tabla
-                addUserToTable(userData);
-                
-            }, 2000);
-        }
-    });
-}
-
-// 2. ALERTA PARA CAMBIAR ESTADO (HABILITAR/INHABILITAR)
-function toggleUserStatus(row, button) {
-    const colors = getThemeColors();
-    const statusSpan = row.querySelector('.status');
-    const isActive = statusSpan.classList.contains('active');
-    const userName = row.querySelector('.user-info div').textContent.trim();
-    const userLastname = row.cells[1].textContent;
-    const userEmail = row.cells[2].textContent;
-    const fullName = `${userName} ${userLastname}`;
-    
-    const action = isActive ? 'inhabilitar' : 'habilitar';
-    const actionCapitalized = action.toUpperCase();
-    const icon = isActive ? 'fa-user-slash' : 'fa-user-check';
-    const iconColor = isActive ? colors.error : colors.success;
-    const confirmColor = isActive ? colors.error : colors.success;
-    
-    Swal.fire({
-        title: ` ${actionCapitalized} COLABORADOR`,
-        html: `
-            <div style="text-align: center; margin: 20px 0;">
-                <div style="display: inline-block; background: ${isActive ? colors.error + '15' : colors.success + '15'}; 
-                     padding: 20px; border-radius: 50%; border: 3px solid ${iconColor}; margin-bottom: 15px;">
-                    <i class="fas ${icon}" style="font-size: 2.5rem; color: ${iconColor};"></i>
-                </div>
-                <h3 style="color: ${colors.textPrimary}; margin: 10px 0;">${fullName}</h3>
-                <p style="color: ${colors.textSecondary}; margin: 0;">${userEmail}</p>
-            </div>
-            <p style="text-align: center; font-size: 1.1rem; color: ${colors.textPrimary};">
-                ¿Estás seguro de <strong>${action}</strong> a este colaborador?
-            </p>
-            ${isActive ? 
-                `<div style="background: ${colors.error}15; padding: 10px; border-radius: 6px; border-left: 3px solid ${colors.error}; margin-top: 15px;">
-                    <p style="margin: 0; color: ${colors.error}; font-size: 0.9rem;">
-                        <i class="fas fa-exclamation-triangle"></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente.
-                    </p>
-                </div>` :
-                `<div style="background: ${colors.success}15; padding: 10px; border-radius: 6px; border-left: 3px solid ${colors.success}; margin-top: 15px;">
-                    <p style="margin: 0; color: ${colors.success}; font-size: 0.9rem;">
-                        <i class="fas fa-check-circle"></i> El usuario podrá acceder al sistema normalmente.
-                    </p>
-                </div>`
-            }
-        `,
-        icon: isActive ? 'warning' : 'info',
-        showCancelButton: true,
-        confirmButtonText: `<i class="fas ${icon}"></i> SÍ, ${actionCapitalized}`,
-        cancelButtonText: '<i class="fas fa-times"></i> CANCELAR',
-        confirmButtonColor: confirmColor,
-        cancelButtonColor: colors.bgTertiary,
-        reverseButtons: true,
-        width: '500px',
-        backdrop: 'rgba(0, 0, 0, 0.8)',
-        customClass: {
-            popup: 'custom-swal-popup',
-            title: 'custom-swal-title',
-            confirmButton: 'custom-swal-confirm',
-            cancelButton: 'custom-swal-cancel'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Cambiar estado visual
-            const newStatus = isActive ? 'Inactivo' : 'Activo';
-            const newStatusClass = isActive ? 'inactive' : 'active';
-            const newIcon = isActive ? 'fa-ban' : 'fas fa-user-check';
-            const newTitle = isActive ? 'Habilitar' : 'Inhabilitar';
-            const newButtonColor = isActive ? 
-                `linear-gradient(135deg, ${colors.bgTertiary}, ${colors.textSecondary})` : 
-                `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`;
-            
-            // Actualizar interfaz
-            statusSpan.textContent = newStatus;
-            statusSpan.className = `status ${newStatusClass}`;
-            button.innerHTML = `<i class="${newIcon}"></i>`;
-            button.title = newTitle;
-            button.style.background = newButtonColor;
-            
-            // Mostrar mensaje de éxito
-            showSuccessAlert(
-                ' ESTADO CAMBIADO',
-                `El colaborador <strong>${fullName}</strong> ha sido <strong>${action}do</strong> exitosamente.<br><br>
-                <span style="color: ${iconColor};"><i class="fas ${icon}"></i> Estado actual: <strong>${newStatus}</strong></span>`
-            );
-            
-            console.log(`🔄 Estado cambiado: ${fullName} -> ${newStatus}`);
-        }
-    });
-}
-
-// 3. ALERTA PARA EDITAR USUARIO
-function editUser(row) {
-    const colors = getThemeColors();
-    const userName = row.querySelector('.user-info div').textContent.trim();
-    const userLastname = row.cells[1].textContent;
-    const userEmail = row.cells[2].textContent;
-    const statusSpan = row.querySelector('.status');
-    const isActive = statusSpan.classList.contains('active');
-    const fullName = `${userName} ${userLastname}`;
-    
-    Swal.fire({
-        title: ' EDITAR COLABORADOR',
-        html: `
-            <div style="text-align: center; margin-bottom: 20px;">
-                <div style="display: inline-block; background: ${colors.info}15; 
-                     padding: 20px; border-radius: 50%; border: 3px solid ${colors.info};">
-                    <i class="fas fa-user-edit" style="font-size: 2.5rem; color: ${colors.info};"></i>
-                </div>
-                <h3 style="color: ${colors.textPrimary}; margin: 10px 0;">${fullName}</h3>
-                <p style="color: ${colors.textSecondary}; margin: 0;">ID: UID-${Date.now().toString().slice(-6)}</p>
-            </div>
-            
-            <div style="text-align: left;">
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: ${colors.textSecondary}; font-size: 0.9rem;">
-                        <i class="fas fa-user"></i> NOMBRE
-                    </label>
-                    <input type="text" id="edit-name" class="swal2-input" value="${userName}" placeholder="Nombre">
-                </div>
-                
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: ${colors.textSecondary}; font-size: 0.9rem;">
-                        <i class="fas fa-user"></i> APELLIDO
-                    </label>
-                    <input type="text" id="edit-lastname" class="swal2-input" value="${userLastname}" placeholder="Apellido">
-                </div>
-                
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; color: ${colors.textSecondary}; font-size: 0.9rem;">
-                        <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
-                    </label>
-                    <input type="email" id="edit-email" class="swal2-input" value="${userEmail}" placeholder="correo@centinela.mx">
-                </div>
-                
-                <div style="margin-bottom: 10px;">
-                    <label style="display: block; margin-bottom: 5px; color: ${colors.textSecondary}; font-size: 0.9rem;">
-                        <i class="fas fa-toggle-on"></i> ESTADO
-                    </label>
-                    <select id="edit-status" class="swal2-select" style="width: 100%;">
-                        <option value="active" ${isActive ? 'selected' : ''}>Activo</option>
-                        <option value="inactive" ${!isActive ? 'selected' : ''}>Inactivo</option>
-                    </select>
-                </div>
-                
-                <div style="background: ${colors.primary}15; padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid ${colors.primary};">
-                    <p style="margin: 0; color: ${colors.textSecondary}; font-size: 0.8rem;">
-                        <i class="fas fa-info-circle"></i> Los cambios se aplicarán inmediatamente
-                    </p>
-                </div>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-save"></i> GUARDAR CAMBIOS',
-        cancelButtonText: '<i class="fas fa-times"></i> CANCELAR',
-        confirmButtonColor: colors.primary,
-        cancelButtonColor: colors.bgTertiary,
-        width: '500px',
-        backdrop: 'rgba(0, 0, 0, 0.8)',
-        allowOutsideClick: false,
-        customClass: {
-            popup: 'custom-swal-popup',
-            title: 'custom-swal-title',
-            confirmButton: 'custom-swal-confirm',
-            cancelButton: 'custom-swal-cancel'
-        },
-        preConfirm: () => {
-            const newName = document.getElementById('edit-name').value.trim();
-            const newLastname = document.getElementById('edit-lastname').value.trim();
-            const newEmail = document.getElementById('edit-email').value.trim();
-            const newStatus = document.getElementById('edit-status').value;
-            
-            // Validaciones
-            const errors = [];
-            
-            if (!newName) errors.push('El nombre es obligatorio');
-            if (!newLastname) errors.push('El apellido es obligatorio');
-            if (!newEmail) errors.push('El correo es obligatorio');
-            
-            if (newEmail && !validateEmail(newEmail)) {
-                errors.push('El correo electrónico no es válido');
-            }
-            
-            if (errors.length > 0) {
-                Swal.showValidationMessage(errors.join('<br>'));
-                return false;
-            }
-            
-            return { newName, newLastname, newEmail, newStatus };
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const data = result.value;
-            
-            // Mostrar loader
-            Swal.fire({
-                title: ' ACTUALIZANDO DATOS',
-                text: 'Guardando los cambios...',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                willOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            // Simular actualización
-            setTimeout(() => {
-                // Actualizar tabla
-                row.querySelector('.user-info div').textContent = data.newName;
-                row.cells[1].textContent = data.newLastname;
-                row.cells[2].textContent = data.newEmail;
-                
-                // Actualizar estado
-                const statusSpan = row.querySelector('.status');
-                const enableBtn = row.querySelector('.enable');
-                
-                if (data.newStatus === 'active') {
-                    statusSpan.textContent = 'Activo';
-                    statusSpan.className = 'status active';
-                    if (enableBtn) {
-                        enableBtn.innerHTML = '<i class="fas fa-user-check"></i>';
-                        enableBtn.title = 'Inhabilitar';
-                        enableBtn.style.background = `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`;
-                    }
-                } else {
-                    statusSpan.textContent = 'Inactivo';
-                    statusSpan.className = 'status inactive';
-                    if (enableBtn) {
-                        enableBtn.innerHTML = '<i class="fas fa-ban"></i>';
-                        enableBtn.title = 'Habilitar';
-                        enableBtn.style.background = `linear-gradient(135deg, ${colors.bgTertiary}, ${colors.textSecondary})`;
-                    }
-                }
-                
-                // Cerrar loader y mostrar éxito
-                Swal.close();
-                showSuccessAlert(
-                    ' CAMBIOS GUARDADOS',
-                    `Los datos de <strong>${data.newName} ${data.newLastname}</strong> han sido actualizados correctamente.<br><br>
-                    <strong>Nuevo correo:</strong> ${data.newEmail}<br>
-                    <strong>Nuevo estado:</strong> ${data.newStatus === 'active' ? '🟢 Activo' : '🔴 Inactivo'}`
-                );
-                
-                console.log(` Usuario editado: ${data.newName} ${data.newLastname}`);
-                
-            }, 1500);
-        }
-    });
-}
-
-// 4. ALERTA PARA VER DETALLES
-function viewUserDetails(button) {
-    const colors = getThemeColors();
-    const org = button.getAttribute('data-org') || 'Centinela MX';
-    const fullName = button.getAttribute('data-fullname') || 'Sin nombre';
-    const email = button.getAttribute('data-email') || 'Sin correo';
-    const status = button.getAttribute('data-status') || 'Desconocido';
-    const authId = button.getAttribute('data-authid') || 'UID-000000';
-    const orgPhoto = button.getAttribute('data-orgphoto') || 'https://i.imgur.com/8Km9tLL.png';
-    const userPhoto = button.getAttribute('data-userphoto') || 'https://i.imgur.com/6VBx3io.png';
-    const created = button.getAttribute('data-created') || 'No especificada';
-    const updated = button.getAttribute('data-updated') || 'No especificada';
-    const lastLogin = button.getAttribute('data-lastlogin') || 'Nunca';
-    
-    const statusColor = status === 'Activo' ? colors.success : colors.error;
-    const statusIcon = status === 'Activo' ? 'fa-check-circle' : 'fa-ban';
-    
-    Swal.fire({
-        title: 'DETALLES DEL COLABORADOR',
-        html: `
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="${userPhoto}" alt="Foto del usuario" 
-                     style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid ${colors.primary}; object-fit: cover; margin-bottom: 15px;">
-                <h3 style="color: ${colors.textPrimary}; margin: 0 0 5px 0; font-family: var(--font-family-primary, 'Orbitron'), sans-serif;">${fullName}</h3>
-                <p style="color: ${colors.textSecondary}; margin: 0; font-size: 0.9rem;">
-                    <i class="fas fa-building"></i> ${org}
-                </p>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                <div style="background: ${colors.info}15; padding: 12px; border-radius: 8px; border-left: 3px solid ${colors.info};">
-                    <p style="margin: 0 0 5px 0; color: ${colors.textSecondary}; font-size: 0.8rem;"><i class="fas fa-envelope"></i> CORREO</p>
-                    <p style="margin: 0; color: ${colors.textPrimary}; font-weight: 500; word-break: break-all;">${email}</p>
-                </div>
-                
-                <div style="background: ${statusColor}15; padding: 12px; border-radius: 8px; border-left: 3px solid ${statusColor};">
-                    <p style="margin: 0 0 5px 0; color: ${colors.textSecondary}; font-size: 0.8rem;"><i class="fas ${statusIcon}"></i> ESTADO</p>
-                    <p style="margin: 0; color: ${statusColor}; font-weight: 500;">${status}</p>
-                </div>
-                
-                <div style="background: ${colors.primary}15; padding: 12px; border-radius: 8px; border-left: 3px solid ${colors.primary};">
-                    <p style="margin: 0 0 5px 0; color: ${colors.textSecondary}; font-size: 0.8rem;"><i class="fas fa-id-card"></i> ID AUTH</p>
-                    <p style="margin: 0; color: ${colors.textPrimary}; font-weight: 500; font-family: monospace;">${authId}</p>
-                </div>
-                
-                <div style="background: ${colors.warning}15; padding: 12px; border-radius: 8px; border-left: 3px solid ${colors.warning};">
-                    <p style="margin: 0 0 5px 0; color: ${colors.textSecondary}; font-size: 0.8rem;"><i class="fas fa-sign-in-alt"></i> ÚLTIMO LOGIN</p>
-                    <p style="margin: 0; color: ${colors.textPrimary}; font-weight: 500;">${lastLogin}</p>
-                </div>
-            </div>
-            
-            <div style="background: ${colors.bgSecondary}50; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <p style="margin: 0 0 10px 0; color: ${colors.textSecondary}; font-size: 0.9rem;"><i class="fas fa-history"></i> HISTORIAL</p>
-                <div style="display: flex; justify-content: space-between;">
-                    <div>
-                        <p style="margin: 0 0 5px 0; color: ${colors.textSecondary}; font-size: 0.8rem;">CREACIÓN</p>
-                        <p style="margin: 0; color: ${colors.textPrimary}; font-size: 0.9rem;">${created}</p>
-                    </div>
-                    <div>
-                        <p style="margin: 0 0 5px 0; color: ${colors.textSecondary}; font-size: 0.8rem;">ACTUALIZACIÓN</p>
-                        <p style="margin: 0; color: ${colors.textPrimary}; font-size: 0.9rem;">${updated}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="text-align: center;">
-                <p style="margin: 0 0 10px 0; color: ${colors.textSecondary}; font-size: 0.9rem;"><i class="fas fa-image"></i> LOGO DE LA ORGANIZACIÓN</p>
-                <img src="${orgPhoto}" alt="Logo organización" 
-                     style="width: 100%; max-width: 200px; border-radius: 8px; border: 2px solid ${colors.borderLight};">
-            </div>
-        `,
-        confirmButtonText: '<i class="fas fa-times"></i> CERRAR',
-        confirmButtonColor: colors.bgTertiary,
-        width: '600px',
-        backdrop: 'rgba(0, 0, 0, 0.8)',
-        showCloseButton: true,
-        customClass: {
-            popup: 'custom-swal-popup',
-            title: 'custom-swal-title',
-            confirmButton: 'custom-swal-confirm',
-            cancelButton: 'custom-swal-cancel',
-            closeButton: 'custom-swal-close'
-        }
-    });
-}
-
-// 5. ALERTA DE ÉXITO (reutilizable)
-function showSuccessAlert(title, html) {
-    const colors = getThemeColors();
-    
-    Swal.fire({
-        title: title,
-        html: html,
-        icon: 'success',
-        confirmButtonText: '<i class="fas fa-check"></i> ACEPTAR',
-        confirmButtonColor: colors.success,
-        width: '500px',
-        backdrop: 'rgba(0, 0, 0, 0.8)',
-        timer: 3000,
-        timerProgressBar: true,
-        showConfirmButton: true,
-        customClass: {
-            popup: 'custom-swal-popup',
-            title: 'custom-swal-title',
-            confirmButton: 'custom-swal-confirm'
-        }
-    });
-}
-
-// 6. ALERTA DE ERROR (reutilizable)
-function showErrorAlert(title, message) {
-    const colors = getThemeColors();
-    
-    Swal.fire({
-        title: title,
-        text: message,
-        icon: 'error',
-        confirmButtonText: '<i class="fas fa-times"></i> CERRAR',
-        confirmButtonColor: colors.error,
-        width: '500px',
-        backdrop: 'rgba(0, 0, 0, 0.8)',
-        customClass: {
-            popup: 'custom-swal-popup',
-            title: 'custom-swal-title',
-            confirmButton: 'custom-swal-confirm'
-        }
-    });
-}
-
-// ========== FUNCIONES UTILITARIAS ==========
-
-function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-}
-
-function generateUserId() {
-    return Date.now().toString().slice(-6);
-}
-
-function addUserToTable(userData) {
+// ========== MENSAJE CUANDO NO HAY ADMIN ==========
+function showNoAdminMessage() {
     const tbody = document.querySelector('.collaborators-table tbody');
     if (!tbody) return;
     
-    const newRow = document.createElement('tr');
-    const userId = generateUserId();
-    const isActive = true;
-    
-    newRow.innerHTML = `
-        <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>${userData.name}</div></td>
-        <td>${userData.lastname}</td>
-        <td>${userData.email}</td>
-        <td><span class="status ${isActive ? 'active' : 'inactive'}">${isActive ? 'Activo' : 'Inactivo'}</span></td>
-        <td class="actions-cell">
-            <button class="row-btn enable" title="Inhabilitar">
-                <i class="fas fa-user-check"></i>
-            </button>
-            <button class="row-btn edit" title="Editar">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button class="row-btn view" title="Ver detalles"
-                data-org="Centinela MX"
-                data-fullname="${userData.name} ${userData.lastname}"
-                data-email="${userData.email}"
-                data-status="${isActive ? 'Activo' : 'Inactivo'}"
-                data-authid="UID-${userId}"
-                data-orgphoto="https://i.imgur.com/8Km9tLL.png"
-                data-userphoto="https://i.imgur.com/6VBx3io.png"
-                data-created="${new Date().toISOString().split('T')[0]}"
-                data-updated="${new Date().toISOString().split('T')[0]}"
-                data-lastlogin="Nunca">
-                <i class="fas fa-eye"></i>
-            </button>
-        </td>
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align: center; padding: 50px 20px;">
+                <div style="color: var(--color-text-secondary);">
+                    <i class="fas fa-user-slash" style="font-size: 3rem; margin-bottom: 15px; color: #f39c12;"></i>
+                    <h3 style="margin: 10px 0; color: var(--color-text-primary);">
+                        No se detectó sesión activa de administrador
+                    </h3>
+                    <p style="margin-bottom: 10px;">
+                        Para gestionar colaboradores, debes iniciar sesión como administrador.
+                    </p>
+                    <p style="margin-bottom: 25px; font-size: 0.9rem; color: #b0b0d0;">
+                        Si ya iniciaste sesión, recarga la página.
+                    </p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="window.location.reload()" class="row-btn" 
+                            style="background: var(--color-accent-primary); color: white;">
+                            <i class="fas fa-sync-alt"></i> Recargar página
+                        </button>
+                        <button onclick="window.location.href='/users/visitors/login/login.html'" 
+                            class="add-btn">
+                            <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>
     `;
-    
-    tbody.appendChild(newRow);
-    console.log(`Usuario agregado a la tabla: ${userData.name} ${userData.lastname}`);
-    
-    // Actualizar contador
-    updateTableCount();
 }
 
-function updateTableCount() {
-    const activeCount = document.querySelectorAll('.status.active').length;
-    const totalCount = document.querySelectorAll('tbody tr').length;
-    console.log(`Total colaboradores: ${totalCount}, Activos: ${activeCount}`);
+// ========== FUNCIONES PARA LOS BOTONES ==========
+function toggleUserStatus(row, button, admin) {
+    console.log('Cambiar estado de colaborador');
+    // Implementar lógica
 }
 
-// ========== EXPORTAR FUNCIONES PARA USO EN HTML ==========
-window.showAddCollaboratorAlert = showAddCollaboratorAlert;
-window.toggleUserStatus = toggleUserStatus;
-window.editUser = editUser;
-window.viewUserDetails = viewUserDetails;
-window.showSuccessAlert = showSuccessAlert;
-window.showErrorAlert = showErrorAlert;
+function editUser(row, button, admin) {
+    console.log('Editar colaborador');
+    // Implementar lógica
+}
 
-console.log('Gestor de usuarios listo con estilos adaptativos');
+function viewUserDetails(button, admin) {
+    console.log('Ver detalles del colaborador');
+    // Implementar lógica
+}
+
+console.log('✅ Script de gestión de colaboradores cargado');
