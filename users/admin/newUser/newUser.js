@@ -911,19 +911,6 @@ function initCollaboratorForm() {
             }
         });
     }
-
-    // ========== INICIALIZACIÓN DEL FORMULARIO ==========
-    if (elements.registerForm) {
-        // Cargar administrador actual primero
-        loadCurrentAdmin().then(admin => {
-            if (admin) {
-                console.log('Formulario listo para crear colaboradores');
-                
-                // Configurar evento submit
-                elements.registerForm.addEventListener('submit', registerCollaborator);
-            }
-        });
-    }
     
     console.log('Formulario de registro de colaborador inicializado correctamente');
 }

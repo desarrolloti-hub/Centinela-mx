@@ -1,9 +1,11 @@
-// navbar-complete.js 
+// navbar-complete.js MODIFICADO - VERSIÓN COMPLETA
 
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
         this.isAdminDropdownOpen = false;
+        this.currentAdmin = null;
+        this.userManager = null;
         this.init();      
     }
 
@@ -25,12 +27,14 @@ class NavbarComplete {
     }
 
     // Configuración principal del navbar
-    setup() {
+    async setup() {
         try {
             this.removeOriginalNavbar();
             this.createNavbar(); 
             this.setupFunctionalities(); 
-            console.log('✅ Navbar completo inicializado');
+            await this.loadAdminData(); // Cargar datos del administrador
+            this.updateNavbarWithAdminData(); // Actualizar navbar con datos
+            console.log('✅ Navbar completo inicializado con datos del admin');
         } catch (error) {
             console.error('❌ Error:', error);
         }
@@ -49,7 +53,7 @@ class NavbarComplete {
         this.adjustBodyPadding();
     }
 
-    // Agrega todos los estilos CSS necesarios (MODIFICADO para lápiz simple)
+    // Agrega todos los estilos CSS necesarios
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
@@ -93,28 +97,45 @@ class NavbarComplete {
                 justify-content: flex-start;
             }
             
-            /* Logo del sistema */
+            /* Logo del sistema - CÍRCULO PERFECTO */
             .navbar-logo-link {
                 display: flex;
                 align-items: center;
                 text-decoration: none;
                 z-index: 1003;
                 height: 70px;
+                margin-right: 15px;
             }
 
-            .navbar-logo-img {
+            /* Contenedor para logo circular */
+            .logo-circle-container {
+                width: 60px;
                 height: 60px;
-                width: auto;
-                max-height: 90px;
+                border-radius: 50%;
+                overflow: hidden;
+                border: 3px solid var(--color-accent-primary);
+                background-color: var(--color-bg-secondary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.3s ease;
+            }
+
+            /* Todos los logos en círculo perfecto */
+            .navbar-logo-img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
                 transition: transform var(--transition-default);
             }
 
             /* Efecto hover en el logo */
-            .navbar-logo-link:hover .navbar-logo-img {
+            .navbar-logo-link:hover .logo-circle-container {
                 transform: scale(1.05);
+                border-color: var(--color-accent-secondary);
             }
             
-            /* Título "ADMINISTRADOR" centrado */
+            /* Título "CENTINELA" centrado */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -207,7 +228,7 @@ class NavbarComplete {
                 opacity: 1;
             }
             
-            /* Sección superior del menú: Perfil del administrador (MODIFICADO) */
+            /* Sección superior del menú: Perfil del administrador */
             .admin-profile-section {
                 padding: 30px 25px 20px;
                 background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
@@ -235,6 +256,9 @@ class NavbarComplete {
                 border: 3px solid var(--color-accent-primary);
                 background-color: var(--color-bg-secondary);
                 transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .admin-profile-img {
@@ -242,8 +266,26 @@ class NavbarComplete {
                 height: 100%;
                 object-fit: cover;
             }
+
+            /* Placeholder para foto cuando no hay imagen */
+            .profile-placeholder {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: var(--color-accent-primary);
+                font-size: 40px;
+            }
+
+            .profile-placeholder span {
+                font-size: 12px;
+                margin-top: 5px;
+                font-weight: bold;
+            }
             
-            /* Ícono de lápiz para editar (NUEVO - SOLO ESTO) */
+            /* Ícono de lápiz para editar */
             .edit-profile-icon {
                 position: absolute;
                 bottom: 5px;
@@ -285,6 +327,7 @@ class NavbarComplete {
                 margin-bottom: 5px;
                 color: var(--color-text-primary);
                 font-family: 'Orbitron', sans-serif;
+                min-height: 25px;
             }
             
             .admin-role {
@@ -297,6 +340,14 @@ class NavbarComplete {
             .admin-email {
                 font-size: 13px;
                 color: var(--color-text-tertiary);
+                min-height: 20px;
+            }
+
+            .admin-organization {
+                font-size: 13px;
+                color: var(--color-accent-primary);
+                margin-top: 5px;
+                font-weight: 600;
             }
             
             /* Sección de navegación */
@@ -398,7 +449,7 @@ class NavbarComplete {
                 margin-top: auto;
             }
             
-            /* Botón desplegable de administración CON FUENTE ORBITRON */
+            /* Botón desplegable de administración */
             .admin-dropdown-btn {
                 display: flex;
                 align-items: center;
@@ -454,7 +505,7 @@ class NavbarComplete {
             }
             
             .admin-dropdown-options.active {
-                max-height: 200px;
+                max-height: 250px;
                 opacity: 1;
                 overflow: visible;
             }
@@ -488,6 +539,22 @@ class NavbarComplete {
                 color: var(--color-accent-primary);
             }
             
+            /* Opción especial para cerrar sesión */
+            .logout-option {
+                background: linear-gradient(135deg, #ff6b6b, #ff5252);
+                border-color: #ff5252;
+                color: white;
+            }
+            
+            .logout-option:hover {
+                background: linear-gradient(135deg, #ff5252, #ff3838);
+                border-color: #ff3838;
+            }
+            
+            .logout-option i {
+                color: white;
+            }
+            
             /* Overlay para cerrar el menú (en móvil) */
             .navbar-mobile-overlay {
                 position: fixed;
@@ -513,10 +580,15 @@ class NavbarComplete {
                     width: 85%;
                 }
                 
-                .navbar-logo-img {
+                .logo-circle-container {
+                    width: 50px;
                     height: 50px;
-                    width: auto;
-                    max-height: 50px;
+                }
+
+                .org-text-logo {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 12px;
                 }
 
                 body.menu-open {
@@ -530,10 +602,15 @@ class NavbarComplete {
                     width: 100%;
                 }
 
-                .navbar-logo-img {
+                .logo-circle-container {
+                    width: 40px;
                     height: 40px;
-                    width: auto;
-                    max-height: 40px;
+                }
+
+                .org-text-logo {
+                    width: 40px;
+                    height: 40px;
+                    font-size: 10px;
                 }
                 
                 .profile-photo-container {
@@ -559,7 +636,7 @@ class NavbarComplete {
         document.head.appendChild(styleElement);
     }
 
-    // Inserta la estructura HTML del navbar (MODIFICADO para lápiz simple y editAdmin.html)
+    // Inserta la estructura HTML del navbar
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
@@ -567,11 +644,20 @@ class NavbarComplete {
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
+                    <!-- Logo del sistema Centinela - CÍRCULO -->
                     <a href="/index.html" class="navbar-logo-link">
-                        <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
+                        <div class="logo-circle-container">
+                            <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
+                        </div>
                     </a>
-                    <a href="" class="navbar-logo-link">
-                        <img src="/assets/images/logoApp.png" alt="RSI Enterprice" class="navbar-logo-img">
+                    
+                    <!-- Logo de la organización - CÍRCULO -->
+                    <a href="/users/admin/dashboard/dashboard.html" class="navbar-logo-link" id="orgLogoLink">
+                        <div class="logo-circle-container" id="orgLogoContainer">
+                            <img src="/assets/images/logoApp.png" alt="Logo Organización" 
+                                 class="navbar-logo-img" id="orgLogoImg">
+                            <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                        </div>
                     </a>
                 </div>
                 
@@ -592,15 +678,19 @@ class NavbarComplete {
             <!-- Menú lateral -->
             <div class="navbar-main-menu" id="navbarMainMenu">
                 
-                <!-- Sección superior: Perfil del administrador (MODIFICADO) -->
+                <!-- Sección superior: Perfil del administrador -->
                 <div class="admin-profile-section">
                     <!-- Contenedor para la foto con ícono de lápiz -->
                     <div class="profile-photo-container">
                         <!-- Círculo con imagen del administrador -->
                         <div class="admin-profile-circle">
                             <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
+                            <div class="profile-placeholder" id="profilePlaceholder" style="display: none;">
+                                <i class="fas fa-user"></i>
+                                <span>Admin</span>
+                            </div>
                         </div>
-                        <!-- Ícono de lápiz para editar (ENLACE a página editAdmin.html) -->
+                        <!-- Ícono de lápiz para editar -->
                         <a href="/users/admin/editAdmin/editAdmin.html" class="edit-profile-icon" id="editProfileIcon">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
@@ -608,9 +698,10 @@ class NavbarComplete {
                     
                     <!-- Información del administrador -->
                     <div class="admin-info">
-                        <div class="admin-name" id="adminName">Bryan Vazquez Segura</div>
+                        <div class="admin-name" id="adminName">Cargando...</div>
                         <div class="admin-role">Administrador</div>
-                        <div class="admin-email" id="adminEmail">bryan@ejemplo.com</div>
+                        <div class="admin-email" id="adminEmail">cargando@email.com</div>
+                        <div class="admin-organization" id="adminOrganization"></div>
                     </div>
                 </div>
                 
@@ -658,7 +749,7 @@ class NavbarComplete {
                     <div class="empty-menu-item"></div>
                 </div>
                 
-                <!-- Sección de opciones de administración (AL FINAL) -->
+                <!-- Sección de opciones de administración -->
                 <div class="admin-options-section">
                     <button class="admin-dropdown-btn" id="adminDropdownBtn">
                         <span>Opciones de Administración</span>
@@ -670,9 +761,13 @@ class NavbarComplete {
                             <i class="fa-solid fa-gears"></i>
                             <span>Administración</span>
                         </a>
-                        <a href="#" class="admin-dropdown-option">
+                        <a href="/users/admin/managementUser/managementUser.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Gestionar Usuarios</span>
+                        </a>
+                        <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Cerrar Sesión</span>
                         </a>
                     </div>
                 </div>
@@ -697,13 +792,167 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // Configura todas las funcionalidades (SIMPLIFICADO)
+    // Carga los datos del administrador actual
+    async loadAdminData() {
+        try {
+            // Importar UserManager dinámicamente
+            const { UserManager } = await import('/clases/user.js');
+            this.userManager = new UserManager();
+            
+            // Esperar a que UserManager cargue el usuario
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            if (this.userManager.currentUser) {
+                this.currentAdmin = this.userManager.currentUser;
+                console.log('👤 Admin cargado en navbar:', {
+                    nombre: this.currentAdmin.nombreCompleto,
+                    email: this.currentAdmin.correoElectronico,
+                    organizacion: this.currentAdmin.organizacion,
+                    fotoUsuario: this.currentAdmin.fotoUsuario ? 'Sí' : 'No',
+                    fotoOrganizacion: this.currentAdmin.fotoOrganizacion ? 'Sí' : 'No'
+                });
+            } else {
+                // Intentar cargar desde localStorage
+                try {
+                    const storedUser = JSON.parse(localStorage.getItem('centinela-currentUser'));
+                    if (storedUser && storedUser.cargo === 'administrador') {
+                        this.currentAdmin = storedUser;
+                        console.log('👤 Admin cargado desde localStorage en navbar');
+                    }
+                } catch (e) {
+                    console.warn('No se pudo cargar admin desde localStorage');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar datos del admin en navbar:', error);
+        }
+    }
+
+    // Actualiza el navbar con los datos del administrador
+    updateNavbarWithAdminData() {
+        if (!this.currentAdmin) {
+            console.log('⚠️ No hay datos de admin para mostrar en navbar');
+            return;
+        }
+
+        console.log('🔄 Actualizando navbar con datos del admin...');
+
+        // 1. Actualizar segundo logo (logo de la organización)
+        this.updateOrganizationLogo();
+
+        // 2. Actualizar información en el menú desplegable
+        this.updateAdminMenuInfo();
+
+        // 3. Actualizar título del navbar si es necesario
+        this.updateNavbarTitle();
+    }
+
+    // Actualiza el segundo logo con el logo de la organización
+    updateOrganizationLogo() {
+        const organizationLogoImg = document.getElementById('orgLogoImg');
+        const orgTextLogo = document.getElementById('orgTextLogo');
+        const orgLogoLink = document.getElementById('orgLogoLink');
+        const orgLogoContainer = document.getElementById('orgLogoContainer');
+        
+        if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
+
+        // Si tiene logo de organización
+        if (this.currentAdmin.fotoOrganizacion) {
+            organizationLogoImg.src = this.currentAdmin.fotoOrganizacion;
+            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion}`;
+            organizationLogoImg.style.display = 'block';
+            orgTextLogo.style.display = 'none';
+            
+            // Añadir tooltip y atributos
+            organizationLogoImg.title = this.currentAdmin.organizacion;
+            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion);
+            
+            console.log('🏢 Logo de organización actualizado:', this.currentAdmin.organizacion);
+        } else {
+            // Mostrar texto en lugar de imagen
+            organizationLogoImg.style.display = 'none';
+            orgTextLogo.style.display = 'flex';
+            
+            // Crear texto con las iniciales de la organización
+            const orgName = this.currentAdmin.organizacion || 'Organización';
+            const initials = orgName
+                .split(' ')
+                .map(word => word.charAt(0))
+                .join('')
+                .toUpperCase()
+                .substring(0, 3);
+            
+            orgTextLogo.textContent = initials;
+            orgTextLogo.title = orgName;
+            
+            console.log('🏢 Texto de organización mostrado:', initials);
+        }
+
+        // Actualizar el enlace del logo para redirigir al dashboard
+        orgLogoLink.href = '/users/admin/dashboard/dashboard.html';
+        
+        // Asegurar que el contenedor sea un círculo perfecto
+        orgLogoContainer.style.borderRadius = '50%';
+        orgLogoContainer.style.overflow = 'hidden';
+    }
+
+    // Actualiza la información del administrador en el menú
+    updateAdminMenuInfo() {
+        // Nombre del administrador
+        const adminName = document.getElementById('adminName');
+        if (adminName) {
+            adminName.textContent = this.currentAdmin.nombreCompleto || 'Administrador';
+        }
+
+        // Email del administrador
+        const adminEmail = document.getElementById('adminEmail');
+        if (adminEmail) {
+            adminEmail.textContent = this.currentAdmin.correoElectronico || 'No especificado';
+        }
+
+        // Organización del administrador
+        const adminOrganization = document.getElementById('adminOrganization');
+        if (adminOrganization) {
+            adminOrganization.textContent = this.currentAdmin.organizacion || 'Sin organización';
+        }
+
+        // Foto de perfil del administrador
+        const adminProfileImg = document.getElementById('adminProfileImg');
+        const profilePlaceholder = document.getElementById('profilePlaceholder');
+        
+        if (adminProfileImg && profilePlaceholder) {
+            if (this.currentAdmin.fotoUsuario) {
+                adminProfileImg.src = this.currentAdmin.fotoUsuario;
+                adminProfileImg.style.display = 'block';
+                profilePlaceholder.style.display = 'none';
+                console.log('👤 Foto de admin cargada');
+            } else {
+                adminProfileImg.style.display = 'none';
+                profilePlaceholder.style.display = 'flex';
+                console.log('👤 Placeholder de foto mostrado');
+            }
+        }
+
+        console.log('✅ Información del admin actualizada en el menú');
+    }
+
+    // Actualiza el título del navbar si es necesario
+    updateNavbarTitle() {
+        const navbarTitle = document.querySelector('.navbar-title');
+        if (navbarTitle && this.currentAdmin.organizacion) {
+            // Opcional: Cambiar el título para incluir el nombre de la organización
+            // navbarTitle.textContent = `CENTINELA - ${this.currentAdmin.organizacion}`;
+        }
+    }
+
+    // Configura todas las funcionalidades
     setupFunctionalities() {
         this.setupMenu();  
         this.setupScroll();
         this.loadFontAwesome();
         this.setupAdminDropdown();
         this.loadOrbitronFont();
+        this.setupLogout(); // Añadido para cerrar sesión
     }
 
     // Configura el menú hamburguesa
@@ -786,6 +1035,210 @@ class NavbarComplete {
                 this.toggleAdminDropdown(false);
             }
         });
+    }
+
+    // Configura la funcionalidad de cerrar sesión
+    setupLogout() {
+        const logoutOption = document.getElementById('logoutOption');
+        
+        if (!logoutOption) return;
+
+        logoutOption.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Confirmar cierre de sesión
+            const confirmLogout = await this.showLogoutConfirmation();
+            
+            if (confirmLogout) {
+                await this.performLogout();
+            }
+        });
+    }
+
+    // Muestra confirmación para cerrar sesión
+    async showLogoutConfirmation() {
+        return new Promise((resolve) => {
+            // Usar SweetAlert2 para confirmación
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '¿Cerrar sesión?',
+                    text: '¿Estás seguro de que deseas salir del sistema?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, cerrar sesión',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    reverseButtons: true
+                }).then((result) => {
+                    resolve(result.isConfirmed);
+                });
+            } else {
+                // Fallback si SweetAlert2 no está disponible
+                const confirmed = confirm('¿Estás seguro de que deseas cerrar sesión?');
+                resolve(confirmed);
+            }
+        });
+    }
+
+    // Realiza el cierre de sesión COMPLETO
+    async performLogout() {
+        console.log('🚪 Cerrando sesión COMPLETAMENTE...');
+        
+        try {
+            // 1. Cerrar sesión en Firebase si UserManager está disponible
+            if (this.userManager && typeof this.userManager.logout === 'function') {
+                await this.userManager.logout();
+                console.log('🔥 Sesión de Firebase cerrada a través de UserManager');
+            } else {
+                // Intentar cerrar sesión directamente si firebase está disponible
+                await this.signOutFirebaseDirectly();
+            }
+            
+            // 2. Limpiar TODOS los datos de almacenamiento local
+            this.clearAllStorage();
+            
+            console.log('🧹 TODOS los datos de sesión eliminados');
+            
+            // 3. Mostrar mensaje de éxito
+            await this.showLogoutSuccessMessage();
+            
+            // 4. Redirigir a la página de login con parámetros para evitar caché
+            this.redirectToLogin();
+            
+        } catch (error) {
+            console.error('❌ Error al cerrar sesión:', error);
+            
+            // Aún así limpiar almacenamiento y redirigir
+            this.clearAllStorage();
+            this.redirectToLogin();
+        }
+    }
+
+    // Intenta cerrar sesión en Firebase directamente
+    async signOutFirebaseDirectly() {
+        try {
+            // Método 1: Si firebase está disponible globalmente
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                await firebase.auth().signOut();
+                console.log('🔥 Sesión de Firebase cerrada directamente');
+                return;
+            }
+            
+            // Método 2: Intentar con la importación dinámica
+            const { getAuth, signOut } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js');
+            
+            // Buscar cualquier app de Firebase inicializada
+            const firebaseApps = typeof firebase !== 'undefined' ? firebase.apps : [];
+            if (firebaseApps && firebaseApps.length > 0) {
+                const auth = getAuth(firebaseApps[0]);
+                await signOut(auth);
+                console.log('🔥 Sesión de Firebase cerrada con app existente');
+            }
+            
+        } catch (error) {
+            console.warn('⚠️ No se pudo cerrar sesión en Firebase directamente:', error);
+            // Continuar de todos modos
+        }
+    }
+
+    // Limpia TODOS los datos de almacenamiento
+    clearAllStorage() {
+        try {
+            // Limpiar localStorage completamente
+            localStorage.clear();
+            console.log('🗑️ localStorage limpiado');
+            
+            // Limpiar sessionStorage
+            sessionStorage.clear();
+            console.log('🗑️ sessionStorage limpiado');
+            
+            // Limpiar cookies relacionadas con sesión
+            this.clearSessionCookies();
+            
+            // Limpiar indexedDB si es necesario
+            this.clearIndexedDB();
+            
+        } catch (error) {
+            console.warn('⚠️ Error al limpiar almacenamiento:', error);
+        }
+    }
+
+    // Limpia cookies de sesión
+    clearSessionCookies() {
+        try {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i];
+                const eqPos = cookie.indexOf('=');
+                const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                
+                // Eliminar cookies relacionadas con sesión o auth
+                if (name.includes('session') || name.includes('auth') || name.includes('firebase')) {
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                }
+            }
+            console.log('🍪 Cookies de sesión limpiadas');
+        } catch (error) {
+            console.warn('⚠️ Error al limpiar cookies:', error);
+        }
+    }
+
+    // Limpia indexedDB si existe
+    async clearIndexedDB() {
+        try {
+            // Lista de bases de datos que podrían contener datos de sesión
+            const databases = ['firebaseLocalStorageDb', 'firestore', 'centinela-db'];
+            
+            for (const dbName of databases) {
+                try {
+                    await indexedDB.deleteDatabase(dbName);
+                    console.log(`🗃️ indexedDB ${dbName} eliminada`);
+                } catch (e) {
+                    // La base de datos podría no existir, continuar
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Error al limpiar indexedDB:', error);
+        }
+    }
+
+    // Muestra mensaje de éxito al cerrar sesión
+    async showLogoutSuccessMessage() {
+        if (typeof Swal !== 'undefined') {
+            await Swal.fire({
+                icon: 'success',
+                title: 'Sesión cerrada',
+                text: 'Has cerrado sesión exitosamente. Redirigiendo...',
+                timer: 2000,
+                showConfirmButton: false,
+                timerProgressBar: true,
+                willClose: () => {
+                    this.redirectToLogin();
+                }
+            });
+        } else {
+            // Fallback simple
+            alert('Sesión cerrada exitosamente. Redirigiendo...');
+        }
+    }
+
+    // Redirige a la página de login
+    redirectToLogin() {
+        // Agregar timestamp para evitar caché
+        const timestamp = new Date().getTime();
+        
+        // Redirigir con parámetros para forzar cierre de sesión completo
+        const loginUrl = `/users/visitors/login/login.html?logout=true&timestamp=${timestamp}&nocache=1`;
+        
+        // Forzar recarga completa
+        window.location.href = loginUrl;
+        
+        // Doble seguridad: forzar recarga si no redirige en 1 segundo
+        setTimeout(() => {
+            window.location.replace(loginUrl);
+        }, 1000);
     }
 
     // Alterna la visibilidad del dropdown

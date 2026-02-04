@@ -1,108 +1,104 @@
-// editAdmin.js - Editor de perfil de administrador con Firebase
-// ==================== IMPORTS ====================
-import { getAuth, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential } 
-    from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc } 
-    from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { firebaseConfig } from '/config/firebase-config.js';
-
-// ==================== INICIALIZACIÓN ====================
-document.addEventListener('DOMContentLoaded', function() {
+// editAdmin.js - Editor de perfil para administradores
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('📄 Editor de perfil cargado');
     
-    // Verificar SweetAlert2
-    if (typeof Swal === 'undefined') {
-        console.error('❌ SweetAlert2 no está cargado');
-        return;
+    try {
+        console.log('🔍 Cargando Firebase desde /config/firebase-config.js');
+        
+        // IMPORTANTE: Usa la ruta correcta desde editAdmin.html
+        const firebaseModule = await import('../../../config/firebase-config.js');
+        console.log('✅ Firebase configurado correctamente');
+        
+        // Iniciar la aplicación
+        initProfileEditor(firebaseModule.auth, firebaseModule.db);
+        
+    } catch (error) {
+        console.error('❌ Error cargando Firebase:', error);
+        
+        // Mostrar error amigable
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de configuración',
+            html: `
+                <div style="text-align: left; font-size: 14px;">
+                    <p><strong>No se pudo cargar la configuración de Firebase</strong></p>
+                    <p>Error: ${error.message}</p>
+                    <p>El archivo debe estar en: <code>/config/firebase-config.js</code></p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            allowOutsideClick: false
+        }).then(() => {
+            window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
+        });
     }
-    
-    // Aplicar estilos
-    applySweetAlertStyles();
-    
-    // Inicializar Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    
-    // Inicializar editor
-    initProfileEditor(auth, db);
 });
 
-// ==================== FUNCIONES PRINCIPALES ====================
-function applySweetAlertStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        /* Estilos para campos de solo lectura */
-        .readonly-field {
-            background-color: #f5f5f5 !important;
-            border-color: #ddd !important;
-            color: #666 !important;
-            cursor: not-allowed !important;
-        }
-        
-        .readonly-badge {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #e0e0e0;
-            color: #666;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        /* Estilos específicos del editor */
-        .password-section {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            border: 1px solid #e0e0e0;
-        }
-        
-        .section-subtitle {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .section-description {
-            color: #666;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-        
-        .permissions-note {
-            background: #fff8e1;
-            border-left: 4px solid #ffb300;
-            padding: 12px;
-            border-radius: 5px;
-            margin: 20px 0;
-            font-size: 0.9rem;
-            color: #5d4037;
-        }
-        
-        /* Animaciones */
-        @keyframes slideOut {
-            from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(-20px); }
-        }
-    `;
-    document.head.appendChild(style);
-}
+// ==================== EDITOR PRINCIPAL ====================
 
 async function initProfileEditor(auth, db) {
-    // Elementos del DOM
-    const elements = {
-        // Fotos (EDITABLES)
+    console.log('👨‍💼 Inicializando editor de perfil...');
+    
+    // Obtener elementos del DOM
+    const elements = getElements();
+    
+    // Variables de estado
+    let currentUser = null;
+    let userData = {}; // AQUÍ LO DECLARAMOS
+    let selectedFile = null;
+    let currentPhotoType = '';
+    
+    // Configurar handlers básicos primero
+    setupBasicHandlers(elements);
+    
+    // Verificar autenticación
+    auth.onAuthStateChanged(async (user) => {
+        console.log('🔐 Estado de autenticación:', user ? 'Autenticado' : 'No autenticado');
+        
+        if (!user) {
+            console.warn('⚠️ Usuario no autenticado, redirigiendo...');
+            
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sesión expirada',
+                text: 'Debes iniciar sesión para acceder al editor de perfil',
+                timer: 3000,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.href = '/users/visitors/login/login.html';
+            });
+            return;
+        }
+        
+        currentUser = user;
+        console.log('✅ Usuario autenticado:', user.email);
+        
+        try {
+            // Cargar datos del usuario - PASA userData COMO PARÁMETRO
+            await loadUserData(user.uid, db, elements, userData);
+            
+            // Configurar handlers completos
+            setupPhotoHandlers(elements);
+            setupModalHandlers(elements, db, currentUser, userData);
+            setupSaveHandler(elements, db, currentUser, userData);
+            
+            // Mostrar mensaje de bienvenida
+            showMessage(elements.mainMessage, 'success', 
+                `Editando perfil de: ${user.email}`);
+                
+        } catch (error) {
+            console.error('❌ Error inicializando editor:', error);
+            showMessage(elements.mainMessage, 'error', 
+                'Error al cargar datos del usuario: ' + error.message);
+        }
+    });
+}
+
+// ========== FUNCIONES DE UTILIDAD ==========
+
+function getElements() {
+    return {
+        // Fotos
         profileCircle: document.getElementById('profileCircle'),
         profileImage: document.getElementById('profileImage'),
         profilePlaceholder: document.getElementById('profilePlaceholder'),
@@ -124,13 +120,13 @@ async function initProfileEditor(auth, db) {
         cancelChangeBtn: document.getElementById('cancelChangeBtn'),
         
         // Formulario
-        fullNameInput: document.getElementById('fullName'),
-        emailInput: document.getElementById('email'),
-        organizationNameInput: document.getElementById('organizationName'),
-        positionInput: document.getElementById('position'),
-        currentPasswordInput: document.getElementById('currentPassword'),
-        newPasswordInput: document.getElementById('newPassword'),
-        confirmPasswordInput: document.getElementById('confirmPassword'),
+        fullName: document.getElementById('fullName'),
+        email: document.getElementById('email'),
+        organizationName: document.getElementById('organizationName'),
+        position: document.getElementById('position'),
+        currentPassword: document.getElementById('currentPassword'),
+        newPassword: document.getElementById('newPassword'),
+        confirmPassword: document.getElementById('confirmPassword'),
         
         // Botones y mensajes
         saveChangesBtn: document.getElementById('saveChangesBtn'),
@@ -139,518 +135,139 @@ async function initProfileEditor(auth, db) {
         mainMessage: document.getElementById('mainMessage'),
         passwordMessage: document.getElementById('passwordMessage')
     };
+}
 
-    // Variables
-    let currentUser = null;
-    let userData = {};
-    let selectedFile = null;
-    let currentPhotoType = '';
-    let originalData = {};
-
-    // ========== FUNCIONES DE UTILIDAD ==========
-    function showMessage(element, type, text) {
-        if (!element) return;
+async function loadUserData(userId, db, elements, userDataRef) {
+    console.log('📥 Cargando datos del usuario:', userId);
+    
+    try {
+        // Importar Firestore
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
         
-        const icons = {
-            'success': 'fa-check-circle',
-            'error': 'fa-exclamation-circle',
-            'info': 'fa-info-circle',
-            'warning': 'fa-exclamation-triangle'
-        };
+        // Referencia al documento del administrador
+        const userRef = doc(db, "administradores", userId);
+        const userSnap = await getDoc(userRef);
         
-        const colors = {
-            'success': '#4CAF50',
-            'error': '#F44336',
-            'info': '#2196F3',
-            'warning': '#FF9800'
-        };
-        
-        element.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 5px; background: ${colors[type]}15; border-left: 4px solid ${colors[type]}">
-                <i class="fas ${icons[type]}" style="color: ${colors[type]};"></i>
-                <span>${text}</span>
-            </div>
-        `;
-        element.style.display = 'block';
-        
-        // Auto-ocultar después de 5 segundos
-        if (type !== 'error') {
-            setTimeout(() => {
-                element.style.display = 'none';
-            }, 5000);
-        }
-    }
-
-    function clearMessages() {
-        if (elements.mainMessage) elements.mainMessage.style.display = 'none';
-        if (elements.passwordMessage) elements.passwordMessage.style.display = 'none';
-    }
-
-    function validateFile(file, maxSizeMB = 5) {
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        const maxSize = maxSizeMB * 1024 * 1024;
-        
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'Solo se permiten archivos JPG, PNG, GIF o WebP',
-                confirmButtonColor: '#e74c3c'
-            });
-            return false;
-        }
-        
-        if (file.size > maxSize) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: `El archivo excede el tamaño máximo permitido (${maxSizeMB}MB)`,
-                confirmButtonColor: '#e74c3c'
-            });
-            return false;
-        }
-        
-        return true;
-    }
-
-    function validatePassword(password) {
-        const minLength = 8;
-        const hasUpperCase = /[A-Z]/.test(password);
-        const hasLowerCase = /[a-z]/.test(password);
-        const hasNumber = /\d/.test(password);
-        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-        
-        let errors = [];
-        
-        if (password.length < minLength) errors.push(`Mínimo ${minLength} caracteres`);
-        if (!hasUpperCase) errors.push('Al menos una letra mayúscula');
-        if (!hasLowerCase) errors.push('Al menos una letra minúscula');
-        if (!hasNumber) errors.push('Al menos un número');
-        if (!hasSpecialChar) errors.push('Al menos un carácter especial');
-        
-        return {
-            isValid: errors.length === 0,
-            errors: errors
-        };
-    }
-
-    function getImageUrl(base64String) {
-        if (!base64String || base64String.trim() === '') {
-            return '';
-        }
-        
-        if (base64String.startsWith('http')) {
-            return base64String;
-        }
-        
-        if (base64String.startsWith('data:')) {
-            return base64String;
-        }
-        
-        return `data:image/jpeg;base64,${base64String}`;
-    }
-
-    function updatePhoto(imageElement, placeholderElement, imageSrc) {
-        if (imageSrc) {
-            imageElement.src = imageSrc;
-            imageElement.style.display = 'block';
-            placeholderElement.style.display = 'none';
-        } else {
-            imageElement.style.display = 'none';
-            placeholderElement.style.display = 'flex';
-        }
-    }
-
-    // ========== CARGAR DATOS DEL USUARIO ==========
-    async function loadUserData(userId) {
-        try {
-            console.log('🔍 Cargando datos del usuario:', userId);
-            
-            const userRef = doc(db, "administradores", userId);
-            const userSnap = await getDoc(userRef);
-            
-            if (!userSnap.exists()) {
-                showMessage(elements.mainMessage, 'error', 'Usuario no encontrado en la base de datos');
-                return;
-            }
-            
-            userData = userSnap.data();
-            originalData = { ...userData };
-            
-            console.log('📊 Datos cargados:', userData);
+        if (userSnap.exists()) {
+            // Asignar los datos al objeto userDataRef (que es userData del scope superior)
+            Object.assign(userDataRef, userSnap.data());
+            console.log('✅ Datos cargados:', userDataRef);
             
             // Actualizar interfaz
-            updateUI(userData);
+            updateUI(elements, userDataRef);
             
-        } catch (error) {
-            console.error('❌ Error cargando datos:', error);
-            showMessage(elements.mainMessage, 'error', 'Error al cargar datos del usuario');
+        } else {
+            console.error('❌ Usuario no encontrado en Firestore');
+            showMessage(elements.mainMessage, 'error', 
+                'No se encontraron datos del usuario en la base de datos');
+        }
+    } catch (error) {
+        console.error('❌ Error cargando datos:', error);
+        throw error;
+    }
+}
+
+function updateUI(elements, data) {
+    console.log('🎨 Actualizando interfaz...');
+    
+    // Datos personales
+    if (elements.fullName && data.nombreCompleto) {
+        elements.fullName.value = data.nombreCompleto;
+    }
+    
+    if (elements.email && data.correoElectronico) {
+        elements.email.value = data.correoElectronico;
+    }
+    
+    if (elements.organizationName && data.organizacion) {
+        elements.organizationName.value = data.organizacion;
+    }
+    
+    if (elements.position) {
+        elements.position.value = data.cargo || 'Administrador';
+    }
+    
+    // Fotos
+    if (data.fotoUsuario) {
+        const profileUrl = formatImageUrl(data.fotoUsuario);
+        if (elements.profileImage) {
+            elements.profileImage.src = profileUrl;
+            elements.profileImage.style.display = 'block';
+        }
+        if (elements.profilePlaceholder) {
+            elements.profilePlaceholder.style.display = 'none';
         }
     }
-
-    function updateUI(data) {
-        // Fotos
-        const profilePicUrl = getImageUrl(data.fotoUsuario);
-        const orgPicUrl = getImageUrl(data.fotoOrganizacion);
-        
-        updatePhoto(elements.profileImage, elements.profilePlaceholder, profilePicUrl);
-        updatePhoto(elements.orgImage, elements.orgPlaceholder, orgPicUrl);
-        
-        // Campos editables
-        if (elements.fullNameInput) {
-            elements.fullNameInput.value = data.nombreCompleto || '';
+    
+    if (data.fotoOrganizacion) {
+        const orgUrl = formatImageUrl(data.fotoOrganizacion);
+        if (elements.orgImage) {
+            elements.orgImage.src = orgUrl;
+            elements.orgImage.style.display = 'block';
         }
-        
-        // Campos de solo lectura
-        if (elements.emailInput) {
-            elements.emailInput.value = data.correoElectronico || currentUser?.email || '';
-        }
-        
-        if (elements.organizationNameInput) {
-            elements.organizationNameInput.value = data.organizacion || '';
-        }
-        
-        if (elements.positionInput) {
-            elements.positionInput.value = data.cargo || 'administrador';
-        }
-        
-        console.log('✅ Interfaz actualizada');
-    }
-
-    // ========== MANEJO DE FOTOS ==========
-    function setupPhotoHandlers() {
-        // Foto de perfil
-        elements.profileCircle.addEventListener('click', () => elements.profileInput.click());
-        elements.editProfileOverlay.addEventListener('click', (e) => {
-            e.stopPropagation();
-            elements.profileInput.click();
-        });
-        
-        elements.profileInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file && validateFile(file, 5)) {
-                showConfirmationModal(file, 'profile');
-            }
-            this.value = '';
-        });
-
-        // Logo de organización
-        elements.orgCircle.addEventListener('click', () => elements.orgInput.click());
-        elements.editOrgOverlay.addEventListener('click', (e) => {
-            e.stopPropagation();
-            elements.orgInput.click();
-        });
-        
-        elements.orgInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file && validateFile(file, 10)) {
-                showConfirmationModal(file, 'organization');
-            }
-            this.value = '';
-        });
-    }
-
-    function showConfirmationModal(file, type) {
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            elements.previewImage.src = e.target.result;
-            currentPhotoType = type;
-            
-            if (type === 'profile') {
-                elements.modalTitle.textContent = 'CAMBIAR FOTO DE PERFIL';
-                elements.modalMessage.textContent = '¿Deseas usar esta imagen como tu nueva foto de perfil?';
-            } else {
-                elements.modalTitle.textContent = 'CAMBIAR LOGO DE ORGANIZACIÓN';
-                elements.modalMessage.textContent = '¿Deseas usar esta imagen como el nuevo logo de tu organización?';
-            }
-            
-            elements.photoModal.style.display = 'flex';
-            selectedFile = file;
-        };
-        
-        reader.readAsDataURL(file);
-    }
-
-    async function savePhotoToFirestore(imageBase64, type) {
-        try {
-            const updateData = type === 'profile' 
-                ? { fotoUsuario: imageBase64 }
-                : { fotoOrganizacion: imageBase64 };
-            
-            updateData.fechaActualizacion = new Date();
-            
-            const userRef = doc(db, "administradores", currentUser.uid);
-            await updateDoc(userRef, updateData);
-            
-            // Actualizar datos locales
-            if (type === 'profile') {
-                userData.fotoUsuario = imageBase64;
-            } else {
-                userData.fotoOrganizacion = imageBase64;
-            }
-            
-            return true;
-        } catch (error) {
-            console.error(`Error guardando ${type}:`, error);
-            return false;
+        if (elements.orgPlaceholder) {
+            elements.orgPlaceholder.style.display = 'none';
         }
     }
+    
+    console.log('✅ Interfaz actualizada');
+}
 
-    // ========== MANEJO DE CONTRASEÑAS ==========
-    function setupPasswordHandlers() {
-        // Mostrar/ocultar contraseña
-        document.querySelectorAll('.toggle-password').forEach(button => {
-            button.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const input = document.getElementById(targetId);
-                const icon = this.querySelector('i');
-                
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.classList.replace('fa-eye', 'fa-eye-slash');
-                } else {
-                    input.type = 'password';
-                    icon.classList.replace('fa-eye-slash', 'fa-eye');
-                }
-            });
-        });
+function formatImageUrl(imageData) {
+    if (!imageData) return '';
+    if (imageData.startsWith('http') || imageData.startsWith('data:')) return imageData;
+    return `data:image/jpeg;base64,${imageData}`;
+}
+
+function showMessage(element, type, text) {
+    if (!element) return;
+    
+    const icons = {
+        'success': 'fa-check-circle',
+        'error': 'fa-exclamation-circle',
+        'info': 'fa-info-circle',
+        'warning': 'fa-exclamation-triangle'
+    };
+    
+    element.className = `message-container ${type}`;
+    element.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
+            <span>${text}</span>
+        </div>
+    `;
+    element.style.display = 'block';
+    
+    // Auto-ocultar mensajes no críticos
+    if (type !== 'error') {
+        setTimeout(() => {
+            element.style.display = 'none';
+        }, 5000);
     }
+}
 
-    async function changePassword() {
-        if (!elements.currentPasswordInput.value || 
-            !elements.newPasswordInput.value || 
-            !elements.confirmPasswordInput.value) {
-            return { success: false, message: 'Todos los campos de contraseña son obligatorios' };
-        }
-        
-        if (elements.newPasswordInput.value !== elements.confirmPasswordInput.value) {
-            return { success: false, message: 'Las nuevas contraseñas no coinciden' };
-        }
-        
-        const passwordValidation = validatePassword(elements.newPasswordInput.value);
-        if (!passwordValidation.isValid) {
-            return { 
-                success: false, 
-                message: `La contraseña no cumple los requisitos: ${passwordValidation.errors.join(', ')}`
-            };
-        }
-        
-        try {
-            // Reautenticar usuario
-            const credential = EmailAuthProvider.credential(
-                currentUser.email, 
-                elements.currentPasswordInput.value
-            );
-            
-            await reauthenticateWithCredential(currentUser, credential);
-            
-            // Cambiar contraseña
-            await updatePassword(currentUser, elements.newPasswordInput.value);
-            
-            // Limpiar campos
-            elements.currentPasswordInput.value = '';
-            elements.newPasswordInput.value = '';
-            elements.confirmPasswordInput.value = '';
-            
-            return { 
-                success: true, 
-                message: 'Contraseña cambiada exitosamente' 
-            };
-            
-        } catch (error) {
-            console.error('Error cambiando contraseña:', error);
-            
-            let message = 'Error al cambiar la contraseña';
-            if (error.code === 'auth/wrong-password') {
-                message = 'La contraseña actual es incorrecta';
-            } else if (error.code === 'auth/weak-password') {
-                message = 'La nueva contraseña es demasiado débil';
-            } else if (error.code === 'auth/requires-recent-login') {
-                message = 'Debes iniciar sesión nuevamente para cambiar la contraseña';
-            }
-            
-            return { success: false, message: message };
-        }
-    }
+// ========== HANDLERS BÁSICOS ==========
 
-    // ========== GUARDAR CAMBIOS ==========
-    async function saveChanges() {
-        clearMessages();
-        
-        let isValid = true;
-        let messages = [];
-        
-        // Validar nombre
-        if (!elements.fullNameInput.value.trim()) {
-            isValid = false;
-            messages.push('El nombre completo es obligatorio');
-        }
-        
-        if (!isValid) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error de validación',
-                html: messages.map(msg => `• ${msg}`).join('<br>'),
-                confirmButtonColor: '#e74c3c'
-            });
-            return;
-        }
-        
-        // Mostrar loader
-        const swalInstance = Swal.fire({
-            title: 'Guardando cambios...',
-            text: 'Por favor espera',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-        
-        try {
-            // Preparar datos a actualizar
-            const updateData = {
-                nombreCompleto: elements.fullNameInput.value.trim(),
-                fechaActualizacion: new Date()
-            };
+function setupBasicHandlers(elements) {
+    // Mostrar/ocultar contraseña
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = this.querySelector('i');
             
-            // Verificar si hay cambios en el nombre
-            const hasNameChanged = elements.fullNameInput.value.trim() !== (originalData.nombreCompleto || '');
-            
-            // Cambiar contraseña si se proporcionó
-            let passwordChanged = false;
-            if (elements.currentPasswordInput.value || 
-                elements.newPasswordInput.value || 
-                elements.confirmPasswordInput.value) {
-                
-                const passwordResult = await changePassword();
-                if (passwordResult.success) {
-                    passwordChanged = true;
-                    showMessage(elements.passwordMessage, 'success', passwordResult.message);
-                } else {
-                    await swalInstance.close();
-                    showMessage(elements.passwordMessage, 'error', passwordResult.message);
-                    return;
-                }
-            }
-            
-            // Guardar en Firestore si hay cambios
-            if (hasNameChanged) {
-                const userRef = doc(db, "administradores", currentUser.uid);
-                await updateDoc(userRef, updateData);
-                
-                // Actualizar datos locales
-                userData.nombreCompleto = updateData.nombreCompleto;
-                originalData.nombreCompleto = updateData.nombreCompleto;
-            }
-            
-            // Cerrar loader y mostrar éxito
-            await swalInstance.close();
-            
-            let successMessage = 'Cambios guardados exitosamente';
-            if (hasNameChanged && passwordChanged) {
-                successMessage = 'Nombre y contraseña actualizados correctamente';
-            } else if (hasNameChanged) {
-                successMessage = 'Nombre actualizado correctamente';
-            } else if (passwordChanged) {
-                successMessage = 'Contraseña cambiada exitosamente';
-            }
-            
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: successMessage,
-                timer: 3000,
-                showConfirmButton: false
-            });
-            
-            showMessage(elements.mainMessage, 'success', successMessage);
-            
-        } catch (error) {
-            console.error('Error guardando cambios:', error);
-            await swalInstance.close();
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Ocurrió un error al guardar los cambios',
-                confirmButtonColor: '#e74c3c'
-            });
-        }
-    }
-
-    // ========== EVENTOS DEL MODAL ==========
-    function setupModalHandlers() {
-        elements.confirmChangeBtn.addEventListener('click', async () => {
-            if (selectedFile) {
-                const reader = new FileReader();
-                
-                reader.onload = async function(e) {
-                    const imageBase64 = e.target.result;
-                    
-                    // Guardar en Firestore
-                    const success = await savePhotoToFirestore(imageBase64, currentPhotoType);
-                    
-                    if (success) {
-                        // Actualizar interfaz
-                        if (currentPhotoType === 'profile') {
-                            updatePhoto(elements.profileImage, elements.profilePlaceholder, imageBase64);
-                            
-                            Swal.fire({
-                                icon: 'success',
-                                title: '¡Foto actualizada!',
-                                text: 'Tu foto de perfil se ha actualizado correctamente',
-                                timer: 3000,
-                                showConfirmButton: false
-                            });
-                        } else {
-                            updatePhoto(elements.orgImage, elements.orgPlaceholder, imageBase64);
-                            
-                            Swal.fire({
-                                icon: 'success',
-                                title: '¡Logo actualizado!',
-                                text: 'El logo de organización se ha actualizado correctamente',
-                                timer: 3000,
-                                showConfirmButton: false
-                            });
-                        }
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'No se pudo guardar la imagen',
-                            confirmButtonColor: '#e74c3c'
-                        });
-                    }
-                    
-                    elements.photoModal.style.display = 'none';
-                    selectedFile = null;
-                    currentPhotoType = '';
-                };
-                
-                reader.readAsDataURL(selectedFile);
+            if (input && input.type === 'password') {
+                input.type = 'text';
+                if (icon) icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else if (input) {
+                input.type = 'password';
+                if (icon) icon.classList.replace('fa-eye-slash', 'fa-eye');
             }
         });
-
-        elements.cancelChangeBtn.addEventListener('click', () => {
-            elements.photoModal.style.display = 'none';
-            selectedFile = null;
-            currentPhotoType = '';
-        });
-
-        elements.photoModal.addEventListener('click', (e) => {
-            if (e.target === elements.photoModal) {
-                elements.photoModal.style.display = 'none';
-                selectedFile = null;
-                currentPhotoType = '';
-            }
-        });
-    }
-
-    // ========== EVENTOS DE BOTONES ==========
-    function setupButtonHandlers() {
-        // Guardar cambios
-        elements.saveChangesBtn.addEventListener('click', saveChanges);
-        
-        // Cancelar
+    });
+    
+    // Botón cancelar
+    if (elements.cancelBtn) {
         elements.cancelBtn.addEventListener('click', () => {
             Swal.fire({
                 title: '¿Cancelar cambios?',
@@ -667,45 +284,251 @@ async function initProfileEditor(auth, db) {
                 }
             });
         });
-        
-        // Volver al dashboard
+    }
+    
+    // Volver al dashboard
+    if (elements.backToDashboard) {
         elements.backToDashboard.addEventListener('click', () => {
             window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
         });
     }
+}
 
-    // ========== INICIALIZACIÓN ==========
-    function initialize() {
-        // Verificar autenticación
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                showMessage(elements.mainMessage, 'error', 'Debes iniciar sesión para acceder');
-                setTimeout(() => {
-                    window.location.href = '/users/visitors/login/login.html';
-                }, 2000);
-                return;
-            }
-            
-            currentUser = user;
-            console.log('✅ Usuario autenticado:', user.email);
-            
-            // Cargar datos del usuario
-            await loadUserData(user.uid);
-            
-            // Configurar handlers
-            setupPhotoHandlers();
-            setupPasswordHandlers();
-            setupModalHandlers();
-            setupButtonHandlers();
-            
-            // Mostrar mensaje de bienvenida
-            setTimeout(() => {
-                showMessage(elements.mainMessage, 'info', 
-                    'Puedes editar tu nombre, fotos y contraseña. Los campos bloqueados requieren permisos especiales.');
-            }, 1000);
+// ========== HANDLERS DE FOTOS ==========
+
+function setupPhotoHandlers(elements) {
+    if (!elements.profileCircle || !elements.orgCircle) return;
+    
+    // Foto de perfil
+    elements.profileCircle.addEventListener('click', () => {
+        if (elements.profileInput) elements.profileInput.click();
+    });
+    
+    if (elements.editProfileOverlay) {
+        elements.editProfileOverlay.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (elements.profileInput) elements.profileInput.click();
         });
     }
-
-    // Iniciar
-    initialize();
+    
+    if (elements.profileInput) {
+        elements.profileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) showPhotoModal(file, 'profile', elements);
+            this.value = '';
+        });
+    }
+    
+    // Logo de organización
+    elements.orgCircle.addEventListener('click', () => {
+        if (elements.orgInput) elements.orgInput.click();
+    });
+    
+    if (elements.editOrgOverlay) {
+        elements.editOrgOverlay.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (elements.orgInput) elements.orgInput.click();
+        });
+    }
+    
+    if (elements.orgInput) {
+        elements.orgInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) showPhotoModal(file, 'organization', elements);
+            this.value = '';
+        });
+    }
 }
+
+function showPhotoModal(file, type, elements) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        if (elements.previewImage) elements.previewImage.src = e.target.result;
+        currentPhotoType = type;
+        selectedFile = file;
+        
+        if (elements.modalTitle) {
+            elements.modalTitle.textContent = type === 'profile' 
+                ? 'CAMBIAR FOTO DE PERFIL' 
+                : 'CAMBIAR LOGO DE ORGANIZACIÓN';
+        }
+        
+        if (elements.modalMessage) {
+            elements.modalMessage.textContent = type === 'profile'
+                ? '¿Deseas actualizar tu foto de perfil?'
+                : '¿Deseas actualizar el logo de tu organización?';
+        }
+        
+        if (elements.photoModal) elements.photoModal.style.display = 'flex';
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+function setupModalHandlers(elements, db, currentUser, userData) {
+    if (!elements.confirmChangeBtn || !elements.cancelChangeBtn) return;
+    
+    elements.confirmChangeBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+        
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const imageBase64 = e.target.result;
+            
+            try {
+                // Guardar en Firebase
+                const success = await savePhotoToFirestore(imageBase64, currentPhotoType, db, currentUser);
+                
+                if (success) {
+                    // Actualizar interfaz
+                    if (currentPhotoType === 'profile') {
+                        if (elements.profileImage) {
+                            elements.profileImage.src = imageBase64;
+                            elements.profileImage.style.display = 'block';
+                        }
+                        if (elements.profilePlaceholder) {
+                            elements.profilePlaceholder.style.display = 'none';
+                        }
+                        // Actualizar datos locales
+                        if (userData) userData.fotoUsuario = imageBase64;
+                    } else {
+                        if (elements.orgImage) {
+                            elements.orgImage.src = imageBase64;
+                            elements.orgImage.style.display = 'block';
+                        }
+                        if (elements.orgPlaceholder) {
+                            elements.orgPlaceholder.style.display = 'none';
+                        }
+                        // Actualizar datos locales
+                        if (userData) userData.fotoOrganizacion = imageBase64;
+                    }
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: currentPhotoType === 'profile' 
+                            ? 'Foto de perfil actualizada' 
+                            : 'Logo de organización actualizado',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo guardar la imagen: ' + error.message
+                });
+            }
+            
+            if (elements.photoModal) elements.photoModal.style.display = 'none';
+            selectedFile = null;
+            currentPhotoType = '';
+        };
+        
+        reader.readAsDataURL(selectedFile);
+    });
+    
+    elements.cancelChangeBtn.addEventListener('click', () => {
+        if (elements.photoModal) elements.photoModal.style.display = 'none';
+        selectedFile = null;
+        currentPhotoType = '';
+    });
+    
+    if (elements.photoModal) {
+        elements.photoModal.addEventListener('click', (e) => {
+            if (e.target === elements.photoModal) {
+                elements.photoModal.style.display = 'none';
+                selectedFile = null;
+                currentPhotoType = '';
+            }
+        });
+    }
+}
+
+async function savePhotoToFirestore(imageBase64, type, db, currentUser) {
+    try {
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+        
+        const updateData = type === 'profile' 
+            ? { fotoUsuario: imageBase64 }
+            : { fotoOrganizacion: imageBase64 };
+        
+        updateData.fechaActualizacion = new Date();
+        
+        const userRef = doc(db, "administradores", currentUser.uid);
+        await updateDoc(userRef, updateData);
+        
+        console.log(`✅ ${type} guardado en Firestore`);
+        return true;
+    } catch (error) {
+        console.error(`❌ Error guardando ${type}:`, error);
+        throw error;
+    }
+}
+
+// ========== HANDLER DE GUARDADO ==========
+
+function setupSaveHandler(elements, db, currentUser, userData) {
+    if (!elements.saveChangesBtn) return;
+    
+    elements.saveChangesBtn.addEventListener('click', async () => {
+        // Validar nombre completo
+        if (!elements.fullName || !elements.fullName.value.trim()) {
+            showMessage(elements.mainMessage, 'error', 'El nombre completo es obligatorio');
+            if (elements.fullName) elements.fullName.focus();
+            return;
+        }
+        
+        // Mostrar loader
+        Swal.fire({
+            title: 'Guardando cambios...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        try {
+            const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+            
+            // Preparar datos a actualizar
+            const updateData = {
+                nombreCompleto: elements.fullName.value.trim(),
+                fechaActualizacion: new Date()
+            };
+            
+            // Guardar en Firestore
+            const userRef = doc(db, "administradores", currentUser.uid);
+            await updateDoc(userRef, updateData);
+            
+            // Actualizar datos locales
+            if (userData) {
+                userData.nombreCompleto = updateData.nombreCompleto;
+            }
+            
+            // Mostrar éxito
+            Swal.close();
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: 'Datos actualizados correctamente',
+                timer: 3000,
+                showConfirmButton: false
+            });
+            
+            showMessage(elements.mainMessage, 'success', 'Cambios guardados exitosamente');
+            
+        } catch (error) {
+            console.error('❌ Error guardando cambios:', error);
+            Swal.close();
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron guardar los cambios: ' + error.message
+            });
+        }
+    });
+}
+
+console.log('✅ editAdmin.js cargado');
