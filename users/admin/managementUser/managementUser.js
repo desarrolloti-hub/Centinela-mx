@@ -336,7 +336,7 @@ async function editUser(collaboratorId, admin) {
     console.log(`✏️ Editando colaborador: ${collaboratorId}`);
     
     // Redirigir a la página de edición
-    window.location.href = `/users/admin/editar-colaborador/editar-colaborador.html?id=${collaboratorId}&org=${admin.organizacionCamelCase}`;
+    window.location.href = `/users/admin/editUser/editUser.html?id=${collaboratorId}&org=${admin.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DEL COLABORADOR ==========
