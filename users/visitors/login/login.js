@@ -1,22 +1,36 @@
-// login.js - Sistema básico de inicio de sesión
-// Solo maneja autenticación y redirección
-// =============================================
+// login.js - Sistema completo de inicio de sesión
+// Maneja autenticación, almacenamiento de sesión y redirección
+// ===============================================================
 
-// IMPORTACIÓN CORREGIDA - usa '/classes/user.js' en lugar de '/clases/user.js'
+// IMPORTACIÓN DE MÓDULOS
 import { UserManager } from '/clases/user.js';
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Login page loaded');
+// FUNCIÓN AUXILIAR: Convertir texto a camelCase
+function toCamelCase(text) {
+    if (!text || typeof text !== 'string') return '';
     
-    // Elementos del DOM
+    return text
+        .toLowerCase()
+        .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .replace(/^(.)/, (match) => match.toLowerCase());
+}
+
+// INICIALIZACIÓN PRINCIPAL - Se ejecuta cuando el DOM está completamente cargado
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Login page loaded - Sistema de sesión con almacenamiento local');
+    
+    // ELEMENTOS DEL DOM - Referencias a los elementos HTML
     const loginForm = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const passwordToggle = document.getElementById('passwordToggle');
     const loginMessage = document.getElementById('loginMessage');
     const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+    const forgotPasswordLink = document.getElementById('forgotPassword');
+    const registerBtn = document.getElementById('registerBtn');
     
-    // Verificar elementos esenciales
+    // VERIFICACIÓN DE ELEMENTOS - Comprobar que existen los elementos esenciales
     if (!loginForm || !emailInput || !passwordInput) {
         console.error('❌ Elementos del formulario no encontrados:', {
             loginForm: !!loginForm,
@@ -29,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('✅ Elementos del formulario encontrados');
     
-    // Instancia de UserManager con manejo de errores
+    // INICIALIZACIÓN DE USERMANAGER - Crear instancia para manejo de usuarios
     let userManager;
     try {
         userManager = new UserManager();
@@ -40,7 +54,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // ========== FUNCIONES DE UTILIDAD ==========
+    // FUNCIONES DE UTILIDAD - Funciones auxiliares para el sistema
+    // ===============================================================
+    
+    // FUNCIÓN: Mostrar mensajes en la interfaz
     function showMessage(element, type, text) {
         if (!element) {
             console.warn('❌ Elemento para mensaje no encontrado');
@@ -87,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // FUNCIÓN: Limpiar mensajes de la interfaz
     function clearMessage() {
         if (loginMessage) {
             loginMessage.innerHTML = '';
@@ -94,11 +112,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // FUNCIÓN: Validar formato de email
     function validateEmail(email) {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
     }
     
+    // FUNCIÓN: Controlar estado del botón de login
     function toggleButtonState(enabled = true, text = null) {
         if (!loginSubmitBtn) return;
         
@@ -115,7 +135,193 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // ========== MOSTRAR/OCULTAR CONTRASEÑA ==========
+    // FUNCIÓN: Guardar datos del usuario en localStorage (persistente)
+    function saveUserToLocalStorage(user) {
+        try {
+            // Generar organizacionCamelCase
+            const organizacionCamelCase = toCamelCase(user.organizacion);
+            
+            // Crear objeto con datos seguros del usuario
+            const userData = {
+                id: user.id,
+                email: user.email,
+                nombreCompleto: user.nombreCompleto,
+                cargo: user.cargo,
+                organizacion: user.organizacion, // Nombre original de la organización
+                organizacionCamelCase: organizacionCamelCase, // Nombre en camelCase
+                status: user.status,
+                verificado: user.verificado,
+                fotoURL: user.fotoURL || '',
+                ultimoAcceso: new Date().toISOString(),
+                sessionStart: new Date().toISOString(),
+                fechaLogin: new Date().toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+            };
+            
+            // Guardar en localStorage (persiste entre sesiones del navegador)
+            localStorage.setItem('userData', JSON.stringify(userData));
+            localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userRole', user.cargo);
+            localStorage.setItem('userId', user.id);
+            localStorage.setItem('userOrganizacion', user.organizacion);
+            localStorage.setItem('userOrganizacionCamelCase', organizacionCamelCase);
+            localStorage.setItem('userNombre', user.nombreCompleto);
+            
+            console.log('💾 Datos del usuario guardados en localStorage:', {
+                id: user.id,
+                nombre: user.nombreCompleto,
+                cargo: user.cargo,
+                organizacion: user.organizacion,
+                organizacionCamelCase: organizacionCamelCase,
+                timestamp: userData.fechaLogin
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Error al guardar en localStorage:', error);
+            return false;
+        }
+    }
+    
+    // FUNCIÓN: Guardar datos del usuario en sessionStorage (temporal)
+    function saveUserToSessionStorage(user) {
+        try {
+            // Generar organizacionCamelCase
+            const organizacionCamelCase = toCamelCase(user.organizacion);
+            
+            // Crear objeto con datos de sesión
+            const sessionData = {
+                id: user.id,
+                email: user.email,
+                nombreCompleto: user.nombreCompleto,
+                cargo: user.cargo,
+                organizacion: user.organizacion, // Nombre original de la organización
+                organizacionCamelCase: organizacionCamelCase, // Nombre en camelCase
+                sessionId: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                sessionStart: new Date().toISOString(),
+                sessionStartFormatted: new Date().toLocaleTimeString('es-ES'),
+                token: 'auth_token_' + Date.now(),
+                userAgent: navigator.userAgent,
+                screenResolution: `${window.screen.width}x${window.screen.height}`
+            };
+            
+            // Guardar en sessionStorage (se borra al cerrar el navegador)
+            sessionStorage.setItem('currentSession', JSON.stringify(sessionData));
+            sessionStorage.setItem('isAuthenticated', 'true');
+            sessionStorage.setItem('sessionStart', new Date().toISOString());
+            sessionStorage.setItem('sessionOrganizacion', user.organizacion);
+            sessionStorage.setItem('sessionOrganizacionCamelCase', organizacionCamelCase);
+            sessionStorage.setItem('sessionUser', user.nombreCompleto);
+            sessionStorage.setItem('sessionRole', user.cargo);
+            
+            console.log('🔐 Sesión guardada en sessionStorage:', {
+                sessionId: sessionData.sessionId,
+                user: user.nombreCompleto,
+                organizacion: user.organizacion,
+                organizacionCamelCase: organizacionCamelCase,
+                timestamp: sessionData.sessionStartFormatted
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Error al guardar en sessionStorage:', error);
+            return false;
+        }
+    }
+    
+    // FUNCIÓN: Limpiar datos de usuario del almacenamiento (para logout)
+    function clearUserStorage() {
+        try {
+            // Limpiar localStorage
+            localStorage.removeItem('userData');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userOrganizacion');
+            localStorage.removeItem('userOrganizacionCamelCase');
+            localStorage.removeItem('userNombre');
+            
+            // Limpiar sessionStorage
+            sessionStorage.removeItem('currentSession');
+            sessionStorage.removeItem('isAuthenticated');
+            sessionStorage.removeItem('sessionStart');
+            sessionStorage.removeItem('sessionOrganizacion');
+            sessionStorage.removeItem('sessionOrganizacionCamelCase');
+            sessionStorage.removeItem('sessionUser');
+            sessionStorage.removeItem('sessionRole');
+            
+            console.log('🗑️ Datos de usuario eliminados del almacenamiento');
+            console.log('📋 Información eliminada:', {
+                localStorage: ['userData', 'isLoggedIn', 'userRole', 'userId', 'userOrganizacion', 'userOrganizacionCamelCase', 'userNombre'],
+                sessionStorage: ['currentSession', 'isAuthenticated', 'sessionStart', 'sessionOrganizacion', 'sessionOrganizacionCamelCase', 'sessionUser', 'sessionRole']
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Error al limpiar almacenamiento:', error);
+            return false;
+        }
+    }
+    
+    // FUNCIÓN: Verificar si hay una sesión activa
+    function checkExistingSession() {
+        try {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const hasSession = sessionStorage.getItem('isAuthenticated') === 'true';
+            
+            if (isLoggedIn && hasSession) {
+                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                const sessionData = JSON.parse(sessionStorage.getItem('currentSession') || '{}');
+                
+                console.log('🔍 Sesión existente encontrada:', {
+                    usuario: userData.nombreCompleto,
+                    organizacion: userData.organizacion,
+                    organizacionCamelCase: userData.organizacionCamelCase,
+                    sessionId: sessionData.sessionId,
+                    tiempoSesion: sessionData.sessionStart
+                });
+                
+                // Mostrar información útil en consola
+                if (userData.organizacionCamelCase) {
+                    console.log('🏢 CamelCase disponible:', userData.organizacionCamelCase);
+                    console.log('📝 Ejemplos de uso:');
+                    console.log('   - Para nombres de clase CSS: .' + userData.organizacionCamelCase + '-widget');
+                    console.log('   - Para nombres de variables: const ' + userData.organizacionCamelCase + 'Data = ...');
+                    console.log('   - Para nombres de archivos: reporte-' + userData.organizacionCamelCase + '.pdf');
+                }
+                
+                // Podríamos redirigir automáticamente si la sesión es válida
+                // return true;
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('❌ Error al verificar sesión:', error);
+            return false;
+        }
+    }
+    
+    // FUNCIÓN: Mostrar información de la organización en consola
+    function logOrganizationInfo(organizacion, organizacionCamelCase) {
+        console.log('🏢 INFORMACIÓN DE ORGANIZACIÓN:');
+        console.log('   Nombre original:', organizacion);
+        console.log('   CamelCase:', organizacionCamelCase);
+        console.log('   Longitud:', organizacion.length, 'caracteres');
+        console.log('   CamelCase length:', organizacionCamelCase.length, 'caracteres');
+        console.log('   Uso práctico:', {
+            cssClass: '.' + organizacionCamelCase + '-card',
+            jsVariable: 'const ' + organizacionCamelCase + 'Config',
+            localStorageKey: organizacionCamelCase + '_preferences',
+            apiEndpoint: '/api/' + organizacionCamelCase + '/data'
+        });
+    }
+    
+    // MOSTRAR/OCULTAR CONTRASEÑA - Configurar botón de visibilidad
     if (passwordToggle && passwordInput) {
         passwordToggle.addEventListener('click', function() {
             const icon = this.querySelector('i');
@@ -137,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Botón mostrar/ocultar contraseña configurado');
     }
     
-    // ========== FORMULARIO DE LOGIN ==========
+    // FORMULARIO DE LOGIN - Manejar el envío del formulario
     loginForm.addEventListener('submit', async function(event) {
         event.preventDefault();
         console.log('📤 Formulario de login enviado');
@@ -151,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('📝 Datos ingresados:', { email: email, passwordLength: password.length });
         
-        // Validaciones básicas
+        // VALIDACIONES BÁSICAS
         if (!email || !password) {
             showMessage(loginMessage, 'error', '⚠️ Por favor completa todos los campos');
             emailInput.focus();
@@ -178,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('🔐 Intentando iniciar sesión con:', email);
             
-            // Intentar iniciar sesión usando UserManager
+            // INTENTAR INICIAR SESIÓN usando UserManager
             const user = await userManager.iniciarSesion(email, password);
             
             console.log('✅ Login exitoso:', {
@@ -190,20 +396,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 verificado: user.verificado
             });
             
-            // Mostrar mensaje de éxito
-            showMessage(loginMessage, 'success', `🎉 ¡Bienvenido ${user.nombreCompleto}! Redirigiendo al sistema...`);
+            // Mostrar información de la organización
+            const organizacionCamelCase = toCamelCase(user.organizacion);
+            logOrganizationInfo(user.organizacion, organizacionCamelCase);
+            
+            // GUARDAR DATOS EN ALMACENAMIENTO
+            const savedToLocal = saveUserToLocalStorage(user);
+            const savedToSession = saveUserToSessionStorage(user);
+            
+            if (savedToLocal && savedToSession) {
+                console.log('💾✅ Datos de usuario guardados correctamente en ambos almacenamientos');
+                
+                // Verificar que los datos se guardaron correctamente
+                const localOrg = localStorage.getItem('userOrganizacion');
+                const localOrgCamel = localStorage.getItem('userOrganizacionCamelCase');
+                const sessionOrg = sessionStorage.getItem('sessionOrganizacion');
+                const sessionOrgCamel = sessionStorage.getItem('sessionOrganizacionCamelCase');
+                
+                console.log('🔍 Verificación de almacenamiento:', {
+                    localStorage: { organizacion: localOrg, camelCase: localOrgCamel },
+                    sessionStorage: { organizacion: sessionOrg, camelCase: sessionOrgCamel }
+                });
+            } else {
+                console.warn('⚠️ Algunos datos no se guardaron completamente');
+            }
+            
+            // Mostrar mensaje de éxito con información de la organización
+            showMessage(loginMessage, 'success', 
+                `🎉 ¡Bienvenido ${user.nombreCompleto}!<br>
+                 <small>Organización: ${user.organizacion}<br>
+                 Redirigiendo al sistema...</small>`
+            );
             
             // Cambiar texto del botón
             toggleButtonState(false, '<i class="fas fa-check"></i> SESIÓN INICIADA');
             
-            // Redirigir según el tipo de usuario después de 2 segundos
+            // REDIRIGIR según el tipo de usuario después de 2 segundos
             setTimeout(() => {
                 console.log('🔄 Redirigiendo usuario...');
+                console.log('📍 Información disponible para redirección:', {
+                    cargo: user.cargo,
+                    organizacion: user.organizacion,
+                    organizacionCamelCase: organizacionCamelCase
+                });
+                
+                // Ejemplo de cómo usar organizacionCamelCase en redirecciones
                 if (user.cargo === 'administrador') {
                     console.log('👑 Redirigiendo a dashboard de administrador');
+                    // Podrías usar: window.location.href = `/admin/${organizacionCamelCase}/dashboard.html`;
                     window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
                 } else if (user.cargo === 'colaborador') {
                     console.log('👤 Redirigiendo a dashboard de colaborador');
+                    // Podrías usar: window.location.href = `/collaborator/${organizacionCamelCase}/dashboard.html`;
                     window.location.href = '/users/colaborador/dashboard.html';
                 } else {
                     console.log('❓ Tipo de usuario desconocido, redirigiendo a inicio');
@@ -264,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // ========== ENTER PARA SUBMIT ==========
+    // ENTER PARA SUBMIT - Permitir enviar formulario con Enter
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && document.activeElement === passwordInput) {
             console.log('↵ Enter presionado en campo contraseña');
@@ -272,8 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // ========== RECUPERAR CONTRASEÑA ==========
-    const forgotPasswordLink = document.getElementById('forgotPassword');
+    // RECUPERAR CONTRASEÑA - Manejar clic en enlace "Olvidé mi contraseña"
     if (forgotPasswordLink) {
         forgotPasswordLink.addEventListener('click', function(e) {
             e.preventDefault();
@@ -282,8 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // ========== BOTÓN REGISTRARSE ==========
-    const registerBtn = document.getElementById('registerBtn');
+    // BOTÓN REGISTRARSE - Redirigir a página de registro
     if (registerBtn) {
         registerBtn.addEventListener('click', function(e) {
             console.log('👤 Clic en botón registrarse');
@@ -291,7 +533,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // ========== ESTILOS PARA ANIMACIONES ==========
+    // VERIFICAR SESIÓN EXISTENTE al cargar la página
+    const hasExistingSession = checkExistingSession();
+    if (hasExistingSession) {
+        console.log('🔍 Sesión activa detectada, podrías redirigir automáticamente');
+        // Opcional: Redirigir automáticamente si hay sesión
+        // showMessage(loginMessage, 'info', '📱 Tienes una sesión activa. Redirigiendo...');
+    }
+    
+    // ESTILOS PARA ANIMACIONES - Agregar estilos dinámicamente
     const style = document.createElement('style');
     style.textContent = `
         @keyframes slideIn {
@@ -362,11 +612,18 @@ document.addEventListener('DOMContentLoaded', function() {
             color: var(--color-primary) !important;
             transform: scale(1.1);
         }
+        
+        .message-success small {
+            display: block;
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
     `;
     document.head.appendChild(style);
     
-    // ========== AUTOFOCO ==========
-    // Enfocar automáticamente el campo email
+    // AUTOFOCO - Enfocar automáticamente el campo email
     setTimeout(() => {
         if (emailInput) {
             emailInput.focus();
@@ -377,4 +634,5 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Sistema de login inicializado correctamente');
 });
 
-console.log('📄 login.js cargado y listo');
+// Mensaje inicial al cargar el script
+console.log('📄 login.js cargado y listo - Con almacenamiento de organización en camelCase');
