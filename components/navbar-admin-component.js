@@ -97,7 +97,7 @@ class NavbarComplete {
                 justify-content: flex-start;
             }
             
-            /* Logo del sistema */
+            /* Logo del sistema - CÍRCULO PERFECTO */
             .navbar-logo-link {
                 display: flex;
                 align-items: center;
@@ -107,43 +107,35 @@ class NavbarComplete {
                 margin-right: 15px;
             }
 
-            .navbar-logo-img {
-                height: 60px;
-                width: auto;
-                max-height: 90px;
-                transition: transform var(--transition-default);
-                border-radius: 8px;
-            }
-
-            /* Logo de organización específico */
-            .navbar-org-logo {
-                border: 2px solid var(--color-accent-primary);
-                box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-            }
-
-            /* Texto para logo de organización cuando no hay imagen */
-            .org-text-logo {
+            /* Contenedor para logo circular */
+            .logo-circle-container {
                 width: 60px;
                 height: 60px;
-                border-radius: 8px;
-                background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+                border-radius: 50%;
+                overflow: hidden;
+                border: 3px solid var(--color-accent-primary);
+                background-color: var(--color-bg-secondary);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-                text-align: center;
-                padding: 5px;
-                border: 2px solid var(--color-accent-primary);
+                transition: all 0.3s ease;
+            }
+
+            /* Todos los logos en círculo perfecto */
+            .navbar-logo-img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition: transform var(--transition-default);
             }
 
             /* Efecto hover en el logo */
-            .navbar-logo-link:hover .navbar-logo-img {
+            .navbar-logo-link:hover .logo-circle-container {
                 transform: scale(1.05);
+                border-color: var(--color-accent-secondary);
             }
             
-            /* Título "ADMINISTRADOR" centrado */
+            /* Título "CENTINELA" centrado */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -513,7 +505,7 @@ class NavbarComplete {
             }
             
             .admin-dropdown-options.active {
-                max-height: 200px;
+                max-height: 250px;
                 opacity: 1;
                 overflow: visible;
             }
@@ -547,6 +539,22 @@ class NavbarComplete {
                 color: var(--color-accent-primary);
             }
             
+            /* Opción especial para cerrar sesión */
+            .logout-option {
+                background: linear-gradient(135deg, #ff6b6b, #ff5252);
+                border-color: #ff5252;
+                color: white;
+            }
+            
+            .logout-option:hover {
+                background: linear-gradient(135deg, #ff5252, #ff3838);
+                border-color: #ff3838;
+            }
+            
+            .logout-option i {
+                color: white;
+            }
+            
             /* Overlay para cerrar el menú (en móvil) */
             .navbar-mobile-overlay {
                 position: fixed;
@@ -572,10 +580,9 @@ class NavbarComplete {
                     width: 85%;
                 }
                 
-                .navbar-logo-img {
+                .logo-circle-container {
+                    width: 50px;
                     height: 50px;
-                    width: auto;
-                    max-height: 50px;
                 }
 
                 .org-text-logo {
@@ -595,10 +602,9 @@ class NavbarComplete {
                     width: 100%;
                 }
 
-                .navbar-logo-img {
+                .logo-circle-container {
+                    width: 40px;
                     height: 40px;
-                    width: auto;
-                    max-height: 40px;
                 }
 
                 .org-text-logo {
@@ -638,16 +644,20 @@ class NavbarComplete {
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
-                    <!-- Logo del sistema Centinela -->
+                    <!-- Logo del sistema Centinela - CÍRCULO -->
                     <a href="/index.html" class="navbar-logo-link">
-                        <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
+                        <div class="logo-circle-container">
+                            <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
+                        </div>
                     </a>
                     
-                    <!-- Logo de la organización (se actualizará dinámicamente) -->
+                    <!-- Logo de la organización - CÍRCULO -->
                     <a href="/users/admin/dashboard/dashboard.html" class="navbar-logo-link" id="orgLogoLink">
-                        <img src="/assets/images/logoApp.png" alt="Logo Organización" 
-                             class="navbar-logo-img navbar-org-logo" id="orgLogoImg">
-                        <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                        <div class="logo-circle-container" id="orgLogoContainer">
+                            <img src="/assets/images/logoApp.png" alt="Logo Organización" 
+                                 class="navbar-logo-img" id="orgLogoImg">
+                            <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                        </div>
                     </a>
                 </div>
                 
@@ -755,6 +765,10 @@ class NavbarComplete {
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Gestionar Usuarios</span>
                         </a>
+                        <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -838,8 +852,9 @@ class NavbarComplete {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
         const orgLogoLink = document.getElementById('orgLogoLink');
+        const orgLogoContainer = document.getElementById('orgLogoContainer');
         
-        if (!organizationLogoImg || !orgTextLogo || !orgLogoLink) return;
+        if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
 
         // Si tiene logo de organización
         if (this.currentAdmin.fotoOrganizacion) {
@@ -875,6 +890,10 @@ class NavbarComplete {
 
         // Actualizar el enlace del logo para redirigir al dashboard
         orgLogoLink.href = '/users/admin/dashboard/dashboard.html';
+        
+        // Asegurar que el contenedor sea un círculo perfecto
+        orgLogoContainer.style.borderRadius = '50%';
+        orgLogoContainer.style.overflow = 'hidden';
     }
 
     // Actualiza la información del administrador en el menú
@@ -933,6 +952,7 @@ class NavbarComplete {
         this.loadFontAwesome();
         this.setupAdminDropdown();
         this.loadOrbitronFont();
+        this.setupLogout(); // Añadido para cerrar sesión
     }
 
     // Configura el menú hamburguesa
@@ -1015,6 +1035,210 @@ class NavbarComplete {
                 this.toggleAdminDropdown(false);
             }
         });
+    }
+
+    // Configura la funcionalidad de cerrar sesión
+    setupLogout() {
+        const logoutOption = document.getElementById('logoutOption');
+        
+        if (!logoutOption) return;
+
+        logoutOption.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Confirmar cierre de sesión
+            const confirmLogout = await this.showLogoutConfirmation();
+            
+            if (confirmLogout) {
+                await this.performLogout();
+            }
+        });
+    }
+
+    // Muestra confirmación para cerrar sesión
+    async showLogoutConfirmation() {
+        return new Promise((resolve) => {
+            // Usar SweetAlert2 para confirmación
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '¿Cerrar sesión?',
+                    text: '¿Estás seguro de que deseas salir del sistema?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, cerrar sesión',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    reverseButtons: true
+                }).then((result) => {
+                    resolve(result.isConfirmed);
+                });
+            } else {
+                // Fallback si SweetAlert2 no está disponible
+                const confirmed = confirm('¿Estás seguro de que deseas cerrar sesión?');
+                resolve(confirmed);
+            }
+        });
+    }
+
+    // Realiza el cierre de sesión COMPLETO
+    async performLogout() {
+        console.log('🚪 Cerrando sesión COMPLETAMENTE...');
+        
+        try {
+            // 1. Cerrar sesión en Firebase si UserManager está disponible
+            if (this.userManager && typeof this.userManager.logout === 'function') {
+                await this.userManager.logout();
+                console.log('🔥 Sesión de Firebase cerrada a través de UserManager');
+            } else {
+                // Intentar cerrar sesión directamente si firebase está disponible
+                await this.signOutFirebaseDirectly();
+            }
+            
+            // 2. Limpiar TODOS los datos de almacenamiento local
+            this.clearAllStorage();
+            
+            console.log('🧹 TODOS los datos de sesión eliminados');
+            
+            // 3. Mostrar mensaje de éxito
+            await this.showLogoutSuccessMessage();
+            
+            // 4. Redirigir a la página de login con parámetros para evitar caché
+            this.redirectToLogin();
+            
+        } catch (error) {
+            console.error('❌ Error al cerrar sesión:', error);
+            
+            // Aún así limpiar almacenamiento y redirigir
+            this.clearAllStorage();
+            this.redirectToLogin();
+        }
+    }
+
+    // Intenta cerrar sesión en Firebase directamente
+    async signOutFirebaseDirectly() {
+        try {
+            // Método 1: Si firebase está disponible globalmente
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                await firebase.auth().signOut();
+                console.log('🔥 Sesión de Firebase cerrada directamente');
+                return;
+            }
+            
+            // Método 2: Intentar con la importación dinámica
+            const { getAuth, signOut } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js');
+            
+            // Buscar cualquier app de Firebase inicializada
+            const firebaseApps = typeof firebase !== 'undefined' ? firebase.apps : [];
+            if (firebaseApps && firebaseApps.length > 0) {
+                const auth = getAuth(firebaseApps[0]);
+                await signOut(auth);
+                console.log('🔥 Sesión de Firebase cerrada con app existente');
+            }
+            
+        } catch (error) {
+            console.warn('⚠️ No se pudo cerrar sesión en Firebase directamente:', error);
+            // Continuar de todos modos
+        }
+    }
+
+    // Limpia TODOS los datos de almacenamiento
+    clearAllStorage() {
+        try {
+            // Limpiar localStorage completamente
+            localStorage.clear();
+            console.log('🗑️ localStorage limpiado');
+            
+            // Limpiar sessionStorage
+            sessionStorage.clear();
+            console.log('🗑️ sessionStorage limpiado');
+            
+            // Limpiar cookies relacionadas con sesión
+            this.clearSessionCookies();
+            
+            // Limpiar indexedDB si es necesario
+            this.clearIndexedDB();
+            
+        } catch (error) {
+            console.warn('⚠️ Error al limpiar almacenamiento:', error);
+        }
+    }
+
+    // Limpia cookies de sesión
+    clearSessionCookies() {
+        try {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i];
+                const eqPos = cookie.indexOf('=');
+                const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                
+                // Eliminar cookies relacionadas con sesión o auth
+                if (name.includes('session') || name.includes('auth') || name.includes('firebase')) {
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                }
+            }
+            console.log('🍪 Cookies de sesión limpiadas');
+        } catch (error) {
+            console.warn('⚠️ Error al limpiar cookies:', error);
+        }
+    }
+
+    // Limpia indexedDB si existe
+    async clearIndexedDB() {
+        try {
+            // Lista de bases de datos que podrían contener datos de sesión
+            const databases = ['firebaseLocalStorageDb', 'firestore', 'centinela-db'];
+            
+            for (const dbName of databases) {
+                try {
+                    await indexedDB.deleteDatabase(dbName);
+                    console.log(`🗃️ indexedDB ${dbName} eliminada`);
+                } catch (e) {
+                    // La base de datos podría no existir, continuar
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Error al limpiar indexedDB:', error);
+        }
+    }
+
+    // Muestra mensaje de éxito al cerrar sesión
+    async showLogoutSuccessMessage() {
+        if (typeof Swal !== 'undefined') {
+            await Swal.fire({
+                icon: 'success',
+                title: 'Sesión cerrada',
+                text: 'Has cerrado sesión exitosamente. Redirigiendo...',
+                timer: 2000,
+                showConfirmButton: false,
+                timerProgressBar: true,
+                willClose: () => {
+                    this.redirectToLogin();
+                }
+            });
+        } else {
+            // Fallback simple
+            alert('Sesión cerrada exitosamente. Redirigiendo...');
+        }
+    }
+
+    // Redirige a la página de login
+    redirectToLogin() {
+        // Agregar timestamp para evitar caché
+        const timestamp = new Date().getTime();
+        
+        // Redirigir con parámetros para forzar cierre de sesión completo
+        const loginUrl = `/users/visitors/login/login.html?logout=true&timestamp=${timestamp}&nocache=1`;
+        
+        // Forzar recarga completa
+        window.location.href = loginUrl;
+        
+        // Doble seguridad: forzar recarga si no redirige en 1 segundo
+        setTimeout(() => {
+            window.location.replace(loginUrl);
+        }, 1000);
     }
 
     // Alterna la visibilidad del dropdown
