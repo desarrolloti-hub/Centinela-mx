@@ -23,6 +23,9 @@
 <body class="particulas-active">
 <canvas id="particle-canvas"></canvas>
 
+<!-- NAVBAR -->
+<div id="navbar-container"></div>
+
 <div class="admin-container">
     
    <div class="section-header">
@@ -46,150 +49,16 @@
                     <th>ACCIONES</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Pedro Carlos</div></td>
-                    <td>Ramírez</td>
-                    <td>carlos@centinela.mx</td>
-                    <td><span class="status active">Activo</span></td>
-                    <td class="actions-cell">
-                        <button class="row-btn enable" title="Inhabilitar">
-                            <i class="fas fa-user-check"></i>
-                        </button>
-                        <!-- ENLACE ORIGINAL PARA EDITAR -->
-                        <a href="/users/admin/editUser/editUser.html"class="row-btn edit" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
-                        <button class="row-btn view" title="Ver detalles"
-                            data-fullname="Carlos Ramírez"
-                            data-email="carlos@centinela.mx"
-                            data-status="Activo"
-                            data-authid="UID-928372"
-                            data-userphoto="https://i.imgur.com/6VBx3io.png"
-                            data-created="2025-01-10"
-                            data-updated="2025-02-05"
-                            data-lastlogin="2025-02-08 14:33">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Ana Sofia</div></td>
-                    <td>González</td>
-                    <td>ana@centinela.mx</td>
-                    <td><span class="status active">Activo</span></td>
-                    <td class="actions-cell">
-                        <button class="row-btn enable" title="Inhabilitar">
-                            <i class="fas fa-user-check"></i>
-                        </button>
-                        <!-- ENLACE ORIGINAL PARA EDITAR -->
-                        <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
-                        <button class="row-btn view" title="Ver detalles"
-                            data-fullname="Ana González"
-                            data-email="ana@centinela.mx"
-                            data-status="Activo"
-                            data-authid="UID-928373"
-                            data-userphoto="https://i.imgur.com/6VBx3io.png"
-                            data-created="2025-01-15"
-                            data-updated="2025-02-06"
-                            data-lastlogin="2025-02-09 09:20">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Luis Lalo</div></td>
-                    <td>Martínez</td>
-                    <td>luis@centinela.mx</td>
-                    <td><span class="status inactive">Inactivo</span></td>
-                    <td class="actions-cell">
-                        <button class="row-btn enable" title="Habilitar">
-                            <i class="fas fa-ban"></i>
-                        </button>
-                        <!-- ENLACE ORIGINAL PARA EDITAR -->
-                        <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
-                        <button class="row-btn view" title="Ver detalles"
-                            data-fullname="Luis Martínez"
-                            data-email="luis@centinela.mx"
-                            data-status="Inactivo"
-                            data-authid="UID-928374"
-                            data-userphoto="https://i.imgur.com/6VBx3io.png"
-                            data-created="2025-01-20"
-                            data-updated="2025-02-07"
-                            data-lastlogin="2025-02-10 12:45">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>María Laura</div></td>
-                    <td>Fernández</td>
-                    <td>maria@centinela.mx</td>
-                    <td><span class="status active">Activo</span></td>
-                    <td class="actions-cell">
-                        <button class="row-btn enable" title="Inhabilitar">
-                            <i class="fas fa-user-check"></i>
-                        </button>
-                        <!-- ENLACE ORIGINAL PARA EDITAR -->
-                        <a href="/users/admin/editUser/editUser.html"class="row-btn edit" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
-                        <button class="row-btn view" title="Ver detalles"
-                            data-fullname="María Fernández"
-                            data-email="maria@centinela.mx"
-                            data-status="Activo"
-                            data-authid="UID-928375"
-                            data-userphoto="https://i.imgur.com/6VBx3io.png"
-                            data-created="2025-01-25"
-                            data-updated="2025-02-08"
-                            data-lastlogin="2025-02-12 16:10">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td><div class="user-info"><div class="user-avatar"><i class="fas fa-user"></i></div>Jorge Emili</div></td>
-                    <td>El Curioso</td>
-                    <td>jorge@centinela.mx</td>
-                    <td><span class="status active">Activo</span></td>
-                    <td class="actions-cell">
-                        <button class="row-btn enable" title="Inhabilitar">
-                            <i class="fas fa-user-check"></i>
-                        </button>
-                        <!-- ENLACE ORIGINAL PARA EDITAR -->
-                        <a href="/users/admin/editUser/editUser.html" class="row-btn edit" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <!-- BOTÓN PARA VER DETALLES (SweetAlert) -->
-                        <button class="row-btn view" title="Ver detalles"
-                            data-fullname="Jorge Hernández"
-                            data-email="jorge@centinela.mx"
-                            data-status="Activo"
-                            data-authid="UID-928376"
-                            data-userphoto="https://i.imgur.com/6VBx3io.png"
-                            data-created="2025-02-01"
-                            data-updated="2025-02-09"
-                            data-lastlogin="2025-02-13 11:15">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
+            <tbody id="usersTableBody">
+                <!-- LOS USUARIOS SE CARGARÁN DINÁMICAMENTE AQUÍ -->
+                <!-- No pongas filas vacías, JavaScript las creará -->
             </tbody>
         </table>
     </div>
 </div>
+
+<!-- FOOTER -->
+<div id="footer-container"></div>
 
 <!-- MODAL VER COMPLETO (Como fallback) -->
 <div id="viewModal" class="modal">
@@ -197,7 +66,10 @@
         <span class="close-modal">&times;</span>
 
         <div class="modal-header">
-            <img id="viewUserPhoto" class="modal-user-photo" alt="Foto del usuario">
+            <div class="modal-user-photo">
+                <img id="viewUserPhoto" alt="Foto del usuario">
+                <i class="fas fa-user" id="viewUserIcon" style="display: none;"></i>
+            </div>
             <h2 id="viewFullName"></h2>
         </div>
 
@@ -210,6 +82,7 @@
             <div><strong>Fecha actualización:</strong> <span id="viewUpdated"></span></div>
             <div><strong>Último login:</strong> <span id="viewLastLogin"></span></div>
         </div>
+    </div>
 </div>
 
 <script src="/components/themeloader.js"></script>

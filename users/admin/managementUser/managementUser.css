@@ -121,6 +121,10 @@
     font-family: var(--font-family-secondary);
 }
 
+/* =============================================
+   AVATAR - SOLUCIÓN PARA IMÁGENES BASE64 EN TABLA
+   ============================================= */
+
 /* INFO USUARIO */
 .user-info { 
     display: flex; 
@@ -137,14 +141,101 @@
     align-items: center;
     justify-content: center;
     background-color: var(--color-bg-tertiary);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
 }
 
+/* **SOLUCIÓN PRINCIPAL:** Estilos específicos para imágenes Base64 en tabla */
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    /* Para imágenes normales */
+    object-fit: cover;
+    object-position: center;
+}
+
+/* **CLAVE:** Override para imágenes Base64 - NO usar object-fit */
+.user-avatar img[src^="data:image"],
+.user-avatar img[src*="base64"],
+.user-avatar img[src*="data:image/"] {
+    /* CRÍTICO: Para Base64 en contenedores pequeños, NO usar object-fit */
+    object-fit: none !important;
+    object-position: center center !important;
+    /* Forzar la imagen a cubrir el contenedor */
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: none !important;
+    max-height: none !important;
+    /* Asegurar visibilidad */
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    /* Optimización de renderizado */
+    image-rendering: auto !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Fondo transparente */
+    background-color: transparent !important;
+    /* Escala la imagen para que llene el contenedor */
+    transform: scale(1.1); /* Ajusta este valor según necesidad */
+}
+
+/* **ALTERNATIVA:** Si la solución anterior no funciona, usar background-image */
+.user-avatar.has-base64-img {
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+}
+
+.user-avatar.has-base64-img i {
+    display: none !important;
+}
+
+/* Icono de fallback */
 .user-avatar i {
     color: var(--color-icon-primary);
     font-size: 18px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    /* Mostrar por defecto */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* ESTADOS */
+/* **CORRECCIÓN:** Solo ocultar icono cuando hay imagen Base64 visible */
+.user-avatar:has(img[src^="data:image"]:not(.error)) i,
+.user-avatar:has(img[src*="base64"]:not(.error)) i {
+    display: none !important;
+}
+
+/* Mostrar icono si la imagen falla o no carga */
+.user-avatar img.error + i {
+    display: flex !important;
+}
+
+/* Mostrar icono si no hay src */
+.user-avatar img:not([src]),
+.user-avatar img[src=""] {
+    display: none;
+}
+
+.user-avatar img:not([src]) ~ i,
+.user-avatar img[src=""] ~ i {
+    display: flex !important;
+}
+
+/* =============================================
+   ESTADOS
+   ============================================= */
+
 .status {
     padding: 4px 10px;
     border-radius: 20px;
@@ -226,7 +317,7 @@
 }
 
 /* =============================================
-   MODAL
+   MODAL - Ya funciona bien, mantener como está
    ============================================= */
 
 .modal {
@@ -295,6 +386,39 @@
     border: 2px solid var(--color-border-light);
     margin-bottom: 10px;
     background-color: var(--color-bg-tertiary);
+    overflow: hidden;
+    position: relative;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal ya funciona bien - mantener object-fit para Base64 */
+.modal-user-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+/* Icono en modal */
+.modal-user-photo i {
+    font-size: 40px;
+    color: var(--color-icon-primary);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ocultar icono cuando hay imagen */
+.modal-user-photo:has(img[src]:not([src=""])) i {
+    display: none !important;
 }
 
 .modal-grid {
@@ -472,7 +596,7 @@
         flex: 0 0 60px !important;
     }
     
-    /* Ajuste para el avatar */
+    /* Ajuste para el avatar en móvil */
     .user-info {
         justify-content: space-between;
         width: 85%;
@@ -481,6 +605,16 @@
     
     .user-avatar {
         order: 2;
+        width: 32px;
+        height: 32px;
+    }
+    
+    /* Ajustes específicos para Base64 en móvil */
+    .user-avatar img[src^="data:image"],
+    .user-avatar img[src*="base64"] {
+        min-width: 32px !important;
+        min-height: 32px !important;
+        transform: scale(1.2); /* Aumentar escala en móvil */
     }
     
     /* Títulos centrados */
@@ -542,5 +676,10 @@
     .modal-content {
         margin: 10px;
         max-height: 85vh;
+    }
+    
+    .modal-user-photo {
+        width: 70px;
+        height: 70px;
     }
 }
