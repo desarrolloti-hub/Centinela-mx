@@ -2,52 +2,12 @@
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM cargado, iniciando gestor de colaboradores...');
     
-    // Cargar Firebase primero
-    await loadFirebase();
-    
-    // Esperar a que UserManager se cargue
+    // ESPERAR a que UserManager se cargue (ya incluye Firebase)
     await waitForUserManager();
     
     // Inicializar el gestor
     await initUserManager();
 });
-
-// ========== CARGAR FIREBASE ==========
-async function loadFirebase() {
-    console.log('🔥 Cargando Firebase...');
-    
-    // Verificar si Firebase ya está cargado
-    if (typeof firebase === 'undefined') {
-        try {
-            // Cargar Firebase desde CDN
-            const firebaseScript = document.createElement('script');
-            firebaseScript.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
-            await loadScript(firebaseScript);
-            
-            const authScript = document.createElement('script');
-            authScript.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
-            await loadScript(authScript);
-            
-            const firestoreScript = document.createElement('script');
-            firestoreScript.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
-            await loadScript(firestoreScript);
-            
-            console.log('✅ Firebase cargado correctamente');
-        } catch (error) {
-            console.error('❌ Error cargando Firebase:', error);
-            throw error;
-        }
-    }
-}
-
-// Función auxiliar para cargar scripts
-function loadScript(script) {
-    return new Promise((resolve, reject) => {
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-}
 
 // ========== ESPERAR A QUE USERMANAGER SE CARGUE ==========
 async function waitForUserManager() {
@@ -61,6 +21,13 @@ async function waitForUserManager() {
         const module = await import('/clases/user.js');
         const UserManager = module.UserManager;
         const userManager = new UserManager();
+        
+        // Verificar que Firebase esté disponible
+        if (typeof firebase === 'undefined') {
+            console.error('❌ Firebase no está disponible. UserManager no se inicializó correctamente.');
+            showFirebaseNotLoadedError();
+            return null;
+        }
         
         // Esperar a que tenga el usuario actual
         let attempts = 0;
@@ -89,6 +56,13 @@ async function waitForUserManager() {
 // ========== GESTOR DE USUARIOS ==========
 async function initUserManager() {
     console.log('🚀 Inicializando gestor de colaboradores...');
+    
+    // Verificar que Firebase esté disponible
+    if (typeof firebase === 'undefined' || !firebase.apps.length) {
+        console.error('❌ Firebase no está inicializado');
+        showFirebaseNotLoadedError();
+        return;
+    }
     
     // OBTENER ADMIN DESDE USERMANAGER
     let admin = null;
@@ -160,18 +134,31 @@ async function initUserManager() {
     console.log('✅ Gestor de colaboradores inicializado correctamente');
 }
 
-// ========== GENERAR NOMBRE CAMEL CASE ==========
+// ========== GENERAR NOMBRE CAMEL CASE MEJORADO ==========
 function generateCamelCase(organizationName) {
     if (!organizationName) return 'organizacionDefault';
     
-    return organizationName
+    // Limpiar y normalizar el nombre
+    const cleanName = organizationName
+        .trim()
         .toLowerCase()
+        .normalize('NFD') // Separar acentos
+        .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
         .replace(/[^a-z0-9\s]/g, '') // Remover caracteres especiales
+        .replace(/\s+/g, ' '); // Reemplazar múltiples espacios por uno
+    
+    // Convertir a camelCase
+    const camelCaseName = cleanName
         .split(' ')
         .map((word, index) => 
             index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)
         )
         .join('');
+    
+    console.log(`📝 Generando camelCase: "${organizationName}" -> "${camelCaseName}"`);
+    
+    // Si el resultado está vacío, devolver un valor por defecto
+    return camelCaseName || 'organizacionDefault';
 }
 
 // ========== OBTENER ADMIN DESDE LOCALSTORAGE (FALLBACK) ==========
@@ -198,145 +185,65 @@ function getAdminFromLocalStorage() {
 // ========== CARGAR COLABORADORES DESDE FIREBASE ==========
 async function loadCollaboratorsFromFirebase(admin) {
     console.log(`🔄 Cargando colaboradores desde Firebase para admin: ${admin.nombreCompleto}`);
-    console.log(`🏢 Colección: colaboradores_${admin.organizacionCamelCase}`);
+    console.log(`🏢 Admin tiene organizacionCamelCase: ${admin.organizacionCamelCase}`);
+    
+    // Verificar que Firebase esté disponible
+    if (typeof firebase === 'undefined' || !firebase.apps.length) {
+        console.error('❌ Firebase no está disponible');
+        showFirebaseNotLoadedError();
+        return [];
+    }
     
     try {
-        // Inicializar Firebase si no está inicializado
-        if (!firebase.apps.length) {
-            // Configuración de Firebase - ACTUALIZA CON TUS CREDENCIALES
-            const firebaseConfig = {
-                apiKey: "AIzaSyAwN0T0eM6X9EfsdxwDNUlUVRUYI7E73KU",
-                authDomain: "centinela-mx.firebaseapp.com",
-                projectId: "centinela-mx",
-                storageBucket: "centinela-mx.appspot.com",
-                messagingSenderId: "637340258727",
-                appId: "1:637340258727:web:75c9505e16c4380df3fb01"
-            };
-            
-            firebase.initializeApp(firebaseConfig);
-        }
-        
-        // Obtener Firestore
+        // Obtener Firestore (ya debe estar inicializado por UserManager)
         const db = firebase.firestore();
         
-        // Nombre de la colección específica del admin
+        // PRIMERO: Intentar con la colección específica del admin
         const collectionName = `colaboradores_${admin.organizacionCamelCase}`;
+        console.log(`🔍 CONSULTANDO COLECCIÓN PRINCIPAL: ${collectionName}`);
         
-        console.log(`🔍 Consultando colección: ${collectionName}`);
-        
-        // Consultar Firestore
-        const querySnapshot = await db.collection(collectionName).get();
-        
-        if (!querySnapshot.empty) {
-            const collaborators = [];
+        try {
+            const querySnapshot = await db.collection(collectionName).get();
             
-            querySnapshot.forEach(doc => {
-                const data = doc.data();
-                console.log(`📄 Documento encontrado:`, data);
-                
-                // Verificar que el colaborador pertenezca a este admin
-                const belongsToAdmin = 
-                    data.creadoPor === admin.id || 
-                    data.creadoPorEmail === admin.correoElectronico ||
-                    data.organizacion === admin.organizacion;
-                
-                if (belongsToAdmin) {
-                    collaborators.push({
-                        id: doc.id,
-                        name: data.nombreCompleto ? data.nombreCompleto.split(' ')[0] : 'Sin nombre',
-                        lastname: data.nombreCompleto ? data.nombreCompleto.split(' ').slice(1).join(' ') : '',
-                        email: data.correoElectronico || 'sin@email.com',
-                        status: data.status === true || data.status === 'active' ? 'active' : 'inactive',
-                        role: data.rol || 'Colaborador',
-                        organization: data.organizacion || admin.organizacion,
-                        profileImage: data.fotoUsuario || 'https://i.imgur.com/6VBx3io.png',
-                        authId: data.authId || data.id || doc.id,
-                        created: data.fechaCreacion ? 
-                            (data.fechaCreacion.toDate ? data.fechaCreacion.toDate().toLocaleDateString() : 
-                             new Date(data.fechaCreacion).toLocaleDateString()) : 'Hoy',
-                        updated: data.fechaActualizacion ? 
-                            (data.fechaActualizacion.toDate ? data.fechaActualizacion.toDate().toLocaleDateString() : 
-                             new Date(data.fechaActualizacion).toLocaleDateString()) : 'Hoy',
-                        lastLogin: data.ultimoLogin || 'Nunca',
-                        rawData: data // Guardar datos originales
-                    });
-                }
-            });
+            if (!querySnapshot.empty) {
+                console.log(`✅ Colección ${collectionName} encontrada con ${querySnapshot.size} documentos`);
+                const collaborators = processQueryResults(querySnapshot, admin);
+                updateUIWithCollaborators(collaborators, admin, collectionName);
+                return collaborators;
+            } else {
+                console.log(`📭 Colección ${collectionName} existe pero está vacía`);
+                renderCollaboratorsTable([], admin);
+                updateStats([]);
+                return [];
+            }
+        } catch (error) {
+            console.log(`❌ Error consultando ${collectionName}:`, error.message);
             
-            console.log(`✅ ${collaborators.length} colaboradores encontrados en Firebase`);
-            
-            // Guardar en localStorage para cache
-            localStorage.setItem(collectionName, JSON.stringify(collaborators));
-            
-            // Renderizar en tabla
-            renderCollaboratorsTable(collaborators, admin);
-            
-            // Actualizar estadísticas
-            updateStats(collaborators);
-            
-            return collaborators;
-            
-        } else {
-            console.log(`📭 No se encontraron documentos en la colección ${collectionName}`);
-            
-            // Intentar buscar en colecciones alternativas
-            const alternativeCollections = [
-                'colaboradores',
-                `colaboradores_${admin.organizacion.toLowerCase().replace(/[^a-z]/g, '')}`,
-                'users',
-                'colaboradores_rsiEnterprice' // Ejemplo específico
-            ];
+            // Si la colección no existe, intentar con alternativas
+            const alternativeCollections = generateAlternativeCollectionNames(admin);
             
             for (const altCollection of alternativeCollections) {
-                console.log(`🔍 Intentando colección alternativa: ${altCollection}`);
+                console.log(`🔍 Probando colección alternativa: ${altCollection}`);
+                
                 try {
                     const altSnapshot = await db.collection(altCollection)
                         .where('creadoPor', '==', admin.id)
                         .get();
                     
                     if (!altSnapshot.empty) {
-                        const altCollaborators = [];
-                        
-                        altSnapshot.forEach(doc => {
-                            const data = doc.data();
-                            altCollaborators.push({
-                                id: doc.id,
-                                name: data.nombreCompleto ? data.nombreCompleto.split(' ')[0] : 'Sin nombre',
-                                lastname: data.nombreCompleto ? data.nombreCompleto.split(' ').slice(1).join(' ') : '',
-                                email: data.correoElectronico || 'sin@email.com',
-                                status: data.status === true || data.status === 'active' ? 'active' : 'inactive',
-                                role: data.rol || 'Colaborador',
-                                organization: data.organizacion || admin.organizacion,
-                                profileImage: data.fotoUsuario || 'https://i.imgur.com/6VBx3io.png',
-                                authId: data.authId || data.id || doc.id,
-                                created: data.fechaCreacion ? 
-                                    (data.fechaCreacion.toDate ? data.fechaCreacion.toDate().toLocaleDateString() : 
-                                     new Date(data.fechaCreacion).toLocaleDateString()) : 'Hoy',
-                                updated: data.fechaActualizacion ? 
-                                    (data.fechaActualizacion.toDate ? data.fechaActualizacion.toDate().toLocaleDateString() : 
-                                     new Date(data.fechaActualizacion).toLocaleDateString()) : 'Hoy',
-                                lastLogin: data.ultimoLogin || 'Nunca',
-                                rawData: data
-                            });
-                        });
-                        
-                        console.log(`✅ ${altCollaborators.length} colaboradores encontrados en ${altCollection}`);
-                        
-                        // Renderizar en tabla
-                        renderCollaboratorsTable(altCollaborators, admin);
-                        updateStats(altCollaborators);
-                        
-                        return altCollaborators;
+                        console.log(`✅ Encontrados ${altSnapshot.size} colaboradores en ${altCollection}`);
+                        const collaborators = processQueryResults(altSnapshot, admin);
+                        updateUIWithCollaborators(collaborators, admin, altCollection);
+                        return collaborators;
                     }
-                } catch (error) {
-                    console.warn(`⚠️ Error consultando ${altCollection}:`, error);
+                } catch (altError) {
+                    console.log(`⚠️ No se pudo acceder a ${altCollection}:`, altError.message);
                 }
             }
             
-            // Si no hay colaboradores
+            // Si no se encontraron colaboradores en ninguna colección
             renderCollaboratorsTable([], admin);
             updateStats([]);
-            
             return [];
         }
         
@@ -360,6 +267,127 @@ async function loadCollaboratorsFromFirebase(admin) {
     }
 }
 
+// ========== PROCESAR RESULTADOS DE CONSULTA ==========
+function processQueryResults(querySnapshot, admin) {
+    const collaborators = [];
+    
+    querySnapshot.forEach(doc => {
+        const data = doc.data();
+        
+        // Verificar que el colaborador pertenezca a este admin
+        const belongsToAdmin = 
+            data.creadoPor === admin.id || 
+            data.creadoPorEmail === admin.correoElectronico ||
+            data.organizacion === admin.organizacion ||
+            data.organizacionCamelCase === admin.organizacionCamelCase;
+        
+        if (belongsToAdmin) {
+            collaborators.push({
+                id: doc.id,
+                name: data.nombreCompleto ? data.nombreCompleto.split(' ')[0] : 'Sin nombre',
+                lastname: data.nombreCompleto ? data.nombreCompleto.split(' ').slice(1).join(' ') : '',
+                email: data.correoElectronico || 'sin@email.com',
+                status: data.status === true || data.status === 'active' ? 'active' : 'inactive',
+                role: data.rol || 'Colaborador',
+                organization: data.organizacion || admin.organizacion,
+                profileImage: data.fotoUsuario || 'https://i.imgur.com/6VBx3io.png',
+                authId: data.authId || data.id || doc.id,
+                created: formatFirebaseDate(data.fechaCreacion),
+                updated: formatFirebaseDate(data.fechaActualizacion),
+                lastLogin: data.ultimoLogin || 'Nunca',
+                rawData: data
+            });
+        }
+    });
+    
+    console.log(`✅ ${collaborators.length} colaboradores procesados`);
+    return collaborators;
+}
+
+// ========== FORMATO DE FECHA DE FIREBASE ==========
+function formatFirebaseDate(firebaseDate) {
+    if (!firebaseDate) return 'No disponible';
+    
+    try {
+        if (firebaseDate.toDate) {
+            return firebaseDate.toDate().toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } else if (typeof firebaseDate === 'string') {
+            return new Date(firebaseDate).toLocaleDateString('es-MX');
+        } else if (firebaseDate._seconds) {
+            return new Date(firebaseDate._seconds * 1000).toLocaleDateString('es-MX');
+        }
+    } catch (error) {
+        console.warn('⚠️ Error formateando fecha:', error);
+    }
+    
+    return 'Fecha no válida';
+}
+
+// ========== GENERAR NOMBRES ALTERNATIVOS DE COLECCIONES ==========
+function generateAlternativeCollectionNames(admin) {
+    const alternatives = [];
+    
+    // 1. Nombre base sin camelCase
+    if (admin.organizacion) {
+        const simpleName = admin.organizacion
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '')
+            .replace(/\s+/g, '');
+        
+        alternatives.push(`colaboradores_${simpleName}`);
+    }
+    
+    // 2. Nombre con guiones bajos
+    if (admin.organizacion) {
+        const underscoredName = admin.organizacion
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_]/g, '');
+        
+        alternatives.push(`colaboradores_${underscoredName}`);
+    }
+    
+    // 3. Colección general
+    alternatives.push('colaboradores');
+    alternatives.push('users');
+    
+    // 4. Colecciones específicas conocidas
+    alternatives.push('colaboradores_rsiEnterprice');
+    alternatives.push('colaboradores_rsiEnterprise');
+    alternatives.push('colaboradores_rsi');
+    
+    console.log(`🔧 Colecciones alternativas generadas: ${alternatives.join(', ')}`);
+    return alternatives;
+}
+
+// ========== ACTUALIZAR INTERFAZ CON COLABORADORES ==========
+function updateUIWithCollaborators(collaborators, admin, collectionName) {
+    console.log(`✅ ${collaborators.length} colaboradores encontrados en ${collectionName}`);
+    
+    // Guardar en localStorage para cache
+    localStorage.setItem(`colaboradores_${admin.organizacionCamelCase}`, JSON.stringify(collaborators));
+    
+    // Renderizar en tabla
+    renderCollaboratorsTable(collaborators, admin);
+    
+    // Actualizar estadísticas
+    updateStats(collaborators);
+    
+    // Actualizar subtítulo con colección encontrada
+    const subTitle = document.querySelector('.section-header p');
+    if (subTitle && collectionName) {
+        const currentHTML = subTitle.innerHTML;
+        subTitle.innerHTML = currentHTML.replace(
+            /Colección Firebase:.*/,
+            `Colección Firebase: <code>${collectionName}</code>`
+        );
+    }
+}
+
 // ========== OBTENER COLABORADORES DESDE CACHE ==========
 function getCollaboratorsFromCache(admin) {
     try {
@@ -374,6 +402,41 @@ function getCollaboratorsFromCache(admin) {
     }
     
     return [];
+}
+
+// ========== MOSTRAR ERROR DE FIREBASE NO CARGADO ==========
+function showFirebaseNotLoadedError() {
+    const tbody = document.querySelector('.collaborators-table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align: center; padding: 50px 20px;">
+                <div style="color: var(--color-text-secondary);">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px; color: #f39c12;"></i>
+                    <h3 style="margin: 10px 0; color: var(--color-text-primary);">
+                        Firebase no está inicializado
+                    </h3>
+                    <p style="margin-bottom: 10px; color: #f39c12;">
+                        UserManager no pudo cargar Firebase correctamente
+                    </p>
+                    <p style="margin-bottom: 25px; font-size: 0.9rem; color: #b0b0d0;">
+                        Recarga la página o verifica la conexión a internet
+                    </p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="window.location.reload()" class="row-btn" 
+                            style="background: var(--color-accent-primary); color: white;">
+                            <i class="fas fa-sync-alt"></i> Recargar página
+                        </button>
+                        <button onclick="location.href='/users/admin/dashboard/dashboard.html'" 
+                            class="add-btn">
+                            <i class="fas fa-arrow-left"></i> Volver al Dashboard
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    `;
 }
 
 // ========== MOSTRAR ERROR DE FIREBASE ==========
