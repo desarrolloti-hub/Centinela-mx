@@ -761,7 +761,7 @@ class NavbarComplete {
                             <i class="fa-solid fa-gears"></i>
                             <span>Administración</span>
                         </a>
-                        <a href="#" class="admin-dropdown-option">
+                        <a href="/users/admin/managementUser/managmentUser.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Gestionar Usuarios</span>
                         </a>
