@@ -1,4 +1,4 @@
-// navbar-complete.js MODIFICADO - VERSIÓN COMPLETA
+// navbar-complete.js MODIFICADO - VERSIÓN COMPLETA CON BOTONES DE ÁREAS Y PERSONALIZACIÓN
 
 class NavbarComplete {
     constructor() {
@@ -505,7 +505,7 @@ class NavbarComplete {
             }
             
             .admin-dropdown-options.active {
-                max-height: 250px;
+                max-height: 350px;
                 opacity: 1;
                 overflow: visible;
             }
@@ -705,49 +705,32 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- Sección de navegación: Estado de tickets -->
+                <!-- SECCIÓN DE ADMINISTRACIÓN: ÁREAS Y PERSONALIZACIÓN -->
                 <div class="nav-section">
                     <div class="nav-section-title">
-                        <i class="fa-solid fa-ticket"></i>
-                        <span>Estado de mis tickets</span>
+                        <i class="fa-solid fa-gear"></i>
+                        <span>Administración</span>
                     </div>
                     <div class="nav-items-container">
-                        <div class="nav-item">
-                            <i class="fa-solid fa-check-circle"></i>
-                            <span class="nav-item-text">Finalizados</span>
-                            <span class="nav-item-percentage">18%</span>
-                        </div>
+                        <!-- Botón para ÁREAS -->
+                        <a href="/users/admin/area/area.html" class="nav-item" id="areasBtn">
+                            <i class="fa-solid fa-map"></i>
+                            <span class="nav-item-text">Áreas</span>
+                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+                        </a>
+                        
+                        <!-- Botón para PERSONALIZACIÓN DE COLORES -->
+                        <a href="/users/admin/themeManager/themeManager.html" class="nav-item" id="themeManagerBtn">
+                            <i class="fa-solid fa-palette"></i>
+                            <span class="nav-item-text">Personalización de colores</span>
+                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+                        </a>
                     </div>
                 </div>
                 
-                <!-- Sección de navegación: Tickets por Prioridad -->
-                <div class="nav-section">
-                    <div class="nav-section-title">
-                        <i class="fa-solid fa-flag"></i>
-                        <span>Tickets por Prioridad</span>
-                    </div>
-                    <div class="nav-items-container">
-                        <div class="nav-item">
-                            <div class="nav-item-priority">
-                                <div class="priority-item">
-                                    <i class="fa-solid fa-circle" style="color: #FFA500;"></i>
-                                    <span>Media</span>
-                                    <span class="nav-item-percentage">88%</span>
-                                </div>
-                                <div class="priority-item">
-                                    <i class="fa-solid fa-circle" style="color: #008000;"></i>
-                                    <span>Baja</span>
-                                    <span class="nav-item-percentage">13%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Sección de espacios vacíos (8 espacios sin texto) -->
+                <!-- Sección de espacios vacíos (reducidos a 6 espacios) -->
                 <div class="menu-section">
                     <div class="empty-menu-item"></div>
-                </div>
                 
                 <!-- Sección de opciones de administración -->
                 <div class="admin-options-section">
@@ -845,6 +828,30 @@ class NavbarComplete {
 
         // 3. Actualizar título del navbar si es necesario
         this.updateNavbarTitle();
+        
+        // 4. Configurar eventos para los botones nuevos
+        this.setupAdminButtons();
+    }
+
+    // Configura los eventos para los botones de administración
+    setupAdminButtons() {
+        // Botón de Áreas
+        const areasBtn = document.getElementById('areasBtn');
+        if (areasBtn) {
+            areasBtn.addEventListener('click', (e) => {
+                console.log('📍 Navegando a Áreas...');
+                // La navegación se maneja automáticamente por el href
+            });
+        }
+
+        // Botón de Personalización de colores
+        const themeManagerBtn = document.getElementById('themeManagerBtn');
+        if (themeManagerBtn) {
+            themeManagerBtn.addEventListener('click', (e) => {
+                console.log('🎨 Navegando a Personalización de colores...');
+                // La navegación se maneja automáticamente por el href
+            });
+        }
     }
 
     // Actualiza el segundo logo con el logo de la organización
