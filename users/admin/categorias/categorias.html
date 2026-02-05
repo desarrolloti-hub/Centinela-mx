@@ -28,81 +28,54 @@
 
 <div class="admin-container">
     
-   <div class="section-header">
-    <div class="section-title">
-        <i class="fas fa-tags"></i> Gestión de Categorías
+    <!-- HEADER PRINCIPAL -->
+    <div class="section-header">
+        <div class="section-title">
+            <i class="fas fa-tags"></i> Gestión de Categorías
+        </div>
     </div>
-</div>
 
-    <!-- TABLA PRINCIPAL DE CATEGORÍAS -->
-    <div class="table-wrapper">
-        <table class="categories-table">
-            <thead>
-                <tr>
-                    <th>CATEGORÍA</th>
-                    <th>DESCRIPCIÓN</th>
-                    <th>COLOR</th>
-                    <th>SUBCATEGORÍAS</th>
-                    <th>ACCIONES</th>
-                </tr>
-            </thead>
-            <tbody id="categoriesTableBody">
-                <!-- EJEMPLO DE FILA -->
-                <tr class="category-row" data-category-id="1">
-                    <td class="category-name" data-label="CATEGORÍA">
-                        <div class="category-info">
-                            <span class="category-title">Electrónica</span>
-                        </div>
-                    </td>
-                    <td class="category-description" data-label="DESCRIPCIÓN">
-                        <span>Dispositivos electrónicos y gadgets</span>
-                    </td>
-                    <td class="category-color" data-label="COLOR">
-                        <div class="color-indicator" style="background-color: #00ff95;"></div>
-                        <span class="color-code">#00ff95</span>
-                    </td>
-                    <td class="category-count" data-label="SUBCATEGORÍAS">
-                        <div class="count-badge clickable-count" onclick="viewSubcategories(1)">
-                            <i class="fas fa-layer-group"></i>
-                            <span class="count-number">3</span>
-                        </div>
-                    </td>
-                    <td class="category-actions" data-label="ACCIONES">
-                        <div class="actions-cell">
-                            <button class="row-btn view" title="Ver detalles" onclick="viewCategory(1)">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="row-btn edit" title="Editar categoría" onclick="editCategory(1)">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="row-btn delete" title="Eliminar categoría" onclick="deleteCategory(1)">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <!-- FIN EJEMPLO -->
-            </tbody>
-        </table>
+    <!-- BREADCRUMB PARA NAVEGACIÓN -->
+    <div class="breadcrumb" id="breadcrumb">
+        <span class="breadcrumb-item active" onclick="showMainView()">Categorías</span>
     </div>
-    
-    <!-- BOTÓN AGREGAR CATEGORÍA -->
-    <div class="add-category-container">
-        <button class="add-btn" id="addCategoryBtn">
-            <i class="fas fa-plus-circle"></i> Agregar Nueva Categoría
-        </button>
+
+    <!-- VISTA PRINCIPAL DE CATEGORÍAS -->
+    <div id="mainView">
+        <!-- TABLA PRINCIPAL DE CATEGORÍAS -->
+        <div class="table-wrapper">
+            <table class="categories-table">
+                <thead>
+                    <tr>
+                        <th>CATEGORÍA</th>
+                        <th>DESCRIPCIÓN</th>
+                        <th>COLOR</th>
+                        <th>SUBCATEGORÍAS</th>
+                        <th>ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="categoriesTableBody">
+                    <!-- LAS CATEGORÍAS SE CARGARÁN DINÁMICAMENTE -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- BOTÓN AGREGAR CATEGORÍA -->
+        <div class="add-category-container">
+            <button class="add-btn" id="addCategoryBtn">
+                <i class="fas fa-plus-circle"></i> Agregar Nueva Categoría
+            </button>
+        </div>
     </div>
-    
-    <!-- SECCIÓN DE SUBCATEGORÍAS (OCULTA INICIALMENTE) -->
-    <div id="subcategoriesSection" class="subcategories-section" style="display: none;">
+
+    <!-- VISTA DE SUBCATEGORÍAS (OCULTA INICIALMENTE) -->
+    <div id="subcategoriesView" class="subcategories-view" style="display: none;">
+        <!-- HEADER DE SUBCATEGORÍAS -->
         <div class="section-header subcategories-header">
             <div class="section-title">
                 <i class="fas fa-folder-tree"></i>
                 <span id="currentCategoryName">Electrónica</span>
                 <span class="subcategories-title"> - Subcategorías</span>
-                <button class="back-to-categories" onclick="hideSubcategories()">
-                    <i class="fas fa-arrow-left"></i> Volver a Categorías
-                </button>
             </div>
         </div>
 
@@ -113,8 +86,8 @@
                     <tr>
                         <th>NOMBRE</th>
                         <th>DESCRIPCIÓN</th>
+                        <th>COLOR</th>
                         <th>ESTADO</th>
-                        <th>FECHA CREACIÓN</th>
                         <th>ACCIONES</th>
                     </tr>
                 </thead>
@@ -136,26 +109,40 @@
 <!-- FOOTER -->
 <div id="footer-container"></div>
 
-<!-- MODAL PARA VER CATEGORÍA -->
+<!-- MODAL PARA AGREGAR/EDITAR CATEGORÍA -->
 <div id="categoryModal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
-
         <div class="modal-header">
             <div class="modal-category-icon">
                 <i class="fas fa-tag"></i>
             </div>
-            <h2 id="modalCategoryTitle"></h2>
-            <div class="modal-category-color" id="modalCategoryColor"></div>
+            <h2 id="modalCategoryTitle">Nueva Categoría</h2>
         </div>
-
-        <div class="modal-grid">
-            <div><strong>Descripción:</strong> <span id="modalCategoryDescription"></span></div>
-            <div><strong>Total Subcategorías:</strong> <span id="modalCategoryCount"></span></div>
-            <div><strong>Fecha creación:</strong> <span id="modalCategoryCreated"></span></div>
-            <div><strong>Fecha modificación:</strong> <span id="modalCategoryUpdated"></span></div>
-            <div><strong>Estado:</strong> <span id="modalCategoryStatus"></span></div>
-        </div>
+        <form id="categoryForm">
+            <div class="form-group">
+                <label for="categoryName"><i class="fas fa-heading"></i> Nombre *</label>
+                <input type="text" id="categoryName" name="name" required placeholder="Ingresa el nombre de la categoría">
+            </div>
+            
+            <div class="form-group">
+                <label for="categoryDescription"><i class="fas fa-align-left"></i> Descripción</label>
+                <textarea id="categoryDescription" name="description" rows="3" placeholder="Descripción de la categoría"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="categoryColor"><i class="fas fa-palette"></i> Color</label>
+                <div class="color-picker-container">
+                    <input type="color" id="categoryColor" name="color" value="#00ff95">
+                    <span class="color-preview" id="colorPreview">#00ff95</span>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="cancel-btn" onclick="closeCategoryModal()">Cancelar</button>
+                <button type="submit" class="save-btn" id="categorySubmitBtn">Guardar Categoría</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -163,23 +150,32 @@
 <div id="subcategoryModal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
-
         <div class="modal-header">
             <div class="modal-category-icon">
                 <i class="fas fa-folder"></i>
             </div>
             <h2 id="modalSubcategoryTitle">Nueva Subcategoría</h2>
         </div>
-
         <form id="subcategoryForm">
+            <input type="hidden" id="subcategoryId" name="id">
+            <input type="hidden" id="parentCategoryId" name="parentCategoryId">
+            
             <div class="form-group">
-                <label for="subcategoryName"><i class="fas fa-heading"></i> Nombre</label>
+                <label for="subcategoryName"><i class="fas fa-heading"></i> Nombre *</label>
                 <input type="text" id="subcategoryName" name="name" required placeholder="Ingresa el nombre de la subcategoría">
             </div>
             
             <div class="form-group">
                 <label for="subcategoryDescription"><i class="fas fa-align-left"></i> Descripción</label>
                 <textarea id="subcategoryDescription" name="description" rows="3" placeholder="Descripción de la subcategoría"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="subcategoryColor"><i class="fas fa-palette"></i> Color</label>
+                <div class="color-picker-container">
+                    <input type="color" id="subcategoryColor" name="color" value="#2f8cff">
+                    <span class="color-preview" id="subcategoryColorPreview">#2f8cff</span>
+                </div>
             </div>
             
             <div class="form-group">
@@ -192,9 +188,26 @@
             
             <div class="form-actions">
                 <button type="button" class="cancel-btn" onclick="closeSubcategoryModal()">Cancelar</button>
-                <button type="submit" class="save-btn">Guardar Subcategoría</button>
+                <button type="submit" class="save-btn" id="subcategorySubmitBtn">Guardar Subcategoría</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- MODAL PARA VER DETALLES COMPLETOS -->
+<div id="viewModal" class="modal">
+    <div class="modal-content large">
+        <span class="close-modal">&times;</span>
+        <div class="modal-header">
+            <div class="modal-item-icon" id="modalItemIcon">
+                <i class="fas fa-tag" id="modalIcon"></i>
+            </div>
+            <h2 id="modalItemTitle"></h2>
+            <div class="modal-item-color" id="modalItemColor"></div>
+        </div>
+        <div class="modal-grid" id="modalGrid">
+            <!-- LOS DETALLES SE CARGARÁN DINÁMICAMENTE -->
+        </div>
     </div>
 </div>
 
