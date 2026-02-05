@@ -470,8 +470,8 @@ class ThemeManager {
         
         console.log('Inicializando ThemeManager...');
         
-        // Cargar tema guardado
-        await this.loadSavedTheme();
+        // Cargar tema desde Firebase
+        await this.loadThemeFromFirebase();
         
         // Configurar event listeners
         this.setupEventListeners();
@@ -650,10 +650,7 @@ class ThemeManager {
         // Actualizar tema actual
         this.currentTheme = this.selectedThemeId;
         
-        // Guardar en localStorage (para respaldo)
-        this.saveToLocalStorage(this.selectedThemeId, theme);
-        
-        // Guardar en Firebase si está disponible
+        // Guardar en Firebase
         await this.saveThemeToFirebase(this.selectedThemeId);
         
         // Actualizar UI
@@ -702,14 +699,6 @@ class ThemeManager {
             if (nameElement) {
                 nameElement.textContent = currentTheme.name;
             }
-        }
-        
-        // Actualizar hora de última modificación
-        const lastSave = localStorage.getItem('centinela-theme-last-save');
-        const updateTimeElement = document.getElementById('updateTime');
-        if (updateTimeElement && lastSave) {
-            const saveDate = new Date(parseInt(lastSave));
-            updateTimeElement.textContent = saveDate.toLocaleString();
         }
         
         console.log('UI actualizada. Tema actual:', this.currentTheme);
@@ -770,8 +759,8 @@ class ThemeManager {
             const currentUser = this.userManager?.currentUser;
             
             if (!currentUser) {
-                console.warn('⚠️ No hay usuario autenticado, solo guardando en localStorage');
-                this.showNotification('No hay usuario autenticado. Tema guardado localmente.', 'warning');
+                console.warn('⚠️ No hay usuario autenticado, no se puede guardar el tema');
+                this.showNotification('No hay usuario autenticado. Inicia sesión para guardar el tema.', 'warning');
                 return;
             }
             
@@ -903,6 +892,7 @@ class ThemeManager {
             
             if (!this.userManager?.currentUser) {
                 console.log('👤 Usuario no autenticado, usando tema por defecto');
+                this.applyDefaultTheme();
                 return;
             }
             
@@ -932,81 +922,40 @@ class ThemeManager {
                 }
             }
             
-            // Aplicar el tema si es diferente al actual
-            if (themeId !== this.currentTheme) {
-                const themePresets = this.getThemePresets();
-                const theme = themePresets[themeId];
-                
-                if (theme) {
-                    this.currentTheme = themeId;
-                    this.applyColors(theme.colors);
-                    console.log(`🎨 Tema cargado desde Firebase: ${theme.name}`);
-                }
-            }
+            // Aplicar el tema
+            this.applyThemeById(themeId);
             
         } catch (error) {
             console.error('❌ Error cargando tema desde Firebase:', error);
+            this.applyDefaultTheme();
         }
     }
-
-    // =============================================
-    // LOCALSTORAGE (RESPALDO)
-    // =============================================
-    saveToLocalStorage(themeId, themeData) {
-        const saveData = {
-            themeId: themeId,
-            data: themeData,
-            savedAt: Date.now()
-        };
+    
+    /**
+     * Aplica un tema por su ID
+     */
+    applyThemeById(themeId) {
+        const themePresets = this.getThemePresets();
+        const theme = themePresets[themeId];
         
-        localStorage.setItem('centinela-theme', JSON.stringify(saveData));
-        localStorage.setItem('centinela-theme-last-save', Date.now().toString());
-        
-        console.log('💾 Tema guardado en localStorage:', themeId);
-        
-        // Disparar evento de storage para sincronizar entre pestañas
-        window.dispatchEvent(new StorageEvent('storage', {
-            key: 'centinela-theme',
-            newValue: JSON.stringify(saveData)
-        }));
-    }
-
-    async loadSavedTheme() {
-        try {
-            // Primero intentar cargar desde Firebase
-            await this.loadThemeFromFirebase();
-            
-            // Si no hay tema de Firebase, cargar de localStorage
-            if (this.currentTheme === 'default') {
-                const saved = localStorage.getItem('centinela-theme');
-                
-                if (saved) {
-                    try {
-                        const themeData = JSON.parse(saved);
-                        this.currentTheme = themeData.themeId;
-                        this.selectedThemeId = themeData.themeId;
-                        
-                        const themePresets = this.getThemePresets();
-                        if (themePresets[this.currentTheme] && themeData.data.colors) {
-                            // Aplicar tema guardado
-                            this.applyColors(themeData.data.colors);
-                            console.log('💾 Tema cargado desde localStorage:', this.currentTheme);
-                        } else {
-                            await this.resetToDefault();
-                        }
-                    } catch (e) {
-                        console.error('❌ Error cargando tema de localStorage:', e);
-                        await this.resetToDefault();
-                    }
-                } else {
-                    await this.resetToDefault();
-                }
-            }
-            
-        } catch (error) {
-            console.error('❌ Error cargando tema guardado:', error);
-            await this.resetToDefault();
+        if (theme) {
+            this.currentTheme = themeId;
+            this.applyColors(theme.colors);
+            console.log(`🎨 Tema aplicado: ${theme.name}`);
+        } else {
+            console.warn(`⚠️ Tema ${themeId} no encontrado, usando predeterminado`);
+            this.applyDefaultTheme();
         }
+    }
+    
+    /**
+     * Aplica el tema predeterminado
+     */
+    applyDefaultTheme() {
+        const defaultTheme = this.getThemePresets()['default'];
+        this.currentTheme = 'default';
+        this.applyColors(defaultTheme.colors);
+        console.log('🎨 Tema predeterminado aplicado');
     }
 
     // =============================================
