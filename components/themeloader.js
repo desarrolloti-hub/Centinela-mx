@@ -1,5 +1,5 @@
 // =============================================
-// THEME LOADER - VERSIÓN CON IMPORTACIÓN DIRECTA
+// THEME LOADER
 // =============================================
 
 // Importar UserManager desde la clase
@@ -13,7 +13,7 @@ class ThemeLoader {
         this.currentThemeId = 'default';
         this.lastAppliedTheme = null;
         this.checkInterval = null;
-        this.checkIntervalMs = 30000;
+        this.checkIntervalMs = 100000;
         
         console.log('🎨 ThemeLoader CON IMPORTACIÓN DIRECTA');
         
@@ -198,7 +198,7 @@ class ThemeLoader {
     // MONITOREO EN TIEMPO REAL
     // =============================================
     startThemeMonitoring() {
-        console.log('🔄 INICIANDO MONITOREO DE TEMAS (5 segundos)');
+        console.log('🔄 INICIANDO MONITOREO DE TEMAS (60 segundos)');
         
         if (this.checkInterval) {
             clearInterval(this.checkInterval);
