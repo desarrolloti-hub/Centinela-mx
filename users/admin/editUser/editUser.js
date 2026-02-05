@@ -1,4 +1,10 @@
+// ========== IMPORTACIÓN ==========
+import { UserManager } from '/clases/user.js';
+
 // ========== INICIALIZACIÓN ==========
+// Variable global para UserManager
+let userManager = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM cargado, iniciando editor de colaborador...');
     
@@ -11,6 +17,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('SweetAlert2 ya está cargado');
     applySweetAlertStyles();
+    
+    // Inicializar UserManager
+    userManager = new UserManager();
+    
     initCollaboratorEditor();
     
     // Cargar datos del colaborador desde Firebase
@@ -24,10 +34,9 @@ async function loadCollaboratorData() {
     // Obtener parámetros de la URL
     const urlParams = new URLSearchParams(window.location.search);
     const collaboratorId = urlParams.get('id');
-    const collectionName = urlParams.get('collection');
     
-    if (!collaboratorId || !collectionName) {
-        console.error('❌ ID o colección no especificados en la URL');
+    if (!collaboratorId) {
+        console.error('❌ ID no especificado en la URL');
         showErrorAlert(
             'ERROR',
             'No se especificó el colaborador a editar.<br><br>Por favor, regresa a la gestión de colaboradores.'
@@ -35,14 +44,7 @@ async function loadCollaboratorData() {
         return;
     }
     
-    console.log(`🔍 Cargando colaborador: ${collaboratorId} de ${collectionName}`);
-    
-    // Verificar Firebase
-    if (typeof firebase === 'undefined') {
-        console.error('Firebase no está disponible');
-        showFirebaseError();
-        return;
-    }
+    console.log(`🔍 Cargando colaborador: ${collaboratorId}`);
     
     try {
         // Mostrar loader
@@ -56,35 +58,40 @@ async function loadCollaboratorData() {
             }
         });
         
-        // Obtener datos de Firebase
-        const db = firebase.firestore();
-        const docRef = db.collection(collectionName).doc(collaboratorId);
-        const doc = await docRef.get();
+        // Obtener datos usando UserManager
+        const user = await userManager.getUserById(collaboratorId);
         
-        if (!doc.exists) {
+        if (!user) {
             Swal.close();
             showErrorAlert(
                 'COLABORADOR NO ENCONTRADO',
-                `El colaborador con ID ${collaboratorId} no existe en la colección ${collectionName}.`
+                `El colaborador con ID ${collaboratorId} no existe.`
             );
             return;
         }
         
-        const collaboratorData = doc.data();
+        // Verificar que el usuario es un colaborador
+        if (user.cargo !== 'colaborador') {
+            Swal.close();
+            showErrorAlert(
+                'TIPO DE USUARIO INCORRECTO',
+                'Este usuario no es un colaborador.'
+            );
+            return;
+        }
         
         // Actualizar interfaz con los datos
-        updateUIWithCollaboratorData(collaboratorData);
+        updateUIWithCollaboratorData(user);
         
         // Guardar referencia para uso posterior
         window.currentCollaborator = {
             id: collaboratorId,
-            collection: collectionName,
-            data: collaboratorData
+            data: user
         };
         
         Swal.close();
         
-        console.log('✅ Datos del colaborador cargados:', collaboratorData);
+        console.log('✅ Datos del colaborador cargados:', user);
         
     } catch (error) {
         Swal.close();
@@ -98,24 +105,34 @@ async function loadCollaboratorData() {
 }
 
 // ========== ACTUALIZAR INTERFAZ CON DATOS ==========
-function updateUIWithCollaboratorData(data) {
+function updateUIWithCollaboratorData(user) {
     console.log('Actualizando interfaz con datos del colaborador...');
     
     // Nombre completo
-    document.getElementById('fullName').value = data.nombreCompleto || '';
+    document.getElementById('fullName').value = user.nombreCompleto || '';
     
     // Correo electrónico
-    document.getElementById('email').value = data.correoElectronico || '';
+    document.getElementById('email').value = user.correoElectronico || '';
     
     // Organización (si existe el campo)
     const organizationSelect = document.getElementById('organization');
     if (organizationSelect) {
-        organizationSelect.value = data.organizacionCamelCase || data.organizacion || '';
+        // Buscar opción que coincida con la organización del usuario
+        for (let option of organizationSelect.options) {
+            if (option.value === user.organizacionCamelCase || option.text === user.organizacion) {
+                option.selected = true;
+                break;
+            }
+        }
     }
     
-    // Status
-    const statusValue = data.status === true || data.status === 'active' ? 'active' : 
-                       data.status === false || data.status === 'inactive' ? 'inactive' : 'pending';
+    // Status - Convertir a formato de la interfaz
+    let statusValue = 'active';
+    if (user.eliminado) {
+        statusValue = 'inactive';
+    } else if (!user.status) {
+        statusValue = 'pending';
+    }
     
     document.getElementById('status').value = statusValue;
     
@@ -127,67 +144,58 @@ function updateUIWithCollaboratorData(data) {
         }
     });
     
-    // Permisos
-    const permissions = data.permisos || data.permissions || [];
-    document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
-        checkbox.checked = permissions.includes(checkbox.value);
-    });
+    // Permisos - Convertir permisosPersonalizados a checkboxes
+    if (user.permisosPersonalizados) {
+        document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
+            const permiso = checkbox.value;
+            checkbox.checked = user.permisosPersonalizados[permiso] === true;
+        });
+    }
     
     // Foto de perfil
-    if (data.fotoUsuario || data.profileImage) {
-        const imageUrl = data.fotoUsuario || data.profileImage;
+    if (user.fotoUsuario) {
         const collaboratorImage = document.getElementById('collaboratorImage');
         const collaboratorPlaceholder = document.getElementById('collaboratorPlaceholder');
         
-        collaboratorImage.src = imageUrl;
+        // Usar el método getFotoUrl() de la clase User
+        collaboratorImage.src = user.getFotoUrl();
         collaboratorImage.style.display = 'block';
         collaboratorPlaceholder.style.display = 'none';
     }
     
     // Información del sistema
-    document.getElementById('authId').textContent = data.authId || data.id || 'N/A';
+    document.getElementById('authId').textContent = user.idAuth || user.id || 'N/A';
     
-    if (data.fechaCreacion) {
-        const creationDate = formatFirebaseDate(data.fechaCreacion);
-        document.querySelector('#creationDate').textContent = creationDate.date;
-        document.querySelector('#creationTime').textContent = creationDate.time;
-    }
+    // Formatear fechas
+    const formatDate = (date) => {
+        if (!date) return { date: 'N/A', time: '' };
+        const d = date.toDate ? date.toDate() : new Date(date);
+        return {
+            date: d.toLocaleDateString('es-MX'),
+            time: d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+        };
+    };
     
-    if (data.fechaActualizacion) {
-        const updateDate = formatFirebaseDate(data.fechaActualizacion);
-        document.querySelector('#lastUpdateDate').textContent = updateDate.date;
-        document.querySelector('#lastUpdateTime').textContent = updateDate.time;
-    }
+    // Actualizar fechas en la interfaz
+    // Nota: Asegúrate de que estos selectores existan en tu HTML
+    const updateElement = (selector, text) => {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = text;
+    };
     
-    if (data.ultimoLogin) {
-        const loginDate = formatFirebaseDate(data.ultimoLogin);
-        document.querySelector('#lastLoginDate').textContent = loginDate.date;
-        document.querySelector('#lastLoginTime').textContent = loginDate.time;
-    }
+    const creationDate = formatDate(user.fechaCreacion);
+    updateElement('#creationDate', creationDate.date);
+    updateElement('#creationTime', creationDate.time);
+    
+    const updateDate = formatDate(user.fechaActualizacion);
+    updateElement('#lastUpdateDate', updateDate.date);
+    updateElement('#lastUpdateTime', updateDate.time);
+    
+    const loginDate = formatDate(user.ultimoLogin);
+    updateElement('#lastLoginDate', loginDate.date);
+    updateElement('#lastLoginTime', loginDate.time);
     
     console.log('✅ Interfaz actualizada con datos del colaborador');
-}
-
-// ========== FORMATAR FECHAS DE FIREBASE ==========
-function formatFirebaseDate(firebaseDate) {
-    let date = new Date();
-    
-    try {
-        if (firebaseDate.toDate) {
-            date = firebaseDate.toDate();
-        } else if (firebaseDate._seconds) {
-            date = new Date(firebaseDate._seconds * 1000);
-        } else if (typeof firebaseDate === 'string') {
-            date = new Date(firebaseDate);
-        }
-    } catch (error) {
-        console.warn('Error formateando fecha:', error);
-    }
-    
-    return {
-        date: date.toLocaleDateString('es-MX'),
-        time: date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-    };
 }
 
 // ========== EDITOR DE COLABORADOR ==========
@@ -225,8 +233,7 @@ function initCollaboratorEditor() {
     };
     
     // Variables globales
-    let currentFile = null;
-    let collaboratorImageUrl = null;
+    window.collaboratorImageUrl = null;
     
     // ========== EVENT LISTENERS ==========
     
@@ -300,15 +307,12 @@ function initCollaboratorEditor() {
     console.log('Event listeners asignados correctamente');
 }
 
-// ========== ALERTAS DE SWEETALERT ==========
-
-// 1. VALIDAR Y GUARDAR CAMBIOS EN FIREBASE
+// ========== VALIDAR Y GUARDAR CAMBIOS ==========
 async function validateAndSaveChanges() {
     const fullName = document.getElementById('fullName').value.trim();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
-    const organization = document.getElementById('organization').value;
     const status = document.getElementById('status').value;
     const statusBoolean = status === 'active';
     
@@ -324,11 +328,6 @@ async function validateAndSaveChanges() {
         errors.push('El correo electrónico es obligatorio');
     } else if (!validateEmail(email)) {
         errors.push('El correo electrónico no es válido');
-    }
-    
-    // Validar organización
-    if (!organization) {
-        errors.push('Debe seleccionar una organización');
     }
     
     // Validar contraseñas si se proporcionan
@@ -363,19 +362,32 @@ async function validateAndSaveChanges() {
         return;
     }
     
-    // Mostrar confirmación antes de guardar
+    // Verificar si el email ya existe (solo si cambió)
+    const currentEmail = window.currentCollaborator?.data?.correoElectronico;
+    if (currentEmail && email !== currentEmail && userManager) {
+        try {
+            const emailExists = await userManager.verificarCorreoExistente(email, 'todos');
+            if (emailExists) {
+                showErrorAlert(
+                    'EMAIL YA EXISTE',
+                    'El correo electrónico ya está registrado en el sistema.'
+                );
+                return;
+            }
+        } catch (error) {
+            console.warn('No se pudo verificar email:', error);
+        }
+    }
+    
+    // Mostrar confirmación
     showSaveConfirmation(fullName, email, statusBoolean);
 }
 
-// 2. ALERTA DE CONFIRMACIÓN PARA GUARDAR
+// ========== ALERTA DE CONFIRMACIÓN PARA GUARDAR ==========
 function showSaveConfirmation(fullName, email, status) {
     // Obtener permisos seleccionados
     const selectedPermissions = Array.from(document.querySelectorAll('input[name="permissions"]:checked'))
         .map(checkbox => checkbox.value);
-    
-    // Obtener organización seleccionada
-    const organizationSelect = document.getElementById('organization');
-    const selectedOrg = organizationSelect.options[organizationSelect.selectedIndex].text;
     
     // Status en español
     const statusText = status ? '🟢 Activo' : '🔴 Inactivo';
@@ -386,7 +398,7 @@ function showSaveConfirmation(fullName, email, status) {
                  padding: 20px; border-radius: 50%; border: 3px solid #2ecc71; margin-bottom: 15px;">
                 <i class="fas fa-save" style="font-size: 2.5rem; color: #2ecc71;"></i>
             </div>
-            <h3 style="color: white; margin: 10px 0;">¿Actualizar colaborador en Firebase?</h3>
+            <h3 style="color: white; margin: 10px 0;">¿Actualizar colaborador?</h3>
             <p style="color: #b0b0d0; margin: 0;">Se actualizarán los siguientes datos:</p>
         </div>
         
@@ -418,16 +430,10 @@ function showSaveConfirmation(fullName, email, status) {
                 ${selectedPermissions.length > 0 ? selectedPermissions.join(', ') : 'Sin permisos asignados'}
             </p>
         </div>
-        
-        <div style="background: rgba(241, 196, 15, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #f1c40f;">
-            <p style="margin: 0; color: #f1c40f; font-size: 0.8rem;">
-                <i class="fas fa-info-circle"></i> Esta acción actualizará la información en Firebase
-            </p>
-        </div>
     `;
     
     Swal.fire({
-        title: 'ACTUALIZAR EN FIREBASE',
+        title: 'ACTUALIZAR COLABORADOR',
         html: htmlContent,
         icon: 'question',
         showCancelButton: true,
@@ -446,18 +452,18 @@ function showSaveConfirmation(fullName, email, status) {
     });
 }
 
-// 3. GUARDAR EN FIREBASE
+// ========== GUARDAR CAMBIOS USANDO USERMANAGER ==========
 async function saveCollaboratorToFirebase() {
-    if (!window.currentCollaborator) {
+    if (!window.currentCollaborator || !userManager) {
         showErrorAlert('ERROR', 'No hay datos del colaborador cargados');
         return;
     }
     
-    const { id, collection } = window.currentCollaborator;
+    const { id, data } = window.currentCollaborator;
     
     // Mostrar loader
     Swal.fire({
-        title: 'ACTUALIZANDO EN FIREBASE',
+        title: 'ACTUALIZANDO COLABORADOR',
         text: 'Por favor espera un momento...',
         allowOutsideClick: false,
         allowEscapeKey: false,
@@ -472,29 +478,36 @@ async function saveCollaboratorToFirebase() {
         const updateData = {
             nombreCompleto: document.getElementById('fullName').value.trim(),
             correoElectronico: document.getElementById('email').value.trim(),
-            status: document.getElementById('status').value === 'active',
-            permisos: Array.from(document.querySelectorAll('input[name="permissions"]:checked'))
-                          .map(checkbox => checkbox.value),
-            organizacionCamelCase: document.getElementById('organization').value,
-            fechaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+            status: document.getElementById('status').value === 'active'
         };
+        
+        // Convertir permisos checkboxes a objeto
+        const permisosPersonalizados = {};
+        document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
+            permisosPersonalizados[checkbox.value] = checkbox.checked;
+        });
+        updateData.permisosPersonalizados = permisosPersonalizados;
         
         // Agregar foto si se cambió
         if (window.collaboratorImageUrl) {
             updateData.fotoUsuario = window.collaboratorImageUrl;
         }
         
-        // Actualizar contraseña si se proporcionó una nueva
-        const password = document.getElementById('password').value;
-        if (password) {
-            // Aquí deberías actualizar la contraseña en Firebase Auth
-            // Esto requiere autenticación y manejo especial
-            console.log('Contraseña cambiada (requiere implementación de Firebase Auth)');
+        // Determinar tipo de usuario y organización
+        const userType = 'colaborador';
+        const organizacionCamelCase = data.organizacionCamelCase;
+        
+        if (!organizacionCamelCase) {
+            throw new Error('No se pudo determinar la organización del colaborador');
         }
         
-        // Guardar en Firebase
-        const db = firebase.firestore();
-        await db.collection(collection).doc(id).update(updateData);
+        // Actualizar usando UserManager
+        await userManager.updateUser(
+            id, 
+            updateData, 
+            userType, 
+            organizacionCamelCase
+        );
         
         // Limpiar campos de contraseña
         document.getElementById('password').value = '';
@@ -511,16 +524,11 @@ async function saveCollaboratorToFirebase() {
                     <i class="fas fa-check-circle" style="font-size: 2rem; color: #2ecc71;"></i>
                 </div>
                 <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${updateData.nombreCompleto}</p>
-                <p style="color: #b0b0d0; margin: 5px 0;">ha sido actualizado exitosamente en Firebase</p>
-            </div>
-            <div style="background: rgba(52, 152, 219, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #3498db;">
-                <p style="margin: 0; color: #3498db; font-size: 0.9rem;">
-                    <i class="fas fa-database"></i> Colección: <code>${collection}</code>
-                </p>
+                <p style="color: #b0b0d0; margin: 5px 0;">ha sido actualizado exitosamente</p>
             </div>`
         );
         
-        console.log('✅ Colaborador actualizado en Firebase:', { id, collection, updateData });
+        console.log('✅ Colaborador actualizado:', { id, updateData });
         
         // Actualizar datos locales
         window.currentCollaborator.data = { 
@@ -530,32 +538,32 @@ async function saveCollaboratorToFirebase() {
         
         // Actualizar timestamp de última actualización en la UI
         const now = new Date();
-        document.querySelector('#lastUpdateDate').textContent = now.toLocaleDateString('es-MX');
-        document.querySelector('#lastUpdateTime').textContent = now.toLocaleTimeString('es-MX', { 
+        const lastUpdateDate = now.toLocaleDateString('es-MX');
+        const lastUpdateTime = now.toLocaleTimeString('es-MX', { 
             hour: '2-digit', 
             minute: '2-digit' 
         });
         
+        updateElement('#lastUpdateDate', lastUpdateDate);
+        updateElement('#lastUpdateTime', lastUpdateTime);
+        
     } catch (error) {
         Swal.close();
-        console.error('❌ Error actualizando en Firebase:', error);
+        console.error('❌ Error actualizando colaborador:', error);
         
         showErrorAlert(
             'ERROR AL ACTUALIZAR',
             `<div style="text-align: left;">
-                <p>No se pudo actualizar el colaborador en Firebase:</p>
+                <p>No se pudo actualizar el colaborador:</p>
                 <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; margin-top: 10px;">
                     <code style="color: #e74c3c; font-size: 0.85rem;">${error.message}</code>
                 </div>
-                <p style="margin-top: 15px; color: #f39c12;">
-                    <i class="fas fa-exclamation-triangle"></i> Verifica tu conexión a internet.
-                </p>
             </div>`
         );
     }
 }
 
-// 4. ALERTA DE CONFIRMACIÓN PARA CANCELAR
+// ========== ALERTA DE CONFIRMACIÓN PARA CANCELAR ==========
 function showCancelConfirmation() {
     Swal.fire({
         title: '¿CANCELAR CAMBIOS?',
@@ -569,7 +577,7 @@ function showCancelConfirmation() {
                     ¿Estás seguro de cancelar los cambios?
                 </p>
                 <p style="color: #b0b0d0; margin: 0;">
-                    Se perderán todos los cambios no guardados en Firebase
+                    Se perderán todos los cambios no guardados
                 </p>
             </div>
             <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #e74c3c;">
@@ -594,47 +602,44 @@ function showCancelConfirmation() {
     });
 }
 
-// 5. ALERTA DE CONFIRMACIÓN PARA ELIMINAR DESDE FIREBASE
+// ========== ALERTA DE CONFIRMACIÓN PARA ELIMINAR ==========
 function showDeleteConfirmation() {
     const fullName = document.getElementById('fullName').value;
     const email = document.getElementById('email').value;
     
     Swal.fire({
-        title: '¿ELIMINAR DE FIREBASE?',
+        title: '¿INHABILITAR COLABORADOR?',
         html: `
             <div style="text-align: center; margin: 20px 0;">
                 <div style="display: inline-block; background: rgba(231, 76, 60, 0.1); 
                      padding: 20px; border-radius: 50%; border: 3px solid #e74c3c; margin-bottom: 15px;">
-                    <i class="fas fa-trash-alt" style="font-size: 2.5rem; color: #e74c3c;"></i>
+                    <i class="fas fa-user-slash" style="font-size: 2.5rem; color: #e74c3c;"></i>
                 </div>
                 <h3 style="color: white; margin: 10px 0;">${fullName}</h3>
                 <p style="color: #b0b0d0; margin: 0;">${email}</p>
-                <p style="color: #f39c12; margin: 10px 0; font-size: 0.9rem;">
-                    <i class="fas fa-database"></i> Colección: ${window.currentCollaborator?.collection || 'No especificada'}
-                </p>
             </div>
             
             <p style="text-align: center; font-size: 1.1rem;">
-                ¿Estás seguro de <strong style="color: #e74c3c;">eliminar permanentemente</strong> 
-                este colaborador de Firebase?
+                ¿Estás seguro de <strong style="color: #e74c3c;">inhabilitar</strong> 
+                este colaborador?
             </p>
             
             <div style="background: rgba(231, 76, 60, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #e74c3c; margin-top: 15px;">
                 <p style="margin: 0 0 5px 0; color: #e74c3c; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> CONSECUENCIAS</p>
                 <ul style="margin: 0; color: #b0b0d0; font-size: 0.9rem; padding-left: 20px;">
-                    <li>Se eliminará permanentemente de la base de datos</li>
-                    <li>Se perderán todos los datos del colaborador</li>
-                    <li>No se podrá recuperar la información</li>
-                    <li>Esta acción afecta directamente a Firebase</li>
+                    <li>No podrá iniciar sesión en el sistema</li>
+                    <li>Su información se mantiene en la base de datos</li>
+                    <li>Puede ser reactivado posteriormente</li>
+                    <li>Esta acción es reversible</li>
                 </ul>
             </div>
         `,
-        icon: 'error',
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-trash"></i> SÍ, ELIMINAR DE FIREBASE',
-        cancelButtonText: '<i class="fas fa-ban"></i> SOLO DESACTIVAR',
+        confirmButtonText: '<i class="fas fa-ban"></i> SÍ, INHABILITAR',
+        cancelButtonText: '<i class="fas fa-times"></i> CANCELAR',
         showDenyButton: true,
-        denyButtonText: '<i class="fas fa-times"></i> CANCELAR',
+        denyButtonText: '<i class="fas fa-toggle-off"></i> SOLO DESACTIVAR',
         confirmButtonColor: '#e74c3c',
         cancelButtonColor: '#95a5a6',
         denyButtonColor: '#3498db',
@@ -643,28 +648,39 @@ function showDeleteConfirmation() {
         backdrop: 'rgba(0, 0, 0, 0.9)'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Eliminar colaborador de Firebase
+            // Inhabilitar colaborador
             deleteCollaboratorFromFirebase();
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-            // Solo desactivar
-            deactivateCollaborator();
+        } else if (result.isDenied) {
+            // Solo cambiar status a inactivo en el formulario
+            document.getElementById('status').value = 'inactive';
+            document.querySelectorAll('.role-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.getAttribute('data-status') === 'inactive') {
+                    opt.classList.add('selected');
+                }
+            });
+            
+            showSuccessAlert(
+                'ESTATUS CAMBIADO',
+                'El colaborador ha sido marcado como inactivo en el formulario.<br>Recuerda guardar los cambios.'
+            );
         }
     });
 }
 
-// 6. ELIMINAR COLABORADOR DE FIREBASE
+// ========== ELIMINAR/INHABILITAR COLABORADOR ==========
 async function deleteCollaboratorFromFirebase() {
-    if (!window.currentCollaborator) {
+    if (!window.currentCollaborator || !userManager) {
         showErrorAlert('ERROR', 'No hay datos del colaborador cargados');
         return;
     }
     
-    const { id, collection } = window.currentCollaborator;
+    const { id, data } = window.currentCollaborator;
     const fullName = document.getElementById('fullName').value;
     
     // Mostrar loader
     Swal.fire({
-        title: 'ELIMINANDO DE FIREBASE',
+        title: 'INHABILITANDO COLABORADOR',
         text: 'Por favor espera...',
         allowOutsideClick: false,
         allowEscapeKey: false,
@@ -675,30 +691,38 @@ async function deleteCollaboratorFromFirebase() {
     });
     
     try {
-        // Eliminar de Firebase
-        const db = firebase.firestore();
-        await db.collection(collection).doc(id).delete();
+        // Usar UserManager para inhabilitar
+        await userManager.inhabilitarUsuario(
+            id,
+            'colaborador',
+            data.organizacionCamelCase,
+            'Inhabilitado por administrador'
+        );
         
         Swal.close();
         
         showSuccessAlert(
-            '🗑️ COLABORADOR ELIMINADO',
+            '✅ COLABORADOR INHABILITADO',
             `<div style="text-align: center; margin: 15px 0;">
-                <div style="display: inline-block; background: rgba(231, 76, 60, 0.2); 
-                     padding: 15px; border-radius: 50%; border: 2px solid #e74c3c;">
-                    <i class="fas fa-trash-alt" style="font-size: 2rem; color: #e74c3c;"></i>
+                <div style="display: inline-block; background: rgba(149, 165, 166, 0.2); 
+                     padding: 15px; border-radius: 50%; border: 2px solid #95a5a6;">
+                    <i class="fas fa-ban" style="font-size: 2rem; color: #95a5a6;"></i>
                 </div>
                 <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${fullName}</p>
-                <p style="color: #b0b0d0; margin: 5px 0;">ha sido eliminado de Firebase</p>
-            </div>
-            <div style="background: rgba(52, 152, 219, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #3498db;">
-                <p style="margin: 0; color: #3498db; font-size: 0.9rem;">
-                    <i class="fas fa-database"></i> Eliminado de: <code>${collection}</code>
-                </p>
+                <p style="color: #b0b0d0; margin: 5px 0;">ha sido inhabilitado del sistema</p>
             </div>`
         );
         
-        console.log(`✅ Colaborador eliminado de Firebase: ${id} de ${collection}`);
+        console.log(`✅ Colaborador inhabilitado: ${id}`);
+        
+        // Actualizar UI localmente
+        document.getElementById('status').value = 'inactive';
+        document.querySelectorAll('.role-option').forEach(opt => {
+            opt.classList.remove('selected');
+            if (opt.getAttribute('data-status') === 'inactive') {
+                opt.classList.add('selected');
+            }
+        });
         
         // Redirigir después de 3 segundos
         setTimeout(() => {
@@ -707,52 +731,12 @@ async function deleteCollaboratorFromFirebase() {
         
     } catch (error) {
         Swal.close();
-        console.error('❌ Error eliminando colaborador:', error);
-        
-        showErrorAlert(
-            'ERROR AL ELIMINAR',
-            `<div style="text-align: left;">
-                <p>No se pudo eliminar el colaborador de Firebase:</p>
-                <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; margin-top: 10px;">
-                    <code style="color: #e74c3c; font-size: 0.85rem;">${error.message}</code>
-                </div>
-            </div>`
-        );
+        console.error('❌ Error inhabilitando colaborador:', error);
+        showErrorAlert('ERROR AL INHABILITAR', error.message);
     }
 }
 
-// 7. DESACTIVAR COLABORADOR (SOLO CAMBIAR STATUS)
-function deactivateCollaborator() {
-    const fullName = document.getElementById('fullName').value;
-    
-    // Cambiar status a inactivo
-    document.getElementById('status').value = 'inactive';
-    const statusOptions = document.querySelectorAll('.role-option');
-    statusOptions.forEach(opt => opt.classList.remove('selected'));
-    document.querySelector('.role-option[data-status="inactive"]').classList.add('selected');
-    
-    // Mostrar mensaje
-    showSuccessAlert(
-        '✅ COLABORADOR DESACTIVADO',
-        `<div style="text-align: center; margin: 15px 0;">
-            <div style="display: inline-block; background: rgba(149, 165, 166, 0.2); 
-                 padding: 15px; border-radius: 50%; border: 2px solid #95a5a6;">
-                <i class="fas fa-ban" style="font-size: 2rem; color: #95a5a6;"></i>
-            </div>
-            <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${fullName}</p>
-            <p style="color: #b0b0d0; margin: 5px 0;">ha sido desactivado en el formulario</p>
-        </div>
-        <div style="background: rgba(149, 165, 166, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #95a5a6;">
-            <p style="margin: 0; color: #95a5a6; font-size: 0.9rem;">
-                <i class="fas fa-info-circle"></i> Recuerda guardar los cambios para aplicar en Firebase
-            </p>
-        </div>`
-    );
-    
-    console.log(`Colaborador desactivado: ${fullName}`);
-}
-
-// 8. MANEJO DE ARCHIVOS DE IMAGEN
+// ========== MANEJO DE ARCHIVOS DE IMAGEN ==========
 function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -795,7 +779,7 @@ function handleFileSelect(event) {
     showImagePreview(file);
 }
 
-// 9. PREVIEW DE IMAGEN
+// ========== PREVIEW DE IMAGEN ==========
 function showImagePreview(file) {
     const reader = new FileReader();
     
@@ -840,7 +824,7 @@ function showImagePreview(file) {
     reader.readAsDataURL(file);
 }
 
-// 10. GUARDAR IMAGEN DEL COLABORADOR (LOCAL)
+// ========== GUARDAR IMAGEN DEL COLABORADOR ==========
 function saveCollaboratorImage(imageUrl) {
     const collaboratorImage = document.getElementById('collaboratorImage');
     const collaboratorPlaceholder = document.getElementById('collaboratorPlaceholder');
@@ -889,7 +873,7 @@ function saveCollaboratorImage(imageUrl) {
     }, 1500);
 }
 
-// 11. GENERAR CONTRASEÑA SEGURA
+// ========== GENERAR CONTRASEÑA SEGURA ==========
 function generateSecurePassword() {
     // Caracteres disponibles
     const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -954,7 +938,13 @@ function generateSecurePassword() {
 
 // ========== FUNCIONES UTILITARIAS ==========
 
-// 12. VALIDAR CONTRASEÑA
+// FUNCIÓN AUXILIAR PARA ACTUALIZAR ELEMENTOS
+function updateElement(selector, text) {
+    const el = document.querySelector(selector);
+    if (el) el.textContent = text;
+}
+
+// VALIDAR CONTRASEÑA
 function validatePassword(password) {
     const minLength = 8;
     const hasUpperCase = /[A-Z]/.test(password);
@@ -976,15 +966,46 @@ function validatePassword(password) {
     };
 }
 
-// 13. VALIDAR EMAIL
+// VALIDAR EMAIL
 function validateEmail(email) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
 }
 
+// DESACTIVAR COLABORADOR (SOLO CAMBIAR STATUS)
+function deactivateCollaborator() {
+    const fullName = document.getElementById('fullName').value;
+    
+    // Cambiar status a inactivo
+    document.getElementById('status').value = 'inactive';
+    const statusOptions = document.querySelectorAll('.role-option');
+    statusOptions.forEach(opt => opt.classList.remove('selected'));
+    document.querySelector('.role-option[data-status="inactive"]').classList.add('selected');
+    
+    // Mostrar mensaje
+    showSuccessAlert(
+        '✅ COLABORADOR DESACTIVADO',
+        `<div style="text-align: center; margin: 15px 0;">
+            <div style="display: inline-block; background: rgba(149, 165, 166, 0.2); 
+                 padding: 15px; border-radius: 50%; border: 2px solid #95a5a6;">
+                <i class="fas fa-ban" style="font-size: 2rem; color: #95a5a6;"></i>
+            </div>
+            <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${fullName}</p>
+            <p style="color: #b0b0d0; margin: 5px 0;">ha sido desactivado en el formulario</p>
+        </div>
+        <div style="background: rgba(149, 165, 166, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #95a5a6;">
+            <p style="margin: 0; color: #95a5a6; font-size: 0.9rem;">
+                <i class="fas fa-info-circle"></i> Recuerda guardar los cambios para aplicar en Firebase
+            </p>
+        </div>`
+    );
+    
+    console.log(`Colaborador desactivado: ${fullName}`);
+}
+
 // ========== ALERTAS REUTILIZABLES ==========
 
-// 14. ALERTA DE ÉXITO
+// ALERTA DE ÉXITO
 function showSuccessAlert(title, html) {
     Swal.fire({
         title: title,
@@ -1000,7 +1021,7 @@ function showSuccessAlert(title, html) {
     });
 }
 
-// 15. ALERTA DE ERROR
+// ALERTA DE ERROR
 function showErrorAlert(title, message) {
     Swal.fire({
         title: title,
@@ -1013,7 +1034,7 @@ function showErrorAlert(title, message) {
     });
 }
 
-// 16. ERROR DE FIREBASE
+// ERROR DE FIREBASE
 function showFirebaseError() {
     Swal.fire({
         title: 'FIREBASE NO DISPONIBLE',
