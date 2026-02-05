@@ -1130,3 +1130,116 @@ select.form-input-field {
 .edit-right-panel::-webkit-scrollbar-thumb:hover {
     background: var(--color-accent-secondary);
 }
+/* Estilos para mensajes */
+.message-container {
+    margin: 15px 0;
+    min-height: 50px;
+}
+
+.message {
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.3s ease-out;
+}
+
+.message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.message.warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.message i {
+    font-size: 1.2em;
+}
+
+/* Animación para mensajes */
+@keyframes slideIn {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Estilos para loading */
+.form-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: 8px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estilos para campos con error */
+.form-input-field.error {
+    border-color: #ff3860 !important;
+    background: #fff5f5;
+}
+
+/* Mejoras responsivas */
+@media (max-width: 768px) {
+    .edit-wrapper {
+        flex-direction: column;
+    }
+    
+    .edit-left-panel,
+    .edit-right-panel {
+        width: 100%;
+    }
+    
+    .permissions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Estilos para información del sistema dinámica */
+.info-value {
+    word-break: break-all;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.timestamp {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 3px;
+}

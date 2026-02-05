@@ -25,6 +25,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             id: admin.id
         });
         
+        // Guardar info del admin en localStorage
+        localStorage.setItem('adminInfo', JSON.stringify({
+            id: admin.id,
+            nombreCompleto: admin.nombreCompleto,
+            organizacion: admin.organizacion,
+            organizacionCamelCase: admin.organizacionCamelCase,
+            correoElectronico: admin.correoElectronico,
+            timestamp: new Date().toISOString()
+        }));
+        
+        // Limpiar colaborador seleccionado previo
+        localStorage.removeItem('selectedCollaborator');
+        
         // Actualizar interfaz
         updatePageWithAdminInfo(admin);
         
@@ -45,6 +58,9 @@ async function loadCollaborators(admin, userManager) {
     console.log(`🔄 Cargando colaboradores para: ${admin.organizacion}`);
     
     try {
+        // Mostrar loading
+        showLoadingState();
+        
         // Usar el método del UserManager para obtener colaboradores
         // Cambiar a true para incluir inhabilitados
         const colaboradores = await userManager.getColaboradoresByOrganizacion(
@@ -56,6 +72,21 @@ async function loadCollaborators(admin, userManager) {
         
         // Filtrar para mostrar solo los no eliminados
         const colaboradoresActivos = colaboradores;
+        
+        // Guardar lista de colaboradores en localStorage
+        localStorage.setItem('colaboradoresList', JSON.stringify(
+            colaboradoresActivos.map(col => ({
+                id: col.id,
+                nombreCompleto: col.nombreCompleto,
+                correoElectronico: col.correoElectronico,
+                rol: col.rol,
+                status: col.status,
+                organizacion: col.organizacion,
+                fotoUsuario: col.fotoUsuario,
+                telefono: col.telefono,
+                departamento: col.departamento
+            }))
+        ));
         
         if (colaboradoresActivos.length === 0) {
             showEmptyState(admin);
@@ -97,10 +128,13 @@ function renderCollaboratorsTable(collaborators, admin) {
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
         
+        // Obtener URL de la foto
+        const fotoUrl = col.getFotoUrl ? col.getFotoUrl() : (col.fotoUsuario || '');
+        
         row.innerHTML = `
             <td>
                 <div class="user-info">
-                    <div class="user-avatar" style="background-image: url('${col.getFotoUrl()}')">
+                    <div class="user-avatar" style="background-image: url('${fotoUrl}')">
                         ${!col.fotoUsuario ? '<i class="fas fa-user"></i>' : ''}
                     </div>
                     <div>
@@ -120,15 +154,18 @@ function renderCollaboratorsTable(collaborators, admin) {
             <td class="actions-cell">
                 <button class="row-btn ${enableBtnClass}" title="${enableBtnText}"
                     data-collaborator-id="${col.id}"
+                    data-collaborator-name="${fullName}"
                     data-current-status="${isActive}">
                     <i class="fas ${enableBtnIcon}"></i>
                 </button>
                 <button class="row-btn edit" title="Editar" 
-                    data-collaborator-id="${col.id}">
+                    data-collaborator-id="${col.id}"
+                    data-collaborator-name="${fullName}">
                     <i class="fas fa-edit"></i>
                 </button>
                 <button class="row-btn view" title="Ver detalles" 
-                    data-collaborator-id="${col.id}">
+                    data-collaborator-id="${col.id}"
+                    data-collaborator-name="${fullName}">
                     <i class="fas fa-eye"></i>
                 </button>
             </td>
@@ -169,7 +206,7 @@ function updateStats(collaborators) {
                 <i class="fas fa-chart-bar"></i> ESTADÍSTICAS DE COLABORADORES
             </h3>
             <button id="refreshStats" class="row-btn" 
-                style="background: var(--color-accent-primary); color: white;">
+                style="background: var(black); color: white;">
                 <i class="fas fa-sync-alt"></i> Actualizar
             </button>
         </div>
@@ -212,7 +249,7 @@ function setupEvents(admin, userManager) {
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
-            window.location.href = '/users/admin/crear-colaborador/crear-colaborador.html';
+            window.location.href = '/users/admin/newUser/newUser.html';
         });
     }
     
@@ -226,24 +263,25 @@ function setupEvents(admin, userManager) {
             if (!button || !row) return;
             
             const collaboratorId = button.getAttribute('data-collaborator-id');
+            const collaboratorName = button.getAttribute('data-collaborator-name');
             const isEnableBtn = button.classList.contains('enable');
             const isDisableBtn = button.classList.contains('disable');
             
             if (isEnableBtn || isDisableBtn) {
-                await toggleUserStatus(collaboratorId, admin, userManager, isEnableBtn);
+                await toggleUserStatus(collaboratorId, collaboratorName, admin, userManager, isEnableBtn);
             } 
             else if (button.classList.contains('edit')) {
-                await editUser(collaboratorId, admin);
+                await editUser(collaboratorId, collaboratorName, admin);
             } 
             else if (button.classList.contains('view')) {
-                await viewUserDetails(collaboratorId, admin, userManager);
+                await viewUserDetails(collaboratorId, collaboratorName, admin, userManager);
             }
         });
     }
 }
 
 // ========== CAMBIAR ESTADO DEL COLABORADOR ==========
-async function toggleUserStatus(collaboratorId, admin, userManager, isEnabling) {
+async function toggleUserStatus(collaboratorId, collaboratorName, admin, userManager, isEnabling) {
     try {
         // Obtener el colaborador
         const collaborator = await userManager.getUserById(collaboratorId);
@@ -258,7 +296,7 @@ async function toggleUserStatus(collaboratorId, admin, userManager, isEnabling) 
         // Confirmación
         const result = await Swal.fire({
             title: `${actionText} colaborador`,
-            text: `¿Estás seguro de ${statusText} a ${collaborator.nombreCompleto}?`,
+            text: `¿Estás seguro de ${statusText} a ${collaboratorName}?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: `Sí, ${statusText}`,
@@ -314,7 +352,7 @@ async function toggleUserStatus(collaboratorId, admin, userManager, isEnabling) 
         Swal.fire({
             icon: 'success',
             title: `${actionText} exitosamente`,
-            text: `El colaborador ha sido ${statusText}`,
+            text: `${collaboratorName} ha sido ${statusText}`,
             timer: 2000,
             showConfirmButton: false
         });
@@ -332,15 +370,28 @@ async function toggleUserStatus(collaboratorId, admin, userManager, isEnabling) 
 }
 
 // ========== EDITAR COLABORADOR ==========
-async function editUser(collaboratorId, admin) {
-    console.log(`✏️ Editando colaborador: ${collaboratorId}`);
+async function editUser(collaboratorId, collaboratorName, admin) {
+    console.log(`✏️ Editando colaborador: ${collaboratorId} - ${collaboratorName}`);
+    
+    // Guardar información del colaborador seleccionado en localStorage
+    const selectedCollaborator = {
+        id: collaboratorId,
+        nombreCompleto: collaboratorName,
+        organizacion: admin.organizacion,
+        organizacionCamelCase: admin.organizacionCamelCase,
+        fechaSeleccion: new Date().toISOString(),
+        admin: admin.nombreCompleto
+    };
+    
+    localStorage.setItem('selectedCollaborator', JSON.stringify(selectedCollaborator));
+    console.log('💾 Colaborador guardado en localStorage:', selectedCollaborator);
     
     // Redirigir a la página de edición
     window.location.href = `/users/admin/editUser/editUser.html?id=${collaboratorId}&org=${admin.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DEL COLABORADOR ==========
-async function viewUserDetails(collaboratorId, admin, userManager) {
+async function viewUserDetails(collaboratorId, collaboratorName, admin, userManager) {
     try {
         const collaborator = await userManager.getUserById(collaboratorId);
         
@@ -348,7 +399,7 @@ async function viewUserDetails(collaboratorId, admin, userManager) {
             throw new Error('Colaborador no encontrado');
         }
         
-        showCollaboratorDetails(collaborator);
+        showCollaboratorDetails(collaborator, collaboratorName);
         
     } catch (error) {
         console.error('Error obteniendo detalles:', error);
@@ -361,7 +412,7 @@ async function viewUserDetails(collaboratorId, admin, userManager) {
 }
 
 // ========== MOSTRAR DETALLES EN MODAL ==========
-function showCollaboratorDetails(collaborator) {
+function showCollaboratorDetails(collaborator, collaboratorName) {
     // Formatear fecha
     let fechaCreacion = 'No disponible';
     if (collaborator.fechaCreacion) {
@@ -379,7 +430,7 @@ function showCollaboratorDetails(collaborator) {
             '<span style="color: #dc3545;"><i class="fas fa-ban"></i> Inactivo</span>');
     
     Swal.fire({
-        title: `Detalles del Colaborador`,
+        title: `Detalles de: ${collaboratorName}`,
         html: `
             <div style="text-align: left; max-height: 60vh; overflow-y: auto; padding: 10px;">
                 <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
@@ -408,6 +459,13 @@ function showCollaboratorDetails(collaborator) {
                         <p><strong>Verificado:</strong><br>${collaborator.verificado ? 'Sí' : 'No'}</p>
                     </div>
                 </div>
+                
+                ${collaborator.telefono ? `
+                    <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <p><strong>Teléfono:</strong> ${collaborator.telefono}</p>
+                        ${collaborator.departamento ? `<p><strong>Departamento:</strong> ${collaborator.departamento}</p>` : ''}
+                    </div>
+                ` : ''}
                 
                 ${collaborator.eliminado ? `
                     <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffc107;">
@@ -488,8 +546,36 @@ function showEmptyState(admin) {
     `;
     
     document.getElementById('addFirstCollaborator')?.addEventListener('click', () => {
-        window.location.href = '/users/admin/crear-colaborador/crear-colaborador.html';
+        window.location.href = '/users/admin/newUser/newUser.html';
     });
+}
+
+// ========== ESTADO DE CARGA ==========
+function showLoadingState() {
+    const tbody = document.querySelector('.collaborators-table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align: center; padding: 40px 20px;">
+                <div style="color: var(--color-text-secondary);">
+                    <div class="loading-spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite;"></div>
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                    <h3 style="margin: 10px 0; color: var(--color-text-primary);">
+                        Cargando colaboradores...
+                    </h3>
+                    <p style="margin-bottom: 20px; font-size: 0.9rem;">
+                        Obteniendo datos de Firebase
+                    </p>
+                </div>
+            </td>
+        </tr>
+    `;
 }
 
 // ========== MANEJO DE ERRORES ==========
