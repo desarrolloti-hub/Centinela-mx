@@ -1,19 +1,57 @@
-// editAdmin.js - Editor de perfil para administradores
+// editAdmin.js - Editor de perfil para administradores (Versión con UserManager)
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📄 Editor de perfil cargado');
+    console.log('📄 Editor de perfil cargado - Versión con UserManager');
     
     try {
-        console.log('🔍 Cargando Firebase desde /config/firebase-config.js');
+        console.log('🔍 Cargando módulos necesarios...');
         
-        // IMPORTANTE: Usa la ruta correcta desde editAdmin.html
-        const firebaseModule = await import('../../../config/firebase-config.js');
-        console.log('✅ Firebase configurado correctamente');
+        // Importar el módulo UserManager
+        const userModule = await import('/clases/user.js');
+        const { UserManager } = userModule;
         
-        // Iniciar la aplicación
-        initProfileEditor(firebaseModule.auth, firebaseModule.db);
+        console.log('✅ Módulos cargados correctamente');
+        
+        // Instanciar UserManager
+        const userManager = new UserManager();
+        
+        // Esperar a que UserManager cargue el usuario actual
+        // UserManager ya maneja la autenticación internamente
+        if (!userManager.currentUser) {
+            console.log('🔄 Esperando que UserManager cargue el usuario actual...');
+            
+            // Podemos esperar un momento o verificar periódicamente
+            const waitForUser = setInterval(() => {
+                if (userManager.currentUser) {
+                    clearInterval(waitForUser);
+                    console.log('✅ Usuario cargado por UserManager:', userManager.currentUser.email);
+                    iniciarEditor(userManager);
+                }
+            }, 500);
+            
+            // Timeout después de 5 segundos
+            setTimeout(() => {
+                if (!userManager.currentUser) {
+                    clearInterval(waitForUser);
+                    console.error('❌ Timeout esperando usuario');
+                    
+                    // Mostrar error y redirigir
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de autenticación',
+                        text: 'No se pudo cargar el usuario actual',
+                        confirmButtonText: 'Ir al login'
+                    }).then(() => {
+                        window.location.href = '/users/visitors/login/login.html';
+                    });
+                }
+            }, 5000);
+        } else {
+            // Si ya está cargado, iniciar directamente
+            iniciarEditor(userManager);
+        }
         
     } catch (error) {
-        console.error('❌ Error cargando Firebase:', error);
+        console.error('❌ Error cargando módulos:', error);
         
         // Mostrar error amigable
         Swal.fire({
@@ -21,9 +59,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             title: 'Error de configuración',
             html: `
                 <div style="text-align: left; font-size: 14px;">
-                    <p><strong>No se pudo cargar la configuración de Firebase</strong></p>
+                    <p><strong>No se pudo cargar los módulos necesarios</strong></p>
                     <p>Error: ${error.message}</p>
-                    <p>El archivo debe estar en: <code>/config/firebase-config.js</code></p>
+                    <p>Verifica que los archivos existan en las rutas correctas:</p>
+                    <ul>
+                        <li><code>/clases/user.js</code></li>
+                    </ul>
                 </div>
             `,
             confirmButtonText: 'Entendido',
@@ -34,67 +75,62 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// ==================== EDITOR PRINCIPAL ====================
+// ==================== FUNCIÓN PARA INICIAR EDITOR ====================
 
-async function initProfileEditor(auth, db) {
-    console.log('👨‍💼 Inicializando editor de perfil...');
+async function iniciarEditor(userManager) {
+    console.log('👨‍💼 Iniciando editor de perfil...');
+    
+    // Verificar si el usuario está autenticado a través de UserManager
+    if (!userManager.currentUser) {
+        console.warn('⚠️ Usuario no autenticado según UserManager');
+        
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sesión expirada',
+            text: 'Debes iniciar sesión para acceder al editor de perfil',
+            timer: 3000,
+            showConfirmButton: false
+        }).then(() => {
+            window.location.href = '/users/visitors/login/login.html';
+        });
+        return;
+    }
     
     // Obtener elementos del DOM
     const elements = getElements();
     
     // Variables de estado
-    let currentUser = null;
-    let userData = {};
     let selectedFile = null;
     let currentPhotoType = '';
     
-    // Configurar handlers básicos primero
-    setupBasicHandlers(elements);
-    
-    // Verificar autenticación
-    auth.onAuthStateChanged(async (user) => {
-        console.log('🔐 Estado de autenticación:', user ? 'Autenticado' : 'No autenticado');
+    try {
+        // Cargar datos del usuario usando UserManager
+        await loadUserData(userManager, elements);
         
-        if (!user) {
-            console.warn('⚠️ Usuario no autenticado, redirigiendo...');
-            
-            Swal.fire({
-                icon: 'warning',
-                title: 'Sesión expirada',
-                text: 'Debes iniciar sesión para acceder al editor de perfil',
-                timer: 3000,
-                showConfirmButton: false
-            }).then(() => {
-                window.location.href = '/users/visitors/login/login.html';
-            });
-            return;
-        }
+        // Configurar handlers básicos
+        setupBasicHandlers(elements);
         
-        currentUser = user;
-        console.log('✅ Usuario autenticado:', user.email);
+        // Configurar handlers de fotos
+        setupPhotoHandlers(elements);
+        setupModalHandlers(elements, userManager);
         
-        try {
-            // Cargar datos del usuario
-            await loadUserData(user.uid, db, elements, userData);
+        // Configurar handler de guardado
+        setupSaveHandler(elements, userManager);
+        
+        // Configurar handler para cambiar contraseña
+        setupPasswordChangeHandler(elements, userManager);
+        
+        // Mostrar mensaje de bienvenida
+        showMessage(elements.mainMessage, 'success', 
+            `Editando perfil de: ${userManager.currentUser.email}`);
             
-            // Configurar handlers completos
-            setupPhotoHandlers(elements);
-            setupModalHandlers(elements, db, currentUser, userData);
-            setupSaveHandler(elements, db, currentUser, userData);
-            
-            // Configurar handler para cambiar contraseña (POSICIÓN CORREGIDA)
-            setupPasswordChangeHandler(elements, auth, currentUser);
-            
-            // Mostrar mensaje de bienvenida
-            showMessage(elements.mainMessage, 'success', 
-                `Editando perfil de: ${user.email}`);
-                
-        } catch (error) {
-            console.error('❌ Error inicializando editor:', error);
-            showMessage(elements.mainMessage, 'error', 
-                'Error al cargar datos del usuario: ' + error.message);
-        }
-    });
+        console.log('✅ Editor de perfil inicializado correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error inicializando editor:', error);
+        showMessage(elements.mainMessage, 'error', 
+            'Error al cargar datos del usuario: ' + error.message);
+    }
 }
 
 // ========== FUNCIONES DE UTILIDAD ==========
@@ -136,73 +172,90 @@ function getElements() {
     };
 }
 
-async function loadUserData(userId, db, elements, userDataRef) {
-    console.log('📥 Cargando datos del usuario:', userId);
+async function loadUserData(userManager, elements) {
+    console.log('📥 Cargando datos del usuario con UserManager');
     
     try {
-        // Importar Firestore
-        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        
-        // Referencia al documento del administrador
-        const userRef = doc(db, "administradores", userId);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-            // Asignar los datos al objeto userDataRef (que es userData del scope superior)
-            Object.assign(userDataRef, userSnap.data());
-            console.log('✅ Datos cargados:', userDataRef);
-            
-            // Actualizar interfaz
-            updateUI(elements, userDataRef);
-            
-        } else {
-            console.error('❌ Usuario no encontrado en Firestore');
-            showMessage(elements.mainMessage, 'error', 
-                'No se encontraron datos del usuario en la base de datos');
+        // Verificar que UserManager tenga el usuario actual
+        if (!userManager.currentUser) {
+            console.error('❌ No hay usuario actual en UserManager');
+            throw new Error('No hay usuario autenticado');
         }
+        
+        const user = userManager.currentUser;
+        
+        console.log('✅ Usuario cargado por UserManager:', {
+            id: user.id,
+            nombre: user.nombreCompleto,
+            cargo: user.cargo,
+            organizacion: user.organizacion,
+            email: user.correoElectronico
+        });
+        
+        // Actualizar interfaz
+        updateUI(elements, user);
+        
     } catch (error) {
         console.error('❌ Error cargando datos:', error);
         throw error;
     }
 }
 
-function updateUI(elements, data) {
+function updateUI(elements, user) {
     console.log('🎨 Actualizando interfaz...');
     
     // Datos personales
-    if (elements.fullName && data.nombreCompleto) {
-        elements.fullName.value = data.nombreCompleto;
+    if (elements.fullName && user.nombreCompleto) {
+        elements.fullName.value = user.nombreCompleto;
     }
     
-    if (elements.email && data.correoElectronico) {
-        elements.email.value = data.correoElectronico;
+    if (elements.email && user.correoElectronico) {
+        elements.email.value = user.correoElectronico;
     }
     
-    if (elements.organizationName && data.organizacion) {
-        elements.organizationName.value = data.organizacion;
+    if (elements.organizationName && user.organizacion) {
+        elements.organizationName.value = user.organizacion;
     }
     
     if (elements.position) {
-        elements.position.value = data.cargo || 'Administrador';
+        elements.position.value = user.cargo || 'Administrador';
     }
     
-    // Fotos
-    if (data.fotoUsuario) {
-        const profileUrl = formatImageUrl(data.fotoUsuario);
+    // Fotos - Usar el método getFotoUrl() de la clase User
+    if (user.fotoUsuario) {
+        const profileUrl = user.getFotoUrl();
         if (elements.profileImage) {
             elements.profileImage.src = profileUrl;
             elements.profileImage.style.display = 'block';
+            
+            // Agregar manejador de error en caso de imagen rota
+            elements.profileImage.onerror = function() {
+                console.warn('⚠️ Error cargando imagen de perfil, usando placeholder');
+                this.style.display = 'none';
+                if (elements.profilePlaceholder) {
+                    elements.profilePlaceholder.style.display = 'flex';
+                }
+            };
         }
         if (elements.profilePlaceholder) {
             elements.profilePlaceholder.style.display = 'none';
         }
     }
     
-    if (data.fotoOrganizacion) {
-        const orgUrl = formatImageUrl(data.fotoOrganizacion);
+    if (user.fotoOrganizacion) {
+        const orgUrl = user.fotoOrganizacion;
         if (elements.orgImage) {
             elements.orgImage.src = orgUrl;
             elements.orgImage.style.display = 'block';
+            
+            // Agregar manejador de error
+            elements.orgImage.onerror = function() {
+                console.warn('⚠️ Error cargando logo de organización');
+                this.style.display = 'none';
+                if (elements.orgPlaceholder) {
+                    elements.orgPlaceholder.style.display = 'flex';
+                }
+            };
         }
         if (elements.orgPlaceholder) {
             elements.orgPlaceholder.style.display = 'none';
@@ -210,12 +263,6 @@ function updateUI(elements, data) {
     }
     
     console.log('✅ Interfaz actualizada');
-}
-
-function formatImageUrl(imageData) {
-    if (!imageData) return '';
-    if (imageData.startsWith('http') || imageData.startsWith('data:')) return imageData;
-    return `data:image/jpeg;base64,${imageData}`;
 }
 
 function showMessage(element, type, text) {
@@ -248,23 +295,6 @@ function showMessage(element, type, text) {
 // ========== HANDLERS BÁSICOS ==========
 
 function setupBasicHandlers(elements) {
-    // Mostrar/ocultar contraseña
-    document.querySelectorAll('.toggle-password').forEach(button => {
-        button.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-target');
-            const input = document.getElementById(targetId);
-            const icon = this.querySelector('i');
-            
-            if (input && input.type === 'password') {
-                input.type = 'text';
-                if (icon) icon.classList.replace('fa-eye', 'fa-eye-slash');
-            } else if (input) {
-                input.type = 'password';
-                if (icon) icon.classList.replace('fa-eye-slash', 'fa-eye');
-            }
-        });
-    });
-    
     // Botón cancelar
     if (elements.cancelBtn) {
         elements.cancelBtn.addEventListener('click', () => {
@@ -365,7 +395,7 @@ function showPhotoModal(file, type, elements) {
     reader.readAsDataURL(file);
 }
 
-function setupModalHandlers(elements, db, currentUser, userData) {
+function setupModalHandlers(elements, userManager) {
     if (!elements.confirmChangeBtn || !elements.cancelChangeBtn) return;
     
     elements.confirmChangeBtn.addEventListener('click', async () => {
@@ -376,8 +406,24 @@ function setupModalHandlers(elements, db, currentUser, userData) {
             const imageBase64 = e.target.result;
             
             try {
-                // Guardar en Firebase
-                const success = await savePhotoToFirestore(imageBase64, currentPhotoType, db, currentUser);
+                // Determinar el campo a actualizar
+                const fieldToUpdate = currentPhotoType === 'profile' 
+                    ? { fotoUsuario: imageBase64 }
+                    : { fotoOrganizacion: imageBase64 };
+                
+                // Obtener usuario actual
+                const currentUser = userManager.currentUser;
+                if (!currentUser) {
+                    throw new Error('No hay usuario autenticado');
+                }
+                
+                // Actualizar usando UserManager
+                const success = await userManager.updateUser(
+                    currentUser.id,
+                    fieldToUpdate,
+                    currentUser.cargo,
+                    currentUser.organizacionCamelCase
+                );
                 
                 if (success) {
                     // Actualizar interfaz
@@ -389,8 +435,9 @@ function setupModalHandlers(elements, db, currentUser, userData) {
                         if (elements.profilePlaceholder) {
                             elements.profilePlaceholder.style.display = 'none';
                         }
-                        // Actualizar datos locales
-                        if (userData) userData.fotoUsuario = imageBase64;
+                        
+                        // Actualizar el objeto user en memoria
+                        currentUser.fotoUsuario = imageBase64;
                     } else {
                         if (elements.orgImage) {
                             elements.orgImage.src = imageBase64;
@@ -399,8 +446,9 @@ function setupModalHandlers(elements, db, currentUser, userData) {
                         if (elements.orgPlaceholder) {
                             elements.orgPlaceholder.style.display = 'none';
                         }
-                        // Actualizar datos locales
-                        if (userData) userData.fotoOrganizacion = imageBase64;
+                        
+                        // Actualizar el objeto user en memoria
+                        currentUser.fotoOrganizacion = imageBase64;
                     }
                     
                     Swal.fire({
@@ -446,30 +494,9 @@ function setupModalHandlers(elements, db, currentUser, userData) {
     }
 }
 
-async function savePhotoToFirestore(imageBase64, type, db, currentUser) {
-    try {
-        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        
-        const updateData = type === 'profile' 
-            ? { fotoUsuario: imageBase64 }
-            : { fotoOrganizacion: imageBase64 };
-        
-        updateData.fechaActualizacion = new Date();
-        
-        const userRef = doc(db, "administradores", currentUser.uid);
-        await updateDoc(userRef, updateData);
-        
-        console.log(`✅ ${type} guardado en Firestore`);
-        return true;
-    } catch (error) {
-        console.error(`❌ Error guardando ${type}:`, error);
-        throw error;
-    }
-}
-
 // ========== HANDLER DE GUARDADO ==========
 
-function setupSaveHandler(elements, db, currentUser, userData) {
+function setupSaveHandler(elements, userManager) {
     if (!elements.saveChangesBtn) return;
     
     elements.saveChangesBtn.addEventListener('click', async () => {
@@ -477,6 +504,13 @@ function setupSaveHandler(elements, db, currentUser, userData) {
         if (!elements.fullName || !elements.fullName.value.trim()) {
             showMessage(elements.mainMessage, 'error', 'El nombre completo es obligatorio');
             if (elements.fullName) elements.fullName.focus();
+            return;
+        }
+        
+        // Obtener usuario actual
+        const currentUser = userManager.currentUser;
+        if (!currentUser) {
+            showMessage(elements.mainMessage, 'error', 'No hay usuario autenticado');
             return;
         }
         
@@ -488,22 +522,21 @@ function setupSaveHandler(elements, db, currentUser, userData) {
         });
         
         try {
-            const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-            
             // Preparar datos a actualizar
             const updateData = {
-                nombreCompleto: elements.fullName.value.trim(),
-                fechaActualizacion: new Date()
+                nombreCompleto: elements.fullName.value.trim()
             };
             
-            // Guardar en Firestore
-            const userRef = doc(db, "administradores", currentUser.uid);
-            await updateDoc(userRef, updateData);
+            // Actualizar usando UserManager
+            await userManager.updateUser(
+                currentUser.id,
+                updateData,
+                currentUser.cargo,
+                currentUser.organizacionCamelCase
+            );
             
-            // Actualizar datos locales
-            if (userData) {
-                userData.nombreCompleto = updateData.nombreCompleto;
-            }
+            // Actualizar el objeto user en memoria
+            currentUser.nombreCompleto = updateData.nombreCompleto;
             
             // Mostrar éxito
             Swal.close();
@@ -530,33 +563,9 @@ function setupSaveHandler(elements, db, currentUser, userData) {
     });
 }
 
-// ========== FUNCIÓN PARA CAMBIAR CONTRASEÑA (POSICIÓN CORREGIDA) ==========
+// ========== FUNCIÓN PARA CAMBIAR CONTRASEÑA ==========
 
-function addPasswordButtonStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .btn-change-password {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn-change-password:active {
-            transform: translateY(1px);
-        }
-        
-        .btn-change-password i {
-            margin-right: 8px;
-            transition: transform 0.3s ease;
-        }
-        
-        .btn-change-password:hover i {
-            transform: rotate(-10deg);
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-function setupPasswordChangeHandler(elements, auth, currentUser) {
+function setupPasswordChangeHandler(elements, userManager) {
     // Solo crear el botón si no existe
     if (!document.getElementById('changePasswordBtn')) {
         // Buscar el contenedor correcto para insertar el botón
@@ -628,7 +637,7 @@ function setupPasswordChangeHandler(elements, auth, currentUser) {
             
             // Agregar evento click
             changePasswordBtn.addEventListener('click', () => {
-                showPasswordResetConfirmation(auth, currentUser);
+                showPasswordResetConfirmation(userManager);
             });
             
             // Agregar elementos al contenedor
@@ -647,11 +656,11 @@ function setupPasswordChangeHandler(elements, auth, currentUser) {
 
 // ========== FUNCIÓN ACTUALIZADA PARA CAMBIAR CONTRASEÑA ==========
 
-async function showPasswordResetConfirmation(auth, currentUser) {
+async function showPasswordResetConfirmation(userManager) {
     try {
-        const userEmail = currentUser?.email;
-        
-        if (!userEmail) {
+        // Obtener usuario actual desde UserManager
+        const currentUser = userManager.currentUser;
+        if (!currentUser || !currentUser.correoElectronico) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -660,6 +669,8 @@ async function showPasswordResetConfirmation(auth, currentUser) {
             });
             return;
         }
+        
+        const userEmail = currentUser.correoElectronico;
         
         // Mostrar confirmación
         const result = await Swal.fire({
@@ -711,25 +722,31 @@ async function showPasswordResetConfirmation(auth, currentUser) {
             });
             
             try {
-                // Importar funciones de Firebase
+                // Aquí deberías tener un método en UserManager para enviar el correo de restablecimiento
+                // Por ahora, asumimos que UserManager puede acceder al auth necesario
+                
+                // IMPORTANTE: Necesitas agregar un método sendPasswordResetEmail a UserManager
+                // o importar directamente el auth de firebase-config.js
+                
+                // Opción 1: Si UserManager tiene acceso a auth
+                // await userManager.sendPasswordResetEmail(userEmail);
+                
+                // Opción 2: Importar auth directamente (temporalmente)
+                const firebaseModule = await import('/config/firebase-config.js');
                 const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js");
                 
-                // CONFIGURACIÓN CRÍTICA - URL CORRECTA
                 const actionCodeSettings = {
                     url: 'https://centinela-mx.web.app/verifyEmail.html',
                     handleCodeInApp: false
                 };
                 
                 console.log('📧 Enviando correo de restablecimiento a:', userEmail);
-                console.log('🔗 URL de redirección configurada:', actionCodeSettings.url);
-                
-                // Enviar correo con configuración personalizada
-                await sendPasswordResetEmail(auth, userEmail, actionCodeSettings);
+                await sendPasswordResetEmail(firebaseModule.auth, userEmail, actionCodeSettings);
                 
                 // Cerrar loader
                 Swal.close();
                 
-                // Mostrar éxito con instrucciones detalladas
+                // Mostrar éxito
                 await Swal.fire({
                     icon: 'success',
                     title: '¡ENLACE ENVIADO EXITOSAMENTE!',
@@ -761,18 +778,6 @@ async function showPasswordResetConfirmation(auth, currentUser) {
                                     <li><strong>Inicia sesión</strong> con tu nueva contraseña</li>
                                 </ol>
                             </div>
-                            
-                            <div style="background: #fff3cd; border: 1px solid #ffecb5; border-radius: 8px; padding: 15px; margin-top: 20px;">
-                                <h4 style="color: #856404; margin-bottom: 10px;">
-                                    <i class="fas fa-exclamation-triangle"></i> NOTA IMPORTANTE
-                                </h4>
-                                <p style="color: #856404; margin: 0; font-size: 14px;">
-                                    El enlace tendrá la forma:<br>
-                                    <code style="font-size: 12px; background: #fff; padding: 5px; display: inline-block; margin-top: 5px;">
-                                        https://centinela-mx.web.app/verifyEmail.html?mode=action&oobCode=XXXXXXXX
-                                    </code>
-                                </p>
-                            </div>
                         </div>
                     `,
                     confirmButtonText: 'ENTENDIDO, REVISARÉ MI CORREO',
@@ -790,57 +795,30 @@ async function showPasswordResetConfirmation(auth, currentUser) {
                 
                 // Manejar errores específicos
                 let errorMessage = 'Ocurrió un error al enviar el correo de restablecimiento';
-                let errorDetails = '';
                 
                 switch(error.code) {
                     case 'auth/user-not-found':
                         errorMessage = 'Usuario no encontrado';
-                        errorDetails = `No existe una cuenta con el correo: ${userEmail}`;
                         break;
                     case 'auth/invalid-email':
                         errorMessage = 'Correo inválido';
-                        errorDetails = 'El formato del correo electrónico no es válido';
                         break;
                     case 'auth/too-many-requests':
                         errorMessage = 'Demasiados intentos';
-                        errorDetails = 'Por seguridad, debes esperar antes de solicitar otro enlace';
                         break;
                     case 'auth/network-request-failed':
                         errorMessage = 'Error de conexión';
-                        errorDetails = 'Verifica tu conexión a internet e intenta nuevamente';
-                        break;
-                    case 'auth/argument-error':
-                        errorMessage = 'Error en la configuración';
-                        errorDetails = 'La URL de redirección puede ser inválida. Verifica la configuración en Firebase Console.';
                         break;
                     default:
-                        errorMessage = 'Error del sistema';
-                        errorDetails = `Código: ${error.code || 'N/A'} - Mensaje: ${error.message}`;
+                        errorMessage = 'Error del sistema: ' + (error.message || 'Desconocido');
                 }
                 
-                // Mostrar error detallado
                 Swal.fire({
                     icon: 'error',
                     title: errorMessage,
-                    html: `
-                        <div style="text-align: left;">
-                            <p>${errorDetails}</p>
-                            <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin-top: 15px;">
-                                <p style="color: #856404; margin: 0; font-size: 14px;">
-                                    <i class="fas fa-lightbulb"></i> 
-                                    <strong>Solución:</strong> 
-                                    Verifica que en Firebase Console > Authentication > Templates > Password reset, 
-                                    la URL personalizada sea:<br>
-                                    <code style="display: block; background: #fff; padding: 5px; margin-top: 5px; border-radius: 4px; font-size: 12px;">
-                                        https://centinela-mx.web.app/verifyEmail.html
-                                    </code>
-                                </p>
-                            </div>
-                        </div>
-                    `,
+                    text: 'Por favor, intenta nuevamente más tarde.',
                     confirmButtonText: 'ENTENDIDO',
-                    confirmButtonColor: '#d33',
-                    allowOutsideClick: true
+                    confirmButtonColor: '#d33'
                 });
             }
         }
@@ -856,4 +834,4 @@ async function showPasswordResetConfirmation(auth, currentUser) {
     }
 }
 
-console.log('✅ editAdmin.js cargado');
+console.log('✅ editAdmin.js cargado con UserManager - Sin autenticación directa');
