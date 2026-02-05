@@ -1,4 +1,4 @@
-// navbar-complete.js MODIFICADO - VERSIÓN COMPLETA CON BOTONES DE ÁREAS Y PERSONALIZACIÓN
+// navbar-complete.js MODIFICADO - CON BARRA SEPARADORA ENTRE LOGOS
 
 class NavbarComplete {
     constructor() {
@@ -95,6 +95,7 @@ class NavbarComplete {
                 align-items: center;
                 flex: 1;
                 justify-content: flex-start;
+                gap: 4px; /* Espacio entre logos */
             }
             
             /* Logo del sistema - CÍRCULO PERFECTO */
@@ -104,13 +105,12 @@ class NavbarComplete {
                 text-decoration: none;
                 z-index: 1003;
                 height: 70px;
-                margin-right: 15px;
             }
 
             /* Contenedor para logo circular */
             .logo-circle-container {
-                width: 60px;
-                height: 60px;
+                width: 50px;
+                height: 50px;
                 border-radius: 50%;
                 overflow: hidden;
                 border: 3px solid var(--color-accent-primary);
@@ -135,6 +135,37 @@ class NavbarComplete {
                 border-color: var(--color-accent-secondary);
             }
             
+            /* BARRA SEPARADORA ENTRE LOGOS */
+            .logo-separator {
+                width: 2px;
+                height: 45px;
+                background: linear-gradient(
+                    to bottom,
+                    var(--color-accent-primary) 0%,
+                    var(--color-accent-primary) 20%,
+                    var(--color-accent-primary) 80%,
+                    var(--color-accent-primary) 100%
+                );
+                margin: 0 10px;
+                border-radius: 1px;
+            }
+            
+            /* Logo de organización cuando es texto */
+            .org-text-logo {
+                display: none;
+                align-items: center;
+                justify-content: center;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background-color: var(--color-accent-primary);
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                text-align: center;
+                border: 3px solid var(--color-accent-primary);
+            }
+            
             /* Título "CENTINELA" centrado */
             .navbar-title {
                 position: absolute;
@@ -142,7 +173,7 @@ class NavbarComplete {
                 top: 50%;
                 transform: translate(-50%, -50%);
                 font-weight: 700;
-                font-size: 26px;
+                font-size: 24px;
                 color: var(--navbar-logo-text);
                 text-shadow: var(--text-shadow-effect);
                 margin: 0;
@@ -591,6 +622,10 @@ class NavbarComplete {
                     font-size: 12px;
                 }
 
+                .logo-separator {
+                    height: 35px;
+                }
+
                 body.menu-open {
                     overflow: hidden;
                 }
@@ -611,6 +646,11 @@ class NavbarComplete {
                     width: 40px;
                     height: 40px;
                     font-size: 10px;
+                }
+                
+                .logo-separator {
+                    height: 30px;
+                    margin: 0 3px;
                 }
                 
                 .profile-photo-container {
@@ -650,6 +690,9 @@ class NavbarComplete {
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                         </div>
                     </a>
+                    
+                    <!-- BARRA SEPARADORA ENTRE LOGOS -->
+                    <div class="logo-separator"></div>
                     
                     <!-- Logo de la organización - CÍRCULO -->
                     <a href="/users/admin/dashboard/dashboard.html" class="navbar-logo-link" id="orgLogoLink">
@@ -731,6 +774,7 @@ class NavbarComplete {
                 <!-- Sección de espacios vacíos (reducidos a 6 espacios) -->
                 <div class="menu-section">
                     <div class="empty-menu-item"></div>
+                </div>
                 
                 <!-- Sección de opciones de administración -->
                 <div class="admin-options-section">

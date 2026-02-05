@@ -13,7 +13,7 @@ class ThemeLoader {
         this.currentThemeId = 'default';
         this.lastAppliedTheme = null;
         this.checkInterval = null;
-        this.checkIntervalMs = 100000;
+        this.checkIntervalMs = 30000;
         
         console.log('🎨 ThemeLoader CON IMPORTACIÓN DIRECTA');
         
