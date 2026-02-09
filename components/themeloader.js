@@ -1,5 +1,5 @@
 // =============================================
-// THEME LOADER
+// THEME LOADER - VERSIÓN CORREGIDA SIN LOOPS
 // =============================================
 
 // Importar UserManager desde la clase
@@ -13,9 +13,12 @@ class ThemeLoader {
         this.currentThemeId = 'default';
         this.lastAppliedTheme = null;
         this.checkInterval = null;
-        this.checkIntervalMs = 30000;
+        this.checkIntervalMs = 30000; // 30 segundos, no 15!
+        this.isApplyingTheme = false; // <-- NUEVO: Flag para evitar loops
+        this.lastCheckTime = 0;
+        this.minCheckInterval = 10000; // Mínimo 10 segundos entre verificaciones
         
-        console.log('🎨 ThemeLoader CON IMPORTACIÓN DIRECTA');
+        console.log('🎨 ThemeLoader CON CORRECCIONES ANTILOOP');
         
         // Inicializar UserManager
         this.initUserManager();
@@ -43,7 +46,7 @@ class ThemeLoader {
     }
 
     // =============================================
-    // CARGAR TEMA - ¡ESTA ES LA PARTE IMPORTANTE!
+    // CARGAR TEMA - VERSIÓN MEJORADA SIN LOOPS
     // =============================================
     async loadTheme() {
         console.log('🎨 CARGANDO TEMA DESDE BASE DE DATOS...');
@@ -103,9 +106,12 @@ class ThemeLoader {
                 themeId = 'default';
             }
             
-            // Aplicar el tema
-            console.log(`🚀 APLICANDO TEMA: ${themeId}`);
-            this.applyThemeById(themeId);
+            // Aplicar el tema SIN disparar eventos que puedan causar loops
+            console.log(`🚀 APLICANDO TEMA (SIN LOOP): ${themeId}`);
+            this.applyThemeDirectly(themeId);
+            
+            // Actualizar también en memoria local
+            this.updateLocalUserTheme(themeId);
             
             // Guardar en localStorage como respaldo
             this.saveThemeToLocalStorage(themeId);
@@ -117,27 +123,12 @@ class ThemeLoader {
     }
 
     // =============================================
-    // GUARDAR TEMA EN LOCALSTORAGE
+    // APLICAR TEMA DIRECTAMENTE (SIN EVENTOS QUE CAUSEN LOOPS)
     // =============================================
-    saveThemeToLocalStorage(themeId) {
-        try {
-            const themeData = {
-                themeId: themeId,
-                appliedAt: new Date().toISOString(),
-                user: this.userManager?.currentUser?.id || 'unknown'
-            };
-            localStorage.setItem('centinela-theme', JSON.stringify(themeData));
-        } catch (e) {
-            console.warn('No se pudo guardar tema en localStorage');
-        }
-    }
-
-    // =============================================
-    // APLICAR TEMA POR ID (CORREGIDO)
-    // =============================================
-    applyThemeById(themeId) {
+    applyThemeDirectly(themeId) {
         // Verificar si ya está aplicado el mismo tema
         if (this.currentThemeId === themeId) {
+            console.log(`ℹ️ Tema ${themeId} ya está aplicado, omitiendo`);
             return;
         }
         
@@ -150,7 +141,10 @@ class ThemeLoader {
             return;
         }
         
-        console.log(`🎨 APLICANDO: ${theme.name}`);
+        console.log(`🎨 APLICANDO DIRECTAMENTE: ${theme.name}`);
+        
+        // Activar flag para evitar loops
+        this.isApplyingTheme = true;
         
         // Aplicar colores
         this.applyColors(theme.colors);
@@ -163,16 +157,75 @@ class ThemeLoader {
             appliedAt: new Date()
         };
         
-        // Disparar evento
+        // Disparar evento themeApplied (este NO causa loop)
         document.dispatchEvent(new CustomEvent('themeApplied', {
             detail: {
                 themeId: themeId,
                 themeName: theme.name,
-                user: this.userManager?.currentUser?.id
+                user: this.userManager?.currentUser?.id,
+                appliedDirectly: true // Indicar que fue aplicación directa
             }
         }));
         
-        console.log(`✅ TEMA "${theme.name}" APLICADO CORRECTAMENTE`);
+        console.log(`✅ TEMA "${theme.name}" APLICADO DIRECTAMENTE`);
+        
+        // Desactivar flag después de un tiempo
+        setTimeout(() => {
+            this.isApplyingTheme = false;
+            console.log('✅ Flag de aplicación desactivado');
+        }, 3000);
+    }
+
+    // =============================================
+    // APLICAR TEMA POR ID (MANTENER PARA COMPATIBILIDAD)
+    // =============================================
+    applyThemeById(themeId) {
+        // Usar applyThemeDirectly para evitar loops
+        this.applyThemeDirectly(themeId);
+    }
+
+    // =============================================
+    // ACTUALIZAR TEMA EN MEMORIA LOCAL
+    // =============================================
+    updateLocalUserTheme(themeId) {
+        try {
+            if (!this.userManager || !this.userManager.currentUser) {
+                return;
+            }
+            
+            // Actualizar la propiedad theme del usuario en memoria
+            this.userManager.currentUser.theme = themeId;
+            
+            // También actualizar en la lista de usuarios si existe
+            const index = this.userManager.users.findIndex(
+                user => user.id === this.userManager.currentUser.id
+            );
+            if (index !== -1) {
+                this.userManager.users[index].theme = themeId;
+            }
+            
+            console.log(`✅ Tema ${themeId} actualizado en memoria local`);
+            
+        } catch (error) {
+            console.error('Error actualizando tema local:', error);
+        }
+    }
+
+    // =============================================
+    // GUARDAR TEMA EN LOCALSTORAGE
+    // =============================================
+    saveThemeToLocalStorage(themeId) {
+        try {
+            const themeData = {
+                themeId: themeId,
+                appliedAt: new Date().toISOString(),
+                user: this.userManager?.currentUser?.id || 'unknown',
+                fromLoader: true
+            };
+            localStorage.setItem('centinela-theme', JSON.stringify(themeData));
+        } catch (e) {
+            console.warn('No se pudo guardar tema en localStorage');
+        }
     }
 
     // =============================================
@@ -195,10 +248,10 @@ class ThemeLoader {
     }
 
     // =============================================
-    // MONITOREO EN TIEMPO REAL
+    // MONITOREO EN TIEMPO REAL - CON PROTECCIÓN ANTILOOP
     // =============================================
     startThemeMonitoring() {
-        console.log('🔄 INICIANDO MONITOREO DE TEMAS (60 segundos)');
+        console.log('🔄 INICIANDO MONITOREO DE TEMAS (30 segundos)');
         
         if (this.checkInterval) {
             clearInterval(this.checkInterval);
@@ -211,13 +264,30 @@ class ThemeLoader {
         // También escuchar cambios en la pestaña
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                this.checkForThemeChanges();
+                setTimeout(() => {
+                    this.checkForThemeChanges();
+                }, 2000);
             }
         });
     }
 
     async checkForThemeChanges() {
         try {
+            // Verificar tiempo mínimo entre verificaciones
+            const now = Date.now();
+            if (now - this.lastCheckTime < this.minCheckInterval) {
+                console.log('⏱️ Verificación muy frecuente, omitiendo');
+                return;
+            }
+            
+            this.lastCheckTime = now;
+            
+            // Evitar verificación si ya estamos aplicando un tema
+            if (this.isApplyingTheme) {
+                console.log('⏳ Ya aplicando tema, omitiendo verificación');
+                return;
+            }
+            
             if (!this.userManager || !this.userManager.currentUser) {
                 return;
             }
@@ -225,37 +295,75 @@ class ThemeLoader {
             const currentUser = this.userManager.currentUser;
             const currentTheme = currentUser.theme || 'default';
             
+            // Si ya estamos aplicando este tema, no hacer nada
+            if (currentTheme === this.currentThemeId) {
+                return;
+            }
+            
             console.log('🔍 Verificando cambios:', {
                 temaActual: this.currentThemeId,
-                temaEnBase: currentTheme
+                temaEnBase: currentTheme,
+                usuario: currentUser.id,
+                timestamp: new Date().toISOString()
             });
             
             if (currentTheme !== this.currentThemeId) {
-                console.log(`🔄 ¡CAMBIO DETECTADO! ${this.currentThemeId} → ${currentTheme}`);
-                await this.loadTheme();
+                console.log(`🔄 ¡CAMBIO DETECTADO EN BD! ${this.currentThemeId} → ${currentTheme}`);
+                
+                // Aplicar directamente sin llamar a loadTheme
+                this.applyThemeDirectly(currentTheme);
             }
             
         } catch (error) {
             console.error('Error en monitoreo:', error);
+            this.isApplyingTheme = false;
         }
     }
 
     // =============================================
-    // ESCUCHAR CAMBIOS EXTERNOS
+    // ESCUCHAR CAMBIOS EXTERNOS - CON DEBOUNCE
     // =============================================
     setupThemeSync() {
-        // Escuchar cambios desde el admin
+        // Escuchar cambios desde el admin - con debounce
+        let themeChangedTimeout;
         document.addEventListener('themeChanged', (event) => {
             if (event.detail?.themeId) {
-                console.log('🎨 Cambio desde admin:', event.detail.themeId);
-                this.applyThemeById(event.detail.themeId);
+                console.log('🎨 Cambio desde admin recibido:', event.detail.themeId);
+                
+                // Debounce para evitar múltiples aplicaciones rápidas
+                clearTimeout(themeChangedTimeout);
+                themeChangedTimeout = setTimeout(() => {
+                    console.log('🎨 Procesando cambio desde admin...');
+                    this.applyThemeDirectly(event.detail.themeId);
+                }, 500);
             }
         });
         
         // Escuchar cambios en UserManager
         document.addEventListener('userUpdated', async () => {
-            console.log('👤 Usuario actualizado, recargando tema...');
-            await this.loadTheme();
+            console.log('👤 Usuario actualizado, esperando para recargar tema...');
+            
+            // Esperar un momento para que los datos se actualicen
+            setTimeout(async () => {
+                await this.loadTheme();
+            }, 1500);
+        });
+        
+        // Escuchar storage changes (otras pestañas)
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'centinela-theme') {
+                try {
+                    const themeData = JSON.parse(event.newValue);
+                    if (themeData && !themeData.fromLoader) {
+                        console.log('🔄 Tema cambiado desde otra pestaña:', themeData.themeId);
+                        setTimeout(() => {
+                            this.applyThemeDirectly(themeData.themeId);
+                        }, 1000);
+                    }
+                } catch (e) {
+                    // Ignorar errores de parseo
+                }
+            }
         });
     }
 
@@ -263,7 +371,7 @@ class ThemeLoader {
     // INICIALIZACIÓN COMPLETA
     // =============================================
     async init() {
-        console.log('🚀 INICIANDO THEME LOADER...');
+        console.log('🚀 INICIANDO THEME LOADER (VERSIÓN CORREGIDA)...');
         
         // Esperar DOM
         if (document.readyState === 'loading') {
@@ -281,7 +389,7 @@ class ThemeLoader {
         // Hacer disponible globalmente
         window.themeLoader = this;
         
-        console.log('✅ THEME LOADER LISTO');
+        console.log('✅ THEME LOADER LISTO (SIN LOOPS)');
     }
 
     // =============================================
@@ -731,12 +839,12 @@ class ThemeLoader {
 // =============================================
 // Asegurarse de que se inicialice cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('📄 DOM cargado - Iniciando ThemeLoader...');
+    console.log('📄 DOM cargado - Iniciando ThemeLoader (VERSIÓN CORREGIDA)...');
     
     const themeLoader = new ThemeLoader();
     await themeLoader.init();
     
-    console.log('✅ ThemeLoader funcionando');
+    console.log('✅ ThemeLoader funcionando (SIN LOOPS)');
 });
 
 // =============================================

@@ -1,6 +1,6 @@
 // ==================== CLASE AREA ====================
 // Clase que representa un área/departamento en el sistema
-// USANDO MAP para cargos (optimizado para Firebase)
+
 
 class Area {
     constructor(id, data) {
