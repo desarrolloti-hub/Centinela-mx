@@ -1,12 +1,9 @@
-// ==================== area.js ====================
-// CLASE CORREGIDA - IMPLEMENTACIONES COMPLETAS
-
+// clases/area.js - Modelo de datos para Áreas
+import { db } from '../config/firebase-config.js';
 import { 
     collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc,
     query, where, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-
-import { db } from '../config/firebase-config.js';
 
 // ==================== CLASE AREA ====================
 class Area {
@@ -49,8 +46,8 @@ class Area {
         this.objetivos = data.objetivos || [];
         this.metricas = data.metricas || {};
     }
-
-    // Métodos de utilidad
+    
+    // Métodos privados
     _convertirFecha(fecha) {
         if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
         if (fecha instanceof Date) return fecha;
@@ -62,7 +59,7 @@ class Area {
         const colores = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'];
         return colores[Math.floor(Math.random() * colores.length)];
     }
-
+    
     _formatearFecha(date) {
         if (!date) return 'No disponible';
         try {
@@ -75,7 +72,7 @@ class Area {
             return 'Fecha inválida';
         }
     }
-
+    
     _mapToObject(map) {
         const obj = {};
         for (let [key, value] of map) {
@@ -83,9 +80,10 @@ class Area {
         }
         return obj;
     }
-
-    // Getters importantes
+    
+    // Getters
     getCantidadCargos() { return this.cargos.size; }
+    
     getCargosActivos() {
         const cargosActivos = [];
         for (let [id, cargo] of this.cargos) {
@@ -95,6 +93,7 @@ class Area {
         }
         return cargosActivos;
     }
+    
     getCargosAsArray() {
         const cargosArray = [];
         for (let [id, cargo] of this.cargos) {
@@ -102,20 +101,28 @@ class Area {
         }
         return cargosArray;
     }
+    
     getEstado() {
         if (this.eliminado) return 'Eliminado';
         else if (!this.activo) return 'Inactivo';
         else return 'Activo';
     }
+    
     getEstadoBadge() {
-        if (this.eliminado) return '<span class="badge bg-danger"><i class="fas fa-trash me-1"></i> Eliminado</span>';
-        else if (!this.activo) return '<span class="badge bg-warning text-dark"><i class="fas fa-pause me-1"></i> Inactivo</span>';
-        else return '<span class="badge bg-success"><i class="fas fa-check me-1"></i> Activo</span>';
+        if (this.eliminado) {
+            return `<span class="badge bg-danger"><i class="fas fa-trash me-1"></i> Eliminado</span>`;
+        } else if (!this.activo) {
+            return `<span class="badge bg-warning text-dark"><i class="fas fa-pause me-1"></i> Inactivo</span>`;
+        } else {
+            return `<span class="badge bg-success"><i class="fas fa-check me-1"></i> Activo</span>`;
+        }
     }
+    
     getFechaCreacionFormateada() { return this._formatearFecha(this.fechaCreacion); }
+    getFechaActualizacionFormateada() { return this._formatearFecha(this.fechaActualizacion); }
     estaActiva() { return this.activo && !this.eliminado; }
-
-    // Setters importantes
+    
+    // Setters
     setEliminado(usuarioId = '') {
         this.eliminado = true;
         this.activo = false;
@@ -123,6 +130,7 @@ class Area {
         this.actualizadoPor = usuarioId;
         this.fechaActualizacion = new Date();
     }
+    
     restaurar(usuarioId = '') {
         this.eliminado = false;
         this.activo = true;
@@ -130,18 +138,8 @@ class Area {
         this.actualizadoPor = usuarioId;
         this.fechaActualizacion = new Date();
     }
-    activar(usuarioId = '') {
-        this.activo = true;
-        this.actualizadoPor = usuarioId;
-        this.fechaActualizacion = new Date();
-    }
-    desactivar(usuarioId = '') {
-        this.activo = false;
-        this.actualizadoPor = usuarioId;
-        this.fechaActualizacion = new Date();
-    }
-
-    // Para Firestore
+    
+    // Conversión
     toFirestore() {
         return {
             nombreArea: this.nombreArea,
@@ -166,7 +164,7 @@ class Area {
             metricas: this.metricas
         };
     }
-
+    
     toUI() {
         return {
             id: this.id,
@@ -194,23 +192,23 @@ class Area {
     }
 }
 
-// ==================== CLASE AREAMANAGER CORREGIDA ====================
+// ==================== CLASE AREAMANAGER ====================
 class AreaManager {
     constructor() {
         this.areas = [];
         console.log('✅ AreaManager inicializado');
     }
-
-    // ========== CRUD COMPLETO ==========
     
+    // Crear nueva área
     async crearArea(areaData, idOrganizacion, userManager) {
         try {
-            console.log('📝 Creando nueva área:', areaData.nombreArea);
-            
             const usuarioActual = userManager.currentUser;
             
             // Verificar si ya existe
-            const existe = await this.verificarAreaExistente(areaData.nombreArea, usuarioActual.organizacionCamelCase);
+            const existe = await this.verificarAreaExistente(
+                areaData.nombreArea, 
+                usuarioActual.organizacionCamelCase
+            );
             if (existe) throw new Error('Ya existe un área con ese nombre');
             
             // Generar ID
@@ -252,7 +250,6 @@ class AreaManager {
             });
             
             this.areas.unshift(nuevaArea);
-            console.log('✅ Área creada:', nuevaArea.nombreArea);
             return nuevaArea;
             
         } catch (error) {
@@ -260,14 +257,16 @@ class AreaManager {
             throw error;
         }
     }
-
+    
+    // Obtener áreas por organización
     async getAreasByOrganizacion(organizacionCamelCase, incluirEliminadas = false) {
         try {
-            console.log(`🔍 Obteniendo áreas para: ${organizacionCamelCase}`);
-            
             let areasQuery;
             if (incluirEliminadas) {
-                areasQuery = query(collection(db, "areas"), where("organizacionCamelCase", "==", organizacionCamelCase));
+                areasQuery = query(
+                    collection(db, "areas"),
+                    where("organizacionCamelCase", "==", organizacionCamelCase)
+                );
             } else {
                 areasQuery = query(
                     collection(db, "areas"),
@@ -293,7 +292,6 @@ class AreaManager {
             areas.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
             this.areas = areas;
             
-            console.log(`✅ Encontradas ${areas.length} áreas`);
             return areas;
             
         } catch (error) {
@@ -301,7 +299,8 @@ class AreaManager {
             return [];
         }
     }
-
+    
+    // Obtener área por ID
     async getAreaById(areaId) {
         // Buscar en memoria primero
         const areaInMemory = this.areas.find(area => area.id === areaId);
@@ -324,21 +323,10 @@ class AreaManager {
             return null;
         }
     }
-
-    // ========== MÉTODOS DE ACTUALIZACIÓN CORREGIDOS ==========
     
+    // Actualizar área
     async actualizarArea(areaId, nuevosDatos, usuarioId) {
         try {
-            console.log('🔄 Actualizando área:', areaId);
-            
-            // Primero obtener el área actual
-            const areaRef = doc(db, "areas", areaId);
-            const areaSnap = await getDoc(areaRef);
-            
-            if (!areaSnap.exists()) {
-                throw new Error(`Área con ID ${areaId} no encontrada`);
-            }
-            
             // Datos actualizados
             const datosActualizados = {
                 ...nuevosDatos,
@@ -347,6 +335,7 @@ class AreaManager {
             };
             
             // Actualizar en Firestore
+            const areaRef = doc(db, "areas", areaId);
             await updateDoc(areaRef, datosActualizados);
             
             // Actualizar en memoria
@@ -362,7 +351,6 @@ class AreaManager {
                 areaActual.actualizadoPor = usuarioId;
             }
             
-            console.log('✅ Área actualizada:', areaId);
             return await this.getAreaById(areaId);
             
         } catch (error) {
@@ -370,14 +358,13 @@ class AreaManager {
             throw error;
         }
     }
-
+    
+    // Eliminar área (marcar como eliminada)
     async eliminarArea(areaId, usuarioId) {
         try {
-            console.log('🗑️ Eliminando área:', areaId);
-            
             const areaRef = doc(db, "areas", areaId);
             
-            // Actualizar en Firestore (eliminación lógica)
+            // Actualizar en Firestore
             await updateDoc(areaRef, {
                 eliminado: true,
                 activo: false,
@@ -397,7 +384,6 @@ class AreaManager {
                 area.actualizadoPor = usuarioId;
             }
             
-            console.log('✅ Área eliminada:', areaId);
             return true;
             
         } catch (error) {
@@ -405,14 +391,12 @@ class AreaManager {
             throw error;
         }
     }
-
+    
+    // Restaurar área
     async restaurarArea(areaId, usuarioId) {
         try {
-            console.log('🔄 Restaurando área:', areaId);
-            
             const areaRef = doc(db, "areas", areaId);
             
-            // Actualizar en Firestore
             await updateDoc(areaRef, {
                 eliminado: false,
                 activo: true,
@@ -432,7 +416,6 @@ class AreaManager {
                 area.actualizadoPor = usuarioId;
             }
             
-            console.log('✅ Área restaurada:', areaId);
             return true;
             
         } catch (error) {
@@ -440,11 +423,10 @@ class AreaManager {
             throw error;
         }
     }
-
+    
+    // Activar área
     async activarArea(areaId, usuarioId) {
         try {
-            console.log('✅ Activando área:', areaId);
-            
             const areaRef = doc(db, "areas", areaId);
             
             await updateDoc(areaRef, {
@@ -462,7 +444,6 @@ class AreaManager {
                 area.actualizadoPor = usuarioId;
             }
             
-            console.log('✅ Área activada:', areaId);
             return true;
             
         } catch (error) {
@@ -470,11 +451,10 @@ class AreaManager {
             throw error;
         }
     }
-
+    
+    // Desactivar área
     async desactivarArea(areaId, usuarioId) {
         try {
-            console.log('⏸️ Desactivando área:', areaId);
-            
             const areaRef = doc(db, "areas", areaId);
             
             await updateDoc(areaRef, {
@@ -492,7 +472,6 @@ class AreaManager {
                 area.actualizadoPor = usuarioId;
             }
             
-            console.log('✅ Área desactivada:', areaId);
             return true;
             
         } catch (error) {
@@ -500,9 +479,8 @@ class AreaManager {
             throw error;
         }
     }
-
-    // ========== MÉTODOS AUXILIARES ==========
     
+    // Verificar si área existe
     async verificarAreaExistente(nombreArea, organizacionCamelCase) {
         try {
             const areasQuery = query(
@@ -520,7 +498,8 @@ class AreaManager {
             return false;
         }
     }
-
+    
+    // Métodos auxiliares
     _generarAreaId(nombreArea, organizacionCamelCase) {
         const nombreNormalizado = nombreArea
             .toLowerCase()
@@ -532,11 +511,12 @@ class AreaManager {
         const org = organizacionCamelCase || 'sinOrganizacion';
         return `${org}_${nombreNormalizado}_${timestamp}`;
     }
-
+    
     _generarColorAleatorio() {
         const colores = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'];
         return colores[Math.floor(Math.random() * colores.length)];
     }
 }
 
+// Exportar las clases
 export { Area, AreaManager };
