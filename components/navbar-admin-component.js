@@ -1,5 +1,3 @@
-// navbar-complete.js MODIFICADO - CON BARRA SEPARADORA ENTRE LOGOS
-
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
@@ -685,7 +683,7 @@ class NavbarComplete {
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
                     <!-- Logo del sistema Centinela - CÍRCULO -->
-                    <a href="/index.html" class="navbar-logo-link">
+                    <a href="/users/admin/dashAdmin/dashAdmin.html" class="navbar-logo-link">
                         <div class="logo-circle-container">
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                         </div>

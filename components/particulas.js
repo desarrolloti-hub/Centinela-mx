@@ -14,6 +14,8 @@ class ParticleSystem {
         this.userManager = null;
         this.currentTheme = null;
         this.animationId = null;
+        this.primaryColor = 'rgba(192, 192, 192, 0.8)'; // Color por defecto
+        this.secondaryColor = 'rgba(255, 255, 255, 0.8)'; // Color por defecto
         
         console.log('🎯 ParticleSystem inicializado');
         
@@ -30,6 +32,9 @@ class ParticleSystem {
     // =============================================
     async init() {
         try {
+            // Inyectar estilos CSS
+            this.injectStyles();
+            
             // Buscar canvas
             this.canvas = document.getElementById("particle-canvas");
             if (!this.canvas) {
@@ -39,19 +44,33 @@ class ParticleSystem {
             
             this.ctx = this.canvas.getContext("2d");
             
+            // Añadir clase al body
+            document.body.classList.add('particulas-active');
+            
             // Ajustar tamaño
             this.resizeCanvas();
             
-            // Inicializar UserManager
-            this.userManager = new UserManager();
+            // Inicializar UserManager (si aún no está inicializado)
+            if (!window.userManager) {
+                this.userManager = new UserManager();
+                window.userManager = this.userManager; // Guardar referencia global
+            } else {
+                this.userManager = window.userManager; // Usar instancia existente
+            }
             
-            // Esperar a que UserManager cargue el usuario
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // CARGAR TEMAS EN ESTE ORDEN:
+            // 1. Primero intentar desde localStorage (más rápido)
+            await this.loadFromLocalStorage();
             
-            // Cargar tema inicial
+            // 2. Luego desde base de datos (si hay usuario)
             await this.loadColorsFromDatabase();
             
-            // Crear partículas
+            // 3. Si todo falla, usar colores por defecto
+            if (!this.currentTheme) {
+                this.useDefaultColors();
+            }
+            
+            // Crear partículas con los colores actuales
             this.createParticles();
             
             // Iniciar animación
@@ -60,7 +79,7 @@ class ParticleSystem {
             // Configurar eventos
             this.setupEventListeners();
             
-            console.log('✅ ParticleSystem listo');
+            console.log('✅ ParticleSystem listo con tema:', this.currentTheme);
             
         } catch (error) {
             console.error('❌ Error inicializando ParticleSystem:', error);
@@ -72,6 +91,90 @@ class ParticleSystem {
     }
     
     // =============================================
+    // INYECTAR ESTILOS CSS
+    // =============================================
+    injectStyles() {
+        // Verificar si los estilos ya existen
+        if (document.querySelector('style[data-particle-styles]')) {
+            return;
+        }
+        
+        const style = document.createElement('style');
+        style.setAttribute('data-particle-styles', 'true');
+        style.textContent = `
+            /* =============================================
+               SISTEMA DE PARTÍCULAS ANIMADAS - CENTINELA
+               ============================================= */
+            
+            body.particulas-active {
+                margin: 0;
+                font-family: 'Rajdhani', sans-serif;
+                background-color: var(--color-bg-primary, #000000);
+                /* Color de fondo por si el canvas tarda en cargar */
+            }
+            
+            /* --- LA MAGIA ESTÁ AQUÍ --- */
+            #particle-canvas {
+                position: fixed;
+                /* 1. Lo deja fijo en la pantalla, no se moverá con el scroll. */
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+                /* 2. LO MÁS IMPORTANTE: Lo envía detrás de todo el demás contenido. */
+            }
+            
+            /* --- Estilos para tu contenido --- */
+            /* Este es un ejemplo de cómo se vería tu contenedor de login ahora */
+            .login-container {
+                /* Centra el formulario en la pantalla */
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                /* Ocupa el 100% de la altura de la pantalla */
+            
+                /* Estilos del formulario para que se vea bien sobre el fondo */
+                color: var(--color-text-primary, white);
+                text-align: center;
+            }
+            
+            /* Un estilo para la caja del formulario */
+            .form-box {
+                background: rgba(12, 12, 30, 0.7);
+                /* Fondo semi-transparente para que resalte */
+                padding: 30px 40px;
+                border-radius: 8px;
+                border: 1px solid var(--color-accent-primary, rgba(255, 153, 28, 0.4));
+                backdrop-filter: blur(5px);
+                /* Efecto de desenfoque en el fondo (opcional, se ve genial) */
+            }
+        `;
+        document.head.appendChild(style);
+        console.log('🎨 Estilos CSS inyectados');
+    }
+    
+    // =============================================
+    // CARGAR DESDE LOCALSTORAGE (MÁS RÁPIDO)
+    // =============================================
+    async loadFromLocalStorage() {
+        const savedTheme = localStorage.getItem('centinela-theme');
+        if (savedTheme) {
+            try {
+                const themeData = JSON.parse(savedTheme);
+                console.log('📂 Usando tema de localStorage:', themeData.themeId);
+                this.loadThemeColors(themeData.themeId);
+                return true;
+            } catch (e) {
+                console.warn('⚠️ Error parseando tema de localStorage:', e);
+                return false;
+            }
+        }
+        return false;
+    }
+    
+    // =============================================
     // CARGAR COLORES DESDE BASE DE DATOS
     // =============================================
     async loadColorsFromDatabase() {
@@ -80,9 +183,16 @@ class ParticleSystem {
         try {
             // Verificar si UserManager está listo
             if (!this.userManager) {
-                console.log('⏳ UserManager no disponible, usando colores por defecto');
-                this.useDefaultColors();
-                return;
+                console.log('⏳ UserManager no disponible');
+                return false;
+            }
+            
+            // Esperar a que UserManager esté listo
+            let attempts = 0;
+            while (!this.userManager.currentUser && attempts < 10) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+                attempts++;
+                console.log(`⏳ Esperando usuario... intento ${attempts}`);
             }
             
             // Obtener usuario actual
@@ -90,27 +200,13 @@ class ParticleSystem {
             
             if (!currentUser) {
                 console.log('👤 No hay usuario autenticado');
-                
-                // Intentar desde localStorage
-                const savedTheme = localStorage.getItem('centinela-theme');
-                if (savedTheme) {
-                    try {
-                        const themeData = JSON.parse(savedTheme);
-                        console.log('📂 Usando tema de localStorage:', themeData.themeId);
-                        this.loadThemeColors(themeData.themeId);
-                    } catch (e) {
-                        this.useDefaultColors();
-                    }
-                } else {
-                    this.useDefaultColors();
-                }
-                return;
+                return false;
             }
             
             // Obtener tema del usuario
             let themeId = currentUser.theme;
             
-            console.log('🎯 Tema del usuario:', themeId);
+            console.log('🎯 Tema del usuario desde DB:', themeId);
             
             // Validar tema
             if (!themeId || themeId === 'predeterminado') {
@@ -123,9 +219,17 @@ class ParticleSystem {
             // Guardar estado actual
             this.currentTheme = themeId;
             
+            // También guardar en localStorage para futuras cargas rápidas
+            localStorage.setItem('centinela-theme', JSON.stringify({
+                themeId: themeId,
+                timestamp: Date.now()
+            }));
+            
+            return true;
+            
         } catch (error) {
-            console.error('🔥 Error cargando colores:', error);
-            this.useDefaultColors();
+            console.error('🔥 Error cargando colores desde DB:', error);
+            return false;
         }
     }
     
@@ -137,9 +241,8 @@ class ParticleSystem {
         const theme = themePresets[themeId];
         
         if (!theme) {
-            console.warn(`⚠️ Tema ${themeId} no encontrado, usando default`);
-            this.useDefaultColors();
-            return;
+            console.warn(`⚠️ Tema ${themeId} no encontrado`);
+            return false;
         }
         
         // Obtener color de acento principal
@@ -149,18 +252,21 @@ class ParticleSystem {
         
         // Actualizar colores de partículas
         this.updateParticleColors(accentColor);
+        
+        // Guardar tema actual
+        this.currentTheme = themeId;
+        
+        return true;
     }
     
     // =============================================
     // ACTUALIZAR COLORES DE PARTÍCULAS
     // =============================================
     updateParticleColors(accentColor) {
-        let primaryColor, secondaryColor;
-        
         // Convertir HEX a RGBA
         if (accentColor.startsWith('#')) {
             const rgb = this.hexToRgb(accentColor);
-            primaryColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`;
+            this.primaryColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`;
             
             // Crear color secundario más claro
             const lighter = {
@@ -168,11 +274,11 @@ class ParticleSystem {
                 g: Math.min(255, rgb.g + 40),
                 b: Math.min(255, rgb.b + 40)
             };
-            secondaryColor = `rgba(${lighter.r}, ${lighter.g}, ${lighter.b}, 0.8)`;
+            this.secondaryColor = `rgba(${lighter.r}, ${lighter.g}, ${lighter.b}, 0.8)`;
             
         } else if (accentColor.includes('rgb')) {
             // Ya es RGB/RGBA
-            primaryColor = accentColor.replace(')', ', 0.8)').replace('rgb', 'rgba');
+            this.primaryColor = accentColor.replace(')', ', 0.8)').replace('rgb', 'rgba');
             
             // Crear versión más clara
             const match = accentColor.match(/(\d+),\s*(\d+),\s*(\d+)/);
@@ -180,28 +286,40 @@ class ParticleSystem {
                 const r = Math.min(255, parseInt(match[1]) + 40);
                 const g = Math.min(255, parseInt(match[2]) + 40);
                 const b = Math.min(255, parseInt(match[3]) + 40);
-                secondaryColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+                this.secondaryColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
             } else {
-                secondaryColor = primaryColor;
+                this.secondaryColor = this.primaryColor;
             }
         } else {
             // Color por defecto
-            primaryColor = 'rgba(192, 192, 192, 0.8)';
-            secondaryColor = 'rgba(255, 255, 255, 0.8)';
+            this.primaryColor = 'rgba(192, 192, 192, 0.8)';
+            this.secondaryColor = 'rgba(255, 255, 255, 0.8)';
         }
         
         // Actualizar partículas existentes
-        this.updateExistingParticles(primaryColor, secondaryColor);
+        if (this.particles.length > 0) {
+            this.updateExistingParticles();
+        }
         
-        console.log('🎨 Colores actualizados:', { primaryColor, secondaryColor });
+        console.log('🎨 Colores actualizados:', { 
+            primary: this.primaryColor, 
+            secondary: this.secondaryColor 
+        });
+        
+        // Guardar en localStorage para persistencia
+        localStorage.setItem('particle-colors', JSON.stringify({
+            primary: this.primaryColor,
+            secondary: this.secondaryColor,
+            timestamp: Date.now()
+        }));
     }
     
     // =============================================
     // ACTUALIZAR PARTÍCULAS EXISTENTES
     // =============================================
-    updateExistingParticles(primaryColor, secondaryColor) {
+    updateExistingParticles() {
         this.particles.forEach(particle => {
-            particle.color = Math.random() > 0.7 ? secondaryColor : primaryColor;
+            particle.color = Math.random() > 0.7 ? this.secondaryColor : this.primaryColor;
         });
     }
     
@@ -209,7 +327,16 @@ class ParticleSystem {
     // USAR COLORES POR DEFECTO
     // =============================================
     useDefaultColors() {
-        this.updateParticleColors('#c0c0c0');
+        this.primaryColor = 'rgba(192, 192, 192, 0.8)';
+        this.secondaryColor = 'rgba(255, 255, 255, 0.8)';
+        this.currentTheme = 'default';
+        
+        // Actualizar partículas si ya existen
+        if (this.particles.length > 0) {
+            this.updateExistingParticles();
+        }
+        
+        console.log('🎨 Usando colores por defecto');
     }
     
     // =============================================
@@ -236,6 +363,8 @@ class ParticleSystem {
         this.particles = [];
         const particleCount = Math.floor(window.innerWidth / 15);
         
+        console.log(`✨ Creando ${particleCount} partículas con tema:`, this.currentTheme);
+        
         for (let i = 0; i < particleCount; i++) {
             this.particles.push({
                 x: Math.random() * this.canvas.width,
@@ -243,9 +372,7 @@ class ParticleSystem {
                 size: Math.random() * 3 + 1,
                 speedX: Math.random() * 1 - 0.5,
                 speedY: Math.random() * 1 - 0.5,
-                color: Math.random() > 0.7 ? 
-                    'rgba(255, 255, 255, 0.8)' : 
-                    'rgba(192, 192, 192, 0.8)',
+                color: Math.random() > 0.7 ? this.secondaryColor : this.primaryColor,
             });
         }
     }
@@ -308,38 +435,64 @@ class ParticleSystem {
     // =============================================
     setupEventListeners() {
         // Redimensionamiento
-        window.addEventListener("resize", () => {
+        const resizeHandler = () => {
             this.resizeCanvas();
             this.createParticles();
-        });
+        };
+        window.addEventListener("resize", resizeHandler);
         
         // Cambios de tema desde ThemeLoader
-        document.addEventListener('themeApplied', (event) => {
+        const themeChangeHandler = (event) => {
             if (event.detail?.themeId) {
                 console.log('🔄 Tema cambiado desde ThemeLoader:', event.detail.themeId);
                 this.loadThemeColors(event.detail.themeId);
             }
-        });
+        };
+        document.addEventListener('themeApplied', themeChangeHandler);
         
         // Cambios en UserManager
-        document.addEventListener('userUpdated', async () => {
+        const userUpdateHandler = async () => {
             console.log('👤 Usuario actualizado, actualizando partículas...');
             await this.loadColorsFromDatabase();
-        });
+        };
+        document.addEventListener('userUpdated', userUpdateHandler);
         
-        // Cambios en localStorage
-        window.addEventListener('storage', (event) => {
+        // Cambios en localStorage (otras pestañas)
+        const storageHandler = (event) => {
             if (event.key === 'centinela-theme') {
                 console.log('🔄 Tema cambiado desde otra pestaña');
                 setTimeout(async () => {
                     await this.loadColorsFromDatabase();
                 }, 100);
             }
-        });
+            
+            if (event.key === 'particle-colors') {
+                console.log('🎨 Colores de partículas actualizados desde otra pestaña');
+                try {
+                    const colors = JSON.parse(event.newValue);
+                    if (colors) {
+                        this.primaryColor = colors.primary;
+                        this.secondaryColor = colors.secondary;
+                        this.updateExistingParticles();
+                    }
+                } catch (e) {
+                    console.warn('Error cargando colores:', e);
+                }
+            }
+        };
+        window.addEventListener('storage', storageHandler);
+        
+        // Guardar referencias para poder removerlas después
+        this.eventListeners = {
+            resize: resizeHandler,
+            themeApplied: themeChangeHandler,
+            userUpdated: userUpdateHandler,
+            storage: storageHandler
+        };
     }
     
     // =============================================
-    // OBTENER PRESETS DE TEMAS (igual que en ThemeLoader)
+    // OBTENER PRESETS DE TEMAS
     // =============================================
     getThemePresets() {
         return {
@@ -426,19 +579,69 @@ class ParticleSystem {
             cancelAnimationFrame(this.animationId);
         }
         
-        window.removeEventListener("resize", this.resizeCanvas);
+        // Remover clase del body
+        document.body.classList.remove('particulas-active');
+        
+        // Remover estilos inyectados
+        const styles = document.querySelectorAll('style[data-particle-styles]');
+        styles.forEach(style => style.remove());
+        
+        // Remover event listeners
+        if (this.eventListeners) {
+            window.removeEventListener("resize", this.eventListeners.resize);
+            document.removeEventListener('themeApplied', this.eventListeners.themeApplied);
+            document.removeEventListener('userUpdated', this.eventListeners.userUpdated);
+            window.removeEventListener('storage', this.eventListeners.storage);
+        }
+        
         console.log('🧹 ParticleSystem destruido');
     }
 }
 
 // =============================================
-// INICIALIZACIÓN AUTOMÁTICA
+// INICIALIZACIÓN AUTOMÁTICA (SINGLETON)
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('📄 DOM cargado - Iniciando sistema de partículas...');
     
-    // Inicializar el sistema de partículas
+    // Verificar si ya existe una instancia
+    if (window.particleSystem) {
+        console.log('🔄 Reciclando instancia existente de ParticleSystem');
+        try {
+            window.particleSystem.destroy();
+        } catch (e) {
+            console.warn('Error al destruir instancia anterior:', e);
+        }
+    }
+    
+    // Crear nueva instancia
     window.particleSystem = new ParticleSystem();
     
     console.log('✅ Sistema de partículas funcionando');
 });
+
+// =============================================
+// FUNCIÓN PÚBLICA PARA ACTUALIZAR COLORS
+// =============================================
+/**
+ * Función pública para actualizar colores de partículas desde cualquier parte
+ * @param {string} themeId - ID del tema a aplicar
+ */
+window.updateParticleColors = function(themeId) {
+    if (window.particleSystem) {
+        window.particleSystem.loadThemeColors(themeId);
+        return true;
+    }
+    return false;
+};
+
+/**
+ * Función pública para forzar recarga de colores
+ */
+window.reloadParticleColors = async function() {
+    if (window.particleSystem) {
+        await window.particleSystem.loadColorsFromDatabase();
+        return true;
+    }
+    return false;
+};

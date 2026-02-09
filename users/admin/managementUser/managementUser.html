@@ -6,7 +6,7 @@
     <title>Perfil Administrador - Gestión de Colaboradores</title>
     
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    <link rel="stylesheet" href="/components/particulas/particulas.css">
+    
     <link rel="stylesheet" href="managementUser.css">
     
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -20,11 +20,8 @@
     <link rel="manifest" href="/manifest.json">
 </head>
 
-<body class="particulas-active">
+<body>
 <canvas id="particle-canvas"></canvas>
-
-<!-- NAVBAR -->
-<div id="navbar-container"></div>
 
 <div class="admin-container">
     
@@ -43,52 +40,23 @@
             <thead>
                 <tr>
                     <th>NOMBRE</th>
-                    <th>APELLIDO</th>
+                    <th>AREA</th>
                     <th>CORREO</th>
                     <th>ESTADO</th>
                     <th>ACCIONES</th>
                 </tr>
             </thead>
             <tbody id="usersTableBody">
-                <!-- LOS USUARIOS SE CARGARÁN DINÁMICAMENTE AQUÍ -->
-                <!-- No pongas filas vacías, JavaScript las creará -->
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- FOOTER -->
-<div id="footer-container"></div>
-
-<!-- MODAL VER COMPLETO (Como fallback) -->
-<div id="viewModal" class="modal">
-    <div class="modal-content large">
-        <span class="close-modal">&times;</span>
-
-        <div class="modal-header">
-            <div class="modal-user-photo">
-                <img id="viewUserPhoto" alt="Foto del usuario">
-                <i class="fas fa-user" id="viewUserIcon" style="display: none;"></i>
-            </div>
-            <h2 id="viewFullName"></h2>
-        </div>
-
-        <div class="modal-grid">
-            <div><strong>Organización:</strong> <span id="viewOrg"></span></div>
-            <div><strong>Correo:</strong> <span id="viewEmail"></span></div>
-            <div><strong>Status:</strong> <span id="viewStatus"></span></div>
-            <div><strong>ID Auth:</strong> <span id="viewAuthId"></span></div>
-            <div><strong>Fecha creación:</strong> <span id="viewCreated"></span></div>
-            <div><strong>Fecha actualización:</strong> <span id="viewUpdated"></span></div>
-            <div><strong>Último login:</strong> <span id="viewLastLogin"></span></div>
-        </div>
-    </div>
-</div>
-
 <script type="module" src="/components/themeloader.js"></script>
-    <script type="module" src="/components/particulas/particulas.js"></script>
+<script type="module" src="/components/particulas.js"></script>
 <script src="/components/navbar-admin-component.js"></script>
 <script src="/components/footer-admin-component.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- SÓLO ESTE ARCHIVO JS -->
 <script src="managementUser.js"></script>

@@ -49,15 +49,7 @@ function initCollaboratorForm() {
         registerForm: document.getElementById('registerForm')
     };
 
-    // Verificar elementos críticos
-    const elementosCriticos = ['nombreCompleto', 'correoElectronico', 'contrasena', 'confirmarContrasena', 'registerForm'];
-    for (const elemento of elementosCriticos) {
-        if (!elements[elemento]) {
-            console.error(`Elemento crítico no encontrado: ${elemento}`);
-            showErrorMessage(`Error: No se encontró el elemento ${elemento}. Contacta al administrador.`);
-            return;
-        }
-    }
+   
 
     // Instancia del UserManager
     const userManager = new UserManager();

@@ -846,32 +846,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     console.log('✅ ThemeLoader funcionando (SIN LOOPS)');
 });
-
-// =============================================
-// SWEETALERT2 STYLES (OPCIONAL - MANTENER SI LO NECESITAS)
-// =============================================
-function applySweetAlertStyles() {
-    if (document.getElementById('sweetalert-custom-styles')) return;
-    
-    const style = document.createElement('style');
-    style.id = 'sweetalert-custom-styles';
-    style.textContent = /*css*/`
-        .swal2-popup {
-            background: var(--color-bg-tertiary) !important;
-            border: 1px solid var(--color-border-light) !important;
-            border-radius: 10px !important;
-            box-shadow: var(--shadow-large) !important;
-        }
-        
-        .swal2-title {
-            color: var(--color-text-primary) !important;
-            font-family: 'Orbitron', sans-serif !important;
-        }
-        
-        .swal2-confirm {
-            background: var(--color-accent-primary) !important;
-            color: white !important;
-        }
-    `;
-    document.head.appendChild(style);
-}

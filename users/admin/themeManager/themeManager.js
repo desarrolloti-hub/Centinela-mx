@@ -3,6 +3,9 @@
 // Vista de administración - Gestión de temas
 // =============================================
 
+// SweetAlert2 ya está disponible globalmente desde el CDN
+// No necesitas importarlo
+
 // Importar solo UserManager (ya que user.js ya importa Firebase)
 import { UserManager } from '/clases/user.js';
 
@@ -482,6 +485,9 @@ class ThemeManager {
         // Actualizar UI
         this.updateUI();
         
+        // Inicializar visualización de colores
+        this.initColorDisplay();
+        
         this.initialized = true;
         
         console.log('🎨 Theme Manager (Admin View) inicializado correctamente');
@@ -489,6 +495,51 @@ class ThemeManager {
         
         // Hacerlo disponible globalmente
         window.themeManager = this;
+    }
+
+    // =============================================
+    // INICIALIZAR VISUALIZACIÓN DE COLORES
+    // =============================================
+    initColorDisplay() {
+        console.log('Inicializando visualización de colores...');
+        
+        // Actualizar visualización inicial
+        this.updateColorDisplay();
+        
+        // Actualizar cada vez que cambie el tema
+        document.addEventListener('themeChanged', () => {
+            this.updateColorDisplay();
+        });
+    }
+
+    // =============================================
+    // ACTUALIZAR VISUALIZACIÓN DE COLORES
+    // =============================================
+    updateColorDisplay() {
+        const colors = this.getCurrentColors();
+        
+        // Actualizar elementos de visualización si existen
+        const elements = {
+            'bg-primary': '--color-bg-primary',
+            'bg-secondary': '--color-bg-secondary',
+            'text-primary': '--color-text-primary',
+            'text-secondary': '--color-text-secondary'
+        };
+        
+        Object.keys(elements).forEach(key => {
+            const element = document.querySelector(`.color-display.${key}`);
+            if (element) {
+                element.style.backgroundColor = colors[elements[key]];
+                
+                // Agregar texto con el valor del color si hay un span dentro
+                const colorValue = element.querySelector('.color-value');
+                if (colorValue) {
+                    colorValue.textContent = colors[elements[key]];
+                }
+            }
+        });
+        
+        console.log('Visualización de colores actualizada');
     }
 
     // =============================================
@@ -602,6 +653,9 @@ class ThemeManager {
         
         // Aplicar vista previa del tema
         this.previewTheme(this.selectedThemeId);
+        
+        // Actualizar visualización de colores
+        this.updateColorDisplay();
     }
 
     previewTheme(themeId) {
@@ -629,7 +683,7 @@ class ThemeManager {
 
     async applySelectedTheme() {
         if (!this.selectedThemeId) {
-            this.showNotification('Selecciona un tema primero', 'error');
+            this.showNotification('Selecciona un tema primero', 'warning');
             console.warn('No hay tema seleccionado');
             return;
         }
@@ -640,6 +694,34 @@ class ThemeManager {
         if (!theme) {
             console.error('Tema no encontrado:', this.selectedThemeId);
             return;
+        }
+        
+        // Verificar si SweetAlert2 está disponible
+        if (typeof Swal === 'undefined') {
+            console.error('SweetAlert2 no está disponible');
+            alert(`¿Aplicar tema ${theme.name}?`);
+            // Continuar con la aplicación del tema
+        } else {
+            // Mostrar confirmación con SweetAlert2
+            const result = await Swal.fire({
+                title: '¿Aplicar tema?',
+                html: `¿Deseas aplicar el tema <strong>${theme.name}</strong>?<br><small>${theme.description}</small>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Aplicar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
+                cancelButtonColor: this.getCurrentColors()['--color-border-light'],
+                background: this.getCurrentColors()['--color-bg-primary'],
+                color: this.getCurrentColors()['--color-text-primary']
+            });
+            
+            if (!result.isConfirmed) {
+                console.log('Aplicación de tema cancelada por el usuario');
+                // Revertir previsualización
+                this.previewTheme(this.currentTheme);
+                return;
+            }
         }
         
         console.log('Aplicando tema:', theme.name);
@@ -656,11 +738,26 @@ class ThemeManager {
         // Actualizar UI
         this.updateUI();
         
-        // MOSTRAR NOTIFICACIÓN
-        this.showNotification(`Tema "${theme.name}" aplicado correctamente`);
+        // Mostrar éxito
+        if (typeof Swal !== 'undefined') {
+            await Swal.fire({
+                title: '¡Tema aplicado!',
+                text: `El tema "${theme.name}" se ha aplicado correctamente`,
+                icon: 'success',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
+                background: this.getCurrentColors()['--color-bg-primary'],
+                color: this.getCurrentColors()['--color-text-primary']
+            });
+        } else {
+            alert(`Tema "${theme.name}" aplicado correctamente`);
+        }
         
-        // MARCA COMO ACTIVO
+        // Marca como activo
         this.markCurrentTheme();
+        
+        // Actualizar visualización de colores
+        this.updateColorDisplay();
         
         // Disparar evento para notificar a partículas y otros componentes
         const themeChangedEvent = new CustomEvent('themeChanged', {
@@ -682,6 +779,31 @@ class ThemeManager {
     }
 
     async resetToDefault() {
+        // Verificar si SweetAlert2 está disponible
+        if (typeof Swal !== 'undefined') {
+            const result = await Swal.fire({
+                title: '¿Restablecer tema?',
+                text: '¿Deseas restablecer el tema predeterminado?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Restablecer',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
+                cancelButtonColor: this.getCurrentColors()['--color-border-light'],
+                background: this.getCurrentColors()['--color-bg-primary'],
+                color: this.getCurrentColors()['--color-text-primary']
+            });
+            
+            if (!result.isConfirmed) {
+                console.log('Restablecimiento cancelado por el usuario');
+                return;
+            }
+        } else {
+            if (!confirm('¿Restablecer tema predeterminado?')) {
+                return;
+            }
+        }
+        
         console.log('Restableciendo a tema predeterminado');
         this.selectedThemeId = 'default';
         await this.applySelectedTheme();
@@ -698,6 +820,12 @@ class ThemeManager {
             const nameElement = document.getElementById('currentThemeName');
             if (nameElement) {
                 nameElement.textContent = currentTheme.name;
+            }
+            
+            // Actualizar última actualización si existe
+            const updateElement = document.querySelector('.last-update');
+            if (updateElement) {
+                updateElement.textContent = new Date().toLocaleString();
             }
         }
         
@@ -771,9 +899,25 @@ class ThemeManager {
                 organizacionCamelCase: currentUser.organizacionCamelCase
             });
             
+            // Mostrar alerta de carga si SweetAlert2 está disponible
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Guardando tema...',
+                    text: 'Por favor espera mientras se guarda el tema',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    },
+                    background: this.getCurrentColors()['--color-bg-primary'],
+                    color: this.getCurrentColors()['--color-text-primary']
+                });
+            }
+            
             // Obtener funciones de Firebase
             const firebase = await this.getFirebaseFunctions();
             const { db, doc, updateDoc, collection, query, where, getDocs, writeBatch, serverTimestamp } = firebase;
+            
+            let message = '';
             
             // Guardar según el tipo de usuario
             if (currentUser.cargo === 'administrador') {
@@ -791,9 +935,10 @@ class ThemeManager {
                 console.log('✅ Tema guardado para administrador en Firebase');
                 
                 // 2. Sincronizar a todos sus colaboradores
-                await this.syncThemeToAllColaboradores(themeId, currentUser);
-                
-                this.showNotification(`🎨 Tema "${this.getThemePresets()[themeId].name}" aplicado a toda la organización`);
+                const syncCount = await this.syncThemeToAllColaboradores(themeId, currentUser);
+                message = syncCount > 0 
+                    ? `Tema "${this.getThemePresets()[themeId].name}" aplicado a ${syncCount} colaboradores`
+                    : `Tema "${this.getThemePresets()[themeId].name}" aplicado`;
                 
             } else if (currentUser.cargo === 'colaborador') {
                 // ===========================================
@@ -808,10 +953,15 @@ class ThemeManager {
                 });
                 
                 console.log('✅ Tema guardado para colaborador en Firebase');
-                this.showNotification('🎨 Tema personal guardado correctamente');
+                message = 'Tema personal guardado correctamente';
                 
             } else {
                 throw new Error('❌ Tipo de usuario no reconocido');
+            }
+            
+            // Cerrar alerta de carga si está abierta
+            if (typeof Swal !== 'undefined') {
+                Swal.close();
             }
             
             // Disparar evento para sincronización entre pestañas
@@ -823,9 +973,30 @@ class ThemeManager {
                 }
             }));
             
+            return message;
+            
         } catch (error) {
             console.error('❌ Error guardando tema en Firebase:', error);
-            this.showNotification(`❌ Error guardando tema: ${error.message}`, 'error');
+            
+            // Cerrar alerta de carga si está abierta
+            if (typeof Swal !== 'undefined') {
+                Swal.close();
+                
+                // Mostrar error con SweetAlert2
+                await Swal.fire({
+                    title: 'Error',
+                    text: `No se pudo guardar el tema: ${error.message}`,
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar',
+                    confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
+                    background: this.getCurrentColors()['--color-bg-primary'],
+                    color: this.getCurrentColors()['--color-text-primary']
+                });
+            } else {
+                alert(`Error: ${error.message}`);
+            }
+            
+            throw error;
         }
     }
     
@@ -853,7 +1024,7 @@ class ThemeManager {
             
             if (colabSnapshot.empty) {
                 console.log('👥 No hay colaboradores para sincronizar');
-                return;
+                return 0;
             }
             
             console.log(`🔄 Sincronizando tema a ${colabSnapshot.size} colaboradores...`);
@@ -876,6 +1047,7 @@ class ThemeManager {
             await batch.commit();
             
             console.log(`✅ Tema sincronizado a ${updatedCount} colaboradores`);
+            return updatedCount;
             
         } catch (error) {
             console.error('❌ Error sincronizando tema a colaboradores:', error);
@@ -962,75 +1134,41 @@ class ThemeManager {
     // UTILIDADES
     // =============================================
     showNotification(message, type = 'success') {
-        console.log(`💬 Mostrando notificación: ${message}`);
+        console.log(`💬 Mostrando notificación: ${message} - Tipo: ${type}`);
         
-        // Crear notificación
-        const notification = document.createElement('div');
-        notification.className = 'theme-notification';
-        notification.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
-            ${message}
-        `;
-        
-        // Estilos para la notificación
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? 'var(--color-accent-primary)' : '#ff4444'};
-            color: var(--color-text-dark);
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 10000;
-            animation: slideIn 0.3s ease;
-            font-weight: 600;
-            font-family: 'Orbitron', sans-serif;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Asegurarse de que las animaciones estén definidas
-        if (!document.getElementById('themeNotificationStyles')) {
-            const style = document.createElement('style');
-            style.id = 'themeNotificationStyles';
-            style.textContent = `
-                @keyframes slideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateX(100px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
+        // Verificar si SweetAlert2 está disponible
+        if (typeof Swal !== 'undefined') {
+            // Configurar icono según tipo
+            const iconMap = {
+                'success': 'success',
+                'error': 'error',
+                'warning': 'warning',
+                'info': 'info'
+            };
+            
+            Swal.fire({
+                title: type === 'success' ? '¡Éxito!' : 
+                       type === 'error' ? 'Error' : 
+                       type === 'warning' ? 'Advertencia' : 'Información',
+                text: message,
+                icon: iconMap[type] || 'info',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                background: this.getCurrentColors()['--color-bg-primary'],
+                color: this.getCurrentColors()['--color-text-primary'],
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
                 }
-                @keyframes slideOut {
-                    from {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                    to {
-                        opacity: 0;
-                        transform: translateX(100px);
-                    }
-                }
-            `;
-            document.head.appendChild(style);
+            });
+        } else {
+            // Fallback a alert normal
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            alert(message);
         }
-        
-        // Remover después de 3 segundos
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
     }
 
     // =============================================
