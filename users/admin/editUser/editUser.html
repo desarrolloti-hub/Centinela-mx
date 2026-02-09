@@ -7,11 +7,10 @@
     
     <!-- Fuentes y iconos -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- Estilos externos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
     
     <!-- Estilos principales -->
     <link rel="stylesheet" href="editUser.css">
@@ -32,7 +31,7 @@
     <div class="edit-main-container">
         <div class="edit-wrapper">
             
-            <!-- Panel izquierdo: Fotos e información general -->
+            <!-- Panel izquierdo: Fotos e información -->
             <div class="edit-left-panel">
                 <header class="edit-header">
                     <h1 class="edit-main-title">EDITAR COLABORADOR</h1>
@@ -42,100 +41,100 @@
                 <!-- Foto del colaborador -->
                 <section class="photo-section">
                     <h2 class="section-title">
-                        <i class="fas fa-user-circle"></i>FOTO DEL COLABORADOR
+                        <i class="fas fa-user-circle"></i> FOTO DEL COLABORADOR
                     </h2>
                     
                     <div class="photo-container">
-                        <div class="profile-circle" id="collaboratorCircle">
-                            <div class="placeholder-text" id="collaboratorPlaceholder">
+                        <div class="profile-circle" id="profileCircle">
+                            <div class="placeholder-text" id="profilePlaceholder">
                                 <i class="fas fa-user"></i>
                                 <span>Foto colaborador</span>
                             </div>
-                            <img src="" alt="Foto del colaborador" class="profile-image" id="collaboratorImage" style="display: none;">
-                            <div class="edit-overlay" id="editCollaboratorOverlay">
+                            <img src="" alt="Foto del colaborador" class="profile-image" id="profileImage" style="display: none;">
+                            <div class="edit-overlay" id="editProfileOverlay">
                                 <i class="fas fa-pencil-alt edit-icon"></i>
                             </div>
                         </div>
-                        <input type="file" id="collaborator-input" class="file-input" accept="image/*">
+                        <input type="file" id="profile-input" class="file-input" accept="image/*">
                     </div>
                     
-                    <p class="photo-info">Haz clic para cambiar la foto del colaborador</p>
+                    <p class="photo-info">Haz clic en la foto o en el lápiz para cambiar</p>
                     <p class="photo-info">Formatos: JPG, PNG • Máximo: 5MB</p>
                 </section>
 
-                <!-- Información del sistema -->
-                <section class="info-section">
+                <!-- Logo de organización -->
+                <section class="photo-section">
                     <h2 class="section-title">
-                        <i class="fas fa-info-circle"></i>INFORMACIÓN DEL SISTEMA
+                        <i class="fas fa-building"></i> LOGO ORGANIZACIÓN
+                    </h2>
+                    
+                    <div class="photo-container">
+                        <div class="profile-circle" id="orgCircle">
+                            <div class="placeholder-text" id="orgPlaceholder">
+                                <i class="fas fa-building"></i>
+                                <span>Logo organización</span>
+                            </div>
+                            <img src="" alt="Logo de la organización" class="profile-image" id="orgImage" style="display: none;">
+                            <div class="edit-overlay" id="editOrgOverlay">
+                                <i class="fas fa-pencil-alt edit-icon"></i>
+                            </div>
+                        </div>
+                        <input type="file" id="org-input" class="file-input" accept="image/*">
+                    </div>
+                    
+                    <p class="photo-info">Logo de la organización del colaborador</p>
+                </section>
+
+                <!-- Información del sistema -->
+                <section class="system-info-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-info-circle"></i> INFORMACIÓN DEL SISTEMA
                     </h2>
                     
                     <div class="info-grid">
                         <div class="info-item">
                             <div class="info-label">
-                                <i class="fas fa-fingerprint"></i>ID Auth
+                                <i class="fas fa-fingerprint"></i> ID Auth
                             </div>
-                            <div class="info-value collaborator-id" id="authId">AUTH-7F3B9D2E</div>
+                            <div class="info-value collaborator-id" id="authId">CARGANDO...</div>
                         </div>
                         
                         <div class="info-item">
                             <div class="info-label">
-                                <i class="fas fa-calendar-plus"></i>Fecha de Creación
+                                <i class="fas fa-calendar-plus"></i> Fecha de Creación
                             </div>
                             <div class="info-value">
-                                <div>15/03/2023</div>
-                                <div class="timestamp">10:45 AM</div>
-                            </div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <div class="info-label">
-                                <i class="fas fa-calendar-check"></i>Última Actualización
-                            </div>
-                            <div class="info-value">
-                                <div>24/10/2023</div>
-                                <div class="timestamp">03:22 PM</div>
+                                <div id="creationDate">--/--/----</div>
+                                <div class="timestamp" id="creationTime">--:-- --</div>
                             </div>
                         </div>
                         
                         <div class="info-item">
                             <div class="info-label">
-                                <i class="fas fa-sign-in-alt"></i>Último Login
+                                <i class="fas fa-calendar-check"></i> Última Actualización
                             </div>
                             <div class="info-value">
-                                <div>23/10/2023</div>
-                                <div class="timestamp">09:15 AM</div>
+                                <div id="lastUpdateDate">--/--/----</div>
+                                <div class="timestamp" id="lastUpdateTime">--:-- --</div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fas fa-sign-in-alt"></i> Último Login
+                            </div>
+                            <div class="info-value">
+                                <div id="lastLoginDate">--/--/----</div>
+                                <div class="timestamp" id="lastLoginTime">--:-- --</div>
                             </div>
                         </div>
                     </div>
-                    <!-- Status -->
-                    <div class="form-field-group">
-                        <label class="field-label">
-                            <i class="fas fa-toggle-on"></i> ESTATUS DEL COLABORADOR
-                        </label>
-                        <div class="role-selector">
-                            <div class="role-option selected" data-status="active">
-                                <i class="fas fa-check-circle"></i>
-                                <div>Activo</div>
-                            </div>
-                            <div class="role-option" data-status="inactive">
-                                <i class="fas fa-times-circle"></i>
-                                <div>Inactivo</div>
-                            </div>
-                            <div class="role-option" data-status="pending">
-                                <i class="fas fa-clock"></i>
-                                <div>Pendiente</div>
-                            </div>
-                        </div>
-                        <input type="hidden" id="status" value="active">
-                    </div>
-
-                    <div class="divider"></div>
                 </section>
 
                 <!-- Botón volver -->
                 <footer class="back-btn-container">
                     <a href="gestionColaboradores.html" class="back-btn">
-                        <i class="fas fa-arrow-left"></i>VOLVER A GESTIÓN
+                        <i class="fas fa-arrow-left"></i> VOLVER A GESTIÓN
                     </a>
                 </footer>
             </div>
@@ -147,91 +146,96 @@
                     <p class="edit-sub-title">Actualiza la información del colaborador</p>
                 </header>
 
-                <form class="edit-form-container" id="editCollaboratorForm">
-                    <!-- Organización -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="organization">
-                            <i class="fas fa-building"></i> ORGANIZACIÓN
-                        </label>
-                        <div class="input-wrapper">
-                            <select class="form-input-field" id="organization" required>
-                                <option value="">Seleccionar organización</option>
-                                <option value="org1" selected>Tech Solutions S.A.</option>
-                                <option value="org2">Innovate Corp</option>
-                                <option value="org3">Digital Future Ltd</option>
-                                <option value="org4">Secure Systems Inc.</option>
-                            </select>
+                <form class="edit-form-container" id="editProfileForm">
+                    <!-- Grid para campos del formulario -->
+                    <div class="form-grid">
+                        <!-- Nombre completo (EDITABLE) -->
+                        <div class="form-field-group full-width">
+                            <label class="field-label" for="fullName">
+                                <i class="fas fa-user"></i> NOMBRE COMPLETO *
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="text" id="fullName" 
+                                       placeholder="Ingresa el nombre completo" required>
+                            </div>
+                        </div>
+
+                        <!-- Correo electrónico (SOLO LECTURA) -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="email">
+                                <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field readonly-field" type="email" id="email" 
+                                       placeholder="Correo electrónico" readonly>
+                                <span class="readonly-badge">
+                                    <i class="fas fa-lock"></i> Solo lectura
+                                </span>
+                            </div>
+                            <p class="field-info">No se puede modificar el correo</p>
+                        </div>
+
+                        <!-- Organización (SOLO LECTURA) -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="organizationName">
+                                <i class="fas fa-building"></i> ORGANIZACIÓN
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field readonly-field" type="text" id="organizationName" 
+                                       placeholder="Nombre de la organización" readonly>
+                                <span class="readonly-badge">
+                                    <i class="fas fa-lock"></i> Solo lectura
+                                </span>
+                            </div>
+                            <p class="field-info">Contacta al administrador principal</p>
+                        </div>
+
+                        <!-- Status (EDITABLE) -->
+                        <div class="form-field-group full-width">
+                            <label class="field-label">
+                                <i class="fas fa-toggle-on"></i> ESTATUS DEL COLABORADOR
+                            </label>
+                            <div class="status-selector">
+                                <div class="status-option" data-status="active">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span class="status-text">Activo</span>
+                                </div>
+                                <div class="status-option" data-status="inactive">
+                                    <i class="fas fa-times-circle"></i>
+                                    <span class="status-text">Inactivo</span>
+                                </div>
+                                <div class="status-option" data-status="pending">
+                                    <i class="fas fa-clock"></i>
+                                    <span class="status-text">Pendiente</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="status" value="active">
                         </div>
                     </div>
 
-                    <div class="divider"></div>
-
-                    <!-- Nombre completo -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="fullName">
-                            <i class="fas fa-user"></i> NOMBRE COMPLETO
-                        </label>
-                        <div class="input-wrapper">
-                            <input class="form-input-field" type="text" id="fullName" 
-                                   value="María González López" placeholder="Nombre completo del colaborador" required>
-                        </div>
-                    </div>
-
-                    <!-- Correo electrónico -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="email">
-                            <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
-                        </label>
-                        <div class="input-wrapper">
-                            <input class="form-input-field" type="email" id="email" 
-                                   value="maria.gonzalez@techsolutions.com" placeholder="correo@organizacion.com" required>
-                        </div>
-                    </div>
-
-                    <!-- Contraseña (opcional para reset) -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="password">
-                            <i class="fas fa-key"></i> RESTABLECER CONTRASEÑA
-                        </label>
-                        <div class="input-wrapper password-field">
-                            <input class="form-input-field" type="password" id="password" 
-                                   placeholder="Dejar en blanco para no cambiar">
-                            <button type="button" class="toggle-password" data-target="password">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        <button type="button" class="generate-password-btn" id="generatePasswordBtn">
-                            <i class="fas fa-random"></i> Generar contraseña segura
+                    <!-- Sección para cambiar contraseña -->
+                    <div class="password-change-section">
+                        <button type="button" class="btn-change-password" id="changePasswordBtn">
+                            <i class="fas fa-key"></i> ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA
                         </button>
-                    </div>
-
-                    <!-- Confirmar Contraseña -->
-                    <div class="form-field-group">
-                        <label class="field-label" for="confirmPassword">
-                            <i class="fas fa-key"></i> CONFIRMAR CONTRASEÑA
-                        </label>
-                        <div class="input-wrapper password-field">
-                            <input class="form-input-field" type="password" id="confirmPassword" 
-                                   placeholder="Confirmar nueva contraseña">
-                            <button type="button" class="toggle-password" data-target="confirmPassword">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
+                        <p class="password-change-info">
+                            Se enviará un enlace seguro al correo del colaborador para restablecer su contraseña.
+                        </p>
                     </div>
 
                     <!-- Permisos del sistema -->
                     <section class="permissions-section">
                         <h2 class="section-title">
-                            <i class="fas fa-shield-alt"></i>PERMISOS DEL SISTEMA
+                            <i class="fas fa-shield-alt"></i> PERMISOS DEL SISTEMA
                         </h2>
                         
                         <div class="permissions-grid">
                             <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="dashboard" checked>
+                                <input type="checkbox" name="permissions" value="dashboard">
                                 <span class="permission-label">Ver Dashboard</span>
                             </label>
                             <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="reports" checked>
+                                <input type="checkbox" name="permissions" value="reports">
                                 <span class="permission-label">Generar Reportes</span>
                             </label>
                             <label class="permission-checkbox">
@@ -239,11 +243,11 @@
                                 <span class="permission-label">Gestionar Usuarios</span>
                             </label>
                             <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="settings" checked>
+                                <input type="checkbox" name="permissions" value="settings">
                                 <span class="permission-label">Configuración</span>
                             </label>
                             <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="analytics" checked>
+                                <input type="checkbox" name="permissions" value="analytics">
                                 <span class="permission-label">Analíticas</span>
                             </label>
                             <label class="permission-checkbox">
@@ -262,19 +266,18 @@
                     </section>
 
                     <!-- Mensajes -->
-                    <div class="message-container" id="passwordMessage"></div>
                     <div class="message-container" id="mainMessage"></div>
 
-                    <!-- Acciones -->
-                    <div class="action-buttons">
+                    <!-- Acciones del formulario -->
+                    <div class="form-actions">
                         <button type="button" class="action-btn save-btn" id="saveChangesBtn">
-                            <i class="fas fa-save"></i>ACTUALIZAR COLABORADOR
+                            <i class="fas fa-save"></i> GUARDAR CAMBIOS
                         </button>
                         <button type="button" class="action-btn cancel-btn" id="cancelBtn">
-                            <i class="fas fa-times"></i>CANCELAR
+                            <i class="fas fa-times"></i> CANCELAR
                         </button>
                         <button type="button" class="action-btn delete-btn" id="deleteBtn">
-                            <i class="fas fa-trash"></i>ELIMINAR
+                            <i class="fas fa-trash"></i> ELIMINAR
                         </button>
                     </div>
                 </form>
@@ -282,34 +285,33 @@
         </div>
     </div>
 
-    <!-- Modal para fotos (fallback) -->
+    <!-- Modal para fotos -->
     <div class="photo-modal" id="photoModal">
         <div class="modal-content">
             <h3 class="modal-title">
                 <i class="fas fa-camera"></i>
-                <span id="modalTitle">CAMBIAR FOTO DEL COLABORADOR</span>
+                <span id="modalTitle">CAMBIAR FOTO</span>
             </h3>
             <div class="modal-preview">
                 <img id="previewImage" class="preview-image" src="" alt="Vista previa">
             </div>
             <p class="modal-message" id="modalMessage">
-                ¿Deseas usar esta imagen como foto del colaborador?
+                ¿Deseas usar esta imagen?
             </p>
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-confirm" id="confirmChangeBtn">CONFIRMAR</button>
                 <button class="modal-btn modal-btn-cancel" id="cancelChangeBtn">CANCELAR</button>
             </div>
         </div>
-        <br>
     </div>
-<br>
+
     <!-- Scripts externos -->
     <script type="module" src="/components/themeloader.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     
-    <!-- Script principal con SweetAlerts -->
+    <!-- Script principal - MÓDULO ES6 -->
     <script type="module" src="editUser.js"></script>
 </body>
 </html>

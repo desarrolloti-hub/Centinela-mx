@@ -199,12 +199,12 @@ class User {
      */
     tieneLimiteUsuarios() {
         const limites = {
-            'gratis': 3,
-            'basico': 10,
-            'premium': 50,
+            'gratis': 100,
+            'basico': 200,
+            'premium': 300,
             'empresa': 999 // Ilimitado para empresas
         };
-        return limites[this.plan] || 3; // Por defecto 3 (plan gratis)
+        return limites[this.plan] || 100; // Por defecto 3 (plan gratis)
     }
 
     /**

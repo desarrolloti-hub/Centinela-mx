@@ -1,170 +1,329 @@
-// ========== IMPORTACIÓN ==========
-import { UserManager } from '/clases/user.js';
-
-// ========== INICIALIZACIÓN ==========
-// Variable global para UserManager
-let userManager = null;
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM cargado, iniciando editor de colaborador...');
+// editUser.js - Editor de colaboradores (Versión limpia)
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('📄 Editor de colaborador cargado');
     
-    // Verificar si SweetAlert2 está cargado
-    if (typeof Swal === 'undefined') {
-        console.error('SweetAlert2 no está cargado');
-        loadSweetAlert();
-        return;
+    try {
+        // Importar el módulo UserManager
+        const userModule = await import('/clases/user.js');
+        const { UserManager } = userModule;
+        
+        // Instanciar UserManager
+        const userManager = new UserManager();
+        
+        // Iniciar editor
+        iniciarEditor(userManager);
+        
+    } catch (error) {
+        console.error('❌ Error cargando módulos:', error);
+        mostrarErrorConfiguracion(error);
     }
-    
-    console.log('SweetAlert2 ya está cargado');
-    applySweetAlertStyles();
-    
-    // Inicializar UserManager
-    userManager = new UserManager();
-    
-    initCollaboratorEditor();
-    
-    // Cargar datos del colaborador desde Firebase
-    loadCollaboratorData();
 });
 
-// ========== CARGAR DATOS DEL COLABORADOR ==========
-async function loadCollaboratorData() {
-    console.log('Cargando datos del colaborador...');
+// ==================== VARIABLES GLOBALES ====================
+let selectedFile = null;
+let currentPhotoType = '';
+let currentPhotoElements = null;
+
+// ==================== FUNCIONES PRINCIPALES ====================
+
+async function iniciarEditor(userManager) {
+    console.log('👨‍💼 Iniciando editor de colaborador...');
     
-    // Obtener parámetros de la URL
+    const collaboratorId = obtenerIdDesdeURL();
+    if (!collaboratorId) return;
+    
+    const elements = obtenerElementosDOM();
+    currentPhotoElements = elements;
+    
+    try {
+        await cargarDatosColaborador(userManager, collaboratorId, elements);
+        configurarHandlersBasicos(elements);
+        configurarFotoPerfil(elements);
+        configurarModal(elements, userManager);
+        configurarGuardado(elements, userManager);
+        configurarCambioPassword(elements, userManager);
+        configurarEliminacion(elements, userManager);
+        configurarSelectorStatus(elements);
+        
+        console.log('✅ Editor de colaborador inicializado correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error inicializando editor:', error);
+        mostrarMensaje(elements.mainMessage, 'error', 
+            'Error al cargar datos del colaborador: ' + error.message);
+    }
+}
+
+// ========== FUNCIONES DE UTILIDAD ==========
+
+function obtenerIdDesdeURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const collaboratorId = urlParams.get('id');
     
     if (!collaboratorId) {
-        console.error('❌ ID no especificado en la URL');
-        showErrorAlert(
-            'ERROR',
-            'No se especificó el colaborador a editar.<br><br>Por favor, regresa a la gestión de colaboradores.'
-        );
-        return;
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se especificó el colaborador a editar',
+            confirmButtonText: 'Volver'
+        }).then(() => {
+            window.location.href = 'gestionColaboradores.html';
+        });
+        return null;
     }
     
-    console.log(`🔍 Cargando colaborador: ${collaboratorId}`);
+    return collaboratorId;
+}
+
+function obtenerElementosDOM() {
+    return {
+        // Fotos (solo perfil editable, logo NO editable)
+        profileCircle: document.getElementById('profileCircle'),
+        profileImage: document.getElementById('profileImage'),
+        profilePlaceholder: document.getElementById('profilePlaceholder'),
+        editProfileOverlay: document.getElementById('editProfileOverlay'),
+        profileInput: document.getElementById('profile-input'),
+        
+        // Logo de organización (NO EDITABLE)
+        orgCircle: document.getElementById('orgCircle'),
+        orgImage: document.getElementById('orgImage'),
+        orgPlaceholder: document.getElementById('orgPlaceholder'),
+        // Edit overlay para logo NO se usará
+        
+        // Modal
+        photoModal: document.getElementById('photoModal'),
+        previewImage: document.getElementById('previewImage'),
+        modalTitle: document.getElementById('modalTitle'),
+        modalMessage: document.getElementById('modalMessage'),
+        confirmChangeBtn: document.getElementById('confirmChangeBtn'),
+        cancelChangeBtn: document.getElementById('cancelChangeBtn'),
+        
+        // Formulario
+        fullName: document.getElementById('fullName'),
+        email: document.getElementById('email'),
+        organizationName: document.getElementById('organizationName'),
+        statusInput: document.getElementById('status'),
+        
+        // Permisos
+        permissionCheckboxes: document.querySelectorAll('input[name="permissions"]'),
+        
+        // Información del sistema
+        authId: document.getElementById('authId'),
+        creationDate: document.getElementById('creationDate'),
+        creationTime: document.getElementById('creationTime'),
+        lastUpdateDate: document.getElementById('lastUpdateDate'),
+        lastUpdateTime: document.getElementById('lastUpdateTime'),
+        lastLoginDate: document.getElementById('lastLoginDate'),
+        lastLoginTime: document.getElementById('lastLoginTime'),
+        
+        // Botones y mensajes
+        saveChangesBtn: document.getElementById('saveChangesBtn'),
+        cancelBtn: document.getElementById('cancelBtn'),
+        deleteBtn: document.getElementById('deleteBtn'),
+        changePasswordBtn: document.getElementById('changePasswordBtn'),
+        mainMessage: document.getElementById('mainMessage'),
+        
+        // Status selector
+        statusOptions: document.querySelectorAll('.status-option')
+    };
+}
+
+function mostrarErrorConfiguracion(error) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Error de configuración',
+        html: `
+            <div style="text-align: left; font-size: 14px;">
+                <p><strong>No se pudo cargar los módulos necesarios</strong></p>
+                <p>Error: ${error.message}</p>
+                <p>Verifica que los archivos existan en las rutas correctas:</p>
+                <ul>
+                    <li><code>/clases/user.js</code></li>
+                </ul>
+            </div>
+        `,
+        confirmButtonText: 'Entendido',
+        allowOutsideClick: false
+    }).then(() => {
+        window.location.href = 'gestionColaboradores.html';
+    });
+}
+
+async function cargarDatosColaborador(userManager, collaboratorId, elements) {
+    console.log('📥 Cargando datos del colaborador');
     
     try {
         // Mostrar loader
         Swal.fire({
-            title: 'CARGANDO DATOS',
-            text: 'Obteniendo información del colaborador...',
+            title: 'Cargando datos...',
             allowOutsideClick: false,
-            showConfirmButton: false,
-            willOpen: () => {
-                Swal.showLoading();
-            }
+            didOpen: () => Swal.showLoading()
         });
         
-        // Obtener datos usando UserManager
-        const user = await userManager.getUserById(collaboratorId);
+        // Obtener datos del colaborador
+        const collaborator = await userManager.getUserById(collaboratorId);
         
-        if (!user) {
+        if (!collaborator) {
             Swal.close();
-            showErrorAlert(
-                'COLABORADOR NO ENCONTRADO',
-                `El colaborador con ID ${collaboratorId} no existe.`
-            );
-            return;
+            throw new Error('Colaborador no encontrado');
         }
         
-        // Verificar que el usuario es un colaborador
-        if (user.cargo !== 'colaborador') {
+        // Verificar que sea un colaborador
+        if (collaborator.cargo !== 'colaborador') {
             Swal.close();
-            showErrorAlert(
-                'TIPO DE USUARIO INCORRECTO',
-                'Este usuario no es un colaborador.'
-            );
-            return;
+            throw new Error('El usuario no es un colaborador');
         }
         
-        // Actualizar interfaz con los datos
-        updateUIWithCollaboratorData(user);
+        // Guardar referencia global
+        window.currentCollaborator = collaborator;
         
-        // Guardar referencia para uso posterior
-        window.currentCollaborator = {
-            id: collaboratorId,
-            data: user
-        };
+        // Actualizar interfaz
+        actualizarInterfaz(elements, collaborator);
         
+        // Deshabilitar edición del logo de organización
+        deshabilitarLogoOrganizacion(elements);
+        
+        // Cerrar loader
         Swal.close();
         
-        console.log('✅ Datos del colaborador cargados:', user);
+        console.log('✅ Colaborador cargado:', {
+            id: collaborator.id,
+            nombre: collaborator.nombreCompleto,
+            email: collaborator.correoElectronico
+        });
         
+        mostrarMensaje(elements.mainMessage, 'success', 
+            `Editando colaborador: ${collaborator.nombreCompleto}`);
+            
     } catch (error) {
         Swal.close();
-        console.error('❌ Error cargando colaborador:', error);
-        showErrorAlert(
-            'ERROR AL CARGAR',
-            `No se pudieron cargar los datos del colaborador:<br><br>
-            <code>${error.message}</code>`
-        );
+        console.error('❌ Error cargando datos:', error);
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error al cargar',
+            text: error.message,
+            confirmButtonText: 'Volver'
+        }).then(() => {
+            window.location.href = 'gestionColaboradores.html';
+        });
+        
+        throw error;
     }
 }
 
-// ========== ACTUALIZAR INTERFAZ CON DATOS ==========
-function updateUIWithCollaboratorData(user) {
-    console.log('Actualizando interfaz con datos del colaborador...');
-    
-    // Nombre completo
-    document.getElementById('fullName').value = user.nombreCompleto || '';
-    
-    // Correo electrónico
-    document.getElementById('email').value = user.correoElectronico || '';
-    
-    // Organización (si existe el campo)
-    const organizationSelect = document.getElementById('organization');
-    if (organizationSelect) {
-        // Buscar opción que coincida con la organización del usuario
-        for (let option of organizationSelect.options) {
-            if (option.value === user.organizacionCamelCase || option.text === user.organizacion) {
-                option.selected = true;
-                break;
-            }
-        }
+function deshabilitarLogoOrganizacion(elements) {
+    // Agregar clase para deshabilitar la interacción
+    if (elements.orgCircle) {
+        elements.orgCircle.classList.add('org-disabled');
+        elements.orgCircle.style.cursor = 'default';
+        
+        // Remover cualquier event listener que pudiera existir
+        const newOrgCircle = elements.orgCircle.cloneNode(true);
+        elements.orgCircle.parentNode.replaceChild(newOrgCircle, elements.orgCircle);
+        
+        // Actualizar referencia
+        elements.orgCircle = newOrgCircle;
     }
     
-    // Status - Convertir a formato de la interfaz
+    // Ocultar el overlay de edición si existe
+    if (elements.editOrgOverlay) {
+        elements.editOrgOverlay.style.display = 'none';
+    }
+}
+
+function actualizarInterfaz(elements, collaborator) {
+    console.log('🎨 Actualizando interfaz...');
+    
+    // Datos personales
+    if (elements.fullName && collaborator.nombreCompleto) {
+        elements.fullName.value = collaborator.nombreCompleto;
+    }
+    
+    if (elements.email && collaborator.correoElectronico) {
+        elements.email.value = collaborator.correoElectronico;
+    }
+    
+    if (elements.organizationName && collaborator.organizacion) {
+        elements.organizationName.value = collaborator.organizacion;
+    }
+    
+    // Status
     let statusValue = 'active';
-    if (user.eliminado) {
+    if (collaborator.eliminado) {
         statusValue = 'inactive';
-    } else if (!user.status) {
+    } else if (collaborator.status === 'pending') {
         statusValue = 'pending';
     }
     
-    document.getElementById('status').value = statusValue;
+    if (elements.statusInput) {
+        elements.statusInput.value = statusValue;
+    }
     
     // Actualizar botones de status
-    document.querySelectorAll('.role-option').forEach(opt => {
-        opt.classList.remove('selected');
-        if (opt.getAttribute('data-status') === statusValue) {
-            opt.classList.add('selected');
-        }
-    });
-    
-    // Permisos - Convertir permisosPersonalizados a checkboxes
-    if (user.permisosPersonalizados) {
-        document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
-            const permiso = checkbox.value;
-            checkbox.checked = user.permisosPersonalizados[permiso] === true;
+    if (elements.statusOptions) {
+        elements.statusOptions.forEach(option => {
+            option.classList.remove('selected');
+            if (option.getAttribute('data-status') === statusValue) {
+                option.classList.add('selected');
+            }
         });
     }
     
-    // Foto de perfil
-    if (user.fotoUsuario) {
-        const collaboratorImage = document.getElementById('collaboratorImage');
-        const collaboratorPlaceholder = document.getElementById('collaboratorPlaceholder');
-        
-        // Usar el método getFotoUrl() de la clase User
-        collaboratorImage.src = user.getFotoUrl();
-        collaboratorImage.style.display = 'block';
-        collaboratorPlaceholder.style.display = 'none';
+    // Permisos
+    if (collaborator.permisosPersonalizados && elements.permissionCheckboxes) {
+        elements.permissionCheckboxes.forEach(checkbox => {
+            const permiso = checkbox.value;
+            checkbox.checked = collaborator.permisosPersonalizados[permiso] === true;
+        });
+    }
+    
+    // Foto de perfil - Usar el método getFotoUrl() de la clase User
+    if (collaborator.fotoUsuario) {
+        const profileUrl = collaborator.getFotoUrl();
+        if (elements.profileImage) {
+            elements.profileImage.src = profileUrl;
+            elements.profileImage.style.display = 'block';
+            
+            // Agregar manejador de error
+            elements.profileImage.onerror = function() {
+                console.warn('⚠️ Error cargando imagen de perfil');
+                this.style.display = 'none';
+                if (elements.profilePlaceholder) {
+                    elements.profilePlaceholder.style.display = 'flex';
+                }
+            };
+        }
+        if (elements.profilePlaceholder) {
+            elements.profilePlaceholder.style.display = 'none';
+        }
+    }
+    
+    // Logo de organización (solo visualización)
+    if (collaborator.fotoOrganizacion) {
+        const orgUrl = collaborator.fotoOrganizacion;
+        if (elements.orgImage) {
+            elements.orgImage.src = orgUrl;
+            elements.orgImage.style.display = 'block';
+            
+            // Agregar manejador de error
+            elements.orgImage.onerror = function() {
+                console.warn('⚠️ Error cargando logo de organización');
+                this.style.display = 'none';
+                if (elements.orgPlaceholder) {
+                    elements.orgPlaceholder.style.display = 'flex';
+                }
+            };
+        }
+        if (elements.orgPlaceholder) {
+            elements.orgPlaceholder.style.display = 'none';
+        }
     }
     
     // Información del sistema
-    document.getElementById('authId').textContent = user.idAuth || user.id || 'N/A';
+    if (elements.authId) {
+        elements.authId.textContent = collaborator.idAuth || collaborator.id || 'N/A';
+    }
     
     // Formatear fechas
     const formatDate = (date) => {
@@ -176,1036 +335,655 @@ function updateUIWithCollaboratorData(user) {
         };
     };
     
-    // Actualizar fechas en la interfaz
-    // Nota: Asegúrate de que estos selectores existan en tu HTML
-    const updateElement = (selector, text) => {
-        const el = document.querySelector(selector);
-        if (el) el.textContent = text;
-    };
+    // Actualizar fechas
+    const creationDate = formatDate(collaborator.fechaCreacion);
+    if (elements.creationDate) elements.creationDate.textContent = creationDate.date;
+    if (elements.creationTime) elements.creationTime.textContent = creationDate.time;
     
-    const creationDate = formatDate(user.fechaCreacion);
-    updateElement('#creationDate', creationDate.date);
-    updateElement('#creationTime', creationDate.time);
+    const updateDate = formatDate(collaborator.fechaActualizacion);
+    if (elements.lastUpdateDate) elements.lastUpdateDate.textContent = updateDate.date;
+    if (elements.lastUpdateTime) elements.lastUpdateTime.textContent = updateDate.time;
     
-    const updateDate = formatDate(user.fechaActualizacion);
-    updateElement('#lastUpdateDate', updateDate.date);
-    updateElement('#lastUpdateTime', updateDate.time);
+    const loginDate = formatDate(collaborator.ultimoLogin);
+    if (elements.lastLoginDate) elements.lastLoginDate.textContent = loginDate.date;
+    if (elements.lastLoginTime) elements.lastLoginTime.textContent = loginDate.time;
     
-    const loginDate = formatDate(user.ultimoLogin);
-    updateElement('#lastLoginDate', loginDate.date);
-    updateElement('#lastLoginTime', loginDate.time);
-    
-    console.log('✅ Interfaz actualizada con datos del colaborador');
+    console.log('✅ Interfaz actualizada');
 }
 
-// ========== EDITOR DE COLABORADOR ==========
-function initCollaboratorEditor() {
-    console.log('Inicializando editor de colaborador...');
+function mostrarMensaje(element, type, text) {
+    if (!element) return;
     
-    // Elementos del DOM
-    const elements = {
-        // Botones principales
-        saveChangesBtn: document.getElementById('saveChangesBtn'),
-        cancelBtn: document.getElementById('cancelBtn'),
-        deleteBtn: document.getElementById('deleteBtn'),
-        generatePasswordBtn: document.getElementById('generatePasswordBtn'),
-        
-        // Fotos
-        collaboratorCircle: document.getElementById('collaboratorCircle'),
-        collaboratorInput: document.getElementById('collaborator-input'),
-        
-        // Formulario
-        fullNameInput: document.getElementById('fullName'),
-        emailInput: document.getElementById('email'),
-        passwordInput: document.getElementById('password'),
-        confirmPasswordInput: document.getElementById('confirmPassword'),
-        organizationSelect: document.getElementById('organization'),
-        statusInput: document.getElementById('status'),
-        
-        // Botones mostrar/ocultar contraseña
-        togglePasswordBtns: document.querySelectorAll('.toggle-password'),
-        
-        // Status options
-        statusOptions: document.querySelectorAll('.role-option'),
-        
-        // Permisos
-        permissionCheckboxes: document.querySelectorAll('input[name="permissions"]')
+    const icons = {
+        'success': 'fa-check-circle',
+        'error': 'fa-exclamation-circle',
+        'info': 'fa-info-circle',
+        'warning': 'fa-exclamation-triangle'
     };
     
-    // Variables globales
-    window.collaboratorImageUrl = null;
+    element.className = `message-container ${type}`;
+    element.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
+            <span>${text}</span>
+        </div>
+    `;
+    element.style.display = 'block';
     
-    // ========== EVENT LISTENERS ==========
-    
-    // 1. BOTÓN GUARDAR CAMBIOS
-    elements.saveChangesBtn.addEventListener('click', () => {
-        console.log('Botón guardar cambios clickeado');
-        validateAndSaveChanges();
-    });
-    
-    // 2. BOTÓN CANCELAR
-    elements.cancelBtn.addEventListener('click', () => {
-        console.log('Botón cancelar clickeado');
-        showCancelConfirmation();
-    });
-    
-    // 3. BOTÓN ELIMINAR
-    elements.deleteBtn.addEventListener('click', () => {
-        console.log('Botón eliminar clickeado');
-        showDeleteConfirmation();
-    });
-    
-    // 4. BOTÓN GENERAR CONTRASEÑA
-    elements.generatePasswordBtn.addEventListener('click', () => {
-        console.log('🔑 Botón generar contraseña clickeado');
-        generateSecurePassword();
-    });
-    
-    // 5. FOTO DEL COLABORADOR
-    elements.collaboratorCircle.addEventListener('click', () => {
-        elements.collaboratorInput.click();
-    });
-    
-    elements.collaboratorInput.addEventListener('change', (e) => {
-        handleFileSelect(e);
-    });
-    
-    // 6. MOSTRAR/OCULTAR CONTRASEÑA
-    elements.togglePasswordBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-target');
-            const input = document.getElementById(targetId);
-            const icon = this.querySelector('i');
-            
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.replace('fa-eye', 'fa-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.replace('fa-eye-slash', 'fa-eye');
-            }
+    // Auto-ocultar mensajes no críticos
+    if (type !== 'error') {
+        setTimeout(() => {
+            element.style.display = 'none';
+        }, 5000);
+    }
+}
+
+// ========== HANDLERS BÁSICOS ==========
+
+function configurarHandlersBasicos(elements) {
+    // Botón cancelar
+    if (elements.cancelBtn) {
+        elements.cancelBtn.addEventListener('click', () => {
+            Swal.fire({
+                title: '¿Cancelar cambios?',
+                text: 'Se perderán los cambios no guardados',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, cancelar',
+                cancelButtonText: 'No, continuar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'gestionColaboradores.html';
+                }
+            });
         });
-    });
+    }
+}
+
+function configurarSelectorStatus(elements) {
+    if (!elements.statusOptions || !elements.statusInput) return;
     
-    // 7. SELECCIÓN DE STATUS
     elements.statusOptions.forEach(option => {
         option.addEventListener('click', function() {
-            // Remover clase selected de todas las opciones
+            // Remover selección de todas las opciones
             elements.statusOptions.forEach(opt => opt.classList.remove('selected'));
             
-            // Agregar clase selected a la opción clickeada
+            // Seleccionar la opción clickeada
             this.classList.add('selected');
             
-            // Actualizar el valor del campo oculto
+            // Actualizar campo oculto
             const statusValue = this.getAttribute('data-status');
             elements.statusInput.value = statusValue;
             
             console.log(`🔄 Status cambiado a: ${statusValue}`);
         });
     });
-    
-    console.log('Event listeners asignados correctamente');
 }
 
-// ========== VALIDAR Y GUARDAR CAMBIOS ==========
-async function validateAndSaveChanges() {
-    const fullName = document.getElementById('fullName').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    const status = document.getElementById('status').value;
-    const statusBoolean = status === 'active';
+// ========== HANDLERS DE FOTOS (SOLO PERFIL) ==========
+
+function configurarFotoPerfil(elements) {
+    if (!elements.profileCircle) return;
     
-    const errors = [];
+    // Solo configurar para foto de perfil
+    elements.profileCircle.addEventListener('click', () => {
+        if (elements.profileInput) elements.profileInput.click();
+    });
     
-    // Validar nombre
-    if (!fullName) {
-        errors.push('El nombre completo es obligatorio');
+    if (elements.editProfileOverlay) {
+        elements.editProfileOverlay.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (elements.profileInput) elements.profileInput.click();
+        });
     }
     
-    // Validar email
-    if (!email) {
-        errors.push('El correo electrónico es obligatorio');
-    } else if (!validateEmail(email)) {
-        errors.push('El correo electrónico no es válido');
+    if (elements.profileInput) {
+        elements.profileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) mostrarModalFoto(file, 'profile', elements);
+            this.value = '';
+        });
     }
+}
+
+function mostrarModalFoto(file, type, elements) {
+    // Solo permitir para foto de perfil
+    if (type !== 'profile') return;
     
-    // Validar contraseñas si se proporcionan
-    if (password || confirmPassword) {
-        if (password && confirmPassword && password !== confirmPassword) {
-            errors.push('Las contraseñas no coinciden');
-        }
-        
-        if (password && password.length < 8) {
-            errors.push('La contraseña debe tener al menos 8 caracteres');
-        }
-        
-        if (password) {
-            const passwordValidation = validatePassword(password);
-            if (!passwordValidation.isValid) {
-                errors.push('La contraseña no cumple con los requisitos de seguridad');
-            }
-        }
-    }
+    // Validar archivo
+    const maxSize = 5; // MB
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
     
-    // Si hay errores, mostrar alerta
-    if (errors.length > 0) {
-        showErrorAlert(
-            'ERROR DE VALIDACIÓN',
-            `<div style="text-align: left;">
-                <p>Por favor corrige los siguientes errores:</p>
-                <ul style="margin: 10px 0 0 20px;">
-                    ${errors.map(error => `<li>${error}</li>`).join('')}
-                </ul>
-            </div>`
-        );
+    if (!validTypes.includes(file.type)) {
+        mostrarMensaje(elements.mainMessage, 'error', 
+            'Formato no válido. Use JPG, PNG o GIF');
         return;
     }
     
-    // Verificar si el email ya existe (solo si cambió)
-    const currentEmail = window.currentCollaborator?.data?.correoElectronico;
-    if (currentEmail && email !== currentEmail && userManager) {
-        try {
-            const emailExists = await userManager.verificarCorreoExistente(email, 'todos');
-            if (emailExists) {
-                showErrorAlert(
-                    'EMAIL YA EXISTE',
-                    'El correo electrónico ya está registrado en el sistema.'
+    if (file.size > maxSize * 1024 * 1024) {
+        mostrarMensaje(elements.mainMessage, 'error', 
+            `Archivo demasiado grande. Máximo: ${maxSize}MB`);
+        return;
+    }
+    
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        if (elements.previewImage) elements.previewImage.src = e.target.result;
+        
+        // Actualizar variables globales
+        currentPhotoType = type;
+        selectedFile = file;
+        
+        if (elements.modalTitle) {
+            elements.modalTitle.textContent = 'CAMBIAR FOTO DE PERFIL';
+        }
+        
+        if (elements.modalMessage) {
+            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+            elements.modalMessage.textContent = 
+                `Tamaño: ${fileSize} MB • ¿Deseas usar esta imagen?`;
+        }
+        
+        if (elements.photoModal) elements.photoModal.style.display = 'flex';
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+function configurarModal(elements, userManager) {
+    if (!elements.confirmChangeBtn || !elements.cancelChangeBtn) return;
+    
+    elements.confirmChangeBtn.addEventListener('click', async () => {
+        if (!selectedFile || !window.currentCollaborator) return;
+        
+        // Solo permitir foto de perfil
+        if (currentPhotoType !== 'profile') return;
+        
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const imageBase64 = e.target.result;
+            
+            try {
+                const collaborator = window.currentCollaborator;
+                
+                // Actualizar solo foto de perfil usando UserManager
+                const success = await userManager.updateUser(
+                    collaborator.id,
+                    { fotoUsuario: imageBase64 },
+                    'colaborador',
+                    collaborator.organizacionCamelCase
                 );
-                return;
+                
+                if (success) {
+                    // Actualizar interfaz
+                    if (elements.profileImage) {
+                        elements.profileImage.src = imageBase64;
+                        elements.profileImage.style.display = 'block';
+                    }
+                    if (elements.profilePlaceholder) {
+                        elements.profilePlaceholder.style.display = 'none';
+                    }
+                    
+                    // Actualizar objeto en memoria
+                    collaborator.fotoUsuario = imageBase64;
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: 'Foto actualizada correctamente',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudo guardar la imagen: ' + error.message
+                });
             }
+            
+            if (elements.photoModal) elements.photoModal.style.display = 'none';
+            selectedFile = null;
+            currentPhotoType = '';
+        };
+        
+        reader.readAsDataURL(selectedFile);
+    });
+    
+    elements.cancelChangeBtn.addEventListener('click', () => {
+        if (elements.photoModal) elements.photoModal.style.display = 'none';
+        selectedFile = null;
+        currentPhotoType = '';
+    });
+    
+    if (elements.photoModal) {
+        elements.photoModal.addEventListener('click', (e) => {
+            if (e.target === elements.photoModal) {
+                elements.photoModal.style.display = 'none';
+                selectedFile = null;
+                currentPhotoType = '';
+            }
+        });
+    }
+}
+
+// ========== HANDLER DE GUARDADO ==========
+
+function configurarGuardado(elements, userManager) {
+    if (!elements.saveChangesBtn || !window.currentCollaborator) return;
+    
+    elements.saveChangesBtn.addEventListener('click', async () => {
+        // Validar nombre completo
+        if (!elements.fullName || !elements.fullName.value.trim()) {
+            mostrarMensaje(elements.mainMessage, 'error', 'El nombre completo es obligatorio');
+            if (elements.fullName) elements.fullName.focus();
+            return;
+        }
+        
+        const collaborator = window.currentCollaborator;
+        
+        // Mostrar confirmación
+        const result = await Swal.fire({
+            title: '¿Guardar cambios?',
+            html: `
+                <div style="text-align: center; padding: 10px 0;">
+                    <div style="font-size: 60px; color: #4CAF50; margin-bottom: 15px;">
+                        <i class="fas fa-save"></i>
+                    </div>
+                    <p style="color: var(--color-text-secondary); margin-bottom: 15px;">
+                        Se actualizarán los datos del colaborador:
+                    </p>
+                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <p><strong>Nombre:</strong> ${elements.fullName.value}</p>
+                        <p><strong>Status:</strong> ${elements.statusInput.value === 'active' ? 'Activo' : 'Inactivo'}</p>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'GUARDAR',
+            cancelButtonText: 'CANCELAR',
+            confirmButtonColor: '#4CAF50',
+            cancelButtonColor: '#d33',
+            reverseButtons: true
+        });
+        
+        if (!result.isConfirmed) return;
+        
+        // Mostrar loader
+        Swal.fire({
+            title: 'Guardando cambios...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        try {
+            // Obtener permisos seleccionados
+            const permisosPersonalizados = {};
+            if (elements.permissionCheckboxes) {
+                elements.permissionCheckboxes.forEach(checkbox => {
+                    permisosPersonalizados[checkbox.value] = checkbox.checked;
+                });
+            }
+            
+            // Preparar datos a actualizar
+            const updateData = {
+                nombreCompleto: elements.fullName.value.trim(),
+                status: elements.statusInput.value === 'active',
+                permisosPersonalizados: permisosPersonalizados
+            };
+            
+            // Actualizar usando UserManager
+            await userManager.updateUser(
+                collaborator.id,
+                updateData,
+                'colaborador',
+                collaborator.organizacionCamelCase
+            );
+            
+            // Actualizar el objeto en memoria
+            Object.assign(collaborator, updateData);
+            
+            // Actualizar timestamp
+            const now = new Date();
+            if (elements.lastUpdateDate) {
+                elements.lastUpdateDate.textContent = now.toLocaleDateString('es-MX');
+            }
+            if (elements.lastUpdateTime) {
+                elements.lastUpdateTime.textContent = now.toLocaleTimeString('es-MX', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            }
+            
+            // Mostrar éxito
+            Swal.close();
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: 'Datos actualizados correctamente',
+                timer: 3000,
+                showConfirmButton: false
+            });
+            
+            mostrarMensaje(elements.mainMessage, 'success', 'Cambios guardados exitosamente');
+            
         } catch (error) {
-            console.warn('No se pudo verificar email:', error);
-        }
-    }
-    
-    // Mostrar confirmación
-    showSaveConfirmation(fullName, email, statusBoolean);
-}
-
-// ========== ALERTA DE CONFIRMACIÓN PARA GUARDAR ==========
-function showSaveConfirmation(fullName, email, status) {
-    // Obtener permisos seleccionados
-    const selectedPermissions = Array.from(document.querySelectorAll('input[name="permissions"]:checked'))
-        .map(checkbox => checkbox.value);
-    
-    // Status en español
-    const statusText = status ? '🟢 Activo' : '🔴 Inactivo';
-    
-    const htmlContent = `
-        <div style="text-align: center; margin: 20px 0;">
-            <div style="display: inline-block; background: rgba(46, 204, 113, 0.1); 
-                 padding: 20px; border-radius: 50%; border: 3px solid #2ecc71; margin-bottom: 15px;">
-                <i class="fas fa-save" style="font-size: 2.5rem; color: #2ecc71;"></i>
-            </div>
-            <h3 style="color: white; margin: 10px 0;">¿Actualizar colaborador?</h3>
-            <p style="color: #b0b0d0; margin: 0;">Se actualizarán los siguientes datos:</p>
-        </div>
-        
-        <div style="background: rgba(52, 152, 219, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #3498db; margin-bottom: 10px;">
-            <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-user"></i> NOMBRE COMPLETO</p>
-            <p style="margin: 0; color: white; font-weight: 500;">${fullName}</p>
-        </div>
-        
-        <div style="background: rgba(155, 89, 182, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #9b59b6; margin-bottom: 10px;">
-            <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-envelope"></i> CORREO</p>
-            <p style="margin: 0; color: white; font-weight: 500;">${email}</p>
-        </div>
-        
-        <div style="background: rgba(46, 204, 113, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #2ecc71; margin-bottom: 10px;">
-            <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-toggle-on"></i> ESTATUS</p>
-            <p style="margin: 0; color: white; font-weight: 500;">${statusText}</p>
-        </div>
-        
-        ${window.collaboratorImageUrl ? `
-        <div style="background: rgba(241, 196, 15, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #f1c40f; margin-bottom: 10px;">
-            <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-camera"></i> FOTO</p>
-            <p style="margin: 0; color: white; font-weight: 500;">Se actualizará la foto del colaborador</p>
-        </div>
-        ` : ''}
-        
-        <div style="background: rgba(44, 62, 80, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #2c3e50; margin-bottom: 15px;">
-            <p style="margin: 0 0 5px 0; color: #b0b0d0; font-size: 0.9rem;"><i class="fas fa-shield-alt"></i> PERMISOS (${selectedPermissions.length})</p>
-            <p style="margin: 0; color: white; font-weight: 500; font-size: 0.9rem;">
-                ${selectedPermissions.length > 0 ? selectedPermissions.join(', ') : 'Sin permisos asignados'}
-            </p>
-        </div>
-    `;
-    
-    Swal.fire({
-        title: 'ACTUALIZAR COLABORADOR',
-        html: htmlContent,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-save"></i> SÍ, ACTUALIZAR',
-        cancelButtonText: '<i class="fas fa-times"></i> CANCELAR',
-        confirmButtonColor: '#2ecc71',
-        cancelButtonColor: '#e74c3c',
-        reverseButtons: true,
-        width: '550px',
-        backdrop: 'rgba(0, 0, 0, 0.8)',
-        allowOutsideClick: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            saveCollaboratorToFirebase();
+            console.error('❌ Error guardando cambios:', error);
+            Swal.close();
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron guardar los cambios: ' + error.message
+            });
         }
     });
 }
 
-// ========== GUARDAR CAMBIOS USANDO USERMANAGER ==========
-async function saveCollaboratorToFirebase() {
-    if (!window.currentCollaborator || !userManager) {
-        showErrorAlert('ERROR', 'No hay datos del colaborador cargados');
-        return;
-    }
+// ========== HANDLER PARA CAMBIAR CONTRASEÑA ==========
+
+function configurarCambioPassword(elements, userManager) {
+    if (!elements.changePasswordBtn) return;
     
-    const { id, data } = window.currentCollaborator;
-    
-    // Mostrar loader
-    Swal.fire({
-        title: 'ACTUALIZANDO COLABORADOR',
-        text: 'Por favor espera un momento...',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        willOpen: () => {
-            Swal.showLoading();
-        }
-    });
-    
-    try {
-        // Preparar datos para actualizar
-        const updateData = {
-            nombreCompleto: document.getElementById('fullName').value.trim(),
-            correoElectronico: document.getElementById('email').value.trim(),
-            status: document.getElementById('status').value === 'active'
-        };
-        
-        // Convertir permisos checkboxes a objeto
-        const permisosPersonalizados = {};
-        document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
-            permisosPersonalizados[checkbox.value] = checkbox.checked;
-        });
-        updateData.permisosPersonalizados = permisosPersonalizados;
-        
-        // Agregar foto si se cambió
-        if (window.collaboratorImageUrl) {
-            updateData.fotoUsuario = window.collaboratorImageUrl;
+    elements.changePasswordBtn.addEventListener('click', async () => {
+        if (!window.currentCollaborator) {
+            mostrarMensaje(elements.mainMessage, 'error', 'No hay colaborador cargado');
+            return;
         }
         
-        // Determinar tipo de usuario y organización
-        const userType = 'colaborador';
-        const organizacionCamelCase = data.organizacionCamelCase;
+        const collaborator = window.currentCollaborator;
+        const userEmail = collaborator.correoElectronico;
         
-        if (!organizacionCamelCase) {
-            throw new Error('No se pudo determinar la organización del colaborador');
+        if (!userEmail) {
+            mostrarMensaje(elements.mainMessage, 'error', 'No se encontró el correo del colaborador');
+            return;
         }
         
-        // Actualizar usando UserManager
-        await userManager.updateUser(
-            id, 
-            updateData, 
-            userType, 
-            organizacionCamelCase
-        );
-        
-        // Limpiar campos de contraseña
-        document.getElementById('password').value = '';
-        document.getElementById('confirmPassword').value = '';
-        
-        // Cerrar loader y mostrar éxito
-        Swal.close();
-        
-        showSuccessAlert(
-            '✅ COLABORADOR ACTUALIZADO',
-            `<div style="text-align: center; margin: 15px 0;">
-                <div style="display: inline-block; background: rgba(46, 204, 113, 0.2); 
-                     padding: 15px; border-radius: 50%; border: 2px solid #2ecc71;">
-                    <i class="fas fa-check-circle" style="font-size: 2rem; color: #2ecc71;"></i>
+        // Mostrar confirmación
+        const result = await Swal.fire({
+            title: '¿ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA?',
+            html: `
+                <div style="text-align: center; padding: 10px 0;">
+                    <div style="font-size: 60px; color: #ff9800; margin-bottom: 15px;">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <p style="color: var(--color-text-secondary); margin-bottom: 15px;">
+                        Se enviará un enlace de restablecimiento al correo del colaborador.
+                    </p>
+                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <p><strong>Correo del colaborador:</strong></p>
+                        <p style="color: var(--color-accent-primary); font-weight: bold;">
+                            ${userEmail}
+                        </p>
+                    </div>
+                    <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0;">
+                        <p style="color: #856404; font-size: 14px; margin: 0;">
+                            <i class="fas fa-info-circle"></i> 
+                            El enlace expirará en 1 hora.
+                        </p>
+                    </div>
                 </div>
-                <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${updateData.nombreCompleto}</p>
-                <p style="color: #b0b0d0; margin: 5px 0;">ha sido actualizado exitosamente</p>
-            </div>`
-        );
-        
-        console.log('✅ Colaborador actualizado:', { id, updateData });
-        
-        // Actualizar datos locales
-        window.currentCollaborator.data = { 
-            ...window.currentCollaborator.data, 
-            ...updateData 
-        };
-        
-        // Actualizar timestamp de última actualización en la UI
-        const now = new Date();
-        const lastUpdateDate = now.toLocaleDateString('es-MX');
-        const lastUpdateTime = now.toLocaleTimeString('es-MX', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ENVIAR ENLACE',
+            cancelButtonText: 'CANCELAR',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            reverseButtons: true,
+            allowOutsideClick: false
         });
         
-        updateElement('#lastUpdateDate', lastUpdateDate);
-        updateElement('#lastUpdateTime', lastUpdateTime);
+        if (!result.isConfirmed) return;
         
-    } catch (error) {
-        Swal.close();
-        console.error('❌ Error actualizando colaborador:', error);
+        // Mostrar loader
+        Swal.fire({
+            title: 'Enviando enlace...',
+            html: 'Por favor espera mientras procesamos tu solicitud.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
         
-        showErrorAlert(
-            'ERROR AL ACTUALIZAR',
-            `<div style="text-align: left;">
-                <p>No se pudo actualizar el colaborador:</p>
-                <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; margin-top: 10px;">
-                    <code style="color: #e74c3c; font-size: 0.85rem;">${error.message}</code>
-                </div>
-            </div>`
-        );
-    }
-}
-
-// ========== ALERTA DE CONFIRMACIÓN PARA CANCELAR ==========
-function showCancelConfirmation() {
-    Swal.fire({
-        title: '¿CANCELAR CAMBIOS?',
-        html: `
-            <div style="text-align: center; margin: 20px 0;">
-                <div style="display: inline-block; background: rgba(231, 76, 60, 0.1); 
-                     padding: 20px; border-radius: 50%; border: 3px solid #e74c3c; margin-bottom: 15px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 2.5rem; color: #e74c3c;"></i>
-                </div>
-                <p style="color: white; font-size: 1.1rem; margin: 0 0 10px 0;">
-                    ¿Estás seguro de cancelar los cambios?
-                </p>
-                <p style="color: #b0b0d0; margin: 0;">
-                    Se perderán todos los cambios no guardados
-                </p>
-            </div>
-            <div style="background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #e74c3c;">
-                <p style="margin: 0; color: #e74c3c; font-size: 0.9rem;">
-                    <i class="fas fa-exclamation-circle"></i> Esta acción no se puede deshacer
-                </p>
-            </div>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-times"></i> SÍ, CANCELAR',
-        cancelButtonText: '<i class="fas fa-arrow-left"></i> NO, CONTINUAR',
-        confirmButtonColor: '#e74c3c',
-        cancelButtonColor: '#3498db',
-        reverseButtons: true,
-        width: '500px',
-        backdrop: 'rgba(0, 0, 0, 0.8)'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = 'gestionColaboradores.html';
+        try {
+            // Importar auth de Firebase
+            const firebaseModule = await import('/config/firebase-config.js');
+            const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js");
+            
+            const actionCodeSettings = {
+                url: 'https://centinela-mx.web.app/verifyEmail.html',
+                handleCodeInApp: false
+            };
+            
+            console.log('📧 Enviando correo de restablecimiento a:', userEmail);
+            await sendPasswordResetEmail(firebaseModule.auth, userEmail, actionCodeSettings);
+            
+            // Cerrar loader
+            Swal.close();
+            
+            // Mostrar éxito
+            await Swal.fire({
+                icon: 'success',
+                title: '¡ENLACE ENVIADO EXITOSAMENTE!',
+                html: `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 60px; color: #28a745; margin-bottom: 20px;">
+                            <i class="fas fa-paper-plane"></i>
+                        </div>
+                        
+                        <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
+                            Correo enviado correctamente
+                        </h3>
+                        
+                        <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <p><strong>📨 Destinatario:</strong> ${userEmail}</p>
+                            <p><strong>⏱️ Válido por:</strong> 1 hora</p>
+                        </div>
+                        
+                        <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                            <h4 style="color: #155724; margin-bottom: 10px;">
+                                <i class="fas fa-check"></i> ¿Qué hacer ahora?
+                            </h4>
+                            <p style="color: #0c5460; margin: 0;">
+                                El colaborador recibirá un correo con instrucciones para restablecer su contraseña.
+                            </p>
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#28a745',
+                allowOutsideClick: false,
+                showCloseButton: true,
+                width: '600px'
+            });
+            
+        } catch (error) {
+            // Cerrar loader
+            Swal.close();
+            
+            console.error('❌ Error enviando correo:', error);
+            
+            // Manejar errores específicos
+            let errorMessage = 'Ocurrió un error al enviar el correo';
+            
+            switch(error.code) {
+                case 'auth/user-not-found':
+                    errorMessage = 'Usuario no encontrado';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Correo inválido';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Demasiados intentos';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = 'Error de conexión';
+                    break;
+                default:
+                    errorMessage = 'Error del sistema: ' + (error.message || 'Desconocido');
+            }
+            
+            Swal.fire({
+                icon: 'error',
+                title: errorMessage,
+                text: 'Por favor, intenta nuevamente más tarde.',
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#d33'
+            });
         }
     });
 }
 
-// ========== ALERTA DE CONFIRMACIÓN PARA ELIMINAR ==========
-function showDeleteConfirmation() {
-    const fullName = document.getElementById('fullName').value;
-    const email = document.getElementById('email').value;
+// ========== HANDLER DE ELIMINACIÓN ==========
+
+function configurarEliminacion(elements, userManager) {
+    if (!elements.deleteBtn) return;
     
-    Swal.fire({
-        title: '¿INHABILITAR COLABORADOR?',
-        html: `
-            <div style="text-align: center; margin: 20px 0;">
-                <div style="display: inline-block; background: rgba(231, 76, 60, 0.1); 
-                     padding: 20px; border-radius: 50%; border: 3px solid #e74c3c; margin-bottom: 15px;">
-                    <i class="fas fa-user-slash" style="font-size: 2.5rem; color: #e74c3c;"></i>
+    elements.deleteBtn.addEventListener('click', async () => {
+        if (!window.currentCollaborator) {
+            mostrarMensaje(elements.mainMessage, 'error', 'No hay colaborador cargado');
+            return;
+        }
+        
+        const collaborator = window.currentCollaborator;
+        const fullName = elements.fullName.value || collaborator.nombreCompleto;
+        
+        // Mostrar confirmación de eliminación
+        const result = await Swal.fire({
+            title: '¿INHABILITAR COLABORADOR?',
+            html: `
+                <div style="text-align: center; padding: 10px 0;">
+                    <div style="font-size: 60px; color: #e74c3c; margin-bottom: 15px;">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                    <h3 style="color: white; margin: 10px 0;">${fullName}</h3>
+                    <p style="color: var(--color-text-secondary); margin: 0;">${collaborator.correoElectronico}</p>
                 </div>
-                <h3 style="color: white; margin: 10px 0;">${fullName}</h3>
-                <p style="color: #b0b0d0; margin: 0;">${email}</p>
-            </div>
-            
-            <p style="text-align: center; font-size: 1.1rem;">
-                ¿Estás seguro de <strong style="color: #e74c3c;">inhabilitar</strong> 
-                este colaborador?
-            </p>
-            
-            <div style="background: rgba(231, 76, 60, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #e74c3c; margin-top: 15px;">
-                <p style="margin: 0 0 5px 0; color: #e74c3c; font-size: 0.9rem;"><i class="fas fa-exclamation-triangle"></i> CONSECUENCIAS</p>
-                <ul style="margin: 0; color: #b0b0d0; font-size: 0.9rem; padding-left: 20px;">
-                    <li>No podrá iniciar sesión en el sistema</li>
-                    <li>Su información se mantiene en la base de datos</li>
-                    <li>Puede ser reactivado posteriormente</li>
-                    <li>Esta acción es reversible</li>
-                </ul>
-            </div>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-ban"></i> SÍ, INHABILITAR',
-        cancelButtonText: '<i class="fas fa-times"></i> CANCELAR',
-        showDenyButton: true,
-        denyButtonText: '<i class="fas fa-toggle-off"></i> SOLO DESACTIVAR',
-        confirmButtonColor: '#e74c3c',
-        cancelButtonColor: '#95a5a6',
-        denyButtonColor: '#3498db',
-        reverseButtons: true,
-        width: '600px',
-        backdrop: 'rgba(0, 0, 0, 0.9)'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Inhabilitar colaborador
-            deleteCollaboratorFromFirebase();
-        } else if (result.isDenied) {
-            // Solo cambiar status a inactivo en el formulario
-            document.getElementById('status').value = 'inactive';
-            document.querySelectorAll('.role-option').forEach(opt => {
+                
+                <p style="text-align: center; font-size: 1.1rem; margin: 20px 0;">
+                    ¿Estás seguro de <strong style="color: #e74c3c;">inhabilitar</strong> 
+                    este colaborador?
+                </p>
+                
+                <div style="background: rgba(231, 76, 60, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #e74c3c;">
+                    <p style="margin: 0 0 5px 0; color: #e74c3c; font-size: 0.9rem;">
+                        <i class="fas fa-exclamation-triangle"></i> CONSECUENCIAS
+                    </p>
+                    <ul style="margin: 0; color: var(--color-text-secondary); font-size: 0.9rem; padding-left: 20px;">
+                        <li>No podrá iniciar sesión en el sistema</li>
+                        <li>Su información se mantiene en la base de datos</li>
+                        <li>Puede ser reactivado posteriormente</li>
+                    </ul>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'INHABILITAR',
+            cancelButtonText: 'CANCELAR',
+            confirmButtonColor: '#e74c3c',
+            cancelButtonColor: '#3085d6',
+            reverseButtons: true,
+            showDenyButton: true,
+            denyButtonText: 'SOLO DESACTIVAR',
+            denyButtonColor: '#95a5a6',
+            width: '600px'
+        });
+        
+        if (result.isDenied) {
+            // Solo cambiar status a inactivo
+            elements.statusInput.value = 'inactive';
+            elements.statusOptions.forEach(opt => {
                 opt.classList.remove('selected');
                 if (opt.getAttribute('data-status') === 'inactive') {
                     opt.classList.add('selected');
                 }
             });
             
-            showSuccessAlert(
-                'ESTATUS CAMBIADO',
-                'El colaborador ha sido marcado como inactivo en el formulario.<br>Recuerda guardar los cambios.'
-            );
+            Swal.fire({
+                icon: 'info',
+                title: 'Status cambiado',
+                text: 'El colaborador ha sido marcado como inactivo. Recuerda guardar los cambios.',
+                timer: 3000,
+                showConfirmButton: false
+            });
+            
+            return;
         }
-    });
-}
-
-// ========== ELIMINAR/INHABILITAR COLABORADOR ==========
-async function deleteCollaboratorFromFirebase() {
-    if (!window.currentCollaborator || !userManager) {
-        showErrorAlert('ERROR', 'No hay datos del colaborador cargados');
-        return;
-    }
-    
-    const { id, data } = window.currentCollaborator;
-    const fullName = document.getElementById('fullName').value;
-    
-    // Mostrar loader
-    Swal.fire({
-        title: 'INHABILITANDO COLABORADOR',
-        text: 'Por favor espera...',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        willOpen: () => {
-            Swal.showLoading();
-        }
-    });
-    
-    try {
-        // Usar UserManager para inhabilitar
-        await userManager.inhabilitarUsuario(
-            id,
-            'colaborador',
-            data.organizacionCamelCase,
-            'Inhabilitado por administrador'
-        );
         
-        Swal.close();
+        if (!result.isConfirmed) return;
         
-        showSuccessAlert(
-            '✅ COLABORADOR INHABILITADO',
-            `<div style="text-align: center; margin: 15px 0;">
-                <div style="display: inline-block; background: rgba(149, 165, 166, 0.2); 
-                     padding: 15px; border-radius: 50%; border: 2px solid #95a5a6;">
-                    <i class="fas fa-ban" style="font-size: 2rem; color: #95a5a6;"></i>
-                </div>
-                <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${fullName}</p>
-                <p style="color: #b0b0d0; margin: 5px 0;">ha sido inhabilitado del sistema</p>
-            </div>`
-        );
-        
-        console.log(`✅ Colaborador inhabilitado: ${id}`);
-        
-        // Actualizar UI localmente
-        document.getElementById('status').value = 'inactive';
-        document.querySelectorAll('.role-option').forEach(opt => {
-            opt.classList.remove('selected');
-            if (opt.getAttribute('data-status') === 'inactive') {
-                opt.classList.add('selected');
-            }
-        });
-        
-        // Redirigir después de 3 segundos
-        setTimeout(() => {
-            window.location.href = 'gestionColaboradores.html';
-        }, 3000);
-        
-    } catch (error) {
-        Swal.close();
-        console.error('❌ Error inhabilitando colaborador:', error);
-        showErrorAlert('ERROR AL INHABILITAR', error.message);
-    }
-}
-
-// ========== MANEJO DE ARCHIVOS DE IMAGEN ==========
-function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    const maxSize = 5; // MB
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    
-    // Validar tipo de archivo
-    if (!validTypes.includes(file.type)) {
-        showErrorAlert(
-            '❌ FORMATO NO VÁLIDO',
-            `El formato del archivo no es compatible.<br><br>
-            <strong>Formatos permitidos:</strong><br>
-            • JPG / JPEG<br>
-            • PNG<br><br>
-            <span style="color: #f39c12;">
-                <i class="fas fa-exclamation-triangle"></i> Por favor selecciona una imagen válida.
-            </span>`
-        );
-        event.target.value = '';
-        return;
-    }
-    
-    // Validar tamaño
-    if (file.size > maxSize * 1024 * 1024) {
-        showErrorAlert(
-            'ARCHIVO DEMASIADO GRANDE',
-            `El archivo excede el tamaño máximo permitido.<br><br>
-            <strong>Tamaño del archivo:</strong> ${(file.size / (1024 * 1024)).toFixed(2)} MB<br>
-            <strong>Límite permitido:</strong> ${maxSize} MB<br><br>
-            <span style="color: #f39c12;">
-                <i class="fas fa-exclamation-triangle"></i> Por favor selecciona una imagen más pequeña.
-            </span>`
-        );
-        event.target.value = '';
-        return;
-    }
-    
-    // Mostrar preview
-    showImagePreview(file);
-}
-
-// ========== PREVIEW DE IMAGEN ==========
-function showImagePreview(file) {
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        const imageUrl = e.target.result;
-        
+        // Mostrar loader
         Swal.fire({
-            title: 'FOTO DEL COLABORADOR',
-            html: `
-                <div style="text-align: center; margin: 20px 0;">
-                    <img src="${imageUrl}" alt="Preview" 
-                         style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; border: 4px solid #667eea; margin-bottom: 15px;">
-                    <p style="color: white; font-size: 1.1rem; margin: 0 0 10px 0;">
-                        Vista previa
-                    </p>
-                    <p style="color: #b0b0d0; margin: 0;">
-                        ¿Deseas usar esta imagen como foto del colaborador?
-                    </p>
-                </div>
-                <div style="background: rgba(52, 152, 219, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #3498db;">
-                    <p style="margin: 0; color: #3498db; font-size: 0.9rem;">
-                        <i class="fas fa-info-circle"></i> Tamaño: ${(file.size / (1024 * 1024)).toFixed(2)} MB • Formato: ${file.type.split('/')[1].toUpperCase()}
-                    </p>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-check"></i> SÍ, USAR ESTA IMAGEN',
-            cancelButtonText: '<i class="fas fa-times"></i> CANCELAR',
-            confirmButtonColor: '#2ecc71',
-            cancelButtonColor: '#e74c3c',
-            width: '500px',
-            backdrop: 'rgba(0, 0, 0, 0.8)'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                saveCollaboratorImage(imageUrl);
-            } else {
-                document.getElementById('collaborator-input').value = '';
-            }
+            title: 'Inhabilitando colaborador...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
         });
-    };
-    
-    reader.readAsDataURL(file);
-}
-
-// ========== GUARDAR IMAGEN DEL COLABORADOR ==========
-function saveCollaboratorImage(imageUrl) {
-    const collaboratorImage = document.getElementById('collaboratorImage');
-    const collaboratorPlaceholder = document.getElementById('collaboratorPlaceholder');
-    
-    // Mostrar loader
-    Swal.fire({
-        title: 'GUARDANDO IMAGEN',
-        text: 'Por favor espera...',
-        allowOutsideClick: false,
-        showConfirmButton: false,
-        willOpen: () => {
-            Swal.showLoading();
-        }
-    });
-    
-    // Simular guardado
-    setTimeout(() => {
-        // Actualizar imagen localmente
-        collaboratorImage.src = imageUrl;
-        collaboratorImage.style.display = 'block';
-        collaboratorPlaceholder.style.display = 'none';
         
-        // Guardar URL para actualizar en Firebase
-        window.collaboratorImageUrl = imageUrl;
-        
-        // Cerrar loader y mostrar éxito
-        Swal.close();
-        showSuccessAlert(
-            'IMAGEN ACTUALIZADA',
-            `La foto del colaborador se ha actualizado localmente.<br><br>
-            <div style="text-align: center; margin: 15px 0;">
-                <div style="display: inline-block; background: rgba(46, 204, 113, 0.2); 
-                     padding: 15px; border-radius: 50%; border: 2px solid #2ecc71;">
-                    <i class="fas fa-camera" style="font-size: 2rem; color: #2ecc71;"></i>
-                </div>
-            </div>
-            <div style="background: rgba(241, 196, 15, 0.1); padding: 10px; border-radius: 6px; margin-top: 10px;">
-                <p style="margin: 0; color: #f1c40f; font-size: 0.8rem;">
-                    <i class="fas fa-info-circle"></i> Recuerda guardar los cambios para subir la imagen a Firebase
-                </p>
-            </div>`
-        );
-        
-        console.log('Imagen del colaborador actualizada localmente');
-        
-    }, 1500);
-}
-
-// ========== GENERAR CONTRASEÑA SEGURA ==========
-function generateSecurePassword() {
-    // Caracteres disponibles
-    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-    const numbers = '0123456789';
-    const symbols = '!@#$%^&*';
-    
-    // Asegurar al menos un carácter de cada tipo
-    let password = '';
-    password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
-    password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
-    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
-    password += symbols.charAt(Math.floor(Math.random() * symbols.length));
-    
-    // Completar con caracteres aleatorios
-    const allChars = uppercase + lowercase + numbers + symbols;
-    for (let i = 4; i < 12; i++) {
-        password += allChars.charAt(Math.floor(Math.random() * allChars.length));
-    }
-    
-    // Mezclar la contraseña
-    password = password.split('').sort(() => 0.5 - Math.random()).join('');
-    
-    // Asignar la contraseña generada
-    document.getElementById('password').value = password;
-    document.getElementById('confirmPassword').value = password;
-    
-    // Mostrar alerta con la contraseña
-    Swal.fire({
-        title: 'CONTRASEÑA GENERADA',
-        html: `
-            <div style="text-align: center; margin: 20px 0;">
-                <div style="display: inline-block; background: rgba(155, 89, 182, 0.1); 
-                     padding: 20px; border-radius: 8px; border: 2px solid #9b59b6; margin-bottom: 15px;">
-                    <code style="font-family: 'Courier New', monospace; font-size: 1.2rem; color: white; letter-spacing: 2px;">
-                        ${password}
-                    </code>
-                </div>
-                <p style="color: #b0b0d0; margin: 10px 0 0 0; font-size: 0.9rem;">
-                    <i class="fas fa-copy"></i> La contraseña ha sido copiada automáticamente
-                </p>
-            </div>
-            <div style="background: rgba(241, 196, 15, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #f1c40f;">
-                <p style="margin: 0; color: #f1c40f; font-size: 0.8rem;">
-                    <i class="fas fa-exclamation-triangle"></i> Guarda esta contraseña en un lugar seguro
-                </p>
-            </div>
-        `,
-        icon: 'success',
-        confirmButtonText: '<i class="fas fa-check"></i> ENTENDIDO',
-        confirmButtonColor: '#9b59b6',
-        width: '500px',
-        backdrop: 'rgba(0, 0, 0, 0.8)',
-        showCloseButton: true
-    });
-    
-    // Copiar al portapapeles
-    navigator.clipboard.writeText(password).then(() => {
-        console.log('📋 Contraseña copiada al portapapeles');
-    });
-}
-
-// ========== FUNCIONES UTILITARIAS ==========
-
-// FUNCIÓN AUXILIAR PARA ACTUALIZAR ELEMENTOS
-function updateElement(selector, text) {
-    const el = document.querySelector(selector);
-    if (el) el.textContent = text;
-}
-
-// VALIDAR CONTRASEÑA
-function validatePassword(password) {
-    const minLength = 8;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    
-    let errors = [];
-    
-    if (password.length < minLength) errors.push(`Mínimo ${minLength} caracteres`);
-    if (!hasUpperCase) errors.push('Al menos una letra mayúscula');
-    if (!hasLowerCase) errors.push('Al menos una letra minúscula');
-    if (!hasNumber) errors.push('Al menos un número');
-    if (!hasSpecialChar) errors.push('Al menos un carácter especial');
-    
-    return {
-        isValid: errors.length === 0,
-        errors: errors
-    };
-}
-
-// VALIDAR EMAIL
-function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-}
-
-// DESACTIVAR COLABORADOR (SOLO CAMBIAR STATUS)
-function deactivateCollaborator() {
-    const fullName = document.getElementById('fullName').value;
-    
-    // Cambiar status a inactivo
-    document.getElementById('status').value = 'inactive';
-    const statusOptions = document.querySelectorAll('.role-option');
-    statusOptions.forEach(opt => opt.classList.remove('selected'));
-    document.querySelector('.role-option[data-status="inactive"]').classList.add('selected');
-    
-    // Mostrar mensaje
-    showSuccessAlert(
-        '✅ COLABORADOR DESACTIVADO',
-        `<div style="text-align: center; margin: 15px 0;">
-            <div style="display: inline-block; background: rgba(149, 165, 166, 0.2); 
-                 padding: 15px; border-radius: 50%; border: 2px solid #95a5a6;">
-                <i class="fas fa-ban" style="font-size: 2rem; color: #95a5a6;"></i>
-            </div>
-            <p style="color: white; margin: 10px 0 0 0; font-weight: 500;">${fullName}</p>
-            <p style="color: #b0b0d0; margin: 5px 0;">ha sido desactivado en el formulario</p>
-        </div>
-        <div style="background: rgba(149, 165, 166, 0.1); padding: 10px; border-radius: 6px; margin-top: 15px; border-left: 3px solid #95a5a6;">
-            <p style="margin: 0; color: #95a5a6; font-size: 0.9rem;">
-                <i class="fas fa-info-circle"></i> Recuerda guardar los cambios para aplicar en Firebase
-            </p>
-        </div>`
-    );
-    
-    console.log(`Colaborador desactivado: ${fullName}`);
-}
-
-// ========== ALERTAS REUTILIZABLES ==========
-
-// ALERTA DE ÉXITO
-function showSuccessAlert(title, html) {
-    Swal.fire({
-        title: title,
-        html: html,
-        icon: 'success',
-        confirmButtonText: '<i class="fas fa-check"></i> ACEPTAR',
-        confirmButtonColor: '#2ecc71',
-        width: '500px',
-        backdrop: 'rgba(0, 0, 0, 0.8)',
-        timer: 3000,
-        timerProgressBar: true,
-        showConfirmButton: true
-    });
-}
-
-// ALERTA DE ERROR
-function showErrorAlert(title, message) {
-    Swal.fire({
-        title: title,
-        html: message,
-        icon: 'error',
-        confirmButtonText: '<i class="fas fa-times"></i> CERRAR',
-        confirmButtonColor: '#e74c3c',
-        width: '500px',
-        backdrop: 'rgba(0, 0, 0, 0.8)'
-    });
-}
-
-// ERROR DE FIREBASE
-function showFirebaseError() {
-    Swal.fire({
-        title: 'FIREBASE NO DISPONIBLE',
-        html: `
-            <div style="text-align: center; margin: 20px 0;">
-                <div style="display: inline-block; background: rgba(231, 76, 60, 0.1); 
-                     padding: 20px; border-radius: 50%; border: 3px solid #e74c3c; margin-bottom: 15px;">
-                    <i class="fas fa-database" style="font-size: 2.5rem; color: #e74c3c;"></i>
-                </div>
-                <p style="color: white; margin: 10px 0;">
-                    No se pudo conectar con Firebase
-                </p>
-                <p style="color: #b0b0d0; margin: 0;">
-                    Verifica tu conexión a internet y recarga la página
-                </p>
-            </div>
-        `,
-        icon: 'error',
-        confirmButtonText: '<i class="fas fa-sync-alt"></i> RECARGAR',
-        confirmButtonColor: '#3498db',
-        cancelButtonText: '<i class="fas fa-arrow-left"></i> VOLVER',
-        showCancelButton: true,
-        backdrop: 'rgba(0, 0, 0, 0.9)'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.reload();
-        } else {
-            window.history.back();
+        try {
+            // Inhabilitar usando UserManager
+            await userManager.inhabilitarUsuario(
+                collaborator.id,
+                'colaborador',
+                collaborator.organizacionCamelCase,
+                'Inhabilitado por administrador'
+            );
+            
+            // Actualizar interfaz
+            elements.statusInput.value = 'inactive';
+            elements.statusOptions.forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.getAttribute('data-status') === 'inactive') {
+                    opt.classList.add('selected');
+                }
+            });
+            
+            // Actualizar objeto en memoria
+            collaborator.eliminado = true;
+            
+            // Mostrar éxito
+            Swal.close();
+            Swal.fire({
+                icon: 'success',
+                title: '✅ COLABORADOR INHABILITADO',
+                html: `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 60px; color: #95a5a6; margin-bottom: 20px;">
+                            <i class="fas fa-ban"></i>
+                        </div>
+                        <p style="color: white; margin: 10px 0; font-weight: 500;">${fullName}</p>
+                        <p style="color: var(--color-text-secondary); margin: 5px 0;">
+                            ha sido inhabilitado del sistema
+                        </p>
+                    </div>
+                `,
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#95a5a6',
+                timer: 3000
+            });
+            
+            // Redirigir después de 3 segundos
+            setTimeout(() => {
+                window.location.href = 'gestionColaboradores.html';
+            }, 3000);
+            
+        } catch (error) {
+            Swal.close();
+            console.error('❌ Error inhabilitando colaborador:', error);
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo inhabilitar el colaborador: ' + error.message,
+                confirmButtonText: 'ENTENDIDO'
+            });
         }
     });
 }
 
-// ========== CARGAR SWEETALERT DINÁMICAMENTE ==========
-function loadSweetAlert() {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
-    script.onload = () => {
-        console.log('SweetAlert2 cargado dinámicamente');
-        applySweetAlertStyles();
-        initCollaboratorEditor();
-        loadCollaboratorData();
-    };
-    script.onerror = () => {
-        console.error('Error cargando SweetAlert2');
-        alert('Error: No se pudo cargar SweetAlert2. Recarga la página.');
-    };
-    document.head.appendChild(script);
-}
-
-// ========== APLICAR ESTILOS SWEETALERT ==========
-function applySweetAlertStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        /* Estilos personalizados para SweetAlert2 */
-        .swal2-popup {
-            background: #1a1a2e !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 12px !important;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
-            backdrop-filter: blur(8px) !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            color: white !important;
-        }
-        
-        .swal2-title {
-            color: white !important;
-            font-family: 'Orbitron', sans-serif !important;
-            font-size: 1.5rem !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 1px !important;
-        }
-        
-        .swal2-html-container {
-            color: #b0b0d0 !important;
-            font-size: 1rem !important;
-            line-height: 1.5 !important;
-        }
-        
-        .swal2-confirm {
-            background: linear-gradient(135deg, #3498db, #2980b9) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 8px !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2) !important;
-        }
-        
-        .swal2-confirm:hover {
-            background: linear-gradient(135deg, #2980b9, #3498db) !important;
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3) !important;
-        }
-        
-        .swal2-cancel {
-            background: rgba(255, 255, 255, 0.07) !important;
-            color: white !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 8px !important;
-            padding: 12px 24px !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        .swal2-cancel:hover {
-            background: rgba(255, 255, 255, 0.1) !important;
-            border-color: rgba(52, 152, 219, 0.3) !important;
-            transform: translateY(-2px) !important;
-        }
-        
-        .swal2-input, .swal2-textarea, .swal2-select {
-            background: rgba(255, 255, 255, 0.07) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 8px !important;
-            color: white !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            transition: all 0.3s ease !important;
-            padding: 10px 15px !important;
-        }
-        
-        .swal2-input:focus, .swal2-textarea:focus {
-            border-color: #3498db !important;
-            box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.2) !important;
-            outline: none !important;
-        }
-        
-        /* Icon colors */
-        .swal2-icon.swal2-success {
-            border-color: #2ecc71 !important;
-            color: #2ecc71 !important;
-        }
-        
-        .swal2-icon.swal2-error {
-            border-color: #e74c3c !important;
-            color: #e74c3c !important;
-        }
-        
-        .swal2-icon.swal2-warning {
-            border-color: #f39c12 !important;
-            color: #f39c12 !important;
-        }
-        
-        .swal2-icon.swal2-info {
-            border-color: #3498db !important;
-            color: #3498db !important;
-        }
-    `;
-    document.head.appendChild(style);
-    console.log('Estilos SweetAlert aplicados');
-}
-
-// ========== EXPORTAR FUNCIONES ==========
-window.validateAndSaveChanges = validateAndSaveChanges;
-window.showCancelConfirmation = showCancelConfirmation;
-window.showDeleteConfirmation = showDeleteConfirmation;
-window.generateSecurePassword = generateSecurePassword;
-window.showSuccessAlert = showSuccessAlert;
-window.showErrorAlert = showErrorAlert;
-
-console.log('Editor de colaborador para Firebase listo. Funciones disponibles:');
-console.log('- validateAndSaveChanges()');
-console.log('- showCancelConfirmation()');
-console.log('- showDeleteConfirmation()');
-console.log('- generateSecurePassword()');
-console.log('- showSuccessAlert(title, html)');
-console.log('- showErrorAlert(title, message)');
+console.log('✅ editUser.js cargado - Logo de organización no editable');
