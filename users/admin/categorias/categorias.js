@@ -1,11 +1,11 @@
 // Archivo JavaScript para la gestión de categorías y subcategorías
+
+// Variables globales
+let currentExpandedCategory = null;
+let isEditMode = false;
+let currentEditId = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Variables globales
-    let currentCategoryId = null;
-    let currentCategoryName = "";
-    let isEditMode = false;
-    let currentEditId = null;
-    
     // Inicializar la aplicación
     initApp();
 });
@@ -26,12 +26,6 @@ function setupEventListeners() {
     const addCategoryBtn = document.getElementById('addCategoryBtn');
     if (addCategoryBtn) {
         addCategoryBtn.addEventListener('click', () => showCategoryModal());
-    }
-    
-    // Botón para agregar subcategoría
-    const addSubcategoryBtn = document.getElementById('addSubcategoryBtn');
-    if (addSubcategoryBtn) {
-        addSubcategoryBtn.addEventListener('click', () => showSubcategoryModal());
     }
     
     // Formulario de categoría
@@ -86,9 +80,127 @@ function setupModals() {
     });
 }
 
+// FUNCIONES PARA EXPANDIR/CONTRAER CATEGORÍAS
+
+function toggleCategory(categoryId, event) {
+    // Prevenir que el clic se propague
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    console.log('toggleCategory llamado con ID:', categoryId);
+    console.log('currentExpandedCategory:', currentExpandedCategory);
+    
+    const categoryRow = document.querySelector(`.category-row[data-category-id="${categoryId}"]`);
+    const subcategoriesContainer = document.getElementById(`subcategories-${categoryId}`);
+    
+    console.log('categoryRow encontrado:', !!categoryRow);
+    console.log('subcategoriesContainer encontrado:', !!subcategoriesContainer);
+    
+    if (!categoryRow || !subcategoriesContainer) {
+        console.error('Elementos no encontrados para categoryId:', categoryId);
+        return;
+    }
+    
+    // Si esta categoría ya está expandida, contraerla
+    if (categoryRow.classList.contains('expanded')) {
+        console.log('Contrayendo categoría:', categoryId);
+        categoryRow.classList.remove('expanded');
+        
+        // Animación de contracción
+        subcategoriesContainer.style.maxHeight = subcategoriesContainer.scrollHeight + 'px';
+        subcategoriesContainer.style.overflow = 'hidden';
+        setTimeout(() => {
+            subcategoriesContainer.style.maxHeight = '0';
+            setTimeout(() => {
+                subcategoriesContainer.classList.remove('expanded');
+                subcategoriesContainer.style.maxHeight = '';
+                subcategoriesContainer.style.overflow = '';
+            }, 300);
+        }, 10);
+        
+        currentExpandedCategory = null;
+    } else {
+        console.log('Expandiendo categoría:', categoryId);
+        
+        // Si hay otra categoría expandida, contraerla primero
+        if (currentExpandedCategory && currentExpandedCategory !== categoryId) {
+            const previousRow = document.querySelector(`.category-row[data-category-id="${currentExpandedCategory}"]`);
+            const previousContainer = document.getElementById(`subcategories-${currentExpandedCategory}`);
+            
+            if (previousRow && previousContainer) {
+                previousRow.classList.remove('expanded');
+                previousContainer.classList.remove('expanded');
+                console.log('Categoría anterior contraída:', currentExpandedCategory);
+            }
+        }
+        
+        // Expandir esta categoría
+        categoryRow.classList.add('expanded');
+        subcategoriesContainer.classList.add('expanded');
+        currentExpandedCategory = categoryId;
+        
+        // Cargar subcategorías si no están cargadas
+        if (!subcategoriesContainer.dataset.loaded) {
+            console.log('Cargando subcategorías para:', categoryId);
+            loadSubcategories(categoryId);
+        }
+        
+        // Animación de expansión suave
+        subcategoriesContainer.style.maxHeight = '0';
+        subcategoriesContainer.style.overflow = 'hidden';
+        setTimeout(() => {
+            subcategoriesContainer.style.maxHeight = subcategoriesContainer.scrollHeight + 'px';
+            setTimeout(() => {
+                subcategoriesContainer.style.maxHeight = '';
+                subcategoriesContainer.style.overflow = '';
+            }, 300);
+        }, 10);
+    }
+}
+
+// Configurar clic en filas de categoría
+function setupCategoryRowClick() {
+    console.log('Configurando eventos de clic en filas...');
+    
+    document.querySelectorAll('.category-row').forEach(row => {
+        // Remover eventos anteriores para evitar duplicados
+        row.removeEventListener('click', handleCategoryRowClick);
+        
+        // Agregar nuevo evento
+        row.addEventListener('click', function(event) {
+            console.log('Clic en fila detectado');
+            handleCategoryRowClick.call(this, event);
+        });
+    });
+    
+    console.log('Eventos configurados en', document.querySelectorAll('.category-row').length, 'filas');
+}
+
+function handleCategoryRowClick(event) {
+    console.log('handleCategoryRowClick ejecutado');
+    console.log('Target:', event.target);
+    console.log('Closest .actions-cell:', event.target.closest('.actions-cell'));
+    console.log('Closest .count-badge:', event.target.closest('.count-badge'));
+    
+    // Solo expandir si se hace clic en la fila, no en los botones
+    if (!event.target.closest('.actions-cell') && !event.target.closest('.count-badge')) {
+        const categoryId = this.dataset.categoryId;
+        console.log('Expandir categoría ID:', categoryId);
+        if (categoryId) {
+            toggleCategory(categoryId, event);
+        }
+    } else {
+        console.log('Clic en botones, ignorando expansión');
+    }
+}
+
 // FUNCIONES PARA CATEGORÍAS
 
 function showCategoryModal(categoryId = null) {
+    console.log('showCategoryModal llamado con ID:', categoryId);
+    
     const modal = document.getElementById('categoryModal');
     const form = document.getElementById('categoryForm');
     const title = document.getElementById('modalCategoryTitle');
@@ -163,10 +275,9 @@ function handleCategorySubmit(event) {
 }
 
 function createCategory(categoryData) {
-    // Aquí iría la lógica para guardar en el backend
     console.log('Creando categoría:', categoryData);
     
-    // Simular guardado exitoso
+    // Aquí iría la lógica para guardar en el backend
     Swal.fire({
         title: '¡Éxito!',
         text: 'Categoría creada correctamente',
@@ -180,10 +291,9 @@ function createCategory(categoryData) {
 }
 
 function updateCategory(categoryId, categoryData) {
-    // Aquí iría la lógica para actualizar en el backend
     console.log('Actualizando categoría:', categoryId, categoryData);
     
-    // Simular actualización exitosa
+    // Aquí iría la lógica para actualizar en el backend
     Swal.fire({
         title: '¡Éxito!',
         text: 'Categoría actualizada correctamente',
@@ -208,7 +318,6 @@ function deleteCategory(categoryId) {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Aquí iría la lógica para eliminar
             console.log('Eliminando categoría:', categoryId);
             
             Swal.fire({
@@ -226,8 +335,10 @@ function deleteCategory(categoryId) {
 
 // FUNCIONES PARA SUBCATEGORÍAS
 
-function showSubcategoryModal(subcategoryId = null) {
-    if (!currentCategoryId) return;
+function showSubcategoryModal(categoryId, subcategoryId = null) {
+    console.log('showSubcategoryModal llamado con categoryId:', categoryId, 'subcategoryId:', subcategoryId);
+    
+    if (!categoryId) return;
     
     const modal = document.getElementById('subcategoryModal');
     const form = document.getElementById('subcategoryForm');
@@ -235,7 +346,7 @@ function showSubcategoryModal(subcategoryId = null) {
     const submitBtn = document.getElementById('subcategorySubmitBtn');
     
     // Establecer categoría padre
-    document.getElementById('parentCategoryId').value = currentCategoryId;
+    document.getElementById('parentCategoryId').value = categoryId;
     
     if (subcategoryId) {
         // Modo edición
@@ -251,7 +362,6 @@ function showSubcategoryModal(subcategoryId = null) {
         document.getElementById('subcategoryDescription').value = subcategory.description;
         document.getElementById('subcategoryColor').value = subcategory.color;
         document.getElementById('subcategoryColorPreview').textContent = subcategory.color;
-        document.getElementById('subcategoryStatus').value = subcategory.status;
         
         form.dataset.editId = subcategoryId;
     } else {
@@ -264,7 +374,6 @@ function showSubcategoryModal(subcategoryId = null) {
         document.getElementById('subcategoryId').value = '';
         document.getElementById('subcategoryColor').value = '#2f8cff';
         document.getElementById('subcategoryColorPreview').textContent = '#2f8cff';
-        document.getElementById('subcategoryStatus').value = 'active';
         
         delete form.dataset.editId;
     }
@@ -286,7 +395,6 @@ function handleSubcategorySubmit(event) {
         name: formData.get('name'),
         description: formData.get('description'),
         color: formData.get('color'),
-        status: formData.get('status'),
         parentCategoryId: formData.get('parentCategoryId')
     };
     
@@ -306,10 +414,9 @@ function handleSubcategorySubmit(event) {
 }
 
 function createSubcategory(subcategoryData) {
-    // Aquí iría la lógica para guardar en el backend
     console.log('Creando subcategoría:', subcategoryData);
     
-    // Simular guardado exitoso
+    // Aquí iría la lógica para guardar en el backend
     Swal.fire({
         title: '¡Éxito!',
         text: 'Subcategoría creada correctamente',
@@ -318,15 +425,14 @@ function createSubcategory(subcategoryData) {
         showConfirmButton: false
     }).then(() => {
         closeSubcategoryModal();
-        loadSubcategories(currentCategoryId);
+        loadSubcategories(subcategoryData.parentCategoryId);
     });
 }
 
 function updateSubcategory(subcategoryId, subcategoryData) {
-    // Aquí iría la lógica para actualizar en el backend
     console.log('Actualizando subcategoría:', subcategoryId, subcategoryData);
     
-    // Simular actualización exitosa
+    // Aquí iría la lógica para actualizar en el backend
     Swal.fire({
         title: '¡Éxito!',
         text: 'Subcategoría actualizada correctamente',
@@ -335,11 +441,11 @@ function updateSubcategory(subcategoryId, subcategoryData) {
         showConfirmButton: false
     }).then(() => {
         closeSubcategoryModal();
-        loadSubcategories(currentCategoryId);
+        loadSubcategories(subcategoryData.parentCategoryId);
     });
 }
 
-function deleteSubcategory(subcategoryId) {
+function deleteSubcategory(subcategoryId, categoryId) {
     Swal.fire({
         title: '¿Eliminar subcategoría?',
         text: "Esta acción no se puede deshacer",
@@ -351,7 +457,6 @@ function deleteSubcategory(subcategoryId) {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Aquí iría la lógica para eliminar
             console.log('Eliminando subcategoría:', subcategoryId);
             
             Swal.fire({
@@ -361,7 +466,7 @@ function deleteSubcategory(subcategoryId) {
                 timer: 2000,
                 showConfirmButton: false
             }).then(() => {
-                loadSubcategories(currentCategoryId);
+                loadSubcategories(categoryId);
             });
         }
     });
@@ -370,6 +475,8 @@ function deleteSubcategory(subcategoryId) {
 // FUNCIONES DE VISUALIZACIÓN
 
 function viewCategoryDetails(categoryId) {
+    console.log('Ver detalles de categoría:', categoryId);
+    
     const category = getCategoryById(categoryId);
     if (!category) return;
     
@@ -391,13 +498,14 @@ function viewCategoryDetails(categoryId) {
         <div><strong>Total Subcategorías:</strong> <span>${category.count}</span></div>
         <div><strong>Fecha creación:</strong> <span>${category.createdDate}</span></div>
         <div><strong>Fecha modificación:</strong> <span>${category.updatedDate}</span></div>
-        <div><strong>Estado:</strong> <span class="status-badge active">Activa</span></div>
     `;
     
     modal.style.display = 'flex';
 }
 
 function viewSubcategoryDetails(subcategoryId) {
+    console.log('Ver detalles de subcategoría:', subcategoryId);
+    
     const subcategory = getSubcategoryById(subcategoryId);
     if (!subcategory) return;
     
@@ -416,76 +524,25 @@ function viewSubcategoryDetails(subcategoryId) {
     grid.innerHTML = `
         <div><strong>Descripción:</strong> <span>${subcategory.description}</span></div>
         <div><strong>Color:</strong> <span>${subcategory.color}</span></div>
-        <div><strong>Categoría padre:</strong> <span>${currentCategoryName}</span></div>
+        <div><strong>Categoría padre:</strong> <span>${subcategory.parentCategoryName}</span></div>
         <div><strong>Fecha creación:</strong> <span>${subcategory.createdDate}</span></div>
         <div><strong>Fecha modificación:</strong> <span>${subcategory.updatedDate}</span></div>
-        <div><strong>Estado:</strong> <span class="status-badge ${subcategory.status}">${subcategory.status === 'active' ? 'Activa' : 'Inactiva'}</span></div>
     `;
     
     modal.style.display = 'flex';
 }
 
-// FUNCIONES DE NAVEGACIÓN
-
-function openCategory(categoryId) {
-    const category = getCategoryById(categoryId);
-    if (!category) return;
-    
-    // Guardar información actual
-    currentCategoryId = categoryId;
-    currentCategoryName = category.name;
-    
-    // Actualizar breadcrumb
-    updateBreadcrumb(category.name);
-    
-    // Actualizar título de subcategorías
-    document.getElementById('currentCategoryName').textContent = category.name;
-    
-    // Ocultar vista principal
-    document.getElementById('mainView').style.display = 'none';
-    
-    // Mostrar vista de subcategorías
-    document.getElementById('subcategoriesView').style.display = 'block';
-    
-    // Cargar subcategorías
-    loadSubcategories(categoryId);
-}
-
-function showMainView() {
-    // Resetear variables
-    currentCategoryId = null;
-    currentCategoryName = "";
-    
-    // Actualizar breadcrumb
-    updateBreadcrumb();
-    
-    // Ocultar vista de subcategorías
-    document.getElementById('subcategoriesView').style.display = 'none';
-    
-    // Mostrar vista principal
-    document.getElementById('mainView').style.display = 'block';
-}
-
-function updateBreadcrumb(categoryName = null) {
-    const breadcrumb = document.getElementById('breadcrumb');
-    
-    if (categoryName) {
-        breadcrumb.innerHTML = `
-            <span class="breadcrumb-item active" onclick="showMainView()">Categorías</span>
-            <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-item active">${categoryName}</span>
-        `;
-    } else {
-        breadcrumb.innerHTML = `
-            <span class="breadcrumb-item active">Categorías</span>
-        `;
-    }
-}
-
 // FUNCIONES DE CARGA DE DATOS
 
 function loadCategories() {
+    console.log('Cargando categorías...');
+    
     const tableBody = document.getElementById('categoriesTableBody');
+    
+    if (!tableBody) {
+        console.error('No se encontró categoriesTableBody');
+        return;
+    }
     
     // Datos de ejemplo
     const categories = [
@@ -521,19 +578,23 @@ function loadCategories() {
     tableBody.innerHTML = '';
     
     categories.forEach(category => {
-        const row = document.createElement('tr');
-        row.className = 'category-row';
-        row.dataset.categoryId = category.id;
-        row.onclick = (e) => {
-            // Evitar que el clic en botones active la navegación
-            if (!e.target.closest('.actions-cell')) {
-                openCategory(category.id);
-            }
-        };
+        // Crear fila de categoría
+        const categoryRow = document.createElement('tr');
+        categoryRow.className = 'category-row';
+        categoryRow.dataset.categoryId = category.id;
         
-        row.innerHTML = `
+        // Agregar evento de clic directamente
+        categoryRow.addEventListener('click', function(event) {
+            console.log('Clic directo en fila ID:', category.id);
+            if (!event.target.closest('.actions-cell') && !event.target.closest('.count-badge')) {
+                toggleCategory(category.id, event);
+            }
+        });
+        
+        categoryRow.innerHTML = `
             <td class="category-name" data-label="CATEGORÍA">
                 <div class="category-info">
+                    <i class="fas fa-chevron-right expand-indicator"></i>
                     <span class="category-title">${category.name}</span>
                 </div>
             </td>
@@ -545,46 +606,170 @@ function loadCategories() {
                 <span class="color-code">${category.color}</span>
             </td>
             <td class="category-count" data-label="SUBCATEGORÍAS">
-                <div class="count-badge" onclick="openCategory(${category.id})">
+                <div class="count-badge" onclick="toggleCategory(${category.id}, event)">
                     <i class="fas fa-layer-group"></i>
                     <span class="count-number">${category.count}</span>
                 </div>
             </td>
             <td class="category-actions" data-label="ACCIONES">
                 <div class="actions-cell">
-                    <button class="row-btn view" onclick="event.stopPropagation(); viewCategoryDetails(${category.id})" title="Ver detalles">
+                    <button class="row-btn view" onclick="viewCategoryDetails(${category.id})" title="Ver detalles">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="row-btn edit" onclick="event.stopPropagation(); showCategoryModal(${category.id})" title="Editar categoría">
+                    <button class="row-btn edit" onclick="showCategoryModal(${category.id})" title="Editar categoría">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="row-btn delete" onclick="event.stopPropagation(); deleteCategory(${category.id})" title="Eliminar categoría">
+                    <button class="row-btn delete" onclick="deleteCategory(${category.id})" title="Eliminar categoría">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             </td>
         `;
         
-        tableBody.appendChild(row);
+        tableBody.appendChild(categoryRow);
+        
+        // Crear contenedor para subcategorías - SOLUCIÓN CORREGIDA
+        const subcategoriesContainer = document.createElement('tr');
+        subcategoriesContainer.id = `subcategories-${category.id}`;
+        subcategoriesContainer.className = 'subcategories-container';
+        
+        // Celda única que ocupa todas las columnas
+        const subcategoriesCell = document.createElement('td');
+        subcategoriesCell.colSpan = 5; // IMPORTANTE: Colspan igual al número de columnas
+        
+        subcategoriesCell.innerHTML = `
+            <div class="subcategories-inner">
+                <div class="subcategories-header">
+                    <div class="subcategories-header-title">
+                        <i class="fas fa-folder-tree"></i>
+                        <span>Subcategorías de ${category.name}</span>
+                    </div>
+                    <div class="subcategories-header-actions">
+                        <button class="add-subcategory-btn" onclick="showSubcategoryModal(${category.id})">
+                            <i class="fas fa-plus-circle"></i> Agregar Subcategoría
+                        </button>
+                    </div>
+                </div>
+                <table class="subcategories-table">
+                    <thead>
+                        <tr>
+                            <th>NOMBRE</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>COLOR</th>
+                            <th>ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subcategories-body-${category.id}">
+                        <!-- LAS SUBCATEGORÍAS SE CARGARÁN DINÁMICAMENTE -->
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        subcategoriesContainer.appendChild(subcategoriesCell);
+        tableBody.appendChild(subcategoriesContainer);
     });
+    
+    console.log('Categorías cargadas:', categories.length);
 }
 
 function loadSubcategories(categoryId) {
-    const tableBody = document.getElementById('subcategoriesTableBody');
+    console.log('Cargando subcategorías para categoryId:', categoryId);
+    
+    const tableBody = document.getElementById(`subcategories-body-${categoryId}`);
+    const container = document.getElementById(`subcategories-${categoryId}`);
+    
+    if (!tableBody || !container) {
+        console.error('No se encontraron elementos para categoryId:', categoryId);
+        return;
+    }
+    
+    // Marcar como cargado
+    container.dataset.loaded = 'true';
     
     // Datos de ejemplo basados en la categoría
     let subcategories = [];
     
-    if (categoryId === 1) {
+    if (categoryId == 1) {
         subcategories = [
-            { id: 1, name: "Smartphones", description: "Teléfonos inteligentes", color: "#ff6b6b", status: "active", createdDate: "2024-01-20", updatedDate: "2024-02-10" },
-            { id: 2, name: "Laptops", description: "Computadoras portátiles", color: "#4ecdc4", status: "active", createdDate: "2024-01-25", updatedDate: "2024-02-12" },
-            { id: 3, name: "Accesorios", description: "Accesorios electrónicos", color: "#ffe66d", status: "inactive", createdDate: "2024-02-01", updatedDate: "2024-02-15" }
+            { 
+                id: 1, 
+                name: "Smartphones", 
+                description: "Teléfonos inteligentes y dispositivos móviles", 
+                color: "#ff6b6b", 
+                createdDate: "2024-01-20", 
+                updatedDate: "2024-02-10",
+                parentCategoryName: "Electrónica"
+            },
+            { 
+                id: 2, 
+                name: "Laptops", 
+                description: "Computadoras portátiles y ultrabooks", 
+                color: "#4ecdc4", 
+                createdDate: "2024-01-25", 
+                updatedDate: "2024-02-12",
+                parentCategoryName: "Electrónica"
+            },
+            { 
+                id: 3, 
+                name: "Accesorios", 
+                description: "Accesorios electrónicos y periféricos", 
+                color: "#ffe66d", 
+                createdDate: "2024-02-01", 
+                updatedDate: "2024-02-15",
+                parentCategoryName: "Electrónica"
+            }
         ];
-    } else if (categoryId === 2) {
+    } else if (categoryId == 2) {
         subcategories = [
-            { id: 4, name: "Hombre", description: "Ropa para hombres", color: "#6a5acd", status: "active", createdDate: "2024-01-12", updatedDate: "2024-02-08" },
-            { id: 5, name: "Mujer", description: "Ropa para mujeres", color: "#ff69b4", status: "active", createdDate: "2024-01-15", updatedDate: "2024-02-10" }
+            { 
+                id: 4, 
+                name: "Hombre", 
+                description: "Ropa y accesorios para hombres", 
+                color: "#6a5acd", 
+                createdDate: "2024-01-12", 
+                updatedDate: "2024-02-08",
+                parentCategoryName: "Ropa"
+            },
+            { 
+                id: 5, 
+                name: "Mujer", 
+                description: "Ropa y accesorios para mujeres", 
+                color: "#ff69b4", 
+                createdDate: "2024-01-15", 
+                updatedDate: "2024-02-10",
+                parentCategoryName: "Ropa"
+            },
+            { 
+                id: 6, 
+                name: "Niños", 
+                description: "Ropa infantil para todas las edades", 
+                color: "#7bed9f", 
+                createdDate: "2024-01-18", 
+                updatedDate: "2024-02-12",
+                parentCategoryName: "Ropa"
+            }
+        ];
+    } else {
+        subcategories = [
+            { 
+                id: 7, 
+                name: "Muebles", 
+                description: "Muebles para el hogar y oficina", 
+                color: "#a855f7", 
+                createdDate: "2024-02-01", 
+                updatedDate: "2024-02-15",
+                parentCategoryName: "Hogar"
+            },
+            { 
+                id: 8, 
+                name: "Decoración", 
+                description: "Artículos decorativos para el hogar", 
+                color: "#ff7f50", 
+                createdDate: "2024-02-05", 
+                updatedDate: "2024-02-18",
+                parentCategoryName: "Hogar"
+            }
         ];
     }
     
@@ -605,18 +790,15 @@ function loadSubcategories(categoryId) {
                 <div class="color-indicator" style="background-color: ${subcat.color};"></div>
                 <span class="color-code">${subcat.color}</span>
             </td>
-            <td class="subcategory-status" data-label="ESTADO">
-                <span class="status-badge ${subcat.status}">${subcat.status === 'active' ? 'Activa' : 'Inactiva'}</span>
-            </td>
             <td class="subcategory-actions" data-label="ACCIONES">
                 <div class="actions-cell">
                     <button class="row-btn view" onclick="viewSubcategoryDetails(${subcat.id})" title="Ver detalles">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="row-btn edit" onclick="showSubcategoryModal(${subcat.id})" title="Editar">
+                    <button class="row-btn edit" onclick="showSubcategoryModal(${categoryId}, ${subcat.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="row-btn delete" onclick="deleteSubcategory(${subcat.id})" title="Eliminar">
+                    <button class="row-btn delete" onclick="deleteSubcategory(${subcat.id}, ${categoryId})" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -625,6 +807,8 @@ function loadSubcategories(categoryId) {
         
         tableBody.appendChild(row);
     });
+    
+    console.log('Subcategorías cargadas:', subcategories.length);
 }
 
 // FUNCIONES AUXILIARES
@@ -637,20 +821,21 @@ function getCategoryById(id) {
         { id: 3, name: "Hogar", description: "Artículos para el hogar y decoración", color: "#ffcc00", count: 2, createdDate: "2024-02-01", updatedDate: "2024-02-15" }
     ];
     
-    return categories.find(cat => cat.id === id);
+    return categories.find(cat => cat.id == id);
 }
 
 function getSubcategoryById(id) {
     // Esta función simula obtener una subcategoría por ID
     const subcategories = [
-        { id: 1, name: "Smartphones", description: "Teléfonos inteligentes", color: "#ff6b6b", status: "active", createdDate: "2024-01-20", updatedDate: "2024-02-10" },
-        { id: 2, name: "Laptops", description: "Computadoras portátiles", color: "#4ecdc4", status: "active", createdDate: "2024-01-25", updatedDate: "2024-02-12" },
-        { id: 3, name: "Accesorios", description: "Accesorios electrónicos", color: "#ffe66d", status: "inactive", createdDate: "2024-02-01", updatedDate: "2024-02-15" },
-        { id: 4, name: "Hombre", description: "Ropa para hombres", color: "#6a5acd", status: "active", createdDate: "2024-01-12", updatedDate: "2024-02-08" },
-        { id: 5, name: "Mujer", description: "Ropa para mujeres", color: "#ff69b4", status: "active", createdDate: "2024-01-15", updatedDate: "2024-02-10" }
+        { id: 1, name: "Smartphones", description: "Teléfonos inteligentes y dispositivos móviles", color: "#ff6b6b", createdDate: "2024-01-20", updatedDate: "2024-02-10", parentCategoryName: "Electrónica" },
+        { id: 2, name: "Laptops", description: "Computadoras portátiles y ultrabooks", color: "#4ecdc4", createdDate: "2024-01-25", updatedDate: "2024-02-12", parentCategoryName: "Electrónica" },
+        { id: 3, name: "Accesorios", description: "Accesorios electrónicos y periféricos", color: "#ffe66d", createdDate: "2024-02-01", updatedDate: "2024-02-15", parentCategoryName: "Electrónica" },
+        { id: 4, name: "Hombre", description: "Ropa y accesorios para hombres", color: "#6a5acd", createdDate: "2024-01-12", updatedDate: "2024-02-08", parentCategoryName: "Ropa" },
+        { id: 5, name: "Mujer", description: "Ropa y accesorios para mujeres", color: "#ff69b4", createdDate: "2024-01-15", updatedDate: "2024-02-10", parentCategoryName: "Ropa" },
+        { id: 6, name: "Niños", description: "Ropa infantil para todas las edades", color: "#7bed9f", createdDate: "2024-01-18", updatedDate: "2024-02-12", parentCategoryName: "Ropa" }
     ];
     
-    return subcategories.find(sub => sub.id === id);
+    return subcategories.find(sub => sub.id == id);
 }
 
 function resetForms() {
@@ -676,8 +861,7 @@ function resetForms() {
 }
 
 // Hacer funciones disponibles globalmente
-window.openCategory = openCategory;
-window.showMainView = showMainView;
+window.toggleCategory = toggleCategory;
 window.showCategoryModal = showCategoryModal;
 window.showSubcategoryModal = showSubcategoryModal;
 window.closeCategoryModal = closeCategoryModal;
@@ -686,3 +870,5 @@ window.viewCategoryDetails = viewCategoryDetails;
 window.viewSubcategoryDetails = viewSubcategoryDetails;
 window.deleteCategory = deleteCategory;
 window.deleteSubcategory = deleteSubcategory;
+
+console.log('categorias.js cargado correctamente');

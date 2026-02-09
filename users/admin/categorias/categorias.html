@@ -24,85 +24,45 @@
 <canvas id="particle-canvas"></canvas>
 
 <!-- NAVBAR -->
-<div id="navbar-container"></div>
+
 
 <div class="admin-container">
     
-    <!-- HEADER PRINCIPAL -->
+    <!-- HEADER PRINCIPAL - ACTUALIZADO CON DESCRIPCIÓN -->
     <div class="section-header">
         <div class="section-title">
-            <i class="fas fa-tags"></i> Gestión de Categorías
+            <i class="fas fa-tags"></i> Gestión de Categorías y Subcategorías
+        </div>
+        <div class="section-description">
+            Administra y organiza tus categorías principales y sus subcategorías. 
+            Crea, edita, visualiza y elimina categorías con sus respectivas subcategorías. 
+            Utiliza los colores para identificar rápidamente cada categoría y mantén tu organización estructurada.
         </div>
     </div>
 
-    <!-- BREADCRUMB PARA NAVEGACIÓN -->
-    <div class="breadcrumb" id="breadcrumb">
-        <span class="breadcrumb-item active" onclick="showMainView()">Categorías</span>
+    <!-- TABLA PRINCIPAL DE CATEGORÍAS - SIN SCROLL HORIZONTAL -->
+    <div class="table-wrapper">
+        <table class="categories-table">
+            <thead>
+                <tr>
+                    <th>CATEGORÍA</th>
+                    <th>DESCRIPCIÓN</th>
+                    <th>COLOR</th>
+                    <th>SUBCATEGORÍAS</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody id="categoriesTableBody">
+                <!-- LAS CATEGORÍAS SE CARGARÁN DINÁMICAMENTE -->
+            </tbody>
+        </table>
     </div>
-
-    <!-- VISTA PRINCIPAL DE CATEGORÍAS -->
-    <div id="mainView">
-        <!-- TABLA PRINCIPAL DE CATEGORÍAS -->
-        <div class="table-wrapper">
-            <table class="categories-table">
-                <thead>
-                    <tr>
-                        <th>CATEGORÍA</th>
-                        <th>DESCRIPCIÓN</th>
-                        <th>COLOR</th>
-                        <th>SUBCATEGORÍAS</th>
-                        <th>ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody id="categoriesTableBody">
-                    <!-- LAS CATEGORÍAS SE CARGARÁN DINÁMICAMENTE -->
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- BOTÓN AGREGAR CATEGORÍA -->
-        <div class="add-category-container">
-            <button class="add-btn" id="addCategoryBtn">
-                <i class="fas fa-plus-circle"></i> Agregar Nueva Categoría
-            </button>
-        </div>
-    </div>
-
-    <!-- VISTA DE SUBCATEGORÍAS (OCULTA INICIALMENTE) -->
-    <div id="subcategoriesView" class="subcategories-view" style="display: none;">
-        <!-- HEADER DE SUBCATEGORÍAS -->
-        <div class="section-header subcategories-header">
-            <div class="section-title">
-                <i class="fas fa-folder-tree"></i>
-                <span id="currentCategoryName">Electrónica</span>
-                <span class="subcategories-title"> - Subcategorías</span>
-            </div>
-        </div>
-
-        <!-- TABLA DE SUBCATEGORÍAS -->
-        <div class="table-wrapper">
-            <table class="subcategories-table">
-                <thead>
-                    <tr>
-                        <th>NOMBRE</th>
-                        <th>DESCRIPCIÓN</th>
-                        <th>COLOR</th>
-                        <th>ESTADO</th>
-                        <th>ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody id="subcategoriesTableBody">
-                    <!-- LAS SUBCATEGORÍAS SE CARGARÁN DINÁMICAMENTE -->
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- BOTÓN AGREGAR SUBCATEGORÍA -->
-        <div class="add-subcategory-container">
-            <button class="add-btn subcategory-btn" id="addSubcategoryBtn">
-                <i class="fas fa-plus-circle"></i> Agregar Subcategoría
-            </button>
-        </div>
+    
+    <!-- BOTÓN AGREGAR CATEGORÍA -->
+    <div class="add-category-container">
+        <button class="add-btn" id="addCategoryBtn">
+            <i class="fas fa-plus-circle"></i> Agregar Nueva Categoría
+        </button>
     </div>
 </div>
 
@@ -178,14 +138,6 @@
                 </div>
             </div>
             
-            <div class="form-group">
-                <label for="subcategoryStatus"><i class="fas fa-toggle-on"></i> Estado</label>
-                <select id="subcategoryStatus" name="status">
-                    <option value="active">Activa</option>
-                    <option value="inactive">Inactiva</option>
-                </select>
-            </div>
-            
             <div class="form-actions">
                 <button type="button" class="cancel-btn" onclick="closeSubcategoryModal()">Cancelar</button>
                 <button type="submit" class="save-btn" id="subcategorySubmitBtn">Guardar Subcategoría</button>
@@ -212,7 +164,7 @@
 </div>
 
 <script src="/components/themeloader.js"></script>
-<script src="/components/particulas/particulas.js"></script>
+<script src="/components/particulas.js"></script>
 <script src="/components/navbar-admin-component.js"></script>
 <script src="/components/footer-admin-component.js"></script>
 

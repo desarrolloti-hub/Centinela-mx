@@ -1,4 +1,10 @@
 // editAdmin.js - Editor de perfil para administradores (Versión con UserManager)
+// MODIFICADO: Validación de nombre (solo letras) y ocultar icono/texto al subir imagen
+
+// ==================== VARIABLES GLOBALES ====================
+let selectedFile = null;
+let currentPhotoType = '';
+
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📄 Editor de perfil cargado - Versión con UserManager');
     
@@ -15,11 +21,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         const userManager = new UserManager();
         
         // Esperar a que UserManager cargue el usuario actual
-        // UserManager ya maneja la autenticación internamente
         if (!userManager.currentUser) {
             console.log('🔄 Esperando que UserManager cargue el usuario actual...');
             
-            // Podemos esperar un momento o verificar periódicamente
             const waitForUser = setInterval(() => {
                 if (userManager.currentUser) {
                     clearInterval(waitForUser);
@@ -34,26 +38,27 @@ document.addEventListener('DOMContentLoaded', async function() {
                     clearInterval(waitForUser);
                     console.error('❌ Timeout esperando usuario');
                     
-                    // Mostrar error y redirigir
                     Swal.fire({
                         icon: 'error',
                         title: 'Error de autenticación',
                         text: 'No se pudo cargar el usuario actual',
-                        confirmButtonText: 'Ir al login'
+                        confirmButtonText: 'Ir al login',
+                        background: 'var(--color-bg-primary)',
+                        color: 'var(--color-text-primary)',
+                        confirmButtonColor: 'var(--color-accent-primary)',
+                        timer: 4000
                     }).then(() => {
                         window.location.href = '/users/visitors/login/login.html';
                     });
                 }
             }, 5000);
         } else {
-            // Si ya está cargado, iniciar directamente
             iniciarEditor(userManager);
         }
         
     } catch (error) {
         console.error('❌ Error cargando módulos:', error);
         
-        // Mostrar error amigable
         Swal.fire({
             icon: 'error',
             title: 'Error de configuración',
@@ -68,7 +73,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </div>
             `,
             confirmButtonText: 'Entendido',
-            allowOutsideClick: false
+            allowOutsideClick: false,
+            background: 'var(--color-bg-primary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: 'var(--color-accent-primary)',
+            timer: 5000
         }).then(() => {
             window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
         });
@@ -80,7 +89,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 async function iniciarEditor(userManager) {
     console.log('👨‍💼 Iniciando editor de perfil...');
     
-    // Verificar si el usuario está autenticado a través de UserManager
+    // Resetear variables globales
+    selectedFile = null;
+    currentPhotoType = '';
+    
     if (!userManager.currentUser) {
         console.warn('⚠️ Usuario no autenticado según UserManager');
         
@@ -88,8 +100,10 @@ async function iniciarEditor(userManager) {
             icon: 'warning',
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para acceder al editor de perfil',
-            timer: 3000,
-            showConfirmButton: false
+            timer: 4000,
+            showConfirmButton: false,
+            background: 'var(--color-bg-primary)',
+            color: 'var(--color-text-primary)'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -99,28 +113,14 @@ async function iniciarEditor(userManager) {
     // Obtener elementos del DOM
     const elements = getElements();
     
-    // Variables de estado
-    let selectedFile = null;
-    let currentPhotoType = '';
-    
     try {
-        // Cargar datos del usuario usando UserManager
         await loadUserData(userManager, elements);
-        
-        // Configurar handlers básicos
         setupBasicHandlers(elements);
-        
-        // Configurar handlers de fotos
         setupPhotoHandlers(elements);
         setupModalHandlers(elements, userManager);
-        
-        // Configurar handler de guardado
         setupSaveHandler(elements, userManager);
-        
-        // Configurar handler para cambiar contraseña
         setupPasswordChangeHandler(elements, userManager);
         
-        // Mostrar mensaje de bienvenida
         showMessage(elements.mainMessage, 'success', 
             `Editando perfil de: ${userManager.currentUser.email}`);
             
@@ -172,11 +172,71 @@ function getElements() {
     };
 }
 
+function validateAndDebugFile(file, type, elements) {
+    console.log('🔍 Validando archivo:', {
+        nombre: file.name,
+        tipo: file.type,
+        tamaño: Math.round(file.size/1024) + 'KB',
+        tipoSeleccionado: type
+    });
+    
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+        showMessage(elements.mainMessage, 'error', 
+            `Tipo de archivo no válido. Usa: JPEG, PNG, GIF o WEBP`);
+        return false;
+    }
+    
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showMessage(elements.mainMessage, 'error', 
+            `La imagen es muy grande (${Math.round(file.size/1024)}KB). Máximo: 2MB`);
+        return false;
+    }
+    
+    if (!elements.photoModal) {
+        console.error('❌ Elemento photoModal no encontrado');
+        showMessage(elements.mainMessage, 'error', 'Error: No se encontró el modal de confirmación');
+        return false;
+    }
+    
+    if (!elements.previewImage) {
+        console.error('❌ Elemento previewImage no encontrado');
+        return false;
+    }
+    
+    return true;
+}
+
+// ========== FUNCIÓN PARA VALIDAR NOMBRE (SOLO LETRAS) ==========
+
+function validarNombreSoloLetras(nombre) {
+    // Permite letras, espacios, tildes y letras ñ
+    const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+    return regex.test(nombre);
+}
+
+function mostrarErrorNombre(elements) {
+    showMessage(elements.mainMessage, 'error', 
+        'El nombre solo puede contener letras y espacios. No se permiten números ni caracteres especiales.');
+    
+    if (elements.fullName) {
+        elements.fullName.style.borderColor = 'var(--color-error)';
+        elements.fullName.style.boxShadow = '0 0 0 2px rgba(255, 87, 87, 0.2)';
+        elements.fullName.focus();
+        
+        // Remover el estilo después de 3 segundos
+        setTimeout(() => {
+            elements.fullName.style.borderColor = '';
+            elements.fullName.style.boxShadow = '';
+        }, 3000);
+    }
+}
+
 async function loadUserData(userManager, elements) {
     console.log('📥 Cargando datos del usuario con UserManager');
     
     try {
-        // Verificar que UserManager tenga el usuario actual
         if (!userManager.currentUser) {
             console.error('❌ No hay usuario actual en UserManager');
             throw new Error('No hay usuario autenticado');
@@ -192,7 +252,6 @@ async function loadUserData(userManager, elements) {
             email: user.correoElectronico
         });
         
-        // Actualizar interfaz
         updateUI(elements, user);
         
     } catch (error) {
@@ -204,7 +263,6 @@ async function loadUserData(userManager, elements) {
 function updateUI(elements, user) {
     console.log('🎨 Actualizando interfaz...');
     
-    // Datos personales
     if (elements.fullName && user.nombreCompleto) {
         elements.fullName.value = user.nombreCompleto;
     }
@@ -221,44 +279,143 @@ function updateUI(elements, user) {
         elements.position.value = user.cargo || 'Administrador';
     }
     
-    // Fotos - Usar el método getFotoUrl() de la clase User
-    if (user.fotoUsuario) {
-        const profileUrl = user.getFotoUrl();
+    // ==================== FOTO DE PERFIL - MODIFICADA ====================
+    if (user.fotoUsuario && user.fotoUsuario.trim() !== '') {
+        const profileUrl = user.getFotoUrl ? user.getFotoUrl() : user.fotoUsuario;
+        console.log('📸 Cargando foto de perfil existente');
+        
         if (elements.profileImage) {
+            // Configurar la imagen
             elements.profileImage.src = profileUrl;
             elements.profileImage.style.display = 'block';
             
-            // Agregar manejador de error en caso de imagen rota
+            // OCULTAR completamente el placeholder (icono y letras)
+            if (elements.profilePlaceholder) {
+                elements.profilePlaceholder.style.display = 'none';
+                // También ocultar cualquier texto dentro del círculo
+                const placeholderText = elements.profilePlaceholder.querySelector('.placeholder-text');
+                if (placeholderText) {
+                    placeholderText.style.display = 'none';
+                }
+                const placeholderIcon = elements.profilePlaceholder.querySelector('.placeholder-icon');
+                if (placeholderIcon) {
+                    placeholderIcon.style.display = 'none';
+                }
+            }
+            
+            // Verificar si la imagen se carga
+            elements.profileImage.onload = function() {
+                console.log('✅ Imagen de perfil cargada');
+                // Asegurarse de que el placeholder esté oculto
+                if (elements.profilePlaceholder) {
+                    elements.profilePlaceholder.style.display = 'none';
+                }
+            };
+            
             elements.profileImage.onerror = function() {
-                console.warn('⚠️ Error cargando imagen de perfil, usando placeholder');
+                console.warn('⚠️ Error cargando imagen de perfil');
                 this.style.display = 'none';
+                // Mostrar placeholder si la imagen falla
                 if (elements.profilePlaceholder) {
                     elements.profilePlaceholder.style.display = 'flex';
+                    // Mostrar icono y texto de nuevo
+                    const placeholderText = elements.profilePlaceholder.querySelector('.placeholder-text');
+                    if (placeholderText) {
+                        placeholderText.style.display = 'block';
+                    }
+                    const placeholderIcon = elements.profilePlaceholder.querySelector('.placeholder-icon');
+                    if (placeholderIcon) {
+                        placeholderIcon.style.display = 'block';
+                    }
                 }
             };
         }
+    } else {
+        console.log('ℹ️ No hay foto de usuario, mostrando placeholder');
         if (elements.profilePlaceholder) {
-            elements.profilePlaceholder.style.display = 'none';
+            elements.profilePlaceholder.style.display = 'flex';
+            // Asegurar que el icono y texto sean visibles
+            const placeholderText = elements.profilePlaceholder.querySelector('.placeholder-text');
+            if (placeholderText) {
+                placeholderText.style.display = 'block';
+            }
+            const placeholderIcon = elements.profilePlaceholder.querySelector('.placeholder-icon');
+            if (placeholderIcon) {
+                placeholderIcon.style.display = 'block';
+            }
+        }
+        if (elements.profileImage) {
+            elements.profileImage.style.display = 'none';
         }
     }
     
-    if (user.fotoOrganizacion) {
+    // ==================== LOGO DE ORGANIZACIÓN - MODIFICADA ====================
+    if (user.fotoOrganizacion && user.fotoOrganizacion.trim() !== '') {
         const orgUrl = user.fotoOrganizacion;
+        console.log('🏢 Cargando logo de organización');
+        
         if (elements.orgImage) {
+            // Configurar la imagen
             elements.orgImage.src = orgUrl;
             elements.orgImage.style.display = 'block';
             
-            // Agregar manejador de error
+            // OCULTAR completamente el placeholder (icono y letras)
+            if (elements.orgPlaceholder) {
+                elements.orgPlaceholder.style.display = 'none';
+                // También ocultar cualquier texto dentro del círculo
+                const placeholderText = elements.orgPlaceholder.querySelector('.placeholder-text');
+                if (placeholderText) {
+                    placeholderText.style.display = 'none';
+                }
+                const placeholderIcon = elements.orgPlaceholder.querySelector('.placeholder-icon');
+                if (placeholderIcon) {
+                    placeholderIcon.style.display = 'none';
+                }
+            }
+            
+            // Verificar si la imagen se carga
+            elements.orgImage.onload = function() {
+                console.log('✅ Logo de organización cargado');
+                // Asegurarse de que el placeholder esté oculto
+                if (elements.orgPlaceholder) {
+                    elements.orgPlaceholder.style.display = 'none';
+                }
+            };
+            
             elements.orgImage.onerror = function() {
                 console.warn('⚠️ Error cargando logo de organización');
                 this.style.display = 'none';
+                // Mostrar placeholder si la imagen falla
                 if (elements.orgPlaceholder) {
                     elements.orgPlaceholder.style.display = 'flex';
+                    // Mostrar icono y texto de nuevo
+                    const placeholderText = elements.orgPlaceholder.querySelector('.placeholder-text');
+                    if (placeholderText) {
+                        placeholderText.style.display = 'block';
+                    }
+                    const placeholderIcon = elements.orgPlaceholder.querySelector('.placeholder-icon');
+                    if (placeholderIcon) {
+                        placeholderIcon.style.display = 'block';
+                    }
                 }
             };
         }
+    } else {
+        console.log('ℹ️ No hay logo de organización');
         if (elements.orgPlaceholder) {
-            elements.orgPlaceholder.style.display = 'none';
+            elements.orgPlaceholder.style.display = 'flex';
+            // Asegurar que el icono y texto sean visibles
+            const placeholderText = elements.orgPlaceholder.querySelector('.placeholder-text');
+            if (placeholderText) {
+                placeholderText.style.display = 'block';
+            }
+            const placeholderIcon = elements.orgPlaceholder.querySelector('.placeholder-icon');
+            if (placeholderIcon) {
+                placeholderIcon.style.display = 'block';
+            }
+        }
+        if (elements.orgImage) {
+            elements.orgImage.style.display = 'none';
         }
     }
     
@@ -288,14 +445,13 @@ function showMessage(element, type, text) {
     if (type !== 'error') {
         setTimeout(() => {
             element.style.display = 'none';
-        }, 5000);
+        }, 7000);
     }
 }
 
 // ========== HANDLERS BÁSICOS ==========
 
 function setupBasicHandlers(elements) {
-    // Botón cancelar
     if (elements.cancelBtn) {
         elements.cancelBtn.addEventListener('click', () => {
             Swal.fire({
@@ -303,10 +459,13 @@ function setupBasicHandlers(elements) {
                 text: 'Se perderán los cambios no guardados',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
+                confirmButtonColor: 'var(--color-accent-primary)',
+                cancelButtonColor: 'var(--color-text-secondary)',
                 confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar'
+                cancelButtonText: 'No, continuar',
+                background: 'var(--color-bg-primary)',
+                color: 'var(--color-text-primary)',
+                timer: 5000
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
@@ -315,7 +474,6 @@ function setupBasicHandlers(elements) {
         });
     }
     
-    // Volver al dashboard
     if (elements.backToDashboard) {
         elements.backToDashboard.addEventListener('click', () => {
             window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
@@ -343,7 +501,11 @@ function setupPhotoHandlers(elements) {
     if (elements.profileInput) {
         elements.profileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (file) showPhotoModal(file, 'profile', elements);
+            if (file) {
+                if (validateAndDebugFile(file, 'profile', elements)) {
+                    showPhotoModal(file, 'profile', elements);
+                }
+            }
             this.value = '';
         });
     }
@@ -363,19 +525,26 @@ function setupPhotoHandlers(elements) {
     if (elements.orgInput) {
         elements.orgInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (file) showPhotoModal(file, 'organization', elements);
+            if (file) {
+                if (validateAndDebugFile(file, 'organization', elements)) {
+                    showPhotoModal(file, 'organization', elements);
+                }
+            }
             this.value = '';
         });
     }
 }
 
 function showPhotoModal(file, type, elements) {
+    console.log('📸 Mostrando modal para imagen:', type);
+    
     const reader = new FileReader();
     
     reader.onload = function(e) {
         if (elements.previewImage) elements.previewImage.src = e.target.result;
-        currentPhotoType = type;
+        
         selectedFile = file;
+        currentPhotoType = type;
         
         if (elements.modalTitle) {
             elements.modalTitle.textContent = type === 'profile' 
@@ -384,101 +553,173 @@ function showPhotoModal(file, type, elements) {
         }
         
         if (elements.modalMessage) {
+            const fileSizeKB = Math.round(file.size / 1024);
             elements.modalMessage.textContent = type === 'profile'
-                ? '¿Deseas actualizar tu foto de perfil?'
-                : '¿Deseas actualizar el logo de tu organización?';
+                ? `¿Deseas actualizar tu foto de perfil? (${fileSizeKB} KB)`
+                : `¿Deseas actualizar el logo de tu organización? (${fileSizeKB} KB)`;
         }
         
-        if (elements.photoModal) elements.photoModal.style.display = 'flex';
+        if (elements.photoModal) {
+            elements.photoModal.style.display = 'flex';
+        }
     };
     
     reader.readAsDataURL(file);
 }
 
 function setupModalHandlers(elements, userManager) {
-    if (!elements.confirmChangeBtn || !elements.cancelChangeBtn) return;
+    if (!elements.confirmChangeBtn || !elements.cancelChangeBtn) {
+        console.error('❌ Elementos del modal no encontrados');
+        return;
+    }
     
     elements.confirmChangeBtn.addEventListener('click', async () => {
-        if (!selectedFile) return;
+        if (!selectedFile) {
+            console.warn('⚠️ No hay archivo seleccionado');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sin archivo',
+                text: 'No hay ninguna imagen seleccionada',
+                confirmButtonText: 'Entendido',
+                background: 'var(--color-bg-primary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: 'var(--color-accent-primary)',
+                timer: 4000
+            });
+            return;
+        }
         
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const imageBase64 = e.target.result;
+        Swal.fire({
+            title: 'Procesando imagen...',
+            html: 'Por favor espera mientras cargamos tu imagen',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            background: 'var(--color-bg-primary)',
+            color: 'var(--color-text-primary)',
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        try {
+            const imageBase64 = await readFileAsDataURL(selectedFile);
             
-            try {
-                // Determinar el campo a actualizar
-                const fieldToUpdate = currentPhotoType === 'profile' 
-                    ? { fotoUsuario: imageBase64 }
-                    : { fotoOrganizacion: imageBase64 };
-                
-                // Obtener usuario actual
-                const currentUser = userManager.currentUser;
-                if (!currentUser) {
-                    throw new Error('No hay usuario autenticado');
-                }
-                
-                // Actualizar usando UserManager
-                const success = await userManager.updateUser(
-                    currentUser.id,
-                    fieldToUpdate,
-                    currentUser.cargo,
-                    currentUser.organizacionCamelCase
-                );
-                
-                if (success) {
-                    // Actualizar interfaz
-                    if (currentPhotoType === 'profile') {
-                        if (elements.profileImage) {
-                            elements.profileImage.src = imageBase64;
-                            elements.profileImage.style.display = 'block';
-                        }
-                        if (elements.profilePlaceholder) {
-                            elements.profilePlaceholder.style.display = 'none';
-                        }
-                        
-                        // Actualizar el objeto user en memoria
-                        currentUser.fotoUsuario = imageBase64;
-                    } else {
-                        if (elements.orgImage) {
-                            elements.orgImage.src = imageBase64;
-                            elements.orgImage.style.display = 'block';
-                        }
-                        if (elements.orgPlaceholder) {
-                            elements.orgPlaceholder.style.display = 'none';
-                        }
-                        
-                        // Actualizar el objeto user en memoria
-                        currentUser.fotoOrganizacion = imageBase64;
-                    }
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: currentPhotoType === 'profile' 
-                            ? 'Foto de perfil actualizada' 
-                            : 'Logo de organización actualizado',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudo guardar la imagen: ' + error.message
-                });
+            const fieldToUpdate = currentPhotoType === 'profile' 
+                ? { fotoUsuario: imageBase64 }
+                : { fotoOrganizacion: imageBase64 };
+            
+            const currentUser = userManager.currentUser;
+            if (!currentUser) {
+                throw new Error('No hay usuario autenticado');
             }
             
-            if (elements.photoModal) elements.photoModal.style.display = 'none';
+            const success = await userManager.updateUser(
+                currentUser.id,
+                fieldToUpdate,
+                currentUser.cargo,
+                currentUser.organizacionCamelCase
+            );
+            
+            if (success) {
+                Swal.close();
+                
+                if (currentPhotoType === 'profile') {
+                    if (elements.profileImage) {
+                        elements.profileImage.src = imageBase64;
+                        elements.profileImage.style.display = 'block';
+                        
+                        // OCULTAR COMPLETAMENTE el placeholder (icono y letras)
+                        if (elements.profilePlaceholder) {
+                            elements.profilePlaceholder.style.display = 'none';
+                            // Ocultar icono si existe
+                            const placeholderIcon = elements.profilePlaceholder.querySelector('.placeholder-icon');
+                            if (placeholderIcon) {
+                                placeholderIcon.style.display = 'none';
+                            }
+                            // Ocultar texto si existe
+                            const placeholderText = elements.profilePlaceholder.querySelector('.placeholder-text');
+                            if (placeholderText) {
+                                placeholderText.style.display = 'none';
+                            }
+                        }
+                    }
+                    currentUser.fotoUsuario = imageBase64;
+                } else {
+                    if (elements.orgImage) {
+                        elements.orgImage.src = imageBase64;
+                        elements.orgImage.style.display = 'block';
+                        
+                        // OCULTAR COMPLETAMENTE el placeholder (icono y letras)
+                        if (elements.orgPlaceholder) {
+                            elements.orgPlaceholder.style.display = 'none';
+                            // Ocultar icono si existe
+                            const placeholderIcon = elements.orgPlaceholder.querySelector('.placeholder-icon');
+                            if (placeholderIcon) {
+                                placeholderIcon.style.display = 'none';
+                            }
+                            // Ocultar texto si existe
+                            const placeholderText = elements.orgPlaceholder.querySelector('.placeholder-text');
+                            if (placeholderText) {
+                                placeholderText.style.display = 'none';
+                            }
+                        }
+                    }
+                    currentUser.fotoOrganizacion = imageBase64;
+                }
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: currentPhotoType === 'profile' 
+                        ? 'Foto de perfil actualizada' 
+                        : 'Logo de organización actualizado',
+                    timer: 5000,
+                    showConfirmButton: false,
+                    background: 'var(--color-bg-primary)',
+                    color: 'var(--color-text-primary)',
+                    iconColor: 'var(--color-accent-primary)'
+                });
+                
+                console.log('✅ Imagen actualizada exitosamente');
+            } else {
+                throw new Error('No se pudo actualizar en la base de datos');
+            }
+        } catch (error) {
+            console.error('❌ Error actualizando imagen:', error);
+            Swal.close();
+            
+            let errorMessage = 'No se pudo guardar la imagen: ' + error.message;
+            
+            if (error.message.includes('permission') || error.message.includes('permiso')) {
+                errorMessage = 'No tienes permisos para actualizar la imagen';
+            } else if (error.message.includes('network') || error.message.includes('conexión')) {
+                errorMessage = 'Error de conexión. Verifica tu internet';
+            }
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: errorMessage,
+                confirmButtonText: 'Entendido',
+                background: 'var(--color-bg-primary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: 'var(--color-accent-primary)',
+                timer: 5000
+            });
+        } finally {
+            if (elements.photoModal) {
+                elements.photoModal.style.display = 'none';
+            }
             selectedFile = null;
             currentPhotoType = '';
-        };
-        
-        reader.readAsDataURL(selectedFile);
+        }
     });
     
     elements.cancelChangeBtn.addEventListener('click', () => {
-        if (elements.photoModal) elements.photoModal.style.display = 'none';
+        if (elements.photoModal) {
+            elements.photoModal.style.display = 'none';
+        }
         selectedFile = null;
         currentPhotoType = '';
     });
@@ -494,40 +735,58 @@ function setupModalHandlers(elements, userManager) {
     }
 }
 
-// ========== HANDLER DE GUARDADO ==========
+// Función auxiliar para leer archivo como Data URL
+function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(file);
+    });
+}
+
+// ========== HANDLER DE GUARDADO MODIFICADO ==========
 
 function setupSaveHandler(elements, userManager) {
     if (!elements.saveChangesBtn) return;
     
     elements.saveChangesBtn.addEventListener('click', async () => {
-        // Validar nombre completo
+        // Validar que el campo no esté vacío
         if (!elements.fullName || !elements.fullName.value.trim()) {
             showMessage(elements.mainMessage, 'error', 'El nombre completo es obligatorio');
             if (elements.fullName) elements.fullName.focus();
             return;
         }
         
-        // Obtener usuario actual
+        // Validar que solo contenga letras
+        const nombre = elements.fullName.value.trim();
+        if (!validarNombreSoloLetras(nombre)) {
+            mostrarErrorNombre(elements);
+            return;
+        }
+        
+        // Si el nombre es válido, proceder con el guardado...
         const currentUser = userManager.currentUser;
         if (!currentUser) {
             showMessage(elements.mainMessage, 'error', 'No hay usuario autenticado');
             return;
         }
         
-        // Mostrar loader
         Swal.fire({
             title: 'Guardando cambios...',
             allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+            background: 'var(--color-bg-primary)',
+            color: 'var(--color-text-primary)',
+            didOpen: () => {
+                Swal.showLoading();
+            }
         });
         
         try {
-            // Preparar datos a actualizar
             const updateData = {
-                nombreCompleto: elements.fullName.value.trim()
+                nombreCompleto: nombre
             };
             
-            // Actualizar usando UserManager
             await userManager.updateUser(
                 currentUser.id,
                 updateData,
@@ -535,17 +794,18 @@ function setupSaveHandler(elements, userManager) {
                 currentUser.organizacionCamelCase
             );
             
-            // Actualizar el objeto user en memoria
             currentUser.nombreCompleto = updateData.nombreCompleto;
             
-            // Mostrar éxito
             Swal.close();
             Swal.fire({
                 icon: 'success',
                 title: '¡Éxito!',
                 text: 'Datos actualizados correctamente',
-                timer: 3000,
-                showConfirmButton: false
+                timer: 5000,
+                showConfirmButton: false,
+                background: 'var(--color-bg-primary)',
+                color: 'var(--color-text-primary)',
+                iconColor: 'var(--color-accent-primary)'
             });
             
             showMessage(elements.mainMessage, 'success', 'Cambios guardados exitosamente');
@@ -557,22 +817,51 @@ function setupSaveHandler(elements, userManager) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'No se pudieron guardar los cambios: ' + error.message
+                text: 'No se pudieron guardar los cambios: ' + error.message,
+                confirmButtonText: 'Entendido',
+                background: 'var(--color-bg-primary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: 'var(--color-accent-primary)',
+                timer: 5000
             });
         }
     });
+    
+    // Agregar validación en tiempo real
+    if (elements.fullName) {
+        elements.fullName.addEventListener('input', function() {
+            const nombre = this.value.trim();
+            
+            // Limpiar estilo si es válido
+            if (validarNombreSoloLetras(nombre) || nombre === '') {
+                this.style.borderColor = '';
+                this.style.boxShadow = '';
+                
+                // Ocultar mensaje de error si está visible
+                if (elements.mainMessage && 
+                    elements.mainMessage.textContent.includes('solo puede contener letras')) {
+                    elements.mainMessage.style.display = 'none';
+                }
+            }
+        });
+        
+        // También validar al perder el foco
+        elements.fullName.addEventListener('blur', function() {
+            const nombre = this.value.trim();
+            if (nombre && !validarNombreSoloLetras(nombre)) {
+                mostrarErrorNombre(elements);
+            }
+        });
+    }
 }
 
 // ========== FUNCIÓN PARA CAMBIAR CONTRASEÑA ==========
 
 function setupPasswordChangeHandler(elements, userManager) {
-    // Solo crear el botón si no existe
     if (!document.getElementById('changePasswordBtn')) {
-        // Buscar el contenedor correcto para insertar el botón
         const permissionsNote = document.querySelector('.permissions-note');
         
         if (permissionsNote) {
-            // Crear contenedor para el botón de cambiar contraseña
             const passwordSection = document.createElement('div');
             passwordSection.className = 'password-section-simple';
             passwordSection.style.cssText = `
@@ -584,7 +873,6 @@ function setupPasswordChangeHandler(elements, userManager) {
                 text-align: center;
             `;
             
-            // Crear botón
             const changePasswordBtn = document.createElement('button');
             changePasswordBtn.id = 'changePasswordBtn';
             changePasswordBtn.type = 'button';
@@ -611,18 +899,6 @@ function setupPasswordChangeHandler(elements, userManager) {
                 display: inline-block;
             `;
             
-            // Crear descripción
-            const description = document.createElement('p');
-            description.className = 'password-change-info';
-            description.textContent = 'Se te enviará un enlace seguro a tu correo electrónico para restablecer tu contraseña.';
-            description.style.cssText = `
-                color: var(--color-text-secondary);
-                font-size: 0.75rem;
-                line-height: 1.4;
-                margin: 10px 0 0 0;
-            `;
-            
-            // Agregar eventos hover al botón
             changePasswordBtn.addEventListener('mouseenter', function() {
                 this.style.background = 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))';
                 this.style.transform = 'translateY(-2px)';
@@ -635,21 +911,28 @@ function setupPasswordChangeHandler(elements, userManager) {
                 this.style.boxShadow = 'var(--shadow-small)';
             });
             
-            // Agregar evento click
+            const description = document.createElement('p');
+            description.className = 'password-change-info';
+            description.textContent = 'Se te enviará un enlace seguro a tu correo electrónico para restablecer tu contraseña.';
+            description.style.cssText = `
+                color: var(--color-text-secondary);
+                font-size: 0.75rem;
+                line-height: 1.4;
+                margin: 10px 0 0 0;
+            `;
+            
             changePasswordBtn.addEventListener('click', () => {
                 showPasswordResetConfirmation(userManager);
             });
             
-            // Agregar elementos al contenedor
             passwordSection.appendChild(changePasswordBtn);
             passwordSection.appendChild(description);
             
-            // Insertar después de la nota de permisos
             permissionsNote.parentNode.insertBefore(passwordSection, permissionsNote.nextSibling);
             
-            console.log('✅ Botón de cambiar contraseña agregado en posición correcta');
+            console.log('✅ Botón de cambiar contraseña agregado');
         } else {
-            console.warn('⚠️ No se encontró la nota de permisos para insertar el botón');
+            console.warn('⚠️ No se encontró la nota de permisos');
         }
     }
 }
@@ -658,80 +941,77 @@ function setupPasswordChangeHandler(elements, userManager) {
 
 async function showPasswordResetConfirmation(userManager) {
     try {
-        // Obtener usuario actual desde UserManager
         const currentUser = userManager.currentUser;
         if (!currentUser || !currentUser.correoElectronico) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
                 text: 'No se pudo obtener el correo electrónico del usuario',
-                confirmButtonText: 'ENTENDIDO'
+                confirmButtonText: 'ENTENDIDO',
+                background: 'var(--color-bg-primary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: 'var(--color-accent-primary)',
+                timer: 4000
             });
             return;
         }
         
         const userEmail = currentUser.correoElectronico;
         
-        // Mostrar confirmación
         const result = await Swal.fire({
             title: '¿CAMBIAR CONTRASEÑA?',
             html: `
                 <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 60px; color: #ff9800; margin-bottom: 15px;">
+                    <div style="font-size: 60px; color: var(--color-accent-primary); margin-bottom: 15px;">
                         <i class="fas fa-key"></i>
                     </div>
                     <p style="color: var(--color-text-secondary); margin-bottom: 15px;">
                         Se enviará un enlace de restablecimiento a tu correo electrónico.
                     </p>
-                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                        <p><strong>Correo asociado:</strong></p>
+                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid var(--color-border-light);">
+                        <p><strong style="color: var(--color-text-primary);">Correo asociado:</strong></p>
                         <p style="color: var(--color-accent-primary); font-weight: bold;">
                             ${userEmail}
                         </p>
                     </div>
-                    <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0;">
-                        <p style="color: #856404; font-size: 14px; margin: 0;">
-                            <i class="fas fa-info-circle"></i> 
+                    <div style="background: rgba(255, 243, 205, 0.1); padding: 10px; border-radius: 6px; margin: 10px 0; border: 1px solid var(--color-border-light);">
+                        <p style="color: var(--color-text-secondary); font-size: 14px; margin: 0;">
+                            <i class="fas fa-info-circle" style="color: var(--color-accent-primary);"></i> 
                             El enlace expirará en 1 hora.
                         </p>
                     </div>
                 </div>
             `,
             icon: 'warning',
+            iconColor: 'var(--color-accent-primary)',
             showCancelButton: true,
             confirmButtonText: 'ENVIAR ENLACE',
             cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
+            confirmButtonColor: 'var(--color-accent-primary)',
+            cancelButtonColor: 'var(--color-text-secondary)',
             reverseButtons: true,
             allowOutsideClick: false,
-            backdrop: true
+            backdrop: true,
+            background: 'var(--color-bg-primary)',
+            color: 'var(--color-text-primary)',
+            timer: 6000
         });
         
         if (result.isConfirmed) {
-            // Mostrar loader
             Swal.fire({
                 title: 'Enviando enlace...',
                 html: 'Por favor espera mientras procesamos tu solicitud.',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
+                background: 'var(--color-bg-primary)',
+                color: 'var(--color-text-primary)',
                 didOpen: () => {
                     Swal.showLoading();
                 }
             });
             
             try {
-                // Aquí deberías tener un método en UserManager para enviar el correo de restablecimiento
-                // Por ahora, asumimos que UserManager puede acceder al auth necesario
-                
-                // IMPORTANTE: Necesitas agregar un método sendPasswordResetEmail a UserManager
-                // o importar directamente el auth de firebase-config.js
-                
-                // Opción 1: Si UserManager tiene acceso a auth
-                // await userManager.sendPasswordResetEmail(userEmail);
-                
-                // Opción 2: Importar auth directamente (temporalmente)
                 const firebaseModule = await import('/config/firebase-config.js');
                 const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js");
                 
@@ -743,16 +1023,14 @@ async function showPasswordResetConfirmation(userManager) {
                 console.log('📧 Enviando correo de restablecimiento a:', userEmail);
                 await sendPasswordResetEmail(firebaseModule.auth, userEmail, actionCodeSettings);
                 
-                // Cerrar loader
                 Swal.close();
                 
-                // Mostrar éxito
                 await Swal.fire({
                     icon: 'success',
                     title: '¡ENLACE ENVIADO EXITOSAMENTE!',
                     html: `
                         <div style="text-align: center; padding: 20px;">
-                            <div style="font-size: 60px; color: #28a745; margin-bottom: 20px;">
+                            <div style="font-size: 60px; color: var(--color-accent-primary); margin-bottom: 20px;">
                                 <i class="fas fa-paper-plane"></i>
                             </div>
                             
@@ -760,40 +1038,40 @@ async function showPasswordResetConfirmation(userManager) {
                                 Correo enviado correctamente
                             </h3>
                             
-                            <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                                <p><strong>📨 Destinatario:</strong> ${userEmail}</p>
-                                <p><strong>⏱️ Válido por:</strong> 1 hora</p>
-                                <p><strong>🔗 Redirigirá a:</strong> verifyEmail.html</p>
+                            <div style="background: var(--color-bg-secondary); padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid var(--color-border-light);">
+                                <p style="color: var(--color-text-primary);"><strong>📨 Destinatario:</strong> ${userEmail}</p>
+                                <p style="color: var(--color-text-primary);"><strong>⏱️ Válido por:</strong> 1 hora</p>
+                                <p style="color: var(--color-text-primary);"><strong>🔗 Redirigirá a:</strong> verifyEmail.html</p>
                             </div>
                             
-                            <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 20px 0;">
-                                <h4 style="color: #155724; margin-bottom: 10px;">
-                                    <i class="fas fa-check"></i> ¿Qué hacer ahora?
+                            <div style="background: rgba(212, 237, 218, 0.1); border: 1px solid var(--color-border-light); border-radius: 8px; padding: 15px; margin: 20px 0;">
+                                <h4 style="color: var(--color-text-primary); margin-bottom: 10px;">
+                                    <i class="fas fa-check" style="color: var(--color-accent-primary);"></i> ¿Qué hacer ahora?
                                 </h4>
-                                <ol style="text-align: left; margin: 0; padding-left: 20px; color: #0c5460;">
-                                    <li><strong>Abre tu correo</strong> (revisa spam si no lo ves)</li>
-                                    <li><strong>Haz clic en el enlace</strong> "Restablecer contraseña"</li>
-                                    <li><strong>Ingresa tu nueva contraseña</strong> (2 veces para confirmar)</li>
-                                    <li><strong>Haz clic en "CAMBIAR CONTRASEÑA"</strong></li>
-                                    <li><strong>Inicia sesión</strong> con tu nueva contraseña</li>
+                                <ol style="text-align: left; margin: 0; padding-left: 20px; color: var(--color-text-secondary);">
+                                    <li><strong style="color: var(--color-text-primary);">Abre tu correo</strong> (revisa spam si no lo ves)</li>
+                                    <li><strong style="color: var(--color-text-primary);">Haz clic en el enlace</strong> "Restablecer contraseña"</li>
+                                    <li><strong style="color: var(--color-text-primary);">Ingresa tu nueva contraseña</strong> (2 veces para confirmar)</li>
+                                    <li><strong style="color: var(--color-text-primary);">Haz clic en "CAMBIAR CONTRASEÑA"</strong></li>
+                                    <li><strong style="color: var(--color-text-primary);">Inicia sesión</strong> con tu nueva contraseña</li>
                                 </ol>
                             </div>
                         </div>
                     `,
                     confirmButtonText: 'ENTENDIDO, REVISARÉ MI CORREO',
-                    confirmButtonColor: '#28a745',
+                    confirmButtonColor: 'var(--color-accent-primary)',
                     allowOutsideClick: false,
                     showCloseButton: true,
-                    width: '650px'
+                    width: '650px',
+                    background: 'var(--color-bg-primary)',
+                    color: 'var(--color-text-primary)',
+                    timer: 8000
                 });
                 
             } catch (error) {
-                // Cerrar loader
                 Swal.close();
-                
                 console.error('❌ Error enviando correo:', error);
                 
-                // Manejar errores específicos
                 let errorMessage = 'Ocurrió un error al enviar el correo de restablecimiento';
                 
                 switch(error.code) {
@@ -818,7 +1096,10 @@ async function showPasswordResetConfirmation(userManager) {
                     title: errorMessage,
                     text: 'Por favor, intenta nuevamente más tarde.',
                     confirmButtonText: 'ENTENDIDO',
-                    confirmButtonColor: '#d33'
+                    confirmButtonColor: 'var(--color-accent-primary)',
+                    background: 'var(--color-bg-primary)',
+                    color: 'var(--color-text-primary)',
+                    timer: 5000
                 });
             }
         }
@@ -829,9 +1110,13 @@ async function showPasswordResetConfirmation(userManager) {
             icon: 'error',
             title: 'Error inesperado',
             text: 'Ocurrió un error inesperado. Por favor, intenta nuevamente.',
-            confirmButtonText: 'ENTENDIDO'
+            confirmButtonText: 'ENTENDIDO',
+            background: 'var(--color-bg-primary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: 'var(--color-accent-primary)',
+            timer: 5000
         });
     }
 }
 
-console.log('✅ editAdmin.js cargado con UserManager - Sin autenticación directa');
+console.log('✅ editAdmin.js cargado - Con validación de nombre y manejo mejorado de imágenes');
