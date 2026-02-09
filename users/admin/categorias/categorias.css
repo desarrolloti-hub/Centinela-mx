@@ -4,7 +4,7 @@
 
 /* VARIABLES ESPECÍFICAS */
 :root {
-    /* COLORES - MANTENIDOS DE COLLABORATORS */
+    /* COLORES */
     --color-bg-primary: #000000;
     --color-bg-secondary: #0a0a0a;
     --color-bg-tertiary: #141414;
@@ -45,7 +45,7 @@
     --font-family-secondary: 'Rajdhani', sans-serif;
 }
 
-/* CONTAINER PRINCIPAL - IGUAL QUE COLLABORATORS */
+/* CONTAINER PRINCIPAL */
 .admin-container {
     padding: 100px 20px 40px;
     position: relative;
@@ -56,144 +56,126 @@
     margin: 0 auto;
     font-family: var(--font-family-secondary);
     min-height: calc(100vh - 160px);
-    animation: fadeInUp 0.5s ease;
 }
 
-/* HEADER - MANTENIENDO TU ESTRUCTURA PERO CON ESTILO DE COLLABORATORS */
+/* HEADER - VISIBLE - CENTRADO Y CON DESCRIPCIÓN */
 .section-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    flex-wrap: wrap;
-    gap: 15px;
+    flex-direction: column; /* Cambiado a columna */
+    align-items: center; /* Centrado */
+    text-align: center; /* Texto centrado */
+    margin-bottom: 30px; /* Más espacio debajo */
     background: rgba(15, 15, 15, 0.9);
-    padding: 20px 25px;
+    padding: 30px 25px; /* Más padding */
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-light);
     box-shadow: var(--shadow-normal);
+    gap: 15px;
 }
 
-/* TÍTULO PRINCIPAL - ESTILO COLLABORATORS */
+/* TÍTULO PRINCIPAL - CENTRADO */
 .section-title {
-    font-size: clamp(22px, 4vw, 26px);
+    font-size: clamp(24px, 4vw, 28px); /* Un poco más grande */
     color: var(--color-text-primary);
     margin: 0;
     text-transform: uppercase;
     font-family: var(--font-family-primary);
-    letter-spacing: 1px;
+    letter-spacing: 1.5px; /* Más espaciado */
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 15px;
+    width: 100%;
+    justify-content: center; /* Centrado */
 }
 
 .section-title i {
     color: var(--color-accent-primary);
-    font-size: 24px;
+    font-size: 28px; /* Un poco más grande */
 }
 
-/* DESCRIPCIÓN - ESTILO PERSONALIZADO PARA CATEGORÍAS */
+/* DESCRIPCIÓN DE SECCIÓN */
 .section-description {
     color: var(--color-text-secondary);
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.6;
-    margin-top: 10px;
-    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
     font-family: var(--font-family-secondary);
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
 }
 
 /* CONTENEDOR DEL BOTÓN AGREGAR */
 .add-category-container {
     display: flex;
     justify-content: flex-end;
-    margin-top: 20px;
+    margin-top: 25px;
     padding: 0 10px;
 }
 
-/* BOTÓN AGREGAR - EXACTAMENTE IGUAL QUE COLLABORATORS */
+/* BOTÓN AGREGAR - ESTILOS MEJORADOS */
 .add-btn {
-    background: var(--color-accent-primary);
-    color: var(--color-text-dark);
-    border: none;
-    border-radius: var(--border-radius-small);
-    padding: 12px 24px;
-    font-weight: 600;
-    transition: var(--transition-default);
-    box-shadow: var(--shadow-small);
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
+    border: 1px solid var(--color-accent-primary);
+    color: var(--color-text-primary);
+    padding: 14px 25px;
+    border-radius: var(--border-radius-medium);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     font-family: var(--font-family-primary);
-    cursor: pointer;
+    font-size: 15px;
     min-width: 250px;
     justify-content: center;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: relative;
-    overflow: hidden;
+    letter-spacing: 1px;
 }
 
 .add-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-normal);
-    background: var(--color-success);
+    transform: translateY(-3px);
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f);
+    box-shadow: 0 5px 25px rgba(192, 192, 192, 0.3);
+    border-color: var(--color-success);
 }
 
-.add-btn::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    height: 200%;
-    background: linear-gradient(
-        to bottom right,
-        rgba(192, 183, 183, 0) 0%,
-        rgba(213, 203, 203, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    transform: rotate(30deg);
-    transition: all 0.5s ease;
+.add-btn i {
+    font-size: 18px;
+    color: var(--color-success);
 }
 
-.add-btn:hover::after {
-    transform: rotate(30deg) translate(10%, 10%);
-}
-
-/* TABLA - ESTILOS IDÉNTICOS A COLLABORATORS */
+/* TABLA - ESTILOS ESPECÍFICOS - SIN SCROLL HORIZONTAL EN NINGÚN DISPOSITIVO */
 .table-wrapper {
     background: var(--color-bg-secondary);
     border-radius: var(--border-radius-large);
     padding: 20px;
-    overflow-x: auto;
     box-shadow: var(--shadow-normal);
     border: 1px solid var(--color-border-light);
     margin-top: 20px;
     position: relative;
+    width: 100%;
+    overflow: hidden; /* Elimina el scroll horizontal en todos los dispositivos */
 }
 
+/* ELIMINAR SCROLLBAR COMPLETAMENTE */
 .table-wrapper::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
+    display: none; /* Oculta completamente la scrollbar */
 }
 
-.table-wrapper::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-}
-
-.table-wrapper::-webkit-scrollbar-thumb {
-    background: var(--color-accent-primary);
-    border-radius: 10px;
-}
-
-.table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent-secondary);
+.table-wrapper {
+    -ms-overflow-style: none; /* IE y Edge */
+    scrollbar-width: none; /* Firefox */
 }
 
 .categories-table {
     width: 100%;
-    border-collapse: collapse;
-    min-width: 1000px;
+    border-collapse: separate; /* Cambiado para mejor control de bordes */
+    border-spacing: 0;
+    table-layout: fixed; /* Fija el ancho de las columnas */
 }
 
 .categories-table th {
@@ -212,7 +194,14 @@
     z-index: 10;
 }
 
-/* CENTRAR TEXTOS EN COLUMNAS ESPECÍFICAS (como en colaboradores) */
+/* ANCHO DE COLUMNAS PROPORCIONAL */
+.categories-table th:nth-child(1) { width: 20%; } /* CATEGORÍA */
+.categories-table th:nth-child(2) { width: 25%; } /* DESCRIPCIÓN */
+.categories-table th:nth-child(3) { width: 10%; } /* COLOR */
+.categories-table th:nth-child(4) { width: 15%; } /* SUBCATEGORÍAS */
+.categories-table th:nth-child(5) { width: 20%; } /* ACCIONES */
+
+/* Centrar texto en columnas específicas */
 .categories-table th:nth-child(3),
 .categories-table th:nth-child(4),
 .categories-table th:nth-child(5) {
@@ -220,15 +209,31 @@
 }
 
 .categories-table td {
-    padding: 16px 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 18px 15px;
+    border-bottom: 1px solid var(--color-border-light); /* Líneas grises */
     color: var(--color-text-secondary);
     font-family: var(--font-family-secondary);
     font-size: 14px;
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.categories-table tr:hover {
+/* LÍNEAS VERTICALES ENTRE COLUMNAS */
+.categories-table th:not(:last-child),
+.categories-table td:not(:last-child) {
+    border-right: 1px solid var(--color-border-light); /* Líneas verticales grises */
+}
+
+/* FILAS DE CATEGORÍA - CLICKABLES */
+.category-row {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.category-row:hover {
     background: rgba(255, 255, 255, 0.03);
 }
 
@@ -237,170 +242,7 @@
     border-left: 3px solid var(--color-info);
 }
 
-/* INFORMACIÓN DE CATEGORÍA - ESTILO SIMILAR A USUARIO EN COLLABORATORS */
-.category-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.category-title {
-    font-weight: 600;
-    color: var(--color-text-primary);
-}
-
-.expand-indicator {
-    color: var(--color-accent-primary);
-    transition: transform 0.3s ease;
-    flex-shrink: 0;
-}
-
-.category-row.expanded .expand-indicator {
-    transform: rotate(90deg);
-}
-
-/* COLOR DE CATEGORÍAS - ESTILO MÁS LIMPIO */
-.category-color {
-    text-align: center;
-}
-
-.color-indicator {
-    width: 30px;
-    height: 30px;
-    border-radius: var(--border-radius-circle);
-    background-color: var(--color-bg-tertiary);
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid var(--color-border-light);
-    transition: transform 0.3s ease;
-}
-
-.color-indicator:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-}
-
-.color-code {
-    display: none; /* Oculta el código de color como en colaboradores */
-}
-
-/* CONTADOR DE SUBCATEGORÍAS - ESTILO SIMILAR A BADGE */
-.count-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(47, 140, 255, 0.1);
-    color: var(--color-accent-secondary);
-    border: 1px solid rgba(47, 140, 255, 0.3);
-    padding: 8px 16px;
-    border-radius: var(--border-radius-small);
-    font-size: 14px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    min-width: 100px;
-    justify-content: center;
-    text-align: center;
-    cursor: pointer;
-    transition: var(--transition-default);
-}
-
-.count-badge:hover {
-    background: rgba(47, 140, 255, 0.2);
-    border-color: var(--color-accent-secondary);
-    transform: translateY(-2px);
-}
-
-.count-badge i {
-    color: var(--color-accent-secondary);
-    font-size: 14px;
-}
-
-.count-number {
-    font-weight: 700;
-    color: var(--color-text-primary);
-    font-size: 16px;
-}
-
-/* CELDA DE ACCIONES - EXACTAMENTE IGUAL QUE COLLABORATORS */
-.category-actions,
-.subcategory-actions {
-    text-align: center;
-}
-
-.actions-cell {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-}
-
-/* BOTONES DE ACCIÓN - IDÉNTICOS A COLLABORATORS */
-.row-btn {
-    width: 44px;
-    height: 44px;
-    background: linear-gradient(145deg, #030303, #111212);
-    border: 1px solid var(--color-border-light);
-    border-radius: var(--border-radius-small);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: var(--color-text-secondary);
-    position: relative;
-    overflow: hidden;
-}
-
-.row-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.row-btn::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    height: 200%;
-    background: linear-gradient(
-        to bottom right,
-        rgba(192, 183, 183, 0) 0%,
-        rgba(213, 203, 203, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    transform: rotate(30deg);
-    transition: all 0.5s ease;
-}
-
-.row-btn:hover::after {
-    transform: rotate(30deg) translate(10%, 10%);
-}
-
-.row-btn.view:hover {
-    border-color: #00e0ff;
-    color: #00e0ff;
-    box-shadow: 0 5px 15px rgba(0, 224, 255, 0.2);
-}
-
-.row-btn.edit:hover {
-    border-color: var(--color-info);
-    color: var(--color-info);
-    box-shadow: 0 5px 15px rgba(0, 207, 255, 0.2);
-}
-
-.row-btn.delete:hover {
-    border-color: var(--color-danger);
-    color: var(--color-danger);
-    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2);
-}
-
-.row-btn i {
-    font-size: 16px;
-}
-
-/* SUBCATEGORÍAS CONTAINER - MANTENIENDO TU ESTRUCTURA CON ESTILOS MEJORADOS */
+/* SUBCATEGORÍAS CONTAINER - MEJORADO */
 .subcategories-container {
     display: none;
     background: linear-gradient(180deg, rgba(10, 10, 10, 0.95), rgba(15, 15, 15, 0.9));
@@ -414,24 +256,25 @@
 
 .subcategories-container td {
     padding: 0 !important;
-    border-top: 2px solid var(--color-border-light);
+    border-top: 2px solid var(--color-border-light); /* Línea más gruesa */
     background: linear-gradient(180deg, rgba(10, 10, 10, 0.95), rgba(15, 15, 15, 0.9));
 }
 
+/* Contenedor interno que ocupa todo el ancho */
 .subcategories-inner {
     width: 100%;
     padding: 25px 20px;
     background: linear-gradient(180deg, rgba(10, 10, 10, 0.95), rgba(15, 15, 15, 0.9));
 }
 
-/* HEADER DE SUBCATEGORÍAS - ESTILO COHERENTE */
+/* HEADER DE SUBCATEGORÍAS MEJORADO */
 .subcategories-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 10px 15px 10px;
     margin-bottom: 15px;
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid rgba(47, 140, 255, 0.3);
     width: 100%;
 }
 
@@ -458,7 +301,7 @@
 }
 
 .add-subcategory-btn {
-    background: rgba(0, 255, 149, 0.1);
+    background: linear-gradient(145deg, rgba(0, 255, 149, 0.1), rgba(0, 255, 149, 0.05));
     border: 1px solid var(--color-success);
     color: var(--color-success);
     padding: 10px 18px;
@@ -476,15 +319,17 @@
 }
 
 .add-subcategory-btn:hover {
-    background: rgba(0, 255, 149, 0.2);
+    background: linear-gradient(145deg, rgba(0, 255, 149, 0.2), rgba(0, 255, 149, 0.1));
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 255, 149, 0.2);
 }
 
-/* TABLA DE SUBCATEGORÍAS - MANTENIENDO TU ESTRUCTURA */
+/* TABLA DE SUBCATEGORÍAS - SIN SCROLL HORIZONTAL Y CON LÍNEAS */
 .subcategories-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate; /* Cambiado para mejor control de bordes */
+    border-spacing: 0;
+    table-layout: fixed; /* Fija el ancho de las columnas */
     background: rgba(20, 20, 20, 0.7);
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-light);
@@ -507,15 +352,29 @@
     letter-spacing: 0.8px;
 }
 
-/* CENTRAR COLUMNAS ESPECÍFICAS EN SUBCATEGORÍAS */
+/* ANCHO DE COLUMNAS PARA SUBCATEGORÍAS */
+.subcategories-table th:nth-child(1) { width: 25%; } /* NOMBRE */
+.subcategories-table th:nth-child(2) { width: 40%; } /* DESCRIPCIÓN */
+.subcategories-table th:nth-child(3) { width: 15%; } /* COLOR */
+.subcategories-table th:nth-child(4) { width: 20%; } /* ACCIONES */
+
+/* Centrar columnas específicas */
 .subcategories-table th:nth-child(3),
 .subcategories-table th:nth-child(4) {
     text-align: center;
 }
 
+/* LÍNEAS VERTICALES ENTRE COLUMNAS - SUBCATEGORÍAS */
+.subcategories-table th:not(:last-child),
+.subcategories-table td:not(:last-child) {
+    border-right: 1px solid var(--color-border-light); /* Líneas verticales grises */
+}
+
+/* Filas de subcategorías */
 .subcategories-table tbody tr {
     transition: all 0.3s ease;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--color-border-light); /* Líneas horizontales grises */
+    height: 60px;
 }
 
 .subcategories-table tbody tr:last-child {
@@ -523,7 +382,7 @@
 }
 
 .subcategories-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(47, 140, 255, 0.05);
 }
 
 .subcategories-table td {
@@ -532,16 +391,20 @@
     font-family: var(--font-family-secondary);
     font-size: 14px;
     vertical-align: middle;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--color-border-light); /* Líneas horizontales */
+    height: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* ALINEACIÓN ESPECÍFICA DE COLUMNAS EN SUBCATEGORÍAS */
+/* Alineación específica de columnas */
 .subcategories-table td:nth-child(3),
 .subcategories-table td:nth-child(4) {
     text-align: center;
 }
 
-/* ESTILOS ESPECÍFICOS PARA SUBCATEGORÍAS */
+/* Estilos específicos para subcategorías */
 .subcategory-name {
     font-weight: 600;
     color: var(--color-text-primary);
@@ -549,6 +412,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    overflow: hidden;
 }
 
 .subcategory-name::before {
@@ -558,11 +422,15 @@
     flex-shrink: 0;
 }
 
+/* Descripción con puntos suspensivos si es muy larga */
 .subcategory-description {
     line-height: 1.4;
-    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
+/* Color de subcategorías - SIN CÓDIGO DE COLOR */
 .subcategory-color {
     display: flex;
     flex-direction: column;
@@ -584,6 +452,78 @@
     box-shadow: 0 0 15px currentColor;
 }
 
+/* Color de categorías - SIN CÓDIGO DE COLOR */
+.category-color {
+    text-align: center;
+}
+
+.color-indicator {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border-light);
+    margin: 0 auto; /* Centrado sin margen inferior */
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease;
+}
+
+.color-indicator:hover {
+    transform: scale(1.1);
+}
+
+/* ELIMINADO: .color-code - No mostrar código de color */
+
+/* Celda de contador */
+.category-count {
+    text-align: center;
+}
+
+.count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(145deg, rgba(47, 140, 255, 0.15), rgba(47, 140, 255, 0.05));
+    padding: 10px 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(47, 140, 255, 0.4);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 100px;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.count-badge:hover {
+    background: linear-gradient(145deg, rgba(47, 140, 255, 0.25), rgba(47, 140, 255, 0.15));
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2);
+    border-color: var(--color-accent-secondary);
+}
+
+.count-badge i {
+    color: var(--color-accent-secondary);
+    font-size: 14px;
+}
+
+.count-number {
+    font-weight: 700;
+    color: var(--color-text-primary);
+    font-size: 16px;
+    min-width: 25px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Celda de acciones */
+.category-actions,
+.subcategory-actions {
+    text-align: center;
+}
+
+/* Acciones de subcategorías */
 .subcategory-actions .actions-cell {
     display: flex;
     gap: 8px;
@@ -591,7 +531,68 @@
     align-items: center;
 }
 
-/* MODALES - MANTENIENDO TUS ESTILOS PERO CON COHERENCIA VISUAL */
+/* BOTONES DE ACCIÓN */
+.actions-cell {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.row-btn {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(145deg, #0a0a0a, #151515);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-small);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+
+.row-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+.row-btn.view:hover {
+    border-color: var(--color-accent-secondary);
+    color: var(--color-accent-secondary);
+    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.3);
+}
+
+.row-btn.edit:hover {
+    border-color: var(--color-info);
+    color: var(--color-info);
+    box-shadow: 0 5px 15px rgba(0, 207, 255, 0.3);
+}
+
+.row-btn.delete:hover {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.3);
+}
+
+.row-btn i {
+    font-size: 14px;
+}
+
+/* INDICADOR DE EXPANSIÓN */
+.expand-indicator {
+    margin-left: auto;
+    transition: transform 0.3s ease;
+    color: var(--color-info);
+    flex-shrink: 0;
+}
+
+.category-row.expanded .expand-indicator {
+    transform: rotate(90deg);
+}
+
+/* MODALES */
 .modal {
     display: none;
     position: fixed;
@@ -887,7 +888,7 @@
 }
 
 /* =============================================
-   RESPONSIVE DESIGN - EXACTAMENTE IGUAL QUE COLLABORATORS
+   RESPONSIVE DESIGN
    ============================================= */
 
 /* TABLET (768px - 1023px) */
@@ -897,32 +898,53 @@
     }
     
     .section-header {
-        padding: 20px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 20px;
+        padding: 25px 20px; /* Ajustado para tablet */
+    }
+    
+    .section-title {
+        font-size: 22px;
+    }
+    
+    .section-description {
+        font-size: 15px;
+        padding: 0 15px;
     }
     
     .add-category-container {
-        width: 100%;
+        justify-content: center;
     }
     
     .add-btn {
         width: 100%;
-        max-width: 300px;
+        max-width: 400px;
     }
     
     .table-wrapper {
         padding: 15px;
-        margin: 0 -10px;
-        width: calc(100% + 20px);
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
+        border-radius: var(--border-radius-medium);
     }
     
     .subcategories-inner {
         padding: 20px 15px;
+    }
+    
+    .subcategories-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .subcategories-header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    /* Eliminar líneas verticales en tablet */
+    .categories-table th:not(:last-child),
+    .categories-table td:not(:last-child),
+    .subcategories-table th:not(:last-child),
+    .subcategories-table td:not(:last-child) {
+        border-right: none;
     }
     
     .modal-content {
@@ -937,30 +959,33 @@
         padding: 80px 10px 20px;
     }
     
+    .section-header {
+        padding: 20px 15px;
+        margin-bottom: 25px;
+    }
+    
     .section-title {
         font-size: 20px;
         text-align: center;
         justify-content: center;
-        width: 100%;
+        flex-wrap: wrap;
     }
     
     .section-description {
-        text-align: center;
-        font-size: 13px;
+        font-size: 14px;
+        padding: 0 10px;
         line-height: 1.5;
-    }
-    
-    .add-category-container {
-        justify-content: center;
     }
     
     .add-btn {
         width: 100%;
         max-width: none;
-        margin: 0;
+        padding: 12px 20px;
+        font-size: 14px;
+        min-width: auto;
     }
     
-    /* TABLA CONVERTIDA A TARJETAS EN MÓVIL - IGUAL QUE COLLABORATORS */
+    /* TABLA CONVERTIDA A TARJETAS EN MÓVIL */
     .table-wrapper {
         background: transparent;
         border: none;
@@ -972,8 +997,8 @@
     }
     
     .categories-table {
-        min-width: 100%;
         display: block;
+        table-layout: auto;
     }
     
     .categories-table thead {
@@ -983,10 +1008,10 @@
     .categories-table tbody {
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 20px;
     }
     
-    .categories-table tr {
+    .category-row {
         display: block;
         background: var(--color-bg-secondary);
         border: 1px solid var(--color-border-light);
@@ -996,15 +1021,18 @@
         box-shadow: var(--shadow-small);
     }
     
+    /* CELDAS EN MÓVIL */
     .categories-table td {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
         padding: 12px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid var(--color-border-light);
         font-size: 14px;
         width: 100%;
         text-align: left;
+        white-space: normal;
+        border-right: none !important;
     }
     
     .categories-table td:last-child {
@@ -1012,6 +1040,7 @@
         padding-bottom: 0;
     }
     
+    /* ETIQUETAS PARA CELDAS EN MÓVIL */
     .categories-table td::before {
         content: attr(data-label);
         font-weight: 600;
@@ -1024,51 +1053,6 @@
         text-align: left;
     }
     
-    /* CELDA DE ACCIONES EN MÓVIL */
-    .categories-table td[data-label="ACCIONES"] {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding-top: 15px;
-        margin-top: 10px;
-        border-top: 1px solid var(--color-border-light);
-        text-align: center;
-    }
-    
-    .categories-table td[data-label="ACCIONES"]::before {
-        content: "ACCIONES";
-        display: block;
-        margin-bottom: 12px;
-        text-align: center;
-        width: 100%;
-        font-size: 12px;
-        color: var(--color-accent-primary);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .actions-cell {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        justify-content: center !important;
-        align-items: center !important;
-        width: 100% !important;
-        gap: 10px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    .row-btn {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        min-height: 44px;
-        margin: 0;
-        flex-shrink: 0;
-    }
-    
     /* SUBCATEGORÍAS EN MÓVIL */
     .subcategories-inner {
         padding: 15px;
@@ -1076,11 +1060,11 @@
     
     .subcategories-header {
         flex-direction: column;
-        gap: 15px;
+        align-items: stretch;
+        gap: 10px;
     }
     
     .subcategories-header-actions {
-        width: 100%;
         justify-content: center;
     }
     
@@ -1089,8 +1073,13 @@
         justify-content: center;
     }
     
+    /* Tabla de subcategorías en móvil */
     .subcategories-table {
         display: block;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        table-layout: auto;
     }
     
     .subcategories-table thead {
@@ -1103,13 +1092,15 @@
         gap: 12px;
     }
     
-    .subcategories-table tr {
+    .subcategories-table tbody tr {
         display: block;
         background: rgba(25, 25, 25, 0.9);
         border: 1px solid var(--color-border-light);
         border-radius: var(--border-radius-medium);
         padding: 15px;
         margin: 0;
+        height: auto;
+        border-right: none !important;
     }
     
     .subcategories-table td {
@@ -1120,6 +1111,9 @@
         border-bottom: 1px solid var(--color-border-light);
         width: 100%;
         text-align: left;
+        height: auto;
+        white-space: normal;
+        border-right: none !important;
     }
     
     .subcategories-table td::before {
@@ -1139,22 +1133,50 @@
         text-align: left;
     }
     
+    .subcategory-color {
+        align-items: flex-start;
+    }
+    
+    .subcategory-color .color-indicator {
+        margin: 0;
+    }
+    
     .subcategory-actions .actions-cell {
         justify-content: flex-start;
     }
     
-    /* MODALES EN MÓVIL */
-    .swal2-popup {
-        width: 90% !important;
-        margin: 10px !important;
+    /* AJUSTES ESPECIALES PARA MÓVIL */
+    .category-info {
+        justify-content: flex-start;
     }
     
-    .modal-content {
-        width: 95% !important;
-        padding: 20px !important;
-        margin: 10px !important;
+    .category-description,
+    .subcategory-description {
+        text-align: left;
+        white-space: normal;
     }
     
+    .color-indicator {
+        margin: 0;
+    }
+    
+    .count-badge {
+        justify-content: flex-start;
+        width: fit-content;
+    }
+    
+    /* ACCIONES EN MÓVIL */
+    .category-actions,
+    .subcategory-actions {
+        align-items: flex-start;
+    }
+    
+    .actions-cell {
+        justify-content: flex-start;
+        gap: 10px;
+    }
+    
+    /* FORMULARIO EN MÓVIL */
     .form-actions {
         flex-direction: column;
     }
@@ -1162,6 +1184,15 @@
     .cancel-btn,
     .save-btn {
         width: 100%;
+    }
+    
+    .color-picker-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .modal-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1175,64 +1206,58 @@
         padding: 15px;
     }
     
-    .add-btn {
-        padding: 10px 15px;
+    .section-title {
+        font-size: 18px;
+        gap: 10px;
+    }
+    
+    .section-title i {
+        font-size: 22px;
+    }
+    
+    .section-description {
         font-size: 13px;
     }
     
-    .categories-table tr {
+    .category-row {
         padding: 15px;
     }
     
-    .categories-table td {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 10px 0;
-        text-align: left;
-    }
-    
-    .categories-table td::before {
-        margin-bottom: 5px;
-        font-size: 10px;
-        text-align: left;
-        width: 100%;
-    }
-    
-    .categories-table td[data-label="ACCIONES"] {
-        align-items: center;
-        text-align: center;
-    }
-    
-    .categories-table td[data-label="ACCIONES"]::before {
-        font-size: 11px;
-        margin-bottom: 10px;
+    .subcategories-inner {
+        padding: 12px;
     }
     
     .actions-cell {
-        gap: 8px !important;
+        gap: 8px;
     }
     
     .row-btn {
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
+        width: 34px;
+        height: 34px;
     }
     
-    .count-badge {
-        align-self: flex-start;
-        margin-top: 5px;
+    .subcategory-actions .row-btn {
+        width: 32px;
+        height: 32px;
     }
 }
 
-/* MEJORA PARA DISPOSITIVOS TÁCTILES */
-@media (hover: none) and (pointer: coarse) {
-    .row-btn, .add-btn {
-        min-height: 44px;
-        min-width: 44px;
-    }
-    
-    .table-wrapper {
-        -webkit-overflow-scrolling: touch;
-    }
+/* ELIMINAR COMPLETAMENTE EL SCROLL EN TODOS LOS DISPOSITIVOS */
+.table-wrapper::-webkit-scrollbar {
+    display: none !important;
+}
+
+.table-wrapper {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+}
+
+/* Animación de entrada */
+.admin-container {
+    animation: fadeInUp 0.5s ease;
+}
+
+.category-row,
+.subcategory-row {
+    animation: fadeInUp 0.3s ease;
 }
