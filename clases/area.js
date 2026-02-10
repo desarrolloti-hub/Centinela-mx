@@ -1,14 +1,22 @@
-// ==================== area.js ====================
-// CLASE CORREGIDA - IMPLEMENTACIONES COMPLETAS
+// CLASE SIMPLIFICADA 
 
 import { 
-    collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc,
-    query, where, orderBy, serverTimestamp
+    collection, 
+    doc, 
+    getDocs, 
+    getDoc, 
+    setDoc, 
+    updateDoc, 
+    deleteDoc,
+    query, 
+    where, 
+    orderBy, 
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '../config/firebase-config.js';
 
-// ==================== CLASE AREA ====================
+// ==================== CLASE AREA SIMPLIFICADA ====================
 class Area {
     constructor(id, data) {
         this.id = id;
@@ -32,22 +40,10 @@ class Area {
             }
         }
         
-        this.idOrganizacion = data.idOrganizacion || '';
-        this.nombreOrganizacion = data.nombreOrganizacion || '';
-        this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.actualizadoPor = data.actualizadoPor || '';
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
-        this.fechaEliminacion = data.fechaEliminacion ? this._convertirFecha(data.fechaEliminacion) : null;
-        this.activo = data.activo !== undefined ? data.activo : true;
-        this.eliminado = data.eliminado || false;
-        this.color = data.color || this._generarColorAleatorio();
-        this.icono = data.icono || 'fas fa-building';
-        this.capacidadMaxima = data.capacidadMaxima || 0;
-        this.presupuestoAnual = data.presupuestoAnual || 0;
-        this.objetivos = data.objetivos || [];
-        this.metricas = data.metricas || {};
     }
 
     // Métodos de utilidad
@@ -58,11 +54,6 @@ class Area {
         return new Date();
     }
     
-    _generarColorAleatorio() {
-        const colores = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'];
-        return colores[Math.floor(Math.random() * colores.length)];
-    }
-
     _formatearFecha(date) {
         if (!date) return 'No disponible';
         try {
@@ -102,44 +93,8 @@ class Area {
         }
         return cargosArray;
     }
-    getEstado() {
-        if (this.eliminado) return 'Eliminado';
-        else if (!this.activo) return 'Inactivo';
-        else return 'Activo';
-    }
-    getEstadoBadge() {
-        if (this.eliminado) return '<span class="badge bg-danger"><i class="fas fa-trash me-1"></i> Eliminado</span>';
-        else if (!this.activo) return '<span class="badge bg-warning text-dark"><i class="fas fa-pause me-1"></i> Inactivo</span>';
-        else return '<span class="badge bg-success"><i class="fas fa-check me-1"></i> Activo</span>';
-    }
     getFechaCreacionFormateada() { return this._formatearFecha(this.fechaCreacion); }
-    estaActiva() { return this.activo && !this.eliminado; }
-
-    // Setters importantes
-    setEliminado(usuarioId = '') {
-        this.eliminado = true;
-        this.activo = false;
-        this.fechaEliminacion = new Date();
-        this.actualizadoPor = usuarioId;
-        this.fechaActualizacion = new Date();
-    }
-    restaurar(usuarioId = '') {
-        this.eliminado = false;
-        this.activo = true;
-        this.fechaEliminacion = null;
-        this.actualizadoPor = usuarioId;
-        this.fechaActualizacion = new Date();
-    }
-    activar(usuarioId = '') {
-        this.activo = true;
-        this.actualizadoPor = usuarioId;
-        this.fechaActualizacion = new Date();
-    }
-    desactivar(usuarioId = '') {
-        this.activo = false;
-        this.actualizadoPor = usuarioId;
-        this.fechaActualizacion = new Date();
-    }
+    getFechaActualizacionFormateada() { return this._formatearFecha(this.fechaActualizacion); }
 
     // Para Firestore
     toFirestore() {
@@ -148,22 +103,10 @@ class Area {
             descripcion: this.descripcion,
             caracteristicas: this.caracteristicas,
             cargos: this._mapToObject(this.cargos),
-            idOrganizacion: this.idOrganizacion,
-            nombreOrganizacion: this.nombreOrganizacion,
-            organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             actualizadoPor: this.actualizadoPor,
             fechaCreacion: this.fechaCreacion,
-            fechaActualizacion: this.fechaActualizacion,
-            fechaEliminacion: this.fechaEliminacion,
-            activo: this.activo,
-            eliminado: this.eliminado,
-            color: this.color,
-            icono: this.icono,
-            capacidadMaxima: this.capacidadMaxima,
-            presupuestoAnual: this.presupuestoAnual,
-            objetivos: this.objetivos,
-            metricas: this.metricas
+            fechaActualizacion: this.fechaActualizacion
         };
     }
 
@@ -176,25 +119,14 @@ class Area {
             totalCargos: this.cargos.size,
             cargosActivos: this.getCargosActivos().length,
             cargos: this.getCargosAsArray(),
-            organizacion: this.nombreOrganizacion,
-            estado: this.getEstado(),
-            estadoBadge: this.getEstadoBadge(),
-            color: this.color,
-            icono: this.icono,
             fechaCreacion: this.getFechaCreacionFormateada(),
             fechaActualizacion: this.getFechaActualizacionFormateada(),
-            creadoPor: this.creadoPor,
-            capacidadMaxima: this.capacidadMaxima,
-            presupuestoAnual: new Intl.NumberFormat('es-ES', {
-                style: 'currency', currency: 'USD'
-            }).format(this.presupuestoAnual),
-            objetivos: this.objetivos.length,
-            metricas: Object.keys(this.metricas).length
+            creadoPor: this.creadoPor
         };
     }
 }
 
-// ==================== CLASE AREAMANAGER CORREGIDA ====================
+// ==================== CLASE AREAMANAGER SIMPLIFICADA ====================
 class AreaManager {
     constructor() {
         this.areas = [];
@@ -203,7 +135,7 @@ class AreaManager {
 
     // ========== CRUD COMPLETO ==========
     
-    async crearArea(areaData, idOrganizacion, userManager) {
+    async crearArea(areaData, userManager) {
         try {
             console.log('📝 Creando nueva área:', areaData.nombreArea);
             
@@ -222,22 +154,11 @@ class AreaManager {
                 descripcion: areaData.descripcion || '',
                 caracteristicas: areaData.caracteristicas || '',
                 cargos: {},
-                idOrganizacion: idOrganizacion || usuarioActual.id,
-                nombreOrganizacion: usuarioActual.organizacion || 'Sin organización',
                 organizacionCamelCase: usuarioActual.organizacionCamelCase || 'sinOrganizacion',
                 creadoPor: usuarioActual.id,
                 actualizadoPor: usuarioActual.id,
                 fechaCreacion: serverTimestamp(),
-                fechaActualizacion: serverTimestamp(),
-                fechaEliminacion: null,
-                activo: areaData.activo !== false,
-                eliminado: false,
-                color: areaData.color || this._generarColorAleatorio(),
-                icono: areaData.icono || 'fas fa-building',
-                capacidadMaxima: areaData.capacidadMaxima || 0,
-                presupuestoAnual: areaData.presupuestoAnual || 0,
-                objetivos: areaData.objetivos || [],
-                metricas: {}
+                fechaActualizacion: serverTimestamp()
             };
             
             // Guardar en Firestore
@@ -261,20 +182,14 @@ class AreaManager {
         }
     }
 
-    async getAreasByOrganizacion(organizacionCamelCase, incluirEliminadas = false) {
+    async getAreasByOrganizacion(organizacionCamelCase) {
         try {
             console.log(`🔍 Obteniendo áreas para: ${organizacionCamelCase}`);
             
-            let areasQuery;
-            if (incluirEliminadas) {
-                areasQuery = query(collection(db, "areas"), where("organizacionCamelCase", "==", organizacionCamelCase));
-            } else {
-                areasQuery = query(
-                    collection(db, "areas"),
-                    where("organizacionCamelCase", "==", organizacionCamelCase),
-                    where("eliminado", "==", false)
-                );
-            }
+            const areasQuery = query(
+                collection(db, "areas"),
+                where("organizacionCamelCase", "==", organizacionCamelCase)
+            );
             
             const areasSnapshot = await getDocs(areasQuery);
             const areas = [];
@@ -325,7 +240,7 @@ class AreaManager {
         }
     }
 
-    // ========== MÉTODOS DE ACTUALIZACIÓN CORREGIDOS ==========
+    // ========== MÉTODOS DE ACTUALIZACIÓN SIMPLIFICADOS ==========
     
     async actualizarArea(areaId, nuevosDatos, usuarioId) {
         try {
@@ -377,126 +292,20 @@ class AreaManager {
             
             const areaRef = doc(db, "areas", areaId);
             
-            // Actualizar en Firestore (eliminación lógica)
-            await updateDoc(areaRef, {
-                eliminado: true,
-                activo: false,
-                fechaEliminacion: serverTimestamp(),
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: usuarioId
-            });
+            // Eliminar de Firestore (eliminación física)
+            await deleteDoc(areaRef);
             
-            // Actualizar en memoria
+            // Eliminar de memoria
             const areaIndex = this.areas.findIndex(a => a.id === areaId);
             if (areaIndex !== -1) {
-                const area = this.areas[areaIndex];
-                area.eliminado = true;
-                area.activo = false;
-                area.fechaEliminacion = new Date();
-                area.fechaActualizacion = new Date();
-                area.actualizadoPor = usuarioId;
+                this.areas.splice(areaIndex, 1);
             }
             
-            console.log('✅ Área eliminada:', areaId);
+            console.log('✅ Área eliminada permanentemente:', areaId);
             return true;
             
         } catch (error) {
             console.error('❌ Error eliminando área:', error);
-            throw error;
-        }
-    }
-
-    async restaurarArea(areaId, usuarioId) {
-        try {
-            console.log('🔄 Restaurando área:', areaId);
-            
-            const areaRef = doc(db, "areas", areaId);
-            
-            // Actualizar en Firestore
-            await updateDoc(areaRef, {
-                eliminado: false,
-                activo: true,
-                fechaEliminacion: null,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: usuarioId
-            });
-            
-            // Actualizar en memoria
-            const areaIndex = this.areas.findIndex(a => a.id === areaId);
-            if (areaIndex !== -1) {
-                const area = this.areas[areaIndex];
-                area.eliminado = false;
-                area.activo = true;
-                area.fechaEliminacion = null;
-                area.fechaActualizacion = new Date();
-                area.actualizadoPor = usuarioId;
-            }
-            
-            console.log('✅ Área restaurada:', areaId);
-            return true;
-            
-        } catch (error) {
-            console.error('❌ Error restaurando área:', error);
-            throw error;
-        }
-    }
-
-    async activarArea(areaId, usuarioId) {
-        try {
-            console.log('✅ Activando área:', areaId);
-            
-            const areaRef = doc(db, "areas", areaId);
-            
-            await updateDoc(areaRef, {
-                activo: true,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: usuarioId
-            });
-            
-            // Actualizar en memoria
-            const areaIndex = this.areas.findIndex(a => a.id === areaId);
-            if (areaIndex !== -1) {
-                const area = this.areas[areaIndex];
-                area.activo = true;
-                area.fechaActualizacion = new Date();
-                area.actualizadoPor = usuarioId;
-            }
-            
-            console.log('✅ Área activada:', areaId);
-            return true;
-            
-        } catch (error) {
-            console.error('❌ Error activando área:', error);
-            throw error;
-        }
-    }
-
-    async desactivarArea(areaId, usuarioId) {
-        try {
-            console.log('⏸️ Desactivando área:', areaId);
-            
-            const areaRef = doc(db, "areas", areaId);
-            
-            await updateDoc(areaRef, {
-                activo: false,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: usuarioId
-            });
-            
-            // Actualizar en memoria
-            const areaIndex = this.areas.findIndex(a => a.id === areaId);
-            if (areaIndex !== -1) {
-                const area = this.areas[areaIndex];
-                area.activo = false;
-                area.fechaActualizacion = new Date();
-                area.actualizadoPor = usuarioId;
-            }
-            
-            console.log('✅ Área desactivada:', areaId);
-            return true;
-            
-        } catch (error) {
-            console.error('❌ Error desactivando área:', error);
             throw error;
         }
     }
@@ -508,8 +317,7 @@ class AreaManager {
             const areasQuery = query(
                 collection(db, "areas"),
                 where("nombreArea", "==", nombreArea),
-                where("organizacionCamelCase", "==", organizacionCamelCase),
-                where("eliminado", "==", false)
+                where("organizacionCamelCase", "==", organizacionCamelCase)
             );
             
             const querySnapshot = await getDocs(areasQuery);
@@ -531,11 +339,6 @@ class AreaManager {
         const timestamp = Date.now();
         const org = organizacionCamelCase || 'sinOrganizacion';
         return `${org}_${nombreNormalizado}_${timestamp}`;
-    }
-
-    _generarColorAleatorio() {
-        const colores = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'];
-        return colores[Math.floor(Math.random() * colores.length)];
     }
 }
 
