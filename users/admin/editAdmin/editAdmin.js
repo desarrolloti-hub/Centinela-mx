@@ -1,5 +1,5 @@
 // editAdmin.js - Editor de perfil para administradores (Versión con UserManager)
-// MODIFICADO: Validación de nombre (solo letras) y ocultar icono/texto al subir imagen
+// MODIFICADO: Todos los estilos de SweetAlert2 se manejan desde el CSS
 
 // ==================== VARIABLES GLOBALES ====================
 let selectedFile = null;
@@ -42,11 +42,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         icon: 'error',
                         title: 'Error de autenticación',
                         text: 'No se pudo cargar el usuario actual',
-                        confirmButtonText: 'Ir al login',
-                        background: 'var(--color-bg-primary)',
-                        color: 'var(--color-text-primary)',
-                        confirmButtonColor: 'var(--color-accent-primary)',
-                        timer: 4000
+                        confirmButtonText: 'Ir al login'
                     }).then(() => {
                         window.location.href = '/users/visitors/login/login.html';
                     });
@@ -73,11 +69,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </div>
             `,
             confirmButtonText: 'Entendido',
-            allowOutsideClick: false,
-            background: 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: 'var(--color-accent-primary)',
-            timer: 5000
+            allowOutsideClick: false
         }).then(() => {
             window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
         });
@@ -101,9 +93,7 @@ async function iniciarEditor(userManager) {
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para acceder al editor de perfil',
             timer: 4000,
-            showConfirmButton: false,
-            background: 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)'
+            showConfirmButton: false
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -221,8 +211,8 @@ function mostrarErrorNombre(elements) {
         'El nombre solo puede contener letras y espacios. No se permiten números ni caracteres especiales.');
     
     if (elements.fullName) {
-        elements.fullName.style.borderColor = 'var(--color-error)';
-        elements.fullName.style.boxShadow = '0 0 0 2px rgba(255, 87, 87, 0.2)';
+        elements.fullName.style.borderColor = '#F44336';
+        elements.fullName.style.boxShadow = '0 0 0 2px rgba(244, 67, 54, 0.2)';
         elements.fullName.focus();
         
         // Remover el estilo después de 3 segundos
@@ -279,54 +269,28 @@ function updateUI(elements, user) {
         elements.position.value = user.cargo || 'Administrador';
     }
     
-    // ==================== FOTO DE PERFIL - MODIFICADA ====================
+    // ==================== FOTO DE PERFIL ====================
     if (user.fotoUsuario && user.fotoUsuario.trim() !== '') {
         const profileUrl = user.getFotoUrl ? user.getFotoUrl() : user.fotoUsuario;
         console.log('📸 Cargando foto de perfil existente');
         
         if (elements.profileImage) {
-            // Configurar la imagen
             elements.profileImage.src = profileUrl;
             elements.profileImage.style.display = 'block';
             
-            // OCULTAR completamente el placeholder (icono y letras)
             if (elements.profilePlaceholder) {
                 elements.profilePlaceholder.style.display = 'none';
-                // También ocultar cualquier texto dentro del círculo
-                const placeholderText = elements.profilePlaceholder.querySelector('.placeholder-text');
-                if (placeholderText) {
-                    placeholderText.style.display = 'none';
-                }
-                const placeholderIcon = elements.profilePlaceholder.querySelector('.placeholder-icon');
-                if (placeholderIcon) {
-                    placeholderIcon.style.display = 'none';
-                }
             }
             
-            // Verificar si la imagen se carga
             elements.profileImage.onload = function() {
                 console.log('✅ Imagen de perfil cargada');
-                // Asegurarse de que el placeholder esté oculto
-                if (elements.profilePlaceholder) {
-                    elements.profilePlaceholder.style.display = 'none';
-                }
             };
             
             elements.profileImage.onerror = function() {
                 console.warn('⚠️ Error cargando imagen de perfil');
                 this.style.display = 'none';
-                // Mostrar placeholder si la imagen falla
                 if (elements.profilePlaceholder) {
                     elements.profilePlaceholder.style.display = 'flex';
-                    // Mostrar icono y texto de nuevo
-                    const placeholderText = elements.profilePlaceholder.querySelector('.placeholder-text');
-                    if (placeholderText) {
-                        placeholderText.style.display = 'block';
-                    }
-                    const placeholderIcon = elements.profilePlaceholder.querySelector('.placeholder-icon');
-                    if (placeholderIcon) {
-                        placeholderIcon.style.display = 'block';
-                    }
                 }
             };
         }
@@ -334,69 +298,34 @@ function updateUI(elements, user) {
         console.log('ℹ️ No hay foto de usuario, mostrando placeholder');
         if (elements.profilePlaceholder) {
             elements.profilePlaceholder.style.display = 'flex';
-            // Asegurar que el icono y texto sean visibles
-            const placeholderText = elements.profilePlaceholder.querySelector('.placeholder-text');
-            if (placeholderText) {
-                placeholderText.style.display = 'block';
-            }
-            const placeholderIcon = elements.profilePlaceholder.querySelector('.placeholder-icon');
-            if (placeholderIcon) {
-                placeholderIcon.style.display = 'block';
-            }
         }
         if (elements.profileImage) {
             elements.profileImage.style.display = 'none';
         }
     }
     
-    // ==================== LOGO DE ORGANIZACIÓN - MODIFICADA ====================
+    // ==================== LOGO DE ORGANIZACIÓN ====================
     if (user.fotoOrganizacion && user.fotoOrganizacion.trim() !== '') {
         const orgUrl = user.fotoOrganizacion;
         console.log('🏢 Cargando logo de organización');
         
         if (elements.orgImage) {
-            // Configurar la imagen
             elements.orgImage.src = orgUrl;
             elements.orgImage.style.display = 'block';
             
-            // OCULTAR completamente el placeholder (icono y letras)
             if (elements.orgPlaceholder) {
                 elements.orgPlaceholder.style.display = 'none';
-                // También ocultar cualquier texto dentro del círculo
-                const placeholderText = elements.orgPlaceholder.querySelector('.placeholder-text');
-                if (placeholderText) {
-                    placeholderText.style.display = 'none';
-                }
-                const placeholderIcon = elements.orgPlaceholder.querySelector('.placeholder-icon');
-                if (placeholderIcon) {
-                    placeholderIcon.style.display = 'none';
-                }
             }
             
-            // Verificar si la imagen se carga
             elements.orgImage.onload = function() {
                 console.log('✅ Logo de organización cargado');
-                // Asegurarse de que el placeholder esté oculto
-                if (elements.orgPlaceholder) {
-                    elements.orgPlaceholder.style.display = 'none';
-                }
             };
             
             elements.orgImage.onerror = function() {
                 console.warn('⚠️ Error cargando logo de organización');
                 this.style.display = 'none';
-                // Mostrar placeholder si la imagen falla
                 if (elements.orgPlaceholder) {
                     elements.orgPlaceholder.style.display = 'flex';
-                    // Mostrar icono y texto de nuevo
-                    const placeholderText = elements.orgPlaceholder.querySelector('.placeholder-text');
-                    if (placeholderText) {
-                        placeholderText.style.display = 'block';
-                    }
-                    const placeholderIcon = elements.orgPlaceholder.querySelector('.placeholder-icon');
-                    if (placeholderIcon) {
-                        placeholderIcon.style.display = 'block';
-                    }
                 }
             };
         }
@@ -404,15 +333,6 @@ function updateUI(elements, user) {
         console.log('ℹ️ No hay logo de organización');
         if (elements.orgPlaceholder) {
             elements.orgPlaceholder.style.display = 'flex';
-            // Asegurar que el icono y texto sean visibles
-            const placeholderText = elements.orgPlaceholder.querySelector('.placeholder-text');
-            if (placeholderText) {
-                placeholderText.style.display = 'block';
-            }
-            const placeholderIcon = elements.orgPlaceholder.querySelector('.placeholder-icon');
-            if (placeholderIcon) {
-                placeholderIcon.style.display = 'block';
-            }
         }
         if (elements.orgImage) {
             elements.orgImage.style.display = 'none';
@@ -459,13 +379,8 @@ function setupBasicHandlers(elements) {
                 text: 'Se perderán los cambios no guardados',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: 'var(--color-accent-primary)',
-                cancelButtonColor: 'var(--color-text-secondary)',
                 confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar',
-                background: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                timer: 5000
+                cancelButtonText: 'No, continuar'
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
@@ -580,11 +495,7 @@ function setupModalHandlers(elements, userManager) {
                 icon: 'warning',
                 title: 'Sin archivo',
                 text: 'No hay ninguna imagen seleccionada',
-                confirmButtonText: 'Entendido',
-                background: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: 'var(--color-accent-primary)',
-                timer: 4000
+                confirmButtonText: 'Entendido'
             });
             return;
         }
@@ -595,8 +506,6 @@ function setupModalHandlers(elements, userManager) {
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
-            background: 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)',
             didOpen: () => {
                 Swal.showLoading();
             }
@@ -629,19 +538,8 @@ function setupModalHandlers(elements, userManager) {
                         elements.profileImage.src = imageBase64;
                         elements.profileImage.style.display = 'block';
                         
-                        // OCULTAR COMPLETAMENTE el placeholder (icono y letras)
                         if (elements.profilePlaceholder) {
                             elements.profilePlaceholder.style.display = 'none';
-                            // Ocultar icono si existe
-                            const placeholderIcon = elements.profilePlaceholder.querySelector('.placeholder-icon');
-                            if (placeholderIcon) {
-                                placeholderIcon.style.display = 'none';
-                            }
-                            // Ocultar texto si existe
-                            const placeholderText = elements.profilePlaceholder.querySelector('.placeholder-text');
-                            if (placeholderText) {
-                                placeholderText.style.display = 'none';
-                            }
                         }
                     }
                     currentUser.fotoUsuario = imageBase64;
@@ -650,19 +548,8 @@ function setupModalHandlers(elements, userManager) {
                         elements.orgImage.src = imageBase64;
                         elements.orgImage.style.display = 'block';
                         
-                        // OCULTAR COMPLETAMENTE el placeholder (icono y letras)
                         if (elements.orgPlaceholder) {
                             elements.orgPlaceholder.style.display = 'none';
-                            // Ocultar icono si existe
-                            const placeholderIcon = elements.orgPlaceholder.querySelector('.placeholder-icon');
-                            if (placeholderIcon) {
-                                placeholderIcon.style.display = 'none';
-                            }
-                            // Ocultar texto si existe
-                            const placeholderText = elements.orgPlaceholder.querySelector('.placeholder-text');
-                            if (placeholderText) {
-                                placeholderText.style.display = 'none';
-                            }
                         }
                     }
                     currentUser.fotoOrganizacion = imageBase64;
@@ -675,10 +562,7 @@ function setupModalHandlers(elements, userManager) {
                         ? 'Foto de perfil actualizada' 
                         : 'Logo de organización actualizado',
                     timer: 5000,
-                    showConfirmButton: false,
-                    background: 'var(--color-bg-primary)',
-                    color: 'var(--color-text-primary)',
-                    iconColor: 'var(--color-accent-primary)'
+                    showConfirmButton: false
                 });
                 
                 console.log('✅ Imagen actualizada exitosamente');
@@ -701,11 +585,7 @@ function setupModalHandlers(elements, userManager) {
                 icon: 'error',
                 title: 'Error',
                 text: errorMessage,
-                confirmButtonText: 'Entendido',
-                background: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: 'var(--color-accent-primary)',
-                timer: 5000
+                confirmButtonText: 'Entendido'
             });
         } finally {
             if (elements.photoModal) {
@@ -775,8 +655,6 @@ function setupSaveHandler(elements, userManager) {
         Swal.fire({
             title: 'Guardando cambios...',
             allowOutsideClick: false,
-            background: 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)',
             didOpen: () => {
                 Swal.showLoading();
             }
@@ -802,10 +680,7 @@ function setupSaveHandler(elements, userManager) {
                 title: '¡Éxito!',
                 text: 'Datos actualizados correctamente',
                 timer: 5000,
-                showConfirmButton: false,
-                background: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                iconColor: 'var(--color-accent-primary)'
+                showConfirmButton: false
             });
             
             showMessage(elements.mainMessage, 'success', 'Cambios guardados exitosamente');
@@ -818,11 +693,7 @@ function setupSaveHandler(elements, userManager) {
                 icon: 'error',
                 title: 'Error',
                 text: 'No se pudieron guardar los cambios: ' + error.message,
-                confirmButtonText: 'Entendido',
-                background: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: 'var(--color-accent-primary)',
-                timer: 5000
+                confirmButtonText: 'Entendido'
             });
         }
     });
@@ -864,14 +735,6 @@ function setupPasswordChangeHandler(elements, userManager) {
         if (permissionsNote) {
             const passwordSection = document.createElement('div');
             passwordSection.className = 'password-section-simple';
-            passwordSection.style.cssText = `
-                background: var(--color-bg-primary);
-                padding: 1.2rem;
-                border-radius: var(--border-radius-medium);
-                margin: 1.5rem 0;
-                border: 1px solid var(--color-border-light);
-                text-align: center;
-            `;
             
             const changePasswordBtn = document.createElement('button');
             changePasswordBtn.id = 'changePasswordBtn';
@@ -880,33 +743,13 @@ function setupPasswordChangeHandler(elements, userManager) {
             changePasswordBtn.innerHTML = `
                 <i class="fas fa-key"></i> CAMBIAR CONTRASEÑA
             `;
-            changePasswordBtn.style.cssText = `
-                background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
-                color: white;
-                border: none;
-                border-radius: var(--border-radius-small);
-                padding: 12px 24px;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.8px;
-                font-family: 'Rajdhani', sans-serif;
-                transition: var(--transition-default);
-                cursor: pointer;
-                width: 100%;
-                max-width: 300px;
-                margin-top: 10px;
-                box-shadow: var(--shadow-small);
-                display: inline-block;
-            `;
             
             changePasswordBtn.addEventListener('mouseenter', function() {
-                this.style.background = 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))';
                 this.style.transform = 'translateY(-2px)';
                 this.style.boxShadow = 'var(--shadow-normal)';
             });
             
             changePasswordBtn.addEventListener('mouseleave', function() {
-                this.style.background = 'linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary))';
                 this.style.transform = 'translateY(0)';
                 this.style.boxShadow = 'var(--shadow-small)';
             });
@@ -914,12 +757,6 @@ function setupPasswordChangeHandler(elements, userManager) {
             const description = document.createElement('p');
             description.className = 'password-change-info';
             description.textContent = 'Se te enviará un enlace seguro a tu correo electrónico para restablecer tu contraseña.';
-            description.style.cssText = `
-                color: var(--color-text-secondary);
-                font-size: 0.75rem;
-                line-height: 1.4;
-                margin: 10px 0 0 0;
-            `;
             
             changePasswordBtn.addEventListener('click', () => {
                 showPasswordResetConfirmation(userManager);
@@ -947,11 +784,7 @@ async function showPasswordResetConfirmation(userManager) {
                 icon: 'error',
                 title: 'Error',
                 text: 'No se pudo obtener el correo electrónico del usuario',
-                confirmButtonText: 'ENTENDIDO',
-                background: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: 'var(--color-accent-primary)',
-                timer: 4000
+                confirmButtonText: 'ENTENDIDO'
             });
             return;
         }
@@ -962,38 +795,33 @@ async function showPasswordResetConfirmation(userManager) {
             title: '¿CAMBIAR CONTRASEÑA?',
             html: `
                 <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 60px; color: var(--color-accent-primary); margin-bottom: 15px;">
+                    <div style="font-size: 60px; margin-bottom: 15px;">
                         <i class="fas fa-key"></i>
                     </div>
-                    <p style="color: var(--color-text-secondary); margin-bottom: 15px;">
+                    <p style="margin-bottom: 15px;">
                         Se enviará un enlace de restablecimiento a tu correo electrónico.
                     </p>
-                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid var(--color-border-light);">
-                        <p><strong style="color: var(--color-text-primary);">Correo asociado:</strong></p>
-                        <p style="color: var(--color-accent-primary); font-weight: bold;">
+                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <p><strong>Correo asociado:</strong></p>
+                        <p style="font-weight: bold;">
                             ${userEmail}
                         </p>
                     </div>
-                    <div style="background: rgba(255, 243, 205, 0.1); padding: 10px; border-radius: 6px; margin: 10px 0; border: 1px solid var(--color-border-light);">
-                        <p style="color: var(--color-text-secondary); font-size: 14px; margin: 0;">
-                            <i class="fas fa-info-circle" style="color: var(--color-accent-primary);"></i> 
+                    <div style="padding: 10px; border-radius: 6px; margin: 10px 0;">
+                        <p style="font-size: 14px; margin: 0;">
+                            <i class="fas fa-info-circle"></i> 
                             El enlace expirará en 1 hora.
                         </p>
                     </div>
                 </div>
             `,
             icon: 'warning',
-            iconColor: 'var(--color-accent-primary)',
             showCancelButton: true,
             confirmButtonText: 'ENVIAR ENLACE',
             cancelButtonText: 'CANCELAR',
-            confirmButtonColor: 'var(--color-accent-primary)',
-            cancelButtonColor: 'var(--color-text-secondary)',
             reverseButtons: true,
             allowOutsideClick: false,
             backdrop: true,
-            background: 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)',
             timer: 6000
         });
         
@@ -1004,8 +832,6 @@ async function showPasswordResetConfirmation(userManager) {
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
-                background: 'var(--color-bg-primary)',
-                color: 'var(--color-text-primary)',
                 didOpen: () => {
                     Swal.showLoading();
                 }
@@ -1030,41 +856,38 @@ async function showPasswordResetConfirmation(userManager) {
                     title: '¡ENLACE ENVIADO EXITOSAMENTE!',
                     html: `
                         <div style="text-align: center; padding: 20px;">
-                            <div style="font-size: 60px; color: var(--color-accent-primary); margin-bottom: 20px;">
+                            <div style="font-size: 60px; margin-bottom: 20px;">
                                 <i class="fas fa-paper-plane"></i>
                             </div>
                             
-                            <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
+                            <h3 style="margin-bottom: 15px;">
                                 Correo enviado correctamente
                             </h3>
                             
-                            <div style="background: var(--color-bg-secondary); padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid var(--color-border-light);">
-                                <p style="color: var(--color-text-primary);"><strong>📨 Destinatario:</strong> ${userEmail}</p>
-                                <p style="color: var(--color-text-primary);"><strong>⏱️ Válido por:</strong> 1 hora</p>
-                                <p style="color: var(--color-text-primary);"><strong>🔗 Redirigirá a:</strong> verifyEmail.html</p>
+                            <div style="background: var(--color-bg-secondary); padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <p><strong>📨 Destinatario:</strong> ${userEmail}</p>
+                                <p><strong>⏱️ Válido por:</strong> 1 hora</p>
+                                <p><strong>🔗 Redirigirá a:</strong> verifyEmail.html</p>
                             </div>
                             
-                            <div style="background: rgba(212, 237, 218, 0.1); border: 1px solid var(--color-border-light); border-radius: 8px; padding: 15px; margin: 20px 0;">
-                                <h4 style="color: var(--color-text-primary); margin-bottom: 10px;">
-                                    <i class="fas fa-check" style="color: var(--color-accent-primary);"></i> ¿Qué hacer ahora?
+                            <div style="padding: 15px; margin: 20px 0;">
+                                <h4 style="margin-bottom: 10px;">
+                                    <i class="fas fa-check"></i> ¿Qué hacer ahora?
                                 </h4>
-                                <ol style="text-align: left; margin: 0; padding-left: 20px; color: var(--color-text-secondary);">
-                                    <li><strong style="color: var(--color-text-primary);">Abre tu correo</strong> (revisa spam si no lo ves)</li>
-                                    <li><strong style="color: var(--color-text-primary);">Haz clic en el enlace</strong> "Restablecer contraseña"</li>
-                                    <li><strong style="color: var(--color-text-primary);">Ingresa tu nueva contraseña</strong> (2 veces para confirmar)</li>
-                                    <li><strong style="color: var(--color-text-primary);">Haz clic en "CAMBIAR CONTRASEÑA"</strong></li>
-                                    <li><strong style="color: var(--color-text-primary);">Inicia sesión</strong> con tu nueva contraseña</li>
+                                <ol style="text-align: left; margin: 0; padding-left: 20px;">
+                                    <li><strong>Abre tu correo</strong> (revisa spam si no lo ves)</li>
+                                    <li><strong>Haz clic en el enlace</strong> "Restablecer contraseña"</li>
+                                    <li><strong>Ingresa tu nueva contraseña</strong> (2 veces para confirmar)</li>
+                                    <li><strong>Haz clic en "CAMBIAR CONTRASEÑA"</strong></li>
+                                    <li><strong>Inicia sesión</strong> con tu nueva contraseña</li>
                                 </ol>
                             </div>
                         </div>
                     `,
                     confirmButtonText: 'ENTENDIDO, REVISARÉ MI CORREO',
-                    confirmButtonColor: 'var(--color-accent-primary)',
                     allowOutsideClick: false,
                     showCloseButton: true,
                     width: '650px',
-                    background: 'var(--color-bg-primary)',
-                    color: 'var(--color-text-primary)',
                     timer: 8000
                 });
                 
@@ -1095,11 +918,7 @@ async function showPasswordResetConfirmation(userManager) {
                     icon: 'error',
                     title: errorMessage,
                     text: 'Por favor, intenta nuevamente más tarde.',
-                    confirmButtonText: 'ENTENDIDO',
-                    confirmButtonColor: 'var(--color-accent-primary)',
-                    background: 'var(--color-bg-primary)',
-                    color: 'var(--color-text-primary)',
-                    timer: 5000
+                    confirmButtonText: 'ENTENDIDO'
                 });
             }
         }
@@ -1110,13 +929,9 @@ async function showPasswordResetConfirmation(userManager) {
             icon: 'error',
             title: 'Error inesperado',
             text: 'Ocurrió un error inesperado. Por favor, intenta nuevamente.',
-            confirmButtonText: 'ENTENDIDO',
-            background: 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: 'var(--color-accent-primary)',
-            timer: 5000
+            confirmButtonText: 'ENTENDIDO'
         });
     }
 }
 
-console.log('✅ editAdmin.js cargado - Con validación de nombre y manejo mejorado de imágenes');
+console.log('✅ editAdmin.js cargado - Todos los estilos de SweetAlert2 en CSS');

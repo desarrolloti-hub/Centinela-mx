@@ -17,8 +17,6 @@ class ParticleSystem {
         this.primaryColor = 'rgba(192, 192, 192, 0.8)'; // Color por defecto
         this.secondaryColor = 'rgba(255, 255, 255, 0.8)'; // Color por defecto
         
-        console.log('🎯 ParticleSystem inicializado');
-        
         // Inicializar cuando el DOM esté listo
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.init());
@@ -78,8 +76,6 @@ class ParticleSystem {
             
             // Configurar eventos
             this.setupEventListeners();
-            
-            console.log('✅ ParticleSystem listo con tema:', this.currentTheme);
             
         } catch (error) {
             console.error('❌ Error inicializando ParticleSystem:', error);
@@ -152,7 +148,6 @@ class ParticleSystem {
             }
         `;
         document.head.appendChild(style);
-        console.log('🎨 Estilos CSS inyectados');
     }
     
     // =============================================
@@ -163,7 +158,6 @@ class ParticleSystem {
         if (savedTheme) {
             try {
                 const themeData = JSON.parse(savedTheme);
-                console.log('📂 Usando tema de localStorage:', themeData.themeId);
                 this.loadThemeColors(themeData.themeId);
                 return true;
             } catch (e) {
@@ -178,7 +172,6 @@ class ParticleSystem {
     // CARGAR COLORES DESDE BASE DE DATOS
     // =============================================
     async loadColorsFromDatabase() {
-        console.log('🎨 Cargando colores desde base de datos...');
         
         try {
             // Verificar si UserManager está listo
@@ -205,8 +198,6 @@ class ParticleSystem {
             
             // Obtener tema del usuario
             let themeId = currentUser.theme;
-            
-            console.log('🎯 Tema del usuario desde DB:', themeId);
             
             // Validar tema
             if (!themeId || themeId === 'predeterminado') {
@@ -247,8 +238,6 @@ class ParticleSystem {
         
         // Obtener color de acento principal
         const accentColor = theme.colors['--color-accent-primary'];
-        
-        console.log('🎨 Color de acento detectado:', accentColor);
         
         // Actualizar colores de partículas
         this.updateParticleColors(accentColor);
@@ -362,8 +351,6 @@ class ParticleSystem {
     createParticles() {
         this.particles = [];
         const particleCount = Math.floor(window.innerWidth / 15);
-        
-        console.log(`✨ Creando ${particleCount} partículas con tema:`, this.currentTheme);
         
         for (let i = 0; i < particleCount; i++) {
             this.particles.push({

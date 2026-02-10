@@ -18,185 +18,184 @@ body {
 }
 
 /* =============================================
-   SWEETALERT2 - USANDO FORMATO ORIGINAL CON TUS VARIABLES
+   SWEETALERT2 - ESTILOS PERSONALIZADOS
    ============================================= */
 
-/* Popup principal - Estilo original del ejemplo */
+/* OVERLAY DEL MODAL */
 .swal2-popup {
-    font-family: 'Segoe UI', sans-serif !important;
-    background-color: var(--color-bg-primary) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: 10px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
-    border: none !important;
-}
-
-/* Título - Estilo original del ejemplo */
-.swal2-title {
-    font-size: 1.5rem !important;
-    font-weight: 700 !important;
-    color: var(--color-text-primary) !important;
-    text-align: center !important;
-    margin-bottom: 15px !important;
-}
-
-/* Contenido - Estilo original del ejemplo */
-.swal2-html-container {
-    font-size: 1rem !important;
-    color: var(--color-text-secondary) !important;
-    text-align: center !important;
-    line-height: 1.5 !important;
-}
-
-/* Botón de confirmar - Estilo original del ejemplo */
-.swal2-confirm {
-    background-color: var(--color-accent-primary) !important;
-    color: var(--color-text-dark) !important;
-    border: none !important;
-    border-radius: 5px !important;
-    padding: 12px 24px !important;
-    font-weight: bold !important;
-    font-size: 1rem !important;
-    cursor: pointer !important;
-    transition: 0.3s !important;
-    margin: 5px !important;
-    min-width: 100px !important;
-}
-
-.swal2-confirm:hover {
-    opacity: 0.8 !important;
-    transform: translateY(-2px) !important;
-}
-
-/* Botón de cancelar - Estilo original del ejemplo */
-.swal2-cancel {
-    background-color: var(--color-bg-tertiary) !important;
-    color: var(--color-text-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: 5px !important;
-    padding: 12px 24px !important;
-    font-weight: bold !important;
-    font-size: 1rem !important;
-    cursor: pointer !important;
-    transition: 0.3s !important;
-    margin: 5px !important;
-    min-width: 100px !important;
-}
-
-.swal2-cancel:hover {
-    opacity: 0.8 !important;
-    transform: translateY(-2px) !important;
-}
-
-/* Botón de cerrar - Estilo original del ejemplo */
-.swal2-close {
-    color: var(--color-text-secondary) !important;
-    font-size: 1.5rem !important;
-    transition: 0.3s !important;
-}
-
-.swal2-close:hover {
-    color: var(--color-accent-primary) !important;
-}
-
-/* Iconos - Manteniendo colores originales del ejemplo */
-.swal2-icon.swal2-success {
-    border-color: var(--color-accent-primary) !important;
-    color: var(--color-accent-primary) !important;
-}
-
-.swal2-icon.swal2-success [class^=swal2-success-line] {
-    background-color: var(--color-accent-primary) !important;
-}
-
-.swal2-icon.swal2-error {
-    border-color: #e74a3b !important;
-    color: #e74a3b !important;
-}
-
-.swal2-icon.swal2-error [class^=swal2-x-mark-line] {
-    background-color: #e74a3b !important;
-}
-
-.swal2-icon.swal2-warning {
-    border-color: #f6c23e !important;
-    color: #f6c23e !important;
-}
-
-.swal2-icon.swal2-info {
-    border-color: #36b9cc !important;
-    color: #36b9cc !important;
-}
-
-.swal2-icon.swal2-question {
-    border-color: var(--color-accent-primary) !important;
-    color: var(--color-accent-primary) !important;
-}
-
-/* Progress bar - Con tu variable */
-.swal2-timer-progress-bar {
-    background: var(--color-accent-primary) !important;
-}
-
-/* Toast notifications - Estilo del ejemplo con tus variables */
-.swal2-toast {
-    border-radius: 5px !important;
-    font-family: 'Segoe UI', sans-serif !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
-}
-
-.swal2-toast .swal2-title {
+    border-radius: var(--border-radius-medium) !important;
     color: var(--color-text-primary) !important;
-    font-size: 1rem !important;
-    font-weight: 600 !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    backdrop-filter: blur(10px) !important;
+    box-shadow: var(--shadow-large) !important;
+    padding: 2rem !important;
 }
 
-/* Fondo del modal - Del ejemplo */
 .swal2-backdrop-show {
-    background-color: rgba(0, 0, 0, 0.5) !important;
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    backdrop-filter: blur(5px) !important;
 }
 
-/* Input fields - Del ejemplo con tus variables */
-.swal2-input {
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: 5px !important;
-    background: var(--color-bg-tertiary) !important;
+/* ICONOS */
+.swal2-icon {
+    border-width: 3px !important;
+    width: 60px !important;
+    height: 60px !important;
+    margin: 1.5rem auto 1rem !important;
+}
+
+.swal2-icon-content {
+    font-size: 2.5rem !important;
+}
+
+/* TÍTULOS Y TEXTO */
+.swal2-title {
     color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.2px !important;
+    margin-bottom: 0.5rem !important;
+    text-shadow: var(--text-shadow-effect) !important;
 }
 
-.swal2-input:focus {
+.swal2-html-container {
+    color: var(--color-text-secondary) !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.9rem !important;
+    line-height: 1.4 !important;
+}
+
+/* BOTONES */
+.swal2-actions {
+    margin: 1.5rem auto 0 !important;
+    gap: 0.75rem !important;
+}
+
+.swal2-styled {
+    border: none !important;
+    border-radius: var(--border-radius-small) !important;
+    padding: 0.75rem 1.5rem !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
+    height: 45px !important;
+    min-width: 120px !important;
+    transition: var(--transition-default) !important;
+    box-shadow: var(--shadow-small) !important;
+    cursor: pointer !important;
+}
+
+.swal2-styled:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-normal) !important;
+}
+
+.swal2-styled.swal2-confirm {
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
+    color: var(--color-text-dark) !important;
+}
+
+.swal2-styled.swal2-confirm:hover {
+    background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary)) !important;
+}
+
+.swal2-styled.swal2-deny {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d) !important;
+    color: white !important;
+}
+
+.swal2-styled.swal2-deny:hover {
+    background: linear-gradient(135deg, #7f8c8d, #95a5a6) !important;
+}
+
+.swal2-styled.swal2-cancel {
+    background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary)) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-light) !important;
+}
+
+.swal2-styled.swal2-cancel:hover {
+    background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary)) !important;
     border-color: var(--color-accent-primary) !important;
-    box-shadow: 0 0 0 3px rgba(192, 192, 192, 0.2) !important;
 }
 
-/* Select dropdown - Del ejemplo con tus variables */
-.swal2-select {
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: 5px !important;
-    background: var(--color-bg-tertiary) !important;
-    color: var(--color-text-primary) !important;
-}
-
-/* Loader spinner - Del ejemplo con tu variable */
-.swal2-loader {
+/* LOADER */
+.swal2-loading {
     border-color: var(--color-accent-primary) transparent var(--color-accent-primary) transparent !important;
 }
 
-/* Footer link - Del ejemplo con tus variables */
-.swal2-footer {
-    border-top: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-secondary) !important;
+/* INPUTS */
+.swal2-input,
+.swal2-textarea {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-small) !important;
+    color: var(--color-text-primary) !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.9rem !important;
+    padding: 0.75rem !important;
+    transition: var(--transition-default) !important;
 }
 
-.swal2-footer a {
+.swal2-input:focus,
+.swal2-textarea:focus {
+    border-color: var(--color-accent-primary) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.1) !important;
+}
+
+.swal2-validation-message {
+    background: rgba(244, 67, 54, 0.1) !important;
+    color: #F44336 !important;
+    border-left: 3px solid #F44336 !important;
+}
+
+/* FOOTER */
+.swal2-footer {
+    border-top: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-tertiary) !important;
+    font-size: 0.8rem !important;
+}
+
+/* ICONOS POR TIPO */
+.swal2-success {
+    border-color: var(--color-accent-primary) !important;
     color: var(--color-accent-primary) !important;
 }
 
-/* =============================================
-   FIN SWEETALERT2 - FORMATO ORIGINAL CON TUS VARIABLES
-   ============================================= */
+.swal2-success [class^="swal2-success-line"] {
+    background-color: var(--color-accent-primary) !important;
+}
+
+.swal2-success .swal2-success-ring {
+    border-color: rgba(192, 192, 192, 0.3) !important;
+}
+
+.swal2-warning {
+    border-color: #ff9800 !important;
+    color: #ff9800 !important;
+}
+
+.swal2-error {
+    border-color: #f44336 !important;
+    color: #f44336 !important;
+}
+
+.swal2-info {
+    border-color: #2196f3 !important;
+    color: #2196f3 !important;
+}
+
+.swal2-question {
+    border-color: #9c27b0 !important;
+    color: #9c27b0 !important;
+}
 
 /* ========== PARTÍCULAS ========== */
 #particle-canvas {
@@ -838,8 +837,8 @@ body {
 }
 
 .btn-change-password {
-    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
-    color: var(--color-text-dark);
+    background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
+    color: white;
     border: none;
     border-radius: var(--border-radius-small);
     padding: 12px 24px;
@@ -857,7 +856,7 @@ body {
 }
 
 .btn-change-password:hover {
-    background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
     transform: translateY(-2px);
     box-shadow: var(--shadow-normal);
 }
@@ -908,6 +907,11 @@ body {
     .preview-image {
         width: 140px;
         height: 140px;
+    }
+    
+    /* SweetAlert2 responsive */
+    .swal2-popup {
+        width: 90% !important;
     }
 }
 
@@ -1042,6 +1046,27 @@ body {
         padding: 0.6rem;
         font-size: 0.75rem;
     }
+    
+    /* SweetAlert2 responsive */
+    .swal2-title {
+        font-size: 1.1rem !important;
+    }
+    
+    .swal2-styled {
+        padding: 0.6rem 1rem !important;
+        height: 40px !important;
+        min-width: auto !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .swal2-icon {
+        width: 50px !important;
+        height: 50px !important;
+    }
+    
+    .swal2-icon-content {
+        font-size: 2rem !important;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1104,6 +1129,17 @@ body {
     .btn-change-password {
         padding: 10px 20px;
         font-size: 0.75rem;
+    }
+    
+    /* SweetAlert2 responsive */
+    .swal2-actions {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+    
+    .swal2-styled {
+        width: 100% !important;
+        margin: 0.25rem 0 !important;
     }
 }
 

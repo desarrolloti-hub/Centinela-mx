@@ -479,7 +479,6 @@ function updatePageWithAdminInfo(admin) {
                 <i class="fas fa-user-shield"></i>
                 Administrador: <strong>${admin.nombreCompleto || 'Administrador'}</strong>
                 ${admin.correoElectronico ? ` | <span>${admin.correoElectronico}</span>` : ''}
-                ${admin.organizacionCamelCase ? ` | Colección: <code>colaboradores_${admin.organizacionCamelCase}</code>` : ''}
             `;
             sectionTitle.parentNode.insertBefore(newSubTitle, sectionTitle.nextSibling);
         }
@@ -498,12 +497,6 @@ function showEmptyState(admin) {
                     <i class="fas fa-users"></i>
                     <h3>No hay colaboradores en ${admin.organizacion || 'tu organización'}</h3>
                     <p>Comienza agregando tu primer colaborador</p>
-                    <p class="firebase-collection">
-                        Colección Firebase: <code>colaboradores_${admin.organizacionCamelCase || 'tu_organizacion'}</code>
-                    </p>
-                    <button id="addFirstCollaborator" class="add-first-btn">
-                        <i class="fas fa-user-plus"></i> Agregar primer colaborador
-                    </button>
                 </div>
             </td>
         </tr>
