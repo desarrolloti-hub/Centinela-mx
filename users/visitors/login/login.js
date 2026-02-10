@@ -549,7 +549,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     window.irARegistro = function() {
-        window.location.href = '/users/visitors/registrarse/registro.html';
+        window.location.href = '/users/visitors/registro/registro.html';
     };
     
     window.mostrarRecuperacionContraseña = function() {

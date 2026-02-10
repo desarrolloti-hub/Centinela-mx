@@ -189,7 +189,7 @@ class ParticleSystem {
             
             // Esperar a que UserManager esté listo
             let attempts = 0;
-            while (!this.userManager.currentUser && attempts < 10) {
+            while (!this.userManager.currentUser && attempts < 3) {
                 await new Promise(resolve => setTimeout(resolve, 300));
                 attempts++;
                 console.log(`⏳ Esperando usuario... intento ${attempts}`);
