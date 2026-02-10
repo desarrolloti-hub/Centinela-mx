@@ -1,6 +1,6 @@
 // =============================================
 // SISTEMA DE PARTÍCULAS ANIMADAS
-// Integrado con Theme Manager - Versión Base de Datos
+// Integrado con Theme Manager - Versión Optimizada
 // =============================================
 
 // Importar UserManager
@@ -16,6 +16,8 @@ class ParticleSystem {
         this.animationId = null;
         this.primaryColor = 'rgba(192, 192, 192, 0.8)'; // Color por defecto
         this.secondaryColor = 'rgba(255, 255, 255, 0.8)'; // Color por defecto
+        this.lastDatabaseCheck = 0; // Para evitar consultas frecuentes
+        this.databaseCheckInterval = 3600000; // 1 hora entre verificaciones
         
         // Inicializar cuando el DOM esté listo
         if (document.readyState === 'loading') {
@@ -56,12 +58,19 @@ class ParticleSystem {
                 this.userManager = window.userManager; // Usar instancia existente
             }
             
-            // CARGAR TEMAS EN ESTE ORDEN:
-            // 1. Primero intentar desde localStorage (más rápido)
-            await this.loadFromLocalStorage();
+            // CARGAR TEMAS EN ESTE ORDEN (ESTRATEGIA OPTIMIZADA):
+            // 1. Primero intentar desde localStorage (SIN CONSULTA A BD)
+            const loadedFromLocal = await this.loadFromLocalStorage();
             
-            // 2. Luego desde base de datos (si hay usuario)
-            await this.loadColorsFromDatabase();
+            // 2. Solo consultar BD si no hay datos en localStorage o han pasado más de 1 hora
+            const now = Date.now();
+            const shouldCheckDatabase = !loadedFromLocal || 
+                                      (now - this.lastDatabaseCheck) > this.databaseCheckInterval;
+            
+            if (shouldCheckDatabase) {
+                await this.loadColorsFromDatabase();
+                this.lastDatabaseCheck = now;
+            }
             
             // 3. Si todo falla, usar colores por defecto
             if (!this.currentTheme) {
@@ -151,27 +160,62 @@ class ParticleSystem {
     }
     
     // =============================================
-    // CARGAR DESDE LOCALSTORAGE (MÁS RÁPIDO)
+    // CARGAR DESDE LOCALSTORAGE (MÁS RÁPIDO - PRIORIDAD 1)
     // =============================================
     async loadFromLocalStorage() {
-        const savedTheme = localStorage.getItem('centinela-theme');
-        if (savedTheme) {
-            try {
-                const themeData = JSON.parse(savedTheme);
-                this.loadThemeColors(themeData.themeId);
-                return true;
-            } catch (e) {
-                console.warn('⚠️ Error parseando tema de localStorage:', e);
-                return false;
+        try {
+            // Primero intentar con particle-colors (específico para partículas)
+            const savedParticleColors = localStorage.getItem('particle-colors');
+            if (savedParticleColors) {
+                const colors = JSON.parse(savedParticleColors);
+                if (colors && colors.primary && colors.secondary) {
+                    // Verificar que no sean muy viejos (más de 24 horas)
+                    const maxAge = 24 * 60 * 60 * 1000; // 24 horas
+                    if (!colors.timestamp || (Date.now() - colors.timestamp) < maxAge) {
+                        this.primaryColor = colors.primary;
+                        this.secondaryColor = colors.secondary;
+                        this.currentTheme = colors.themeId || 'default';
+                        
+                        console.log('🎨 Colores cargados de localStorage (particle-colors)');
+                        return true;
+                    }
+                }
             }
+            
+            // Luego intentar con centinela-theme (más general)
+            const savedTheme = localStorage.getItem('centinela-theme');
+            if (savedTheme) {
+                try {
+                    const themeData = JSON.parse(savedTheme);
+                    if (themeData && themeData.themeId) {
+                        // Usar presets para obtener color
+                        const themePresets = this.getThemePresets();
+                        const theme = themePresets[themeData.themeId];
+                        
+                        if (theme) {
+                            this.loadThemeColors(themeData.themeId);
+                            console.log('🎨 Tema cargado de localStorage (centinela-theme):', themeData.themeId);
+                            return true;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Error parseando tema de localStorage:', e);
+                }
+            }
+            
+            return false;
+            
+        } catch (error) {
+            console.warn('⚠️ Error cargando de localStorage:', error);
+            return false;
         }
-        return false;
     }
     
     // =============================================
-    // CARGAR COLORES DESDE BASE DE DATOS
+    // CARGAR COLORES DESDE BASE DE DATOS (SOLO CUANDO SEA NECESARIO)
     // =============================================
     async loadColorsFromDatabase() {
+        console.log('🗄️ Intentando cargar colores desde BD...');
         
         try {
             // Verificar si UserManager está listo
@@ -180,19 +224,10 @@ class ParticleSystem {
                 return false;
             }
             
-            // Esperar a que UserManager esté listo
-            let attempts = 0;
-            while (!this.userManager.currentUser && attempts < 3) {
-                await new Promise(resolve => setTimeout(resolve, 300));
-                attempts++;
-                console.log(`⏳ Esperando usuario... intento ${attempts}`);
-            }
-            
-            // Obtener usuario actual
+            // Solo consultar si hay usuario autenticado
             const currentUser = this.userManager.currentUser;
-            
             if (!currentUser) {
-                console.log('👤 No hay usuario autenticado');
+                console.log('👤 No hay usuario autenticado - omitiendo BD');
                 return false;
             }
             
@@ -204,23 +239,52 @@ class ParticleSystem {
                 themeId = 'default';
             }
             
+            // Verificar si es el mismo tema que ya tenemos
+            if (this.currentTheme === themeId) {
+                console.log('ℹ️ Tema actual ya coincide con BD, omitiendo');
+                return true;
+            }
+            
             // Cargar colores del tema
             this.loadThemeColors(themeId);
             
             // Guardar estado actual
             this.currentTheme = themeId;
             
-            // También guardar en localStorage para futuras cargas rápidas
-            localStorage.setItem('centinela-theme', JSON.stringify({
-                themeId: themeId,
-                timestamp: Date.now()
-            }));
+            // Guardar en localStorage para futuras cargas rápidas
+            this.saveToLocalStorage(themeId);
             
+            console.log('✅ Colores actualizados desde BD:', themeId);
             return true;
             
         } catch (error) {
             console.error('🔥 Error cargando colores desde DB:', error);
             return false;
+        }
+    }
+    
+    // =============================================
+    // GUARDAR EN LOCALSTORAGE
+    // =============================================
+    saveToLocalStorage(themeId) {
+        try {
+            // Guardar colores específicos de partículas
+            localStorage.setItem('particle-colors', JSON.stringify({
+                primary: this.primaryColor,
+                secondary: this.secondaryColor,
+                themeId: themeId,
+                timestamp: Date.now()
+            }));
+            
+            // También guardar tema general
+            localStorage.setItem('centinela-theme', JSON.stringify({
+                themeId: themeId,
+                timestamp: Date.now(),
+                source: 'particle-system'
+            }));
+            
+        } catch (e) {
+            console.warn('⚠️ No se pudo guardar en localStorage:', e);
         }
     }
     
@@ -294,13 +358,6 @@ class ParticleSystem {
             primary: this.primaryColor, 
             secondary: this.secondaryColor 
         });
-        
-        // Guardar en localStorage para persistencia
-        localStorage.setItem('particle-colors', JSON.stringify({
-            primary: this.primaryColor,
-            secondary: this.secondaryColor,
-            timestamp: Date.now()
-        }));
     }
     
     // =============================================
@@ -428,29 +485,46 @@ class ParticleSystem {
         };
         window.addEventListener("resize", resizeHandler);
         
-        // Cambios de tema desde ThemeLoader
+        // Cambios de tema desde ThemeLoader (SIN CONSULTAR BD)
         const themeChangeHandler = (event) => {
             if (event.detail?.themeId) {
-                console.log('🔄 Tema cambiado desde ThemeLoader:', event.detail.themeId);
+                console.log('🔄 Tema cambiado desde ThemeLoader (LOCAL):', event.detail.themeId);
+                
+                // Aplicar directamente desde los presets
                 this.loadThemeColors(event.detail.themeId);
+                
+                // Guardar en localStorage
+                this.saveToLocalStorage(event.detail.themeId);
             }
         };
         document.addEventListener('themeApplied', themeChangeHandler);
         
-        // Cambios en UserManager
-        const userUpdateHandler = async () => {
-            console.log('👤 Usuario actualizado, actualizando partículas...');
-            await this.loadColorsFromDatabase();
+        // Cambios desde ThemeManager (cuando usuario cambia tema manualmente)
+        const themeChangedHandler = (event) => {
+            if (event.detail?.themeId) {
+                console.log('🎨 Tema cambiado desde ThemeManager:', event.detail.themeId);
+                
+                // Aplicar nuevo tema
+                this.loadThemeColors(event.detail.themeId);
+                
+                // Guardar en localStorage
+                this.saveToLocalStorage(event.detail.themeId);
+            }
         };
-        document.addEventListener('userUpdated', userUpdateHandler);
+        document.addEventListener('themeChanged', themeChangedHandler);
         
-        // Cambios en localStorage (otras pestañas)
+        // Cambios en localStorage (otras pestañas) - SIN CONSULTAR BD
         const storageHandler = (event) => {
             if (event.key === 'centinela-theme') {
-                console.log('🔄 Tema cambiado desde otra pestaña');
-                setTimeout(async () => {
-                    await this.loadColorsFromDatabase();
-                }, 100);
+                console.log('🔄 Tema cambiado desde otra pestaña (LOCAL)');
+                try {
+                    const themeData = JSON.parse(event.newValue);
+                    if (themeData && themeData.themeId) {
+                        this.loadThemeColors(themeData.themeId);
+                    }
+                } catch (e) {
+                    console.warn('Error cargando tema desde storage:', e);
+                }
             }
             
             if (event.key === 'particle-colors') {
@@ -473,7 +547,7 @@ class ParticleSystem {
         this.eventListeners = {
             resize: resizeHandler,
             themeApplied: themeChangeHandler,
-            userUpdated: userUpdateHandler,
+            themeChanged: themeChangedHandler,
             storage: storageHandler
         };
     }
@@ -577,7 +651,7 @@ class ParticleSystem {
         if (this.eventListeners) {
             window.removeEventListener("resize", this.eventListeners.resize);
             document.removeEventListener('themeApplied', this.eventListeners.themeApplied);
-            document.removeEventListener('userUpdated', this.eventListeners.userUpdated);
+            document.removeEventListener('themeChanged', this.eventListeners.themeChanged);
             window.removeEventListener('storage', this.eventListeners.storage);
         }
         
@@ -604,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Crear nueva instancia
     window.particleSystem = new ParticleSystem();
     
-    console.log('✅ Sistema de partículas funcionando');
+    console.log('✅ Sistema de partículas funcionando (Optimizado)');
 });
 
 // =============================================
@@ -627,7 +701,14 @@ window.updateParticleColors = function(themeId) {
  */
 window.reloadParticleColors = async function() {
     if (window.particleSystem) {
-        await window.particleSystem.loadColorsFromDatabase();
+        // Solo consultar BD si han pasado más de 1 hora desde la última verificación
+        const now = Date.now();
+        if (now - window.particleSystem.lastDatabaseCheck > window.particleSystem.databaseCheckInterval) {
+            await window.particleSystem.loadColorsFromDatabase();
+            window.particleSystem.lastDatabaseCheck = now;
+        } else {
+            console.log('⏰ Aún no es necesario consultar BD (menos de 1 hora)');
+        }
         return true;
     }
     return false;

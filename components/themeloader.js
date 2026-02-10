@@ -1,5 +1,5 @@
 // =============================================
-// THEME LOADER - VERSIÓN CORREGIDA SIN LOOPS
+// THEME LOADER - VERSIÓN OPTIMIZADA SIN CONSULTAS CONSTANTES
 // =============================================
 
 // Importar UserManager desde la clase
@@ -13,12 +13,13 @@ class ThemeLoader {
         this.currentThemeId = 'default';
         this.lastAppliedTheme = null;
         this.checkInterval = null;
-        this.checkIntervalMs = 30000; // 30 segundos, no 15!
-        this.isApplyingTheme = false; // <-- NUEVO: Flag para evitar loops
+        this.checkIntervalMs = 3600000; // 1 hora entre verificaciones de BD
+        this.isApplyingTheme = false;
         this.lastCheckTime = 0;
-        this.minCheckInterval = 10000; // Mínimo 10 segundos entre verificaciones
+        this.minCheckInterval = 30000; // 30 segundos mínimo entre verificaciones
+        this.lastDatabaseCheck = 0;
         
-        console.log('🎨 ThemeLoader CON CORRECCIONES ANTILOOP');
+        console.log('🎨 ThemeLoader VERSIÓN OPTIMIZADA - LocalStorage First');
         
         // Inicializar UserManager
         this.initUserManager();
@@ -46,50 +47,46 @@ class ThemeLoader {
     }
 
     // =============================================
-    // CARGAR TEMA - VERSIÓN MEJORADA SIN LOOPS
+    // CARGAR TEMA - ESTRATEGIA OPTIMIZADA
     // =============================================
     async loadTheme() {
-        console.log('🎨 CARGANDO TEMA DESDE BASE DE DATOS...');
+        console.log('🎨 CARGANDO TEMA (ESTRATEGIA OPTIMIZADA)...');
         
         try {
-            // Verificar si UserManager está listo
-            if (!this.userManager) {
-                console.log('⏳ UserManager no listo, reintentando...');
-                setTimeout(() => this.loadTheme(), 1000);
+            // PRIMERO: Cargar desde localStorage (SIN CONSULTAR BD)
+            const themeFromLocalStorage = this.loadThemeFromLocalStorage();
+            
+            if (themeFromLocalStorage) {
+                console.log('📂 Tema cargado de localStorage:', themeFromLocalStorage);
+                
+                // Aplicar tema desde localStorage inmediatamente
+                this.applyThemeDirectly(themeFromLocalStorage);
+                
+                // LUEGO: Verificar BD solo si es necesario
+                setTimeout(() => {
+                    this.verifyWithDatabase(themeFromLocalStorage);
+                }, 2000); // Esperar 2 segundos antes de verificar BD
+                
                 return;
             }
             
-            // Obtener usuario actual DIRECTAMENTE del UserManager
+            // SEGUNDO: Si no hay en localStorage, cargar desde UserManager
+            if (!this.userManager) {
+                console.log('⏳ UserManager no listo, usando tema predeterminado');
+                this.applyThemeById('default');
+                return;
+            }
+            
+            // TERCERO: Obtener usuario actual
             const currentUser = this.userManager.currentUser;
             
             if (!currentUser) {
-                console.log('👤 No hay usuario autenticado');
-                
-                // Verificar si hay sesión en localStorage como respaldo
-                const savedTheme = localStorage.getItem('centinela-theme');
-                if (savedTheme) {
-                    try {
-                        const themeData = JSON.parse(savedTheme);
-                        console.log('📂 Usando tema de localStorage:', themeData.themeId);
-                        this.applyThemeById(themeData.themeId || 'default');
-                    } catch (e) {
-                        this.applyThemeById('default');
-                    }
-                } else {
-                    this.applyThemeById('default');
-                }
+                console.log('👤 No hay usuario autenticado, usando predeterminado');
+                this.applyThemeById('default');
                 return;
             }
             
-            console.log('✅ USUARIO ENCONTRADO EN USERMANAGER:', {
-                id: currentUser.id,
-                nombre: currentUser.nombreCompleto,
-                cargo: currentUser.cargo,
-                theme: currentUser.theme,
-                verificado: currentUser.verificado
-            });
-            
-            // Obtener el tema del objeto User
+            // Obtener tema del usuario
             let themeId = currentUser.theme;
             
             console.log('🎯 TEMA DEL USUARIO:', themeId);
@@ -106,19 +103,84 @@ class ThemeLoader {
                 themeId = 'default';
             }
             
-            // Aplicar el tema SIN disparar eventos que puedan causar loops
-            console.log(`🚀 APLICANDO TEMA (SIN LOOP): ${themeId}`);
+            // Aplicar el tema
+            console.log(`🚀 APLICANDO TEMA DESDE USUARIO: ${themeId}`);
             this.applyThemeDirectly(themeId);
             
-            // Actualizar también en memoria local
-            this.updateLocalUserTheme(themeId);
-            
-            // Guardar en localStorage como respaldo
+            // Guardar en localStorage para futuras cargas rápidas
             this.saveThemeToLocalStorage(themeId);
             
         } catch (error) {
             console.error('🔥 ERROR CARGANDO TEMA:', error);
             this.applyThemeById('default');
+        }
+    }
+    
+    // =============================================
+    // CARGAR TEMA DESDE LOCALSTORAGE
+    // =============================================
+    loadThemeFromLocalStorage() {
+        try {
+            const savedTheme = localStorage.getItem('centinela-theme');
+            if (!savedTheme) return null;
+            
+            const themeData = JSON.parse(savedTheme);
+            
+            // Verificar que no sea muy viejo (más de 7 días)
+            const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 días
+            if (themeData.timestamp && (Date.now() - themeData.timestamp) > maxAge) {
+                console.log('🕰️ Datos de localStorage muy viejos, ignorando');
+                return null;
+            }
+            
+            return themeData.themeId || null;
+            
+        } catch (e) {
+            console.warn('⚠️ Error leyendo localStorage:', e);
+            return null;
+        }
+    }
+    
+    // =============================================
+    // VERIFICAR CON BASE DE DATOS (SOLO CUANDO SEA NECESARIO)
+    // =============================================
+    async verifyWithDatabase(currentThemeId) {
+        const now = Date.now();
+        const timeSinceLastCheck = now - this.lastDatabaseCheck;
+        
+        // Solo verificar BD si han pasado más de 1 hora desde la última verificación
+        if (timeSinceLastCheck < 3600000) { // 1 hora
+            console.log('⏰ Aún no es necesario verificar BD');
+            return;
+        }
+        
+        console.log('🔍 Verificando tema con base de datos...');
+        
+        try {
+            if (!this.userManager || !this.userManager.currentUser) {
+                console.log('👤 No hay usuario para verificar BD');
+                return;
+            }
+            
+            const currentUser = this.userManager.currentUser;
+            const dbThemeId = currentUser.theme || 'default';
+            
+            // Si el tema coincide con el actual, no hacer nada
+            if (dbThemeId === currentThemeId) {
+                console.log('✅ Tema coincide con BD, todo correcto');
+                this.lastDatabaseCheck = now;
+                return;
+            }
+            
+            // Si hay diferencia, actualizar desde BD
+            console.log(`🔄 Tema difiere: localStorage=${currentThemeId}, BD=${dbThemeId}`);
+            this.applyThemeDirectly(dbThemeId);
+            this.saveThemeToLocalStorage(dbThemeId);
+            
+            this.lastDatabaseCheck = now;
+            
+        } catch (error) {
+            console.error('❌ Error verificando con BD:', error);
         }
     }
 
@@ -157,13 +219,13 @@ class ThemeLoader {
             appliedAt: new Date()
         };
         
-        // Disparar evento themeApplied (este NO causa loop)
+        // Disparar evento themeApplied
         document.dispatchEvent(new CustomEvent('themeApplied', {
             detail: {
                 themeId: themeId,
                 themeName: theme.name,
                 user: this.userManager?.currentUser?.id,
-                appliedDirectly: true // Indicar que fue aplicación directa
+                appliedDirectly: true
             }
         }));
         
@@ -180,35 +242,7 @@ class ThemeLoader {
     // APLICAR TEMA POR ID (MANTENER PARA COMPATIBILIDAD)
     // =============================================
     applyThemeById(themeId) {
-        // Usar applyThemeDirectly para evitar loops
         this.applyThemeDirectly(themeId);
-    }
-
-    // =============================================
-    // ACTUALIZAR TEMA EN MEMORIA LOCAL
-    // =============================================
-    updateLocalUserTheme(themeId) {
-        try {
-            if (!this.userManager || !this.userManager.currentUser) {
-                return;
-            }
-            
-            // Actualizar la propiedad theme del usuario en memoria
-            this.userManager.currentUser.theme = themeId;
-            
-            // También actualizar en la lista de usuarios si existe
-            const index = this.userManager.users.findIndex(
-                user => user.id === this.userManager.currentUser.id
-            );
-            if (index !== -1) {
-                this.userManager.users[index].theme = themeId;
-            }
-            
-            console.log(`✅ Tema ${themeId} actualizado en memoria local`);
-            
-        } catch (error) {
-            console.error('Error actualizando tema local:', error);
-        }
     }
 
     // =============================================
@@ -220,9 +254,11 @@ class ThemeLoader {
                 themeId: themeId,
                 appliedAt: new Date().toISOString(),
                 user: this.userManager?.currentUser?.id || 'unknown',
-                fromLoader: true
+                fromLoader: true,
+                timestamp: Date.now()
             };
             localStorage.setItem('centinela-theme', JSON.stringify(themeData));
+            console.log('💾 Tema guardado en localStorage:', themeId);
         } catch (e) {
             console.warn('No se pudo guardar tema en localStorage');
         }
@@ -248,27 +284,46 @@ class ThemeLoader {
     }
 
     // =============================================
-    // MONITOREO EN TIEMPO REAL - CON PROTECCIÓN ANTILOOP
+    // MONITOREO EN TIEMPO REAL - OPTIMIZADO
     // =============================================
     startThemeMonitoring() {
-        console.log('🔄 INICIANDO MONITOREO DE TEMAS (30 segundos)');
+        console.log('🔄 INICIANDO MONITOREO DE TEMAS (1 hora entre verificaciones BD)');
         
         if (this.checkInterval) {
             clearInterval(this.checkInterval);
         }
         
+        // Solo verificar BD cada 1 hora
         this.checkInterval = setInterval(() => {
             this.checkForThemeChanges();
         }, this.checkIntervalMs);
         
-        // También escuchar cambios en la pestaña
+        // Escuchar cambios en la pestaña (solo actualizar desde localStorage)
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 setTimeout(() => {
-                    this.checkForThemeChanges();
-                }, 2000);
+                    this.checkLocalStorageForChanges();
+                }, 1000);
             }
         });
+    }
+    
+    // =============================================
+    // VERIFICAR CAMBIOS EN LOCALSTORAGE
+    // =============================================
+    checkLocalStorageForChanges() {
+        try {
+            const savedTheme = localStorage.getItem('centinela-theme');
+            if (!savedTheme) return;
+            
+            const themeData = JSON.parse(savedTheme);
+            if (themeData.themeId && themeData.themeId !== this.currentThemeId) {
+                console.log('🔄 Cambio detectado en localStorage:', themeData.themeId);
+                this.applyThemeDirectly(themeData.themeId);
+            }
+        } catch (error) {
+            console.warn('Error verificando localStorage:', error);
+        }
     }
 
     async checkForThemeChanges() {
@@ -300,18 +355,20 @@ class ThemeLoader {
                 return;
             }
             
-            console.log('🔍 Verificando cambios:', {
+            console.log('🔍 Verificando cambios en BD:', {
                 temaActual: this.currentThemeId,
                 temaEnBase: currentTheme,
-                usuario: currentUser.id,
-                timestamp: new Date().toISOString()
+                usuario: currentUser.id
             });
             
             if (currentTheme !== this.currentThemeId) {
                 console.log(`🔄 ¡CAMBIO DETECTADO EN BD! ${this.currentThemeId} → ${currentTheme}`);
                 
-                // Aplicar directamente sin llamar a loadTheme
+                // Aplicar directamente
                 this.applyThemeDirectly(currentTheme);
+                
+                // Guardar en localStorage
+                this.saveThemeToLocalStorage(currentTheme);
             }
             
         } catch (error) {
@@ -335,26 +392,19 @@ class ThemeLoader {
                 themeChangedTimeout = setTimeout(() => {
                     console.log('🎨 Procesando cambio desde admin...');
                     this.applyThemeDirectly(event.detail.themeId);
+                    
+                    // Guardar en localStorage
+                    this.saveThemeToLocalStorage(event.detail.themeId);
                 }, 500);
             }
         });
         
-        // Escuchar cambios en UserManager
-        document.addEventListener('userUpdated', async () => {
-            console.log('👤 Usuario actualizado, esperando para recargar tema...');
-            
-            // Esperar un momento para que los datos se actualicen
-            setTimeout(async () => {
-                await this.loadTheme();
-            }, 1500);
-        });
-        
-        // Escuchar storage changes (otras pestañas)
+        // Escuchar cambios en localStorage de otras pestañas
         window.addEventListener('storage', (event) => {
             if (event.key === 'centinela-theme') {
                 try {
                     const themeData = JSON.parse(event.newValue);
-                    if (themeData && !themeData.fromLoader) {
+                    if (themeData && themeData.themeId) {
                         console.log('🔄 Tema cambiado desde otra pestaña:', themeData.themeId);
                         setTimeout(() => {
                             this.applyThemeDirectly(themeData.themeId);
@@ -371,7 +421,7 @@ class ThemeLoader {
     // INICIALIZACIÓN COMPLETA
     // =============================================
     async init() {
-        console.log('🚀 INICIANDO THEME LOADER (VERSIÓN CORREGIDA)...');
+        console.log('🚀 INICIANDO THEME LOADER (VERSIÓN OPTIMIZADA)...');
         
         // Esperar DOM
         if (document.readyState === 'loading') {
@@ -380,7 +430,7 @@ class ThemeLoader {
             });
         }
         
-        // Cargar tema inicial
+        // Cargar tema inicial (desde localStorage primero)
         await this.loadTheme();
         
         // Configurar monitoreo
@@ -389,7 +439,7 @@ class ThemeLoader {
         // Hacer disponible globalmente
         window.themeLoader = this;
         
-        console.log('✅ THEME LOADER LISTO (SIN LOOPS)');
+        console.log('✅ THEME LOADER LISTO (LocalStorage First)');
     }
 
     // =============================================
@@ -837,12 +887,11 @@ class ThemeLoader {
 // =============================================
 // INICIALIZACIÓN AUTOMÁTICA
 // =============================================
-// Asegurarse de que se inicialice cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('📄 DOM cargado - Iniciando ThemeLoader (VERSIÓN CORREGIDA)...');
+    console.log('📄 DOM cargado - Iniciando ThemeLoader (VERSIÓN OPTIMIZADA)...');
     
     const themeLoader = new ThemeLoader();
     await themeLoader.init();
     
-    console.log('✅ ThemeLoader funcionando (SIN LOOPS)');
+    console.log('✅ ThemeLoader funcionando (LocalStorage First)');
 });

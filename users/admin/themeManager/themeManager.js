@@ -1,12 +1,4 @@
-// =============================================
-// THEME MANAGER - Centinela Security
-// Vista de administración - Gestión de temas
-// =============================================
-
-// SweetAlert2 ya está disponible globalmente desde el CDN
-// No necesitas importarlo
-
-// Importar solo UserManager (ya que user.js ya importa Firebase)
+// Importar UserManager
 import { UserManager } from '/clases/user.js';
 
 class ThemeManager {
@@ -473,8 +465,8 @@ class ThemeManager {
         
         console.log('Inicializando ThemeManager...');
         
-        // Cargar tema desde Firebase
-        await this.loadThemeFromFirebase();
+        // Cargar tema desde el usuario
+        await this.loadUserTheme();
         
         // Configurar event listeners
         this.setupEventListeners();
@@ -732,8 +724,8 @@ class ThemeManager {
         // Actualizar tema actual
         this.currentTheme = this.selectedThemeId;
         
-        // Guardar en Firebase
-        await this.saveThemeToFirebase(this.selectedThemeId);
+        // Guardar en el usuario actual
+        await this.saveThemeToUser(this.selectedThemeId);
         
         // Actualizar UI
         this.updateUI();
@@ -850,257 +842,180 @@ class ThemeManager {
     }
 
     // =============================================
-    // FIREBASE INTEGRATION
+    // INTEGRACIÓN CON USERMANAGER
     // =============================================
     
     /**
-     * Obtener funciones de Firebase (igual que en user.js)
+     * Guarda el tema en el usuario actual
      */
-    async getFirebaseFunctions() {
+    async saveThemeToUser(themeId) {
         try {
-            // Importar dinámicamente las funciones de Firestore
-            const firebaseFirestore = await import(
-                "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js"
-            );
-            
-            // Importar db desde el config
-            const { db } = await import('/config/firebase-config.js');
-            
-            return {
-                ...firebaseFirestore,
-                db
-            };
-        } catch (error) {
-            console.error('Error obteniendo funciones de Firebase:', error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Guarda el tema en Firebase y sincroniza con colaboradores
-     */
-    async saveThemeToFirebase(themeId) {
-        try {
-            console.log('🔥 Guardando tema en Firebase:', themeId);
-            
-            // Verificar que haya un usuario autenticado
-            const currentUser = this.userManager?.currentUser;
-            
-            if (!currentUser) {
-                console.warn('⚠️ No hay usuario autenticado, no se puede guardar el tema');
-                this.showNotification('No hay usuario autenticado. Inicia sesión para guardar el tema.', 'warning');
-                return;
-            }
-            
-            console.log('👤 Usuario actual:', {
-                id: currentUser.id,
-                cargo: currentUser.cargo,
-                organizacion: currentUser.organizacion,
-                organizacionCamelCase: currentUser.organizacionCamelCase
-            });
-            
-            // Mostrar alerta de carga si SweetAlert2 está disponible
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: 'Guardando tema...',
-                    text: 'Por favor espera mientras se guarda el tema',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    },
-                    background: this.getCurrentColors()['--color-bg-primary'],
-                    color: this.getCurrentColors()['--color-text-primary']
-                });
-            }
-            
-            // Obtener funciones de Firebase
-            const firebase = await this.getFirebaseFunctions();
-            const { db, doc, updateDoc, collection, query, where, getDocs, writeBatch, serverTimestamp } = firebase;
-            
-            let message = '';
-            
-            // Guardar según el tipo de usuario
-            if (currentUser.cargo === 'administrador') {
-                // ===========================================
-                // ADMINISTRADOR: Guardar y sincronizar
-                // ===========================================
-                console.log('💼 Guardando tema para administrador...');
-                
-                // 1. Guardar en administradores
-                await updateDoc(doc(db, "administradores", currentUser.id), {
-                    theme: themeId,
-                    fechaActualizacion: serverTimestamp()
-                });
-                
-                console.log('✅ Tema guardado para administrador en Firebase');
-                
-                // 2. Sincronizar a todos sus colaboradores
-                const syncCount = await this.syncThemeToAllColaboradores(themeId, currentUser);
-                message = syncCount > 0 
-                    ? `Tema "${this.getThemePresets()[themeId].name}" aplicado a ${syncCount} colaboradores`
-                    : `Tema "${this.getThemePresets()[themeId].name}" aplicado`;
-                
-            } else if (currentUser.cargo === 'colaborador') {
-                // ===========================================
-                // COLABORADOR: Solo guardar para sí mismo
-                // ===========================================
-                console.log('👥 Guardando tema para colaborador...');
-                
-                const coleccionColaboradores = `colaboradores_${currentUser.organizacionCamelCase}`;
-                await updateDoc(doc(db, coleccionColaboradores, currentUser.id), {
-                    theme: themeId,
-                    fechaActualizacion: serverTimestamp()
-                });
-                
-                console.log('✅ Tema guardado para colaborador en Firebase');
-                message = 'Tema personal guardado correctamente';
-                
-            } else {
-                throw new Error('❌ Tipo de usuario no reconocido');
-            }
-            
-            // Cerrar alerta de carga si está abierta
-            if (typeof Swal !== 'undefined') {
-                Swal.close();
-            }
-            
-            // Disparar evento para sincronización entre pestañas
-            window.dispatchEvent(new CustomEvent('themeUpdatedInFirebase', {
-                detail: { 
-                    themeId, 
-                    userId: currentUser.id,
-                    cargo: currentUser.cargo 
-                }
-            }));
-            
-            return message;
-            
-        } catch (error) {
-            console.error('❌ Error guardando tema en Firebase:', error);
-            
-            // Cerrar alerta de carga si está abierta
-            if (typeof Swal !== 'undefined') {
-                Swal.close();
-                
-                // Mostrar error con SweetAlert2
-                await Swal.fire({
-                    title: 'Error',
-                    text: `No se pudo guardar el tema: ${error.message}`,
-                    icon: 'error',
-                    confirmButtonText: 'Aceptar',
-                    confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
-                    background: this.getCurrentColors()['--color-bg-primary'],
-                    color: this.getCurrentColors()['--color-text-primary']
-                });
-            } else {
-                alert(`Error: ${error.message}`);
-            }
-            
-            throw error;
-        }
-    }
-    
-    /**
-     * Sincroniza el tema a todos los colaboradores del administrador
-     */
-    async syncThemeToAllColaboradores(themeId, administrador) {
-        try {
-            console.log(`🔄 Sincronizando tema a colaboradores de: ${administrador.organizacion}`);
-            
-            // Obtener funciones de Firebase
-            const firebase = await this.getFirebaseFunctions();
-            const { db, collection, query, where, getDocs, writeBatch, serverTimestamp } = firebase;
-            
-            const coleccionColaboradores = `colaboradores_${administrador.organizacionCamelCase}`;
-            
-            // Obtener todos los colaboradores activos
-            const colabQuery = query(
-                collection(db, coleccionColaboradores),
-                where("eliminado", "==", false),
-                where("status", "==", true)
-            );
-            
-            const colabSnapshot = await getDocs(colabQuery);
-            
-            if (colabSnapshot.empty) {
-                console.log('👥 No hay colaboradores para sincronizar');
-                return 0;
-            }
-            
-            console.log(`🔄 Sincronizando tema a ${colabSnapshot.size} colaboradores...`);
-            
-            // Preparar todas las actualizaciones
-            const batch = writeBatch(db);
-            let updatedCount = 0;
-            
-            colabSnapshot.forEach(docSnap => {
-                batch.update(docSnap.ref, {
-                    theme: themeId,
-                    fechaActualizacion: serverTimestamp(),
-                    themeUpdatedBy: administrador.id,
-                    themeUpdatedAt: serverTimestamp()
-                });
-                updatedCount++;
-            });
-            
-            // Ejecutar todas las actualizaciones en lote
-            await batch.commit();
-            
-            console.log(`✅ Tema sincronizado a ${updatedCount} colaboradores`);
-            return updatedCount;
-            
-        } catch (error) {
-            console.error('❌ Error sincronizando tema a colaboradores:', error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Carga el tema desde Firebase
-     */
-    async loadThemeFromFirebase() {
-        try {
-            console.log('🔍 Cargando tema desde Firebase...');
+            console.log('💾 Guardando tema en usuario:', themeId);
             
             if (!this.userManager?.currentUser) {
-                console.log('👤 Usuario no autenticado, usando tema por defecto');
-                this.applyDefaultTheme();
-                return;
+                console.warn('⚠️ No hay usuario autenticado, guardando en localStorage');
+                this.saveThemeToLocalStorage(themeId);
+                return 'Tema guardado localmente';
             }
             
             const currentUser = this.userManager.currentUser;
             
-            // Obtener funciones de Firebase
-            const firebase = await this.getFirebaseFunctions();
-            const { db, doc, getDoc } = firebase;
+            // Guardar en localStorage como respaldo
+            this.saveThemeToLocalStorage(themeId);
             
-            let themeId = 'default';
+            // Guardar en el usuario usando el UserManager
+            const updateData = {
+                theme: themeId,
+                fechaActualizacion: new Date()
+            };
             
-            // Obtener tema según tipo de usuario
+            // Determinar tipo de usuario y colección
+            let result;
             if (currentUser.cargo === 'administrador') {
-                const adminDoc = await getDoc(doc(db, "administradores", currentUser.id));
-                if (adminDoc.exists()) {
-                    const data = adminDoc.data();
-                    themeId = data.theme || 'default';
-                    console.log('💼 Tema cargado para administrador:', themeId);
+                result = await this.userManager.updateUser(
+                    currentUser.id,
+                    updateData,
+                    'administrador'
+                );
+                
+                // Si el administrador quiere sincronizar a colaboradores
+                if (this.userManager.esAdministrador()) {
+                    const sync = await this.syncThemeToColaboradores(themeId);
+                    if (sync) {
+                        return `Tema aplicado y sincronizado a ${sync} colaboradores`;
+                    }
                 }
-            } else if (currentUser.cargo === 'colaborador') {
-                const coleccionColaboradores = `colaboradores_${currentUser.organizacionCamelCase}`;
-                const colabDoc = await getDoc(doc(db, coleccionColaboradores, currentUser.id));
-                if (colabDoc.exists()) {
-                    const data = colabDoc.data();
-                    themeId = data.theme || 'default';
-                    console.log('👥 Tema cargado para colaborador:', themeId);
+            } else {
+                result = await this.userManager.updateUser(
+                    currentUser.id,
+                    updateData,
+                    'colaborador',
+                    currentUser.organizacionCamelCase
+                );
+            }
+            
+            console.log('✅ Tema guardado en usuario');
+            return 'Tema guardado correctamente';
+            
+        } catch (error) {
+            console.error('❌ Error guardando tema:', error);
+            // Fallback a localStorage
+            this.saveThemeToLocalStorage(themeId);
+            throw error;
+        }
+    }
+    
+    /**
+     * Sincroniza el tema a los colaboradores del administrador
+     */
+    async syncThemeToColaboradores(themeId) {
+        try {
+            if (!this.userManager?.currentUser || !this.userManager.esAdministrador()) {
+                return 0;
+            }
+            
+            const currentUser = this.userManager.currentUser;
+            
+            // Obtener todos los colaboradores de la organización
+            const colaboradores = await this.userManager.getColaboradoresByOrganizacion(
+                currentUser.organizacionCamelCase
+            );
+            
+            let syncCount = 0;
+            
+            // Actualizar tema de cada colaborador
+            for (const colaborador of colaboradores) {
+                if (!colaborador.eliminado && colaborador.status) {
+                    try {
+                        await this.userManager.updateUser(
+                            colaborador.id,
+                            { theme: themeId },
+                            'colaborador',
+                            currentUser.organizacionCamelCase
+                        );
+                        syncCount++;
+                    } catch (error) {
+                        console.warn(`Error sincronizando tema a ${colaborador.nombreCompleto}:`, error);
+                    }
                 }
             }
             
-            // Aplicar el tema
+            console.log(`✅ Tema sincronizado a ${syncCount} colaboradores`);
+            return syncCount;
+            
+        } catch (error) {
+            console.error('❌ Error sincronizando tema:', error);
+            return 0;
+        }
+    }
+    
+    /**
+     * Carga el tema desde el usuario actual
+     */
+    async loadUserTheme() {
+        try {
+            console.log('🔍 Cargando tema desde usuario...');
+            
+            let themeId = 'default';
+            
+            // 1. Intentar cargar desde localStorage primero
+            const savedTheme = this.loadThemeFromLocalStorage();
+            if (savedTheme) {
+                themeId = savedTheme;
+                console.log('📱 Tema cargado de localStorage:', themeId);
+            }
+            
+            // 2. Si hay usuario autenticado, cargar su tema
+            if (this.userManager?.currentUser) {
+                const userTheme = this.userManager.currentUser.theme;
+                if (userTheme && userTheme !== 'default') {
+                    themeId = userTheme;
+                    console.log('👤 Tema cargado del usuario:', themeId);
+                }
+            }
+            
+            // 3. Aplicar el tema
             this.applyThemeById(themeId);
             
         } catch (error) {
-            console.error('❌ Error cargando tema desde Firebase:', error);
+            console.error('❌ Error cargando tema:', error);
             this.applyDefaultTheme();
         }
+    }
+    
+    /**
+     * Guarda el tema en localStorage
+     */
+    saveThemeToLocalStorage(themeId) {
+        try {
+            const themeData = {
+                themeId: themeId,
+                savedAt: new Date().toISOString(),
+                appliedAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem('centinela-theme', JSON.stringify(themeData));
+            console.log('💾 Tema guardado en localStorage:', themeId);
+            
+        } catch (error) {
+            console.warn('⚠️ No se pudo guardar en localStorage:', error);
+        }
+    }
+    
+    /**
+     * Carga el tema desde localStorage
+     */
+    loadThemeFromLocalStorage() {
+        try {
+            const savedTheme = localStorage.getItem('centinela-theme');
+            if (savedTheme) {
+                const themeData = JSON.parse(savedTheme);
+                return themeData.themeId;
+            }
+        } catch (error) {
+            console.warn('⚠️ No se pudo leer tema de localStorage:', error);
+        }
+        return null;
     }
     
     /**
@@ -1137,7 +1052,11 @@ class ThemeManager {
         console.log(`💬 Mostrando notificación: ${message} - Tipo: ${type}`);
         
         // Verificar si SweetAlert2 está disponible
-        if (typeof Swal !== 'undefined') {
+        if (typeof Swal === 'undefined') {
+            // Fallback a alert normal
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            alert(message);
+        } else {
             // Configurar icono según tipo
             const iconMap = {
                 'success': 'success',
@@ -1164,10 +1083,6 @@ class ThemeManager {
                     toast.addEventListener('mouseleave', Swal.resumeTimer);
                 }
             });
-        } else {
-            // Fallback a alert normal
-            console.log(`[${type.toUpperCase()}] ${message}`);
-            alert(message);
         }
     }
 
