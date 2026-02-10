@@ -860,6 +860,14 @@ class NavbarComplete {
                             <span class="nav-item-text">Áreas</span>
                             <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
                         </a>
+
+                        <div class="nav-items-container">
+                        <!-- Botón para CATEGORIAS -->
+                        <a href="/users/admin/categorias/categorias.html" class="nav-item" id="categoriasBtn">
+                            <i class="fa-solid fa-tags"></i>
+                            <span class="nav-item-text">Categorías</span>
+                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+                        </a>
                         
                         <!-- Botón para PERSONALIZACIÓN DE COLORES -->
                         <a href="/users/admin/themeManager/themeManager.html" class="nav-item" id="themeManagerBtn">

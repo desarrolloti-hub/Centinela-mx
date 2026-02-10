@@ -892,3 +892,146 @@ h1.h3 i {
 .table-hover > tbody > tr:hover > * {
     background-color: rgba(255,255,255,0.03) !important;
 }
+/* =============================================
+   SELECTORES DE COLOR SEMÁFORO (ROJO/AMARILLO/VERDE)
+   ============================================= */
+.color-selector {
+    padding: 0.5rem 0;
+    display: flex;
+    gap: 12px;
+}
+
+.color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    position: relative;
+    transition: all var(--transition-default);
+    border: 2px solid transparent;
+    box-shadow: var(--shadow-small);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.color-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border-color: var(--color-accent-primary);
+}
+
+.color-option.selected {
+    border-color: var(--color-text-primary);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.color-option i {
+    color: var(--color-text-primary) !important;
+    font-size: 16px !important;
+    opacity: 0;
+    transition: opacity var(--transition-default);
+}
+
+.color-option.selected i {
+    opacity: 1;
+}
+
+/* Colores específicos del semáforo */
+.color-rojo {
+    background-color: var(--color-danger) !important;
+}
+
+.color-amarillo {
+    background-color: var(--color-warning) !important;
+}
+
+.color-verde {
+    background-color: var(--color-success) !important;
+}
+
+/* Indicadores de color en la tabla */
+.color-indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    border: 2px solid var(--color-border-light);
+    box-shadow: var(--shadow-small);
+    vertical-align: middle;
+}
+
+/* Badges de color para la tabla */
+.badge.rojo {
+    background: rgba(255, 77, 77, 0.1) !important;
+    color: var(--color-danger) !important;
+    border: 1px solid rgba(255, 77, 77, 0.3) !important;
+}
+
+.badge.amarillo {
+    background: rgba(255, 204, 0, 0.1) !important;
+    color: var(--color-warning) !important;
+    border: 1px solid rgba(255, 204, 0, 0.3) !important;
+}
+
+.badge.verde {
+    background: rgba(0, 255, 149, 0.1) !important;
+    color: var(--color-success) !important;
+    border: 1px solid rgba(0, 255, 149, 0.3) !important;
+}
+
+/* Estilos para el formulario de edición de categorías */
+.form-control-color {
+    background: var(--color-bg-tertiary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-small) !important;
+    padding: 0 !important;
+    cursor: pointer;
+    width: 50px;
+    height: 40px;
+}
+
+.form-control-color:focus {
+    border-color: var(--color-accent-secondary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
+}
+
+.input-group .btn-outline-secondary {
+    background: var(--color-bg-tertiary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-secondary) !important;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-default);
+}
+
+.input-group .btn-outline-secondary:hover {
+    background: var(--color-hover) !important;
+    border-color: var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.input-group .btn-outline-secondary i {
+    color: var(--color-accent-primary) !important;
+}
+
+/* Responsive para selectores de color */
+@media (max-width: 768px) {
+    .color-selector {
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .color-option {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .color-option i {
+        font-size: 14px !important;
+    }
+}

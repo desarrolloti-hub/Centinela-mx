@@ -26,11 +26,11 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h1 class="h3"><i class="fas fa-tags me-2"></i>Gestión de Categorías</h1>
-                        <p class="text-muted">Administra las categorías y subcategorías de tu organización</p>
+                        <p class="text-muted">Administra las categorías de tu organización</p>
                     </div>
-                    <button id="btnNuevaCategoria" class="btn btn-primary btn-lg">
+                    <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn btn-primary btn-lg">
                         <i class="fas fa-plus me-2"></i>Nueva Categoría
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
@@ -40,10 +40,13 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Categorías</h5>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="toggleEliminadas">
-                            <label class="form-check-label" for="toggleEliminadas">Mostrar eliminadas</label>
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mis Categorías</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="form-check form-switch me-3">
+                                <input class="form-check-input" type="checkbox" id="toggleEliminadas">
+                                <label class="form-check-label" for="toggleEliminadas">Mostrar eliminadas</label>
+                            </div>
+                            <input type="text" class="form-control form-control-sm" id="buscarCategoria" placeholder="Buscar categoría..." style="width: 200px;">
                         </div>
                     </div>
                     <div class="card-body">
@@ -51,12 +54,10 @@
                             <table class="table table-hover" id="tablaCategorias">
                                 <thead>
                                     <tr>
-                                        <th width="30"><i class="fas fa-caret-down"></i></th>
-                                        <th width="50">#</th>
                                         <th>Nombre</th>
                                         <th>Color</th>
-                                        <th>Contador</th>
-                                        <th width="250">Acciones</th>
+                                        <th>Subcategorías</th>
+                                        <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tablaCategoriasBody">
@@ -80,132 +81,19 @@
         </div>
     </div>
     
-    <!-- Modal para Formulario de Categoría -->
-    <div class="modal fade" id="modalCategoria" tabindex="-1" aria-hidden="true">
+    <!-- Modal para Ver Detalles -->
+    <div class="modal fade" id="modalDetalles" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle"><i class="fas fa-tag me-2"></i>Nueva Categoría</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles de la Categoría</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="formCategoria">
-                        <input type="hidden" id="categoriaId">
-                        <input type="hidden" id="esSubcategoria" value="false">
-                        <input type="hidden" id="categoriaPadreId">
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <label for="nombreCategoria" class="form-label">Nombre *</label>
-                                <input type="text" class="form-control" id="nombreCategoria" required>
-                                <div class="form-text">Nombre descriptivo de la categoría o subcategoría</div>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="tipoCategoria" class="form-label">Tipo *</label>
-                                <select class="form-select" id="tipoCategoria" required>
-                                    <option value="">Seleccionar...</option>
-                                    <option value="activo">Activo/Equipo</option>
-                                    <option value="material">Material/Insumo</option>
-                                    <option value="servicio">Servicio</option>
-                                    <option value="documento">Documento</option>
-                                    <option value="proveedor">Proveedor</option>
-                                    <option value="proyecto">Proyecto</option>
-                                    <option value="otro">Otro</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="color" class="form-label">Color</label>
-                                <div class="input-group">
-                                    <input type="color" class="form-control form-control-color" id="color" value="#3498db" title="Selecciona un color">
-                                    <button type="button" class="btn btn-outline-secondary" id="btnColorRandom">Aleatorio</button>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="icono" class="form-label">Icono</label>
-                                <select class="form-select" id="icono">
-                                    <option value="fas fa-tag">🏷️ Etiqueta</option>
-                                    <option value="fas fa-laptop">💻 Laptop</option>
-                                    <option value="fas fa-tools">🔧 Herramientas</option>
-                                    <option value="fas fa-file-alt">📄 Documento</option>
-                                    <option value="fas fa-truck">🚚 Camión</option>
-                                    <option value="fas fa-cogs">⚙️ Engranajes</option>
-                                    <option value="fas fa-box">📦 Caja</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="descripcion" rows="2" placeholder="Breve descripción..."></textarea>
-                        </div>
-                        
-                        <div class="row mb-3" id="contenedorJerarquia">
-                            <div class="col-md-6">
-                                <label for="jerarquia" class="form-label">Jerarquía</label>
-                                <select class="form-select" id="jerarquia">
-                                    <option value="principal">Categoría Principal</option>
-                                    <option value="subcategoria">Subcategoría</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6" id="contenedorCategoriaPadre">
-                                <label for="categoriaPadre" class="form-label">Categoría Padre</label>
-                                <select class="form-select" id="categoriaPadre">
-                                    <option value="">Seleccionar categoría padre...</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Los campos marcados con * son obligatorios.
-                        </div>
-                    </form>
+                <div class="modal-body" id="detallesContent">
+                    <!-- Se llenará dinámicamente -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnGuardarCategoria">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para Formulario de Subcategoría -->
-    <div class="modal fade" id="modalSubcategoria" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Nueva Subcategoría</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formSubcategoria">
-                        <input type="hidden" id="subcategoriaCategoriaPadreId">
-                        
-                        <div class="mb-3">
-                            <label for="nombreSubcategoria" class="form-label">Nombre *</label>
-                            <input type="text" class="form-control" id="nombreSubcategoria" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="colorSubcategoria" class="form-label">Color</label>
-                            <div class="input-group">
-                                <input type="color" class="form-control form-control-color" id="colorSubcategoria" value="#3498db">
-                                <button type="button" class="btn btn-outline-secondary" id="btnColorRandomSub">Aleatorio</button>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="descripcionSubcategoria" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="descripcionSubcategoria" rows="2"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnGuardarSubcategoria">Guardar Subcategoría</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>
@@ -236,6 +124,22 @@
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
+    <script type="module">
+        // Obtener datos del administrador desde localStorage
+        const adminId = localStorage.getItem('adminId') || 'admin_default_id';
+        const adminNombre = localStorage.getItem('adminNombre') || 'Administrador';
+        const organizacionCamelCase = localStorage.getItem('organizacionCamelCase') || 'miEmpresa';
+        
+        console.log('🆔 Admin ID:', adminId);
+        console.log('🏢 Organización:', organizacionCamelCase);
+        
+        // Configuración global
+        window.adminConfig = {
+            id: adminId,
+            nombre: adminNombre,
+            organizacionCamelCase: organizacionCamelCase
+        };
+    </script>
     <script type="module" src="categorias.js"></script>
 </body>
 </html>
