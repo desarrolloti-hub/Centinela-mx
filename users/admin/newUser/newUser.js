@@ -1,5 +1,4 @@
-// ARCHIVO JS PARA CREAR COLABORADOR - VERSIÓN LIMPIA
-// Hereda campos del administrador actual y guarda en colección correcta
+// ARCHIVO JS PARA CREAR COLABORADOR
 
 // Importar las clases correctamente desde user.js
 import { UserManager } from '/clases/user.js';
@@ -25,14 +24,12 @@ async function initCollaboratorForm() {
     const userManager = new UserManager();
     console.log('✅ UserManager inicializado');
     
-    // Variables de estado
-    let selectedFile = null;
-    let profileImageBase64 = null;
-    let currentAdmin = null;
-    
     try {
+        // Esperar a que el usuario actual esté disponible
+        await esperarUsuarioActual(userManager);
+        
         // Cargar administrador actual
-        currentAdmin = await cargarAdministradorActual(userManager, elements);
+        const currentAdmin = await cargarAdministradorActual(userManager, elements);
         if (!currentAdmin) return;
         
         // Configurar interfaz con datos del admin
@@ -95,6 +92,19 @@ function obtenerElementosDOM() {
     }
 }
 
+// Función para esperar que el usuario actual esté disponible
+async function esperarUsuarioActual(userManager, maxAttempts = 15, delay = 500) {
+    for (let i = 0; i < maxAttempts; i++) {
+        if (userManager.currentUser) {
+            console.log('✅ Usuario actual detectado después de', i + 1, 'intentos');
+            return userManager.currentUser;
+        }
+        console.log(`⏳ Esperando usuario... intento ${i + 1}/${maxAttempts}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    throw new Error('No se pudo detectar el usuario actual después de ' + maxAttempts + ' intentos');
+}
+
 async function cargarAdministradorActual(userManager, elements) {
     try {
         // Mostrar loader
@@ -104,10 +114,7 @@ async function cargarAdministradorActual(userManager, elements) {
             didOpen: () => Swal.showLoading()
         });
         
-        // Esperar a que UserManager se inicialice
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Obtener administrador actual
+        // Obtener administrador actual desde UserManager
         const admin = userManager.currentUser;
         
         if (!admin) {
@@ -610,17 +617,6 @@ async function mostrarExitoRegistro(colaboradorData) {
                         <i class="fas fa-info-circle"></i> El colaborador debe verificar su email antes de iniciar sesión
                     </p>
                 </div>
-                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                    <p style="color: #0a2540; font-weight: bold; margin-bottom: 10px;">
-                        <i class="fas fa-lightbulb"></i> Datos heredados del administrador:
-                    </p>
-                    <ul style="text-align: left; margin: 0; padding-left: 20px; color: #666;">
-                        <li><strong>Organización:</strong> ${colaboradorData.organizacion}</li>
-                        <li><strong>Plan:</strong> ${colaboradorData.plan.toUpperCase()}</li>
-                        <li><strong>Tema:</strong> ${colaboradorData.theme}</li>
-                        ${colaboradorData.fotoOrganizacion ? '<li><strong>Logo de organización:</strong> Heredado ✓</li>' : ''}
-                    </ul>
-                </div>
             </div>
         `,
         showCancelButton: true,
@@ -635,7 +631,7 @@ async function mostrarExitoRegistro(colaboradorData) {
         // Recargar página para nuevo registro
         location.reload();
     } else {
-        window.location.href = '/users/admin/dashboard/dashboard.html';
+        window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
     }
 }
 

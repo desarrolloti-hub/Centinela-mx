@@ -3,173 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil Administrador - Gestión de Categorías</title>
+    <title>CRUD Categorías - Sistema Centinela</title>
     
-    <link rel="stylesheet" href="/components/personalization/personalization.css">
-    <link rel="stylesheet" href="/components/particulas/particulas.css">
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Fuentes del sistema Centinela -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Nuestros estilos -->
     <link rel="stylesheet" href="categorias.css">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- SweetAlert2 CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
-    <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    <link rel="manifest" href="/manifest.json">
 </head>
-
-<body class="particulas-active">
-<canvas id="particle-canvas"></canvas>
-
-<!-- NAVBAR -->
-
-
-<div class="admin-container">
-    
-    <!-- HEADER PRINCIPAL - ACTUALIZADO CON DESCRIPCIÓN -->
-    <div class="section-header">
-        <div class="section-title">
-            <i class="fas fa-tags"></i> Gestión de Categorías y Subcategorías
-        </div>
-        <div class="section-description">
-            Administra y organiza tus categorías principales y sus subcategorías. 
-            Crea, edita, visualiza y elimina categorías con sus respectivas subcategorías. 
-            Utiliza los colores para identificar rápidamente cada categoría y mantén tu organización estructurada.
-        </div>
-    </div>
-
-    <!-- TABLA PRINCIPAL DE CATEGORÍAS - SIN SCROLL HORIZONTAL -->
-    <div class="table-wrapper">
-        <table class="categories-table">
-            <thead>
-                <tr>
-                    <th>CATEGORÍA</th>
-                    <th>DESCRIPCIÓN</th>
-                    <th>COLOR</th>
-                    <th>SUBCATEGORÍAS</th>
-                    <th>ACCIONES</th>
-                </tr>
-            </thead>
-            <tbody id="categoriesTableBody">
-                <!-- LAS CATEGORÍAS SE CARGARÁN DINÁMICAMENTE -->
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- BOTÓN AGREGAR CATEGORÍA -->
-    <div class="add-category-container">
-        <button class="add-btn" id="addCategoryBtn">
-            <i class="fas fa-plus-circle"></i> Agregar Nueva Categoría
-        </button>
-    </div>
-</div>
-
-<!-- FOOTER -->
-<div id="footer-container"></div>
-
-<!-- MODAL PARA AGREGAR/EDITAR CATEGORÍA -->
-<div id="categoryModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <div class="modal-header">
-            <div class="modal-category-icon">
-                <i class="fas fa-tag"></i>
-            </div>
-            <h2 id="modalCategoryTitle">Nueva Categoría</h2>
-        </div>
-        <form id="categoryForm">
-            <div class="form-group">
-                <label for="categoryName"><i class="fas fa-heading"></i> Nombre *</label>
-                <input type="text" id="categoryName" name="name" required placeholder="Ingresa el nombre de la categoría">
-            </div>
-            
-            <div class="form-group">
-                <label for="categoryDescription"><i class="fas fa-align-left"></i> Descripción</label>
-                <textarea id="categoryDescription" name="description" rows="3" placeholder="Descripción de la categoría"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="categoryColor"><i class="fas fa-palette"></i> Color</label>
-                <div class="color-picker-container">
-                    <input type="color" id="categoryColor" name="color" value="#00ff95">
-                    <span class="color-preview" id="colorPreview">#00ff95</span>
+<body>
+    <canvas id="particle-canvas"></canvas>
+    <!-- Contenedor principal con estilo oscuro -->
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3"><i class="fas fa-tags me-2"></i>Gestión de Categorías</h1>
+                        <p class="text-muted">Administra las categorías de tu organización</p>
+                    </div>
+                    <button id="btnNuevaCategoria" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus me-2"></i>Nueva Categoría
+                    </button>
                 </div>
             </div>
-            
-            <div class="form-actions">
-                <button type="button" class="cancel-btn" onclick="closeCategoryModal()">Cancelar</button>
-                <button type="submit" class="save-btn" id="categorySubmitBtn">Guardar Categoría</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- MODAL PARA AGREGAR/EDITAR SUBCATEGORÍA -->
-<div id="subcategoryModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <div class="modal-header">
-            <div class="modal-category-icon">
-                <i class="fas fa-folder"></i>
-            </div>
-            <h2 id="modalSubcategoryTitle">Nueva Subcategoría</h2>
         </div>
-        <form id="subcategoryForm">
-            <input type="hidden" id="subcategoryId" name="id">
-            <input type="hidden" id="parentCategoryId" name="parentCategoryId">
-            
-            <div class="form-group">
-                <label for="subcategoryName"><i class="fas fa-heading"></i> Nombre *</label>
-                <input type="text" id="subcategoryName" name="name" required placeholder="Ingresa el nombre de la subcategoría">
-            </div>
-            
-            <div class="form-group">
-                <label for="subcategoryDescription"><i class="fas fa-align-left"></i> Descripción</label>
-                <textarea id="subcategoryDescription" name="description" rows="3" placeholder="Descripción de la subcategoría"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="subcategoryColor"><i class="fas fa-palette"></i> Color</label>
-                <div class="color-picker-container">
-                    <input type="color" id="subcategoryColor" name="color" value="#2f8cff">
-                    <span class="color-preview" id="subcategoryColorPreview">#2f8cff</span>
+        
+        <!-- Tabla de Categorías -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Categorías</h5>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="toggleEliminadas">
+                            <label class="form-check-label" for="toggleEliminadas">Mostrar eliminadas</label>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="tablaCategorias">
+                                <thead>
+                                    <tr>
+                                        <th width="50">#</th>
+                                        <th>Nombre</th>
+                                        <th>Tipo</th>
+                                        <th>Color</th>
+                                        <th>Ítems Asociados</th>
+                                        <th>Estado</th>
+                                        <th>Fecha Creación</th>
+                                        <th width="200">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaCategoriasBody">
+                                    <!-- Se llenará dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Paginación -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div id="paginationInfo" class="text-muted"></div>
+                            <nav>
+                                <ul class="pagination" id="pagination">
+                                    <!-- Se llenará dinámicamente -->
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="form-actions">
-                <button type="button" class="cancel-btn" onclick="closeSubcategoryModal()">Cancelar</button>
-                <button type="submit" class="save-btn" id="subcategorySubmitBtn">Guardar Subcategoría</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- MODAL PARA VER DETALLES COMPLETOS -->
-<div id="viewModal" class="modal">
-    <div class="modal-content large">
-        <span class="close-modal">&times;</span>
-        <div class="modal-header">
-            <div class="modal-item-icon" id="modalItemIcon">
-                <i class="fas fa-tag" id="modalIcon"></i>
-            </div>
-            <h2 id="modalItemTitle"></h2>
-            <div class="modal-item-color" id="modalItemColor"></div>
-        </div>
-        <div class="modal-grid" id="modalGrid">
-            <!-- LOS DETALLES SE CARGARÁN DINÁMICAMENTE -->
         </div>
     </div>
-</div>
+    
+    <!-- Modal para Formulario de Categoría -->
+    <div class="modal fade" id="modalCategoria" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle"><i class="fas fa-tag me-2"></i>Nueva Categoría</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formCategoria">
+                        <input type="hidden" id="categoriaId">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="nombreCategoria" class="form-label">Nombre de la Categoría *</label>
+                                <input type="text" class="form-control" id="nombreCategoria" required>
+                                <div class="form-text">Ej: Tecnología, Mobiliario, Herramientas</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="tipoCategoria" class="form-label">Tipo de Categoría *</label>
+                                <select class="form-select" id="tipoCategoria" required>
+                                    <option value="">Seleccionar tipo...</option>
+                                    <option value="activo">Activo/Equipo</option>
+                                    <option value="material">Material/Insumo</option>
+                                    <option value="servicio">Servicio</option>
+                                    <option value="documento">Documento</option>
+                                    <option value="proveedor">Proveedor</option>
+                                    <option value="proyecto">Proyecto</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="color" class="form-label">Color de Identificación</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="color" value="#3498db" title="Selecciona un color">
+                                    <button type="button" class="btn btn-outline-secondary" id="btnColorRandom">Aleatorio</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="icono" class="form-label">Icono</label>
+                                <select class="form-select" id="icono">
+                                    <option value="fas fa-tag">🏷️ Etiqueta</option>
+                                    <option value="fas fa-laptop">💻 Laptop</option>
+                                    <option value="fas fa-tools">🔧 Herramientas</option>
+                                    <option value="fas fa-file-alt">📄 Documento</option>
+                                    <option value="fas fa-truck">🚚 Camión</option>
+                                    <option value="fas fa-cogs">⚙️ Engranajes</option>
+                                    <option value="fas fa-box">📦 Caja</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="descripcion" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="descripcion" rows="2"></textarea>
+                            <div class="form-text">Breve descripción de la categoría</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="jerarquia" class="form-label">Jerarquía</label>
+                                <select class="form-select" id="jerarquia">
+                                    <option value="principal">Principal</option>
+                                    <option value="subcategoria">Subcategoría</option>
+                                    <option value="subsubcategoria">Sub-subcategoría</option>
+                                </select>
+                                <div class="form-text">Define el nivel de la categoría</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="categoriaPadre" class="form-label">Categoría Padre</label>
+                                <select class="form-select" id="categoriaPadre">
+                                    <option value="">Ninguna (categoría principal)</option>
+                                    <!-- Se llenará dinámicamente con categorías principales -->
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="caracteristicas" class="form-label">Características Especiales</label>
+                            <textarea class="form-control" id="caracteristicas" rows="2" placeholder="Ej: Requiere mantenimiento anual, Es consumible, etc."></textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="codigo" class="form-label">Código de Categoría</label>
+                                <input type="text" class="form-control" id="codigo" placeholder="Ej: CAT-TEC-001">
+                                <div class="form-text">Código único identificador</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="activo" checked>
+                                    <label class="form-check-label" for="activo">
+                                        Categoría Activa
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Los campos marcados con * son obligatorios.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarCategoria">Guardar Categoría</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Ver Detalles -->
+    <div class="modal fade" id="modalDetalles" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles de la Categoría</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detallesContent">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Confirmar Eliminación -->
+    <div class="modal fade" id="modalConfirmar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirmar Acción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmarMensaje">¿Está seguro de realizar esta acción?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarAccion">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<script src="/components/themeloader.js"></script>
-<script src="/components/particulas.js"></script>
-<script src="/components/navbar-admin-component.js"></script>
-<script src="/components/footer-admin-component.js"></script>
-
-<!-- ARCHIVO JS ESPECÍFICO PARA CATEGORÍAS -->
-<script src="categorias.js"></script>
-
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="/components/themeloader.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script src="/components/navbar-admin-component.js"></script>
+    <script src="/components/footer-admin-component.js"></script>
+    <script type="module" src="categorias.js"></script>
 </body>
 </html>
