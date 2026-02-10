@@ -491,6 +491,10 @@ class UserManager {
      * @returns {Promise<Object>} Objeto con resultado del registro
      */
     async createColaborador(colaboradorData, password, idAdministrador) {
+        // GUARDAR SESIÓN ACTUAL DEL ADMINISTRADOR ANTES DE CREAR COLABORADOR
+        const adminEmail = auth.currentUser?.email;
+        const adminPassword = password; // IMPORTANTE: Necesitas obtener la contraseña del admin de alguna forma
+        
         try {
             console.log('Creando nuevo colaborador para administrador:', idAdministrador);
             
@@ -510,7 +514,6 @@ class UserManager {
             }
             
             // ===== PASO 3: Verificar límites del plan =====
-            // Solo contar usuarios activos (no inhabilitados)
             const totalUsuariosActivos = await this.contarUsuariosActivosPorOrganizacion(adminData.organizacionCamelCase);
             const adminUser = new User(idAdministrador, adminData);
             
@@ -552,7 +555,6 @@ class UserManager {
             });
             
             // ===== PASO 8: Determinar nombre de colección específica =====
-            // Cada organización tiene su propia colección: colaboradores_nombreOrganizacion
             const coleccionColaboradores = `colaboradores_${adminData.organizacionCamelCase}`;
             
             // ===== PASO 9: Crear documento en la colección específica =====
@@ -578,7 +580,7 @@ class UserManager {
                     eliminarContenido: false
                 },
                 status: true,
-                eliminado: false, // Solo se inhabilita, no se elimina
+                eliminado: false,
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp(),
                 ultimoLogin: null
@@ -595,25 +597,46 @@ class UserManager {
             });
             this.users.unshift(newColab);
             
-            // ===== PASO 11: Cerrar sesión =====
+            // ===== PASO 11: IMPORTANTE - RESTAURAR SESIÓN DEL ADMINISTRADOR =====
+            // 1. Cerrar sesión del nuevo colaborador
             await signOut(auth);
+            
+            // 2. Verificar si hay credenciales para restaurar al admin
+            if (adminEmail && adminPassword) {
+                try {
+                    // Intentar restaurar sesión del admin
+                    console.log('🔄 Restaurando sesión del administrador:', adminEmail);
+                    const adminCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+                    
+                    // Recargar usuario actual (admin)
+                    await this.loadCurrentUser(adminCredential.user.uid);
+                    console.log('✅ Sesión del administrador restaurada correctamente');
+                    
+                } catch (restoreError) {
+                    console.warn('⚠️ No se pudo restaurar sesión del administrador:', restoreError.message);
+                    // Continuar sin restaurar - el usuario tendrá que iniciar sesión manualmente
+                }
+            } else {
+                console.log('ℹ️ No hay credenciales del administrador para restaurar sesión');
+            }
             
             return { 
                 id: uid, 
                 user: newColab,
                 credential: userCredential,
                 coleccion: coleccionColaboradores,
-                emailVerificationSent: true
+                emailVerificationSent: true,
+                adminSessionRestored: true
             };
             
         } catch (error) {
             console.error("Error creando colaborador:", error);
             
             // Revertir usuario en Auth si hubo error
-            if (auth.currentUser) {
+            if (auth.currentUser && auth.currentUser.uid !== idAdministrador) {
                 try {
-                    await auth.currentUser.delete();
-                    console.log('Usuario Auth eliminado por error en registro');
+                    await deleteUser(auth.currentUser);
+                    console.log('Usuario Auth (colaborador) eliminado por error en registro');
                 } catch (deleteError) {
                     console.error('Error eliminando usuario Auth:', deleteError);
                 }

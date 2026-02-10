@@ -75,25 +75,27 @@ class NavbarComplete {
                 box-shadow: var(--navbar-scrolled-shadow);
             }
             
-            /* Sección superior: Logo | Título | Botón hamburguesa */
+            /* Sección superior: Logo | Título | Botón hamburguesa - MODIFICADO */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 5px 10px;
+                padding: 5px 20px; /* Más padding horizontal */
                 min-height: 50px;
-                max-width: 1200px;
-                margin: 0 auto;
+                margin: 0;
                 position: relative;
+                width: 100%;
+                box-sizing: border-box;
             }
             
-            /* Contenedor izquierdo para el logo */
+            /* Contenedor izquierdo para el logo - PEGADO A LA IZQUIERDA */
             .navbar-left-container {
                 display: flex;
                 align-items: center;
-                flex: 1;
                 justify-content: flex-start;
-                gap: 4px; /* Espacio entre logos */
+                gap: 10px; /* Espacio entre logos */
+                flex: 0 0 auto; /* No crece, no se encoge */
+                margin-right: auto; /* Empuja todo lo demás a la derecha */
             }
             
             /* Logo del sistema - CÍRCULO PERFECTO */
@@ -103,6 +105,7 @@ class NavbarComplete {
                 text-decoration: none;
                 z-index: 1003;
                 height: 70px;
+                flex: 0 0 auto; /* Tamaño fijo */
             }
 
             /* Contenedor para logo circular */
@@ -117,6 +120,7 @@ class NavbarComplete {
                 align-items: center;
                 justify-content: center;
                 transition: all 0.3s ease;
+                flex-shrink: 0; /* No se encoge */
             }
 
             /* Todos los logos en círculo perfecto */
@@ -125,6 +129,7 @@ class NavbarComplete {
                 height: 100%;
                 object-fit: cover;
                 transition: transform var(--transition-default);
+                display: block;
             }
 
             /* Efecto hover en el logo */
@@ -144,8 +149,9 @@ class NavbarComplete {
                     var(--color-accent-primary) 80%,
                     var(--color-accent-primary) 100%
                 );
-                margin: 0 10px;
+                margin: 0 5px;
                 border-radius: 1px;
+                flex-shrink: 0; /* No se encoge */
             }
             
             /* Logo de organización cuando es texto */
@@ -162,9 +168,10 @@ class NavbarComplete {
                 font-size: 14px;
                 text-align: center;
                 border: 3px solid var(--color-accent-primary);
+                flex-shrink: 0; /* No se encoge */
             }
             
-            /* Título "CENTINELA" centrado */
+            /* Título "CENTINELA" centrado - AHORA ABSOLUTO */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -179,17 +186,20 @@ class NavbarComplete {
                 pointer-events: none;
                 z-index: 1;
                 font-family: 'Orbitron', sans-serif;
+                text-align: center;
+                width: max-content;
             }
             
-            /* Contenedor derecho para el botón hamburguesa */
+            /* Contenedor derecho para el botón hamburguesa - PEGADO A LA DERECHA */
             .navbar-right-container {
                 display: flex;
                 align-items: center;
-                flex: 1;
                 justify-content: flex-end;
+                flex: 0 0 auto; /* Tamaño fijo */
+                margin-left: auto; /* Empuja todo lo demás a la izquierda */
             }
             
-            /* Botón hamburguesa */
+            /* Botón hamburguesa - PEGADO A LA DERECHA */
             .navbar-hamburger-btn {
                 display: flex;
                 flex-direction: column;
@@ -204,6 +214,7 @@ class NavbarComplete {
                 position: relative;
                 z-index: 1002;
                 transition: var(--transition-default);
+                flex-shrink: 0; /* No se encoge */
             }
             
             /* Líneas del botón hamburguesa */
@@ -623,6 +634,11 @@ class NavbarComplete {
                 .logo-separator {
                     height: 35px;
                 }
+                
+                .navbar-title {
+                    font-size: 22px;
+                    /* En móviles, el título puede ajustarse */
+                }
 
                 body.menu-open {
                     overflow: hidden;
@@ -630,7 +646,11 @@ class NavbarComplete {
             }
             
             /* Responsive para móvil */
-            @media (max-width: 480px) {
+            @media (max-width: 768px) {
+                .navbar-top-section {
+                    padding: 5px 15px;
+                }
+                
                 .navbar-main-menu {
                     width: 100%;
                 }
@@ -651,6 +671,15 @@ class NavbarComplete {
                     margin: 0 3px;
                 }
                 
+                .navbar-title {
+                    font-size: 18px;
+                    /* En móviles pequeños, el título puede ocultarse si hay poco espacio */
+                    white-space: normal;
+                    max-width: 150px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                
                 .profile-photo-container {
                     width: 100px;
                     height: 100px;
@@ -664,6 +693,76 @@ class NavbarComplete {
                 .admin-dropdown-btn {
                     padding: 12px 14px;
                     font-size: 15px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 36px;
+                    height: 36px;
+                }
+                
+                .hamburger-line {
+                    width: 22px;
+                    height: 2.5px;
+                }
+            }
+            
+            /* Para pantallas muy pequeñas (menos de 480px) */
+            @media (max-width: 480px) {
+                .navbar-top-section {
+                    padding: 5px 10px;
+                }
+                
+                .navbar-title {
+                    font-size: 16px;
+                    max-width: 120px;
+                }
+                
+                .logo-circle-container {
+                    width: 36px;
+                    height: 36px;
+                }
+                
+                .org-text-logo {
+                    width: 36px;
+                    height: 36px;
+                    font-size: 9px;
+                }
+                
+                .logo-separator {
+                    height: 28px;
+                    margin: 0 2px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 32px;
+                    height: 32px;
+                }
+                
+                .hamburger-line {
+                    width: 20px;
+                    height: 2px;
+                }
+            }
+            
+            /* Para pantallas extra grandes */
+            @media (min-width: 1600px) {
+                .navbar-top-section {
+                    padding: 5px 40px;
+                }
+                
+                .navbar-title {
+                    font-size: 28px;
+                }
+                
+                .logo-circle-container {
+                    width: 55px;
+                    height: 55px;
+                }
+                
+                .org-text-logo {
+                    width: 55px;
+                    height: 55px;
+                    font-size: 16px;
                 }
             }
         `;
@@ -682,7 +781,7 @@ class NavbarComplete {
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
-                    <!-- Logo del sistema Centinela - CÍRCULO -->
+                    <!-- Logo del sistema Centinela - CÍRCULO - PEGADO A LA IZQUIERDA -->
                     <a href="/users/admin/dashAdmin/dashAdmin.html" class="navbar-logo-link">
                         <div class="logo-circle-container">
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
@@ -702,9 +801,11 @@ class NavbarComplete {
                     </a>
                 </div>
                 
+                <!-- Título CENTRADO ABSOLUTAMENTE -->
                 <h1 class="navbar-title">CENTINELA</h1>
                 
                 <div class="navbar-right-container">
+                    <!-- Botón hamburguesa - PEGADO A LA DERECHA -->
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
                         <span class="hamburger-line"></span>
                         <span class="hamburger-line"></span>
