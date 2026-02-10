@@ -539,10 +539,7 @@ async function registrarColaborador(event, elements, userManager, admin) {
             
             // Campos de sistema
             cargo: 'colaborador',
-            esSuperAdmin: false,
-            esAdminOrganizacion: false,
             status: true,
-            eliminado: false,
             
             // Campos de trazabilidad
             creadoPor: admin.id,

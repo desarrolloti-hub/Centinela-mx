@@ -50,10 +50,7 @@ class User {
         
         // Configuraciones y preferencias
         this.theme = data.theme || this._obtenerThemeDelLocalStorage() || 'predeterminado';
-        this.eliminado = data.eliminado || false;
         this.cargo = data.cargo || 'colaborador'; // 'administrador' o 'colaborador'
-        this.esSuperAdmin = data.esSuperAdmin || false;
-        this.idAdministrador = data.idAdministrador || ''; // Solo para colaboradores
         
         // Permisos y plan
         this.permisosPersonalizados = data.permisosPersonalizados || {};
@@ -62,6 +59,9 @@ class User {
         // Estado de verificación de email
         this.verificado = data.verificado || false;
         this.emailVerified = data.emailVerified || false; // Estado de verificación de email en Auth
+        
+        // Información de creación
+        this.creadoPor = data.creadoPor || '';
         
         console.log(`User ${id} creado:`, {
             cargo: this.cargo,
@@ -135,10 +135,10 @@ class User {
     
     /**
      * Verifica si el usuario está activo
-     * @returns {boolean} True si está activo y no eliminado
+     * @returns {boolean} True si está activo
      */
     estaActivo() {
-        return this.status && !this.eliminado;
+        return this.status;
     }
 
     /**
@@ -150,11 +150,11 @@ class User {
     }
 
     /**
-     * Verifica si el usuario está inhabilitado
-     * @returns {boolean} True si está eliminado o inactivo
+     * Verifica si el usuario está inactivo
+     * @returns {boolean} True si está inactivo
      */
-    estaInhabilitado() {
-        return this.eliminado || !this.status;
+    estaInactivo() {
+        return !this.status;
     }
 
     /**
@@ -162,9 +162,7 @@ class User {
      * @returns {string} Texto descriptivo del estado
      */
     getEstadoTexto() {
-        if (this.eliminado) {
-            return 'Inhabilitado';
-        } else if (!this.status) {
+        if (!this.status) {
             return 'Inactivo';
         } else {
             return 'Activo';
@@ -179,10 +177,6 @@ class User {
         if (this.estaActivo()) {
             return `<span style="background: #28a745; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.8rem;">
                 <i class="fas fa-check-circle"></i> Activo
-            </span>`;
-        } else if (this.eliminado) {
-            return `<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.8rem;">
-                <i class="fas fa-ban"></i> Inhabilitado
             </span>`;
         } else {
             return `<span style="background: #ffc107; color: black; padding: 3px 8px; border-radius: 20px; font-size: 0.8rem;">
@@ -204,7 +198,7 @@ class User {
             'premium': 300,
             'empresa': 999 // Ilimitado para empresas
         };
-        return limites[this.plan] || 100; // Por defecto 3 (plan gratis)
+        return limites[this.plan] || 100; // Por defecto 100 (plan gratis)
     }
 
     /**
@@ -287,10 +281,10 @@ class UserManager {
             if (adminSnap.exists()) {
                 const data = adminSnap.data();
                 
-                // Si el usuario está inhabilitado, cerrar sesión y lanzar error
-                if (data.eliminado) {
+                // Si el usuario está inactivo, cerrar sesión y lanzar error
+                if (!data.status) {
                     await signOut(auth);
-                    throw new Error('Tu cuenta ha sido inhabilitada. Contacta al administrador del sistema.');
+                    throw new Error('Tu cuenta está inactiva. Contacta al administrador del sistema.');
                 }
                 
                 // Crear instancia de usuario administrador
@@ -321,10 +315,10 @@ class UserManager {
                     const docSnap = colabSnapshot.docs[0];
                     const data = docSnap.data();
                     
-                    // Si el colaborador está inhabilitado, cerrar sesión
-                    if (data.eliminado) {
+                    // Si el colaborador está inactivo, cerrar sesión
+                    if (!data.status) {
                         await signOut(auth);
-                        throw new Error('Tu cuenta ha sido inhabilitada. Contacta al administrador de tu organización.');
+                        throw new Error('Tu cuenta está inactiva. Contacta al administrador de tu organización.');
                     }
                     
                     // Crear instancia de usuario colaborador
@@ -366,7 +360,7 @@ class UserManager {
                     id: doc.id, // ID del administrador
                     nombre: data.organizacion, // Nombre legible de la organización
                     camelCase: data.organizacionCamelCase, // Nombre en camelCase para colecciones
-                    eliminado: data.eliminado || false // Estado de inhabilitación
+                    status: data.status || true // Estado de actividad
                 });
             });
             
@@ -406,8 +400,6 @@ class UserManager {
             
             // ===== PASO 3: Enviar correo de verificación de Firebase =====
             try {
-                // IMPORTANTE: Esta URL debe estar configurada en Firebase Console
-                // Ve a: Firebase Console → Authentication → Templates → Email address verification
                 await sendEmailVerification(userCredential.user, {
                     url: window.location.origin + '/verifyEmail.html',
                     handleCodeInApp: true
@@ -415,9 +407,6 @@ class UserManager {
                 console.log('✅ Correo de verificación enviado');
             } catch (emailError) {
                 console.warn('⚠️ Error enviando verificación de email:', emailError);
-                // Continuamos aunque falle el email, el usuario está creado
-                // NOTA: Puedes comentar el throw si quieres permitir registro sin verificación inmediata
-                // throw new Error('No se pudo enviar el correo de verificación: ' + emailError.message);
             }
             
             // ===== PASO 4: Actualizar display name en Auth =====
@@ -432,12 +421,11 @@ class UserManager {
                 ...adminData,
                 idAuth: uid,
                 cargo: 'administrador',
-                esSuperAdmin: true, // El primer administrador es super admin
                 plan: adminData.plan || 'gratis',
                 verificado: false, // Hasta que verifique el email
                 emailVerified: false,
                 status: true,
-                eliminado: false, // Nunca se elimina, solo se inhabilita
+                creadoPor: uid, // Se crea a sí mismo
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp(),
                 ultimoLogin: null
@@ -508,9 +496,9 @@ class UserManager {
             
             const adminData = adminSnap.data();
             
-            // ===== PASO 2: Verificar que el administrador no esté inhabilitado =====
-            if (adminData.eliminado) {
-                throw new Error('El administrador está inhabilitado');
+            // ===== PASO 2: Verificar que el administrador esté activo =====
+            if (!adminData.status) {
+                throw new Error('El administrador está inactivo');
             }
             
             // ===== PASO 3: Verificar límites del plan =====
@@ -564,7 +552,6 @@ class UserManager {
                 ...colaboradorData,
                 idAuth: uid,
                 cargo: 'colaborador',
-                idAdministrador: idAdministrador,
                 organizacion: adminData.organizacion,
                 organizacionCamelCase: adminData.organizacionCamelCase,
                 fotoOrganizacion: adminData.fotoOrganizacion,
@@ -580,7 +567,7 @@ class UserManager {
                     eliminarContenido: false
                 },
                 status: true,
-                eliminado: false,
+                creadoPor: idAdministrador, // ID del administrador que lo creó
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp(),
                 ultimoLogin: null
@@ -726,28 +713,27 @@ class UserManager {
     // ========== MÉTODOS DE GESTIÓN DE ESTADO ==========
     
     /**
-     * Inhabilita un usuario (no lo elimina, solo cambia su estado)
+     * Inactiva un usuario (cambia su estado a inactivo)
      * @param {string} id - ID del usuario
      * @param {string} userType - Tipo de usuario ('administrador' o 'colaborador')
      * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
-     * @param {string} razon - Razón de la inhabilitación
-     * @returns {Promise<boolean>} True si se inhabilitó correctamente
+     * @returns {Promise<boolean>} True si se inactivó correctamente
      */
-    async inhabilitarUsuario(id, userType, organizacionCamelCase = null, razon = '') {
+    async inactivarUsuario(id, userType, organizacionCamelCase = null) {
         try {
-            console.log(`Inhabilitando usuario ${id} de tipo ${userType}. Razón: ${razon}`);
+            console.log(`Inactivando usuario ${id} de tipo ${userType}`);
             
             let docRef;
             
             if (userType === 'administrador') {
                 docRef = doc(db, "administradores", id);
                 
-                // Si es administrador, también inhabilitar a todos sus colaboradores
+                // Si es administrador, también inactivar a todos sus colaboradores
                 if (organizacionCamelCase) {
                     const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
                     const colabQuery = query(
                         collection(db, coleccionColaboradores),
-                        where("eliminado", "==", false)
+                        where("status", "==", true)
                     );
                     
                     const colabSnapshot = await getDocs(colabQuery);
@@ -756,16 +742,15 @@ class UserManager {
                     colabSnapshot.forEach(docSnap => {
                         updatePromises.push(
                             updateDoc(doc(db, coleccionColaboradores, docSnap.id), {
-                                eliminado: true,
                                 status: false,
                                 fechaActualizacion: serverTimestamp(),
-                                razonInhabilitacion: `Administrador inhabilitado: ${razon}`
+                                actualizadoPor: id // ID del admin que inactivó
                             })
                         );
                     });
                     
                     await Promise.all(updatePromises);
-                    console.log(`Se inhabilitaron ${updatePromises.length} colaboradores`);
+                    console.log(`Se inactivaron ${updatePromises.length} colaboradores`);
                 }
             } else {
                 // Para colaboradores
@@ -781,38 +766,31 @@ class UserManager {
                 docRef = doc(db, coleccionColaboradores, id);
             }
             
-            // Marcar usuario como inhabilitado en Firestore
+            // Marcar usuario como inactivo en Firestore
             await updateDoc(docRef, {
-                eliminado: true,
                 status: false,
                 fechaActualizacion: serverTimestamp(),
-                fechaInhabilitacion: serverTimestamp(),
-                razonInhabilitacion: razon || 'Sin razón especificada',
-                inhabilitadoPor: this.currentUser?.id || 'sistema'
+                actualizadoPor: this.currentUser?.id || 'sistema'
             });
-            
-            // Nota: No podemos deshabilitar directamente en Firebase Auth desde el cliente
-            // Esto requeriría una Cloud Function en el backend
             
             // Actualizar en memoria local
             const index = this.users.findIndex(user => user.id === id);
             if (index !== -1) {
-                this.users[index].eliminado = true;
                 this.users[index].status = false;
                 this.users[index].fechaActualizacion = new Date();
             }
             
-            console.log(`Usuario ${id} inhabilitado exitosamente`);
+            console.log(`Usuario ${id} inactivado exitosamente`);
             return true;
             
         } catch (error) {
-            console.error("Error inhabilitando usuario:", error);
+            console.error("Error inactivando usuario:", error);
             throw error;
         }
     }
 
     /**
-     * Reactiva un usuario previamente inhabilitado
+     * Reactiva un usuario previamente inactivo
      * @param {string} id - ID del usuario
      * @param {string} userType - Tipo de usuario ('administrador' o 'colaborador')
      * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
@@ -841,17 +819,14 @@ class UserManager {
             
             // Reactivar el usuario en Firestore
             await updateDoc(docRef, {
-                eliminado: false,
                 status: true,
                 fechaActualizacion: serverTimestamp(),
-                fechaReactivacion: serverTimestamp(),
-                reactivadoPor: this.currentUser?.id || 'sistema'
+                actualizadoPor: this.currentUser?.id || 'sistema'
             });
             
             // Actualizar en memoria local
             const index = this.users.findIndex(user => user.id === id);
             if (index !== -1) {
-                this.users[index].eliminado = false;
                 this.users[index].status = true;
                 this.users[index].fechaActualizacion = new Date();
             }
@@ -954,7 +929,7 @@ class UserManager {
     // ========== MÉTODOS DE CONTEO ==========
     
     /**
-     * Cuenta solo los usuarios activos (no inhabilitados) de una organización
+     * Cuenta solo los usuarios activos de una organización
      * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
      * @returns {Promise<number>} Número de usuarios activos
      */
@@ -966,7 +941,7 @@ class UserManager {
             const adminQuery = query(
                 collection(db, "administradores"),
                 where("organizacionCamelCase", "==", organizacionCamelCase),
-                where("eliminado", "==", false)
+                where("status", "==", true)
             );
             const adminSnapshot = await getDocs(adminQuery);
             total += adminSnapshot.size;
@@ -975,7 +950,7 @@ class UserManager {
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
             const colabQuery = query(
                 collection(db, coleccionColaboradores),
-                where("eliminado", "==", false)
+                where("status", "==", true)
             );
             const colabSnapshot = await getDocs(colabQuery);
             total += colabSnapshot.size;
@@ -990,7 +965,7 @@ class UserManager {
     }
 
     /**
-     * Cuenta TODOS los usuarios de una organización (incluyendo inhabilitados)
+     * Cuenta TODOS los usuarios de una organización (incluyendo inactivos)
      * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
      * @returns {Promise<number>} Número total de usuarios
      */
@@ -1012,7 +987,7 @@ class UserManager {
             const colabSnapshot = await getDocs(colabQuery);
             total += colabSnapshot.size;
             
-            console.log(`Total usuarios (incluyendo inhabilitados) para ${organizacionCamelCase}: ${total}`);
+            console.log(`Total usuarios (incluyendo inactivos) para ${organizacionCamelCase}: ${total}`);
             return total;
             
         } catch (error) {
@@ -1051,7 +1026,8 @@ class UserManager {
             
             const updateData = {
                 ...data,
-                fechaActualizacion: serverTimestamp()
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: this.currentUser?.id || 'sistema'
             };
             
             console.log('Actualizando usuario:', updateData);
@@ -1064,6 +1040,7 @@ class UserManager {
                     this.users[index][key] = data[key];
                 });
                 this.users[index].fechaActualizacion = new Date();
+                this.users[index].actualizadoPor = this.currentUser?.id || 'sistema';
             }
             
             return true;
@@ -1098,12 +1075,7 @@ class UserManager {
                 throw new Error('Usuario no encontrado en la base de datos');
             }
             
-            // ===== PASO 3: Verificar que NO esté inhabilitado =====
-            if (user.eliminado) {
-                await signOut(auth);
-                throw new Error('Tu cuenta ha sido inhabilitada. Contacta al administrador.');
-            }
-            
+            // ===== PASO 3: Verificar que NO esté inactivo =====
             if (!user.status) {
                 await signOut(auth);
                 throw new Error('Tu cuenta está inactiva. Contacta al administrador.');
@@ -1171,23 +1143,23 @@ class UserManager {
     /**
      * Obtiene todos los colaboradores de una organización
      * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
-     * @param {boolean} incluirInhabilitados - Incluir usuarios inhabilitados
+     * @param {boolean} incluirInactivos - Incluir usuarios inactivos
      * @returns {Promise<Array<User>>} Array de colaboradores
      */
-    async getColaboradoresByOrganizacion(organizacionCamelCase, incluirInhabilitados = false) {
+    async getColaboradoresByOrganizacion(organizacionCamelCase, incluirInactivos = false) {
         try {
             console.log(`Obteniendo colaboradores para organización: ${organizacionCamelCase}`);
             
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
             let colabQuery;
             
-            // Configurar query según si incluye inhabilitados o no
-            if (incluirInhabilitados) {
+            // Configurar query según si incluye inactivos o no
+            if (incluirInactivos) {
                 colabQuery = query(collection(db, coleccionColaboradores));
             } else {
                 colabQuery = query(
                     collection(db, coleccionColaboradores),
-                    where("eliminado", "==", false)
+                    where("status", "==", true)
                 );
             }
             
@@ -1214,20 +1186,20 @@ class UserManager {
 
     /**
      * Obtiene todos los administradores
-     * @param {boolean} incluirInhabilitados - Incluir administradores inhabilitados
+     * @param {boolean} incluirInactivos - Incluir administradores inactivos
      * @returns {Promise<Array<User>>} Array de administradores
      */
-    async getAdministradores(incluirInhabilitados = false) {
+    async getAdministradores(incluirInactivos = false) {
         try {
             let adminsQuery;
             
-            // Configurar query según si incluye inhabilitados o no
-            if (incluirInhabilitados) {
+            // Configurar query según si incluye inactivos o no
+            if (incluirInactivos) {
                 adminsQuery = query(collection(db, "administradores"));
             } else {
                 adminsQuery = query(
                     collection(db, "administradores"),
-                    where("eliminado", "==", false)
+                    where("status", "==", true)
                 );
             }
             
@@ -1251,51 +1223,51 @@ class UserManager {
     }
 
     /**
-     * Obtiene todos los usuarios inhabilitados de una organización
+     * Obtiene todos los usuarios inactivos de una organización
      * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
-     * @returns {Promise<Array<User>>} Array de usuarios inhabilitados
+     * @returns {Promise<Array<User>>} Array de usuarios inactivos
      */
-    async getUsuariosInhabilitadosPorOrganizacion(organizacionCamelCase) {
+    async getUsuariosInactivosPorOrganizacion(organizacionCamelCase) {
         try {
-            const usuariosInhabilitados = [];
+            const usuariosInactivos = [];
             
-            // Buscar administradores inhabilitados
+            // Buscar administradores inactivos
             const adminQuery = query(
                 collection(db, "administradores"),
                 where("organizacionCamelCase", "==", organizacionCamelCase),
-                where("eliminado", "==", true)
+                where("status", "==", false)
             );
             const adminSnapshot = await getDocs(adminQuery);
             
             adminSnapshot.forEach(doc => {
                 const data = doc.data();
-                usuariosInhabilitados.push(new User(doc.id, {
+                usuariosInactivos.push(new User(doc.id, {
                     ...data,
                     cargo: 'administrador'
                 }));
             });
             
-            // Buscar colaboradores inhabilitados
+            // Buscar colaboradores inactivos
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
             const colabQuery = query(
                 collection(db, coleccionColaboradores),
-                where("eliminado", "==", true)
+                where("status", "==", false)
             );
             const colabSnapshot = await getDocs(colabQuery);
             
             colabSnapshot.forEach(doc => {
                 const data = doc.data();
-                usuariosInhabilitados.push(new User(doc.id, {
+                usuariosInactivos.push(new User(doc.id, {
                     ...data,
                     cargo: 'colaborador'
                 }));
             });
             
-            console.log(`Encontrados ${usuariosInhabilitados.length} usuarios inhabilitados`);
-            return usuariosInhabilitados;
+            console.log(`Encontrados ${usuariosInactivos.length} usuarios inactivos`);
+            return usuariosInactivos;
             
         } catch (error) {
-            console.error("Error obteniendo usuarios inhabilitados:", error);
+            console.error("Error obteniendo usuarios inactivos:", error);
             return [];
         }
     }
@@ -1308,71 +1280,71 @@ class UserManager {
      * @returns {User|undefined} Instancia del usuario o undefined
      */
     async getUserById(id) {
-    console.log('🔍 getUserById buscando:', id);
-    
-    // 1. Buscar primero en memoria
-    const userInMemory = this.users.find(user => user.id === id);
-    if (userInMemory) {
-        console.log('✅ Usuario encontrado en memoria');
-        return userInMemory;
-    }
-    
-    console.log('❌ No encontrado en memoria, buscando en Firestore...');
-    
-    // 2. Si no está en memoria, buscar en Firestore
-    try {
-        // Buscar en administradores primero
-        const adminRef = doc(db, "administradores", id);
-        const adminSnap = await getDoc(adminRef);
+        console.log('🔍 getUserById buscando:', id);
         
-        if (adminSnap.exists()) {
-            console.log('✅ Encontrado en administradores');
-            const data = adminSnap.data();
-            const user = new User(id, {
-                ...data,
-                idAuth: id,
-                cargo: 'administrador'
-            });
-            
-            // Agregar a memoria para próximas búsquedas
-            this.users.push(user);
-            return user;
+        // 1. Buscar primero en memoria
+        const userInMemory = this.users.find(user => user.id === id);
+        if (userInMemory) {
+            console.log('✅ Usuario encontrado en memoria');
+            return userInMemory;
         }
         
-        // Buscar en colaboradores
-        const organizaciones = await this.getTodasLasOrganizaciones();
+        console.log('❌ No encontrado en memoria, buscando en Firestore...');
         
-        for (const org of organizaciones) {
-            const coleccion = `colaboradores_${org.camelCase}`;
-            const q = query(
-                collection(db, coleccion),
-                where("idAuth", "==", id)
-            );
-            const snapshot = await getDocs(q);
+        // 2. Si no está en memoria, buscar en Firestore
+        try {
+            // Buscar en administradores primero
+            const adminRef = doc(db, "administradores", id);
+            const adminSnap = await getDoc(adminRef);
             
-            if (!snapshot.empty) {
-                console.log(`✅ Encontrado en ${coleccion}`);
-                const docSnap = snapshot.docs[0];
-                const data = docSnap.data();
+            if (adminSnap.exists()) {
+                console.log('✅ Encontrado en administradores');
+                const data = adminSnap.data();
                 const user = new User(id, {
                     ...data,
                     idAuth: id,
-                    cargo: 'colaborador'
+                    cargo: 'administrador'
                 });
                 
+                // Agregar a memoria para próximas búsquedas
                 this.users.push(user);
                 return user;
             }
+            
+            // Buscar en colaboradores
+            const organizaciones = await this.getTodasLasOrganizaciones();
+            
+            for (const org of organizaciones) {
+                const coleccion = `colaboradores_${org.camelCase}`;
+                const q = query(
+                    collection(db, coleccion),
+                    where("idAuth", "==", id)
+                );
+                const snapshot = await getDocs(q);
+                
+                if (!snapshot.empty) {
+                    console.log(`✅ Encontrado en ${coleccion}`);
+                    const docSnap = snapshot.docs[0];
+                    const data = docSnap.data();
+                    const user = new User(id, {
+                        ...data,
+                        idAuth: id,
+                        cargo: 'colaborador'
+                    });
+                    
+                    this.users.push(user);
+                    return user;
+                }
+            }
+            
+            console.log('❌ No encontrado en ninguna colección');
+            return null;
+            
+        } catch (error) {
+            console.error('Error en getUserById:', error);
+            return null;
         }
-        
-        console.log('❌ No encontrado en ninguna colección');
-        return null;
-        
-    } catch (error) {
-        console.error('Error en getUserById:', error);
-        return null;
     }
-}
 
     /**
      * Verifica si el usuario actual es administrador

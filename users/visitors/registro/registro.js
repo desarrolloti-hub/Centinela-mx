@@ -614,11 +614,8 @@ async function registrarAdministrador(event, elements, userManager) {
             fotoUsuario: profileImageBase64,
             fotoOrganizacion: orgImageBase64,
             cargo: 'administrador',
-            esSuperAdmin: true,
-            esAdminOrganizacion: true,
             status: true,
-            eliminado: false,
-            theme: 'light',
+            theme: 'Predeterminado',
             plan: 'gratis',
             fechaCreacion: new Date()
         };

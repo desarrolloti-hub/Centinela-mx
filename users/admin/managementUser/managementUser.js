@@ -65,8 +65,6 @@ async function loadCollaborators(admin, userManager) {
                 status: col.status,
                 organizacion: col.organizacion,
                 fotoUsuario: col.fotoUsuario,
-                telefono: col.telefono,
-                departamento: col.departamento
             }))
         ));
         
@@ -298,7 +296,7 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
                 admin.organizacionCamelCase
             );
         } else {
-            await userManager.inhabilitarUsuario(
+            await userManager.inactivarUsuario(
                 collaboratorId, 
                 'colaborador', 
                 admin.organizacionCamelCase,

@@ -1,6 +1,3 @@
-// editAdmin.js - Editor de perfil para administradores (Versión con UserManager)
-// MODIFICADO: Todos los estilos de SweetAlert2 se manejan desde el CSS
-
 // ==================== VARIABLES GLOBALES ====================
 let selectedFile = null;
 let currentPhotoType = '';
