@@ -1,4 +1,4 @@
-// areas.js - VERSIÓN SIMPLIFICADA
+// areas.js - VERSIÓN SIN EDICIÓN, REDIRIGE A OTRAS PÁGINAS
 console.log('🚀 areas.js iniciando...');
 
 // Variable global para debugging
@@ -92,15 +92,14 @@ class AreasController {
         this.elementosPorPagina = 10;
         this.areaSeleccionada = null;
         
-        // Usuario demo
         this.userManager = {
-            currentUser: {
-                id: 'admin_demo',
-                nombre: 'Administrador',
-                cargo: 'administrador',
-                organizacion: 'Mi Empresa',
-                organizacionCamelCase: 'miEmpresa'
-            }
+    currentUser: {
+        id: 'admin_default',
+        nombre: 'Administrador',
+        cargo: 'administrador',
+        organizacion: 'Tu Empresa',  // Cambia esto
+        organizacionCamelCase: 'tuEmpresa'  // Cambia esto también
+    }
         };
         
         console.log('✅ Controller creado');
@@ -122,8 +121,7 @@ class AreasController {
         const ids = [
             'btnNuevaArea', 'tablaAreasBody', 'toggleEliminadas',
             'modalConfirmar', 'btnConfirmarAccion',
-            'vistaLista', 'vistaEdicion', 'btnVolverLista',
-            'formAreaEdicion', 'btnGuardarAreaEdicion', 'btnCancelarEdicion'
+            'vistaLista'
         ];
         
         ids.forEach(id => {
@@ -136,39 +134,11 @@ class AreasController {
         console.log('🎮 Configurando eventos...');
         
         try {
-            // Botón nueva área
+            // Botón nueva área - Redirige a crear área
             const btnNuevaArea = document.getElementById('btnNuevaArea');
             if (btnNuevaArea) {
-                btnNuevaArea.addEventListener('click', () => this.mostrarVistaEdicion());
-                console.log('✅ Evento btnNuevaArea');
-            }
-            
-            // Botón volver a lista
-            const btnVolverLista = document.getElementById('btnVolverLista');
-            if (btnVolverLista) {
-                btnVolverLista.addEventListener('click', () => this.mostrarVistaLista());
-                console.log('✅ Evento btnVolverLista');
-            }
-            
-            // Botón cancelar edición
-            const btnCancelarEdicion = document.getElementById('btnCancelarEdicion');
-            if (btnCancelarEdicion) {
-                btnCancelarEdicion.addEventListener('click', () => this.mostrarVistaLista());
-                console.log('✅ Evento btnCancelarEdicion');
-            }
-            
-            // Botón guardar área (edición)
-            const btnGuardarAreaEdicion = document.getElementById('btnGuardarAreaEdicion');
-            if (btnGuardarAreaEdicion) {
-                btnGuardarAreaEdicion.addEventListener('click', () => this.guardarAreaEdicion());
-                console.log('✅ Evento btnGuardarAreaEdicion');
-            }
-            
-            // Botón color aleatorio (edición)
-            const btnColorRandomEdicion = document.getElementById('btnColorRandomEdicion');
-            if (btnColorRandomEdicion) {
-                btnColorRandomEdicion.addEventListener('click', () => this.generarColorAleatorioEdicion());
-                console.log('✅ Evento btnColorRandomEdicion');
+                btnNuevaArea.addEventListener('click', () => this.irACrearArea());
+                console.log('✅ Evento btnNuevaArea configurado para redirección');
             }
             
             // Toggle eliminadas
@@ -194,47 +164,31 @@ class AreasController {
         }
     }
     
-    // ========== MÉTODOS DE VISTA ==========
+    // ========== MÉTODOS DE NAVEGACIÓN ==========
     
-    mostrarVistaLista() {
-        document.getElementById('vistaLista').style.display = 'block';
-        document.getElementById('vistaEdicion').style.display = 'none';
-        document.getElementById('btnNuevaArea').style.display = 'block';
-        this.cargarAreas();
+    irACrearArea() {
+        console.log('➡️ Redirigiendo a página de creación de áreas...');
+        
+        // 🎯 AJUSTA ESTA RUTA SEGÚN TU ESTRUCTURA
+        // Opción 1: Si editarAreas.html está en el mismo directorio que areas.html:
+        // window.location.href = 'crearAreas.html';
+        
+        // Opción 2: Si está en un directorio paralelo (recomendado basado en tu estructura):
+        window.location.href = '/users/admin/crearAreas/crearAreas.html';
+        
+        // Opción 3: Si usas rutas absolutas:
+        // window.location.href = '/users/admin/crearAreas/crearAreas.html';
     }
     
-    mostrarVistaEdicion(areaId = null) {
-        document.getElementById('vistaLista').style.display = 'none';
-        document.getElementById('vistaEdicion').style.display = 'block';
-        document.getElementById('btnNuevaArea').style.display = 'none';
+    // ✅ CORRECIÓN APLICADA AQUÍ
+    irAEditarArea(areaId) {
+        console.log(`➡️ Redirigiendo a editar área: ${areaId}`);
         
-        if (areaId) {
-            this.cargarAreaParaEdicion(areaId);
-        } else {
-            this.limpiarFormularioEdicion();
-        }
-    }
-    
-    limpiarFormularioEdicion() {
-        document.getElementById('areaIdEdicion').value = '';
-        document.getElementById('nombreAreaEdicion').value = '';
-        document.getElementById('descripcionEdicion').value = '';
-        document.getElementById('caracteristicasEdicion').value = '';
-        document.getElementById('colorEdicion').value = '#3498db';
-        document.getElementById('iconoEdicion').value = 'fas fa-building';
-        document.getElementById('capacidadMaximaEdicion').value = '0';
-        document.getElementById('presupuestoAnualEdicion').value = '0';
-        document.getElementById('activoEdicion').checked = true;
-        document.getElementById('objetivosEdicion').value = '';
+        // 🚨 ELIMINADO: sessionStorage.setItem('areaIdParaEditar', areaId);
+        // 🚨 ELIMINADO: window.location.href = '/users/admin/editarAreas/editarAreas.html';
         
-        // Actualizar título del formulario
-        const cardHeader = document.querySelector('#vistaEdicion .card-header h5');
-        if (cardHeader) {
-            cardHeader.innerHTML = '<i class="fas fa-plus me-2"></i>Nueva Área';
-        }
-        
-        document.getElementById('btnGuardarAreaEdicion').textContent = 'Crear Área';
-        document.getElementById('btnGuardarAreaEdicion').className = 'btn btn-primary';
+        // ✅ CORRECCIÓN: Pasar el ID por URL como parámetro
+        window.location.href = `/users/admin/editarAreas/editarAreas.html?id=${areaId}`;
     }
     
     // ========== MÉTODOS CRUD ==========
@@ -254,103 +208,6 @@ class AreasController {
         } catch (error) {
             console.error('❌ Error cargando áreas:', error);
             this.mostrarError('Error cargando áreas: ' + error.message);
-        }
-    }
-    
-    async cargarAreaParaEdicion(areaId) {
-        try {
-            console.log('✏️ Cargando área para edición:', areaId);
-            
-            const area = await this.areaManager.getAreaById(areaId);
-            if (!area) {
-                this.mostrarError('Área no encontrada');
-                this.mostrarVistaLista();
-                return;
-            }
-            
-            // Llenar formulario
-            document.getElementById('areaIdEdicion').value = area.id;
-            document.getElementById('nombreAreaEdicion').value = area.nombreArea;
-            document.getElementById('descripcionEdicion').value = area.descripcion || '';
-            document.getElementById('caracteristicasEdicion').value = area.caracteristicas || '';
-            document.getElementById('colorEdicion').value = area.color || '#3498db';
-            document.getElementById('iconoEdicion').value = area.icono || 'fas fa-building';
-            document.getElementById('capacidadMaximaEdicion').value = area.capacidadMaxima || 0;
-            document.getElementById('presupuestoAnualEdicion').value = area.presupuestoAnual || 0;
-            document.getElementById('activoEdicion').checked = area.activo !== false;
-            document.getElementById('objetivosEdicion').value = Array.isArray(area.objetivos) ? area.objetivos.join('\n') : '';
-            
-            // Actualizar título del formulario
-            const cardHeader = document.querySelector('#vistaEdicion .card-header h5');
-            if (cardHeader) {
-                cardHeader.innerHTML = `<i class="fas fa-edit me-2"></i>Editar Área: ${area.nombreArea}`;
-            }
-            
-            document.getElementById('btnGuardarAreaEdicion').textContent = 'Actualizar Área';
-            document.getElementById('btnGuardarAreaEdicion').className = 'btn btn-warning';
-            
-        } catch (error) {
-            console.error('❌ Error cargando área para edición:', error);
-            this.mostrarError('Error: ' + error.message);
-            this.mostrarVistaLista();
-        }
-    }
-    
-    async guardarAreaEdicion() {
-        console.log('💾 Guardando área...');
-        
-        try {
-            const form = document.getElementById('formAreaEdicion');
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-            
-            const areaId = document.getElementById('areaIdEdicion').value;
-            const esNueva = !areaId;
-            
-            // Obtener datos del formulario
-            const areaData = {
-                nombreArea: document.getElementById('nombreAreaEdicion').value.trim(),
-                descripcion: document.getElementById('descripcionEdicion').value.trim(),
-                caracteristicas: document.getElementById('caracteristicasEdicion').value.trim(),
-                color: document.getElementById('colorEdicion').value,
-                icono: document.getElementById('iconoEdicion').value,
-                capacidadMaxima: parseInt(document.getElementById('capacidadMaximaEdicion').value) || 0,
-                presupuestoAnual: parseFloat(document.getElementById('presupuestoAnualEdicion').value) || 0,
-                activo: document.getElementById('activoEdicion').checked,
-                objetivos: document.getElementById('objetivosEdicion').value.split('\n').filter(o => o.trim() !== '')
-            };
-            
-            console.log('📝 Datos del formulario:', areaData);
-            
-            if (esNueva) {
-                // Crear nueva área
-                console.log('🆕 Creando nueva área...');
-                await this.areaManager.crearArea(
-                    areaData, 
-                    this.userManager.currentUser.id, 
-                    this.userManager
-                );
-                this.mostrarExito('✅ Área creada exitosamente');
-                
-            } else {
-                // Actualizar área existente
-                console.log('✏️ Actualizando área:', areaId);
-                await this.areaManager.actualizarArea(
-                    areaId,
-                    areaData,
-                    this.userManager.currentUser.id
-                );
-                this.mostrarExito('✅ Área actualizada exitosamente');
-            }
-            
-            // Volver a la lista
-            this.mostrarVistaLista();
-            
-        } catch (error) {
-            console.error('❌ Error guardando área:', error);
-            this.mostrarError('Error guardando área: ' + error.message);
         }
     }
     
@@ -528,8 +385,8 @@ class AreasController {
             case 'ver':
                 this.verDetalles(areaId);
                 break;
-            case 'editar':
-                this.mostrarVistaEdicion(areaId);
+            case 'editar':  // Redirige a la página de edición
+                this.irAEditarArea(areaId);
                 break;
             case 'eliminar':
                 this.solicitarEliminacion(areaId);
@@ -632,7 +489,8 @@ class AreasController {
                 <button class="btn btn-sm btn-primary" data-action="ver" data-id="${area.id}" title="Ver detalles">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button class="btn btn-sm btn-warning" data-action="editar" data-id="${area.id}" title="Editar">
+                <!-- Botón EDITAR - Redirige a editarAreas.html -->
+                <button class="btn btn-sm btn-warning" data-action="editar" data-id="${area.id}" title="Editar Área">
                     <i class="fas fa-edit"></i>
                 </button>
                 ${area.activo ? 
@@ -651,14 +509,6 @@ class AreasController {
     }
     
     // ========== UTILIDADES ==========
-    
-    generarColorAleatorioEdicion() {
-        const colores = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'];
-        const colorInput = document.getElementById('colorEdicion');
-        if (colorInput) {
-            colorInput.value = colores[Math.floor(Math.random() * colores.length)];
-        }
-    }
     
     paginarAreas(listaAreas, pagina) {
         const inicio = (pagina - 1) * this.elementosPorPagina;
