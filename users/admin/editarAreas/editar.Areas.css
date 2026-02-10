@@ -1,0 +1,684 @@
+/* =============================================
+   VARIABLES ESPECÍFICAS PARA EDITAR ÁREAS
+   ============================================= */
+:root {
+    /* COLORES PRINCIPALES */
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #0a0a0a;
+    --color-bg-tertiary: #141414;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #cccccc;
+    --color-accent-primary: #c0c0c0;
+    --color-accent-secondary: #2f8cff;
+    --color-border-light: #545454;
+    --color-hover: #1a1a1a;
+    
+    /* COLORES DE ESTADO */
+    --color-success: #00ff95;
+    --color-danger: #ff4d4d;
+    --color-warning: #ffcc00;
+    --color-info: #00cfff;
+    
+    /* SOMBRAS */
+    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
+    
+    /* BORDES */
+    --border-radius-small: 5px;
+    --border-radius-medium: 10px;
+    --border-radius-large: 15px;
+    
+    /* TRANSICIONES */
+    --transition-default: 0.3s ease;
+    
+    /* FUENTES */
+    --font-family-primary: 'Orbitron', sans-serif;
+    --font-family-secondary: 'Rajdhani', sans-serif;
+}
+
+/* =============================================
+   ESTILOS GENERALES
+   ============================================= */
+body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-secondary);
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+
+.container-fluid {
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-large);
+    padding: 25px;
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-normal);
+    max-width: min(1200px, 95vw);
+    margin: 0 auto;
+    animation: fadeInUp 0.5s ease;
+}
+
+/* =============================================
+   HEADER PRINCIPAL
+   ============================================= */
+.row.mb-4:first-child {
+    background: rgba(15, 15, 15, 0.9);
+    padding: 20px 25px;
+    border-radius: var(--border-radius-medium);
+    border: 1px solid var(--color-border-light);
+    margin-bottom: 30px !important;
+    box-shadow: var(--shadow-normal);
+}
+
+h1.h3 {
+    font-family: var(--font-family-primary);
+    color: var(--color-text-primary);
+    font-size: clamp(22px, 4vw, 26px);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+h1.h3 i {
+    color: var(--color-accent-primary);
+    font-size: 24px;
+}
+
+.text-muted {
+    color: var(--color-text-secondary) !important;
+    font-family: var(--font-family-secondary);
+    margin-top: 5px;
+    font-size: 14px;
+}
+
+/* =============================================
+   BOTONES PRINCIPALES
+   ============================================= */
+#btnVolverLista {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+    padding: 12px 25px !important;
+    border-radius: var(--border-radius-medium) !important;
+    font-weight: 600 !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 14px !important;
+    min-width: 180px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    justify-content: center !important;
+}
+
+#btnVolverLista:hover {
+    transform: translateY(-2px) !important;
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.2) !important;
+    border-color: var(--color-accent-primary) !important;
+}
+
+/* =============================================
+   TARJETA DEL FORMULARIO
+   ============================================= */
+.card {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-large) !important;
+    box-shadow: var(--shadow-normal) !important;
+    margin-bottom: 20px !important;
+}
+
+.card-header {
+    background: rgba(20, 20, 20, 0.95) !important;
+    border-bottom: 1px solid var(--color-border-light) !important;
+    padding: 18px 25px !important;
+}
+
+.card-header h5 {
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 16px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+.card-header h5 i {
+    color: var(--color-accent-primary) !important;
+}
+
+.card-body {
+    padding: 30px !important;
+}
+
+/* =============================================
+   SECCIONES DEL FORMULARIO
+   ============================================= */
+h6.border-bottom {
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 14px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-bottom: 2px solid var(--color-accent-primary) !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 20px !important;
+}
+
+h6 i {
+    color: var(--color-accent-primary) !important;
+}
+
+/* =============================================
+   FORMULARIOS
+   ============================================= */
+.form-label {
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-secondary) !important;
+    font-weight: 500 !important;
+    margin-bottom: 8px !important;
+    font-size: 14px !important;
+}
+
+.form-label::after {
+    content: " *";
+    color: var(--color-danger);
+    opacity: 0.8;
+}
+
+.form-label:has(+ :not(:required))::after {
+    content: "" !important;
+}
+
+.form-control, .form-select, .form-control-color {
+    background: var(--color-bg-tertiary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+    border-radius: var(--border-radius-small) !important;
+    padding: 12px 15px !important;
+    transition: all 0.3s ease !important;
+    font-family: var(--font-family-secondary) !important;
+}
+
+.form-control:focus, .form-select:focus, .form-control-color:focus {
+    border-color: var(--color-accent-secondary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
+    background: var(--color-bg-secondary) !important;
+    outline: none !important;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.form-control-color {
+    height: 45px !important;
+    padding: 5px !important;
+    cursor: pointer !important;
+}
+
+.form-text {
+    color: var(--color-text-secondary) !important;
+    font-size: 12px !important;
+    font-family: var(--font-family-secondary) !important;
+    margin-top: 5px !important;
+}
+
+/* Input groups */
+.input-group {
+    border-radius: var(--border-radius-small) !important;
+    overflow: hidden !important;
+}
+
+.input-group-text {
+    background: var(--color-bg-tertiary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-secondary) !important;
+    padding: 12px 15px !important;
+}
+
+.input-group .form-control {
+    border-left: none !important;
+}
+
+/* Campos de solo lectura (auditoría) */
+.form-control.bg-dark {
+    background: var(--color-bg-primary) !important;
+    border-color: var(--color-border-light) !important;
+    color: var(--color-text-secondary) !important;
+    cursor: not-allowed !important;
+}
+
+/* Botón de color aleatorio */
+#btnColorRandom {
+    background: var(--color-bg-tertiary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-secondary) !important;
+    transition: all 0.3s ease !important;
+}
+
+#btnColorRandom:hover {
+    background: var(--color-hover) !important;
+    border-color: var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+}
+
+/* Selector de iconos */
+.icon-selector {
+    position: relative;
+}
+
+.icon-selector select option {
+    background: var(--color-bg-tertiary) !important;
+    color: var(--color-text-primary) !important;
+    padding: 10px !important;
+}
+
+#iconoPreview {
+    color: var(--color-accent-primary);
+    font-size: 20px;
+}
+
+/* =============================================
+   ALERTAS
+   ============================================= */
+.alert {
+    border-radius: var(--border-radius-small) !important;
+    border: 1px solid !important;
+    padding: 15px 20px !important;
+}
+
+.alert-info {
+    background: rgba(0, 207, 255, 0.1) !important;
+    border-color: rgba(0, 207, 255, 0.3) !important;
+    color: var(--color-info) !important;
+}
+
+.alert-info i {
+    color: var(--color-info) !important;
+}
+
+.alert-warning {
+    background: rgba(255, 204, 0, 0.1) !important;
+    border-color: rgba(255, 204, 0, 0.3) !important;
+    color: var(--color-warning) !important;
+}
+
+.alert-warning i {
+    color: var(--color-warning) !important;
+}
+
+.alert-danger {
+    background: rgba(255, 77, 77, 0.1) !important;
+    border-color: rgba(255, 77, 77, 0.3) !important;
+    color: var(--color-danger) !important;
+}
+
+.alert-danger i {
+    color: var(--color-danger) !important;
+}
+
+/* =============================================
+   BOTONES DEL FORMULARIO
+   ============================================= */
+.d-flex.justify-content-end.gap-3 {
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border-light);
+    margin-top: 20px;
+}
+
+#btnCancelar, #btnDesactivarArea, #btnGuardarCambios {
+    padding: 12px 30px !important;
+    font-family: var(--font-family-secondary) !important;
+    font-weight: 600 !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
+    min-width: 180px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+}
+
+#btnCancelar {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+}
+
+#btnCancelar:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    border-color: var(--color-danger) !important;
+    color: var(--color-danger) !important;
+}
+
+#btnDesactivarArea {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-danger) !important;
+    color: var(--color-danger) !important;
+}
+
+#btnDesactivarArea:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    color: white !important;
+    border-color: #ff3333 !important;
+    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
+}
+
+#btnGuardarCambios {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+}
+
+#btnGuardarCambios:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border-color: var(--color-accent-secondary) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
+}
+
+/* =============================================
+   MODALES
+   ============================================= */
+.modal-content {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-large) !important;
+    box-shadow: var(--shadow-large) !important;
+    color: var(--color-text-secondary) !important;
+}
+
+.modal-header {
+    background: rgba(20, 20, 20, 0.95) !important;
+    border-bottom: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    padding: 20px 25px !important;
+}
+
+.modal-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    font-size: 16px !important;
+}
+
+.modal-title i {
+    color: var(--color-accent-primary) !important;
+}
+
+.btn-close {
+    filter: invert(1) brightness(2) !important;
+    opacity: 0.7 !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-close:hover {
+    opacity: 1 !important;
+    transform: rotate(90deg) !important;
+}
+
+.modal-body {
+    padding: 25px !important;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--color-border-light) !important;
+    padding: 20px 25px !important;
+}
+
+/* Modal de desactivación específico */
+#modalDesactivacion .modal-body {
+    padding: 25px !important;
+}
+
+#modalDesactivacion .alert-danger {
+    margin-bottom: 20px !important;
+}
+
+/* Modal de éxito específico */
+#modalExito .modal-body {
+    padding: 40px 25px !important;
+}
+
+#modalExito .fa-check-circle {
+    color: var(--color-success) !important;
+}
+
+#btnContinuarEdicion, #btnVolverListaExito {
+    padding: 10px 20px !important;
+    font-family: var(--font-family-secondary) !important;
+    font-weight: 600 !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
+    min-width: 180px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+}
+
+#btnContinuarEdicion {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+}
+
+#btnContinuarEdicion:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border-color: var(--color-accent-primary) !important;
+}
+
+/* =============================================
+   CONTADOR DE CARACTERES
+   ============================================= */
+#contadorCaracteres {
+    color: var(--color-accent-primary);
+    font-weight: 600;
+}
+
+/* =============================================
+   ANIMACIONES
+   ============================================= */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =============================================
+   EFECTOS ESPECIALES
+   ============================================= */
+/* Efecto de brillo en hover para botones */
+#btnVolverLista, #btnCancelar, #btnDesactivarArea, #btnGuardarCambios,
+#btnContinuarEdicion, #btnVolverListaExito, .modal-footer .btn {
+    position: relative;
+    overflow: hidden;
+}
+
+#btnVolverLista::after, #btnCancelar::after, #btnDesactivarArea::after,
+#btnGuardarCambios::after, #btnContinuarEdicion::after, #btnVolverListaExito::after,
+.modal-footer .btn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 100%;
+    height: 200%;
+    background: linear-gradient(
+        to bottom right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: rotate(30deg);
+    transition: all 0.5s ease;
+    opacity: 0;
+}
+
+#btnVolverLista:hover::after, #btnCancelar:hover::after, #btnDesactivarArea:hover::after,
+#btnGuardarCambios:hover::after, #btnContinuarEdicion:hover::after, #btnVolverListaExito:hover::after,
+.modal-footer .btn:hover::after {
+    opacity: 1;
+    transform: rotate(30deg) translate(10%, 10%);
+}
+
+/* =============================================
+   ESTILOS PARA VALIDACIÓN
+   ============================================= */
+.form-control:invalid:not(:focus):not(:placeholder-shown) {
+    border-color: var(--color-danger) !important;
+}
+
+.form-control:valid:not(:focus):not(:placeholder-shown) {
+    border-color: var(--color-success) !important;
+}
+
+/* =============================================
+   RESPONSIVE DESIGN
+   ============================================= */
+
+/* TABLET (768px - 1023px) */
+@media (max-width: 1023px) {
+    .container-fluid {
+        padding: 20px !important;
+    }
+    
+    .row.mb-4:first-child {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 20px !important;
+        padding: 20px !important;
+    }
+    
+    #btnVolverLista {
+        width: 100% !important;
+        max-width: 300px !important;
+    }
+    
+    .card-body {
+        padding: 20px !important;
+    }
+    
+    #btnCancelar, #btnDesactivarArea, #btnGuardarCambios {
+        width: 100% !important;
+        margin-bottom: 10px !important;
+    }
+    
+    .d-flex.justify-content-end.gap-3 {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+}
+
+/* MÓVIL (768px hacia abajo) */
+@media (max-width: 768px) {
+    body {
+        padding: 10px !important;
+    }
+    
+    .container-fluid {
+        padding: 15px !important;
+        border-radius: var(--border-radius-medium) !important;
+    }
+    
+    h1.h3 {
+        font-size: 20px !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+    
+    .row.mb-4:first-child {
+        padding: 15px !important;
+    }
+    
+    .card-header {
+        padding: 15px 20px !important;
+    }
+    
+    .card-body {
+        padding: 15px !important;
+    }
+    
+    h6.border-bottom {
+        font-size: 13px !important;
+    }
+    
+    .form-control, .form-select, .form-control-color {
+        padding: 10px 12px !important;
+        font-size: 14px !important;
+    }
+    
+    .input-group-text {
+        padding: 10px 12px !important;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem !important;
+    }
+    
+    .modal-content {
+        padding: 15px !important;
+        margin: 0 !important;
+    }
+}
+
+/* MÓVIL PEQUEÑO (480px hacia abajo) */
+@media (max-width: 480px) {
+    .container-fluid {
+        padding: 10px !important;
+    }
+    
+    .row.mb-4:first-child {
+        padding: 12px !important;
+    }
+    
+    #btnVolverLista {
+        padding: 10px 15px !important;
+        font-size: 13px !important;
+        min-width: auto !important;
+    }
+    
+    .card-header {
+        padding: 12px 15px !important;
+    }
+    
+    .card-header h5 {
+        font-size: 14px !important;
+    }
+    
+    #btnCancelar, #btnDesactivarArea, #btnGuardarCambios {
+        padding: 10px 15px !important;
+        font-size: 13px !important;
+        min-width: auto !important;
+    }
+    
+    .modal-body {
+        padding: 15px !important;
+    }
+    
+    #btnContinuarEdicion, #btnVolverListaExito {
+        min-width: 140px !important;
+        padding: 8px 15px !important;
+        font-size: 13px !important;
+    }
+}

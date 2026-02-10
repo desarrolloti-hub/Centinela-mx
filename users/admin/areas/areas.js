@@ -1,4 +1,4 @@
-// areas.js - VERSIÓN CORREGIDA CON BINDING DE MÉTODOS
+// areas.js - VERSIÓN SIMPLIFICADA
 console.log('🚀 areas.js iniciando...');
 
 // Variable global para debugging
@@ -67,9 +67,6 @@ function inicializarController() {
         const app = new AreasController();
         window.appDebug.controller = app;
         
-        // Vincular todos los métodos al contexto correcto
-        app.bindMethods();
-        
         // Inicializar
         app.init();
         
@@ -91,7 +88,6 @@ class AreasController {
         
         this.areaManager = new AreaManager();
         this.areas = [];
-        this.filtroActual = 'todas';
         this.paginacionActual = 1;
         this.elementosPorPagina = 10;
         this.areaSeleccionada = null;
@@ -110,28 +106,6 @@ class AreasController {
         console.log('✅ Controller creado');
     }
     
-    // ========== VINCULAR MÉTODOS (IMPORTANTE) ==========
-    bindMethods() {
-        console.log('🔗 Vinculando métodos...');
-        
-        // Vincular todos los métodos que se usan en event listeners
-        this.mostrarFormularioNuevaArea = this.mostrarFormularioNuevaArea.bind(this);
-        this.guardarArea = this.guardarArea.bind(this);
-        this.generarColorAleatorio = this.generarColorAleatorio.bind(this);
-        this.ejecutarAccionConfirmada = this.ejecutarAccionConfirmada.bind(this);
-        
-        // Vincular métodos de filtros
-        this.aplicarFiltroTodas = () => this.aplicarFiltro('todas');
-        this.aplicarFiltroActivas = () => this.aplicarFiltro('activas');
-        this.aplicarFiltroInactivas = () => this.aplicarFiltro('inactivas');
-        this.aplicarFiltroEliminadas = () => this.aplicarFiltro('eliminadas');
-        
-        // Vincular búsqueda
-        this.buscarAreas = this.buscarAreas.bind(this);
-        
-        console.log('✅ Métodos vinculados');
-    }
-    
     init() {
         console.log('🎬 Iniciando aplicación...');
         
@@ -146,10 +120,10 @@ class AreasController {
         console.log('🔍 Verificando DOM...');
         
         const ids = [
-            'btnNuevaArea', 'tablaAreasBody', 'statsContainer', 'searchInput',
-            'modalArea', 'formArea', 'btnGuardarArea', 'btnColorRandom',
-            'btnFiltrarTodas', 'btnFiltrarActivas', 'btnFiltrarInactivas', 'btnFiltrarEliminadas',
-            'toggleEliminadas', 'modalConfirmar', 'btnConfirmarAccion'
+            'btnNuevaArea', 'tablaAreasBody', 'toggleEliminadas',
+            'modalConfirmar', 'btnConfirmarAccion',
+            'vistaLista', 'vistaEdicion', 'btnVolverLista',
+            'formAreaEdicion', 'btnGuardarAreaEdicion', 'btnCancelarEdicion'
         ];
         
         ids.forEach(id => {
@@ -165,36 +139,36 @@ class AreasController {
             // Botón nueva área
             const btnNuevaArea = document.getElementById('btnNuevaArea');
             if (btnNuevaArea) {
-                btnNuevaArea.addEventListener('click', this.mostrarFormularioNuevaArea);
+                btnNuevaArea.addEventListener('click', () => this.mostrarVistaEdicion());
                 console.log('✅ Evento btnNuevaArea');
             }
             
-            // Botón guardar área
-            const btnGuardarArea = document.getElementById('btnGuardarArea');
-            if (btnGuardarArea) {
-                btnGuardarArea.addEventListener('click', this.guardarArea);
-                console.log('✅ Evento btnGuardarArea');
+            // Botón volver a lista
+            const btnVolverLista = document.getElementById('btnVolverLista');
+            if (btnVolverLista) {
+                btnVolverLista.addEventListener('click', () => this.mostrarVistaLista());
+                console.log('✅ Evento btnVolverLista');
             }
             
-            // Botón color aleatorio
-            const btnColorRandom = document.getElementById('btnColorRandom');
-            if (btnColorRandom) {
-                btnColorRandom.addEventListener('click', this.generarColorAleatorio);
-                console.log('✅ Evento btnColorRandom');
+            // Botón cancelar edición
+            const btnCancelarEdicion = document.getElementById('btnCancelarEdicion');
+            if (btnCancelarEdicion) {
+                btnCancelarEdicion.addEventListener('click', () => this.mostrarVistaLista());
+                console.log('✅ Evento btnCancelarEdicion');
             }
             
-            // Filtros
-            document.getElementById('btnFiltrarTodas')?.addEventListener('click', this.aplicarFiltroTodas);
-            document.getElementById('btnFiltrarActivas')?.addEventListener('click', this.aplicarFiltroActivas);
-            document.getElementById('btnFiltrarInactivas')?.addEventListener('click', this.aplicarFiltroInactivas);
-            document.getElementById('btnFiltrarEliminadas')?.addEventListener('click', this.aplicarFiltroEliminadas);
-            console.log('✅ Eventos de filtro');
+            // Botón guardar área (edición)
+            const btnGuardarAreaEdicion = document.getElementById('btnGuardarAreaEdicion');
+            if (btnGuardarAreaEdicion) {
+                btnGuardarAreaEdicion.addEventListener('click', () => this.guardarAreaEdicion());
+                console.log('✅ Evento btnGuardarAreaEdicion');
+            }
             
-            // Búsqueda
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.addEventListener('input', this.buscarAreas);
-                console.log('✅ Evento searchInput');
+            // Botón color aleatorio (edición)
+            const btnColorRandomEdicion = document.getElementById('btnColorRandomEdicion');
+            if (btnColorRandomEdicion) {
+                btnColorRandomEdicion.addEventListener('click', () => this.generarColorAleatorioEdicion());
+                console.log('✅ Evento btnColorRandomEdicion');
             }
             
             // Toggle eliminadas
@@ -209,7 +183,7 @@ class AreasController {
             // Confirmación
             const btnConfirmarAccion = document.getElementById('btnConfirmarAccion');
             if (btnConfirmarAccion) {
-                btnConfirmarAccion.addEventListener('click', this.ejecutarAccionConfirmada);
+                btnConfirmarAccion.addEventListener('click', () => this.ejecutarAccionConfirmada());
                 console.log('✅ Evento btnConfirmarAccion');
             }
             
@@ -218,6 +192,49 @@ class AreasController {
         } catch (error) {
             console.error('❌ Error configurando eventos:', error);
         }
+    }
+    
+    // ========== MÉTODOS DE VISTA ==========
+    
+    mostrarVistaLista() {
+        document.getElementById('vistaLista').style.display = 'block';
+        document.getElementById('vistaEdicion').style.display = 'none';
+        document.getElementById('btnNuevaArea').style.display = 'block';
+        this.cargarAreas();
+    }
+    
+    mostrarVistaEdicion(areaId = null) {
+        document.getElementById('vistaLista').style.display = 'none';
+        document.getElementById('vistaEdicion').style.display = 'block';
+        document.getElementById('btnNuevaArea').style.display = 'none';
+        
+        if (areaId) {
+            this.cargarAreaParaEdicion(areaId);
+        } else {
+            this.limpiarFormularioEdicion();
+        }
+    }
+    
+    limpiarFormularioEdicion() {
+        document.getElementById('areaIdEdicion').value = '';
+        document.getElementById('nombreAreaEdicion').value = '';
+        document.getElementById('descripcionEdicion').value = '';
+        document.getElementById('caracteristicasEdicion').value = '';
+        document.getElementById('colorEdicion').value = '#3498db';
+        document.getElementById('iconoEdicion').value = 'fas fa-building';
+        document.getElementById('capacidadMaximaEdicion').value = '0';
+        document.getElementById('presupuestoAnualEdicion').value = '0';
+        document.getElementById('activoEdicion').checked = true;
+        document.getElementById('objetivosEdicion').value = '';
+        
+        // Actualizar título del formulario
+        const cardHeader = document.querySelector('#vistaEdicion .card-header h5');
+        if (cardHeader) {
+            cardHeader.innerHTML = '<i class="fas fa-plus me-2"></i>Nueva Área';
+        }
+        
+        document.getElementById('btnGuardarAreaEdicion').textContent = 'Crear Área';
+        document.getElementById('btnGuardarAreaEdicion').className = 'btn btn-primary';
     }
     
     // ========== MÉTODOS CRUD ==========
@@ -232,7 +249,6 @@ class AreasController {
             this.areas = await this.areaManager.getAreasByOrganizacion(organizacion, incluirEliminadas);
             console.log(`📊 ${this.areas.length} áreas cargadas`);
             
-            this.actualizarEstadisticas();
             this.actualizarTabla();
             
         } catch (error) {
@@ -241,30 +257,69 @@ class AreasController {
         }
     }
     
-    async guardarArea() {
+    async cargarAreaParaEdicion(areaId) {
+        try {
+            console.log('✏️ Cargando área para edición:', areaId);
+            
+            const area = await this.areaManager.getAreaById(areaId);
+            if (!area) {
+                this.mostrarError('Área no encontrada');
+                this.mostrarVistaLista();
+                return;
+            }
+            
+            // Llenar formulario
+            document.getElementById('areaIdEdicion').value = area.id;
+            document.getElementById('nombreAreaEdicion').value = area.nombreArea;
+            document.getElementById('descripcionEdicion').value = area.descripcion || '';
+            document.getElementById('caracteristicasEdicion').value = area.caracteristicas || '';
+            document.getElementById('colorEdicion').value = area.color || '#3498db';
+            document.getElementById('iconoEdicion').value = area.icono || 'fas fa-building';
+            document.getElementById('capacidadMaximaEdicion').value = area.capacidadMaxima || 0;
+            document.getElementById('presupuestoAnualEdicion').value = area.presupuestoAnual || 0;
+            document.getElementById('activoEdicion').checked = area.activo !== false;
+            document.getElementById('objetivosEdicion').value = Array.isArray(area.objetivos) ? area.objetivos.join('\n') : '';
+            
+            // Actualizar título del formulario
+            const cardHeader = document.querySelector('#vistaEdicion .card-header h5');
+            if (cardHeader) {
+                cardHeader.innerHTML = `<i class="fas fa-edit me-2"></i>Editar Área: ${area.nombreArea}`;
+            }
+            
+            document.getElementById('btnGuardarAreaEdicion').textContent = 'Actualizar Área';
+            document.getElementById('btnGuardarAreaEdicion').className = 'btn btn-warning';
+            
+        } catch (error) {
+            console.error('❌ Error cargando área para edición:', error);
+            this.mostrarError('Error: ' + error.message);
+            this.mostrarVistaLista();
+        }
+    }
+    
+    async guardarAreaEdicion() {
         console.log('💾 Guardando área...');
         
         try {
-            const form = document.getElementById('formArea');
+            const form = document.getElementById('formAreaEdicion');
             if (!form.checkValidity()) {
                 form.reportValidity();
                 return;
             }
             
-            const areaId = document.getElementById('areaId').value;
+            const areaId = document.getElementById('areaIdEdicion').value;
             const esNueva = !areaId;
             
             // Obtener datos del formulario
             const areaData = {
-                nombreArea: document.getElementById('nombreArea').value.trim(),
-                descripcion: document.getElementById('descripcion').value.trim(),
-                caracteristicas: document.getElementById('caracteristicas').value.trim(),
-                color: document.getElementById('color').value,
-                icono: document.getElementById('icono').value,
-                capacidadMaxima: parseInt(document.getElementById('capacidadMaxima').value) || 0,
-                presupuestoAnual: parseFloat(document.getElementById('presupuestoAnual').value) || 0,
-                activo: document.getElementById('activo').checked,
-                objetivos: document.getElementById('objetivos').value.split('\n').filter(o => o.trim() !== '')
+                nombreArea: document.getElementById('nombreAreaEdicion').value.trim(),
+                descripcion: document.getElementById('descripcionEdicion').value.trim(),
+                caracteristicas: document.getElementById('caracteristicasEdicion').value.trim(),
+                color: document.getElementById('colorEdicion').value,
+                icono: document.getElementById('iconoEdicion').value,
+                capacidadMaxima: parseInt(document.getElementById('capacidadMaximaEdicion').value) || 0,
+                presupuestoAnual: parseFloat(document.getElementById('presupuestoAnualEdicion').value) || 0,
+                activo: document.getElementById('activoEdicion').checked,
+                objetivos: document.getElementById('objetivosEdicion').value.split('\n').filter(o => o.trim() !== '')
             };
             
             console.log('📝 Datos del formulario:', areaData);
@@ -290,84 +345,12 @@ class AreasController {
                 this.mostrarExito('✅ Área actualizada exitosamente');
             }
             
-            // Cerrar modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalArea'));
-            if (modal) {
-                modal.hide();
-            }
-            
-            // Recargar lista
-            await this.cargarAreas();
+            // Volver a la lista
+            this.mostrarVistaLista();
             
         } catch (error) {
             console.error('❌ Error guardando área:', error);
             this.mostrarError('Error guardando área: ' + error.message);
-        }
-    }
-    
-    mostrarFormularioNuevaArea() {
-        console.log('📝 Mostrando formulario para nueva área');
-        
-        try {
-            // Limpiar formulario
-            const form = document.getElementById('formArea');
-            if (form) {
-                form.reset();
-            }
-            
-            document.getElementById('areaId').value = '';
-            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-building me-2"></i>Nueva Área';
-            document.getElementById('btnGuardarArea').textContent = 'Crear Área';
-            document.getElementById('btnGuardarArea').className = 'btn btn-primary';
-            
-            // Generar color aleatorio
-            this.generarColorAleatorio();
-            
-            // Mostrar modal
-            const modalElement = document.getElementById('modalArea');
-            if (modalElement) {
-                const modal = new bootstrap.Modal(modalElement);
-                modal.show();
-            }
-            
-        } catch (error) {
-            console.error('❌ Error mostrando formulario:', error);
-        }
-    }
-    
-    async mostrarFormularioEdicion(areaId) {
-        try {
-            console.log('✏️ Cargando área para edición:', areaId);
-            
-            const area = await this.areaManager.getAreaById(areaId);
-            if (!area) {
-                this.mostrarError('Área no encontrada');
-                return;
-            }
-            
-            // Llenar formulario
-            document.getElementById('areaId').value = area.id;
-            document.getElementById('nombreArea').value = area.nombreArea;
-            document.getElementById('descripcion').value = area.descripcion || '';
-            document.getElementById('caracteristicas').value = area.caracteristicas || '';
-            document.getElementById('color').value = area.color || '#3498db';
-            document.getElementById('icono').value = area.icono || 'fas fa-building';
-            document.getElementById('capacidadMaxima').value = area.capacidadMaxima || 0;
-            document.getElementById('presupuestoAnual').value = area.presupuestoAnual || 0;
-            document.getElementById('activo').checked = area.activo !== false;
-            document.getElementById('objetivos').value = Array.isArray(area.objetivos) ? area.objetivos.join('\n') : '';
-            
-            document.getElementById('modalTitle').innerHTML = `<i class="fas fa-edit me-2"></i>Editar Área: ${area.nombreArea}`;
-            document.getElementById('btnGuardarArea').textContent = 'Actualizar Área';
-            document.getElementById('btnGuardarArea').className = 'btn btn-warning';
-            
-            // Mostrar modal
-            const modal = new bootstrap.Modal(document.getElementById('modalArea'));
-            modal.show();
-            
-        } catch (error) {
-            console.error('❌ Error cargando área para edición:', error);
-            this.mostrarError('Error: ' + error.message);
         }
     }
     
@@ -432,50 +415,77 @@ class AreasController {
             }
             
             const detalles = area.toUI();
-            const contenido = `
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="area-color me-3" style=" width: 30px; height: 30px;"></div>
-                            <div>
-                                <h4>${detalles.nombreArea}</h4>
-                                <div class="d-flex align-items-center">
-                                    ${detalles.estadoBadge}
-                                    <span class="ms-3"><i class="fas fa-building me-1"></i>${detalles.organizacion}</span>
+            
+            // Crear un modal simple para mostrar detalles
+            const detallesHTML = `
+                <div class="modal fade" id="modalDetallesTemp" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles del Área</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-center mb-4">
+                                            <div class="area-color me-3" style="background-color: ${detalles.color || '#3498db'}; width: 30px; height: 30px;"></div>
+                                            <div>
+                                                <h4>${detalles.nombreArea}</h4>
+                                                <div class="d-flex align-items-center">
+                                                    ${detalles.estadoBadge}
+                                                    <span class="ms-3"><i class="fas fa-building me-1"></i>${detalles.organizacion}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <h6><i class="fas fa-align-left me-2"></i>Descripción</h6>
+                                            <p class="text-muted">${detalles.descripcion || 'Sin descripción'}</p>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <h6><i class="fas fa-star me-2"></i>Características</h6>
+                                            <p class="text-muted">${detalles.caracteristicas || 'Sin características'}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="mb-2"><strong>Creación:</strong> ${detalles.fechaCreacion}</p>
+                                                <p class="mb-2"><strong>Última actualización:</strong> ${detalles.fechaActualizacion}</p>
+                                                <p class="mb-2"><strong>Cargos:</strong> ${detalles.totalCargos} total, ${detalles.cargosActivos} activos</p>
+                                                <p class="mb-2"><strong>Capacidad:</strong> ${detalles.capacidadMaxima === 0 ? 'Ilimitado' : detalles.capacidadMaxima}</p>
+                                                <p class="mb-0"><strong>Presupuesto:</strong> $${detalles.presupuestoAnual}</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <h6><i class="fas fa-align-left me-2"></i>Descripción</h6>
-                            <p class="text-muted">${detalles.descripcion || 'Sin descripción'}</p>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <h6><i class="fas fa-star me-2"></i>Características</h6>
-                            <p class="text-muted">${detalles.caracteristicas || 'Sin características'}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h6>
-                            </div>
-                            <div class="card-body">
-                                <p class="mb-2"><strong>Creación:</strong> ${detalles.fechaCreacion}</p>
-                                <p class="mb-2"><strong>Última actualización:</strong> ${detalles.fechaActualizacion}</p>
-                                <p class="mb-2"><strong>Cargos:</strong> ${detalles.totalCargos} total, ${detalles.cargosActivos} activos</p>
-                                <p class="mb-2"><strong>Capacidad:</strong> ${detalles.capacidadMaxima === 0 ? 'Ilimitado' : detalles.capacidadMaxima}</p>
-                                <p class="mb-0"><strong>Presupuesto:</strong> ${detalles.presupuestoAnual}</p>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                             </div>
                         </div>
                     </div>
                 </div>
             `;
             
-            document.getElementById('detallesContent').innerHTML = contenido;
-            new bootstrap.Modal(document.getElementById('modalDetalles')).show();
+            // Crear y mostrar el modal
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = detallesHTML;
+            document.body.appendChild(modalDiv);
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalDetallesTemp'));
+            modal.show();
+            
+            // Remover el modal del DOM después de cerrar
+            modalDiv.addEventListener('hidden.bs.modal', () => {
+                modalDiv.remove();
+            });
             
         } catch (error) {
             console.error('❌ Error mostrando detalles:', error);
@@ -519,7 +529,7 @@ class AreasController {
                 this.verDetalles(areaId);
                 break;
             case 'editar':
-                this.mostrarFormularioEdicion(areaId);
+                this.mostrarVistaEdicion(areaId);
                 break;
             case 'eliminar':
                 this.solicitarEliminacion(areaId);
@@ -538,53 +548,11 @@ class AreasController {
     
     // ========== INTERFAZ ==========
     
-    actualizarEstadisticas() {
-        const total = this.areas.length;
-        const activas = this.areas.filter(a => a.estaActiva()).length;
-        const inactivas = this.areas.filter(a => !a.activo && !a.eliminado).length;
-        const eliminadas = this.areas.filter(a => a.eliminado).length;
-        
-        const statsContainer = document.getElementById('statsContainer');
-        if (statsContainer) {
-            statsContainer.innerHTML = `
-                <div class="col-md-3">
-                    <div class="stats-card total">
-                        <i class="fas fa-building"></i>
-                        <div class="number">${total}</div>
-                        <div class="label">Total Áreas</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card activas">
-                        <i class="fas fa-check-circle"></i>
-                        <div class="number">${activas}</div>
-                        <div class="label">Áreas Activas</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card inactivas">
-                        <i class="fas fa-pause-circle"></i>
-                        <div class="number">${inactivas}</div>
-                        <div class="label">Áreas Inactivas</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card eliminadas">
-                        <i class="fas fa-trash-alt"></i>
-                        <div class="number">${eliminadas}</div>
-                        <div class="label">Áreas Eliminadas</div>
-                    </div>
-                </div>
-            `;
-        }
-    }
-    
     actualizarTabla() {
         const tbody = document.getElementById('tablaAreasBody');
         if (!tbody) return;
         
-        const areasFiltradas = this.filtrarAreas(this.areas);
-        const areasPaginadas = this.paginarAreas(areasFiltradas, this.paginacionActual);
+        const areasPaginadas = this.paginarAreas(this.areas, this.paginacionActual);
         
         tbody.innerHTML = '';
         
@@ -606,7 +574,7 @@ class AreasController {
             tbody.appendChild(fila);
         });
         
-        this.actualizarPaginacion(areasFiltradas.length);
+        this.actualizarPaginacion(this.areas.length);
     }
     
     crearFilaArea(area, numero) {
@@ -670,63 +638,26 @@ class AreasController {
                 ${area.activo ? 
                     `<button class="btn btn-sm btn-secondary" data-action="desactivar" data-id="${area.id}" title="Desactivar">
                         <i class="fas fa-pause"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" data-action="eliminar" data-id="${area.id}" title="Eliminar">
-                        <i class="fas fa-trash"></i>
                     </button>` : 
                     `<button class="btn btn-sm btn-success" data-action="activar" data-id="${area.id}" title="Activar">
                         <i class="fas fa-play"></i>
                     </button>`
                 }
+                <button class="btn btn-sm btn-danger" data-action="eliminar" data-id="${area.id}" title="Eliminar">
+                    <i class="fas fa-trash"></i>
+                </button>
             `;
         }
     }
     
     // ========== UTILIDADES ==========
     
-    generarColorAleatorio() {
+    generarColorAleatorioEdicion() {
         const colores = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'];
-        const colorInput = document.getElementById('color');
+        const colorInput = document.getElementById('colorEdicion');
         if (colorInput) {
             colorInput.value = colores[Math.floor(Math.random() * colores.length)];
         }
-    }
-    
-    aplicarFiltro(filtro) {
-        this.filtroActual = filtro;
-        this.paginacionActual = 1;
-        this.actualizarTabla();
-    }
-    
-    buscarAreas() {
-        this.paginacionActual = 1;
-        this.actualizarTabla();
-    }
-    
-    filtrarAreas(listaAreas) {
-        let filtradas = [...listaAreas];
-        
-        switch(this.filtroActual) {
-            case 'activas':
-                filtradas = filtradas.filter(a => a.activo && !a.eliminado);
-                break;
-            case 'inactivas':
-                filtradas = filtradas.filter(a => !a.activo && !a.eliminado);
-                break;
-            case 'eliminadas':
-                filtradas = filtradas.filter(a => a.eliminado);
-                break;
-        }
-        
-        const termino = document.getElementById('searchInput')?.value.toLowerCase() || '';
-        if (termino) {
-            filtradas = filtradas.filter(area => 
-                area.nombreArea.toLowerCase().includes(termino) ||
-                area.descripcion.toLowerCase().includes(termino)
-            );
-        }
-        
-        return filtradas;
     }
     
     paginarAreas(listaAreas, pagina) {

@@ -1,11 +1,284 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Editar Área - Sistema Centinela</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Fuentes del sistema Centinela -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Nuestros estilos -->
+    <link rel="stylesheet" href="editar.Areas.css">
 </head>
 <body>
+    <canvas id="particle-canvas"></canvas>
     
+    <!-- Contenedor principal -->
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3"><i class="fas fa-edit me-2"></i>Editar Área</h1>
+                        <p class="text-muted">Modifique la información del área seleccionada</p>
+                    </div>
+                    <button id="btnVolverLista" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a la Lista
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formulario de Edición -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-pencil-alt me-2"></i>Editar Información del Área</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="formEditarArea">
+                            <input type="hidden" id="areaId">
+                            
+                            <!-- Sección 1: Información Básica -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-info-circle me-2"></i>Información Básica</h6>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="nombreArea" class="form-label">Nombre del Área *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-building"></i></span>
+                                        <input type="text" class="form-control" id="nombreArea" placeholder="Ej: Recursos Humanos, Ventas, Tecnología" required>
+                                    </div>
+                                    <div class="form-text">Modifique el nombre del área o departamento</div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="colorIdentificacion" class="form-label">Color de Identificación *</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="colorIdentificacion" value="#3498db" title="Selecciona un color">
+                                        <button type="button" class="btn btn-outline-secondary" id="btnColorRandom">Color Aleatorio</button>
+                                    </div>
+                                    <div class="form-text">Este color identificará al área en gráficos y reportes</div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="iconoArea" class="form-label">Icono *</label>
+                                    <div class="icon-selector">
+                                        <select class="form-select" id="iconoArea" required>
+                                            <option value="">Seleccione un icono</option>
+                                            <option value="fas fa-building">🏢 Edificio</option>
+                                            <option value="fas fa-users">👥 Usuarios/Equipo</option>
+                                            <option value="fas fa-chart-line">📈 Gráficos/Análisis</option>
+                                            <option value="fas fa-code">💻 Desarrollo TI</option>
+                                            <option value="fas fa-cogs">⚙️ Operaciones</option>
+                                            <option value="fas fa-handshake">🤝 Recursos Humanos</option>
+                                            <option value="fas fa-shopping-cart">🛒 Ventas</option>
+                                            <option value="fas fa-flask">🔬 Investigación</option>
+                                            <option value="fas fa-bullhorn">📢 Marketing</option>
+                                            <option value="fas fa-money-bill">💰 Finanzas</option>
+                                            <option value="fas fa-shield-alt">🛡️ Seguridad</option>
+                                            <option value="fas fa-truck">🚚 Logística</option>
+                                        </select>
+                                        <div class="mt-2">
+                                            <small class="text-muted">Icono seleccionado: </small>
+                                            <span id="iconoPreview" class="ms-2"><i class="fas fa-question-circle"></i></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="organizacion" class="form-label">Organización *</label>
+                                    <select class="form-select" id="organizacion" required>
+                                        <option value="">Seleccione organización</option>
+                                        <option value="1">Centinela Corp</option>
+                                        <option value="2">Tech Solutions</option>
+                                        <option value="3">Global Systems</option>
+                                        <option value="4">Innovation Labs</option>
+                                    </select>
+                                    <div class="form-text">Organización a la que pertenece el área</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sección 2: Descripción -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-align-left me-2"></i>Descripción</h6>
+                                </div>
+                                
+                                <div class="col-12 mb-3">
+                                    <label for="descripcionArea" class="form-label">Descripción del Área *</label>
+                                    <textarea class="form-control" id="descripcionArea" rows="4" placeholder="Describa las funciones principales, objetivos y responsabilidades del área..." required></textarea>
+                                    <div class="form-text">Mínimo 50 caracteres, máximo 500 caracteres</div>
+                                    <div class="mt-1">
+                                        <small class="text-muted">Caracteres: <span id="contadorCaracteres">0</span>/500</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="responsable" class="form-label">Responsable del Área</label>
+                                    <select class="form-select" id="responsable">
+                                        <option value="">Sin responsable asignado</option>
+                                        <option value="1">María González</option>
+                                        <option value="2">Carlos Rodríguez</option>
+                                        <option value="3">Ana Martínez</option>
+                                        <option value="4">Luis Fernández</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="capacidadMaxima" class="form-label">Capacidad Máxima</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user-friends"></i></span>
+                                        <input type="number" class="form-control" id="capacidadMaxima" min="0" value="0" placeholder="0 para ilimitado">
+                                    </div>
+                                    <div class="form-text">Número máximo de personas en el área (0 = sin límite)</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Información adicional de auditoría -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-history me-2"></i>Información de Auditoría</h6>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Fecha de Creación</label>
+                                    <input type="text" class="form-control bg-dark" id="fechaCreacion" readonly>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Última Actualización</label>
+                                    <input type="text" class="form-control bg-dark" id="ultimaActualizacion" readonly>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Creado Por</label>
+                                    <input type="text" class="form-control bg-dark" id="creadoPor" readonly>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Estado Actual</label>
+                                    <input type="text" class="form-control bg-dark" id="estadoActual" readonly>
+                                </div>
+                            </div>
+                            
+                            <!-- Mensajes de validación -->
+                            <div class="alert alert-info mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Los campos marcados con * son obligatorios. Los cambios se guardarán en el historial del sistema.
+                            </div>
+                            
+                            <!-- Botones de acción -->
+                            <div class="d-flex justify-content-end gap-3">
+                                <button type="button" class="btn btn-secondary" id="btnCancelar">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </button>
+                                <button type="button" class="btn btn-danger" id="btnDesactivarArea">
+                                    <i class="fas fa-power-off me-2"></i>Desactivar Área
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="btnGuardarCambios">
+                                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmación -->
+    <div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirmar Cambios</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmacionMensaje">¿Está seguro de guardar los cambios realizados en esta área?</p>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-history me-2"></i>
+                        <strong>Nota:</strong> Todos los cambios serán registrados en el historial del sistema.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Revisar Cambios</button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmarGuardar">Sí, Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Desactivación -->
+    <div class="modal fade" id="modalDesactivacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-power-off me-2"></i>Confirmar Desactivación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger mb-4">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>¡Atención!</strong> Esta acción desactivará el área y afectará a todos los usuarios asignados.
+                    </div>
+                    <p id="desactivacionMensaje">¿Está seguro de desactivar esta área? Esta acción puede ser reversible.</p>
+                    <div class="mb-3">
+                        <label for="motivoDesactivacion" class="form-label">Motivo de desactivación (opcional):</label>
+                        <textarea class="form-control" id="motivoDesactivacion" rows="2" placeholder="Explique brevemente el motivo..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarDesactivacion">Sí, Desactivar Área</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Éxito -->
+    <div class="modal fade" id="modalExito" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4 class="mb-3" id="exitoTitulo">¡Cambios Guardados Exitosamente!</h4>
+                    <p class="text-muted mb-4" id="exitoMensaje">El área ha sido actualizada correctamente en el sistema.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal" id="btnContinuarEdicion">
+                            <i class="fas fa-edit me-2"></i>Seguir Editando
+                        </button>
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="btnVolverListaExito">
+                            <i class="fas fa-list me-2"></i>Volver a la Lista
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="/components/themeloader.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script src="/components/navbar-admin-component.js"></script>
+    <script src="/components/footer-admin-component.js"></script>
+    <script src="editar-area.js"></script>
 </body>
 </html>
