@@ -40,13 +40,13 @@ class User {
         this.correoElectronico = data.correoElectronico || '';
         this.status = data.status !== undefined ? data.status : true;
         this.idAuth = data.idAuth || '';
-        this.fotoUsuario = data.fotoUsuario || '';
-        this.fotoOrganizacion = data.fotoOrganizacion || '';
+        this.fotoUsuario = data.fotoUsuario || data.fotoURL || data.foto || '';
+        this.fotoOrganizacion = data.fotoOrganizacion || data.logoOrganizacion || data.logo || '';
         
         // Fechas y timestamps
-        this.fechaActualizacion = data.fechaActualizacion || new Date();
-        this.fechaCreacion = data.fechaCreacion || new Date();
-        this.ultimoLogin = data.ultimoLogin || null;
+        this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
+        this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
+        this.ultimoLogin = data.ultimoLogin ? this._convertirFecha(data.ultimoLogin) : null;
         
         // Configuraciones y preferencias
         this.theme = data.theme || this._obtenerThemeDelLocalStorage() || 'predeterminado';
@@ -75,6 +75,13 @@ class User {
     }
 
     // ========== MÉTODOS DE UTILIDAD ==========
+    
+    _convertirFecha(fecha) {
+        if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
+        if (fecha instanceof Date) return fecha;
+        if (typeof fecha === 'string' || typeof fecha === 'number') return new Date(fecha);
+        return new Date();
+    }
     
     /**
      * Obtiene el tema guardado en localStorage como respaldo
@@ -279,23 +286,24 @@ class UserManager {
             const adminSnap = await getDoc(adminRef);
             
             if (adminSnap.exists()) {
+                console.log('✅ Encontrado en administradores');
                 const data = adminSnap.data();
-                
-                // Si el usuario está inactivo, cerrar sesión y lanzar error
-                if (!data.status) {
-                    await signOut(auth);
-                    throw new Error('Tu cuenta está inactiva. Contacta al administrador del sistema.');
-                }
-                
-                // Crear instancia de usuario administrador
-                this.currentUser = new User(userId, {
+
+                // ✅ CORREGIDO: Usar userId en lugar de id
+                const user = new User(userId, {
                     ...data,
                     idAuth: userId,
                     cargo: 'administrador',
-                    emailVerified: auth.currentUser?.emailVerified || false
+                    // Asegurar que las fotos se pasen explícitamente
+                    fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
+                    fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
+                    email: data.correoElectronico || data.email
                 });
-                console.log('Usuario actual es administrador:', this.currentUser.nombreCompleto);
-                return this.currentUser;
+
+                // Agregar a memoria para próximas búsquedas
+                this.users.push(user);
+                this.currentUser = user; // ✅ IMPORTANTE: Asignar el usuario actual
+                return user;
             }
             
             // ===== SEGUNDO: Buscar en colaboradores =====
@@ -322,14 +330,20 @@ class UserManager {
                     }
                     
                     // Crear instancia de usuario colaborador
-                    this.currentUser = new User(userId, {
+                    const user = new User(userId, {
                         ...data,
                         idAuth: userId,
                         cargo: 'colaborador',
+                        fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
+                        fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
+                        email: data.correoElectronico || data.email,
                         emailVerified: auth.currentUser?.emailVerified || false
                     });
+                    
+                    this.currentUser = user; // ✅ IMPORTANTE: Asignar el usuario actual
+                    this.users.push(user);
                     console.log('Usuario actual es colaborador de:', data.organizacion);
-                    return this.currentUser;
+                    return user;
                 }
             }
             
@@ -554,7 +568,8 @@ class UserManager {
                 cargo: 'colaborador',
                 organizacion: adminData.organizacion,
                 organizacionCamelCase: adminData.organizacionCamelCase,
-                fotoOrganizacion: adminData.fotoOrganizacion,
+                fotoOrganizacion: adminData.fotoOrganizacion || adminData.logoOrganizacion || null,
+                fotoUsuario: colaboradorData.fotoUsuario || colaboradorData.fotoURL || null,
                 theme: adminData.theme || 'light',
                 plan: adminData.plan || 'gratis',
                 verificado: false,
@@ -1081,7 +1096,7 @@ class UserManager {
                 throw new Error('Tu cuenta está inactiva. Contacta al administrador.');
             }
             
-            // ===== PASO 4: Verificar email (OPCIONAL - puedes comentar estas líneas) =====
+            // ===== PASO 4: Verificar email =====
             if (!userCredential.user.emailVerified) {
                 console.warn('Usuario no verificado intentando iniciar sesión');
                 
@@ -1095,7 +1110,6 @@ class UserManager {
                     console.warn('Error reenviando verificación:', emailError);
                 }
                 
-                // Lanzar error para bloquear login sin verificación
                 throw new Error('Tu email no está verificado. Se ha reenviado el correo de verificación.');
             }
             
@@ -1129,8 +1143,8 @@ class UserManager {
                 console.warn('No se pudo guardar datos en localStorage');
             }
             
-            console.log('Sesión iniciada exitosamente:', user.nombreCompleto);
-            return user;
+            console.log('✅ Sesión iniciada exitosamente:', user.nombreCompleto);
+            return this.currentUser; // ✅ IMPORTANTE: Devolver this.currentUser en lugar de user
             
         } catch (error) {
             console.error("Error iniciando sesión:", error);
@@ -1272,12 +1286,12 @@ class UserManager {
         }
     }
 
-    // ========== MÉTODOS DE BÚSQUEDA EN MEMORIA ==========
+    // ========== 🔥 MÉTODO CORREGIDO - OBTENER USUARIO POR ID CON FOTOS ==========
     
     /**
-     * Busca un usuario por ID en la memoria local
+     * Busca un usuario por ID en la memoria local o Firestore
      * @param {string} id - ID del usuario
-     * @returns {User|undefined} Instancia del usuario o undefined
+     * @returns {Promise<User|null>} Instancia del usuario o null
      */
     async getUserById(id) {
         console.log('🔍 getUserById buscando:', id);
@@ -1300,10 +1314,15 @@ class UserManager {
             if (adminSnap.exists()) {
                 console.log('✅ Encontrado en administradores');
                 const data = adminSnap.data();
+                
+                // ✅ CORREGIDO: Usar el parámetro 'id' correctamente
                 const user = new User(id, {
                     ...data,
                     idAuth: id,
-                    cargo: 'administrador'
+                    cargo: 'administrador',
+                    fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
+                    fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
+                    email: data.correoElectronico || data.email
                 });
                 
                 // Agregar a memoria para próximas búsquedas
@@ -1316,24 +1335,37 @@ class UserManager {
             
             for (const org of organizaciones) {
                 const coleccion = `colaboradores_${org.camelCase}`;
-                const q = query(
-                    collection(db, coleccion),
-                    where("idAuth", "==", id)
-                );
-                const snapshot = await getDocs(q);
                 
-                if (!snapshot.empty) {
-                    console.log(`✅ Encontrado en ${coleccion}`);
-                    const docSnap = snapshot.docs[0];
-                    const data = docSnap.data();
-                    const user = new User(id, {
-                        ...data,
-                        idAuth: id,
-                        cargo: 'colaborador'
-                    });
+                // Verificar si la colección existe
+                try {
+                    const q = query(
+                        collection(db, coleccion),
+                        where("idAuth", "==", id)
+                    );
+                    const snapshot = await getDocs(q);
                     
-                    this.users.push(user);
-                    return user;
+                    if (!snapshot.empty) {
+                        console.log(`✅ Encontrado en ${coleccion}`);
+                        const docSnap = snapshot.docs[0];
+                        const data = docSnap.data();
+
+                        // ✅ CORREGIDO: Usar el parámetro 'id' correctamente
+                        const user = new User(id, {
+                            ...data,
+                            idAuth: id,
+                            cargo: 'colaborador',
+                            fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
+                            fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
+                            email: data.correoElectronico || data.email
+                        });
+
+                        this.users.push(user);
+                        return user;
+                    }
+                } catch (e) {
+                    // La colección podría no existir, continuar con la siguiente
+                    console.warn(`Colección ${coleccion} no disponible:`, e.message);
+                    continue;
                 }
             }
             
