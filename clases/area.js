@@ -10,6 +10,7 @@ import {
     deleteDoc,
     query, 
     where, 
+    orderBy, 
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
@@ -74,7 +75,7 @@ class Area {
     
     /**
      * Agrega un cargo al área
-     * @param {string} cargoId - ID único del cargo (proporcionado externamente)
+     * @param {string} cargoId - ID único del cargo
      * @param {Object} cargoData - Datos del cargo { cargo, descripcion }
      */
     agregarCargo(cargoId, cargoData) {
@@ -204,14 +205,7 @@ class AreaManager {
 
     // ========== CRUD COMPLETO ==========
     
-    /**
-     * Crea una nueva área
-     * @param {string} areaId - ID único del área (proporcionado externamente)
-     * @param {Object} areaData - Datos del área { nombreArea, descripcion }
-     * @param {Object} userManager - Instancia de UserManager para obtener usuario actual
-     * @returns {Promise<Area>} Instancia del área creada
-     */
-    async crearArea(areaId, areaData, userManager) {
+    async crearArea(areaData, userManager) {
         try {
             console.log('📝 Creando nueva área:', areaData.nombreArea);
             
@@ -236,18 +230,8 @@ class AreaManager {
                 throw new Error('Ya existe un área con ese nombre en tu organización');
             }
             
-            // Validar que se proporcione un ID
-            if (!areaId) {
-                throw new Error('Se requiere un ID para crear el área');
-            }
-            
-            // Verificar si ya existe un documento con ese ID
-            const areaRef = doc(db, collectionName, areaId);
-            const areaSnap = await getDoc(areaRef);
-            
-            if (areaSnap.exists()) {
-                throw new Error(`Ya existe un área con el ID ${areaId}`);
-            }
+            // Generar ID
+            const areaId = this._generarAreaId(areaData.nombreArea, organizacion);
             
             // Datos para Firestore
             const areaFirestoreData = {
@@ -262,6 +246,7 @@ class AreaManager {
             };
             
             // Guardar en Firestore en la colección específica de la organización
+            const areaRef = doc(db, collectionName, areaId);
             await setDoc(areaRef, areaFirestoreData);
             
             // Crear instancia
@@ -450,7 +435,7 @@ class AreaManager {
     /**
      * Agrega un cargo a un área
      * @param {string} areaId - ID del área
-     * @param {string} cargoId - ID del cargo (proporcionado externamente)
+     * @param {string} cargoId - ID del cargo
      * @param {Object} cargoData - Datos del cargo { cargo, descripcion }
      * @param {string} usuarioId - ID del usuario que realiza la acción
      * @param {string} organizacionCamelCase - Organización
@@ -459,16 +444,6 @@ class AreaManager {
         try {
             const area = await this.getAreaById(areaId, organizacionCamelCase);
             if (!area) throw new Error('Área no encontrada');
-            
-            // Validar que se proporcione un ID para el cargo
-            if (!cargoId) {
-                throw new Error('Se requiere un ID para el cargo');
-            }
-            
-            // Verificar si ya existe un cargo con ese ID en el área
-            if (area.getCargo(cargoId)) {
-                throw new Error(`Ya existe un cargo con el ID ${cargoId} en esta área`);
-            }
             
             // Agregar cargo al Map - solo id, cargo y descripcion
             area.agregarCargo(cargoId, {
@@ -485,7 +460,7 @@ class AreaManager {
             );
             
             console.log(`✅ Cargo ${cargoId} agregado al área ${areaId}`);
-            return area.getCargo(cargoId);
+            return true;
         } catch (error) {
             console.error('❌ Error agregando cargo:', error);
             throw error;
@@ -512,7 +487,7 @@ class AreaManager {
             });
             
             if (!cargoActualizado) {
-                throw new Error(`Cargo con ID ${cargoId} no encontrado en el área`);
+                throw new Error('Cargo no encontrado');
             }
             
             // Actualizar en Firestore
@@ -546,7 +521,7 @@ class AreaManager {
             // Eliminar cargo del Map
             const eliminado = area.eliminarCargo(cargoId);
             if (!eliminado) {
-                throw new Error(`Cargo con ID ${cargoId} no encontrado en el área`);
+                throw new Error('Cargo no encontrado');
             }
             
             // Actualizar en Firestore
@@ -603,21 +578,31 @@ class AreaManager {
         }
     }
 
+    _generarAreaId(nombreArea, organizacionCamelCase) {
+        const nombreNormalizado = nombreArea
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '_');
+        
+        const timestamp = Date.now();
+        return `${organizacionCamelCase}_${nombreNormalizado}_${timestamp}`;
+    }
+
     /**
-     * Verifica si un ID de área ya existe
-     * @param {string} areaId - ID a verificar
-     * @param {string} organizacionCamelCase - Organización
+     * Genera un ID para un cargo
+     * @param {string} nombreCargo - Nombre del cargo
      */
-    async verificarAreaIdExistente(areaId, organizacionCamelCase) {
-        try {
-            const collectionName = this._getCollectionName(organizacionCamelCase);
-            const areaRef = doc(db, collectionName, areaId);
-            const areaSnap = await getDoc(areaRef);
-            return areaSnap.exists();
-        } catch (error) {
-            console.error("❌ Error verificando ID de área:", error);
-            return false;
-        }
+    _generarCargoId(nombreCargo) {
+        const nombreNormalizado = nombreCargo
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '_');
+        
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 6);
+        return `cargo_${nombreNormalizado}_${timestamp}_${random}`;
     }
 
     // Limpiar caché de áreas
