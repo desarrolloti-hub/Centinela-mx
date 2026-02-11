@@ -10,11 +10,10 @@ import {
     deleteDoc,
     query, 
     where, 
-    orderBy, 
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
-import { db } from '../config/firebase-config.js';
+import { db } from '/config/firebase-config.js';
 
 // ==================== CLASE AREA SIMPLIFICADA ====================
 class Area {
@@ -22,24 +21,28 @@ class Area {
         this.id = id;
         this.nombreArea = data.nombreArea || '';
         this.descripcion = data.descripcion || '';
-        this.caracteristicas = data.caracteristicas || '';
         
-        // Cargos
-        this.cargos = data.cargos || new Map();
+        // Cargos como Map - cada cargo tiene id, cargo y descripcion
+        this.cargos = new Map();
         
-        if (data.cargos && !(data.cargos instanceof Map)) {
-            if (Array.isArray(data.cargos)) {
-                this.cargos = new Map();
-                data.cargos.forEach(cargo => {
-                    if (cargo && cargo.id) {
-                        this.cargos.set(cargo.id, cargo);
-                    }
-                });
+        if (data.cargos) {
+            if (data.cargos instanceof Map) {
+                this.cargos = data.cargos;
             } else if (typeof data.cargos === 'object') {
-                this.cargos = new Map(Object.entries(data.cargos));
+                // Convertir objeto a Map
+                Object.entries(data.cargos).forEach(([key, value]) => {
+                    // Solo guardar id, cargo y descripcion
+                    const cargoData = {
+                        id: value.id || key,
+                        cargo: value.cargo || '',
+                        descripcion: value.descripcion || ''
+                    };
+                    this.cargos.set(key, cargoData);
+                });
             }
         }
         
+        this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.actualizadoPor = data.actualizadoPor || '';
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
@@ -67,42 +70,104 @@ class Area {
         }
     }
 
-    _mapToObject(map) {
-        const obj = {};
-        for (let [key, value] of map) {
-            obj[key] = value;
-        }
-        return obj;
+    // ========== MÉTODOS PARA MANEJAR CARGOS ==========
+    
+    /**
+     * Agrega un cargo al área
+     * @param {string} cargoId - ID único del cargo (proporcionado externamente)
+     * @param {Object} cargoData - Datos del cargo { cargo, descripcion }
+     */
+    agregarCargo(cargoId, cargoData) {
+        const nuevoCargo = {
+            id: cargoId,
+            cargo: cargoData.cargo || '',
+            descripcion: cargoData.descripcion || ''
+        };
+        
+        this.cargos.set(cargoId, nuevoCargo);
+        return nuevoCargo;
     }
 
-    // Getters importantes
-    getCantidadCargos() { return this.cargos.size; }
-    getCargosActivos() {
-        const cargosActivos = [];
-        for (let [id, cargo] of this.cargos) {
-            if (cargo.activo !== false) {
-                cargosActivos.push({ id, ...cargo });
-            }
+    /**
+     * Actualiza un cargo existente
+     * @param {string} cargoId - ID del cargo a actualizar
+     * @param {Object} cargoData - Datos actualizados { cargo, descripcion }
+     */
+    actualizarCargo(cargoId, cargoData) {
+        if (this.cargos.has(cargoId)) {
+            const cargoExistente = this.cargos.get(cargoId);
+            const cargoActualizado = {
+                id: cargoId,
+                cargo: cargoData.cargo !== undefined ? cargoData.cargo : cargoExistente.cargo,
+                descripcion: cargoData.descripcion !== undefined ? cargoData.descripcion : cargoExistente.descripcion
+            };
+            
+            this.cargos.set(cargoId, cargoActualizado);
+            return cargoActualizado;
         }
-        return cargosActivos;
+        return null;
     }
+
+    /**
+     * Elimina un cargo del área
+     * @param {string} cargoId - ID del cargo a eliminar
+     */
+    eliminarCargo(cargoId) {
+        return this.cargos.delete(cargoId);
+    }
+
+    /**
+     * Obtiene un cargo específico
+     * @param {string} cargoId - ID del cargo
+     */
+    getCargo(cargoId) {
+        return this.cargos.get(cargoId);
+    }
+
+    /**
+     * Obtiene todos los cargos como array
+     */
     getCargosAsArray() {
         const cargosArray = [];
         for (let [id, cargo] of this.cargos) {
-            cargosArray.push({ id, ...cargo });
+            cargosArray.push({
+                id,
+                cargo: cargo.cargo,
+                descripcion: cargo.descripcion
+            });
         }
         return cargosArray;
     }
-    getFechaCreacionFormateada() { return this._formatearFecha(this.fechaCreacion); }
-    getFechaActualizacionFormateada() { return this._formatearFecha(this.fechaActualizacion); }
 
-    // Para Firestore
+    getCantidadCargos() { 
+        return this.cargos.size; 
+    }
+    
+    getFechaCreacionFormateada() { 
+        return this._formatearFecha(this.fechaCreacion); 
+    }
+    
+    getFechaActualizacionFormateada() { 
+        return this._formatearFecha(this.fechaActualizacion); 
+    }
+
+    // Para Firestore - mantener cargos como objeto para Firestore
     toFirestore() {
+        // Convertir Map a objeto para Firestore
+        const cargosObj = {};
+        this.cargos.forEach((value, key) => {
+            cargosObj[key] = {
+                id: value.id,
+                cargo: value.cargo,
+                descripcion: value.descripcion
+            };
+        });
+
         return {
             nombreArea: this.nombreArea,
             descripcion: this.descripcion,
-            caracteristicas: this.caracteristicas,
-            cargos: this._mapToObject(this.cargos),
+            cargos: cargosObj,
+            organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             actualizadoPor: this.actualizadoPor,
             fechaCreacion: this.fechaCreacion,
@@ -115,13 +180,12 @@ class Area {
             id: this.id,
             nombreArea: this.nombreArea,
             descripcion: this.descripcion,
-            caracteristicas: this.caracteristicas,
             totalCargos: this.cargos.size,
-            cargosActivos: this.getCargosActivos().length,
             cargos: this.getCargosAsArray(),
             fechaCreacion: this.getFechaCreacionFormateada(),
             fechaActualizacion: this.getFechaActualizacionFormateada(),
-            creadoPor: this.creadoPor
+            creadoPor: this.creadoPor,
+            organizacionCamelCase: this.organizacionCamelCase
         };
     }
 }
@@ -133,36 +197,71 @@ class AreaManager {
         console.log('✅ AreaManager inicializado');
     }
 
+    // ========== OBTENER NOMBRE DE COLECCIÓN DINÁMICO ==========
+    _getCollectionName(organizacionCamelCase) {
+        return `areas_${organizacionCamelCase}`;
+    }
+
     // ========== CRUD COMPLETO ==========
     
-    async crearArea(areaData, userManager) {
+    /**
+     * Crea una nueva área
+     * @param {string} areaId - ID único del área (proporcionado externamente)
+     * @param {Object} areaData - Datos del área { nombreArea, descripcion }
+     * @param {Object} userManager - Instancia de UserManager para obtener usuario actual
+     * @returns {Promise<Area>} Instancia del área creada
+     */
+    async crearArea(areaId, areaData, userManager) {
         try {
             console.log('📝 Creando nueva área:', areaData.nombreArea);
             
             const usuarioActual = userManager.currentUser;
             
-            // Verificar si ya existe
-            const existe = await this.verificarAreaExistente(areaData.nombreArea, usuarioActual.organizacionCamelCase);
-            if (existe) throw new Error('Ya existe un área con ese nombre');
+            // Validar que el usuario tenga organización
+            if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
+                throw new Error('Usuario no tiene organización asignada');
+            }
             
-            // Generar ID
-            const areaId = this._generarAreaId(areaData.nombreArea, usuarioActual.organizacionCamelCase);
+            const organizacion = usuarioActual.organizacionCamelCase;
+            const collectionName = this._getCollectionName(organizacion);
+            
+            // Verificar si ya existe en la colección de la organización
+            const existe = await this.verificarAreaExistente(
+                areaData.nombreArea, 
+                organizacion,
+                collectionName
+            );
+            
+            if (existe) {
+                throw new Error('Ya existe un área con ese nombre en tu organización');
+            }
+            
+            // Validar que se proporcione un ID
+            if (!areaId) {
+                throw new Error('Se requiere un ID para crear el área');
+            }
+            
+            // Verificar si ya existe un documento con ese ID
+            const areaRef = doc(db, collectionName, areaId);
+            const areaSnap = await getDoc(areaRef);
+            
+            if (areaSnap.exists()) {
+                throw new Error(`Ya existe un área con el ID ${areaId}`);
+            }
             
             // Datos para Firestore
             const areaFirestoreData = {
                 nombreArea: areaData.nombreArea,
                 descripcion: areaData.descripcion || '',
-                caracteristicas: areaData.caracteristicas || '',
                 cargos: {},
-                organizacionCamelCase: usuarioActual.organizacionCamelCase || 'sinOrganizacion',
+                organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 actualizadoPor: usuarioActual.id,
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp()
             };
             
-            // Guardar en Firestore
-            const areaRef = doc(db, "areas", areaId);
+            // Guardar en Firestore en la colección específica de la organización
             await setDoc(areaRef, areaFirestoreData);
             
             // Crear instancia
@@ -173,7 +272,7 @@ class AreaManager {
             });
             
             this.areas.unshift(nuevaArea);
-            console.log('✅ Área creada:', nuevaArea.nombreArea);
+            console.log(`✅ Área creada en colección ${collectionName}:`, nuevaArea.nombreArea);
             return nuevaArea;
             
         } catch (error) {
@@ -184,14 +283,16 @@ class AreaManager {
 
     async getAreasByOrganizacion(organizacionCamelCase) {
         try {
-            console.log(`🔍 Obteniendo áreas para: ${organizacionCamelCase}`);
+            if (!organizacionCamelCase) {
+                console.warn('⚠️ No se proporcionó organización');
+                return [];
+            }
             
-            const areasQuery = query(
-                collection(db, "areas"),
-                where("organizacionCamelCase", "==", organizacionCamelCase)
-            );
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            console.log(`🔍 Obteniendo áreas de colección: ${collectionName}`);
             
-            const areasSnapshot = await getDocs(areasQuery);
+            const areasCollection = collection(db, collectionName);
+            const areasSnapshot = await getDocs(areasCollection);
             const areas = [];
             
             areasSnapshot.forEach(doc => {
@@ -208,7 +309,7 @@ class AreaManager {
             areas.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
             this.areas = areas;
             
-            console.log(`✅ Encontradas ${areas.length} áreas`);
+            console.log(`✅ Encontradas ${areas.length} áreas en ${collectionName}`);
             return areas;
             
         } catch (error) {
@@ -217,13 +318,19 @@ class AreaManager {
         }
     }
 
-    async getAreaById(areaId) {
+    async getAreaById(areaId, organizacionCamelCase) {
+        if (!organizacionCamelCase) {
+            console.error('❌ Se requiere organización para obtener área');
+            return null;
+        }
+        
         // Buscar en memoria primero
         const areaInMemory = this.areas.find(area => area.id === areaId);
         if (areaInMemory) return areaInMemory;
         
         try {
-            const areaRef = doc(db, "areas", areaId);
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const areaRef = doc(db, collectionName, areaId);
             const areaSnap = await getDoc(areaRef);
             
             if (areaSnap.exists()) {
@@ -240,26 +347,36 @@ class AreaManager {
         }
     }
 
-    // ========== MÉTODOS DE ACTUALIZACIÓN SIMPLIFICADOS ==========
+    // ========== MÉTODOS DE ACTUALIZACIÓN ==========
     
-    async actualizarArea(areaId, nuevosDatos, usuarioId) {
+    async actualizarArea(areaId, nuevosDatos, usuarioId, organizacionCamelCase) {
         try {
             console.log('🔄 Actualizando área:', areaId);
             
-            // Primero obtener el área actual
-            const areaRef = doc(db, "areas", areaId);
+            if (!organizacionCamelCase) {
+                throw new Error('Se requiere organización para actualizar área');
+            }
+            
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const areaRef = doc(db, collectionName, areaId);
             const areaSnap = await getDoc(areaRef);
             
             if (!areaSnap.exists()) {
                 throw new Error(`Área con ID ${areaId} no encontrada`);
             }
             
-            // Datos actualizados
+            // Preparar datos actualizados
             const datosActualizados = {
                 ...nuevosDatos,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId
             };
+            
+            // Si se actualizan cargos, asegurar formato
+            if (nuevosDatos.cargos && !(nuevosDatos.cargos instanceof Object)) {
+                console.error('❌ cargos debe ser un objeto');
+                delete datosActualizados.cargos;
+            }
             
             // Actualizar en Firestore
             await updateDoc(areaRef, datosActualizados);
@@ -270,7 +387,20 @@ class AreaManager {
                 const areaActual = this.areas[areaIndex];
                 Object.keys(datosActualizados).forEach(key => {
                     if (key in areaActual && key !== 'id') {
-                        areaActual[key] = datosActualizados[key];
+                        if (key === 'cargos' && typeof datosActualizados[key] === 'object') {
+                            // Convertir objeto a Map
+                            const nuevoMap = new Map();
+                            Object.entries(datosActualizados[key]).forEach(([k, v]) => {
+                                nuevoMap.set(k, {
+                                    id: v.id || k,
+                                    cargo: v.cargo || '',
+                                    descripcion: v.descripcion || ''
+                                });
+                            });
+                            areaActual[key] = nuevoMap;
+                        } else {
+                            areaActual[key] = datosActualizados[key];
+                        }
                     }
                 });
                 areaActual.fechaActualizacion = new Date();
@@ -278,7 +408,7 @@ class AreaManager {
             }
             
             console.log('✅ Área actualizada:', areaId);
-            return await this.getAreaById(areaId);
+            return await this.getAreaById(areaId, organizacionCamelCase);
             
         } catch (error) {
             console.error('❌ Error actualizando área:', error);
@@ -286,13 +416,18 @@ class AreaManager {
         }
     }
 
-    async eliminarArea(areaId, usuarioId) {
+    async eliminarArea(areaId, usuarioId, organizacionCamelCase) {
         try {
             console.log('🗑️ Eliminando área:', areaId);
             
-            const areaRef = doc(db, "areas", areaId);
+            if (!organizacionCamelCase) {
+                throw new Error('Se requiere organización para eliminar área');
+            }
             
-            // Eliminar de Firestore (eliminación física)
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const areaRef = doc(db, collectionName, areaId);
+            
+            // Eliminar de Firestore
             await deleteDoc(areaRef);
             
             // Eliminar de memoria
@@ -301,7 +436,7 @@ class AreaManager {
                 this.areas.splice(areaIndex, 1);
             }
             
-            console.log('✅ Área eliminada permanentemente:', areaId);
+            console.log(`✅ Área eliminada permanentemente de ${collectionName}:`, areaId);
             return true;
             
         } catch (error) {
@@ -310,14 +445,153 @@ class AreaManager {
         }
     }
 
+    // ========== MÉTODOS PARA MANEJAR CARGOS ==========
+    
+    /**
+     * Agrega un cargo a un área
+     * @param {string} areaId - ID del área
+     * @param {string} cargoId - ID del cargo (proporcionado externamente)
+     * @param {Object} cargoData - Datos del cargo { cargo, descripcion }
+     * @param {string} usuarioId - ID del usuario que realiza la acción
+     * @param {string} organizacionCamelCase - Organización
+     */
+    async agregarCargoAArea(areaId, cargoId, cargoData, usuarioId, organizacionCamelCase) {
+        try {
+            const area = await this.getAreaById(areaId, organizacionCamelCase);
+            if (!area) throw new Error('Área no encontrada');
+            
+            // Validar que se proporcione un ID para el cargo
+            if (!cargoId) {
+                throw new Error('Se requiere un ID para el cargo');
+            }
+            
+            // Verificar si ya existe un cargo con ese ID en el área
+            if (area.getCargo(cargoId)) {
+                throw new Error(`Ya existe un cargo con el ID ${cargoId} en esta área`);
+            }
+            
+            // Agregar cargo al Map - solo id, cargo y descripcion
+            area.agregarCargo(cargoId, {
+                cargo: cargoData.cargo,
+                descripcion: cargoData.descripcion || ''
+            });
+            
+            // Actualizar en Firestore
+            await this.actualizarArea(
+                areaId, 
+                { cargos: area.toFirestore().cargos }, 
+                usuarioId, 
+                organizacionCamelCase
+            );
+            
+            console.log(`✅ Cargo ${cargoId} agregado al área ${areaId}`);
+            return area.getCargo(cargoId);
+        } catch (error) {
+            console.error('❌ Error agregando cargo:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Actualiza un cargo en un área
+     * @param {string} areaId - ID del área
+     * @param {string} cargoId - ID del cargo
+     * @param {Object} cargoData - Datos actualizados { cargo, descripcion }
+     * @param {string} usuarioId - ID del usuario que realiza la acción
+     * @param {string} organizacionCamelCase - Organización
+     */
+    async actualizarCargoEnArea(areaId, cargoId, cargoData, usuarioId, organizacionCamelCase) {
+        try {
+            const area = await this.getAreaById(areaId, organizacionCamelCase);
+            if (!area) throw new Error('Área no encontrada');
+            
+            // Actualizar cargo
+            const cargoActualizado = area.actualizarCargo(cargoId, {
+                cargo: cargoData.cargo,
+                descripcion: cargoData.descripcion
+            });
+            
+            if (!cargoActualizado) {
+                throw new Error(`Cargo con ID ${cargoId} no encontrado en el área`);
+            }
+            
+            // Actualizar en Firestore
+            await this.actualizarArea(
+                areaId, 
+                { cargos: area.toFirestore().cargos }, 
+                usuarioId, 
+                organizacionCamelCase
+            );
+            
+            console.log(`✅ Cargo ${cargoId} actualizado en área ${areaId}`);
+            return cargoActualizado;
+        } catch (error) {
+            console.error('❌ Error actualizando cargo:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Elimina un cargo de un área
+     * @param {string} areaId - ID del área
+     * @param {string} cargoId - ID del cargo a eliminar
+     * @param {string} usuarioId - ID del usuario que realiza la acción
+     * @param {string} organizacionCamelCase - Organización
+     */
+    async eliminarCargoDeArea(areaId, cargoId, usuarioId, organizacionCamelCase) {
+        try {
+            const area = await this.getAreaById(areaId, organizacionCamelCase);
+            if (!area) throw new Error('Área no encontrada');
+            
+            // Eliminar cargo del Map
+            const eliminado = area.eliminarCargo(cargoId);
+            if (!eliminado) {
+                throw new Error(`Cargo con ID ${cargoId} no encontrado en el área`);
+            }
+            
+            // Actualizar en Firestore
+            await this.actualizarArea(
+                areaId, 
+                { cargos: area.toFirestore().cargos }, 
+                usuarioId, 
+                organizacionCamelCase
+            );
+            
+            console.log(`✅ Cargo ${cargoId} eliminado del área ${areaId}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Error eliminando cargo:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Obtiene todos los cargos de un área
+     * @param {string} areaId - ID del área
+     * @param {string} organizacionCamelCase - Organización
+     */
+    async getCargosByArea(areaId, organizacionCamelCase) {
+        try {
+            const area = await this.getAreaById(areaId, organizacionCamelCase);
+            if (!area) throw new Error('Área no encontrada');
+            
+            return area.getCargosAsArray();
+        } catch (error) {
+            console.error('❌ Error obteniendo cargos:', error);
+            return [];
+        }
+    }
+
     // ========== MÉTODOS AUXILIARES ==========
     
-    async verificarAreaExistente(nombreArea, organizacionCamelCase) {
+    async verificarAreaExistente(nombreArea, organizacionCamelCase, collectionName = null) {
         try {
+            const colName = collectionName || this._getCollectionName(organizacionCamelCase);
+            const areasCollection = collection(db, colName);
+            
             const areasQuery = query(
-                collection(db, "areas"),
-                where("nombreArea", "==", nombreArea),
-                where("organizacionCamelCase", "==", organizacionCamelCase)
+                areasCollection,
+                where("nombreArea", "==", nombreArea)
             );
             
             const querySnapshot = await getDocs(areasQuery);
@@ -329,16 +603,27 @@ class AreaManager {
         }
     }
 
-    _generarAreaId(nombreArea, organizacionCamelCase) {
-        const nombreNormalizado = nombreArea
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]/g, '_');
-        
-        const timestamp = Date.now();
-        const org = organizacionCamelCase || 'sinOrganizacion';
-        return `${org}_${nombreNormalizado}_${timestamp}`;
+    /**
+     * Verifica si un ID de área ya existe
+     * @param {string} areaId - ID a verificar
+     * @param {string} organizacionCamelCase - Organización
+     */
+    async verificarAreaIdExistente(areaId, organizacionCamelCase) {
+        try {
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const areaRef = doc(db, collectionName, areaId);
+            const areaSnap = await getDoc(areaRef);
+            return areaSnap.exists();
+        } catch (error) {
+            console.error("❌ Error verificando ID de área:", error);
+            return false;
+        }
+    }
+
+    // Limpiar caché de áreas
+    clearCache() {
+        this.areas = [];
+        console.log('🧹 Caché de áreas limpiada');
     }
 }
 
