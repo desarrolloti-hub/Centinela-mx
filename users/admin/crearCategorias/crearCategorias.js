@@ -1,269 +1,301 @@
-// crearCategoria.js
-import { BASE_URL } from '/config/config.js';
+/**
+ * CREAR CATEGORÍA - Sistema Centinela
+ * VERSIÓN CON FIREBASE - COMPATIBLE CON TODOS LOS NAVEGADORES
+ * SIN import/export - Usa carga dinámica con import()
+ */
 
-document.addEventListener('DOMContentLoaded', function() {
-    inicializarFormulario();
-});
-
-async function inicializarFormulario() {
-    // Verificar si estamos editando una categoría existente
-    const urlParams = new URLSearchParams(window.location.search);
-    const categoriaId = urlParams.get('id');
-    
-    if (categoriaId) {
-        // Modo edición
-        document.getElementById('tituloFormulario').textContent = 'Editar Categoría';
-        document.getElementById('subtituloFormulario').textContent = 'Modifica la información de la categoría';
-        document.getElementById('btnSubmit').innerHTML = '<i class="fas fa-save me-2"></i>Guardar Cambios';
-        
-        await cargarCategoria(categoriaId);
-    } else {
-        // Modo creación
-        await cargarCategoriasPadre();
+class CrearCategoria {
+    constructor() {
+        this.currentColor = '#FF5733';
+        this.categoriaManager = null;
+        this.empresaData = this.obtenerDatosEmpresa();
+        this.init();
     }
-    
-    // Configurar eventos
-    configurarEventos();
-}
 
-async function cargarCategoria(id) {
-    try {
-        const organizacionCamelCase = localStorage.getItem('organizacionCamelCase');
-        const response = await fetch(`${BASE_URL}/categoria/${organizacionCamelCase}/${id}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-        
-        if (response.ok) {
-            const categoria = await response.json();
+    obtenerDatosEmpresa() {
+        try {
+            const userData = JSON.parse(localStorage.getItem('user') || '{}');
+            const empresaData = JSON.parse(localStorage.getItem('empresa') || '{}');
             
-            // Rellenar formulario
-            document.getElementById('categoriaId').value = categoria.id;
-            document.getElementById('nombreCategoria').value = categoria.nombre;
-            document.getElementById('color').value = categoria.color;
-            document.getElementById('descripcion').value = categoria.descripcion || '';
-            document.getElementById('activo').checked = !categoria.eliminado;
-            
-            // Cargar categorías padre (excluyendo la actual)
-            await cargarCategoriasPadre(categoria.id);
-            
-            // Si tiene categoría padre, seleccionarla
-            if (categoria.parentId) {
-                document.getElementById('categoriaPadre').value = categoria.parentId;
-            }
-        } else {
-            throw new Error('Error al cargar la categoría');
+            return {
+                id: empresaData.id || userData.empresaId || '',
+                nombre: empresaData.nombre || userData.empresa || ''
+            };
+        } catch (error) {
+            console.error('Error obteniendo datos de empresa:', error);
+            return { id: '', nombre: '' };
         }
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarMensaje('error', 'Error al cargar la categoría');
     }
-}
 
-async function cargarCategoriasPadre(excluirId = null) {
-    try {
-        const organizacionCamelCase = localStorage.getItem('organizacionCamelCase');
-        const response = await fetch(`${BASE_URL}/categoria/${organizacionCamelCase}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-        
-        if (response.ok) {
-            const categorias = await response.json();
+    async init() {
+        try {
+            // IMPORTACIÓN DINÁMICA - Funciona en cualquier navegador
+            const module = await import('/clases/categoria.js');
+            const CategoriaManager = module.CategoriaManager;
             
-            // Filtrar categorías activas y que no sean la actual (en modo edición)
-            const categoriasPrincipales = categorias.filter(cat => 
-                !cat.eliminado && 
-                (!cat.parentId || cat.parentId === '') &&
-                cat.id !== excluirId
-            );
+            this.categoriaManager = new CategoriaManager();
             
-            const selectPadre = document.getElementById('categoriaPadre');
-            selectPadre.innerHTML = '<option value="">Seleccionar categoría padre...</option>';
+            this.inicializarElementos();
+            this.inicializarEventos();
+            this.validarFormulario();
+            this.actualizarColor(this.currentColor);
+            this.mostrarInfoEmpresa();
             
-            categoriasPrincipales.forEach(categoria => {
-                const option = document.createElement('option');
-                option.value = categoria.id;
-                option.textContent = categoria.nombre;
-                selectPadre.appendChild(option);
-            });
+            console.log('✅ CategoriaManager cargado correctamente');
+            console.log('📁 Colección:', this.categoriaManager?.nombreColeccion);
+        } catch (error) {
+            console.error('❌ Error al cargar CategoriaManager:', error);
             
-            // Agregar opción para ninguna categoría padre
-            const noneOption = document.createElement('option');
-            noneOption.value = '';
-            noneOption.textContent = 'Ninguna (categoría principal)';
-            selectPadre.appendChild(noneOption);
-        }
-    } catch (error) {
-        console.error('Error al cargar categorías padre:', error);
-    }
-}
-
-function configurarEventos() {
-    // Evento para color aleatorio
-    document.getElementById('btnColorRandom').addEventListener('click', generarColorAleatorio);
-    
-    // Evento para envío del formulario
-    document.getElementById('formCategoria').addEventListener('submit', manejarSubmit);
-    
-    // Validación en tiempo real
-    document.getElementById('nombreCategoria').addEventListener('input', validarNombre);
-    document.getElementById('color').addEventListener('input', validarColor);
-}
-
-function generarColorAleatorio() {
-    const colores = [
-        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
-        '#1abc9c', '#d35400', '#c0392b', '#16a085', '#8e44ad',
-        '#27ae60', '#2980b9', '#e67e22', '#7f8c8d', '#2c3e50'
-    ];
-    
-    const colorAleatorio = colores[Math.floor(Math.random() * colores.length)];
-    document.getElementById('color').value = colorAleatorio;
-}
-
-function validarNombre() {
-    const nombreInput = document.getElementById('nombreCategoria');
-    const nombre = nombreInput.value.trim();
-    
-    if (nombre.length === 0) {
-        nombreInput.classList.add('is-invalid');
-        return false;
-    } else if (nombre.length > 50) {
-        nombreInput.classList.add('is-invalid');
-        return false;
-    } else {
-        nombreInput.classList.remove('is-invalid');
-        return true;
-    }
-}
-
-function validarColor() {
-    const colorInput = document.getElementById('color');
-    const color = colorInput.value;
-    
-    const regexColor = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-    
-    if (!regexColor.test(color)) {
-        colorInput.classList.add('is-invalid');
-        return false;
-    } else {
-        colorInput.classList.remove('is-invalid');
-        return true;
-    }
-}
-
-function validarFormulario() {
-    const nombreValido = validarNombre();
-    const colorValido = validarColor();
-    
-    return nombreValido && colorValido;
-}
-
-async function manejarSubmit(event) {
-    event.preventDefault();
-    
-    if (!validarFormulario()) {
-        mostrarMensaje('error', 'Por favor, corrige los errores en el formulario');
-        return;
-    }
-    
-    const categoriaId = document.getElementById('categoriaId').value;
-    const esEdicion = categoriaId !== '';
-    
-    try {
-        const organizacionCamelCase = localStorage.getItem('organizacionCamelCase');
-        const adminId = localStorage.getItem('adminId');
-        
-        const categoriaData = {
-            nombre: document.getElementById('nombreCategoria').value.trim(),
-            color: document.getElementById('color').value,
-            descripcion: document.getElementById('descripcion').value.trim(),
-            parentId: document.getElementById('categoriaPadre').value || null,
-            activo: document.getElementById('activo').checked,
-            creadoPor: adminId || 'admin_default_id'
-        };
-        
-        let response;
-        
-        if (esEdicion) {
-            // Actualizar categoría existente
-            response = await fetch(`${BASE_URL}/categoria/${organizacionCamelCase}/${categoriaId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(categoriaData)
-            });
-        } else {
-            // Crear nueva categoría
-            response = await fetch(`${BASE_URL}/categoria/${organizacionCamelCase}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(categoriaData)
+            Swal.fire({
+                title: 'Error crítico',
+                text: 'No se pudo cargar el módulo de categorías. Por favor, recarga la página.',
+                icon: 'error',
+                background: '#0a0a0a',
+                color: '#ffffff',
+                confirmButtonColor: '#ff4d4d',
+                confirmButtonText: 'Recargar'
+            }).then(() => {
+                window.location.reload();
             });
         }
+    }
+
+    mostrarInfoEmpresa() {
+        // Agregar indicador visual de la empresa actual
+        const headerContainer = document.querySelector('.dashboard-header') || document.querySelector('h1')?.parentElement;
         
-        if (response.ok) {
-            const resultado = await response.json();
+        if (headerContainer && this.empresaData.nombre) {
+            const badgeEmpresa = document.createElement('div');
+            badgeEmpresa.className = 'alert alert-info mb-3';
+            badgeEmpresa.style.cssText = `
+                background: rgba(16, 185, 129, 0.1);
+                border: 1px solid rgba(16, 185, 129, 0.2);
+                color: #10b981;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 14px;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            `;
+            badgeEmpresa.innerHTML = `
+                <i class="fas fa-building"></i>
+                Creando categoría para: <strong>${this.empresaData.nombre}</strong>
+            `;
             
-            mostrarMensaje('success', 
-                esEdicion ? 'Categoría actualizada correctamente' : 'Categoría creada correctamente'
-            );
-            
-            // Redirigir después de 2 segundos
+            if (headerContainer.firstChild) {
+                headerContainer.insertBefore(badgeEmpresa, headerContainer.firstChild);
+            } else {
+                headerContainer.appendChild(badgeEmpresa);
+            }
+        }
+    }
+
+    inicializarElementos() {
+        this.form = document.getElementById('crearCategoriaForm');
+        this.nombreInput = document.getElementById('nombreCategoria');
+        this.descripcionInput = document.getElementById('descripcionCategoria');
+        this.colorDisplay = document.getElementById('colorDisplay');
+        this.colorHex = document.getElementById('colorHex');
+        this.btnCancel = document.getElementById('btnCancel');
+        this.btnSave = document.getElementById('btnSave');
+        
+        this.colorPickerNative = document.getElementById('colorPickerNative');
+        this.colorPreviewCard = document.getElementById('colorPreviewCard');
+        
+        if (this.btnSave) {
+            this.btnSave.disabled = true;
+            this.btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Cargando...';
+        }
+    }
+
+    inicializarEventos() {
+        if (this.colorPreviewCard && this.colorPickerNative) {
+            this.colorPreviewCard.addEventListener('click', () => {
+                this.colorPickerNative.click();
+            });
+        }
+
+        if (this.colorPickerNative) {
+            this.colorPickerNative.addEventListener('input', (e) => {
+                this.actualizarColor(e.target.value);
+            });
+        }
+
+        if (this.nombreInput) {
+            this.nombreInput.addEventListener('input', () => this.validarFormulario());
+        }
+        
+        if (this.form) {
+            this.form.addEventListener('submit', (e) => this.crearCategoria(e));
+        }
+        
+        if (this.btnCancel) {
+            this.btnCancel.addEventListener('click', () => this.cancelar());
+        }
+    }
+
+    actualizarColor(color) {
+        if (!color || !/^#[0-9A-Fa-f]{6}$/.test(color)) return;
+
+        this.currentColor = color;
+        
+        if (this.colorDisplay) {
+            this.colorDisplay.style.backgroundColor = color;
+        }
+        if (this.colorHex) {
+            this.colorHex.textContent = color.toUpperCase();
+        }
+        
+        if (this.colorPickerNative) {
+            this.colorPickerNative.value = color;
+        }
+        
+        if (this.colorDisplay) {
+            this.colorDisplay.style.transform = 'scale(1.1)';
             setTimeout(() => {
-                window.location.href = '/users/admin/categorias/categorias.html';
-            }, 2000);
-            
-        } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Error en la operación');
+                this.colorDisplay.style.transform = 'scale(1)';
+            }, 150);
         }
+    }
+
+    validarFormulario() {
+        if (!this.nombreInput || !this.btnSave) return false;
         
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarMensaje('error', error.message || 'Error al procesar la solicitud');
-    }
-}
-
-function mostrarMensaje(tipo, mensaje) {
-    // Crear elemento de alerta
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${tipo === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-        <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    // Insertar al principio del contenedor principal
-    const container = document.querySelector('.container-fluid');
-    container.insertBefore(alertDiv, container.firstChild);
-    
-    // Auto-eliminar después de 5 segundos
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
+        const nombre = this.nombreInput.value.trim();
+        
+        if (!nombre) {
+            this.nombreInput.classList.add('is-invalid');
+            this.nombreInput.classList.remove('is-valid');
+            this.btnSave.disabled = true;
+            return false;
+        } else {
+            this.nombreInput.classList.add('is-valid');
+            this.nombreInput.classList.remove('is-invalid');
+            this.btnSave.disabled = false;
+            return true;
         }
-    }, 5000);
-}
+    }
 
-function cancelar() {
-    if (confirm('¿Estás seguro de que quieres cancelar? Los cambios no guardados se perderán.')) {
-        window.location.href = '/users/admin/categorias/categorias.html';
+    irACategorias() {
+        window.location.href = '../categorias/categorias.html';
+    }
+
+    async crearCategoria(e) {
+        e.preventDefault();
+
+        if (!this.validarFormulario()) return;
+        
+        if (!this.categoriaManager) {
+            Swal.fire({
+                title: 'Error',
+                text: 'El sistema no está listo. Por favor, espera un momento.',
+                icon: 'error',
+                background: '#0a0a0a',
+                color: '#ffffff',
+                confirmButtonColor: '#ff4d4d'
+            });
+            return;
+        }
+
+        const nombre = this.nombreInput.value.trim();
+        const descripcion = this.descripcionInput ? this.descripcionInput.value.trim() : '';
+
+        if (nombre.length < 3) {
+            Swal.fire({
+                title: 'Error',
+                text: 'El nombre debe tener al menos 3 caracteres',
+                icon: 'error',
+                background: '#0a0a0a',
+                color: '#ffffff',
+                confirmButtonColor: '#2f8cff'
+            });
+            return;
+        }
+
+        this.btnSave.disabled = true;
+        this.btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Creando...';
+
+        try {
+            const data = {
+                nombre: nombre,
+                descripcion: descripcion || ''
+            };
+
+            const categoria = await this.categoriaManager.crearCategoria(data);
+            console.log('✅ Categoría creada con ID:', categoria.id);
+            console.log('📁 Colección:', this.categoriaManager.nombreColeccion);
+
+            Swal.fire({
+                title: '¡Creada!',
+                html: `La categoría <strong>"${nombre}"</strong> se ha creado correctamente<br>
+                       <small style="color: #10b981;">Empresa: ${this.empresaData.nombre || 'No especificada'}</small>`,
+                icon: 'success',
+                background: '#0a0a0a',
+                color: '#ffffff',
+                confirmButtonColor: '#2f8cff',
+                confirmButtonText: 'Ver categorías',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(() => {
+                this.irACategorias();
+            });
+
+        } catch (error) {
+            console.error('❌ Error al crear categoría:', error);
+
+            let mensajeError = error.message;
+            
+            if (error.message.includes('Ya existe una categoría con ese nombre')) {
+                mensajeError = 'Ya existe una categoría con ese nombre en tu empresa. Por favor, elige otro.';
+            } else if (error.message.includes('permission')) {
+                mensajeError = 'No tienes permisos para crear categorías.';
+            } else if (error.message.includes('network')) {
+                mensajeError = 'Error de conexión. Verifica tu internet.';
+            }
+
+            Swal.fire({
+                title: 'Error',
+                text: mensajeError,
+                icon: 'error',
+                background: '#0a0a0a',
+                color: '#ffffff',
+                confirmButtonColor: '#ff4d4d',
+                confirmButtonText: 'Entendido'
+            });
+
+            this.btnSave.disabled = false;
+            this.btnSave.innerHTML = '<i class="fas fa-save me-2"></i> Crear Categoría';
+        }
+    }
+
+    cancelar() {
+        Swal.fire({
+            title: '¿Cancelar?',
+            text: 'Los cambios no guardados se perderán',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ff4d4d',
+            cancelButtonColor: '#545454',
+            confirmButtonText: 'Sí, cancelar',
+            cancelButtonText: 'Seguir editando',
+            background: '#0a0a0a',
+            color: '#ffffff',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.irACategorias();
+            }
+        });
     }
 }
 
-// Hacer funciones disponibles globalmente si es necesario
-window.cancelar = cancelar;
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('crearCategoriaForm')) {
+        window.crearCategoria = new CrearCategoria();
+    } else {
+        console.error('❌ No se encontró el formulario de creación de categorías');
+    }
+});

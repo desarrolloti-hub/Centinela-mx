@@ -7,14 +7,21 @@
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Fuentes del sistema Centinela -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     
-    <!-- Nuestros estilos -->
+    <!-- ESTILOS DEL NAVBAR Y FOOTER (personalization.css) -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    
+    <!-- TUS ESTILOS - VAN DESPUÉS PARA SOBREESCRIBIR -->
     <link rel="stylesheet" href="categorias.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
 </head>
 <body>
     <canvas id="particle-canvas"></canvas>
@@ -40,13 +47,10 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mis Categorías</h5>
-                        <div class="d-flex align-items-center">
-                            <div class="form-check form-switch me-3">
-                                <input class="form-check-input" type="checkbox" id="toggleEliminadas">
-                                <label class="form-check-label" for="toggleEliminadas">Mostrar eliminadas</label>
-                            </div>
-                            <input type="text" class="form-control form-control-sm" id="buscarCategoria" placeholder="Buscar categoría..." style="width: 200px;">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Categorías</h5>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="toggleEliminadas">
+                            <label class="form-check-label" for="toggleEliminadas">Mostrar eliminadas</label>
                         </div>
                     </div>
                     <div class="card-body">
@@ -54,10 +58,11 @@
                             <table class="table table-hover" id="tablaCategorias">
                                 <thead>
                                     <tr>
+                                        <th width="30"><i class="fas fa-chevron-down"></i></th>
                                         <th>Nombre</th>
                                         <th>Color</th>
                                         <th>Subcategorías</th>
-                                        <th>Acciones</th>
+                                        <th width="200">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tablaCategoriasBody">
@@ -124,22 +129,6 @@
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
-    <script type="module">
-        // Obtener datos del administrador desde localStorage
-        const adminId = localStorage.getItem('adminId') || 'admin_default_id';
-        const adminNombre = localStorage.getItem('adminNombre') || 'Administrador';
-        const organizacionCamelCase = localStorage.getItem('organizacionCamelCase') || 'miEmpresa';
-        
-        console.log('🆔 Admin ID:', adminId);
-        console.log('🏢 Organización:', organizacionCamelCase);
-        
-        // Configuración global
-        window.adminConfig = {
-            id: adminId,
-            nombre: adminNombre,
-            organizacionCamelCase: organizacionCamelCase
-        };
-    </script>
     <script type="module" src="categorias.js"></script>
 </body>
 </html>

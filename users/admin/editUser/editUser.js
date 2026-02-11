@@ -1,989 +1,831 @@
-// editUser.js - Editor de colaboradores (Versión limpia)
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📄 Editor de colaborador cargado');
-    
+/**
+ * EDITAR CATEGORÍAS - Sistema Centinela
+ * VERSIÓN CON FIREBASE - COMPATIBLE CON TODOS LOS NAVEGADORES
+ * SIN import/export - Usa carga dinámica con import()
+ */
+
+// =============================================
+// VARIABLES GLOBALES
+// =============================================
+let categoriaManager = null;
+let categoriaActual = null;
+let subcategorias = [];
+let modoEdicionSubcategoria = 'crear';
+let subcategoriaEditando = null;
+
+// =============================================
+// INICIALIZACIÓN - CARGA DINÁMICA DE LA CLASE
+// =============================================
+async function inicializarCategoriaManager() {
     try {
-        // Importar el módulo UserManager
-        const userModule = await import('/clases/user.js');
-        const { UserManager } = userModule;
+        const module = await import('/clases/categoria.js');
+        const CategoriaManager = module.CategoriaManager;
         
-        // Instanciar UserManager
-        const userManager = new UserManager();
-        
-        // Iniciar editor
-        iniciarEditor(userManager);
-        
+        categoriaManager = new CategoriaManager();
+        console.log('✅ CategoriaManager cargado correctamente');
+        return true;
     } catch (error) {
-        console.error('❌ Error cargando módulos:', error);
-        mostrarErrorConfiguracion(error);
+        console.error('❌ Error al cargar CategoriaManager:', error);
+        
+        Swal.fire({
+            title: 'Error crítico',
+            text: 'No se pudo cargar el módulo de categorías. Por favor, recarga la página.',
+            icon: 'error',
+            background: '#0a0a0a',
+            color: '#ffffff',
+            confirmButtonColor: '#ff4d4d',
+            confirmButtonText: 'Recargar'
+        }).then(() => {
+            window.location.reload();
+        });
+        
+        return false;
+    }
+}
+
+// =============================================
+// INICIALIZACIÓN PRINCIPAL
+// =============================================
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 Inicializando editor de categorías...');
+    
+    // Inicializar manager
+    const exito = await inicializarCategoriaManager();
+    if (!exito) return;
+    
+    // Obtener ID de la categoría de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const categoriaId = urlParams.get('id');
+    
+    if (!categoriaId) {
+        mostrarNotificacion('No se especificó la categoría a editar', 'error');
+        setTimeout(() => window.location.href = '/users/admin/categorias/categorias.html', 1500);
+        return;
+    }
+    
+    // Cargar categoría
+    await cargarCategoria(categoriaId);
+    
+    // Inicializar componentes y eventos
+    inicializarComponentes();
+    inicializarEventos();
+    
+    // SIEMPRE ocultar editor de subcategoría al inicio
+    cerrarEditorSubcategoria();
+    
+    // ============================================
+    // DETECCIÓN DE PARÁMETROS - QUÉ FORMULARIO ABRIR
+    // ============================================
+    
+    // CASO 1: AGREGAR NUEVA SUBCATEGORÍA
+    const nuevaSubcategoria = urlParams.get('nuevaSubcategoria');
+    if (nuevaSubcategoria === 'true') {
+        console.log('📝 Modo: Crear nueva subcategoría');
+        
+        setTimeout(() => {
+            abrirEditorSubcategoria('crear');
+            
+            setTimeout(() => {
+                const editor = document.getElementById('subcategoriaEditorContainer');
+                if (editor) {
+                    editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    editor.style.transition = 'box-shadow 0.3s ease';
+                    editor.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.5)';
+                    setTimeout(() => {
+                        editor.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.25)';
+                    }, 1500);
+                }
+            }, 200);
+            
+            mostrarNotificacion('➕ Creando nueva subcategoría', 'info');
+        }, 500);
+    }
+    
+    // CASO 2: EDITAR SUBCATEGORÍA EXISTENTE
+    const editarSubcategoriaId = urlParams.get('editarSubcategoria');
+    if (editarSubcategoriaId) {
+        console.log(`✏️ Modo: Editar subcategoría ID: ${editarSubcategoriaId}`);
+        
+        setTimeout(() => {
+            const subcategoriaExiste = subcategorias.some(s => s.id === editarSubcategoriaId);
+            
+            if (subcategoriaExiste) {
+                abrirEditorSubcategoria('editar', editarSubcategoriaId);
+                
+                setTimeout(() => {
+                    const editor = document.getElementById('subcategoriaEditorContainer');
+                    if (editor) {
+                        editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        editor.style.transition = 'box-shadow 0.3s ease';
+                        editor.style.boxShadow = '0 0 0 4px rgba(249, 115, 22, 0.5)';
+                        setTimeout(() => {
+                            editor.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.25)';
+                        }, 1500);
+                    }
+                }, 200);
+                
+                const subNombre = subcategorias.find(s => s.id === editarSubcategoriaId)?.nombre || 'subcategoría';
+                mostrarNotificacion(`✏️ Editando: ${subNombre}`, 'info');
+            } else {
+                console.error('Subcategoría no encontrada:', editarSubcategoriaId);
+                mostrarNotificacion('Error: Subcategoría no encontrada', 'error');
+            }
+        }, 600);
+    }
+    
+    // CASO 3: SOLO EDITAR CATEGORÍA
+    if (!nuevaSubcategoria && !editarSubcategoriaId) {
+        console.log('🏷️ Modo: Editar categoría');
     }
 });
 
-// ==================== VARIABLES GLOBALES ====================
-let selectedFile = null;
-let currentPhotoType = '';
-let currentPhotoElements = null;
-
-// ==================== FUNCIONES PRINCIPALES ====================
-
-async function iniciarEditor(userManager) {
-    console.log('👨‍💼 Iniciando editor de colaborador...');
-    
-    const collaboratorId = obtenerIdDesdeURL();
-    if (!collaboratorId) return;
-    
-    const elements = obtenerElementosDOM();
-    currentPhotoElements = elements;
+// =============================================
+// CARGA DE DATOS DESDE FIREBASE
+// =============================================
+async function cargarCategoria(id) {
+    if (!categoriaManager) {
+        mostrarNotificacion('Error: Sistema no inicializado', 'error');
+        return;
+    }
     
     try {
-        await cargarDatosColaborador(userManager, collaboratorId, elements);
-        configurarHandlersBasicos(elements);
-        configurarFotoPerfil(elements);
-        configurarModal(elements, userManager);
-        configurarGuardado(elements, userManager);
-        configurarCambioPassword(elements, userManager);
-        configurarEliminacion(elements, userManager);
-        configurarSelectorStatus(elements);
+        categoriaActual = await categoriaManager.obtenerCategoria(id);
         
-        console.log('✅ Editor de colaborador inicializado correctamente');
+        if (!categoriaActual) {
+            mostrarNotificacion('Categoría no encontrada', 'error');
+            setTimeout(() => window.location.href = '/users/admin/categorias/categorias.html', 1500);
+            return;
+        }
+        
+        // Convertir subcategorías de Map a array de objetos
+        subcategorias = [];
+        categoriaActual.subcategorias.forEach((subMap, subId) => {
+            const subObj = {};
+            subMap.forEach((value, key) => {
+                subObj[key] = value;
+            });
+            subcategorias.push(subObj);
+        });
+        
+        // Ordenar subcategorías por nombre
+        subcategorias.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+        
+        // Actualizar UI
+        actualizarUICategoria();
+        cargarSubcategorias();
+        
+        console.log('✅ Categoría cargada:', categoriaActual.nombre);
+        console.log('📦 Subcategorías:', subcategorias.length);
         
     } catch (error) {
-        console.error('❌ Error inicializando editor:', error);
-        mostrarMensaje(elements.mainMessage, 'error', 
-            'Error al cargar datos del colaborador: ' + error.message);
+        console.error('Error al cargar categoría:', error);
+        mostrarNotificacion('Error al cargar la categoría', 'error');
     }
 }
 
-// ========== FUNCIONES DE UTILIDAD ==========
-
-function obtenerIdDesdeURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const collaboratorId = urlParams.get('id');
+// =============================================
+// UI - FORMULARIO DE CATEGORÍA (PRIMER FORMULARIO)
+// =============================================
+function actualizarUICategoria() {
+    if (!categoriaActual) return;
     
-    if (!collaboratorId) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se especificó el colaborador a editar',
-            confirmButtonText: 'Volver'
-        }).then(() => {
-            window.location.href = 'gestionColaboradores.html';
-        });
-        return null;
+    const tituloElement = document.querySelector('.dashboard-title span');
+    if (tituloElement) {
+        tituloElement.innerHTML = `Editar <span style="color: #FF5733">${escapeHTML(categoriaActual.nombre)}</span>`;
     }
     
-    return collaboratorId;
+    const nombreInput = document.getElementById('nombreCategoria');
+    if (nombreInput) nombreInput.value = categoriaActual.nombre || '';
+    
+    // Color por defecto
+    setColorCategoria('#FF5733');
 }
 
-function obtenerElementosDOM() {
-    return {
-        // Fotos (solo perfil editable, logo NO editable)
-        profileCircle: document.getElementById('profileCircle'),
-        profileImage: document.getElementById('profileImage'),
-        profilePlaceholder: document.getElementById('profilePlaceholder'),
-        editProfileOverlay: document.getElementById('editProfileOverlay'),
-        profileInput: document.getElementById('profile-input'),
-        
-        // Logo de organización (NO EDITABLE)
-        orgCircle: document.getElementById('orgCircle'),
-        orgImage: document.getElementById('orgImage'),
-        orgPlaceholder: document.getElementById('orgPlaceholder'),
-        // Edit overlay para logo NO se usará
-        
-        // Modal
-        photoModal: document.getElementById('photoModal'),
-        previewImage: document.getElementById('previewImage'),
-        modalTitle: document.getElementById('modalTitle'),
-        modalMessage: document.getElementById('modalMessage'),
-        confirmChangeBtn: document.getElementById('confirmChangeBtn'),
-        cancelChangeBtn: document.getElementById('cancelChangeBtn'),
-        
-        // Formulario
-        fullName: document.getElementById('fullName'),
-        email: document.getElementById('email'),
-        organizationName: document.getElementById('organizationName'),
-        statusInput: document.getElementById('status'),
-        
-        // Permisos
-        permissionCheckboxes: document.querySelectorAll('input[name="permissions"]'),
-        
-        // Información del sistema
-        authId: document.getElementById('authId'),
-        creationDate: document.getElementById('creationDate'),
-        creationTime: document.getElementById('creationTime'),
-        lastUpdateDate: document.getElementById('lastUpdateDate'),
-        lastUpdateTime: document.getElementById('lastUpdateTime'),
-        lastLoginDate: document.getElementById('lastLoginDate'),
-        lastLoginTime: document.getElementById('lastLoginTime'),
-        
-        // Botones y mensajes
-        saveChangesBtn: document.getElementById('saveChangesBtn'),
-        cancelBtn: document.getElementById('cancelBtn'),
-        deleteBtn: document.getElementById('deleteBtn'),
-        changePasswordBtn: document.getElementById('changePasswordBtn'),
-        mainMessage: document.getElementById('mainMessage'),
-        
-        // Status selector
-        statusOptions: document.querySelectorAll('.status-option')
-    };
-}
-
-function mostrarErrorConfiguracion(error) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Error de configuración',
-        html: `
-            <div style="text-align: left; font-size: 14px;">
-                <p><strong>No se pudo cargar los módulos necesarios</strong></p>
-                <p>Error: ${error.message}</p>
-                <p>Verifica que los archivos existan en las rutas correctas:</p>
-                <ul>
-                    <li><code>/clases/user.js</code></li>
-                </ul>
-            </div>
-        `,
-        confirmButtonText: 'Entendido',
-        allowOutsideClick: false
-    }).then(() => {
-        window.location.href = 'gestionColaboradores.html';
+function setColorCategoria(color) {
+    const fullColor = color.startsWith('#') ? color : '#' + color;
+    
+    const colorPreview = document.getElementById('colorPreview');
+    const colorPicker = document.getElementById('colorPicker');
+    const colorHex = document.getElementById('colorHex');
+    
+    if (colorPreview) colorPreview.style.backgroundColor = fullColor;
+    if (colorPicker) colorPicker.value = fullColor;
+    if (colorHex) colorHex.textContent = fullColor;
+    
+    document.querySelectorAll('.preset-dot').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.color === fullColor);
     });
+    
+    let cambios = false;
+    subcategorias.forEach(sub => {
+        if (sub.heredaColor) {
+            sub.color = fullColor;
+            cambios = true;
+        }
+    });
+    
+    if (cambios) cargarSubcategorias();
 }
 
-async function cargarDatosColaborador(userManager, collaboratorId, elements) {
-    console.log('📥 Cargando datos del colaborador');
+// =============================================
+// UI - LISTA DE SUBCATEGORÍAS
+// =============================================
+function cargarSubcategorias() {
+    const lista = document.getElementById('listaSubcategorias');
+    if (!lista) return;
     
-    try {
-        // Mostrar loader
-        Swal.fire({
-            title: 'Cargando datos...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-        
-        // Obtener datos del colaborador
-        const collaborator = await userManager.getUserById(collaboratorId);
-        
-        if (!collaborator) {
-            Swal.close();
-            throw new Error('Colaborador no encontrado');
-        }
-        
-        // Verificar que sea un colaborador
-        if (collaborator.cargo !== 'colaborador') {
-            Swal.close();
-            throw new Error('El usuario no es un colaborador');
-        }
-        
-        // Guardar referencia global
-        window.currentCollaborator = collaborator;
-        
-        // Actualizar interfaz
-        actualizarInterfaz(elements, collaborator);
-        
-        // Deshabilitar edición del logo de organización
-        deshabilitarLogoOrganizacion(elements);
-        
-        // Cerrar loader
-        Swal.close();
-        
-        console.log('✅ Colaborador cargado:', {
-            id: collaborator.id,
-            nombre: collaborator.nombreCompleto,
-            email: collaborator.correoElectronico
-        });
-        
-        mostrarMensaje(elements.mainMessage, 'success', 
-            `Editando colaborador: ${collaborator.nombreCompleto}`);
-            
-    } catch (error) {
-        Swal.close();
-        console.error('❌ Error cargando datos:', error);
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'Error al cargar',
-            text: error.message,
-            confirmButtonText: 'Volver'
-        }).then(() => {
-            window.location.href = 'gestionColaboradores.html';
-        });
-        
-        throw error;
+    const totalSub = subcategorias.length;
+    const totalSubElement = document.getElementById('totalSubcategorias');
+    if (totalSubElement) totalSubElement.textContent = totalSub;
+    
+    if (!subcategorias || totalSub === 0) {
+        lista.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-folder-open"></i>
+                <h3>No hay subcategorías</h3>
+                <p>Haz clic en "Agregar Subcategoría" para crear una nueva</p>
+            </div>
+        `;
+        return;
     }
+    
+    lista.innerHTML = '';
+    
+    subcategorias
+        .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
+        .forEach(sub => {
+            const item = crearTarjetaSubcategoria(sub);
+            lista.appendChild(item);
+        });
 }
 
-function deshabilitarLogoOrganizacion(elements) {
-    // Agregar clase para deshabilitar la interacción
-    if (elements.orgCircle) {
-        elements.orgCircle.classList.add('org-disabled');
-        elements.orgCircle.style.cursor = 'default';
-        
-        // Remover cualquier event listener que pudiera existir
-        const newOrgCircle = elements.orgCircle.cloneNode(true);
-        elements.orgCircle.parentNode.replaceChild(newOrgCircle, elements.orgCircle);
-        
-        // Actualizar referencia
-        elements.orgCircle = newOrgCircle;
-    }
+function crearTarjetaSubcategoria(sub) {
+    const div = document.createElement('div');
+    div.className = 'subcategoria-item';
+    div.dataset.id = sub.id;
     
-    // Ocultar el overlay de edición si existe
-    if (elements.editOrgOverlay) {
-        elements.editOrgOverlay.style.display = 'none';
-    }
-}
-
-function actualizarInterfaz(elements, collaborator) {
-    console.log('🎨 Actualizando interfaz...');
+    const badgeColor = sub.heredaColor ? '#10b981' : '#f97316';
+    const badgeIcon = sub.heredaColor ? 'fa-paint-brush' : 'fa-palette';
+    const badgeText = sub.heredaColor ? 'Hereda color' : 'Color propio';
+    const descripcion = sub.descripcion || 'Sin descripción';
+    const colorActual = sub.color || '#FF5733';
     
-    // Datos personales
-    if (elements.fullName && collaborator.nombreCompleto) {
-        elements.fullName.value = collaborator.nombreCompleto;
-    }
-    
-    if (elements.email && collaborator.correoElectronico) {
-        elements.email.value = collaborator.correoElectronico;
-    }
-    
-    if (elements.organizationName && collaborator.organizacion) {
-        elements.organizationName.value = collaborator.organizacion;
-    }
-    
-    // Status
-    let statusValue = 'active';
-    if (collaborator.eliminado) {
-        statusValue = 'inactive';
-    } else if (collaborator.status === 'pending') {
-        statusValue = 'pending';
-    }
-    
-    if (elements.statusInput) {
-        elements.statusInput.value = statusValue;
-    }
-    
-    // Actualizar botones de status
-    if (elements.statusOptions) {
-        elements.statusOptions.forEach(option => {
-            option.classList.remove('selected');
-            if (option.getAttribute('data-status') === statusValue) {
-                option.classList.add('selected');
-            }
-        });
-    }
-    
-    // Permisos
-    if (collaborator.permisosPersonalizados && elements.permissionCheckboxes) {
-        elements.permissionCheckboxes.forEach(checkbox => {
-            const permiso = checkbox.value;
-            checkbox.checked = collaborator.permisosPersonalizados[permiso] === true;
-        });
-    }
-    
-    // Foto de perfil - Usar el método getFotoUrl() de la clase User
-    if (collaborator.fotoUsuario) {
-        const profileUrl = collaborator.getFotoUrl();
-        if (elements.profileImage) {
-            elements.profileImage.src = profileUrl;
-            elements.profileImage.style.display = 'block';
-            
-            // Agregar manejador de error
-            elements.profileImage.onerror = function() {
-                console.warn('⚠️ Error cargando imagen de perfil');
-                this.style.display = 'none';
-                if (elements.profilePlaceholder) {
-                    elements.profilePlaceholder.style.display = 'flex';
-                }
-            };
-        }
-        if (elements.profilePlaceholder) {
-            elements.profilePlaceholder.style.display = 'none';
-        }
-    }
-    
-    // Logo de organización (solo visualización)
-    if (collaborator.fotoOrganizacion) {
-        const orgUrl = collaborator.fotoOrganizacion;
-        if (elements.orgImage) {
-            elements.orgImage.src = orgUrl;
-            elements.orgImage.style.display = 'block';
-            
-            // Agregar manejador de error
-            elements.orgImage.onerror = function() {
-                console.warn('⚠️ Error cargando logo de organización');
-                this.style.display = 'none';
-                if (elements.orgPlaceholder) {
-                    elements.orgPlaceholder.style.display = 'flex';
-                }
-            };
-        }
-        if (elements.orgPlaceholder) {
-            elements.orgPlaceholder.style.display = 'none';
-        }
-    }
-    
-    // Información del sistema
-    if (elements.authId) {
-        elements.authId.textContent = collaborator.idAuth || collaborator.id || 'N/A';
-    }
-    
-    // Formatear fechas
-    const formatDate = (date) => {
-        if (!date) return { date: 'N/A', time: '' };
-        const d = date.toDate ? date.toDate() : new Date(date);
-        return {
-            date: d.toLocaleDateString('es-MX'),
-            time: d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-        };
-    };
-    
-    // Actualizar fechas
-    const creationDate = formatDate(collaborator.fechaCreacion);
-    if (elements.creationDate) elements.creationDate.textContent = creationDate.date;
-    if (elements.creationTime) elements.creationTime.textContent = creationDate.time;
-    
-    const updateDate = formatDate(collaborator.fechaActualizacion);
-    if (elements.lastUpdateDate) elements.lastUpdateDate.textContent = updateDate.date;
-    if (elements.lastUpdateTime) elements.lastUpdateTime.textContent = updateDate.time;
-    
-    const loginDate = formatDate(collaborator.ultimoLogin);
-    if (elements.lastLoginDate) elements.lastLoginDate.textContent = loginDate.date;
-    if (elements.lastLoginTime) elements.lastLoginTime.textContent = loginDate.time;
-    
-    console.log('✅ Interfaz actualizada');
-}
-
-function mostrarMensaje(element, type, text) {
-    if (!element) return;
-    
-    const icons = {
-        'success': 'fa-check-circle',
-        'error': 'fa-exclamation-circle',
-        'info': 'fa-info-circle',
-        'warning': 'fa-exclamation-triangle'
-    };
-    
-    element.className = `message-container ${type}`;
-    element.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
-            <span>${text}</span>
+    div.innerHTML = `
+        <div class="subcategoria-info">
+            <div class="subcategoria-color-indicator" style="background-color: ${colorActual};"></div>
+            <div class="subcategoria-content">
+                <div class="subcategoria-nombre">
+                    <h4>${escapeHTML(sub.nombre || 'Sin nombre')}</h4>
+                    <span class="subcategoria-badge" style="background: ${badgeColor}15; color: ${badgeColor};">
+                        <i class="fas ${badgeIcon}"></i>
+                        ${badgeText}
+                    </span>
+                </div>
+                <p class="subcategoria-descripcion">${escapeHTML(descripcion)}</p>
+                <small class="subcategoria-id" style="color: var(--text-dim); font-size: 11px;">
+                    ID: ${sub.id || ''}
+                </small>
+            </div>
+        </div>
+        <div class="subcategoria-actions">
+            <button class="btn-sub-action edit" onclick="abrirEditorSubcategoria('editar', '${sub.id}')" title="Editar subcategoría">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-sub-action delete" onclick="eliminarSubcategoria('${sub.id}')" title="Eliminar subcategoría">
+                <i class="fas fa-trash"></i>
+            </button>
         </div>
     `;
-    element.style.display = 'block';
     
-    // Auto-ocultar mensajes no críticos
-    if (type !== 'error') {
-        setTimeout(() => {
-            element.style.display = 'none';
-        }, 5000);
-    }
+    return div;
 }
 
-// ========== HANDLERS BÁSICOS ==========
+// =============================================
+// EDITOR DE SUBCATEGORÍA (SEGUNDO FORMULARIO)
+// =============================================
+function abrirEditorSubcategoria(modo, subcategoriaId = null) {
+    if (!categoriaActual) {
+        mostrarNotificacion('Error: Categoría no cargada', 'error');
+        return;
+    }
+    
+    modoEdicionSubcategoria = modo;
+    
+    const editor = document.getElementById('subcategoriaEditorContainer');
+    const titulo = document.getElementById('editorTitulo');
+    const icono = document.getElementById('editorIcon');
+    
+    if (!editor || !titulo || !icono) return;
+    
+    const form = document.getElementById('formSubcategoria');
+    if (form) form.reset();
+    
+    const subcategoriaIdInput = document.getElementById('subcategoriaId');
+    if (subcategoriaIdInput) subcategoriaIdInput.value = '';
+    
+    if (modo === 'crear') {
+        titulo.textContent = 'Nueva Subcategoría';
+        icono.className = 'fas fa-plus-circle';
+        
+        const heredarCheckbox = document.getElementById('heredarColorPadre');
+        if (heredarCheckbox) heredarCheckbox.checked = true;
+        
+        const colorPersonalizadoGroup = document.getElementById('colorPersonalizadoGroup');
+        if (colorPersonalizadoGroup) colorPersonalizadoGroup.style.display = 'none';
+        
+        const colorBase = '#FF5733';
+        const colorSubcategoria = document.getElementById('colorSubcategoria');
+        const subcategoriaColorPreview = document.getElementById('subcategoriaColorPreview');
+        const subcategoriaColorHex = document.getElementById('subcategoriaColorHex');
+        
+        if (colorSubcategoria) colorSubcategoria.value = colorBase;
+        if (subcategoriaColorPreview) subcategoriaColorPreview.style.backgroundColor = colorBase;
+        if (subcategoriaColorHex) subcategoriaColorHex.textContent = colorBase;
+        
+    } else if (modo === 'editar' && subcategoriaId) {
+        const sub = subcategorias.find(s => s.id === subcategoriaId);
+        if (!sub) {
+            mostrarNotificacion('Subcategoría no encontrada', 'error');
+            return;
+        }
+        
+        subcategoriaEditando = sub;
+        titulo.textContent = `Editar: ${sub.nombre || 'Subcategoría'}`;
+        icono.className = 'fas fa-edit';
+        
+        const nombreSubcategoria = document.getElementById('nombreSubcategoria');
+        const descripcionSubcategoria = document.getElementById('descripcionSubcategoria');
+        const subcategoriaIdInput = document.getElementById('subcategoriaId');
+        const heredarCheckbox = document.getElementById('heredarColorPadre');
+        const colorPersonalizadoGroup = document.getElementById('colorPersonalizadoGroup');
+        const colorSubcategoria = document.getElementById('colorSubcategoria');
+        const subcategoriaColorPreview = document.getElementById('subcategoriaColorPreview');
+        const subcategoriaColorHex = document.getElementById('subcategoriaColorHex');
+        
+        if (nombreSubcategoria) nombreSubcategoria.value = sub.nombre || '';
+        if (descripcionSubcategoria) descripcionSubcategoria.value = sub.descripcion || '';
+        if (subcategoriaIdInput) subcategoriaIdInput.value = sub.id;
+        
+        const hereda = sub.heredaColor !== false;
+        if (heredarCheckbox) heredarCheckbox.checked = hereda;
+        
+        if (hereda) {
+            if (colorPersonalizadoGroup) colorPersonalizadoGroup.style.display = 'none';
+        } else {
+            if (colorPersonalizadoGroup) colorPersonalizadoGroup.style.display = 'block';
+            const colorValue = sub.color || '#FF5733';
+            if (colorSubcategoria) colorSubcategoria.value = colorValue;
+            if (subcategoriaColorPreview) subcategoriaColorPreview.style.backgroundColor = colorValue;
+            if (subcategoriaColorHex) subcategoriaColorHex.textContent = colorValue;
+        }
+    }
+    
+    editor.style.display = 'block';
+    
+    setTimeout(() => {
+        editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const nombreInput = document.getElementById('nombreSubcategoria');
+        if (nombreInput) nombreInput.focus();
+    }, 100);
+}
 
-function configurarHandlersBasicos(elements) {
-    // Botón cancelar
-    if (elements.cancelBtn) {
-        elements.cancelBtn.addEventListener('click', () => {
-            Swal.fire({
-                title: '¿Cancelar cambios?',
-                text: 'Se perderán los cambios no guardados',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = 'gestionColaboradores.html';
+function cerrarEditorSubcategoria() {
+    const editor = document.getElementById('subcategoriaEditorContainer');
+    if (editor) editor.style.display = 'none';
+    modoEdicionSubcategoria = 'crear';
+    subcategoriaEditando = null;
+}
+
+// =============================================
+// GUARDAR SUBCATEGORÍA
+// =============================================
+async function guardarSubcategoria() {
+    if (!categoriaManager || !categoriaActual) {
+        mostrarNotificacion('Error: Sistema no inicializado', 'error');
+        return;
+    }
+    
+    const nombreInput = document.getElementById('nombreSubcategoria');
+    if (!nombreInput) return;
+    
+    const nombre = nombreInput.value.trim();
+    if (!nombre) {
+        mostrarNotificacion('El nombre es requerido', 'error');
+        nombreInput.focus();
+        return;
+    }
+    
+    const descripcionInput = document.getElementById('descripcionSubcategoria');
+    const descripcion = descripcionInput ? descripcionInput.value.trim() : '';
+    
+    const heredarCheckbox = document.getElementById('heredarColorPadre');
+    const heredaColor = heredarCheckbox ? heredarCheckbox.checked : true;
+    
+    const colorPicker = document.getElementById('colorPicker');
+    const colorSubcategoria = document.getElementById('colorSubcategoria');
+    const color = heredaColor ? 
+        (colorPicker ? colorPicker.value : '#FF5733') : 
+        (colorSubcategoria ? colorSubcategoria.value : '#FF5733');
+    
+    const subcategoriaIdInput = document.getElementById('subcategoriaId');
+    const subId = subcategoriaIdInput ? subcategoriaIdInput.value : '';
+    
+    try {
+        if (modoEdicionSubcategoria === 'crear') {
+            const nuevaSubId = categoriaActual.agregarSubcategoria(nombre, descripcion);
+            
+            if (!heredaColor) {
+                const subMap = categoriaActual.obtenerSubcategoria(nuevaSubId);
+                if (subMap) {
+                    subMap.set('color', color);
+                    subMap.set('heredaColor', false);
                 }
+            }
+            
+            await categoriaManager.actualizarCategoria(categoriaActual.id, {
+                nombre: categoriaActual.nombre,
+                descripcion: categoriaActual.descripcion
             });
-        });
+            
+            mostrarNotificacion('✅ Subcategoría creada exitosamente', 'success');
+            
+        } else if (modoEdicionSubcategoria === 'editar' && subId) {
+            const subMap = categoriaActual.obtenerSubcategoria(subId);
+            if (subMap) {
+                subMap.set('nombre', nombre);
+                subMap.set('descripcion', descripcion);
+                subMap.set('color', color);
+                subMap.set('heredaColor', heredaColor);
+                subMap.set('fechaActualizacion', new Date());
+            }
+            
+            await categoriaManager.actualizarCategoria(categoriaActual.id, {
+                nombre: categoriaActual.nombre,
+                descripcion: categoriaActual.descripcion
+            });
+            
+            mostrarNotificacion('✅ Subcategoría actualizada', 'success');
+        }
+        
+        await cargarCategoria(categoriaActual.id);
+        cerrarEditorSubcategoria();
+        
+    } catch (error) {
+        console.error('Error al guardar subcategoría:', error);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
     }
 }
 
-function configurarSelectorStatus(elements) {
-    if (!elements.statusOptions || !elements.statusInput) return;
-    
-    elements.statusOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Remover selección de todas las opciones
-            elements.statusOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Seleccionar la opción clickeada
-            this.classList.add('selected');
-            
-            // Actualizar campo oculto
-            const statusValue = this.getAttribute('data-status');
-            elements.statusInput.value = statusValue;
-            
-            console.log(`🔄 Status cambiado a: ${statusValue}`);
-        });
-    });
-}
-
-// ========== HANDLERS DE FOTOS (SOLO PERFIL) ==========
-
-function configurarFotoPerfil(elements) {
-    if (!elements.profileCircle) return;
-    
-    // Solo configurar para foto de perfil
-    elements.profileCircle.addEventListener('click', () => {
-        if (elements.profileInput) elements.profileInput.click();
-    });
-    
-    if (elements.editProfileOverlay) {
-        elements.editProfileOverlay.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (elements.profileInput) elements.profileInput.click();
-        });
-    }
-    
-    if (elements.profileInput) {
-        elements.profileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) mostrarModalFoto(file, 'profile', elements);
-            this.value = '';
-        });
-    }
-}
-
-function mostrarModalFoto(file, type, elements) {
-    // Solo permitir para foto de perfil
-    if (type !== 'profile') return;
-    
-    // Validar archivo
-    const maxSize = 5; // MB
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-    
-    if (!validTypes.includes(file.type)) {
-        mostrarMensaje(elements.mainMessage, 'error', 
-            'Formato no válido. Use JPG, PNG o GIF');
+// =============================================
+// ELIMINAR SUBCATEGORÍA
+// =============================================
+async function eliminarSubcategoria(subcategoriaId) {
+    if (!categoriaManager || !categoriaActual) {
+        mostrarNotificacion('Error: Sistema no inicializado', 'error');
         return;
     }
     
-    if (file.size > maxSize * 1024 * 1024) {
-        mostrarMensaje(elements.mainMessage, 'error', 
-            `Archivo demasiado grande. Máximo: ${maxSize}MB`);
-        return;
+    const sub = subcategorias.find(s => s.id === subcategoriaId);
+    if (!sub) return;
+    
+    const modalMensaje = document.getElementById('modalConfirmacionMensaje');
+    if (modalMensaje) {
+        modalMensaje.innerHTML = `
+            ¿Estás seguro de eliminar <strong>${escapeHTML(sub.nombre || '')}</strong>?<br>
+            <span style="font-size: 13px; color: var(--text-dim);">Esta acción no se puede deshacer.</span>
+        `;
     }
     
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        if (elements.previewImage) elements.previewImage.src = e.target.result;
+    const btnConfirmar = document.getElementById('btnConfirmarAccion');
+    if (btnConfirmar) {
+        const nuevoBtn = btnConfirmar.cloneNode(true);
+        btnConfirmar.parentNode.replaceChild(nuevoBtn, btnConfirmar);
         
-        // Actualizar variables globales
-        currentPhotoType = type;
-        selectedFile = file;
-        
-        if (elements.modalTitle) {
-            elements.modalTitle.textContent = 'CAMBIAR FOTO DE PERFIL';
-        }
-        
-        if (elements.modalMessage) {
-            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
-            elements.modalMessage.textContent = 
-                `Tamaño: ${fileSize} MB • ¿Deseas usar esta imagen?`;
-        }
-        
-        if (elements.photoModal) elements.photoModal.style.display = 'flex';
-    };
-    
-    reader.readAsDataURL(file);
-}
-
-function configurarModal(elements, userManager) {
-    if (!elements.confirmChangeBtn || !elements.cancelChangeBtn) return;
-    
-    elements.confirmChangeBtn.addEventListener('click', async () => {
-        if (!selectedFile || !window.currentCollaborator) return;
-        
-        // Solo permitir foto de perfil
-        if (currentPhotoType !== 'profile') return;
-        
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const imageBase64 = e.target.result;
-            
+        nuevoBtn.onclick = async () => {
             try {
-                const collaborator = window.currentCollaborator;
-                
-                // Actualizar solo foto de perfil usando UserManager
-                const success = await userManager.updateUser(
-                    collaborator.id,
-                    { fotoUsuario: imageBase64 },
-                    'colaborador',
-                    collaborator.organizacionCamelCase
-                );
-                
-                if (success) {
-                    // Actualizar interfaz
-                    if (elements.profileImage) {
-                        elements.profileImage.src = imageBase64;
-                        elements.profileImage.style.display = 'block';
-                    }
-                    if (elements.profilePlaceholder) {
-                        elements.profilePlaceholder.style.display = 'none';
-                    }
-                    
-                    // Actualizar objeto en memoria
-                    collaborator.fotoUsuario = imageBase64;
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: 'Foto actualizada correctamente',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudo guardar la imagen: ' + error.message
+                categoriaActual.eliminarSubcategoria(subcategoriaId);
+                await categoriaManager.actualizarCategoria(categoriaActual.id, {
+                    nombre: categoriaActual.nombre,
+                    descripcion: categoriaActual.descripcion
                 });
+                
+                cerrarModal('modalConfirmacion');
+                await cargarCategoria(categoriaActual.id);
+                mostrarNotificacion('🗑️ Subcategoría eliminada', 'success');
+                
+            } catch (error) {
+                console.error('Error al eliminar subcategoría:', error);
+                mostrarNotificacion(`Error: ${error.message}`, 'error');
+                cerrarModal('modalConfirmacion');
             }
-            
-            if (elements.photoModal) elements.photoModal.style.display = 'none';
-            selectedFile = null;
-            currentPhotoType = '';
         };
+    }
+    
+    abrirModal('modalConfirmacion');
+}
+
+// =============================================
+// GUARDAR CATEGORÍA
+// =============================================
+async function guardarCategoria() {
+    if (!categoriaManager || !categoriaActual) {
+        mostrarNotificacion('Error: Sistema no inicializado', 'error');
+        return;
+    }
+    
+    const nombreInput = document.getElementById('nombreCategoria');
+    if (!nombreInput) return;
+    
+    const nombre = nombreInput.value.trim();
+    if (!nombre) {
+        mostrarNotificacion('El nombre de la categoría es requerido', 'error');
+        nombreInput.focus();
+        return;
+    }
+    
+    const btn = document.getElementById('btnGuardarCategoria');
+    if (!btn) return;
+    
+    const originalHTML = btn.innerHTML;
+    
+    try {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btn.disabled = true;
         
-        reader.readAsDataURL(selectedFile);
+        categoriaActual.nombre = nombre;
+        
+        await categoriaManager.actualizarCategoria(categoriaActual.id, {
+            nombre: categoriaActual.nombre,
+            descripcion: categoriaActual.descripcion
+        });
+        
+        await cargarCategoria(categoriaActual.id);
+        mostrarNotificacion('✅ Categoría guardada exitosamente', 'success');
+        
+    } catch (error) {
+        console.error('Error al guardar categoría:', error);
+        mostrarNotificacion(`Error al guardar: ${error.message}`, 'error');
+    } finally {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+    }
+}
+
+// =============================================
+// CANCELAR EDICIÓN
+// =============================================
+function cancelarEdicion() {
+    if (!categoriaActual) {
+        window.location.href = '/users/admin/categorias/categorias.html';
+        return;
+    }
+    
+    const nombreInput = document.getElementById('nombreCategoria');
+    const nombreActual = nombreInput ? nombreInput.value.trim() : '';
+    const hayCambiosEnCategoria = nombreActual !== categoriaActual.nombre;
+    
+    const subcategoriasOriginales = [];
+    categoriaActual.subcategorias.forEach((subMap) => {
+        const subObj = {};
+        subMap.forEach((value, key) => { subObj[key] = value; });
+        subcategoriasOriginales.push(subObj);
     });
     
-    elements.cancelChangeBtn.addEventListener('click', () => {
-        if (elements.photoModal) elements.photoModal.style.display = 'none';
-        selectedFile = null;
-        currentPhotoType = '';
+    const hayCambiosEnSubcategorias = 
+        JSON.stringify(subcategorias.map(s => ({ 
+            id: s.id, 
+            nombre: s.nombre, 
+            descripcion: s.descripcion, 
+            color: s.color, 
+            heredaColor: s.heredaColor 
+        }))) !== 
+        JSON.stringify(subcategoriasOriginales.map(s => ({ 
+            id: s.id, 
+            nombre: s.nombre, 
+            descripcion: s.descripcion, 
+            color: s.color, 
+            heredaColor: s.heredaColor 
+        })));
+    
+    if (hayCambiosEnCategoria || hayCambiosEnSubcategorias) {
+        const modal = document.getElementById('modalConfirmacion');
+        if (!modal) {
+            window.location.href = '/users/admin/categorias/categorias.html';
+            return;
+        }
+        
+        const titulo = modal.querySelector('.modal-title span');
+        const mensaje = document.getElementById('modalConfirmacionMensaje');
+        const btnConfirmar = document.getElementById('btnConfirmarAccion');
+        
+        if (titulo) titulo.textContent = '¿Cancelar edición?';
+        if (mensaje) {
+            mensaje.innerHTML = `
+                Tienes cambios sin guardar en la categoría o sus subcategorías.<br>
+                <strong>¿Seguro que quieres salir?</strong>
+            `;
+        }
+        
+        if (btnConfirmar) {
+            btnConfirmar.style.background = 'var(--text-muted)';
+            btnConfirmar.style.color = 'white';
+            btnConfirmar.textContent = 'Sí, salir';
+            
+            const nuevoBtn = btnConfirmar.cloneNode(true);
+            btnConfirmar.parentNode.replaceChild(nuevoBtn, btnConfirmar);
+            
+            nuevoBtn.onclick = () => {
+                cerrarModal('modalConfirmacion');
+                window.location.href = '/users/admin/categorias/categorias.html';
+            };
+        }
+        
+        abrirModal('modalConfirmacion');
+    } else {
+        window.location.href = '/users/admin/categorias/categorias.html';
+    }
+}
+
+// =============================================
+// EVENTOS E INICIALIZACIÓN
+// =============================================
+function inicializarComponentes() {
+    const colorPicker = document.getElementById('colorPicker');
+    if (colorPicker) {
+        colorPicker.addEventListener('input', function(e) {
+            setColorCategoria(e.target.value);
+        });
+    }
+    
+    document.querySelectorAll('.preset-dot').forEach(btn => {
+        btn.addEventListener('click', function() {
+            setColorCategoria(this.dataset.color);
+        });
     });
     
-    if (elements.photoModal) {
-        elements.photoModal.addEventListener('click', (e) => {
-            if (e.target === elements.photoModal) {
-                elements.photoModal.style.display = 'none';
-                selectedFile = null;
-                currentPhotoType = '';
-            }
+    const colorSubcategoria = document.getElementById('colorSubcategoria');
+    if (colorSubcategoria) {
+        colorSubcategoria.addEventListener('input', function(e) {
+            const preview = document.getElementById('subcategoriaColorPreview');
+            const hex = document.getElementById('subcategoriaColorHex');
+            if (preview) preview.style.backgroundColor = e.target.value;
+            if (hex) hex.textContent = e.target.value;
         });
     }
 }
 
-// ========== HANDLER DE GUARDADO ==========
-
-function configurarGuardado(elements, userManager) {
-    if (!elements.saveChangesBtn || !window.currentCollaborator) return;
+function inicializarEventos() {
+    const btnGuardar = document.getElementById('btnGuardarCategoria');
+    if (btnGuardar) {
+        btnGuardar.addEventListener('click', guardarCategoria);
+    }
     
-    elements.saveChangesBtn.addEventListener('click', async () => {
-        // Validar nombre completo
-        if (!elements.fullName || !elements.fullName.value.trim()) {
-            mostrarMensaje(elements.mainMessage, 'error', 'El nombre completo es obligatorio');
-            if (elements.fullName) elements.fullName.focus();
-            return;
-        }
-        
-        const collaborator = window.currentCollaborator;
-        
-        // Mostrar confirmación
-        const result = await Swal.fire({
-            title: '¿Guardar cambios?',
-            html: `
-                <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 60px; color: #4CAF50; margin-bottom: 15px;">
-                        <i class="fas fa-save"></i>
-                    </div>
-                    <p style="color: var(--color-text-secondary); margin-bottom: 15px;">
-                        Se actualizarán los datos del colaborador:
-                    </p>
-                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                        <p><strong>Nombre:</strong> ${elements.fullName.value}</p>
-                        <p><strong>Status:</strong> ${elements.statusInput.value === 'active' ? 'Activo' : 'Inactivo'}</p>
-                    </div>
-                </div>
-            `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'GUARDAR',
-            cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#4CAF50',
-            cancelButtonColor: '#d33',
-            reverseButtons: true
+    const btnNuevaSub = document.getElementById('btnNuevaSubcategoria');
+    if (btnNuevaSub) {
+        btnNuevaSub.addEventListener('click', function() {
+            abrirEditorSubcategoria('crear');
         });
-        
-        if (!result.isConfirmed) return;
-        
-        // Mostrar loader
-        Swal.fire({
-            title: 'Guardando cambios...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-        
-        try {
-            // Obtener permisos seleccionados
-            const permisosPersonalizados = {};
-            if (elements.permissionCheckboxes) {
-                elements.permissionCheckboxes.forEach(checkbox => {
-                    permisosPersonalizados[checkbox.value] = checkbox.checked;
-                });
-            }
-            
-            // Preparar datos a actualizar
-            const updateData = {
-                nombreCompleto: elements.fullName.value.trim(),
-                status: elements.statusInput.value === 'active',
-                permisosPersonalizados: permisosPersonalizados
-            };
-            
-            // Actualizar usando UserManager
-            await userManager.updateUser(
-                collaborator.id,
-                updateData,
-                'colaborador',
-                collaborator.organizacionCamelCase
-            );
-            
-            // Actualizar el objeto en memoria
-            Object.assign(collaborator, updateData);
-            
-            // Actualizar timestamp
-            const now = new Date();
-            if (elements.lastUpdateDate) {
-                elements.lastUpdateDate.textContent = now.toLocaleDateString('es-MX');
-            }
-            if (elements.lastUpdateTime) {
-                elements.lastUpdateTime.textContent = now.toLocaleTimeString('es-MX', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-            }
-            
-            // Mostrar éxito
-            Swal.close();
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: 'Datos actualizados correctamente',
-                timer: 3000,
-                showConfirmButton: false
-            });
-            
-            mostrarMensaje(elements.mainMessage, 'success', 'Cambios guardados exitosamente');
-            
-        } catch (error) {
-            console.error('❌ Error guardando cambios:', error);
-            Swal.close();
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron guardar los cambios: ' + error.message
-            });
-        }
-    });
-}
-
-// ========== HANDLER PARA CAMBIAR CONTRASEÑA ==========
-
-function configurarCambioPassword(elements, userManager) {
-    if (!elements.changePasswordBtn) return;
+    }
     
-    elements.changePasswordBtn.addEventListener('click', async () => {
-        if (!window.currentCollaborator) {
-            mostrarMensaje(elements.mainMessage, 'error', 'No hay colaborador cargado');
-            return;
-        }
-        
-        const collaborator = window.currentCollaborator;
-        const userEmail = collaborator.correoElectronico;
-        
-        if (!userEmail) {
-            mostrarMensaje(elements.mainMessage, 'error', 'No se encontró el correo del colaborador');
-            return;
-        }
-        
-        // Mostrar confirmación
-        const result = await Swal.fire({
-            title: '¿ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA?',
-            html: `
-                <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 60px; color: #ff9800; margin-bottom: 15px;">
-                        <i class="fas fa-key"></i>
-                    </div>
-                    <p style="color: var(--color-text-secondary); margin-bottom: 15px;">
-                        Se enviará un enlace de restablecimiento al correo del colaborador.
-                    </p>
-                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                        <p><strong>Correo del colaborador:</strong></p>
-                        <p style="color: var(--color-accent-primary); font-weight: bold;">
-                            ${userEmail}
-                        </p>
-                    </div>
-                    <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0;">
-                        <p style="color: #856404; font-size: 14px; margin: 0;">
-                            <i class="fas fa-info-circle"></i> 
-                            El enlace expirará en 1 hora.
-                        </p>
-                    </div>
-                </div>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'ENVIAR ENLACE',
-            cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            reverseButtons: true,
-            allowOutsideClick: false
-        });
-        
-        if (!result.isConfirmed) return;
-        
-        // Mostrar loader
-        Swal.fire({
-            title: 'Enviando enlace...',
-            html: 'Por favor espera mientras procesamos tu solicitud.',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: () => Swal.showLoading()
-        });
-        
-        try {
-            // Importar auth de Firebase
-            const firebaseModule = await import('/config/firebase-config.js');
-            const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js");
-            
-            const actionCodeSettings = {
-                url: 'https://centinela-mx.web.app/verifyEmail.html',
-                handleCodeInApp: false
-            };
-            
-            console.log('📧 Enviando correo de restablecimiento a:', userEmail);
-            await sendPasswordResetEmail(firebaseModule.auth, userEmail, actionCodeSettings);
-            
-            // Cerrar loader
-            Swal.close();
-            
-            // Mostrar éxito
-            await Swal.fire({
-                icon: 'success',
-                title: '¡ENLACE ENVIADO EXITOSAMENTE!',
-                html: `
-                    <div style="text-align: center; padding: 20px;">
-                        <div style="font-size: 60px; color: #28a745; margin-bottom: 20px;">
-                            <i class="fas fa-paper-plane"></i>
-                        </div>
-                        
-                        <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
-                            Correo enviado correctamente
-                        </h3>
-                        
-                        <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <p><strong>📨 Destinatario:</strong> ${userEmail}</p>
-                            <p><strong>⏱️ Válido por:</strong> 1 hora</p>
-                        </div>
-                        
-                        <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 20px 0;">
-                            <h4 style="color: #155724; margin-bottom: 10px;">
-                                <i class="fas fa-check"></i> ¿Qué hacer ahora?
-                            </h4>
-                            <p style="color: #0c5460; margin: 0;">
-                                El colaborador recibirá un correo con instrucciones para restablecer su contraseña.
-                            </p>
-                        </div>
-                    </div>
-                `,
-                confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: '#28a745',
-                allowOutsideClick: false,
-                showCloseButton: true,
-                width: '600px'
-            });
-            
-        } catch (error) {
-            // Cerrar loader
-            Swal.close();
-            
-            console.error('❌ Error enviando correo:', error);
-            
-            // Manejar errores específicos
-            let errorMessage = 'Ocurrió un error al enviar el correo';
-            
-            switch(error.code) {
-                case 'auth/user-not-found':
-                    errorMessage = 'Usuario no encontrado';
-                    break;
-                case 'auth/invalid-email':
-                    errorMessage = 'Correo inválido';
-                    break;
-                case 'auth/too-many-requests':
-                    errorMessage = 'Demasiados intentos';
-                    break;
-                case 'auth/network-request-failed':
-                    errorMessage = 'Error de conexión';
-                    break;
-                default:
-                    errorMessage = 'Error del sistema: ' + (error.message || 'Desconocido');
+    const btnGuardarSub = document.getElementById('btnGuardarSubcategoria');
+    if (btnGuardarSub) {
+        btnGuardarSub.addEventListener('click', guardarSubcategoria);
+    }
+    
+    const heredarCheckbox = document.getElementById('heredarColorPadre');
+    if (heredarCheckbox) {
+        heredarCheckbox.addEventListener('change', function() {
+            const group = document.getElementById('colorPersonalizadoGroup');
+            if (group) {
+                group.style.display = this.checked ? 'none' : 'block';
             }
             
-            Swal.fire({
-                icon: 'error',
-                title: errorMessage,
-                text: 'Por favor, intenta nuevamente más tarde.',
-                confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: '#d33'
-            });
-        }
-    });
-}
-
-// ========== HANDLER DE ELIMINACIÓN ==========
-
-function configurarEliminacion(elements, userManager) {
-    if (!elements.deleteBtn) return;
-    
-    elements.deleteBtn.addEventListener('click', async () => {
-        if (!window.currentCollaborator) {
-            mostrarMensaje(elements.mainMessage, 'error', 'No hay colaborador cargado');
-            return;
-        }
-        
-        const collaborator = window.currentCollaborator;
-        const fullName = elements.fullName.value || collaborator.nombreCompleto;
-        
-        // Mostrar confirmación de eliminación
-        const result = await Swal.fire({
-            title: '¿INHABILITAR COLABORADOR?',
-            html: `
-                <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 60px; color: #e74c3c; margin-bottom: 15px;">
-                        <i class="fas fa-user-slash"></i>
-                    </div>
-                    <h3 style="color: white; margin: 10px 0;">${fullName}</h3>
-                    <p style="color: var(--color-text-secondary); margin: 0;">${collaborator.correoElectronico}</p>
-                </div>
+            if (!this.checked && categoriaActual) {
+                const colorBase = '#FF5733';
+                const colorInput = document.getElementById('colorSubcategoria');
+                const preview = document.getElementById('subcategoriaColorPreview');
+                const hex = document.getElementById('subcategoriaColorHex');
                 
-                <p style="text-align: center; font-size: 1.1rem; margin: 20px 0;">
-                    ¿Estás seguro de <strong style="color: #e74c3c;">inhabilitar</strong> 
-                    este colaborador?
-                </p>
-                
-                <div style="background: rgba(231, 76, 60, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #e74c3c;">
-                    <p style="margin: 0 0 5px 0; color: #e74c3c; font-size: 0.9rem;">
-                        <i class="fas fa-exclamation-triangle"></i> CONSECUENCIAS
-                    </p>
-                    <ul style="margin: 0; color: var(--color-text-secondary); font-size: 0.9rem; padding-left: 20px;">
-                        <li>No podrá iniciar sesión en el sistema</li>
-                        <li>Su información se mantiene en la base de datos</li>
-                        <li>Puede ser reactivado posteriormente</li>
-                    </ul>
-                </div>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'INHABILITAR',
-            cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#e74c3c',
-            cancelButtonColor: '#3085d6',
-            reverseButtons: true,
-            showDenyButton: true,
-            denyButtonText: 'SOLO DESACTIVAR',
-            denyButtonColor: '#95a5a6',
-            width: '600px'
+                if (colorInput) colorInput.value = colorBase;
+                if (preview) preview.style.backgroundColor = colorBase;
+                if (hex) hex.textContent = colorBase;
+            }
         });
-        
-        if (result.isDenied) {
-            // Solo cambiar status a inactivo
-            elements.statusInput.value = 'inactive';
-            elements.statusOptions.forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.getAttribute('data-status') === 'inactive') {
-                    opt.classList.add('selected');
-                }
-            });
-            
-            Swal.fire({
-                icon: 'info',
-                title: 'Status cambiado',
-                text: 'El colaborador ha sido marcado como inactivo. Recuerda guardar los cambios.',
-                timer: 3000,
-                showConfirmButton: false
-            });
-            
-            return;
-        }
-        
-        if (!result.isConfirmed) return;
-        
-        // Mostrar loader
-        Swal.fire({
-            title: 'Inhabilitando colaborador...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+    }
+    
+    const nombreCategoria = document.getElementById('nombreCategoria');
+    if (nombreCategoria) {
+        nombreCategoria.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                guardarCategoria();
+            }
         });
-        
-        try {
-            // Inhabilitar usando UserManager
-            await userManager.inhabilitarUsuario(
-                collaborator.id,
-                'colaborador',
-                collaborator.organizacionCamelCase,
-                'Inhabilitado por administrador'
-            );
-            
-            // Actualizar interfaz
-            elements.statusInput.value = 'inactive';
-            elements.statusOptions.forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.getAttribute('data-status') === 'inactive') {
-                    opt.classList.add('selected');
-                }
-            });
-            
-            // Actualizar objeto en memoria
-            collaborator.eliminado = true;
-            
-            // Mostrar éxito
-            Swal.close();
-            Swal.fire({
-                icon: 'success',
-                title: '✅ COLABORADOR INHABILITADO',
-                html: `
-                    <div style="text-align: center; padding: 20px;">
-                        <div style="font-size: 60px; color: #95a5a6; margin-bottom: 20px;">
-                            <i class="fas fa-ban"></i>
-                        </div>
-                        <p style="color: white; margin: 10px 0; font-weight: 500;">${fullName}</p>
-                        <p style="color: var(--color-text-secondary); margin: 5px 0;">
-                            ha sido inhabilitado del sistema
-                        </p>
-                    </div>
-                `,
-                confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: '#95a5a6',
-                timer: 3000
-            });
-            
-            // Redirigir después de 3 segundos
-            setTimeout(() => {
-                window.location.href = 'gestionColaboradores.html';
-            }, 3000);
-            
-        } catch (error) {
-            Swal.close();
-            console.error('❌ Error inhabilitando colaborador:', error);
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudo inhabilitar el colaborador: ' + error.message,
-                confirmButtonText: 'ENTENDIDO'
-            });
+    }
+    
+    const nombreSubcategoria = document.getElementById('nombreSubcategoria');
+    if (nombreSubcategoria) {
+        nombreSubcategoria.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                guardarSubcategoria();
+            }
+        });
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            cerrarEditorSubcategoria();
+            cerrarModal('modalConfirmacion');
         }
     });
 }
 
-console.log('✅ editUser.js cargado - Logo de organización no editable');
+// =============================================
+// UTILIDADES
+// =============================================
+function abrirModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function cerrarModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+function escapeHTML(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function mostrarNotificacion(mensaje, tipo = 'success') {
+    const notisExistentes = document.querySelectorAll('.notificacion-flotante');
+    notisExistentes.forEach(n => n.remove());
+    
+    const noti = document.createElement('div');
+    noti.className = 'notificacion-flotante';
+    noti.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: ${tipo === 'success' ? '#10b981' : tipo === 'error' ? '#ef4444' : '#f59e0b'};
+        color: white;
+        padding: 14px 24px;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        z-index: 9999;
+        animation: slideIn 0.2s ease;
+        border: 1px solid rgba(255,255,255,0.1);
+    `;
+    
+    const icon = tipo === 'success' ? 'fa-check-circle' : 
+                 tipo === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+    noti.innerHTML = `<i class="fas ${icon}" style="font-size: 16px;"></i> ${mensaje}`;
+    
+    document.body.appendChild(noti);
+    
+    if (!document.querySelector('#notificacion-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notificacion-styles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    setTimeout(() => {
+        noti.style.animation = 'slideIn 0.2s ease reverse';
+        setTimeout(() => noti.remove(), 200);
+    }, 3000);
+}
+
+// =============================================
+// EXPORTAR FUNCIONES GLOBALES
+// =============================================
+window.cargarCategoria = cargarCategoria;
+window.guardarCategoria = guardarCategoria;
+window.cancelarEdicion = cancelarEdicion;
+window.abrirEditorSubcategoria = abrirEditorSubcategoria;
+window.cerrarEditorSubcategoria = cerrarEditorSubcategoria;
+window.guardarSubcategoria = guardarSubcategoria;
+window.eliminarSubcategoria = eliminarSubcategoria;
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
+window.setColorCategoria = setColorCategoria;

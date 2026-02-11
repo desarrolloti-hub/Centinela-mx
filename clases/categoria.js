@@ -1,6 +1,6 @@
 // ==================== IMPORTS ====================
 // Importar configuración de Firebase y servicios necesarios
-import { db, auth } from '/config/firebase-config.js';
+import { db } from '/config/firebase-config.js';
 import {
     collection,
     getDocs,
@@ -21,6 +21,8 @@ class Categoria {
         this.descripcion = data.descripcion || '';
         this.fechaCreacion = data.fechaCreacion || serverTimestamp();
         this.fechaActualizacion = data.fechaActualizacion || serverTimestamp();
+        this.empresaId = data.empresaId || '';
+        this.empresaNombre = data.empresaNombre || '';
         this.subcategorias = new Map();
         
         if (data.subcategorias && Array.isArray(data.subcategorias)) {
@@ -152,6 +154,8 @@ class Categoria {
             nombre: this.nombre,
             descripcion: this.descripcion,
             subcategorias: subcategoriasArray,
+            empresaId: this.empresaId,
+            empresaNombre: this.empresaNombre,
             fechaCreacion: this.fechaCreacion,
             fechaActualizacion: serverTimestamp()
         };
@@ -163,7 +167,9 @@ class Categoria {
             nombre: this.nombre,
             descripcion: this.descripcion,
             totalSubcategorias: this.subcategorias.size,
-            fechaCreacion: this.fechaCreacion
+            fechaCreacion: this.fechaCreacion,
+            empresaId: this.empresaId,
+            empresaNombre: this.empresaNombre
         };
     }
 }
@@ -171,29 +177,68 @@ class Categoria {
 class CategoriaManager {
     constructor() {
         this.categorias = new Map();
-        this.coleccionRef = collection(db, 'categorias');
+        
+        // Obtener datos de la empresa desde localStorage
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        const empresaData = JSON.parse(localStorage.getItem('empresa') || '{}');
+        
+        this.empresaId = empresaData.id || userData.empresaId || '';
+        this.empresaNombre = empresaData.nombre || userData.empresa || '';
+        
+        // Generar el nombre de la colección en camelCase
+        this.nombreColeccion = this.generarNombreColeccion();
+        
+        // Referencia a la colección específica de la empresa
+        this.coleccionRef = this.nombreColeccion ? collection(db, this.nombreColeccion) : null;
+    }
+
+    generarNombreColeccion() {
+        if (!this.empresaNombre) {
+            console.warn('No se encontró el nombre de la empresa en localStorage');
+            return 'categorias_default';
+        }
+        
+        // Convertir a camelCase
+        const camelCase = this.empresaNombre
+            .toLowerCase()
+            .split(' ')
+            .map((palabra, index) => {
+                if (index === 0) return palabra;
+                return palabra.charAt(0).toUpperCase() + palabra.slice(1);
+            })
+            .join('');
+        
+        return `categorias_${camelCase}`;
     }
 
     async crearCategoria(data) {
         try {
+            if (!this.coleccionRef) {
+                throw new Error('No se pudo determinar la colección. Verifica que hay una sesión activa.');
+            }
+
             if (!data.nombre || data.nombre.trim() === '') {
                 throw new Error('El nombre de la categoría es requerido');
             }
             
-            // Verificar si ya existe una categoría con ese nombre
+            // Verificar si ya existe una categoría con ese nombre en la empresa
             const q = query(this.coleccionRef, 
                           where('nombre', '==', data.nombre.trim()));
             const querySnapshot = await getDocs(q);
             
             if (!querySnapshot.empty) {
-                throw new Error('Ya existe una categoría con ese nombre');
+                throw new Error('Ya existe una categoría con ese nombre en tu empresa');
             }
             
             // Crear documento en Firestore con ID automático
             const docRef = doc(this.coleccionRef);
             const id = docRef.id;
             
-            const nuevaCategoria = new Categoria(id, data);
+            const nuevaCategoria = new Categoria(id, {
+                ...data,
+                empresaId: this.empresaId,
+                empresaNombre: this.empresaNombre
+            });
             
             const validacion = nuevaCategoria.validar();
             if (!validacion.isValid) {
@@ -215,13 +260,17 @@ class CategoriaManager {
 
     async obtenerCategoria(id) {
         try {
+            if (!this.coleccionRef) {
+                throw new Error('No se pudo determinar la colección');
+            }
+
             // Primero verificar en caché local
             if (this.categorias.has(id)) {
                 return this.categorias.get(id);
             }
             
             // Si no está en caché, obtener de Firestore
-            const docRef = doc(db, 'categorias', id);
+            const docRef = doc(db, this.nombreColeccion, id);
             const docSnap = await getDoc(docRef);
             
             if (!docSnap.exists()) {
@@ -240,6 +289,10 @@ class CategoriaManager {
 
     async actualizarCategoria(id, nuevosDatos) {
         try {
+            if (!this.coleccionRef) {
+                throw new Error('No se pudo determinar la colección');
+            }
+
             const categoria = await this.obtenerCategoria(id);
             
             if (!categoria) {
@@ -247,7 +300,7 @@ class CategoriaManager {
             }
             
             if (nuevosDatos.nombre && nuevosDatos.nombre !== categoria.nombre) {
-                // Verificar si ya existe otra categoría con el nuevo nombre
+                // Verificar si ya existe otra categoría con el nuevo nombre en la misma empresa
                 const q = query(this.coleccionRef, 
                               where('nombre', '==', nuevosDatos.nombre.trim()));
                 const querySnapshot = await getDocs(q);
@@ -255,7 +308,7 @@ class CategoriaManager {
                 if (!querySnapshot.empty) {
                     const exists = querySnapshot.docs.some(doc => doc.id !== id);
                     if (exists) {
-                        throw new Error('Ya existe una categoría con ese nombre');
+                        throw new Error('Ya existe una categoría con ese nombre en tu empresa');
                     }
                 }
             }
@@ -265,7 +318,7 @@ class CategoriaManager {
             if (nuevosDatos.descripcion !== undefined) categoria.descripcion = nuevosDatos.descripcion;
             
             // Actualizar en Firestore
-            const docRef = doc(db, 'categorias', id);
+            const docRef = doc(db, this.nombreColeccion, id);
             await updateDoc(docRef, categoria.toFirestore());
             
             return true;
@@ -278,6 +331,10 @@ class CategoriaManager {
 
     async eliminarCategoria(id) {
         try {
+            if (!this.coleccionRef) {
+                throw new Error('No se pudo determinar la colección');
+            }
+
             const categoria = await this.obtenerCategoria(id);
             
             if (!categoria) {
@@ -290,7 +347,7 @@ class CategoriaManager {
             }
             
             // Eliminar de Firestore
-            const docRef = doc(db, 'categorias', id);
+            const docRef = doc(db, this.nombreColeccion, id);
             await deleteDoc(docRef);
             
             // Eliminar de caché local
@@ -305,6 +362,11 @@ class CategoriaManager {
 
     async cargarTodasCategorias() {
         try {
+            if (!this.coleccionRef) {
+                console.warn('No se pudo determinar la colección');
+                return [];
+            }
+
             const querySnapshot = await getDocs(this.coleccionRef);
             this.categorias.clear();
             
@@ -323,6 +385,11 @@ class CategoriaManager {
     }
 
     async obtenerTodasCategorias() {
+        if (!this.coleccionRef) {
+            console.warn('No se pudo determinar la colección');
+            return [];
+        }
+        
         // Si no hay categorías en caché, cargarlas primero
         if (this.categorias.size === 0) {
             return await this.cargarTodasCategorias();
@@ -332,6 +399,10 @@ class CategoriaManager {
 
     async buscarCategorias(termino) {
         try {
+            if (!this.coleccionRef) {
+                throw new Error('No se pudo determinar la colección');
+            }
+
             if (!termino || termino.trim() === '') {
                 return await this.obtenerTodasCategorias();
             }
@@ -374,6 +445,10 @@ class CategoriaManager {
 
     async existeCategoriaConNombre(nombre, excludeId = '') {
         try {
+            if (!this.coleccionRef) {
+                throw new Error('No se pudo determinar la colección');
+            }
+
             const q = query(this.coleccionRef, 
                           where('nombre', '==', nombre.trim()));
             const querySnapshot = await getDocs(q);
@@ -398,8 +473,12 @@ class CategoriaManager {
 
     async sincronizarCategoria(id) {
         try {
+            if (!this.coleccionRef) {
+                throw new Error('No se pudo determinar la colección');
+            }
+
             // Forzar sincronización con Firestore
-            const docRef = doc(db, 'categorias', id);
+            const docRef = doc(db, this.nombreColeccion, id);
             const docSnap = await getDoc(docRef);
             
             if (!docSnap.exists()) {
