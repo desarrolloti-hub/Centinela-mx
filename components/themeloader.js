@@ -1,5 +1,6 @@
 // =============================================
 // THEME LOADER - VERSIÓN OPTIMIZADA SIN CONSULTAS CONSTANTES
+// CORREGIDO PARA TRABAJAR CON COLABORADORES
 // =============================================
 
 // Importar UserManager desde la clase
@@ -26,34 +27,54 @@ class ThemeLoader {
     }
 
     // =============================================
-    // INICIALIZAR USERMANAGER
+    // INICIALIZAR USERMANAGER - CORREGIDO PARA COLABORADORES
     // =============================================
     async initUserManager() {
         try {
             console.log('🔄 Inicializando UserManager...');
             this.userManager = new UserManager();
             
-            // Esperar un momento para que cargue el usuario actual
-            setTimeout(() => {
+            // ✅ CORREGIDO: Esperar a que el usuario esté disponible
+            const waitForUser = async () => {
+                // Intentar cada 500ms hasta 20 intentos (10 segundos)
+                for (let i = 0; i < 20; i++) {
+                    if (this.userManager.currentUser) {
+                        const user = this.userManager.currentUser;
+                        console.log('👤 Usuario autenticado encontrado:', {
+                            nombre: user.nombreCompleto,
+                            rol: user.cargo,
+                            organizacion: user.organizacion,
+                            theme: user.theme
+                        });
+                        this.loadTheme();
+                        this.startThemeMonitoring();
+                        return;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                // Si no hay usuario después de 10 segundos, cargar default
+                console.log('⏰ Tiempo de espera agotado, usando tema predeterminado');
                 this.loadTheme();
                 this.startThemeMonitoring();
-            }, 1000);
+            };
             
+            waitForUser();
             console.log('✅ UserManager inicializado');
+            
         } catch (error) {
             console.error('❌ Error inicializando UserManager:', error);
-            this.applyThemeById('default');
+            this.applyThemeDirectly('default');
         }
     }
 
     // =============================================
-    // CARGAR TEMA - ESTRATEGIA OPTIMIZADA
+    // CARGAR TEMA - CORREGIDO PARA COLABORADORES
     // =============================================
     async loadTheme() {
         console.log('🎨 CARGANDO TEMA (ESTRATEGIA OPTIMIZADA)...');
         
         try {
-            // PRIMERO: Cargar desde localStorage (SIN CONSULTAR BD)
+            // PRIMERO: Cargar desde localStorage (SIEMPRE)
             const themeFromLocalStorage = this.loadThemeFromLocalStorage();
             
             if (themeFromLocalStorage) {
@@ -62,57 +83,38 @@ class ThemeLoader {
                 // Aplicar tema desde localStorage inmediatamente
                 this.applyThemeDirectly(themeFromLocalStorage);
                 
-                // LUEGO: Verificar BD solo si es necesario
+                // LUEGO: Verificar usuario para actualizar si es necesario
                 setTimeout(() => {
-                    this.verifyWithDatabase(themeFromLocalStorage);
-                }, 2000); // Esperar 2 segundos antes de verificar BD
+                    this.verifyWithUserTheme(themeFromLocalStorage);
+                }, 1500);
                 
                 return;
             }
             
-            // SEGUNDO: Si no hay en localStorage, cargar desde UserManager
-            if (!this.userManager) {
-                console.log('⏳ UserManager no listo, usando tema predeterminado');
-                this.applyThemeById('default');
+            // SEGUNDO: Si hay usuario autenticado, usar su tema
+            if (this.userManager?.currentUser) {
+                const user = this.userManager.currentUser;
+                const userTheme = user.theme || 'default';
+                const userRole = user.cargo || 'colaborador';
+                
+                console.log(`👤 Usando tema del usuario (${userRole}):`, {
+                    nombre: user.nombreCompleto,
+                    organizacion: user.organizacion,
+                    theme: userTheme
+                });
+                
+                this.applyThemeDirectly(userTheme);
+                this.saveThemeToLocalStorage(userTheme);
                 return;
             }
             
-            // TERCERO: Obtener usuario actual
-            const currentUser = this.userManager.currentUser;
-            
-            if (!currentUser) {
-                console.log('👤 No hay usuario autenticado, usando predeterminado');
-                this.applyThemeById('default');
-                return;
-            }
-            
-            // Obtener tema del usuario
-            let themeId = currentUser.theme;
-            
-            console.log('🎯 TEMA DEL USUARIO:', themeId);
-            
-            // Si no tiene tema o es predeterminado, usar default
-            if (!themeId || themeId === 'predeterminado' || themeId === 'default') {
-                themeId = 'default';
-            }
-            
-            // Verificar si el tema existe en nuestros presets
-            const themes = this.getThemePresets();
-            if (!themes[themeId]) {
-                console.warn(`⚠️ Tema ${themeId} no existe, usando default`);
-                themeId = 'default';
-            }
-            
-            // Aplicar el tema
-            console.log(`🚀 APLICANDO TEMA DESDE USUARIO: ${themeId}`);
-            this.applyThemeDirectly(themeId);
-            
-            // Guardar en localStorage para futuras cargas rápidas
-            this.saveThemeToLocalStorage(themeId);
+            // TERCERO: Si no hay nada, usar default
+            console.log('⚫ Sin datos de tema, usando predeterminado');
+            this.applyThemeDirectly('default');
             
         } catch (error) {
             console.error('🔥 ERROR CARGANDO TEMA:', error);
-            this.applyThemeById('default');
+            this.applyThemeDirectly('default');
         }
     }
     
@@ -142,6 +144,51 @@ class ThemeLoader {
     }
     
     // =============================================
+    // VERIFICAR TEMA CON USUARIO - CORREGIDO PARA COLABORADORES
+    // =============================================
+    async verifyWithUserTheme(currentThemeId) {
+        try {
+            if (!this.userManager) {
+                console.log('⚠️ UserManager no disponible');
+                return;
+            }
+            
+            // Esperar un poco más a que cargue el usuario
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // ✅ IMPORTANTE: userManager.currentUser funciona para TODOS los roles
+            // porque loadCurrentUser() ya busca en administradores Y colaboradores
+            if (!this.userManager.currentUser) {
+                console.log('👤 No hay usuario autenticado para verificar tema');
+                return;
+            }
+            
+            const user = this.userManager.currentUser;
+            const userTheme = user.theme || 'default';
+            const userRole = user.cargo || 'colaborador';
+            
+            console.log(`🔍 Verificando tema:`, {
+                usuario: user.nombreCompleto,
+                rol: userRole,
+                organizacion: user.organizacion,
+                localStorage: currentThemeId,
+                usuarioTheme: userTheme
+            });
+            
+            if (userTheme !== currentThemeId) {
+                console.log(`🔄 Actualizando tema desde usuario (${userRole}): ${currentThemeId} → ${userTheme}`);
+                this.applyThemeDirectly(userTheme);
+                this.saveThemeToLocalStorage(userTheme);
+            } else {
+                console.log(`✅ Tema coincide con usuario (${userRole})`);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error verificando tema con usuario:', error);
+        }
+    }
+
+    // =============================================
     // VERIFICAR CON BASE DE DATOS (SOLO CUANDO SEA NECESARIO)
     // =============================================
     async verifyWithDatabase(currentThemeId) {
@@ -164,16 +211,17 @@ class ThemeLoader {
             
             const currentUser = this.userManager.currentUser;
             const dbThemeId = currentUser.theme || 'default';
+            const userRole = currentUser.cargo || 'colaborador';
             
             // Si el tema coincide con el actual, no hacer nada
             if (dbThemeId === currentThemeId) {
-                console.log('✅ Tema coincide con BD, todo correcto');
+                console.log(`✅ Tema coincide con BD (${userRole}), todo correcto`);
                 this.lastDatabaseCheck = now;
                 return;
             }
             
             // Si hay diferencia, actualizar desde BD
-            console.log(`🔄 Tema difiere: localStorage=${currentThemeId}, BD=${dbThemeId}`);
+            console.log(`🔄 Tema difiere: localStorage=${currentThemeId}, BD=${dbThemeId} (${userRole})`);
             this.applyThemeDirectly(dbThemeId);
             this.saveThemeToLocalStorage(dbThemeId);
             
@@ -225,6 +273,7 @@ class ThemeLoader {
                 themeId: themeId,
                 themeName: theme.name,
                 user: this.userManager?.currentUser?.id,
+                userRole: this.userManager?.currentUser?.cargo,
                 appliedDirectly: true
             }
         }));
@@ -234,7 +283,6 @@ class ThemeLoader {
         // Desactivar flag después de un tiempo
         setTimeout(() => {
             this.isApplyingTheme = false;
-            console.log('✅ Flag de aplicación desactivado');
         }, 3000);
     }
 
@@ -254,6 +302,7 @@ class ThemeLoader {
                 themeId: themeId,
                 appliedAt: new Date().toISOString(),
                 user: this.userManager?.currentUser?.id || 'unknown',
+                userRole: this.userManager?.currentUser?.cargo || 'unknown',
                 fromLoader: true,
                 timestamp: Date.now()
             };
@@ -326,12 +375,14 @@ class ThemeLoader {
         }
     }
 
+    // =============================================
+    // VERIFICAR CAMBIOS EN BD - CORREGIDO PARA COLABORADORES
+    // =============================================
     async checkForThemeChanges() {
         try {
             // Verificar tiempo mínimo entre verificaciones
             const now = Date.now();
             if (now - this.lastCheckTime < this.minCheckInterval) {
-                console.log('⏱️ Verificación muy frecuente, omitiendo');
                 return;
             }
             
@@ -339,16 +390,17 @@ class ThemeLoader {
             
             // Evitar verificación si ya estamos aplicando un tema
             if (this.isApplyingTheme) {
-                console.log('⏳ Ya aplicando tema, omitiendo verificación');
                 return;
             }
             
             if (!this.userManager || !this.userManager.currentUser) {
+                console.log('👤 No hay usuario autenticado para verificar cambios');
                 return;
             }
             
             const currentUser = this.userManager.currentUser;
             const currentTheme = currentUser.theme || 'default';
+            const userRole = currentUser.cargo || 'colaborador';
             
             // Si ya estamos aplicando este tema, no hacer nada
             if (currentTheme === this.currentThemeId) {
@@ -358,11 +410,13 @@ class ThemeLoader {
             console.log('🔍 Verificando cambios en BD:', {
                 temaActual: this.currentThemeId,
                 temaEnBase: currentTheme,
-                usuario: currentUser.id
+                usuario: currentUser.id,
+                rol: userRole,
+                organizacion: currentUser.organizacion
             });
             
             if (currentTheme !== this.currentThemeId) {
-                console.log(`🔄 ¡CAMBIO DETECTADO EN BD! ${this.currentThemeId} → ${currentTheme}`);
+                console.log(`🔄 ¡CAMBIO DETECTADO EN BD (${userRole})! ${this.currentThemeId} → ${currentTheme}`);
                 
                 // Aplicar directamente
                 this.applyThemeDirectly(currentTheme);
@@ -443,7 +497,7 @@ class ThemeLoader {
     }
 
     // =============================================
-    // PALETA DE TEMAS (COMPLETA - PEGA AQUÍ TUS 12 TEMAS)
+    // PALETA DE TEMAS (COMPLETA - 12 TEMAS)
     // =============================================
     getThemePresets() {
         return {

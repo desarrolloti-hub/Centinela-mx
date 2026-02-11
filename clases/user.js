@@ -40,8 +40,8 @@ class User {
         this.correoElectronico = data.correoElectronico || '';
         this.status = data.status !== undefined ? data.status : true;
         this.idAuth = data.idAuth || '';
-        this.fotoUsuario = data.fotoUsuario || '';
-        this.fotoOrganizacion = data.fotoOrganizacion || '';
+        this.fotoUsuario = data.fotoUsuario || data.fotoURL || data.foto || '';
+this.fotoOrganizacion = data.fotoOrganizacion || data.logoOrganizacion || data.logo || '';
         
         // Fechas y timestamps
         this.fechaActualizacion = data.fechaActualizacion || new Date();
@@ -278,24 +278,25 @@ class UserManager {
             const adminRef = doc(db, "administradores", userId);
             const adminSnap = await getDoc(adminRef);
             
+            // CAMBIA TODO EL BLOQUE DE ADMINISTRADOR por esto:
             if (adminSnap.exists()) {
+                console.log('✅ Encontrado en administradores');
                 const data = adminSnap.data();
-                
-                // Si el usuario está inactivo, cerrar sesión y lanzar error
-                if (!data.status) {
-                    await signOut(auth);
-                    throw new Error('Tu cuenta está inactiva. Contacta al administrador del sistema.');
-                }
-                
-                // Crear instancia de usuario administrador
-                this.currentUser = new User(userId, {
+
+                // ✅ CORREGIDO: Incluir TODOS los campos incluyendo fotos
+                const user = new User(id, {
                     ...data,
-                    idAuth: userId,
+                    idAuth: id,
                     cargo: 'administrador',
-                    emailVerified: auth.currentUser?.emailVerified || false
+                    // Asegurar que las fotos se pasen explícitamente
+                    fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
+                    fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
+                    email: data.correoElectronico || data.email
                 });
-                console.log('Usuario actual es administrador:', this.currentUser.nombreCompleto);
-                return this.currentUser;
+
+                // Agregar a memoria para próximas búsquedas
+                this.users.push(user);
+                return user;
             }
             
             // ===== SEGUNDO: Buscar en colaboradores =====
@@ -554,7 +555,8 @@ class UserManager {
                 cargo: 'colaborador',
                 organizacion: adminData.organizacion,
                 organizacionCamelCase: adminData.organizacionCamelCase,
-                fotoOrganizacion: adminData.fotoOrganizacion,
+                fotoOrganizacion: adminData.fotoOrganizacion || adminData.logoOrganizacion || null,
+                fotoUsuario: colaboradorData.fotoUsuario || colaboradorData.fotoURL || null,
                 theme: adminData.theme || 'light',
                 plan: adminData.plan || 'gratis',
                 verificado: false,
@@ -1272,12 +1274,12 @@ class UserManager {
         }
     }
 
-    // ========== MÉTODOS DE BÚSQUEDA EN MEMORIA ==========
+    // ========== 🔥 MÉTODO CORREGIDO - OBTENER USUARIO POR ID CON FOTOS ==========
     
     /**
-     * Busca un usuario por ID en la memoria local
+     * Busca un usuario por ID en la memoria local o Firestore
      * @param {string} id - ID del usuario
-     * @returns {User|undefined} Instancia del usuario o undefined
+     * @returns {Promise<User|null>} Instancia del usuario o null
      */
     async getUserById(id) {
         console.log('🔍 getUserById buscando:', id);
@@ -1300,10 +1302,16 @@ class UserManager {
             if (adminSnap.exists()) {
                 console.log('✅ Encontrado en administradores');
                 const data = adminSnap.data();
+                
+                // ✅ CORREGIDO: Incluir TODOS los campos incluyendo fotos
                 const user = new User(id, {
                     ...data,
                     idAuth: id,
-                    cargo: 'administrador'
+                    cargo: 'administrador',
+                    // Asegurar que las fotos se pasen explícitamente
+                    fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
+                fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
+                    email: data.correoElectronico || data.email
                 });
                 
                 // Agregar a memoria para próximas búsquedas
@@ -1316,24 +1324,39 @@ class UserManager {
             
             for (const org of organizaciones) {
                 const coleccion = `colaboradores_${org.camelCase}`;
-                const q = query(
-                    collection(db, coleccion),
-                    where("idAuth", "==", id)
-                );
-                const snapshot = await getDocs(q);
                 
-                if (!snapshot.empty) {
-                    console.log(`✅ Encontrado en ${coleccion}`);
-                    const docSnap = snapshot.docs[0];
-                    const data = docSnap.data();
-                    const user = new User(id, {
-                        ...data,
-                        idAuth: id,
-                        cargo: 'colaborador'
-                    });
+                // Verificar si la colección existe
+                try {
+                    const q = query(
+                        collection(db, coleccion),
+                        where("idAuth", "==", id)
+                    );
+                    const snapshot = await getDocs(q);
                     
-                    this.users.push(user);
-                    return user;
+                    // CAMBIA TODO EL BLOQUE DE COLABORADOR por esto:
+            if (!snapshot.empty) {
+                console.log(`✅ Encontrado en ${coleccion}`);
+                const docSnap = snapshot.docs[0];
+                const data = docSnap.data();
+
+                // ✅ CORREGIDO: Incluir TODOS los campos incluyendo fotos
+                const user = new User(id, {
+                    ...data,
+                    idAuth: id,
+                    cargo: 'colaborador',
+                    // Asegurar que las fotos se pasen explícitamente
+                    fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
+                    fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
+                    email: data.correoElectronico || data.email
+                });
+
+                this.users.push(user);
+                return user;
+            }
+                } catch (e) {
+                    // La colección podría no existir, continuar con la siguiente
+                    console.warn(`Colección ${coleccion} no disponible:`, e.message);
+                    continue;
                 }
             }
             

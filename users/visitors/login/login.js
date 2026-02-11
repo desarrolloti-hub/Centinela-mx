@@ -147,20 +147,57 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // ===============================================================
+    // 🔥 FUNCIÓN MEJORADA: Guarda usuario en localStorage con imágenes
+    // ===============================================================
     function saveUserToLocalStorage(user) {
         try {
             const organizacionCamelCase = toCamelCase(user.organizacion);
             
+            // ✅ EXTRAER FOTOS DE TODAS LAS POSIBLES UBICACIONES
+            let fotoUsuario = null;
+            let fotoOrganizacion = null;
+            
+            // Buscar foto de usuario en TODAS las propiedades posibles
+            if (user.fotoUsuario) fotoUsuario = user.fotoUsuario;
+            else if (user.fotoURL) fotoUsuario = user.fotoURL;
+            else if (user.foto) fotoUsuario = user.foto;
+            else if (user.photoURL) fotoUsuario = user.photoURL;
+            else if (user.avatar) fotoUsuario = user.avatar;
+            else if (user.imagenPerfil) fotoUsuario = user.imagenPerfil;
+            
+            // Buscar foto de organización en TODAS las propiedades posibles
+            if (user.fotoOrganizacion) fotoOrganizacion = user.fotoOrganizacion;
+            else if (user.logoOrganizacion) fotoOrganizacion = user.logoOrganizacion;
+            else if (user.logo) fotoOrganizacion = user.logo;
+            else if (user.organizacionLogo) fotoOrganizacion = user.organizacionLogo;
+            else if (user.logoUrl) fotoOrganizacion = user.logoUrl;
+            
+            // LOG DETALLADO DE QUÉ ENCONTRAMOS
+            console.log('📸 BÚSQUEDA DE IMÁGENES EN USER:', {
+                nombre: user.nombreCompleto,
+                fotoUsuario_encontrada: !!fotoUsuario,
+                fotoUsuario_length: fotoUsuario ? fotoUsuario.length : 0,
+                fotoUsuario_inicio: fotoUsuario ? fotoUsuario.substring(0, 50) + '...' : null,
+                fotoOrganizacion_encontrada: !!fotoOrganizacion,
+                fotoOrganizacion_length: fotoOrganizacion ? fotoOrganizacion.length : 0,
+                fotoOrganizacion_inicio: fotoOrganizacion ? fotoOrganizacion.substring(0, 50) + '...' : null
+            });
+            
             const userData = {
                 id: user.id,
-                email: user.email,
+                email: user.email || user.correoElectronico,
                 nombreCompleto: user.nombreCompleto,
                 cargo: user.cargo,
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
                 status: user.status,
                 verificado: user.verificado,
-                fotoURL: user.fotoURL || '',
+                
+                // ✅ GUARDAR IMÁGENES EXPLÍCITAMENTE
+                fotoUsuario: fotoUsuario || '',
+                fotoOrganizacion: fotoOrganizacion || '',
+                
                 ultimoAcceso: new Date().toISOString(),
                 sessionStart: new Date().toISOString(),
                 fechaLogin: new Date().toLocaleDateString('es-ES', {
@@ -179,19 +216,39 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('userOrganizacion', user.organizacion);
             localStorage.setItem('userOrganizacionCamelCase', organizacionCamelCase);
             localStorage.setItem('userNombre', user.nombreCompleto);
+            localStorage.setItem('userEmail', user.email || user.correoElectronico || '');
             
-            console.log('Datos del usuario guardados en localStorage:', {
-                id: user.id,
-                nombre: user.nombreCompleto,
-                cargo: user.cargo,
-                organizacion: user.organizacion,
-                organizacionCamelCase: organizacionCamelCase,
-                timestamp: userData.fechaLogin
+            // ✅ GUARDAR IMÁGENES EN KEYS INDIVIDUALES
+            if (fotoUsuario) {
+                localStorage.setItem('userFoto', fotoUsuario);
+                console.log('📸 Foto de usuario guardada en localStorage (userFoto) - Length:', fotoUsuario.length);
+            } else {
+                localStorage.removeItem('userFoto');
+            }
+            
+            if (fotoOrganizacion) {
+                localStorage.setItem('organizacionLogo', fotoOrganizacion);
+                console.log('🏢 Logo de organización guardado en localStorage (organizacionLogo) - Length:', fotoOrganizacion.length);
+            } else {
+                localStorage.removeItem('organizacionLogo');
+            }
+            
+            // VERIFICAR QUE SE GUARDARON CORRECTAMENTE
+            const savedUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+            console.log('✅ VERIFICACIÓN DE localStorage:', {
+                userData_fotoUsuario: !!savedUserData.fotoUsuario,
+                userData_fotoUsuario_length: savedUserData.fotoUsuario ? savedUserData.fotoUsuario.length : 0,
+                userData_fotoOrganizacion: !!savedUserData.fotoOrganizacion,
+                userData_fotoOrganizacion_length: savedUserData.fotoOrganizacion ? savedUserData.fotoOrganizacion.length : 0,
+                userFoto_key: !!localStorage.getItem('userFoto'),
+                userFoto_length: localStorage.getItem('userFoto') ? localStorage.getItem('userFoto').length : 0,
+                organizacionLogo_key: !!localStorage.getItem('organizacionLogo'),
+                organizacionLogo_length: localStorage.getItem('organizacionLogo') ? localStorage.getItem('organizacionLogo').length : 0
             });
             
             return true;
         } catch (error) {
-            console.error('Error al guardar en localStorage:', error);
+            console.error('❌ Error al guardar en localStorage:', error);
             return false;
         }
     }
@@ -251,6 +308,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     usuario: userData.nombreCompleto,
                     organizacion: userData.organizacion,
                     organizacionCamelCase: userData.organizacionCamelCase,
+                    tieneFotoUsuario: !!userData.fotoUsuario,
+                    tieneFotoOrganizacion: !!userData.fotoOrganizacion,
                     sessionId: sessionData.sessionId,
                     tiempoSesion: sessionData.sessionStart
                 });
@@ -683,13 +742,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const user = await userManager.iniciarSesion(email, password);
             
-            console.log('Login exitoso:', {
+            console.log('✅ Login exitoso:', {
                 id: user.id,
                 nombre: user.nombreCompleto,
                 cargo: user.cargo,
                 organizacion: user.organizacion,
                 status: user.status,
-                verificado: user.verificado
+                verificado: user.verificado,
+                tieneFotoUsuario: !!(user.fotoUsuario || user.fotoURL),
+                tieneFotoOrganizacion: !!user.fotoOrganizacion
             });
             
             const organizacionCamelCase = toCamelCase(user.organizacion);
@@ -699,9 +760,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const savedToSession = saveUserToSessionStorage(user);
             
             if (savedToLocal && savedToSession) {
-                console.log('Datos de usuario guardados correctamente');
+                console.log('✅ Datos de usuario guardados correctamente con imágenes');
             } else {
-                console.log('Algunos datos no se guardaron completamente');
+                console.log('⚠️ Algunos datos no se guardaron completamente');
             }
             
             toggleButtonState(false, '<i class="fas fa-check"></i> SESIÓN INICIADA');
@@ -716,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
                 } else if (user.cargo === 'colaborador') {
                     console.log('Redirigiendo a dashboard de colaborador');
-                    window.location.href = '/users/colaborador/dashboard.html';
+                    window.location.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
                 } else {
                     console.log('Tipo de usuario desconocido, redirigiendo a inicio');
                     window.location.href = '/index.html';
@@ -724,7 +785,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 2500);
             
         } catch (error) {
-            console.error('Error en login:', error);
+            console.error('❌ Error en login:', error);
             
             toggleButtonState(true);
             
