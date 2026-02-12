@@ -201,7 +201,7 @@ h6 i {
     content: "" !important;
 }
 
-.form-control, .form-select, .form-control-color {
+.form-control, .form-select {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
@@ -211,7 +211,7 @@ h6 i {
     font-family: var(--font-family-secondary) !important;
 }
 
-.form-control:focus, .form-select:focus, .form-control-color:focus {
+.form-control:focus, .form-select:focus {
     border-color: var(--color-accent-secondary) !important;
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
     background: var(--color-bg-secondary) !important;
@@ -220,12 +220,6 @@ h6 i {
 
 .form-control::placeholder {
     color: rgba(255, 255, 255, 0.3) !important;
-}
-
-.form-control-color {
-    height: 45px !important;
-    padding: 5px !important;
-    cursor: pointer !important;
 }
 
 .form-text {
@@ -250,36 +244,6 @@ h6 i {
 
 .input-group .form-control {
     border-left: none !important;
-}
-
-/* Botón de color aleatorio */
-#btnColorRandom {
-    background: var(--color-bg-tertiary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-secondary) !important;
-    transition: all 0.3s ease !important;
-}
-
-#btnColorRandom:hover {
-    background: var(--color-hover) !important;
-    border-color: var(--color-accent-primary) !important;
-    color: var(--color-text-primary) !important;
-}
-
-/* Selector de iconos */
-.icon-selector {
-    position: relative;
-}
-
-.icon-selector select option {
-    background: var(--color-bg-tertiary) !important;
-    color: var(--color-text-primary) !important;
-    padding: 10px !important;
-}
-
-#iconoPreview {
-    color: var(--color-accent-primary);
-    font-size: 20px;
 }
 
 /* =============================================
@@ -452,6 +416,109 @@ h6 i {
 }
 
 /* =============================================
+   SECCIÓN DE CARGOS
+   ============================================= */
+.cargos-container {
+    background: rgba(20, 20, 20, 0.5);
+    border-radius: var(--border-radius-medium);
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--color-border-light);
+}
+
+.cargo-item {
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-small);
+    padding: 15px;
+    margin-bottom: 15px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.cargo-item:hover {
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 15px rgba(192, 192, 192, 0.1);
+}
+
+.cargo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cargo-titulo {
+    color: var(--color-accent-primary);
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.btn-eliminar-cargo {
+    background: rgba(255, 77, 77, 0.1) !important;
+    border: 1px solid var(--color-danger) !important;
+    color: var(--color-danger) !important;
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    border-radius: var(--border-radius-small) !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-eliminar-cargo:hover {
+    background: var(--color-danger) !important;
+    color: white !important;
+    transform: translateY(-2px);
+}
+
+.btn-agregar-cargo {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-secondary) !important;
+    color: var(--color-accent-secondary) !important;
+    padding: 10px 20px !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.btn-agregar-cargo:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(47, 140, 255, 0.2);
+}
+
+.cargos-counter {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.cargos-empty {
+    text-align: center;
+    padding: 30px;
+    color: var(--color-text-secondary);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-medium);
+    border: 1px dashed var(--color-border-light);
+}
+
+.cargos-empty i {
+    font-size: 24px;
+    color: var(--color-accent-primary);
+    margin-bottom: 10px;
+}
+
+/* =============================================
    ANIMACIONES
    ============================================= */
 @keyframes fadeInUp {
@@ -500,6 +567,16 @@ h6 i {
         flex-direction: column !important;
         gap: 10px !important;
     }
+    
+    /* Responsive para cargos */
+    .cargo-item .row {
+        flex-direction: column;
+    }
+    
+    .cargo-item .col-md-6 {
+        width: 100%;
+        margin-bottom: 10px;
+    }
 }
 
 /* MÓVIL (768px hacia abajo) */
@@ -535,7 +612,7 @@ h6 i {
         font-size: 13px !important;
     }
     
-    .form-control, .form-select, .form-control-color {
+    .form-control, .form-select {
         padding: 10px 12px !important;
         font-size: 14px !important;
     }
@@ -551,6 +628,20 @@ h6 i {
     .modal-content {
         padding: 15px !important;
         margin: 0 !important;
+    }
+    
+    /* Responsive para cargos en móvil */
+    .cargos-container {
+        padding: 15px !important;
+    }
+    
+    .cargo-item {
+        padding: 12px !important;
+    }
+    
+    .btn-agregar-cargo {
+        width: 100% !important;
+        justify-content: center !important;
     }
 }
 
@@ -592,5 +683,20 @@ h6 i {
         min-width: 140px !important;
         padding: 8px 15px !important;
         font-size: 13px !important;
+    }
+    
+    /* Responsive para cargos en móvil pequeño */
+    .cargo-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .btn-eliminar-cargo {
+        width: 100% !important;
+    }
+    
+    .cargos-empty {
+        padding: 20px !important;
     }
 }

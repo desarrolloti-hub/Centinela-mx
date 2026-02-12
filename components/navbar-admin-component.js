@@ -855,7 +855,7 @@ class NavbarComplete {
                     </div>
                     <div class="nav-items-container">
                         <!-- Botón para ÁREAS -->
-                        <a href="/users/admin/area/area.html" class="nav-item" id="areasBtn">
+                        <a href="/users/admin/areas/areas.html" class="nav-item" id="areasBtn">
                             <i class="fa-solid fa-map"></i>
                             <span class="nav-item-text">Áreas</span>
                             <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
