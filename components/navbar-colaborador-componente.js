@@ -29,8 +29,8 @@ class NavbarComplete {
             this.removeOriginalNavbar();
             this.createNavbar(); 
             this.setupFunctionalities(); 
-            this.loadUserDataFromLocalStorage(); // ✅ Carga inmediata de localStorage con imágenes
-            this.updateNavbarWithUserData();     // ✅ Actualiza navbar con fotos incluidas
+            this.loadUserDataFromLocalStorage();
+            this.updateNavbarWithUserData();
             console.log('✅ Navbar completo inicializado con datos del usuario');
         } catch (error) {
             console.error('❌ Error:', error);
@@ -817,44 +817,78 @@ class NavbarComplete {
                                 <span>Usuario</span>
                             </div>
                         </div>
-                        <a href="#" class="edit-profile-icon" id="editProfileIcon">
+                        <a href="/users/colaborador/perfil/perfil.html" class="edit-profile-icon" id="editProfileIcon">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
                     </div>
                     
                     <div class="admin-info">
                         <div class="admin-name" id="userName">Cargando...</div>
-                        <div class="admin-role" id="userRole">Cargando...</div>
+                        <div class="admin-role" id="userRole">Colaborador</div>
                         <div class="admin-email" id="userEmail">cargando@email.com</div>
                         <div class="admin-organization" id="userOrganization"></div>
                     </div>
                 </div>
                 
-                <!-- SECCIÓN DE MENÚ - SE LLENA DINÁMICAMENTE -->
-                <div class="nav-section" id="navSection">
-                    <!-- Contenido dinámico según rol -->
+                <!-- SECCIÓN DE MENÚ - Mis Herramientas -->
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fa-solid fa-briefcase"></i>
+                        <span>Mis Herramientas</span>
+                    </div>
+                    <div class="nav-items-container">
+                        <a href="/users/colaborador/mis-tareas/mis-tareas.html" class="nav-item" id="misTareasBtn">
+                            <i class="fa-solid fa-check-circle"></i>
+                            <span class="nav-item-text">Mis Tareas</span>
+                            <span class="nav-item-percentage" id="tareasPendientes">0</span>
+                        </a>
+                        <a href="/users/colaborador/proyectos/proyectos.html" class="nav-item" id="proyectosBtn">
+                            <i class="fa-solid fa-project-diagram"></i>
+                            <span class="nav-item-text">Proyectos</span>
+                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+                        </a>
+                        <a href="/users/colaborador/calendario/calendario.html" class="nav-item" id="calendarioBtn">
+                            <i class="fa-solid fa-calendar"></i>
+                            <span class="nav-item-text">Calendario</span>
+                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+                        </a>
+                        <a href="/users/colaborador/notificaciones/notificaciones.html" class="nav-item" id="notificacionesBtn">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="nav-item-text">Notificaciones</span>
+                            <span class="nav-item-percentage" id="notificacionesNoLeidas">0</span>
+                        </a>
+                    </div>
                 </div>
                 
                 <!-- Sección de espacios vacíos -->
                 <div class="menu-section">
+                    <div class="empty-menu-item"></div>
+                    <div class="empty-menu-item"></div>
+                    <div class="empty-menu-item"></div>
+                    <div class="empty-menu-item"></div>
+                    <div class="empty-menu-item"></div>
                     <div class="empty-menu-item"></div>
                 </div>
                 
                 <!-- Sección de opciones de usuario -->
                 <div class="admin-options-section">
                     <button class="admin-dropdown-btn" id="userDropdownBtn">
-                        <span>Opciones de Usuario</span>
+                        <span>Opciones de Colaborador</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
                     
                     <div class="admin-dropdown-options" id="userDropdownOptions">
-                        <a href="#" class="admin-dropdown-option" id="profileOption">
-                            <i class="fa-solid fa-user"></i>
-                            <span>Mi Perfil</span>
+                        <a href="/users/colaborador/perfil/perfil.html" class="admin-dropdown-option">
+                            <i class="fa-solid fa-user-pen"></i>
+                            <span>Editar Perfil</span>
                         </a>
-                        <a href="#" class="admin-dropdown-option" id="settingsOption">
-                            <i class="fa-solid fa-gear"></i>
-                            <span>Configuración</span>
+                        <a href="/users/colaborador/configuracion/configuracion.html" class="admin-dropdown-option">
+                            <i class="fa-solid fa-sliders-h"></i>
+                            <span>Preferencias</span>
+                        </a>
+                        <a href="/users/colaborador/ayuda/ayuda.html" class="admin-dropdown-option">
+                            <i class="fa-solid fa-circle-question"></i>
+                            <span>Ayuda</span>
                         </a>
                         <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
                             <i class="fa-solid fa-right-from-bracket"></i>
@@ -883,12 +917,9 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // ===============================================================
-    // 🔥 FUNCIÓN MEJORADA: Carga los datos del usuario CON IMÁGENES
-    // ===============================================================
+    // Carga los datos del usuario desde localStorage
     loadUserDataFromLocalStorage() {
         try {
-            // 1. VERIFICAR SI EL USUARIO ESTÁ LOGUEADO
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             
             if (!isLoggedIn) {
@@ -896,7 +927,6 @@ class NavbarComplete {
                 return false;
             }
             
-            // 2. VERIFICAR QUÉ HAY EN localStorage AHORA MISMO
             console.log('🔍 VERIFICANDO localStorage:');
             console.log('   - isLoggedIn:', localStorage.getItem('isLoggedIn'));
             console.log('   - userData:', localStorage.getItem('userData') ? '✅ Existe' : '❌ No existe');
@@ -905,13 +935,11 @@ class NavbarComplete {
             console.log('   - organizacionLogo:', localStorage.getItem('organizacionLogo') ? '✅ Existe' : '❌ No existe');
             console.log('   - organizacionLogo length:', localStorage.getItem('organizacionLogo') ? localStorage.getItem('organizacionLogo').length : 0);
             
-            // 3. CARGAR userData COMPLETO
             const userDataString = localStorage.getItem('userData');
             
             if (userDataString) {
                 const userData = JSON.parse(userDataString);
                 
-                // DEBUG: Ver qué contiene userData
                 console.log('📦 Contenido de userData:', {
                     tieneFotoUsuario: !!userData.fotoUsuario,
                     fotoUsuarioLength: userData.fotoUsuario ? userData.fotoUsuario.length : 0,
@@ -919,14 +947,9 @@ class NavbarComplete {
                     fotoOrganizacionLength: userData.fotoOrganizacion ? userData.fotoOrganizacion.length : 0
                 });
                 
-                // ✅ PRIORIDAD 1: Usar las imágenes de userData
-                // ✅ PRIORIDAD 2: Si no hay, usar keys individuales
-                // ✅ PRIORIDAD 3: Si no hay, null
-                
                 let fotoUsuario = null;
                 let fotoOrganizacion = null;
                 
-                // Prioridad para foto de usuario
                 if (userData.fotoUsuario && userData.fotoUsuario.length > 10) {
                     fotoUsuario = userData.fotoUsuario;
                     console.log('📸 Usando fotoUsuario de userData');
@@ -938,7 +961,6 @@ class NavbarComplete {
                     }
                 }
                 
-                // Prioridad para foto de organización
                 if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) {
                     fotoOrganizacion = userData.fotoOrganizacion;
                     console.log('🏢 Usando fotoOrganizacion de userData');
@@ -950,7 +972,6 @@ class NavbarComplete {
                     }
                 }
                 
-                // Construir objeto de usuario COMPLETO con TODOS los campos incluyendo imágenes
                 this.currentUser = {
                     id: userData.id || localStorage.getItem('userId'),
                     uid: userData.id,
@@ -959,11 +980,8 @@ class NavbarComplete {
                     cargo: userData.cargo || localStorage.getItem('userRole'),
                     organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
                     organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
-                    
-                    // ✅ ASIGNAR IMÁGENES
                     fotoUsuario: fotoUsuario,
                     fotoOrganizacion: fotoOrganizacion,
-                    
                     status: userData.status || 'activo',
                     verificado: userData.verificado || true,
                     ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
@@ -984,7 +1002,6 @@ class NavbarComplete {
                 return true;
             }
             
-            // 4. FALLBACK: Cargar desde claves individuales
             this.currentUser = {
                 id: localStorage.getItem('userId'),
                 correoElectronico: localStorage.getItem('userEmail'),
@@ -992,21 +1009,12 @@ class NavbarComplete {
                 cargo: localStorage.getItem('userRole'),
                 organizacion: localStorage.getItem('userOrganizacion'),
                 organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
-                
-                // ✅ Intentar cargar imágenes desde keys individuales
                 fotoUsuario: localStorage.getItem('userFoto') || null,
                 fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
             };
             
-            // Verificar si hay datos mínimos
             if (this.currentUser.nombreCompleto && this.currentUser.cargo) {
-                console.log('✅ Usuario cargado desde claves individuales localStorage:', {
-                    nombre: this.currentUser.nombreCompleto,
-                    tieneFotoUsuario: !!this.currentUser.fotoUsuario,
-                    fotoUsuarioLength: this.currentUser.fotoUsuario ? this.currentUser.fotoUsuario.length : 0,
-                    tieneFotoOrganizacion: !!this.currentUser.fotoOrganizacion,
-                    fotoOrganizacionLength: this.currentUser.fotoOrganizacion ? this.currentUser.fotoOrganizacion.length : 0
-                });
+                console.log('✅ Usuario cargado desde claves individuales localStorage');
                 this.userRole = this.currentUser.cargo?.toLowerCase() || 'colaborador';
                 return true;
             }
@@ -1020,12 +1028,10 @@ class NavbarComplete {
         }
     }
 
-    // Actualiza el navbar con los datos del usuario (INCLUYENDO IMÁGENES)
+    // Actualiza el navbar con los datos del usuario
     updateNavbarWithUserData() {
         if (!this.currentUser) {
             console.log('⚠️ No hay datos de usuario para mostrar');
-            
-            // Mostrar placeholder
             const userName = document.getElementById('userName');
             const userRole = document.getElementById('userRole');
             const userEmail = document.getElementById('userEmail');
@@ -1041,151 +1047,12 @@ class NavbarComplete {
 
         console.log('🔄 Actualizando navbar con datos del usuario...');
 
-        this.updateOrganizationLogo(); // ✅ Actualiza logo de organización con imagen
-        this.updateUserMenuInfo();     // ✅ Actualiza foto de perfil y datos
-        this.setupRoleBasedMenu();
+        this.updateOrganizationLogo();
+        this.updateUserMenuInfo();
         this.setupEditProfileLink();
     }
 
-    // ✅ ACTUALIZADO: Configura el menú basado en el rol
-    setupRoleBasedMenu() {
-        const navSection = document.getElementById('navSection');
-        if (!navSection) return;
-
-        if (this.userRole === 'administrador') {
-            navSection.innerHTML = `
-                <div class="nav-section-title">
-                    <i class="fa-solid fa-gear"></i>
-                    <span>Administración</span>
-                </div>
-                <div class="nav-items-container">
-                    <a href="/users/admin/area/area.html" class="nav-item" id="areasBtn">
-                        <i class="fa-solid fa-map"></i>
-                        <span class="nav-item-text">Áreas</span>
-                        <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
-                    </a>
-                    <a href="/users/admin/categorias/categorias.html" class="nav-item" id="categoriasBtn">
-                        <i class="fa-solid fa-tags"></i>
-                        <span class="nav-item-text">Categorías</span>
-                        <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
-                    </a>
-                    <a href="/users/admin/themeManager/themeManager.html" class="nav-item" id="themeManagerBtn">
-                        <i class="fa-solid fa-palette"></i>
-                        <span class="nav-item-text">Personalización</span>
-                        <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
-                    </a>
-                </div>
-            `;
-            
-            const dropdownBtn = document.getElementById('userDropdownBtn');
-            if (dropdownBtn) {
-                dropdownBtn.querySelector('span').textContent = 'Opciones de Administración';
-            }
-            
-            this.updateDropdownForAdmin();
-            
-        } else {
-            navSection.innerHTML = `
-                <div class="nav-section-title">
-                    <i class="fa-solid fa-briefcase"></i>
-                    <span>Mis Herramientas</span>
-                </div>
-                <div class="nav-items-container">
-                    <a href="/users/colaborador/mis-tareas/mis-tareas.html" class="nav-item" id="misTareasBtn">
-                        <i class="fa-solid fa-check-circle"></i>
-                        <span class="nav-item-text">Mis Tareas</span>
-                        <span class="nav-item-percentage" id="tareasPendientes">0</span>
-                    </a>
-                    <a href="/users/colaborador/proyectos/proyectos.html" class="nav-item" id="proyectosBtn">
-                        <i class="fa-solid fa-project-diagram"></i>
-                        <span class="nav-item-text">Proyectos</span>
-                        <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
-                    </a>
-                    <a href="/users/colaborador/calendario/calendario.html" class="nav-item" id="calendarioBtn">
-                        <i class="fa-solid fa-calendar"></i>
-                        <span class="nav-item-text">Calendario</span>
-                        <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
-                    </a>
-                    <a href="/users/colaborador/notificaciones/notificaciones.html" class="nav-item" id="notificacionesBtn">
-                        <i class="fa-solid fa-bell"></i>
-                        <span class="nav-item-text">Notificaciones</span>
-                        <span class="nav-item-percentage" id="notificacionesNoLeidas">0</span>
-                    </a>
-                </div>
-            `;
-            
-            const dropdownBtn = document.getElementById('userDropdownBtn');
-            if (dropdownBtn) {
-                dropdownBtn.querySelector('span').textContent = 'Opciones de Colaborador';
-            }
-            
-            this.updateDropdownForCollaborator();
-        }
-    }
-
-    // Actualiza dropdown para administrador
-    updateDropdownForAdmin() {
-        const dropdownOptions = document.getElementById('userDropdownOptions');
-        if (!dropdownOptions) return;
-        
-        dropdownOptions.innerHTML = `
-            <a href="/users/admin/editAdmin/editAdmin.html" class="admin-dropdown-option" id="editProfileOption">
-                <i class="fa-solid fa-user-pen"></i>
-                <span>Editar Perfil</span>
-            </a>
-            <a href="/users/admin/managementUser/managementUser.html" class="admin-dropdown-option">
-                <i class="fa-solid fa-users-gear"></i>
-                <span>Gestionar Usuarios</span>
-            </a>
-            <a href="/users/admin/reportes/reportes.html" class="admin-dropdown-option">
-                <i class="fa-solid fa-chart-line"></i>
-                <span>Reportes</span>
-            </a>
-            <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
-                <i class="fa-solid fa-right-from-bracket"></i>
-                <span>Cerrar Sesión</span>
-            </a>
-        `;
-    }
-
-    // Actualiza dropdown para colaborador
-    updateDropdownForCollaborator() {
-        const dropdownOptions = document.getElementById('userDropdownOptions');
-        if (!dropdownOptions) return;
-        
-        dropdownOptions.innerHTML = `
-            <a href="/users/colaborador/perfil/perfil.html" class="admin-dropdown-option" id="editProfileOption">
-                <i class="fa-solid fa-user-pen"></i>
-                <span>Editar Perfil</span>
-            </a>
-            <a href="/users/colaborador/configuracion/configuracion.html" class="admin-dropdown-option">
-                <i class="fa-solid fa-sliders-h"></i>
-                <span>Preferencias</span>
-            </a>
-            <a href="/users/colaborador/ayuda/ayuda.html" class="admin-dropdown-option">
-                <i class="fa-solid fa-circle-question"></i>
-                <span>Ayuda</span>
-            </a>
-            <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
-                <i class="fa-solid fa-right-from-bracket"></i>
-                <span>Cerrar Sesión</span>
-            </a>
-        `;
-    }
-
-    // Configura el enlace de edición según el rol
-    setupEditProfileLink() {
-        const editProfileIcon = document.getElementById('editProfileIcon');
-        if (!editProfileIcon) return;
-        
-        if (this.userRole === 'administrador') {
-            editProfileIcon.href = '/users/admin/editAdmin/editAdmin.html';
-        } else {
-            editProfileIcon.href = '/users/colaborador/perfil/perfil.html';
-        }
-    }
-
-    // ✅ ACTUALIZADO: Actualiza el logo de la organización con la imagen Base64
+    // Actualiza el logo de la organización
     updateOrganizationLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
@@ -1194,9 +1061,7 @@ class NavbarComplete {
         
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
 
-        // Verificar si existe foto de organización en Base64
         if (this.currentUser.fotoOrganizacion && this.currentUser.fotoOrganizacion.length > 10) {
-            // ✅ Mostrar imagen Base64
             organizationLogoImg.src = this.currentUser.fotoOrganizacion;
             organizationLogoImg.alt = `Logo de ${this.currentUser.organizacion}`;
             organizationLogoImg.style.display = 'block';
@@ -1205,7 +1070,6 @@ class NavbarComplete {
             
             console.log('🖼️ Logo de organización cargado desde localStorage (Base64) - Length:', this.currentUser.fotoOrganizacion.length);
             
-            // Verificar que se cargó correctamente
             organizationLogoImg.onload = () => {
                 console.log('✅ Logo de organización cargado exitosamente');
             };
@@ -1214,19 +1078,13 @@ class NavbarComplete {
                 this.showOrgTextLogo();
             };
         } else {
-            // Fallback: mostrar iniciales
             this.showOrgTextLogo();
         }
 
-        // Configurar enlace según rol
-        if (this.userRole === 'administrador') {
-            orgLogoLink.href = '/users/admin/dashAdmin/dashAdmin.html';
-        } else {
-            orgLogoLink.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
-        }
+        orgLogoLink.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
     }
 
-    // ✅ Método auxiliar para mostrar iniciales
+    // Muestra iniciales cuando no hay logo
     showOrgTextLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
@@ -1249,36 +1107,25 @@ class NavbarComplete {
         orgTextLogo.title = orgName;
     }
 
-    // ✅ ACTUALIZADO: Actualiza la información del usuario con foto de perfil
+    // Actualiza la información del usuario
     updateUserMenuInfo() {
         const userName = document.getElementById('userName');
-        if (userName) {
-            userName.textContent = this.currentUser.nombreCompleto || 'Usuario';
-        }
+        if (userName) userName.textContent = this.currentUser.nombreCompleto || 'Usuario';
 
         const userRole = document.getElementById('userRole');
-        if (userRole) {
-            const rol = this.currentUser.cargo || this.userRole || 'Colaborador';
-            userRole.textContent = this.capitalizeFirst(rol);
-        }
+        if (userRole) userRole.textContent = 'Colaborador';
 
         const userEmail = document.getElementById('userEmail');
-        if (userEmail) {
-            userEmail.textContent = this.currentUser.correoElectronico || 'No especificado';
-        }
+        if (userEmail) userEmail.textContent = this.currentUser.correoElectronico || 'No especificado';
 
         const userOrganization = document.getElementById('userOrganization');
-        if (userOrganization) {
-            userOrganization.textContent = this.currentUser.organizacion || 'Sin organización';
-        }
+        if (userOrganization) userOrganization.textContent = this.currentUser.organizacion || 'Sin organización';
 
-        // ✅ ACTUALIZADO: Mostrar foto de perfil en Base64
         const userProfileImg = document.getElementById('userProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
         
         if (userProfileImg && profilePlaceholder) {
             if (this.currentUser.fotoUsuario && this.currentUser.fotoUsuario.length > 10) {
-                // Mostrar imagen Base64
                 userProfileImg.src = this.currentUser.fotoUsuario;
                 userProfileImg.style.display = 'block';
                 profilePlaceholder.style.display = 'none';
@@ -1286,7 +1133,6 @@ class NavbarComplete {
                 
                 console.log('🖼️ Foto de perfil cargada desde localStorage (Base64) - Length:', this.currentUser.fotoUsuario.length);
                 
-                // Verificar que se cargó correctamente
                 userProfileImg.onload = () => {
                     console.log('✅ Foto de perfil cargada exitosamente');
                 };
@@ -1295,13 +1141,12 @@ class NavbarComplete {
                     this.showProfilePlaceholder();
                 };
             } else {
-                // Mostrar placeholder
                 this.showProfilePlaceholder();
             }
         }
     }
 
-    // ✅ Método auxiliar para mostrar placeholder
+    // Muestra placeholder cuando no hay foto
     showProfilePlaceholder() {
         const userProfileImg = document.getElementById('userProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
@@ -1312,7 +1157,6 @@ class NavbarComplete {
         userProfileImg.style.display = 'none';
         profilePlaceholder.style.display = 'flex';
         
-        // Actualizar texto del placeholder con iniciales
         const placeholderText = profilePlaceholder.querySelector('span');
         if (placeholderText && this.currentUser?.nombreCompleto) {
             const initials = this.currentUser.nombreCompleto
@@ -1321,8 +1165,15 @@ class NavbarComplete {
                 .join('')
                 .toUpperCase()
                 .substring(0, 2);
-            
             placeholderText.textContent = initials;
+        }
+    }
+
+    // Configura el enlace de edición de perfil
+    setupEditProfileLink() {
+        const editProfileIcon = document.getElementById('editProfileIcon');
+        if (editProfileIcon) {
+            editProfileIcon.href = '/users/colaborador/perfil/perfil.html';
         }
     }
 
@@ -1463,14 +1314,12 @@ class NavbarComplete {
         });
     }
 
-    // Realiza el cierre de sesión
+    // Realiza el cierre de sesión COMPLETO
     async performLogout() {
         console.log('🚪 Cerrando sesión...');
         
         try {
-            // Limpiar localStorage COMPLETAMENTE
             this.clearAllStorage();
-            
             await this.showLogoutSuccessMessage();
             this.redirectToLogin();
             
@@ -1481,10 +1330,9 @@ class NavbarComplete {
         }
     }
 
-    // Limpia el almacenamiento
+    // Limpia TODO el almacenamiento
     clearAllStorage() {
         try {
-            // Limpiar TODAS las claves de localStorage
             localStorage.clear();
             sessionStorage.clear();
             this.clearSessionCookies();

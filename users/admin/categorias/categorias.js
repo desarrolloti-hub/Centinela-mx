@@ -1,6 +1,6 @@
 /**
  * CATEGORÍAS - Sistema Centinela
- * VERSIÓN CON FIREBASE - Carga dinámica de la clase
+ * VERSIÓN FINAL - CON SWEETALERT2 Y ELIMINACIÓN CORREGIDA
  */
 
 // =============================================
@@ -10,812 +10,788 @@ let categoriaManager = null;
 let categoriaExpandidaId = null;
 let itemAEliminar = null;
 let tipoEliminacion = null;
+let empresaActual = null;
+let categoriasCache = [];
 
 // =============================================
-// INICIALIZACIÓN - Carga dinámica de la clase
+// INICIALIZACIÓN
 // =============================================
 async function inicializarCategoriaManager() {
     try {
+        obtenerDatosEmpresa();
+
         const { CategoriaManager } = await import('/clases/categoria.js');
         categoriaManager = new CategoriaManager();
-        console.log('✅ CategoriaManager cargado correctamente');
+
+        console.log('✅ CategoriaManager cargado');
         console.log('📁 Colección:', categoriaManager?.nombreColeccion);
-        
-        // Mostrar información de la empresa
+
         mostrarInfoEmpresa();
-        
-        // Cargar categorías después de inicializar el manager
         await cargarCategorias();
         return true;
     } catch (error) {
-        console.error('❌ Error al cargar CategoriaManager:', error);
-        
-        // Mostrar error al usuario
-        const alerta = document.createElement('div');
-        alerta.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
-        alerta.style.zIndex = '9999';
-        alerta.style.minWidth = '400px';
-        alerta.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                <div>
-                    <strong>Error crítico</strong><br>
-                    No se pudo cargar el módulo de categorías. 
-                    <button class="btn btn-sm btn-danger ms-2" onclick="window.location.reload()">
-                        <i class="fas fa-sync-alt me-1"></i>Recargar
-                    </button>
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        document.body.appendChild(alerta);
-        
+        console.error('❌ Error:', error);
         return false;
     }
 }
 
-function mostrarInfoEmpresa() {
+function obtenerDatosEmpresa() {
     try {
-        const userData = JSON.parse(localStorage.getItem('user') || '{}');
-        const empresaData = JSON.parse(localStorage.getItem('empresa') || '{}');
-        
-        const empresaNombre = empresaData.nombre || userData.empresa || 'No especificada';
-        
-        // Agregar badge de empresa en el header
-        const header = document.querySelector('.dashboard-title') || document.querySelector('h1');
-        if (header && !document.getElementById('badge-empresa-categorias')) {
-            const badgeEmpresa = document.createElement('div');
-            badgeEmpresa.id = 'badge-empresa-categorias';
-            badgeEmpresa.className = 'badge-empresa';
-            badgeEmpresa.style.cssText = `
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                background: rgba(16, 185, 129, 0.1);
-                border: 1px solid rgba(16, 185, 129, 0.2);
-                color: #10b981;
-                padding: 8px 16px;
-                border-radius: 8px;
-                font-size: 14px;
-                margin-left: 16px;
-            `;
-            badgeEmpresa.innerHTML = `
-                <i class="fas fa-building"></i>
-                <span>Empresa: <strong>${empresaNombre}</strong></span>
-            `;
-            
-            if (header.parentElement) {
-                header.parentElement.insertBefore(badgeEmpresa, header.nextSibling);
-            }
-        }
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        empresaActual = {
+            nombre: userData.organizacion || 'Mi Empresa'
+        };
     } catch (error) {
-        console.error('Error mostrando info de empresa:', error);
+        empresaActual = { nombre: 'Mi Empresa' };
+    }
+}
+
+function mostrarInfoEmpresa() {
+    const header = document.querySelector('.header-title h1');
+    if (header && !document.getElementById('badge-empresa')) {
+        const badge = document.createElement('span');
+        badge.id = 'badge-empresa';
+        badge.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.3);
+            color: #10b981;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-left: 12px;
+        `;
+        badge.innerHTML = `<i class="fas fa-building"></i> ${empresaActual.nombre}`;
+        header.appendChild(badge);
     }
 }
 
 // =============================================
-// FUNCIONES GLOBALES - DECLARADAS CON window
+// FUNCIONES GLOBALES
 // =============================================
-
-// EDITAR CATEGORÍA - Solo envía el ID
-window.editarCategoria = function(categoriaId) {
+window.editarCategoria = function (id) {
     event?.stopPropagation();
-    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${categoriaId}`;
+    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${id}`;
 };
 
-// AGREGAR SUBCATEGORÍA
-window.agregarSubcategoria = function(categoriaId) {
+window.agregarSubcategoria = function (id) {
     event?.stopPropagation();
-    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${categoriaId}&nuevaSubcategoria=true`;
+    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${id}&nuevaSubcategoria=true`;
 };
 
-// EDITAR SUBCATEGORÍA
-window.editarSubcategoria = function(categoriaId, subcategoriaId) {
+window.editarSubcategoria = function (catId, subId) {
     event?.stopPropagation();
-    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${categoriaId}&editarSubcategoria=${subcategoriaId}`;
+    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${catId}&editarSubcategoria=${subId}`;
 };
 
-// VER DETALLES DE CATEGORÍA
-window.verDetalles = async function(categoriaId) {
+// =============================================
+// VER DETALLES
+// =============================================
+window.verDetalles = async function (categoriaId) {
     event?.stopPropagation();
-    
-    if (!categoriaManager) {
-        mostrarAlerta('warning', 'El sistema no está listo. Por favor, espera un momento.');
-        return;
-    }
-    
-    try {
-        const categoria = await categoriaManager.obtenerCategoria(categoriaId);
-        if (!categoria) {
-            mostrarAlerta('danger', 'Categoría no encontrada');
-            return;
+
+    const categoria = categoriasCache.find(c => c.id === categoriaId);
+    if (!categoria) return;
+
+    let subcategoriasArray = [];
+
+    if (categoria.subcategorias) {
+        if (typeof categoria.subcategorias === 'object') {
+            if (categoria.subcategorias.forEach) {
+                // Es un Map
+                categoria.subcategorias.forEach((value, key) => {
+                    if (value && typeof value === 'object') {
+                        // Convertir Map a objeto si es necesario
+                        if (value instanceof Map) {
+                            const subObj = {};
+                            value.forEach((v, k) => { subObj[k] = v; });
+                            subcategoriasArray.push(subObj);
+                        } else {
+                            subcategoriasArray.push(value);
+                        }
+                    }
+                });
+            } else {
+                // Es un objeto plano
+                subcategoriasArray = Object.values(categoria.subcategorias);
+            }
         }
-        
-        const subcategoriasArray = Array.from(categoria.subcategorias.values());
-        
-        const detallesContent = document.getElementById('detallesContent');
-        detallesContent.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="mb-3">Información de la Categoría</h6>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Nombre:</label>
-                        <p class="text-light fs-5">${categoria.nombre}</p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Descripción:</label>
-                        <p class="text-light">${categoria.descripcion || 'Sin descripción'}</p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Empresa:</label>
-                        <p class="text-light">${categoria.empresaNombre || 'No especificada'}</p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">ID:</label>
-                        <p class="text-light"><small class="text-muted">${categoria.id}</small></p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Fecha de creación:</label>
-                        <p class="text-light">${categoria.fechaCreacion?.toDate?.()?.toLocaleDateString() || 'No disponible'}</p>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <h6 class="mb-3">Subcategorías (${categoria.subcategorias.size})</h6>
-                    <div class="subcategorias-container" style="max-height: 250px; overflow-y: auto;">
-                        ${subcategoriasArray.map((subcat, index) => {
-                            const subcatObj = {};
-                            subcat.forEach((value, key) => { subcatObj[key] = value; });
-                            return `
-                                <div class="subcategoria-item mb-2 p-2" style="border: 1px solid var(--border-color); border-radius: 8px;">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span class="badge bg-secondary me-2">${index + 1}</span>
-                                            <strong>${subcatObj.nombre || 'Sin nombre'}</strong>
-                                        </div>
-                                        <span class="badge bg-dark">ID: ${subcatObj.id?.substring(0, 8) || ''}...</span>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">${subcatObj.descripcion || 'Sin descripción'}</small>
-                                </div>
-                            `;
-                        }).join('')}
-                        ${categoria.subcategorias.size === 0 ? 
-                            '<div class="text-center py-4 text-muted"><i class="fas fa-inbox fa-2x mb-2"></i><p>No hay subcategorías</p></div>' : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        const modal = new bootstrap.Modal(document.getElementById('modalDetalles'));
-        modal.show();
-        
-    } catch (error) {
-        console.error('Error al cargar detalles:', error);
-        mostrarAlerta('danger', 'Error al cargar los detalles de la categoría');
     }
-};
 
-// VER DETALLES DE SUBCATEGORÍA
-window.verDetallesSubcategoria = async function(categoriaId, subcategoriaId) {
-    event?.stopPropagation();
-    
-    if (!categoriaManager) {
-        mostrarAlerta('warning', 'El sistema no está listo. Por favor, espera un momento.');
-        return;
-    }
-    
-    try {
-        const categoria = await categoriaManager.obtenerCategoria(categoriaId);
-        if (!categoria) {
-            mostrarAlerta('danger', 'Categoría no encontrada');
-            return;
-        }
-        
-        const subcategoriaMap = categoria.obtenerSubcategoria(subcategoriaId);
-        if (!subcategoriaMap) {
-            mostrarAlerta('danger', 'Subcategoría no encontrada');
-            return;
-        }
-        
-        const subcategoria = {};
-        subcategoriaMap.forEach((value, key) => { subcategoria[key] = value; });
-        
-        const detallesContent = document.getElementById('detallesContent');
-        detallesContent.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="mb-3">Información de la Subcategoría</h6>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Nombre:</label>
-                        <p class="text-light fs-5">${subcategoria.nombre || ''}</p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Categoría padre:</label>
-                        <div class="d-flex align-items-center gap-2">
-                            <p class="text-light mb-0">${categoria.nombre}</p>
+    const html = `
+        <div style="padding: 20px;">
+            <h4 style="color: white; margin-bottom: 20px;">${categoria.nombre}</h4>
+            <p><strong>Descripción:</strong> ${categoria.descripcion || 'Sin descripción'}</p>
+            <p><strong>Color:</strong> 
+                <span style="display:inline-block; width:20px; height:20px; background:${categoria.color || '#2f8cff'}; border-radius:4px; vertical-align:middle;"></span> 
+                ${categoria.color || '#2f8cff'}
+            </p>
+            <p><strong>Subcategorías:</strong> ${subcategoriasArray.length}</p>
+            
+            ${subcategoriasArray.length > 0 ? `
+                <h5 style="color: #f97316; margin-top: 20px;">Lista de Subcategorías</h5>
+                <div style="margin-top: 10px;">
+                    ${subcategoriasArray.map((s, i) => `
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px; margin-bottom: 8px; border-radius: 8px;">
+                            <strong>${i + 1}. ${s.nombre || 'Sin nombre'}</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #9ca3af;">${s.descripcion || 'Sin descripción'}</p>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Descripción:</label>
-                        <p class="text-light">${subcategoria.descripcion || 'Sin descripción'}</p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Empresa:</label>
-                        <p class="text-light">${categoria.empresaNombre || 'No especificada'}</p>
-                    </div>
+                    `).join('')}
                 </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label text-muted">ID de referencia:</label>
-                        <p class="text-light"><small class="text-muted">${subcategoria.id || ''}</small></p>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Fecha de creación:</label>
-                        <p class="text-light">${subcategoria.fechaCreacion?.toDate?.()?.toLocaleDateString() || 'No disponible'}</p>
-                    </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <small>Esta subcategoría pertenece a la categoría <strong>${categoria.nombre}</strong>.</small>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        const modal = new bootstrap.Modal(document.getElementById('modalDetalles'));
-        modal.show();
-        
-    } catch (error) {
-        console.error('Error al cargar detalles de subcategoría:', error);
-        mostrarAlerta('danger', 'Error al cargar los detalles de la subcategoría');
-    }
+            ` : '<p style="color: #6b7280; margin-top: 20px;">No hay subcategorías</p>'}
+        </div>
+    `;
+
+    document.getElementById('detallesContent').innerHTML = html;
+    abrirModal('modalDetalles');
 };
 
-// ELIMINAR CATEGORÍA
-window.eliminarCategoria = async function(categoriaId) {
+window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId) {
     event?.stopPropagation();
-    
-    if (!categoriaManager) {
-        mostrarAlerta('warning', 'El sistema no está listo. Por favor, espera un momento.');
+
+    const categoria = categoriasCache.find(c => c.id === categoriaId);
+    if (!categoria) return;
+
+    let subcategoria = null;
+
+    if (categoria.subcategorias) {
+        if (typeof categoria.subcategorias === 'object') {
+            if (categoria.subcategorias.get) {
+                // Es un Map
+                const subMap = categoria.subcategorias.get(subcategoriaId);
+                if (subMap) {
+                    subcategoria = {};
+                    if (subMap instanceof Map) {
+                        subMap.forEach((value, key) => { subcategoria[key] = value; });
+                    } else {
+                        subcategoria = subMap;
+                    }
+                }
+            } else {
+                // Es un objeto
+                subcategoria = categoria.subcategorias[subcategoriaId];
+            }
+        }
+    }
+
+    if (!subcategoria) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Subcategoría no encontrada',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: '#2f8cff'
+        });
         return;
     }
-    
-    try {
-        const categoria = await categoriaManager.obtenerCategoria(categoriaId);
-        if (!categoria) {
-            mostrarAlerta('danger', 'Categoría no encontrada');
-            return;
-        }
-        
-        if (categoria.subcategorias.size > 0) {
-            mostrarAlerta('warning', 'No se puede eliminar una categoría que tiene subcategorías');
-            return;
-        }
-        
-        itemAEliminar = categoriaId;
-        tipoEliminacion = 'categoria';
-        
-        document.getElementById('confirmarMensaje').innerHTML = `
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>¡Atención!</strong> Esta acción no se puede deshacer.
-            </div>
-            <p>¿Está seguro de eliminar la categoría <strong class="text-danger">"${categoria.nombre}"</strong>?</p>
-            <div class="bg-dark p-3 rounded mt-3">
-                <small class="text-muted">
-                    <i class="fas fa-exclamation-circle me-1"></i>
-                    Esta categoría no tiene subcategorías asociadas.
-                </small>
-                <br>
-                <small class="text-muted">
-                    <i class="fas fa-building me-1"></i>
-                    Empresa: <strong>${categoria.empresaNombre || 'No especificada'}</strong>
-                </small>
-            </div>
-        `;
-        
-        const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'));
-        modal.show();
-        
-    } catch (error) {
-        console.error('Error al preparar eliminación:', error);
-        mostrarAlerta('danger', 'Error al cargar la categoría para eliminar');
-    }
+
+    const html = `
+        <div style="padding: 20px;">
+            <h4 style="color: #f97316; margin-bottom: 20px;">${subcategoria.nombre || 'Sin nombre'}</h4>
+            <p><strong>Categoría padre:</strong> ${categoria.nombre}</p>
+            <p><strong>Descripción:</strong> ${subcategoria.descripcion || 'Sin descripción'}</p>
+            ${subcategoria.color ? `
+                <p><strong>Color:</strong> 
+                    <span style="display:inline-block; width:20px; height:20px; background:${subcategoria.color}; border-radius:4px; vertical-align:middle;"></span> 
+                    ${subcategoria.color}
+                </p>
+                <p><strong>Hereda color:</strong> ${subcategoria.heredaColor ? 'Sí' : 'No'}</p>
+            ` : ''}
+        </div>
+    `;
+
+    document.getElementById('detallesContent').innerHTML = html;
+    abrirModal('modalDetalles');
 };
 
-// ELIMINAR SUBCATEGORÍA
-window.eliminarSubcategoria = async function(categoriaId, subcategoriaId) {
+// =============================================
+// 🎯 ELIMINAR CON SWEETALERT2
+// =============================================
+window.eliminarCategoria = async function (categoriaId) {
     event?.stopPropagation();
-    
-    if (!categoriaManager) {
-        mostrarAlerta('warning', 'El sistema no está listo. Por favor, espera un momento.');
+
+    const categoria = categoriasCache.find(c => c.id === categoriaId);
+    if (!categoria) return;
+
+    // Verificar si tiene subcategorías
+    let tieneSubcategorias = false;
+    if (categoria.subcategorias) {
+        if (typeof categoria.subcategorias === 'object') {
+            if (categoria.subcategorias.size !== undefined) {
+                tieneSubcategorias = categoria.subcategorias.size > 0;
+            } else {
+                tieneSubcategorias = Object.keys(categoria.subcategorias).length > 0;
+            }
+        }
+    }
+
+    if (tieneSubcategorias) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No se puede eliminar',
+            text: `La categoría "${categoria.nombre}" tiene subcategorías asociadas`,
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: '#2f8cff',
+            confirmButtonText: 'Entendido'
+        });
         return;
     }
-    
-    try {
-        const categoria = await categoriaManager.obtenerCategoria(categoriaId);
-        if (!categoria) {
-            mostrarAlerta('danger', 'Categoría no encontrada');
-            return;
+
+    const result = await Swal.fire({
+        title: '¿Eliminar categoría?',
+        text: `Estás a punto de eliminar "${categoria.nombre}"`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        background: 'var(--color-bg-secondary)',
+        color: 'var(--color-text-primary)',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true
+    });
+
+    if (result.isConfirmed) {
+        try {
+            await categoriaManager.eliminarCategoria(categoriaId);
+
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Eliminada!',
+                text: `La categoría "${categoria.nombre}" ha sido eliminada`,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: '#10b981',
+                timer: 2000,
+                timerProgressBar: true
+            });
+
+            await cargarCategorias();
+
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: `No se pudo eliminar: ${error.message}`,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: '#2f8cff'
+            });
         }
-        
-        const subcategoriaMap = categoria.obtenerSubcategoria(subcategoriaId);
-        if (!subcategoriaMap) {
-            mostrarAlerta('danger', 'Subcategoría no encontrada');
-            return;
-        }
-        
-        const subcategoria = {};
-        subcategoriaMap.forEach((value, key) => { subcategoria[key] = value; });
-        
-        itemAEliminar = { categoriaId, subcategoriaId };
-        tipoEliminacion = 'subcategoria';
-        
-        document.getElementById('confirmarMensaje').innerHTML = `
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>¡Atención!</strong> Esta acción no se puede deshacer.
-            </div>
-            <p>¿Está seguro de eliminar la subcategoría <strong class="text-danger">"${subcategoria.nombre}"</strong>?</p>
-            <div class="bg-dark p-3 rounded mt-3">
-                <small class="text-muted">
-                    <i class="fas fa-info-circle me-1"></i>
-                    Categoría padre: <strong>${categoria.nombre}</strong>
-                </small>
-                <br>
-                <small class="text-muted">
-                    <i class="fas fa-building me-1"></i>
-                    Empresa: <strong>${categoria.empresaNombre || 'No especificada'}</strong>
-                </small>
-            </div>
-        `;
-        
-        const modal = new bootstrap.Modal(document.getElementById('modalConfirmar'));
-        modal.show();
-        
-    } catch (error) {
-        console.error('Error al preparar eliminación:', error);
-        mostrarAlerta('danger', 'Error al cargar la subcategoría para eliminar');
     }
 };
 
 // =============================================
-// FUNCIÓN PARA CARGAR CATEGORÍAS
+// 🎯 ELIMINAR SUBCATEGORÍA - VERSIÓN CORREGIDA
+// =============================================
+window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
+    event?.stopPropagation();
+
+    const categoria = categoriasCache.find(c => c.id === categoriaId);
+    if (!categoria) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Categoría no encontrada',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: '#2f8cff'
+        });
+        return;
+    }
+
+    // 🔥 CORREGIDO: Obtener la subcategoría correctamente
+    let subcategoria = null;
+    let subcategoriaNombre = '';
+
+    try {
+        if (categoria.subcategorias) {
+            if (typeof categoria.subcategorias === 'object') {
+                // CASO 1: Es un Map
+                if (categoria.subcategorias.get) {
+                    const subMap = categoria.subcategorias.get(subcategoriaId);
+                    if (subMap) {
+                        if (subMap instanceof Map) {
+                            subcategoria = {};
+                            subMap.forEach((value, key) => { subcategoria[key] = value; });
+                        } else {
+                            subcategoria = subMap;
+                        }
+                    }
+                }
+                // CASO 2: Es un objeto plano
+                else if (categoria.subcategorias[subcategoriaId]) {
+                    subcategoria = categoria.subcategorias[subcategoriaId];
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error al obtener subcategoría:', e);
+    }
+
+    // Si no encontramos la subcategoría, intentamos buscarla en el array
+    if (!subcategoria) {
+        // Intentar convertir a array y buscar
+        let subArray = [];
+        if (categoria.subcategorias) {
+            if (categoria.subcategorias.forEach) {
+                categoria.subcategorias.forEach((value, key) => {
+                    if (key === subcategoriaId) {
+                        if (value instanceof Map) {
+                            subcategoria = {};
+                            value.forEach((v, k) => { subcategoria[k] = v; });
+                        } else {
+                            subcategoria = value;
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    subcategoriaNombre = subcategoria?.nombre || 'Sin nombre';
+
+    if (!subcategoria) {
+        console.error('Subcategoría no encontrada:', { categoriaId, subcategoriaId, categoria });
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Subcategoría no encontrada',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: '#2f8cff'
+        });
+        return;
+    }
+
+    // Confirmación con SweetAlert2
+    const result = await Swal.fire({
+        title: '¿Eliminar subcategoría?',
+        html: `Estás a punto de eliminar "<strong style="color: #ef4444;">${subcategoriaNombre}</strong>"<br>de la categoría "<strong>${categoria.nombre}</strong>"`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        background: 'var(--color-bg-secondary)',
+        color: 'var(--color-text-primary)',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true
+    });
+
+    if (result.isConfirmed) {
+        try {
+            // 🔥 CORREGIDO: Eliminar subcategoría
+            if (categoria.eliminarSubcategoria) {
+                categoria.eliminarSubcategoria(subcategoriaId);
+            } else if (categoria.subcategorias && categoria.subcategorias.delete) {
+                categoria.subcategorias.delete(subcategoriaId);
+            } else if (categoria.subcategorias && typeof categoria.subcategorias === 'object') {
+                delete categoria.subcategorias[subcategoriaId];
+            }
+
+            // Actualizar en Firebase
+            await categoriaManager.actualizarCategoria(categoriaId, {
+                nombre: categoria.nombre,
+                descripcion: categoria.descripcion,
+                color: categoria.color
+            });
+
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Eliminada!',
+                text: `La subcategoría "${subcategoriaNombre}" ha sido eliminada`,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: '#10b981',
+                timer: 2000,
+                timerProgressBar: true
+            });
+
+            // Recargar subcategorías
+            await cargarSubcategorias(categoriaId);
+
+            // Actualizar contador en la fila de categoría
+            const categoriaRow = document.querySelector(`.categoria-row[data-id="${categoriaId}"]`);
+            if (categoriaRow) {
+                // Recalcular número de subcategorías
+                let numSub = 0;
+                if (categoria.subcategorias) {
+                    if (categoria.subcategorias.size !== undefined) {
+                        numSub = categoria.subcategorias.size;
+                    } else {
+                        numSub = Object.keys(categoria.subcategorias).length;
+                    }
+                }
+
+                const badge = categoriaRow.querySelector('td[data-label="Subcategorías"] span');
+                if (badge) {
+                    badge.innerHTML = `<i class="fas fa-folder${numSub > 0 ? '-open' : ''}"></i> ${numSub} ${numSub === 1 ? 'subcategoría' : 'subcategorías'}`;
+                    badge.style.background = numSub > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(107,114,128,0.2)';
+                    badge.style.color = numSub > 0 ? '#10b981' : '#9ca3af';
+                }
+
+                const btnEliminar = categoriaRow.querySelector('.btn-outline-danger');
+                if (btnEliminar) {
+                    btnEliminar.disabled = numSub > 0;
+                }
+            }
+
+        } catch (error) {
+            console.error('Error al eliminar subcategoría:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: `No se pudo eliminar: ${error.message}`,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: '#2f8cff'
+            });
+        }
+    }
+};
+
+// =============================================
+// MODALES
+// =============================================
+function abrirModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+    }
+}
+
+function cerrarModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+    }
+}
+
+// =============================================
+// CARGAR CATEGORÍAS
 // =============================================
 async function cargarCategorias() {
-    if (!categoriaManager) {
-        console.warn('CategoriaManager no inicializado');
-        return;
-    }
-    
+    if (!categoriaManager) return;
+
     try {
         const tbody = document.getElementById('tablaCategoriasBody');
-        if (!tbody) {
-            console.error('No se encontró el elemento tablaCategoriasBody');
-            return;
-        }
-        
-        tbody.innerHTML = '';
-        
-        const categoriasArray = await categoriaManager.obtenerTodasCategorias();
-        
-        if (!categoriasArray || categoriasArray.length === 0) {
-            // Mostrar mensaje de tabla vacía con información de empresa
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td colspan="5" class="text-center py-5">
-                    <div class="text-muted">
-                        <i class="fas fa-tags fa-3x mb-3"></i>
-                        <h5>No hay categorías</h5>
-                        <p>Comienza creando tu primera categoría para 
-                           <strong>${categoriaManager.empresaNombre || 'tu empresa'}</strong></p>
-                        <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn btn-primary mt-2">
-                            <i class="fas fa-plus me-2"></i>Crear Categoría
-                        </a>
-                    </div>
-                </td>
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">Cargando categorías...</td></tr>';
+
+        categoriasCache = await categoriaManager.obtenerTodasCategorias();
+        console.log('📦 Categorías cargadas:', categoriasCache?.length || 0);
+
+        if (!categoriasCache || categoriasCache.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align:center; padding:60px 20px;">
+                        <div style="text-align:center;">
+                            <i class="fas fa-tags" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
+                            <h5 style="color:white;">No hay categorías</h5>
+                            <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria" style="display:inline-flex; margin-top:16px;">
+                                <i class="fas fa-plus-circle"></i> Crear Categoría
+                            </a>
+                        </div>
+                    </td>
+                </tr>
             `;
-            tbody.appendChild(tr);
             return;
         }
-        
-        categoriasArray.forEach(categoria => {
-            // Crear fila principal de categoría
-            const tr = document.createElement('tr');
-            tr.className = 'categoria-row';
-            tr.dataset.id = categoria.id;
-            tr.dataset.tipo = 'categoria';
-            
-            tr.style.cursor = 'pointer';
-            tr.onclick = (e) => {
-                if (!e.target.closest('.btn-group')) {
-                    toggleSubcategorias(categoria.id);
+
+        tbody.innerHTML = '';
+        categoriasCache.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        for (const categoria of categoriasCache) {
+            await crearFilaCategoria(categoria, tbody);
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al cargar categorías',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: '#2f8cff'
+        });
+    }
+}
+
+async function crearFilaCategoria(categoria, tbody) {
+    const tr = document.createElement('tr');
+    tr.className = 'categoria-row';
+    tr.dataset.id = categoria.id;
+
+    tr.onclick = (e) => {
+        if (!e.target.closest('.btn-group')) {
+            toggleSubcategorias(categoria.id);
+        }
+    };
+
+    // Contar subcategorías
+    let numSub = 0;
+    if (categoria.subcategorias) {
+        if (typeof categoria.subcategorias === 'object') {
+            if (categoria.subcategorias.size !== undefined) {
+                numSub = categoria.subcategorias.size;
+            } else {
+                numSub = Object.keys(categoria.subcategorias).length;
+            }
+        }
+    }
+
+    const color = categoria.color || '#2f8cff';
+
+    tr.innerHTML = `
+        <td style="width:50px;">
+            <i class="fas fa-chevron-right expand-icon"></i>
+        </td>
+        <td data-label="Nombre">
+            <div style="display:flex; align-items:center;">
+                <div style="width:4px; height:24px; background:${color}; border-radius:2px; margin-right:12px;"></div>
+                <strong style="color:white;">${categoria.nombre}</strong>
+            </div>
+        </td>
+        <td data-label="Color" style="text-align:center;">
+            <div class="color-display">
+                <span class="color-indicator" style="background-color: ${color};"></span>
+                <span>${color}</span>
+            </div>
+        </td>
+        <td data-label="Subcategorías">
+            <span style="display:inline-block; padding:4px 12px; border-radius:20px; 
+                  background:${numSub > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(107,114,128,0.2)'}; 
+                  color:${numSub > 0 ? '#10b981' : '#9ca3af'};">
+                <i class="fas fa-folder${numSub > 0 ? '-open' : ''}"></i>
+                ${numSub} ${numSub === 1 ? 'subcategoría' : 'subcategorías'}
+            </span>
+        </td>
+        <td data-label="Acciones">
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-info" onclick="window.verDetalles('${categoria.id}')" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="btn btn-outline-warning" onclick="window.editarCategoria('${categoria.id}')" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="window.eliminarCategoria('${categoria.id}')" title="Eliminar" ${numSub > 0 ? 'disabled' : ''}>
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </td>
+    `;
+
+    tbody.appendChild(tr);
+
+    // Fila de subcategorías
+    const subRow = document.createElement('tr');
+    subRow.className = 'subcategoria-row';
+    subRow.id = `sub-${categoria.id}`;
+    subRow.style.display = 'none';
+
+    subRow.innerHTML = `
+        <td colspan="5" style="padding:0; border-top:none;">
+            <div class="subcategorias-container">
+                <div class="subcategorias-header">
+                    <h6>
+                        <i class="fas fa-list-ul"></i>
+                        Subcategorías de <span style="color:#2f8cff;">"${categoria.nombre}"</span>
+                    </h6>
+                    <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoria.id}')">
+                        <i class="fas fa-plus-circle"></i> Agregar
+                    </button>
+                </div>
+                <div id="sub-content-${categoria.id}">
+                    <div style="text-align:center; padding:20px; color:#6b7280;">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando subcategorías...
+                    </div>
+                </div>
+            </div>
+        </td>
+    `;
+
+    tbody.appendChild(subRow);
+    await cargarSubcategorias(categoria.id);
+}
+
+// =============================================
+// CARGAR SUBCATEGORÍAS
+// =============================================
+async function cargarSubcategorias(categoriaId) {
+    const categoria = categoriasCache.find(c => c.id === categoriaId);
+    if (!categoria) return;
+
+    const container = document.getElementById(`sub-content-${categoriaId}`);
+    if (!container) return;
+
+    console.log(`🔍 Cargando subcategorías de: ${categoria.nombre}`);
+
+    // OBTENER SUBCATEGORÍAS
+    let subcategoriasArray = [];
+
+    try {
+        if (categoria.subcategorias) {
+            if (typeof categoria.subcategorias === 'object') {
+                // CASO 1: Es un Map
+                if (categoria.subcategorias.forEach) {
+                    categoria.subcategorias.forEach((value, key) => {
+                        if (value && typeof value === 'object') {
+                            // Si el valor es un Map, convertirlo a objeto
+                            if (value instanceof Map) {
+                                const subObj = {};
+                                value.forEach((v, k) => { subObj[k] = v; });
+                                subcategoriasArray.push(subObj);
+                            } else {
+                                subcategoriasArray.push(value);
+                            }
+                        }
+                    });
                 }
-            };
-            
-            tr.onmouseenter = () => {
-                if (!tr.classList.contains('expanded')) {
-                    tr.style.backgroundColor = 'rgba(47, 140, 255, 0.05)';
+                // CASO 2: Es un objeto plano
+                else {
+                    subcategoriasArray = Object.values(categoria.subcategorias);
                 }
-            };
-            
-            tr.onmouseleave = () => {
-                if (!tr.classList.contains('expanded')) {
-                    tr.style.backgroundColor = '';
-                }
-            };
-            
-            tr.innerHTML = `
-                <td class="expand-cell">
-                    <i class="fas fa-chevron-right expand-icon"></i>
-                </td>
-                <td class="categoria-cell">
-                    <div class="d-flex align-items-center">
-                        <strong>${categoria.nombre}</strong>
+            }
+        }
+    } catch (e) {
+        console.warn('Error al obtener subcategorías:', e);
+        subcategoriasArray = [];
+    }
+
+    console.log(`📋 Encontradas: ${subcategoriasArray.length} subcategorías`);
+
+    if (subcategoriasArray.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:30px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                <i class="fas fa-folder-open" style="font-size:32px; color:#6b7280; margin-bottom:8px;"></i>
+                <p style="color:#6b7280; margin-bottom:12px;">No hay subcategorías</p>
+                <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoriaId}')">
+                    <i class="fas fa-plus-circle"></i> Crear subcategoría
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    // Ordenar por nombre
+    subcategoriasArray.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+
+    let html = `
+        <div style="background:rgba(0,0,0,0.2); border-radius:8px; overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; min-width:600px;">
+                <thead>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <th style="padding:12px; text-align:left; color:#9ca3af;">#</th>
+                        <th style="padding:12px; text-align:left; color:#9ca3af;">Nombre</th>
+                        <th style="padding:12px; text-align:left; color:#9ca3af;">Descripción</th>
+                        <th style="padding:12px; text-align:left; color:#9ca3af;">Color</th>
+                        <th style="padding:12px; text-align:left; color:#9ca3af;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    subcategoriasArray.forEach((sub, index) => {
+        const colorSub = sub.color || categoria.color || '#2f8cff';
+        const hereda = sub.heredaColor ? true : false;
+
+        html += `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:12px; color:#9ca3af;">${index + 1}</td>
+                <td style="padding:12px;">
+                    <div style="display:flex; align-items:center; flex-wrap:wrap;">
+                        <span style="display:inline-block; width:12px; height:12px; background:${colorSub}; border-radius:4px; margin-right:8px;"></span>
+                        <span style="color:white; margin-right:8px;">${sub.nombre || 'Sin nombre'}</span>
+                        ${hereda ?
+                '<span style="padding:2px 6px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:12px; font-size:10px;">Hereda</span>' :
+                sub.color ? '<span style="padding:2px 6px; background:rgba(249,115,22,0.1); color:#f97316; border-radius:12px; font-size:10px;">Propio</span>' : ''
+            }
                     </div>
                 </td>
-                <td class="categoria-cell">
-                    <div class="d-flex align-items-center">
-                        <span class="text-muted">-</span>
+                <td style="padding:12px; color:#d1d5db;">${sub.descripcion || '<span style="color:#6b7280;">-</span>'}</td>
+                <td style="padding:12px;">
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <span style="display:inline-block; width:16px; height:16px; background:${colorSub}; border-radius:4px;"></span>
+                        <span style="color:#9ca3af; font-size:11px;">${colorSub}</span>
                     </div>
                 </td>
-                <td class="categoria-cell">
-                    <span class="badge bg-secondary">
-                        ${categoria.subcategorias.size} subcategoría(s)
-                    </span>
-                </td>
-                <td class="categoria-cell">
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-info" onclick="window.verDetalles('${categoria.id}')" title="Ver detalles">
+                <td style="padding:12px;">
+                    <div style="display:flex; gap:4px;">
+                        <button class="btn" onclick="window.verDetallesSubcategoria('${categoriaId}', '${sub.id}')" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-warning" onclick="window.editarCategoria('${categoria.id}')" title="Editar categoría">
+                        <button class="btn" onclick="window.editarSubcategoria('${categoriaId}', '${sub.id}')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button type="button" class="btn btn-outline-danger" onclick="window.eliminarCategoria('${categoria.id}')" title="Eliminar categoría">
+                        <button class="btn btn-outline-danger" onclick="window.eliminarSubcategoria('${categoriaId}', '${sub.id}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </td>
-            `;
-            
-            tbody.appendChild(tr);
-            
-            // Crear fila para subcategorías (oculta inicialmente)
-            const subcategoriaRow = document.createElement('tr');
-            subcategoriaRow.className = 'subcategoria-row d-none';
-            subcategoriaRow.id = `subcategorias-${categoria.id}`;
-            subcategoriaRow.dataset.parentId = categoria.id;
-            
-            subcategoriaRow.innerHTML = `
-                <td colspan="5" class="p-0 border-top-0">
-                    <div class="subcategorias-container bg-dark p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 text-light">
-                                <i class="fas fa-list me-2"></i>
-                                Subcategorías de <span class="text-info">"${categoria.nombre}"</span>
-                                <span class="badge bg-secondary ms-2">${categoria.subcategorias.size}</span>
-                            </h6>
-                            <button class="btn btn-sm btn-outline-success" onclick="window.agregarSubcategoria('${categoria.id}')">
-                                <i class="fas fa-plus me-1"></i>Agregar Subcategoría
-                            </button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-dark table-sm mb-0">
-                                <thead>
-                                    <tr>
-                                        <th width="30">#</th>
-                                        <th>Nombre</th>
-                                        <th>Descripción</th>
-                                        <th width="150">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="subcategorias-body-${categoria.id}">
-                                    <!-- Subcategorías se llenarán aquí -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </td>
-            `;
-            
-            tbody.appendChild(subcategoriaRow);
-            
-            // Cargar subcategorías
-            cargarSubcategorias(categoria.id);
-        });
-        
-    } catch (error) {
-        console.error('Error al cargar categorías:', error);
-        mostrarAlerta('danger', 'Error al cargar las categorías desde Firebase');
-    }
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = html;
 }
 
-// Cargar subcategorías de una categoría
-async function cargarSubcategorias(categoriaId) {
-    if (!categoriaManager) return;
-    
-    try {
-        const tbody = document.getElementById(`subcategorias-body-${categoriaId}`);
-        if (!tbody) return;
-        
-        tbody.innerHTML = '';
-        const categoria = await categoriaManager.obtenerCategoria(categoriaId);
-        
-        if (categoria && categoria.subcategorias) {
-            const subcategoriasArray = Array.from(categoria.subcategorias.values());
-            
-            subcategoriasArray.forEach((subcategoriaMap, index) => {
-                const subcategoria = {};
-                subcategoriaMap.forEach((value, key) => { subcategoria[key] = value; });
-                
-                const tr = document.createElement('tr');
-                tr.className = 'subcategoria-item';
-                tr.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            ${subcategoria.nombre || ''}
-                        </div>
-                    </td>
-                    <td>
-                        <small class="text-muted">${subcategoria.descripcion || 'Sin descripción'}</small>
-                    </td>
-                    <td>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-info btn-sm" onclick="window.verDetallesSubcategoria('${categoriaId}', '${subcategoria.id}')" title="Ver detalles">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="window.editarSubcategoria('${categoriaId}', '${subcategoria.id}')" title="Editar subcategoría">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="window.eliminarSubcategoria('${categoriaId}', '${subcategoria.id}')" title="Eliminar subcategoría">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
-            // Si no hay subcategorías, mostrar mensaje
-            if (categoria.subcategorias.size === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td colspan="4" class="text-center py-4">
-                        <div class="text-muted">
-                            <i class="fas fa-inbox fa-2x mb-2"></i>
-                            <p>No hay subcategorías registradas</p>
-                            <button class="btn btn-sm btn-outline-primary" onclick="window.agregarSubcategoria('${categoriaId}')">
-                                <i class="fas fa-plus me-1"></i>Crear primera subcategoría
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            }
-        }
-        
-    } catch (error) {
-        console.error('Error al cargar subcategorías:', error);
-        mostrarAlerta('danger', `Error al cargar las subcategorías: ${error.message}`);
-    }
-}
-
-// Toggle para mostrar/ocultar subcategorías
 function toggleSubcategorias(categoriaId) {
-    const categoriaRow = document.querySelector(`.categoria-row[data-id="${categoriaId}"]`);
-    const subcategoriaRow = document.getElementById(`subcategorias-${categoriaId}`);
-    
-    if (!categoriaRow || !subcategoriaRow) return;
-    
-    const icon = categoriaRow.querySelector('.expand-icon');
-    
+    const row = document.getElementById(`sub-${categoriaId}`);
+    const icon = document.querySelector(`.categoria-row[data-id="${categoriaId}"] .expand-icon`);
+
+    if (!row || !icon) return;
+
     if (categoriaExpandidaId && categoriaExpandidaId !== categoriaId) {
-        const prevCategoriaRow = document.querySelector(`.categoria-row[data-id="${categoriaExpandidaId}"]`);
-        const prevSubcategoriaRow = document.getElementById(`subcategorias-${categoriaExpandidaId}`);
-        const prevIcon = prevCategoriaRow?.querySelector('.expand-icon');
-        
-        if (prevSubcategoriaRow && !prevSubcategoriaRow.classList.contains('d-none')) {
-            prevSubcategoriaRow.classList.add('d-none');
-            prevCategoriaRow?.classList.remove('expanded');
-            prevCategoriaRow.style.backgroundColor = '';
-            prevIcon?.classList.remove('fa-chevron-down');
-            prevIcon?.classList.add('fa-chevron-right');
+        const prevRow = document.getElementById(`sub-${categoriaExpandidaId}`);
+        const prevIcon = document.querySelector(`.categoria-row[data-id="${categoriaExpandidaId}"] .expand-icon`);
+        if (prevRow) prevRow.style.display = 'none';
+        if (prevIcon) {
+            prevIcon.classList.remove('fa-chevron-down');
+            prevIcon.classList.add('fa-chevron-right');
         }
     }
-    
-    if (subcategoriaRow.classList.contains('d-none')) {
-        subcategoriaRow.classList.remove('d-none');
-        categoriaRow.classList.add('expanded');
+
+    if (row.style.display === 'none') {
+        row.style.display = 'table-row';
         icon.classList.remove('fa-chevron-right');
         icon.classList.add('fa-chevron-down');
-        categoriaRow.style.backgroundColor = 'rgba(47, 140, 255, 0.1)';
         categoriaExpandidaId = categoriaId;
-        
-        setTimeout(() => {
-            subcategoriaRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
     } else {
-        subcategoriaRow.classList.add('d-none');
-        categoriaRow.classList.remove('expanded');
+        row.style.display = 'none';
         icon.classList.remove('fa-chevron-down');
         icon.classList.add('fa-chevron-right');
-        categoriaRow.style.backgroundColor = '';
         categoriaExpandidaId = null;
     }
 }
 
-// Confirmar eliminación
-async function configurarEventoConfirmar() {
-    const btnConfirmar = document.getElementById('btnConfirmarAccion');
-    if (!btnConfirmar) return;
-    
-    // Remover event listeners anteriores
-    const nuevoBtn = btnConfirmar.cloneNode(true);
-    btnConfirmar.parentNode.replaceChild(nuevoBtn, btnConfirmar);
-    
-    nuevoBtn.addEventListener('click', async function() {
-        if (!categoriaManager) {
-            mostrarAlerta('warning', 'El sistema no está listo');
-            return;
-        }
-        
-        try {
-            if (tipoEliminacion === 'categoria') {
-                await categoriaManager.eliminarCategoria(itemAEliminar);
-                
-                bootstrap.Modal.getInstance(document.getElementById('modalConfirmar')).hide();
-                await cargarCategorias();
-                
-                mostrarAlerta('success', 'Categoría eliminada correctamente');
-                
-                if (categoriaExpandidaId === itemAEliminar) {
-                    categoriaExpandidaId = null;
-                }
-                
-            } else if (tipoEliminacion === 'subcategoria') {
-                const { categoriaId, subcategoriaId } = itemAEliminar;
-                const categoria = await categoriaManager.obtenerCategoria(categoriaId);
-                
-                if (categoria) {
-                    const subcategoriaMap = categoria.obtenerSubcategoria(subcategoriaId);
-                    const subcategoria = {};
-                    subcategoriaMap?.forEach((value, key) => { subcategoria[key] = value; });
-                    
-                    categoria.eliminarSubcategoria(subcategoriaId);
-                    await categoriaManager.actualizarCategoria(categoriaId, {
-                        nombre: categoria.nombre,
-                        descripcion: categoria.descripcion
-                    });
-                    
-                    bootstrap.Modal.getInstance(document.getElementById('modalConfirmar')).hide();
-                    await cargarSubcategorias(categoriaId);
-                    
-                    const categoriaRow = document.querySelector(`.categoria-row[data-id="${categoriaId}"]`);
-                    const badgeContador = categoriaRow?.querySelector('.badge.bg-secondary');
-                    if (badgeContador) {
-                        badgeContador.textContent = `${categoria.subcategorias.size} subcategoría(s)`;
-                    }
-                    
-                    const subcategoriaHeader = document.querySelector(`#subcategorias-${categoriaId} h6 .badge`);
-                    if (subcategoriaHeader) {
-                        subcategoriaHeader.textContent = categoria.subcategorias.size;
-                    }
-                    
-                    mostrarAlerta('success', `Subcategoría "${subcategoria?.nombre || ''}" eliminada correctamente`);
-                }
-            }
-            
-        } catch (error) {
-            console.error('Error al eliminar:', error);
-            bootstrap.Modal.getInstance(document.getElementById('modalConfirmar'))?.hide();
-            mostrarAlerta('danger', `Error al eliminar: ${error.message}`);
-        }
-        
-        itemAEliminar = null;
-        tipoEliminacion = null;
-    });
-}
-
-// Mostrar alerta
-function mostrarAlerta(tipo, mensaje) {
-    const alertasExistentes = document.querySelectorAll('.alert-notification');
-    alertasExistentes.forEach(alerta => alerta.remove());
-    
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${tipo} alert-notification alert-dismissible fade show position-fixed top-0 end-0 m-3`;
-    alert.style.zIndex = '9999';
-    alert.style.minWidth = '300px';
-    alert.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)';
-    alert.innerHTML = `
-        <div class="d-flex align-items-center">
-            <i class="fas ${tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
-            <div>${mensaje}</div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    document.body.appendChild(alert);
-    
-    setTimeout(() => {
-        if (alert.parentNode) {
-            alert.remove();
-        }
-    }, 4000);
-}
-
-// Inicializar eventos
-function inicializarEventos() {
-    document.getElementById('toggleEliminadas')?.addEventListener('change', function(e) {
-        console.log('Mostrar eliminadas:', e.target.checked);
-        mostrarAlerta('info', `Filtro: ${e.target.checked ? 'Mostrando' : 'Ocultando'} categorías eliminadas (no implementado)`);
-    });
-    
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                bootstrap.Modal.getInstance(this)?.hide();
-            }
-        });
-    });
-    
-    // Estilos dinámicos
-    const style = document.createElement('style');
-    style.textContent = `
-        .categoria-cell {
-            transition: background-color 0.2s ease;
-        }
-        
-        .categoria-row:hover .categoria-cell {
-            background-color: rgba(47, 140, 255, 0.03) !important;
-        }
-        
-        .categoria-row.expanded .categoria-cell {
-            background-color: rgba(47, 140, 255, 0.1) !important;
-        }
-        
-        .subcategoria-item:hover {
-            background-color: rgba(255, 255, 255, 0.02) !important;
-        }
-        
-        .color-preview {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 1px solid var(--color-border-light);
-            display: inline-block;
-        }
-        
-        .color-preview-large {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            border: 2px solid var(--color-border-light);
-            display: inline-block;
-        }
-        
-        .color-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 4px;
-            display: inline-block;
-        }
-    `;
-    document.head.appendChild(style);
-}
-
 // =============================================
-// INICIALIZACIÓN PRINCIPAL
+// INICIALIZACIÓN
 // =============================================
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Inicializando página de categorías...');
-    
-    inicializarEventos();
-    await configurarEventoConfirmar();
-    
-    // Inicializar el manager y cargar datos
-    const exito = await inicializarCategoriaManager();
-    
-    if (!exito) {
-        mostrarAlerta('danger', 'No se pudo inicializar el sistema. Recarga la página.');
-    }
+document.addEventListener('DOMContentLoaded', async function () {
+    console.log('🚀 Inicializando sistema de categorías...');
+
+    window.addEventListener('click', function (e) {
+        if (e.target.classList.contains('modal')) {
+            cerrarModal(e.target.id);
+        }
+    });
+
+    await inicializarCategoriaManager();
 });
+
+// Funciones globales
+window.cerrarModal = cerrarModal;
