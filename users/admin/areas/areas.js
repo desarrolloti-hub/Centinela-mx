@@ -1,4 +1,4 @@
-// areas.js - VERSIÓN COMPLETA CON SWEETALERT2 Y BADGE ROJO PARA CARGOS
+// areas.js - VERSIÓN COMPLETA CON SWEETALERT2 (CLASES NATIVAS)
 console.log('🚀 areas.js iniciando...');
 
 window.appDebug = {
@@ -159,12 +159,12 @@ class AreasController {
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login',
-            confirmButtonColor: '#2f8cff',
+            confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
             customClass: {
-                popup: 'swal-dark',
-                title: 'swal-title',
-                htmlContainer: 'swal-html',
-                confirmButton: 'swal-confirm-btn'
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
             }
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
@@ -353,16 +353,16 @@ class AreasController {
             text: "Esta acción no se puede deshacer",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#ff4d4d',
-            cancelButtonColor: '#3085d6',
+            confirmButtonColor: 'var(--color-danger, #ff4d4d)',
+            cancelButtonColor: 'var(--color-accent-secondary, #3085d6)',
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar',
             customClass: {
-                popup: 'swal-dark',
-                title: 'swal-title',
-                htmlContainer: 'swal-html',
-                confirmButton: 'swal-confirm-btn-danger',
-                cancelButton: 'swal-cancel-btn'
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
             }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -382,12 +382,12 @@ class AreasController {
                 icon: 'success',
                 title: 'Eliminado',
                 text: 'El área fue eliminada correctamente',
-                confirmButtonColor: '#2f8cff',
+                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
                 customClass: {
-                    popup: 'swal-dark',
-                    title: 'swal-title',
-                    htmlContainer: 'swal-html',
-                    confirmButton: 'swal-confirm-btn'
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm'
                 }
             });
 
@@ -397,12 +397,12 @@ class AreasController {
                 icon: 'error',
                 title: 'Error',
                 text: 'No se pudo eliminar el área: ' + error.message,
-                confirmButtonColor: '#2f8cff',
+                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
                 customClass: {
-                    popup: 'swal-dark',
-                    title: 'swal-title',
-                    htmlContainer: 'swal-html',
-                    confirmButton: 'swal-confirm-btn'
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm'
                 }
             });
         }
@@ -491,18 +491,18 @@ class AreasController {
                     </div>
                 `,
                 icon: 'info',
-                iconColor: '#2f8cff',
+                iconColor: 'var(--color-accent-secondary, #2f8cff)',
                 confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
-                confirmButtonColor: '#2f8cff',
+                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
                 showCancelButton: true,
                 cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
-                cancelButtonColor: '#545454',
+                cancelButtonColor: 'var(--color-bg-tertiary, #545454)',
                 customClass: {
-                    popup: 'swal-dark swal-detalles',
-                    title: 'swal-title',
-                    htmlContainer: 'swal-html',
-                    confirmButton: 'swal-confirm-btn',
-                    cancelButton: 'swal-cancel-btn'
+                    popup: 'swal2-popup swal-detalles',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm',
+                    cancelButton: 'swal2-cancel'
                 },
                 reverseButtons: true
             }).then((result) => {
@@ -700,7 +700,7 @@ class AreasController {
         alert.setAttribute('role', 'alert');
         
         const icono = tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
-        const color = tipo === 'success' ? '#00ff95' : '#ff4d4d';
+        const color = tipo === 'success' ? 'var(--color-success, #00ff95)' : 'var(--color-danger, #ff4d4d)';
         
         alert.innerHTML = `
             <div class="d-flex align-items-center">

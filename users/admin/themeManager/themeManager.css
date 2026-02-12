@@ -23,7 +23,7 @@ body {
     margin-bottom: 40px;
     padding-bottom: 20px;
     border-bottom: 2px solid var(--color-border-light);
-    text-align: center; /* Añadido para centrar todo el encabezado */
+    text-align: center;
 }
 
 .page-header h1 {
@@ -38,8 +38,8 @@ body {
     color: var(--color-text-secondary);
     font-size: 1.2rem;
     max-width: 800px;
-    margin: 0 auto; /* Esto centra el párrafo dentro de su contenedor */
-    text-align: center; /* Esto centra el texto dentro del párrafo */
+    margin: 0 auto;
+    text-align: center;
 }
 
 .theme-manager-content {
@@ -48,8 +48,6 @@ body {
     gap: 40px;
     margin-bottom: 50px;
 }
-
-/* El resto del CSS se mantiene igual... */
 
 /* Panel izquierdo - Previsualización */
 .preview-section {
@@ -151,7 +149,7 @@ body {
 }
 
 .controls-header p {
-    text-align: center; /* Esto centra el texto "Selecciona uno de los 12 temas disponibles" */
+    text-align: center;
 }
 
 .theme-list {
@@ -313,227 +311,8 @@ body {
     .action-buttons {
         flex-direction: column;
     }
-}
-
-@media (max-width: 480px) {
-    .theme-list {
-        grid-template-columns: 1fr;
-    }
     
-    .preview-card {
-        padding: 20px;
-    }
-}
-
-/* =============================================
-   SWEETALERT2 CUSTOM STYLES - Centinela Security
-   ============================================= */
-
-/* Estilos principales para SweetAlert2 */
-.swal2-popup {
-    background: var(--color-bg-primary) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-medium) !important;
-    border: 1px solid var(--color-border-light) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
-    font-family: var(--font-family-secondary) !important;
-    padding: 2rem !important;
-}
-
-.swal2-title {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    font-weight: 700 !important;
-    font-size: 1.5rem !important;
-    text-shadow: var(--text-shadow-effect) !important;
-    margin-bottom: 1rem !important;
-}
-
-.swal2-html-container {
-    color: var(--color-text-secondary) !important;
-    font-family: var(--font-family-secondary) !important;
-    font-size: 1rem !important;
-    line-height: 1.5 !important;
-    margin-top: 0.5rem !important;
-    margin-bottom: 1.5rem !important;
-}
-
-/* Botón Confirmar */
-.swal2-confirm {
-    background: var(--color-accent-primary) !important;
-    color: var(--color-text-dark) !important;
-    border: none !important;
-    border-radius: var(--border-radius-small) !important;
-    padding: 0.75rem 1.5rem !important;
-    font-family: var(--font-family-primary) !important;
-    font-weight: 600 !important;
-    transition: var(--transition-default) !important;
-    box-shadow: 0 4px 12px var(--color-shadow) !important;
-    font-size: 0.9rem !important;
-    margin: 0 0.5rem !important;
-}
-
-.swal2-confirm:hover {
-    background: var(--color-active) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 16px var(--color-shadow) !important;
-}
-
-.swal2-confirm:focus {
-    box-shadow: 0 0 0 3px rgba(192, 192, 192, 0.3) !important;
-}
-
-/* Botón Cancelar */
-.swal2-cancel {
-    background: transparent !important;
-    color: var(--color-text-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-small) !important;
-    padding: 0.75rem 1.5rem !important;
-    font-family: var(--font-family-primary) !important;
-    font-weight: 600 !important;
-    transition: var(--transition-default) !important;
-    font-size: 0.9rem !important;
-    margin: 0 0.5rem !important;
-}
-
-.swal2-cancel:hover {
-    background: var(--color-hover) !important;
-    border-color: var(--color-accent-primary) !important;
-    color: var(--color-accent-primary) !important;
-}
-
-.swal2-cancel:focus {
-    box-shadow: 0 0 0 3px rgba(192, 192, 192, 0.1) !important;
-}
-
-/* Iconos */
-.swal2-icon {
-    border-color: var(--color-accent-primary) !important;
-    margin-bottom: 1rem !important;
-}
-
-.swal2-icon .swal2-icon-content {
-    color: var(--color-accent-primary) !important;
-    font-size: 3rem !important;
-}
-
-.swal2-success-ring {
-    border-color: var(--color-accent-primary) !important;
-}
-
-.swal2-success [class^=swal2-success-line] {
-    background-color: var(--color-accent-primary) !important;
-}
-
-.swal2-error [class^=swal2-x-mark-line] {
-    background-color: var(--color-accent-secondary) !important;
-}
-
-.swal2-info {
-    border-color: var(--color-accent-secondary) !important;
-    color: var(--color-accent-secondary) !important;
-}
-
-.swal2-warning {
-    border-color: var(--color-accent-footer) !important;
-    color: var(--color-accent-footer) !important;
-}
-
-/* Inputs */
-.swal2-input,
-.swal2-textarea {
-    background: var(--color-bg-tertiary) !important;
-    color: var(--color-text-primary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-small) !important;
-    font-family: var(--font-family-secondary) !important;
-    padding: 0.75rem !important;
-    font-size: 0.9rem !important;
-    margin: 1rem 0 !important;
-}
-
-.swal2-input:focus,
-.swal2-textarea:focus {
-    border-color: var(--color-accent-primary) !important;
-    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.3) !important;
-    outline: none !important;
-}
-
-/* Progress Steps */
-.swal2-progress-steps .swal2-progress-step {
-    background: var(--color-accent-primary) !important;
-    color: var(--color-text-dark) !important;
-}
-
-.swal2-progress-steps .swal2-progress-step.swal2-active-progress-step {
-    background: var(--color-active) !important;
-}
-
-.swal2-progress-steps .swal2-progress-step-line {
-    background: var(--color-border-light) !important;
-}
-
-/* Toast Notifications */
-.swal2-toast {
-    background: var(--color-bg-tertiary) !important;
-    color: var(--color-text-primary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-normal) !important;
-    border-radius: var(--border-radius-small) !important;
-    padding: 1rem !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-.swal2-toast .swal2-title {
-    font-size: 1rem !important;
-    margin-bottom: 0.25rem !important;
-}
-
-.swal2-toast .swal2-html-container {
-    font-size: 0.85rem !important;
-    margin: 0 !important;
-}
-
-/* Loading Animation */
-.swal2-loading {
-    border-color: var(--color-border-light) !important;
-    border-left-color: var(--color-accent-primary) !important;
-}
-
-/* Animaciones personalizadas */
-@keyframes centinelaSweetAlertIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9) translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes centinelaSweetAlertOut {
-    from {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: scale(0.9) translateY(-20px);
-    }
-}
-
-.swal2-show {
-    animation: centinelaSweetAlertIn 0.3s ease !important;
-}
-
-.swal2-hide {
-    animation: centinelaSweetAlertOut 0.3s ease !important;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
+    /* SweetAlert2 responsive - SOLO ESTILOS RESPONSIVE */
     .swal2-popup {
         width: 90% !important;
         max-width: 400px !important;
@@ -555,16 +334,12 @@ body {
     }
 }
 
-/* Dark mode compatibility */
-@media (prefers-color-scheme: dark) {
-    .swal2-popup {
-        background: var(--color-bg-primary) !important;
-        color: var(--color-text-primary) !important;
+@media (max-width: 480px) {
+    .theme-list {
+        grid-template-columns: 1fr;
     }
     
-    .swal2-input,
-    .swal2-textarea {
-        background: var(--color-bg-tertiary) !important;
-        color: var(--color-text-primary) !important;
+    .preview-card {
+        padding: 20px;
     }
 }

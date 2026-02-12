@@ -1,48 +1,7 @@
-/* areas.css - Adaptado al estilo oscuro de Gestión de Usuarios */
+/* areas.css - Adaptado al tema Centinela (USA VARIABLES GLOBALES) */
 /* =============================================
-   VARIABLES ESPECÍFICAS PARA ÁREAS
+   NO REDEFINIR VARIABLES GLOBALES - USAR LAS DE personalization.css
    ============================================= */
-:root {
-    /* COLORES PRINCIPALES */
-    --color-bg-primary: #000000;
-    --color-bg-secondary: #0a0a0a;
-    --color-bg-tertiary: #141414;
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #cccccc;
-    --color-text-light: #ffffff;
-    --color-accent-primary: #c0c0c0;
-    --color-accent-secondary: #2f8cff;
-    --color-border-light: #545454;
-    --color-border-dark: #333333;
-    --color-hover: #1a1a1a;
-    --color-icon-primary: #9caba4;
-    
-    /* COLORES DE ESTADO */
-    --color-success: #00ff95;
-    --color-danger: #ff4d4d;
-    --color-warning: #ffcc00;
-    --color-info: #00cfff;
-    
-    /* SOMBRAS */
-    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
-    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
-    
-    /* BORDES */
-    --border-radius-small: 5px;
-    --border-radius-medium: 10px;
-    --border-radius-large: 15px;
-    --border-radius-circle: 50%;
-    
-    /* TRANSICIONES */
-    --transition-fast: 0.2s ease;
-    --transition-default: 0.3s ease;
-    --transition-slow: 0.5s ease;
-    
-    /* FUENTES */
-    --font-family-primary: 'Orbitron', sans-serif;
-    --font-family-secondary: 'Rajdhani', sans-serif;
-}
 
 /* =============================================
    ESTILOS GENERALES
@@ -307,19 +266,19 @@ tr.area-row.expanded .toggle-icon i {
 
 .badge-activo {
     background: rgba(0, 255, 149, 0.1) !important;
-    color: var(--color-success) !important;
+    color: var(--color-success, #00ff95) !important;
     border: 1px solid rgba(0, 255, 149, 0.3) !important;
 }
 
 .badge-inactivo {
     background: rgba(255, 204, 0, 0.1) !important;
-    color: var(--color-warning) !important;
+    color: var(--color-warning, #ffcc00) !important;
     border: 1px solid rgba(255, 204, 0, 0.3) !important;
 }
 
 .badge-eliminado {
     background: rgba(255, 77, 77, 0.1) !important;
-    color: var(--color-danger) !important;
+    color: var(--color-danger, #ff4d4d) !important;
     border: 1px solid rgba(255, 77, 77, 0.3) !important;
 }
 
@@ -516,7 +475,7 @@ tr.area-row.expanded .toggle-icon i {
 }
 
 /* =============================================
-   NOTIFICACIONES FLOTANTES
+   NOTIFICACIONES FLOTANTES (PROPIAS, NO SWEETALERT)
    ============================================= */
 .notificacion-flotante {
     top: 20px;
@@ -536,85 +495,9 @@ tr.area-row.expanded .toggle-icon i {
 }
 
 /* =============================================
-   SWEETALERT2 - TEMA OSCURO COMPLETO
+   COMPONENTES PERSONALIZADOS PARA SWEETALERT
+   (NO SON ESTILOS NATIVOS, SON CONTENIDO HTML)
    ============================================= */
-.swal-dark {
-    background: var(--color-bg-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
-    box-shadow: var(--shadow-large) !important;
-}
-
-.swal-title {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    font-size: 20px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-}
-
-.swal-html {
-    color: var(--color-text-secondary) !important;
-    font-family: var(--font-family-secondary) !important;
-    font-size: 14px !important;
-}
-
-.swal-confirm-btn, .swal-confirm-btn-danger {
-    font-family: var(--font-family-primary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    border-radius: var(--border-radius-small) !important;
-    transition: all 0.3s ease !important;
-}
-
-.swal-confirm-btn {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-accent-primary) !important;
-    color: var(--color-text-primary) !important;
-}
-
-.swal-confirm-btn:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    border-color: var(--color-accent-secondary) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
-}
-
-.swal-confirm-btn-danger {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-danger) !important;
-    color: var(--color-danger) !important;
-}
-
-.swal-confirm-btn-danger:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    border-color: #ff3333 !important;
-    color: white !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
-}
-
-.swal-cancel-btn {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    border-radius: var(--border-radius-small) !important;
-    transition: all 0.3s ease !important;
-}
-
-.swal-cancel-btn:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px) !important;
-}
-
-/* ESTILOS PARA DETALLES DE ÁREA */
 .swal-detalles {
     width: 800px !important;
     max-width: 95vw !important;
@@ -652,7 +535,7 @@ tr.area-row.expanded .toggle-icon i {
 
 .swal-estado-badge {
     background: rgba(0, 255, 149, 0.1);
-    color: var(--color-success);
+    color: var(--color-success, #00ff95);
     padding: 5px 16px;
     border-radius: 20px;
     border: 1px solid rgba(0, 255, 149, 0.3);
@@ -871,6 +754,37 @@ tr.area-row.expanded .toggle-icon i {
 }
 
 /* =============================================
+   BADGE DE CONTADOR DE CARGOS
+   ============================================= */
+.cargo-count-badge {
+    background: rgba(47, 140, 255, 0.1) !important;
+    color: var(--color-accent-secondary) !important;
+    border: 1px solid rgba(47, 140, 255, 0.3) !important;
+    font-size: 0.7rem !important;
+    padding: 3px 8px !important;
+    border-radius: 20px !important;
+    font-family: var(--font-family-secondary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    min-width: 80px !important;
+    text-align: center !important;
+    display: inline-block !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.cargo-count-badge:hover {
+    background: rgba(47, 140, 255, 0.2) !important;
+    border-color: var(--color-accent-secondary) !important;
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(47, 140, 255, 0.3);
+}
+
+.cargo-count-badge i {
+    color: var(--color-accent-secondary) !important;
+}
+
+/* =============================================
    ANIMACIONES
    ============================================= */
 @keyframes fadeInUp {
@@ -906,6 +820,19 @@ tr.area-row.expanded .toggle-icon i {
 .action-buttons .btn:hover::after {
     opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
+}
+
+/* =============================================
+   ERROR DE CARGA
+   ============================================= */
+.error-carga {
+    background: rgba(255, 77, 77, 0.1) !important;
+    border: 1px solid rgba(255, 77, 77, 0.3) !important;
+    color: var(--color-danger, #ff4d4d) !important;
+}
+
+.error-carga h4 {
+    color: var(--color-danger, #ff4d4d) !important;
 }
 
 /* =============================================
@@ -1134,47 +1061,4 @@ tr.area-row.expanded .toggle-icon i {
     .table-responsive {
         -webkit-overflow-scrolling: touch;
     }
-}
-
-/* =============================================
-   ERROR DE CARGA
-   ============================================= */
-.error-carga {
-    background: rgba(255, 77, 77, 0.1) !important;
-    border: 1px solid rgba(255, 77, 77, 0.3) !important;
-    color: var(--color-danger) !important;
-}
-
-.error-carga h4 {
-    color: var(--color-danger) !important;
-}
-/* =============================================
-   BADGE DE CONTADOR DE CARGOS - ESTILO ACORDE AL TEMA
-   ============================================= */
-.cargo-count-badge {
-    background: rgba(47, 140, 255, 0.1) !important;
-    color: var(--color-accent-secondary) !important;
-    border: 1px solid rgba(47, 140, 255, 0.3) !important;
-    font-size: 0.7rem !important;
-    padding: 3px 8px !important;
-    border-radius: 20px !important;
-    font-family: var(--font-family-secondary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    min-width: 80px !important;
-    text-align: center !important;
-    display: inline-block !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-}
-
-.cargo-count-badge:hover {
-    background: rgba(47, 140, 255, 0.2) !important;
-    border-color: var(--color-accent-secondary) !important;
-    transform: scale(1.05);
-    box-shadow: 0 0 10px rgba(47, 140, 255, 0.3);
-}
-
-.cargo-count-badge i {
-    color: var(--color-accent-secondary) !important;
 }

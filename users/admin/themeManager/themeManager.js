@@ -694,7 +694,7 @@ class ThemeManager {
             alert(`¿Aplicar tema ${theme.name}?`);
             // Continuar con la aplicación del tema
         } else {
-            // Mostrar confirmación con SweetAlert2
+            // Mostrar confirmación con SweetAlert2 - CON CUSTOM CLASS
             const result = await Swal.fire({
                 title: '¿Aplicar tema?',
                 html: `¿Deseas aplicar el tema <strong>${theme.name}</strong>?<br><small>${theme.description}</small>`,
@@ -705,7 +705,14 @@ class ThemeManager {
                 confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
                 cancelButtonColor: this.getCurrentColors()['--color-border-light'],
                 background: this.getCurrentColors()['--color-bg-primary'],
-                color: this.getCurrentColors()['--color-text-primary']
+                color: this.getCurrentColors()['--color-text-primary'],
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm',
+                    cancelButton: 'swal2-cancel'
+                }
             });
             
             if (!result.isConfirmed) {
@@ -739,7 +746,13 @@ class ThemeManager {
                 confirmButtonText: 'Aceptar',
                 confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
                 background: this.getCurrentColors()['--color-bg-primary'],
-                color: this.getCurrentColors()['--color-text-primary']
+                color: this.getCurrentColors()['--color-text-primary'],
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm'
+                }
             });
         } else {
             alert(`Tema "${theme.name}" aplicado correctamente`);
@@ -783,7 +796,14 @@ class ThemeManager {
                 confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
                 cancelButtonColor: this.getCurrentColors()['--color-border-light'],
                 background: this.getCurrentColors()['--color-bg-primary'],
-                color: this.getCurrentColors()['--color-text-primary']
+                color: this.getCurrentColors()['--color-text-primary'],
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm',
+                    cancelButton: 'swal2-cancel'
+                }
             });
             
             if (!result.isConfirmed) {
@@ -1078,6 +1098,12 @@ class ThemeManager {
                 timerProgressBar: true,
                 background: this.getCurrentColors()['--color-bg-primary'],
                 color: this.getCurrentColors()['--color-text-primary'],
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    timerProgressBar: 'swal2-timer-progress-bar'
+                },
                 didOpen: (toast) => {
                     toast.addEventListener('mouseenter', Swal.stopTimer);
                     toast.addEventListener('mouseleave', Swal.resumeTimer);

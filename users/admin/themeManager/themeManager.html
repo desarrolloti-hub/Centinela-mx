@@ -11,19 +11,19 @@
     <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Sistema de colores base -->
+    <!-- ========== SISTEMA DE TEMAS GLOBAL ========== -->
+    <!-- Sistema de colores base - CSS GLOBAL de SweetAlert2 incluido aquí -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     
-    <!-- CSS del Theme Manager -->
+    <!-- CSS específico del Theme Manager -->
     <link rel="stylesheet" href="themeManager.css">
-
-    <!-- sweetalert2 -->
-    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     
-    
+    <!-- ========== SWEETALERT2 (SOLO JS, EL CSS VIENE DE personalization.css) ========== -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <canvas id="particle-canvas"></canvas>
+    
     <!-- Contenedor principal del administrador -->
     <div class="admin-container">
         <!-- Encabezado de página -->
@@ -128,14 +128,12 @@
     </div>
 
     <!-- Scripts -->
-     <script src="/components/navbar-admin-component.js"></script>
-    <script type="module" src="themeManager.js"></script>
+    <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
-    
     <script type="module" src="/components/particulas.js"></script>
-    <script type="module" src="/users/admin/newUser/newUser.js"></script>
     <script type="module" src="/components/themeloader.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Script principal del Theme Manager -->
+    <script type="module" src="themeManager.js"></script>
 </body>
 </html>

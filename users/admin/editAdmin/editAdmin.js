@@ -39,7 +39,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                         icon: 'error',
                         title: 'Error de autenticación',
                         text: 'No se pudo cargar el usuario actual',
-                        confirmButtonText: 'Ir al login'
+                        confirmButtonText: 'Ir al login',
+                        confirmButtonColor: 'var(--color-danger, #ef4444)',
+                        customClass: {
+                            popup: 'swal2-popup',
+                            title: 'swal2-title',
+                            htmlContainer: 'swal2-html-container',
+                            confirmButton: 'swal2-confirm'
+                        }
                     }).then(() => {
                         window.location.href = '/users/visitors/login/login.html';
                     });
@@ -66,7 +73,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </div>
             `,
             confirmButtonText: 'Entendido',
-            allowOutsideClick: false
+            confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
+            allowOutsideClick: false,
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
         }).then(() => {
             window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
         });
@@ -90,7 +104,13 @@ async function iniciarEditor(userManager) {
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para acceder al editor de perfil',
             timer: 4000,
-            showConfirmButton: false
+            showConfirmButton: false,
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                timerProgressBar: 'swal2-timer-progress-bar'
+            }
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -377,7 +397,16 @@ function setupBasicHandlers(elements) {
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar'
+                cancelButtonText: 'No, continuar',
+                confirmButtonColor: 'var(--color-danger, #ef4444)',
+                cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm',
+                    cancelButton: 'swal2-cancel'
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
@@ -492,7 +521,14 @@ function setupModalHandlers(elements, userManager) {
                 icon: 'warning',
                 title: 'Sin archivo',
                 text: 'No hay ninguna imagen seleccionada',
-                confirmButtonText: 'Entendido'
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm'
+                }
             });
             return;
         }
@@ -505,6 +541,11 @@ function setupModalHandlers(elements, userManager) {
             showConfirmButton: false,
             didOpen: () => {
                 Swal.showLoading();
+            },
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container'
             }
         });
         
@@ -559,7 +600,13 @@ function setupModalHandlers(elements, userManager) {
                         ? 'Foto de perfil actualizada' 
                         : 'Logo de organización actualizado',
                     timer: 5000,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    customClass: {
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        timerProgressBar: 'swal2-timer-progress-bar'
+                    }
                 });
                 
                 console.log('✅ Imagen actualizada exitosamente');
@@ -582,7 +629,14 @@ function setupModalHandlers(elements, userManager) {
                 icon: 'error',
                 title: 'Error',
                 text: errorMessage,
-                confirmButtonText: 'Entendido'
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: 'var(--color-danger, #ef4444)',
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm'
+                }
             });
         } finally {
             if (elements.photoModal) {
@@ -654,6 +708,11 @@ function setupSaveHandler(elements, userManager) {
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
+            },
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container'
             }
         });
         
@@ -677,7 +736,13 @@ function setupSaveHandler(elements, userManager) {
                 title: '¡Éxito!',
                 text: 'Datos actualizados correctamente',
                 timer: 5000,
-                showConfirmButton: false
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    timerProgressBar: 'swal2-timer-progress-bar'
+                }
             });
             
             showMessage(elements.mainMessage, 'success', 'Cambios guardados exitosamente');
@@ -690,7 +755,14 @@ function setupSaveHandler(elements, userManager) {
                 icon: 'error',
                 title: 'Error',
                 text: 'No se pudieron guardar los cambios: ' + error.message,
-                confirmButtonText: 'Entendido'
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: 'var(--color-danger, #ef4444)',
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm'
+                }
             });
         }
     });
@@ -781,7 +853,14 @@ async function showPasswordResetConfirmation(userManager) {
                 icon: 'error',
                 title: 'Error',
                 text: 'No se pudo obtener el correo electrónico del usuario',
-                confirmButtonText: 'ENTENDIDO'
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: 'var(--color-danger, #ef4444)',
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm'
+                }
             });
             return;
         }
@@ -816,10 +895,19 @@ async function showPasswordResetConfirmation(userManager) {
             showCancelButton: true,
             confirmButtonText: 'ENVIAR ENLACE',
             cancelButtonText: 'CANCELAR',
+            confirmButtonColor: 'var(--color-warning, #ff9800)',
+            cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
             reverseButtons: true,
             allowOutsideClick: false,
             backdrop: true,
-            timer: 6000
+            timer: 6000,
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
+            }
         });
         
         if (result.isConfirmed) {
@@ -831,6 +919,11 @@ async function showPasswordResetConfirmation(userManager) {
                 showConfirmButton: false,
                 didOpen: () => {
                     Swal.showLoading();
+                },
+                customClass: {
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container'
                 }
             });
             
@@ -882,10 +975,19 @@ async function showPasswordResetConfirmation(userManager) {
                         </div>
                     `,
                     confirmButtonText: 'ENTENDIDO, REVISARÉ MI CORREO',
+                    confirmButtonColor: 'var(--color-success, #28a745)',
                     allowOutsideClick: false,
                     showCloseButton: true,
                     width: '650px',
-                    timer: 8000
+                    timer: 8000,
+                    customClass: {
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm',
+                        closeButton: 'swal2-close',
+                        timerProgressBar: 'swal2-timer-progress-bar'
+                    }
                 });
                 
             } catch (error) {
@@ -915,7 +1017,14 @@ async function showPasswordResetConfirmation(userManager) {
                     icon: 'error',
                     title: errorMessage,
                     text: 'Por favor, intenta nuevamente más tarde.',
-                    confirmButtonText: 'ENTENDIDO'
+                    confirmButtonText: 'ENTENDIDO',
+                    confirmButtonColor: 'var(--color-danger, #ef4444)',
+                    customClass: {
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm'
+                    }
                 });
             }
         }
@@ -926,9 +1035,16 @@ async function showPasswordResetConfirmation(userManager) {
             icon: 'error',
             title: 'Error inesperado',
             text: 'Ocurrió un error inesperado. Por favor, intenta nuevamente.',
-            confirmButtonText: 'ENTENDIDO'
+            confirmButtonText: 'ENTENDIDO',
+            confirmButtonColor: 'var(--color-danger, #ef4444)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
         });
     }
 }
 
-console.log('✅ editAdmin.js cargado - Todos los estilos de SweetAlert2 en CSS');
+console.log('✅ editAdmin.js cargado - Con customClass y variables CSS');
