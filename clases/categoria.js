@@ -10,12 +10,13 @@ import {
     doc,
     query,
     where,
-    serverTimestamp
+    serverTimestamp,
+    addDoc
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 /**
  * Clase Categoria - Representa una categoría con sus subcategorías
- * VERSIÓN CORREGIDA - Usa objetos, NO Maps para Firestore
+ * VERSIÓN FINAL - Sin empresaId/estado, IDs de Firebase
  */
 class Categoria {
     constructor(id, data) {
@@ -23,23 +24,23 @@ class Categoria {
         this.nombre = data.nombre || '';
         this.descripcion = data.descripcion || '';
         this.color = data.color || '#2f8cff';
-        this.estado = data.estado || 'activa';
-        this.empresaId = data.empresaId || '';
-        this.empresaNombre = data.empresaNombre || '';
         
         // Fechas
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
         
-        // SUBCATEGORÍAS: Siempre como objeto, NUNCA como Map
+        // SUBCATEGORÍAS: Como objeto
         this.subcategorias = {};
         
         if (data.subcategorias) {
             if (typeof data.subcategorias === 'object') {
-                // Copiar manteniendo la estructura exacta
                 this.subcategorias = JSON.parse(JSON.stringify(data.subcategorias));
             }
         }
+        
+        // Metadatos de organización (solo en memoria, no se guarda)
+        this.organizacionCamelCase = data.organizacionCamelCase || '';
+        this.organizacionNombre = data.organizacionNombre || '';
     }
 
     // ========== MÉTODOS DE UTILIDAD ==========
@@ -69,22 +70,23 @@ class Categoria {
     /**
      * Agrega una nueva subcategoría
      */
-    agregarSubcategoria(nombre, descripcion = '') {
+    agregarSubcategoria(nombre, descripcion = '', heredaColor = true, colorPersonalizado = null) {
         try {
             if (!nombre || nombre.trim() === '') {
                 throw new Error('El nombre de la subcategoría es requerido');
             }
             
-            const subcatId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            // Usar ID generado por Firebase (se asignará al guardar)
+            const subcatId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             
             this.subcategorias[subcatId] = {
-                id: subcatId,
+                id: subcatId, // Temporal, se reemplazará al guardar
                 nombre: nombre.trim(),
                 descripcion: descripcion.trim() || '',
                 fechaCreacion: new Date().toISOString(),
                 fechaActualizacion: new Date().toISOString(),
-                heredaColor: true,
-                color: null
+                heredaColor: heredaColor,
+                color: !heredaColor ? colorPersonalizado : null
             };
             
             return subcatId;
@@ -112,13 +114,6 @@ class Categoria {
     }
 
     /**
-     * Obtiene una subcategoría por su ID
-     */
-    obtenerSubcategoria(subcatId) {
-        return this.subcategorias[subcatId] || null;
-    }
-
-    /**
      * Actualiza una subcategoría existente
      */
     actualizarSubcategoria(subcatId, nuevosDatos) {
@@ -142,6 +137,33 @@ class Categoria {
     }
 
     /**
+     * Cambia la herencia de color de una subcategoría
+     */
+    cambiarHerenciaColor(subcatId, heredaColor, colorPersonalizado = null) {
+        if (!this.subcategorias[subcatId]) return false;
+        
+        this.subcategorias[subcatId].heredaColor = heredaColor;
+        this.subcategorias[subcatId].color = !heredaColor ? colorPersonalizado : null;
+        this.subcategorias[subcatId].fechaActualizacion = new Date().toISOString();
+        
+        return true;
+    }
+
+    /**
+     * Obtiene el color efectivo de una subcategoría
+     */
+    obtenerColorSubcategoria(subcatId, colorCategoria) {
+        const subcat = this.subcategorias[subcatId];
+        if (!subcat) return colorCategoria;
+        
+        if (subcat.heredaColor === false && subcat.color) {
+            return subcat.color;
+        }
+        
+        return colorCategoria;
+    }
+
+    /**
      * Verifica si existe una subcategoría con el mismo nombre
      */
     existeSubcategoria(nombreSubcategoria) {
@@ -159,12 +181,16 @@ class Categoria {
     /**
      * Obtiene todas las subcategorías como array
      */
-    getSubcategoriasAsArray() {
+    getSubcategoriasAsArray(colorCategoria = null) {
         const subcategoriasArray = [];
         for (const subcatId in this.subcategorias) {
+            const subcat = this.subcategorias[subcatId];
+            const colorEfectivo = this.obtenerColorSubcategoria(subcatId, colorCategoria || this.color);
+            
             subcategoriasArray.push({
                 id: subcatId,
-                ...this.subcategorias[subcatId]
+                ...subcat,
+                colorEfectivo: colorEfectivo
             });
         }
         return subcategoriasArray;
@@ -186,10 +212,6 @@ class Categoria {
             errores.push('El nombre de la categoría es requerido');
         }
         
-        if (!this.empresaId || this.empresaId === '') {
-            errores.push('La categoría debe estar asociada a una empresa');
-        }
-        
         return {
             isValid: errores.length === 0,
             errores: errores
@@ -209,16 +231,13 @@ class Categoria {
     // ========== FIRESTORE ==========
     
     /**
-     * Convierte la categoría a formato Firestore
+     * Prepara datos para Firestore (sin campos innecesarios)
      */
     toFirestore() {
         return {
             nombre: this.nombre,
             descripcion: this.descripcion,
             color: this.color,
-            estado: this.estado,
-            empresaId: this.empresaId,
-            empresaNombre: this.empresaNombre,
             subcategorias: this.subcategorias || {},
             fechaCreacion: this.fechaCreacion,
             fechaActualizacion: new Date().toISOString()
@@ -233,9 +252,6 @@ class Categoria {
             nombre: this.nombre,
             descripcion: this.descripcion,
             color: this.color,
-            estado: this.estado,
-            empresaId: this.empresaId,
-            empresaNombre: this.empresaNombre,
             subcategorias: this.subcategorias || {},
             fechaCreacion: serverTimestamp(),
             fechaActualizacion: serverTimestamp()
@@ -251,56 +267,57 @@ class Categoria {
             nombre: this.nombre,
             descripcion: this.descripcion,
             color: this.color,
-            estado: this.estado,
             totalSubcategorias: this.getCantidadSubcategorias(),
-            subcategorias: this.getSubcategoriasAsArray(),
-            empresaId: this.empresaId,
-            empresaNombre: this.empresaNombre,
+            subcategorias: this.getSubcategoriasAsArray(this.color),
             fechaCreacion: this.getFechaCreacionFormateada(),
-            fechaActualizacion: this.getFechaActualizacionFormateada()
+            fechaActualizacion: this.getFechaActualizacionFormateada(),
+            organizacion: this.organizacionNombre,
+            organizacionCamelCase: this.organizacionCamelCase
         };
     }
 }
 
 /**
- * Clase CategoriaManager - Gestiona las operaciones con categorías en Firestore
- * VERSIÓN CORREGIDA - Colecciones dinámicas como en áreas
+ * Clase CategoriaManager - Gestiona las operaciones con categorías
+ * VERSIÓN FINAL - Sin empresaId/estado, IDs de Firebase
  */
 class CategoriaManager {
     constructor() {
         this.categorias = [];
-        this.empresaNombre = null;
-        this.empresaId = null;
+        this.organizacionNombre = null;
+        this.organizacionCamelCase = null;
         this.nombreColeccion = null;
         
-        // Intentar cargar datos de empresa al instanciar
-        this._cargarDatosEmpresa();
+        // Cargar datos de organización al instanciar
+        this._cargarDatosOrganizacion();
         
         console.log('✅ CategoriaManager inicializado');
     }
 
     // ========== MÉTODOS PRIVADOS ==========
     
-    _cargarDatosEmpresa() {
+    _cargarDatosOrganizacion() {
         try {
-            // Intentar obtener de adminInfo (para administradores)
+            // Intentar obtener de adminInfo
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-                this.empresaNombre = adminData.organizacion || 'Sin organización';
-                this.empresaId = adminData.organizacionCamelCase || this._generarCamelCase(this.empresaNombre);
+                this.organizacionNombre = adminData.organizacion || 'Sin organización';
+                this.organizacionCamelCase = adminData.organizacionCamelCase || 
+                                            this._generarCamelCase(this.organizacionNombre);
                 return;
             }
             
             // Intentar obtener de userData
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-            this.empresaNombre = userData.organizacion || userData.empresa || 'Sin organización';
-            this.empresaId = userData.organizacionCamelCase || this._generarCamelCase(this.empresaNombre);
+            this.organizacionNombre = userData.organizacion || userData.empresa || 'Sin organización';
+            this.organizacionCamelCase = userData.organizacionCamelCase || 
+                                        this._generarCamelCase(this.organizacionNombre);
             
         } catch (error) {
-            console.error('Error cargando datos de empresa:', error);
-            this.empresaNombre = 'Sin organización';
-            this.empresaId = 'sinOrganizacion';
+            console.error('Error cargando datos de organización:', error);
+            this.organizacionNombre = 'Sin organización';
+            this.organizacionCamelCase = 'sinOrganizacion';
         }
         
         // Generar nombre de colección
@@ -318,35 +335,17 @@ class CategoriaManager {
     }
 
     /**
-     * Genera nombre de colección dinámico (IGUAL QUE ÁREAS)
+     * Genera nombre de colección dinámico
      */
-    _getCollectionName(empresaIdOverride = null) {
-        const orgId = empresaIdOverride || this.empresaId || 'sinOrganizacion';
+    _getCollectionName(organizacionOverride = null) {
+        const orgId = organizacionOverride || this.organizacionCamelCase || 'sinOrganizacion';
         return `categorias_${orgId}`;
-    }
-
-    /**
-     * Genera ID único para categoría
-     */
-    _generarCategoriaId(nombre, empresaId) {
-        const nombreNormalizado = nombre
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]/g, '_')
-            .substring(0, 30);
-        
-        const timestamp = Date.now();
-        const random = Math.floor(Math.random() * 10000);
-        const org = empresaId || this.empresaId || 'sinOrganizacion';
-        
-        return `${org}_cat_${nombreNormalizado}_${timestamp}_${random}`;
     }
 
     // ========== MÉTODOS CRUD ==========
     
     /**
-     * Crea una nueva categoría (IGUAL QUE ÁREAS)
+     * Crea una nueva categoría - USA addDoc (ID GENERADO POR FIREBASE)
      */
     async crearCategoria(data) {
         try {
@@ -355,40 +354,36 @@ class CategoriaManager {
                 throw new Error('El nombre de la categoría es requerido');
             }
             
-            // Asegurar que tenemos datos de empresa
-            if (!this.empresaId) {
-                this._cargarDatosEmpresa();
+            // Asegurar que tenemos datos de organización
+            if (!this.organizacionCamelCase) {
+                this._cargarDatosOrganizacion();
             }
             
-            const empresaId = this.empresaId;
-            const empresaNombre = this.empresaNombre;
             const collectionName = this._getCollectionName();
             
             console.log(`📝 Creando categoría en colección: ${collectionName}`);
             
             // Verificar si ya existe
-            const existe = await this.verificarCategoriaExistente(data.nombre.trim(), empresaId);
+            const existe = await this.verificarCategoriaExistente(data.nombre.trim());
             if (existe) {
                 throw new Error(`Ya existe una categoría con el nombre "${data.nombre}"`);
             }
             
-            // Generar ID único
-            const categoriaId = this._generarCategoriaId(data.nombre, empresaId);
-            
-            // Procesar subcategorías si vienen en el data
+            // Procesar subcategorías
             let subcategorias = {};
             if (data.subcategorias) {
                 if (Array.isArray(data.subcategorias)) {
                     data.subcategorias.forEach(subcat => {
-                        const subcatId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+                        // NO generamos ID, Firebase lo hará al guardar
+                        const subcatId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
                         subcategorias[subcatId] = {
-                            id: subcatId,
+                            id: subcatId, // Temporal, se reemplazará
                             nombre: subcat.nombre || '',
                             descripcion: subcat.descripcion || '',
                             fechaCreacion: new Date().toISOString(),
                             fechaActualizacion: new Date().toISOString(),
-                            heredaColor: true,
-                            color: null
+                            heredaColor: subcat.heredaColor !== undefined ? subcat.heredaColor : true,
+                            color: subcat.color || null
                         };
                     });
                 } else if (typeof data.subcategorias === 'object') {
@@ -396,14 +391,11 @@ class CategoriaManager {
                 }
             }
             
-            // Datos para Firestore
+            // Datos para Firestore - SOLO CAMPOS NECESARIOS
             const categoriaFirestoreData = {
                 nombre: data.nombre.trim(),
                 descripcion: data.descripcion?.trim() || '',
                 color: data.color || '#2f8cff',
-                estado: data.estado || 'activa',
-                empresaId: empresaId,
-                empresaNombre: empresaNombre,
                 subcategorias: subcategorias,
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp()
@@ -411,19 +403,23 @@ class CategoriaManager {
             
             console.log('📤 Guardando en Firestore:', {
                 coleccion: collectionName,
-                id: categoriaId,
                 nombre: data.nombre
             });
             
-            // Guardar en Firestore
-            const categoriaRef = doc(db, collectionName, categoriaId);
-            await setDoc(categoriaRef, categoriaFirestoreData);
+            // Guardar en Firestore CON addDoc (ID AUTOMÁTICO)
+            const categoriasCollection = collection(db, collectionName);
+            const docRef = await addDoc(categoriasCollection, categoriaFirestoreData);
+            const categoriaId = docRef.id;
+            
+            console.log(`✅ Categoría creada con ID: ${categoriaId}`);
             
             // Crear instancia para retornar
             const nuevaCategoria = new Categoria(categoriaId, {
                 ...categoriaFirestoreData,
                 fechaCreacion: new Date(),
-                fechaActualizacion: new Date()
+                fechaActualizacion: new Date(),
+                organizacionCamelCase: this.organizacionCamelCase,
+                organizacionNombre: this.organizacionNombre
             });
             
             // Agregar a memoria
@@ -439,14 +435,14 @@ class CategoriaManager {
     }
 
     /**
-     * Obtiene todas las categorías de una empresa
+     * Obtiene todas las categorías de una organización
      */
-    async obtenerCategoriasPorEmpresa(empresaIdOverride = null) {
+    async obtenerCategoriasPorOrganizacion(organizacionOverride = null) {
         try {
-            const orgId = empresaIdOverride || this.empresaId;
+            const orgId = organizacionOverride || this.organizacionCamelCase;
             
             if (!orgId) {
-                console.warn('⚠️ No se proporcionó ID de empresa');
+                console.warn('⚠️ No se proporcionó ID de organización');
                 return [];
             }
             
@@ -460,14 +456,19 @@ class CategoriaManager {
             categoriasSnapshot.forEach(doc => {
                 try {
                     const data = doc.data();
-                    const categoria = new Categoria(doc.id, { ...data, id: doc.id });
+                    const categoria = new Categoria(doc.id, { 
+                        ...data, 
+                        id: doc.id,
+                        organizacionCamelCase: orgId,
+                        organizacionNombre: this.organizacionNombre
+                    });
                     categorias.push(categoria);
                 } catch (error) {
                     console.error(`❌ Error procesando categoría ${doc.id}:`, error);
                 }
             });
             
-            // Ordenar por fecha (más recientes primero)
+            // Ordenar por fecha
             categorias.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
             this.categorias = categorias;
             
@@ -483,11 +484,11 @@ class CategoriaManager {
     /**
      * Obtiene una categoría por ID
      */
-    async obtenerCategoriaPorId(categoriaId, empresaIdOverride = null) {
-        const orgId = empresaIdOverride || this.empresaId;
+    async obtenerCategoriaPorId(categoriaId, organizacionOverride = null) {
+        const orgId = organizacionOverride || this.organizacionCamelCase;
         
         if (!orgId) {
-            console.error('❌ Se requiere ID de empresa');
+            console.error('❌ Se requiere ID de organización');
             return null;
         }
         
@@ -502,7 +503,12 @@ class CategoriaManager {
             
             if (categoriaSnap.exists()) {
                 const data = categoriaSnap.data();
-                const categoria = new Categoria(categoriaId, { ...data, id: categoriaId });
+                const categoria = new Categoria(categoriaId, { 
+                    ...data, 
+                    id: categoriaId,
+                    organizacionCamelCase: orgId,
+                    organizacionNombre: this.organizacionNombre
+                });
                 this.categorias.push(categoria);
                 return categoria;
             }
@@ -518,12 +524,12 @@ class CategoriaManager {
     /**
      * Actualiza una categoría existente
      */
-    async actualizarCategoria(categoriaId, nuevosDatos, empresaIdOverride = null) {
+    async actualizarCategoria(categoriaId, nuevosDatos, organizacionOverride = null) {
         try {
-            const orgId = empresaIdOverride || this.empresaId;
+            const orgId = organizacionOverride || this.organizacionCamelCase;
             
             if (!orgId) {
-                throw new Error('Se requiere ID de empresa');
+                throw new Error('Se requiere ID de organización');
             }
             
             const collectionName = this._getCollectionName(orgId);
@@ -542,11 +548,16 @@ class CategoriaManager {
                 }
             }
             
-            // Datos actualizados
+            // Datos actualizados - SOLO CAMPOS NECESARIOS
             const datosActualizados = {
                 ...nuevosDatos,
                 fechaActualizacion: serverTimestamp()
             };
+            
+            // Eliminar campos que no deben actualizarse
+            delete datosActualizados.id;
+            delete datosActualizados.organizacionCamelCase;
+            delete datosActualizados.organizacionNombre;
             
             // Actualizar en Firestore
             await updateDoc(categoriaRef, datosActualizados);
@@ -575,12 +586,12 @@ class CategoriaManager {
     /**
      * Elimina una categoría (solo si no tiene subcategorías)
      */
-    async eliminarCategoria(categoriaId, empresaIdOverride = null) {
+    async eliminarCategoria(categoriaId, organizacionOverride = null) {
         try {
-            const orgId = empresaIdOverride || this.empresaId;
+            const orgId = organizacionOverride || this.organizacionCamelCase;
             
             if (!orgId) {
-                throw new Error('Se requiere ID de empresa');
+                throw new Error('Se requiere ID de organización');
             }
             
             // Verificar que existe y no tiene subcategorías
@@ -618,13 +629,13 @@ class CategoriaManager {
     /**
      * Verifica si ya existe una categoría con el mismo nombre
      */
-    async verificarCategoriaExistente(nombre, empresaId, excludeId = null) {
+    async verificarCategoriaExistente(nombre, organizacionOverride = null, excludeId = null) {
         try {
-            if (!empresaId) {
-                empresaId = this.empresaId;
-            }
+            const orgId = organizacionOverride || this.organizacionCamelCase;
             
-            const collectionName = this._getCollectionName(empresaId);
+            if (!orgId) return false;
+            
+            const collectionName = this._getCollectionName(orgId);
             const categoriasCollection = collection(db, collectionName);
             
             const q = query(
@@ -649,12 +660,12 @@ class CategoriaManager {
     /**
      * Agrega una subcategoría a una categoría existente
      */
-    async agregarSubcategoria(categoriaId, nombreSubcategoria, descripcion = '', empresaIdOverride = null) {
+    async agregarSubcategoria(categoriaId, nombreSubcategoria, descripcion = '', heredaColor = true, colorPersonalizado = null, organizacionOverride = null) {
         try {
-            const orgId = empresaIdOverride || this.empresaId;
+            const orgId = organizacionOverride || this.organizacionCamelCase;
             
             if (!orgId) {
-                throw new Error('Se requiere ID de empresa');
+                throw new Error('Se requiere ID de organización');
             }
             
             const categoria = await this.obtenerCategoriaPorId(categoriaId, orgId);
@@ -668,8 +679,8 @@ class CategoriaManager {
                 throw new Error(`Ya existe una subcategoría con el nombre "${nombreSubcategoria}"`);
             }
             
-            // Agregar subcategoría al objeto
-            const subcatId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+            // ID temporal, Firebase generará el ID real al guardar el documento completo
+            const subcatId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
             
             categoria.subcategorias[subcatId] = {
                 id: subcatId,
@@ -677,8 +688,8 @@ class CategoriaManager {
                 descripcion: descripcion.trim() || '',
                 fechaCreacion: new Date().toISOString(),
                 fechaActualizacion: new Date().toISOString(),
-                heredaColor: true,
-                color: null
+                heredaColor: heredaColor,
+                color: !heredaColor ? colorPersonalizado : null
             };
             
             // Actualizar en Firestore
@@ -700,10 +711,10 @@ class CategoriaManager {
     }
 
     /**
-     * Carga todas las categorías (alias para mantener compatibilidad)
+     * Carga todas las categorías
      */
     async cargarTodasCategorias() {
-        return await this.obtenerCategoriasPorEmpresa();
+        return await this.obtenerCategoriasPorOrganizacion();
     }
 
     /**

@@ -23,7 +23,6 @@ class Area {
         this.descripcion = data.descripcion || '';
         this.caracteristicas = data.caracteristicas || '';
         
-        // Cargos - SIEMPRE como objeto, NUNCA como Map
         this.cargos = {};
         
         if (data.cargos) {

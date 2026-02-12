@@ -1,4 +1,5 @@
-// crearCategorias.js - VERSIÓN CORREGIDA (ESTILO ÁREAS)
+// crearCategorias.js - VERSIÓN FINAL
+// SIN empresaId/estado, con herencia de color configurable
 console.log('🚀 crearCategorias.js iniciando...');
 
 // Variable global para debugging
@@ -20,7 +21,6 @@ class CrearCategoriaController {
         this.categoriaCreadaReciente = null;
         this.loadingOverlay = null;
         this.notificacionActual = null;
-        this.elementoConFocoAnterior = null;
         
         // Array para almacenar subcategorías
         this.subcategorias = [];
@@ -59,8 +59,8 @@ class CrearCategoriaController {
             // 6. Inicializar gestión de subcategorías
             this._inicializarGestionSubcategorias();
             
-            // 7. Actualizar UI con información de la empresa
-            this._actualizarInfoEmpresa();
+            // 7. Actualizar UI con información de la organización
+            this._actualizarInfoOrganizacion();
             
             console.log('✅ Controlador inicializado correctamente');
             window.crearCategoriaDebug.controller = this;
@@ -102,17 +102,10 @@ class CrearCategoriaController {
                     id: adminData.id || `admin_${Date.now()}`,
                     uid: adminData.uid || adminData.id,
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    nombre: adminData.nombreCompleto || 'Administrador',
-                    cargo: 'administrador',
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase || 
                                           this._generarCamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || '',
-                    fotoUsuario: adminData.fotoUsuario,
-                    fotoOrganizacion: adminData.fotoOrganizacion,
-                    esSuperAdmin: adminData.esSuperAdmin || true,
-                    esAdminOrganizacion: adminData.esAdminOrganizacion || true,
-                    timestamp: adminData.timestamp || new Date().toISOString()
+                    correo: adminData.correoElectronico || ''
                 };
                 return;
             }
@@ -126,13 +119,10 @@ class CrearCategoriaController {
                     id: userData.uid || userData.id || `user_${Date.now()}`,
                     uid: userData.uid || userData.id,
                     nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
-                    nombre: userData.nombreCompleto || userData.nombre || 'Usuario',
-                    cargo: userData.cargo || 'usuario',
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
                     organizacionCamelCase: userData.organizacionCamelCase || 
                                           this._generarCamelCase(userData.organizacion || userData.empresa),
-                    correo: userData.correo || userData.email || '',
-                    timestamp: userData.timestamp || new Date().toISOString()
+                    correo: userData.correo || userData.email || ''
                 };
                 return;
             }
@@ -143,13 +133,9 @@ class CrearCategoriaController {
                 id: `admin_${Date.now()}`,
                 uid: `admin_${Date.now()}`,
                 nombreCompleto: 'Administrador',
-                nombre: 'Administrador',
-                cargo: 'administrador',
                 organizacion: 'pollos Ray',
                 organizacionCamelCase: 'pollosRay',
-                correo: 'admin@centinela.com',
-                esSuperAdmin: true,
-                esAdminOrganizacion: true
+                correo: 'admin@centinela.com'
             };
             
         } catch (error) {
@@ -173,16 +159,15 @@ class CrearCategoriaController {
     _configurarOrganizacion() {
         console.log('🏢 Configurando organización automática...');
         
-        // Configurar campos ocultos
         const orgCamelCaseInput = document.getElementById('organizacionCamelCase');
-        const empresaNombreInput = document.getElementById('empresaNombre');
+        const orgNombreInput = document.getElementById('organizacionNombre');
         
         if (orgCamelCaseInput) {
             orgCamelCaseInput.value = this.usuarioActual.organizacionCamelCase;
         }
         
-        if (empresaNombreInput) {
-            empresaNombreInput.value = this.usuarioActual.organizacion;
+        if (orgNombreInput) {
+            orgNombreInput.value = this.usuarioActual.organizacion;
         }
         
         console.log('✅ Organización configurada:', {
@@ -191,35 +176,32 @@ class CrearCategoriaController {
         });
     }
 
-    _actualizarInfoEmpresa() {
+    _actualizarInfoOrganizacion() {
         const container = document.getElementById('organizacionInfoContainer');
         if (!container) return;
         
         const coleccion = `categorias_${this.usuarioActual.organizacionCamelCase}`;
         
         container.innerHTML = `
-            <div class="organizacion-info alert alert-info mt-3 mb-0">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-building me-3 fs-4"></i>
-                    <div>
-                        <h6 class="mb-1">
-                            Organización: <strong>${this.usuarioActual.organizacion}</strong>
-                        </h6>
-                        <p class="mb-1 text-muted small">
-                            <i class="fas fa-user-shield me-1"></i>
-                            Administrador: ${this.usuarioActual.nombreCompleto}
-                            ${this.usuarioActual.correo ? `(${this.usuarioActual.correo})` : ''}
-                        </p>
-                        <div class="coleccion-badge mt-1">
-                            <i class="fas fa-database me-1"></i>
-                            ${coleccion}
-                        </div>
+            <div class="organizacion-info">
+                <i class="fas fa-building organizacion-icono"></i>
+                <div class="organizacion-contenido">
+                    <div class="organizacion-titulo">
+                        Organización: <strong>${this.usuarioActual.organizacion}</strong>
                     </div>
+                    <div class="organizacion-detalle">
+                        <i class="fas fa-user-shield"></i>
+                        Administrador: ${this.usuarioActual.nombreCompleto}
+                        ${this.usuarioActual.correo ? `(${this.usuarioActual.correo})` : ''}
+                    </div>
+                    <span class="coleccion-badge">
+                        <i class="fas fa-database"></i>
+                        ${coleccion}
+                    </span>
                 </div>
             </div>
         `;
         
-        // Actualizar también el código en la tarjeta de información
         const coleccionDisplay = document.getElementById('coleccionDisplay');
         if (coleccionDisplay) {
             coleccionDisplay.textContent = coleccion;
@@ -236,14 +218,12 @@ class CrearCategoriaController {
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
                 btnVolverLista.addEventListener('click', () => this._volverALista());
-                console.log('✅ Evento btnVolverLista');
             }
             
             // Botón Cancelar
             const btnCancel = document.getElementById('btnCancel');
             if (btnCancel) {
                 btnCancel.addEventListener('click', () => this._cancelarCreacion());
-                console.log('✅ Evento btnCancel');
             }
             
             // Formulario Submit
@@ -253,7 +233,6 @@ class CrearCategoriaController {
                     e.preventDefault();
                     this._validarYGuardar();
                 });
-                console.log('✅ Evento form submit');
             }
             
             // Color Preview
@@ -269,16 +248,16 @@ class CrearCategoriaController {
                     const color = e.target.value;
                     document.getElementById('colorDisplay').style.backgroundColor = color;
                     document.getElementById('colorHex').textContent = color;
+                    
+                    // Actualizar previsualización de colores en subcategorías
+                    this._renderizarSubcategorias();
                 });
-                
-                console.log('✅ Eventos de color');
             }
             
             // Contador de caracteres
             const descripcionInput = document.getElementById('descripcionCategoria');
             if (descripcionInput) {
                 descripcionInput.addEventListener('input', () => this._actualizarContadorCaracteres());
-                console.log('✅ Evento contador caracteres');
             }
             
             console.log('✅ Todos los eventos configurados');
@@ -302,11 +281,11 @@ class CrearCategoriaController {
             contador.textContent = longitud;
             
             if (longitud > 500) {
-                contador.style.color = '#ff4d4d';
+                contador.style.color = 'var(--color-danger)';
             } else if (longitud > 400) {
-                contador.style.color = '#ffcc00';
+                contador.style.color = 'var(--color-warning)';
             } else {
-                contador.style.color = '#00ff95';
+                contador.style.color = 'var(--color-success)';
             }
         }
     }
@@ -319,21 +298,20 @@ class CrearCategoriaController {
         const btnAgregar = document.getElementById('btnAgregarSubcategoria');
         if (btnAgregar) {
             btnAgregar.addEventListener('click', () => this._agregarSubcategoria());
-            console.log('✅ Evento btnAgregarSubcategoria');
         }
-        
-        // No agregar subcategorías por defecto
     }
 
     _agregarSubcategoria() {
         console.log('➕ Agregando subcategoría...');
         
-        const subcatId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const subcatId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         
         this.subcategorias.push({
             id: subcatId,
             nombre: '',
-            descripcion: ''
+            descripcion: '',
+            heredaColor: true,
+            colorPersonalizado: '#ff5733'
         });
         
         this._renderizarSubcategorias();
@@ -359,7 +337,8 @@ class CrearCategoriaController {
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar',
             background: '#0a0a0a',
-            color: '#fff'
+            color: '#fff',
+            backdrop: 'rgba(0,0,0,0.8)'
         }).then((result) => {
             if (result.isConfirmed) {
                 this.subcategorias = this.subcategorias.filter(s => s.id !== subcatId);
@@ -377,16 +356,31 @@ class CrearCategoriaController {
         }
     }
 
+    _cambiarHerenciaColor(subcatId, heredaColor) {
+        const subcategoria = this.subcategorias.find(s => s.id === subcatId);
+        if (subcategoria) {
+            subcategoria.heredaColor = heredaColor;
+            this._renderizarSubcategorias();
+        }
+    }
+
+    _actualizarColorPersonalizado(subcatId, color) {
+        const subcategoria = this.subcategorias.find(s => s.id === subcatId);
+        if (subcategoria) {
+            subcategoria.colorPersonalizado = color;
+        }
+    }
+
     _renderizarSubcategorias() {
         const container = document.getElementById('subcategoriasList');
         if (!container) return;
         
         if (this.subcategorias.length === 0) {
             container.innerHTML = `
-                <div class="subcategorias-empty" id="subcategoriasEmpty">
-                    <i class="fas fa-sitemap mb-2"></i>
+                <div class="subcategorias-empty">
+                    <i class="fas fa-sitemap"></i>
                     <p>No hay subcategorías agregadas</p>
-                    <small class="text-muted">
+                    <small>
                         Las subcategorías heredarán automáticamente el color de la categoría principal
                     </small>
                 </div>
@@ -395,50 +389,79 @@ class CrearCategoriaController {
         }
         
         let html = '';
-        const color = document.getElementById('colorPickerNative')?.value || '#2f8cff';
+        const colorCategoria = document.getElementById('colorPickerNative')?.value || '#2f8cff';
         
         this.subcategorias.forEach((subcat, index) => {
+            const colorEfectivo = subcat.heredaColor ? colorCategoria : (subcat.colorPersonalizado || '#ff5733');
+            
             html += `
-                <div class="subcategoria-item" id="subcategoria_${subcat.id}" style="border-left-color: ${color};">
+                <div class="subcategoria-item" id="subcategoria_${subcat.id}" style="border-left-color: ${colorEfectivo};">
                     <div class="subcategoria-header">
                         <h6 class="subcategoria-titulo">
-                            <i class="fas fa-sitemap me-2"></i>
+                            <i class="fas fa-sitemap"></i>
                             Subcategoría #${index + 1}
-                            <span class="color-badge" style="background: ${color};"></span>
+                            <span class="color-badge" style="background: ${colorEfectivo};"></span>
                         </h6>
-                        <button type="button" class="btn btn-eliminar-subcategoria" 
+                        <button type="button" class="btn-eliminar-subcategoria" 
                                 onclick="window.crearCategoriaDebug.controller._eliminarSubcategoria('${subcat.id}')">
-                            <i class="fas fa-trash-alt me-1"></i>
+                            <i class="fas fa-trash-alt"></i>
                             Eliminar
                         </button>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label small">Nombre *</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-tag"></i></span>
-                                <input type="text" class="form-control" 
-                                       id="subcat_nombre_${subcat.id}"
-                                       value="${this._escapeHTML(subcat.nombre)}"
-                                       placeholder="Ej: Procesadores, Ventas, Redes"
-                                       onchange="window.crearCategoriaDebug.controller._actualizarSubcategoria('${subcat.id}', 'nombre', this.value)">
-                            </div>
+                    
+                    <div class="subcategoria-grid">
+                        <div class="subcategoria-campo">
+                            <label class="subcategoria-label">
+                                <i class="fas fa-tag"></i>
+                                Nombre *
+                            </label>
+                            <input type="text" class="subcategoria-input" 
+                                   id="subcat_nombre_${subcat.id}"
+                                   value="${this._escapeHTML(subcat.nombre)}"
+                                   placeholder="Ej: Procesadores, Ventas, Redes"
+                                   onchange="window.crearCategoriaDebug.controller._actualizarSubcategoria('${subcat.id}', 'nombre', this.value)">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label small">Descripción</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
-                                <input type="text" class="form-control" 
-                                       id="subcat_descripcion_${subcat.id}"
-                                       value="${this._escapeHTML(subcat.descripcion)}"
-                                       placeholder="Descripción opcional"
-                                       onchange="window.crearCategoriaDebug.controller._actualizarSubcategoria('${subcat.id}', 'descripcion', this.value)">
-                            </div>
+                        <div class="subcategoria-campo">
+                            <label class="subcategoria-label">
+                                <i class="fas fa-align-left"></i>
+                                Descripción
+                            </label>
+                            <input type="text" class="subcategoria-input" 
+                                   id="subcat_descripcion_${subcat.id}"
+                                   value="${this._escapeHTML(subcat.descripcion)}"
+                                   placeholder="Descripción opcional"
+                                   onchange="window.crearCategoriaDebug.controller._actualizarSubcategoria('${subcat.id}', 'descripcion', this.value)">
                         </div>
                     </div>
-                    <div class="subcategoria-color-info">
-                        <i class="fas fa-palette me-1"></i>
-                        Hereda color: <span style="color: ${color};">${color}</span>
+                    
+                    <div class="subcategoria-color-control">
+                        <div class="herencia-color">
+                            <label class="herencia-checkbox">
+                                <input type="checkbox" 
+                                       ${subcat.heredaColor ? 'checked' : ''}
+                                       onchange="window.crearCategoriaDebug.controller._cambiarHerenciaColor('${subcat.id}', this.checked)">
+                                <span>Heredar color de categoría</span>
+                            </label>
+                        </div>
+                        
+                        <div class="color-personalizado" style="${subcat.heredaColor ? 'opacity: 0.5; pointer-events: none;' : ''}">
+                            <span class="color-personalizado-label">
+                                <i class="fas fa-palette"></i>
+                                Color:
+                            </span>
+                            <input type="color" class="color-personalizado-input" 
+                                   id="subcat_color_${subcat.id}"
+                                   value="${subcat.colorPersonalizado || '#ff5733'}"
+                                   ${subcat.heredaColor ? 'disabled' : ''}
+                                   onchange="window.crearCategoriaDebug.controller._actualizarColorPersonalizado('${subcat.id}', this.value);
+                                            window.crearCategoriaDebug.controller._renderizarSubcategorias();">
+                        </div>
+                        
+                        <div class="color-actual">
+                            <span>Color efectivo:</span>
+                            <span class="color-muestra" style="background: ${colorEfectivo};"></span>
+                            <span style="font-family: monospace;">${colorEfectivo}</span>
+                        </div>
                     </div>
                 </div>
             `;
@@ -452,7 +475,6 @@ class CrearCategoriaController {
         if (counter) {
             const cantidad = this.subcategorias.length;
             counter.textContent = cantidad;
-            counter.className = `badge ${cantidad > 0 ? 'bg-primary' : 'bg-secondary'} ms-2`;
         }
     }
 
@@ -489,54 +511,51 @@ class CrearCategoriaController {
         
         nombreInput.classList.remove('is-invalid');
         
-        // Obtener datos
-        const datos = this._obtenerDatosFormulario();
-        
-        // Validar que al menos haya una subcategoría si se agregaron
-        if (this.subcategorias.length > 0) {
-            const subcategoriasValidas = this.subcategorias.filter(s => s.nombre && s.nombre.trim() !== '');
-            if (subcategoriasValidas.length === 0) {
-                this._mostrarError('Las subcategorías agregadas deben tener nombre');
-                return;
-            }
+        // Validar subcategorías
+        const subcategoriasValidas = this.subcategorias.filter(s => s.nombre && s.nombre.trim() !== '');
+        if (this.subcategorias.length > 0 && subcategoriasValidas.length === 0) {
+            this._mostrarError('Las subcategorías agregadas deben tener nombre');
+            return;
         }
         
+        // Obtener datos
+        const datos = this._obtenerDatosFormulario(subcategoriasValidas);
         console.log('📋 Datos a guardar:', datos);
         
         // Guardar
         this._guardarCategoria(datos);
     }
 
-    _obtenerDatosFormulario() {
+    _obtenerDatosFormulario(subcategoriasValidas) {
         const nombre = document.getElementById('nombreCategoria').value.trim();
         const descripcion = document.getElementById('descripcionCategoria').value.trim();
         const color = document.getElementById('colorPickerNative')?.value || '#2f8cff';
         
-        // Procesar subcategorías - SOLO las que tienen nombre
-        const subcategoriasValidas = {};
-        this.subcategorias.forEach(subcat => {
-            if (subcat.nombre && subcat.nombre.trim() !== '') {
-                const subcatId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
-                subcategoriasValidas[subcatId] = {
-                    id: subcatId,
-                    nombre: subcat.nombre.trim(),
-                    descripcion: subcat.descripcion?.trim() || '',
-                    fechaCreacion: new Date().toISOString(),
-                    fechaActualizacion: new Date().toISOString(),
-                    heredaColor: true,
-                    color: null
-                };
-            }
+        // Procesar subcategorías - SOLO IDs TEMPORALES
+        // Firebase generará IDs reales al guardar
+        const subcategorias = {};
+        
+        subcategoriasValidas.forEach(subcat => {
+            const tempId = subcat.id;
+            subcategorias[tempId] = {
+                id: tempId, // Temporal, se mantiene para referencia
+                nombre: subcat.nombre.trim(),
+                descripcion: subcat.descripcion?.trim() || '',
+                fechaCreacion: new Date().toISOString(),
+                fechaActualizacion: new Date().toISOString(),
+                heredaColor: subcat.heredaColor !== undefined ? subcat.heredaColor : true,
+                color: !subcat.heredaColor ? (subcat.colorPersonalizado || null) : null
+            };
         });
         
         return {
             nombre: nombre,
             descripcion: descripcion,
             color: color,
-            estado: 'activa',
-            subcategorias: subcategoriasValidas,
-            empresaId: this.usuarioActual.organizacionCamelCase,
-            empresaNombre: this.usuarioActual.organizacion
+            subcategorias: subcategorias,
+            // Metadatos para el manager (no se guardan en Firestore)
+            organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
+            organizacionNombre: this.usuarioActual.organizacion
         };
     }
 
@@ -547,13 +566,13 @@ class CrearCategoriaController {
         const originalHTML = btnSave.innerHTML;
         
         try {
-            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
             btnSave.disabled = true;
             
             // Verificar si ya existe
             const existe = await this.categoriaManager.verificarCategoriaExistente(
                 datos.nombre,
-                datos.empresaId
+                this.usuarioActual.organizacionCamelCase
             );
             
             if (existe) {
@@ -561,14 +580,17 @@ class CrearCategoriaController {
                 return;
             }
             
-            // Crear categoría
+            // Crear categoría (addDoc genera ID automático)
             const nuevaCategoria = await this.categoriaManager.crearCategoria(datos);
             
             console.log('✅✅✅ CATEGORÍA CREADA:', nuevaCategoria);
+            console.log('🆔 ID GENERADO POR FIREBASE:', nuevaCategoria.id);
             
             this.categoriaCreadaReciente = nuevaCategoria;
             
             // Mostrar éxito
+            const subcatCount = nuevaCategoria.getCantidadSubcategorias();
+            
             await Swal.fire({
                 title: '¡Categoría creada!',
                 html: `
@@ -580,15 +602,15 @@ class CrearCategoriaController {
                             <span style="font-family: monospace; color: #d1d5db;">${datos.color}</span>
                         </div>
                         <p style="color: #d1d5db; margin-bottom: 5px;">
-                            <strong>ID:</strong> ${nuevaCategoria.id.substring(0, 20)}...
+                            <strong>ID:</strong> <span style="font-family: monospace;">${nuevaCategoria.id}</span>
                         </p>
                         <p style="color: #10b981; margin-top: 15px;">
-                            <i class="fas fa-database me-1"></i>
-                            categorias_${datos.empresaId}
+                            <i class="fas fa-database"></i>
+                            categorias_${datos.organizacionCamelCase}
                         </p>
                         <p style="color: #d1d5db; margin-top: 10px;">
-                            <i class="fas fa-sitemap me-1"></i>
-                            ${nuevaCategoria.getCantidadSubcategorias()} subcategorías
+                            <i class="fas fa-sitemap"></i>
+                            ${subcatCount} ${subcatCount === 1 ? 'subcategoría' : 'subcategorías'}
                         </p>
                     </div>
                 `,
@@ -596,7 +618,8 @@ class CrearCategoriaController {
                 confirmButtonText: 'Ver categorías',
                 confirmButtonColor: '#2f8cff',
                 background: '#0a0a0a',
-                color: '#fff'
+                color: '#fff',
+                backdrop: 'rgba(0,0,0,0.8)'
             }).then(() => {
                 this._volverALista();
             });
@@ -630,7 +653,8 @@ class CrearCategoriaController {
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             background: '#0a0a0a',
-            color: '#fff'
+            color: '#fff',
+            backdrop: 'rgba(0,0,0,0.8)'
         }).then((result) => {
             if (result.isConfirmed) {
                 this._volverALista();
@@ -646,7 +670,8 @@ class CrearCategoriaController {
             confirmButtonText: 'Ir al login',
             confirmButtonColor: '#2f8cff',
             background: '#0a0a0a',
-            color: '#fff'
+            color: '#fff',
+            backdrop: 'rgba(0,0,0,0.8)'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -663,20 +688,8 @@ class CrearCategoriaController {
             this.notificacionActual.remove();
         }
         
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-        alert.style.cssText = `
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-            max-width: 400px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.1);
-            background: ${tipo === 'danger' ? '#ff4d4d20' : tipo === 'success' ? '#00ff9520' : '#2f8cff20'};
-            backdrop-filter: blur(10px);
-            color: #fff;
-        `;
+        const notificacion = document.createElement('div');
+        notificacion.className = `notificacion notificacion-${tipo}`;
         
         const iconos = {
             success: 'fa-check-circle',
@@ -685,23 +698,45 @@ class CrearCategoriaController {
             info: 'fa-info-circle'
         };
         
-        alert.innerHTML = `
-            <div style="display: flex; align-items: center;">
-                <i class="fas ${iconos[tipo] || 'fa-info-circle'} me-2" style="font-size: 18px;"></i>
-                <div style="flex: 1;">${mensaje}</div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Cerrar" style="filter: invert(1);"></button>
-            </div>
+        notificacion.innerHTML = `
+            <i class="fas ${iconos[tipo] || 'fa-info-circle'}"></i>
+            <div style="flex: 1;">${mensaje}</div>
+            <button style="background: none; border: none; color: inherit; cursor: pointer; padding: 0 5px;" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
         `;
         
-        document.body.appendChild(alert);
-        this.notificacionActual = alert;
+        document.body.appendChild(notificacion);
+        this.notificacionActual = notificacion;
         
         setTimeout(() => {
-            if (alert.parentNode) {
-                alert.classList.remove('show');
-                setTimeout(() => alert.remove(), 300);
+            if (notificacion.parentNode) {
+                notificacion.remove();
             }
         }, duracion);
+    }
+
+    _mostrarCargando(mensaje = 'Guardando...') {
+        if (this.loadingOverlay) {
+            this.loadingOverlay.remove();
+        }
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="spinner"></div>
+            <div class="loading-text">${mensaje}</div>
+        `;
+        
+        document.body.appendChild(overlay);
+        this.loadingOverlay = overlay;
+    }
+
+    _ocultarCargando() {
+        if (this.loadingOverlay) {
+            this.loadingOverlay.remove();
+            this.loadingOverlay = null;
+        }
     }
 }
 
