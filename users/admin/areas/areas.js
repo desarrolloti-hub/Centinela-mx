@@ -1,4 +1,4 @@
-// areas.js - VERSIÓN COMPLETA CON FLECHA ESTILO CATEGORÍAS Y SWEETALERT ACORDE AL TEMA
+// areas.js - VERSIÓN COMPLETA CON SWEETALERT2 Y BADGE ROJO PARA CARGOS
 console.log('🚀 areas.js iniciando...');
 
 window.appDebug = {
@@ -25,25 +25,25 @@ async function cargarDependencias() {
         iniciarAplicacion();
     } catch (error) {
         console.error('❌ Error cargando dependencias:', error);
-        mostrarErrorInterfaz(`
-            <h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error de Carga</h4>
-            <p><strong>Error:</strong> ${error.message}</p>
-            <div class="alert alert-warning mt-3">
-                Verifica que los archivos existan en:
-                <ul class="mb-0 mt-2">
-                    <li><code>/config/firebase-config.js</code></li>
-                    <li><code>/clases/area.js</code></li>
-                </ul>
-            </div>
-        `);
+        mostrarErrorInterfaz(error.message);
     }
 }
 
-function mostrarErrorInterfaz(mensajeHTML) {
+function mostrarErrorInterfaz(mensaje) {
     const container = document.querySelector('.container-fluid') || document.body;
     const errorDiv = document.createElement('div');
-    errorDiv.className = 'alert alert-danger m-4';
-    errorDiv.innerHTML = mensajeHTML;
+    errorDiv.className = 'alert alert-danger m-4 error-carga';
+    errorDiv.innerHTML = `
+        <h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error de Carga</h4>
+        <p><strong>Error:</strong> ${mensaje}</p>
+        <div class="alert alert-warning mt-3">
+            Verifica que los archivos existan en:
+            <ul class="mb-0 mt-2">
+                <li><code>/config/firebase-config.js</code></li>
+                <li><code>/clases/area.js</code></li>
+            </ul>
+        </div>
+    `;
     container.prepend(errorDiv);
 }
 
@@ -58,20 +58,13 @@ function iniciarAplicacion() {
 function inicializarController() {
     try {
         console.log('🎯 Inicializando controller...');
-        
         const app = new AreasController();
         window.appDebug.controller = app;
-        
         app.init();
-        
         console.log('✅ Aplicación lista');
-        
     } catch (error) {
         console.error('❌ Error inicializando:', error);
-        mostrarErrorInterfaz(`
-            <h4 class="text-danger">Error de Inicialización</h4>
-            <p>${error.message}</p>
-        `);
+        mostrarErrorInterfaz(error.message);
     }
 }
 
@@ -83,10 +76,6 @@ class AreasController {
         this.areas = [];
         this.paginacionActual = 1;
         this.elementosPorPagina = 10;
-        this.areaSeleccionada = null;
-        this.accionPendiente = null;
-        
-        // 🔥 Control de filas expandidas
         this.filaExpandida = null;
         
         this.userManager = this.cargarUsuarioDesdeStorage();
@@ -109,8 +98,6 @@ class AreasController {
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-                console.log('🔑 Datos de admin encontrados:', adminData);
-                
                 userData = {
                     id: adminData.id || `admin_${Date.now()}`,
                     nombre: adminData.nombreCompleto || 'Administrador',
@@ -131,7 +118,6 @@ class AreasController {
                 const storedUserData = localStorage.getItem('userData');
                 if (storedUserData) {
                     userData = JSON.parse(storedUserData);
-                    console.log('👤 Datos de usuario encontrados:', userData);
                     userData.nombreCompleto = userData.nombreCompleto || userData.nombre || 'Usuario';
                 }
             }
@@ -149,17 +135,7 @@ class AreasController {
             if (!userData.cargo) userData.cargo = 'usuario';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
             
-            console.log('✅ Usuario procesado:', {
-                id: userData.id,
-                nombre: userData.nombreCompleto,
-                cargo: userData.cargo,
-                organizacion: userData.organizacion,
-                organizacionCamelCase: userData.organizacionCamelCase
-            });
-            
-            return {
-                currentUser: userData
-            };
+            return { currentUser: userData };
             
         } catch (error) {
             console.error('❌ Error cargando usuario:', error);
@@ -183,10 +159,13 @@ class AreasController {
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login',
-            background: '#0a0a0a',
-            color: '#ffffff',
             confirmButtonColor: '#2f8cff',
-            iconColor: '#ff4d4d'
+            customClass: {
+                popup: 'swal-dark',
+                title: 'swal-title',
+                htmlContainer: 'swal-html',
+                confirmButton: 'swal-confirm-btn'
+            }
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -196,29 +175,17 @@ class AreasController {
         console.log('🎬 Iniciando aplicación...');
         
         if (!this.userManager || !this.userManager.currentUser) {
-            console.error('❌ Usuario no autenticado');
             this.redirigirAlLogin();
             return;
         }
         
-        console.log('👤 Usuario actual:', this.userManager.currentUser);
-        
         this.verificarElementosDOM();
         this.inicializarEventos();
         this.cargarAreas();
-        
-        console.log('✅ Aplicación iniciada');
     }
     
     verificarElementosDOM() {
-        console.log('🔍 Verificando DOM...');
-        
-        const ids = [
-            'btnNuevaArea', 'tablaAreasBody', 'toggleEliminadas',
-            'modalConfirmar', 'btnConfirmarAccion',
-            'vistaLista'
-        ];
-        
+        const ids = ['btnNuevaArea', 'tablaAreasBody', 'vistaLista'];
         ids.forEach(id => {
             const el = document.getElementById(id);
             console.log(`${el ? '✅' : '❌'} ${id}`);
@@ -226,60 +193,33 @@ class AreasController {
     }
     
     inicializarEventos() {
-        console.log('🎮 Configurando eventos...');
-        
         try {
             const btnNuevaArea = document.getElementById('btnNuevaArea');
             if (btnNuevaArea) {
                 btnNuevaArea.addEventListener('click', () => this.irACrearArea());
-                console.log('✅ Evento btnNuevaArea');
             }
-            
-            const toggleEliminadas = document.getElementById('toggleEliminadas');
-            if (toggleEliminadas) {
-                toggleEliminadas.addEventListener('change', (e) => {
-                    this.cargarAreas(e.target.checked);
-                });
-                console.log('✅ Evento toggleEliminadas');
-            }
-            
-            const btnConfirmarAccion = document.getElementById('btnConfirmarAccion');
-            if (btnConfirmarAccion) {
-                btnConfirmarAccion.addEventListener('click', () => this.ejecutarAccionConfirmada());
-                console.log('✅ Evento btnConfirmarAccion');
-            }
-            
-            console.log('✅ Todos los eventos configurados');
-            
         } catch (error) {
             console.error('❌ Error configurando eventos:', error);
         }
     }
     
     irACrearArea() {
-        console.log('➡️ Redirigiendo a página de creación de áreas...');
         window.location.href = '/users/admin/crearAreas/crearAreas.html';
     }
     
     irAEditarArea(areaId) {
-        console.log(`➡️ Redirigiendo a editar área: ${areaId}`);
         window.location.href = `/users/admin/editarAreas/editarAreas.html?id=${areaId}`;
     }
     
-    async cargarAreas(incluirEliminadas = false) {
+    async cargarAreas() {
         try {
             this.mostrarCargando();
             
             const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
-            console.log(`📥 Cargando áreas para organización: ${organizacionCamelCase}`);
-            
             this.areas = await this.obtenerAreasDeColeccionEspecifica(organizacionCamelCase);
-            
-            console.log(`📊 ${this.areas.length} áreas cargadas`);
             
             this.actualizarTabla();
             this.ocultarCargando();
-            
         } catch (error) {
             console.error('❌ Error cargando áreas:', error);
             this.mostrarError('Error cargando áreas: ' + error.message);
@@ -288,21 +228,14 @@ class AreasController {
     
     async obtenerAreasDeColeccionEspecifica(organizacionCamelCase) {
         try {
-            console.log(`🔍 Buscando áreas en colección: areas_${organizacionCamelCase}`);
-            
             const collectionName = `areas_${organizacionCamelCase}`;
-            
-            const q = query(
-                collection(db, collectionName)
-            );
-            
+            const q = query(collection(db, collectionName));
             const querySnapshot = await getDocs(q);
             const areas = [];
             
             querySnapshot.forEach(doc => {
                 try {
                     const data = doc.data();
-                    
                     const area = new Area(doc.id, { 
                         ...data, 
                         id: doc.id,
@@ -314,9 +247,6 @@ class AreasController {
                     };
                     
                     area.nombreOrganizacion = this.userManager.currentUser.organizacion;
-                    
-                    console.log(`✅ Área cargada: ${area.nombreArea} - ${area.getCantidadCargos()} cargos`);
-                    
                     areas.push(area);
                 } catch (error) {
                     console.error(`❌ Error procesando área ${doc.id}:`, error);
@@ -329,65 +259,42 @@ class AreasController {
                 return fechaB - fechaA;
             });
             
-            console.log(`✅ Encontradas ${areas.length} áreas en ${collectionName}`);
             return areas;
             
         } catch (error) {
-            console.error('❌ Error obteniendo áreas:', error);
-            
             if (error.code === 'failed-precondition' || error.code === 'not-found') {
-                console.log(`⚠️ La colección areas_${organizacionCamelCase} no existe aún.`);
                 return [];
             }
-            
             throw error;
         }
     }
     
-    // ========== 🔥 MÉTODOS PARA DESPLEGABLE DE CARGOS CON FLECHA ==========
+    // ========== DESPLEGABLE DE CARGOS ==========
     
     toggleCargos(areaId, event) {
-        // Evitar que se active si se hace clic en botones de acción
         if (event?.target.closest('.action-buttons, [data-action], .btn')) {
             return;
         }
-        
-        console.log(`📋 Alternando cargos para área: ${areaId}`);
         
         const fila = document.getElementById(`fila-${areaId}`);
         if (!fila) return;
         
         if (this.filaExpandida === areaId) {
-            // 🔽 CONTRAER: quitar clase expanded y eliminar fila de cargos
             fila.classList.remove('expanded');
-            
             const filaCargos = document.getElementById(`cargos-${areaId}`);
-            if (filaCargos) {
-                filaCargos.remove();
-            }
+            if (filaCargos) filaCargos.remove();
             this.filaExpandida = null;
-            console.log(`📭 Contraída área: ${areaId}`);
         } else {
-            // 🔼 EXPANDIR: cerrar la anterior si existe y abrir la nueva
-            
-            // Cerrar fila expandida anterior
             if (this.filaExpandida) {
                 const filaAnterior = document.getElementById(`fila-${this.filaExpandida}`);
-                if (filaAnterior) {
-                    filaAnterior.classList.remove('expanded');
-                }
-                
+                if (filaAnterior) filaAnterior.classList.remove('expanded');
                 const cargosAnteriores = document.getElementById(`cargos-${this.filaExpandida}`);
-                if (cargosAnteriores) {
-                    cargosAnteriores.remove();
-                }
+                if (cargosAnteriores) cargosAnteriores.remove();
             }
             
-            // Abrir nueva fila
             fila.classList.add('expanded');
             this.filaExpandida = areaId;
             this.mostrarCargosDesplegables(areaId, fila);
-            console.log(`📬 Expandida área: ${areaId}`);
         }
     }
     
@@ -395,11 +302,8 @@ class AreasController {
         const area = this.areas.find(a => a.id === areaId);
         if (!area) return;
         
-        // Obtener cargos usando los métodos de la clase Area
         const cargos = area.getCargosAsArray();
         const cantidad = area.getCantidadCargos();
-        
-        console.log(`📋 ${area.nombreArea} - Cargos encontrados:`, cargos);
         
         const filaCargos = document.createElement('tr');
         filaCargos.id = `cargos-${areaId}`;
@@ -408,18 +312,11 @@ class AreasController {
         const celda = document.createElement('td');
         celda.colSpan = 7;
         celda.className = 'p-0';
-        celda.style.borderBottom = 'none';
-        celda.style.backgroundColor = 'transparent';
         
         let cargosHTML = '';
         
         if (cantidad === 0) {
-            cargosHTML = `
-                <div class="cargos-empty-detalle">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Esta área no tiene cargos asignados
-                </div>
-            `;
+            cargosHTML = '<div class="cargos-empty-detalle"><i class="fas fa-info-circle me-2"></i>Esta área no tiene cargos asignados</div>';
         } else {
             cargosHTML = cargos.map(cargo => `
                 <div class="cargo-item-detalle">
@@ -440,9 +337,7 @@ class AreasController {
                     <h6><i class="fas fa-briefcase me-2"></i>Cargos del Área</h6>
                     <span class="badge">${cantidad} ${cantidad === 1 ? 'cargo' : 'cargos'}</span>
                 </div>
-                <div class="cargos-lista">
-                    ${cargosHTML}
-                </div>
+                <div class="cargos-lista">${cargosHTML}</div>
             </div>
         `;
         
@@ -450,64 +345,70 @@ class AreasController {
         filaReferencia.parentNode.insertBefore(filaCargos, filaReferencia.nextSibling);
     }
     
-    // ========== ACCIONES ==========
-    
-    async eliminarArea(areaId) {
-        try {
-            console.log('🗑️ Eliminando área:', areaId);
-            
-            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
-            
-            const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-            
-            const areaRef = doc(db, collectionName, areaId);
-            await deleteDoc(areaRef);
-            
-            console.log(`✅ Área ${areaId} eliminada permanentemente de ${collectionName}`);
-            
-            this.mostrarExito('Área eliminada correctamente');
-            await this.cargarAreas();
-            
-        } catch (error) {
-            console.error('❌ Error eliminando área:', error);
-            this.mostrarError('Error al eliminar: ' + error.message);
-        }
-    }
+    // ========== ELIMINAR CON SWEETALERT2 ==========
     
     solicitarEliminacion(areaId) {
-        console.log('⚠️ Solicitando confirmación para eliminar:', areaId);
-        
-        this.areaSeleccionada = areaId;
-        this.accionPendiente = 'eliminar';
-        
-        document.getElementById('confirmarMensaje').innerHTML = `
-            <p>¿Está seguro de eliminar esta área?</p>
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>Advertencia:</strong> Esta acción eliminará permanentemente el área y no se podrá recuperar.
-            </div>
-        `;
-        
-        document.getElementById('btnConfirmarAccion').textContent = 'Eliminar';
-        document.getElementById('btnConfirmarAccion').className = 'btn btn-danger';
-        
-        new bootstrap.Modal(document.getElementById('modalConfirmar')).show();
+        Swal.fire({
+            title: '¿Eliminar área?',
+            text: "Esta acción no se puede deshacer",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ff4d4d',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                popup: 'swal-dark',
+                title: 'swal-title',
+                htmlContainer: 'swal-html',
+                confirmButton: 'swal-confirm-btn-danger',
+                cancelButton: 'swal-cancel-btn'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.eliminarArea(areaId);
+            }
+        });
     }
-    
-    ejecutarAccionConfirmada() {
-        console.log('✅ Ejecutando acción confirmada');
-        
-        if (this.areaSeleccionada && this.accionPendiente === 'eliminar') {
-            this.eliminarArea(this.areaSeleccionada);
-            bootstrap.Modal.getInstance(document.getElementById('modalConfirmar')).hide();
-            this.areaSeleccionada = null;
-            this.accionPendiente = null;
+
+    async eliminarArea(areaId) {
+        try {
+            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
+            const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+            const areaRef = doc(db, collectionName, areaId);
+            await deleteDoc(areaRef);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Eliminado',
+                text: 'El área fue eliminada correctamente',
+                confirmButtonColor: '#2f8cff',
+                customClass: {
+                    popup: 'swal-dark',
+                    title: 'swal-title',
+                    htmlContainer: 'swal-html',
+                    confirmButton: 'swal-confirm-btn'
+                }
+            });
+
+            await this.cargarAreas();
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo eliminar el área: ' + error.message,
+                confirmButtonColor: '#2f8cff',
+                customClass: {
+                    popup: 'swal-dark',
+                    title: 'swal-title',
+                    htmlContainer: 'swal-html',
+                    confirmButton: 'swal-confirm-btn'
+                }
+            });
         }
     }
     
     ejecutarAccion(accion, areaId) {
-        console.log(`🎯 Ejecutando acción: ${accion} para ${areaId}`);
-        
         switch(accion) {
             case 'ver':
                 this.verDetalles(areaId);
@@ -521,12 +422,10 @@ class AreasController {
         }
     }
     
-    // ========== 🔥 VER DETALLES CON SWEETALERT - ACORDE AL TEMA ==========
+    // ========== VER DETALLES CON SWEETALERT ==========
     
     async verDetalles(areaId) {
         try {
-            console.log('👁️ Mostrando detalles completos:', areaId);
-            
             const area = this.areas.find(a => a.id === areaId);
             if (!area) {
                 this.mostrarError('Área no encontrada');
@@ -539,190 +438,79 @@ class AreasController {
             let cargosHTML = '';
             
             if (cargos.length === 0) {
-                cargosHTML = `
-                    <div style="text-align: center; padding: 20px; color: var(--color-text-secondary, #cccccc); background: rgba(20,20,20,0.5); border-radius: var(--border-radius-small, 5px);">
-                        <i class="fas fa-briefcase" style="font-size: 24px; margin-bottom: 10px; color: var(--color-accent-secondary, #2f8cff);"></i>
-                        <p style="margin: 0; font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);">Esta área no tiene cargos asignados</p>
-                    </div>
-                `;
+                cargosHTML = '<div class="swal-cargos-empty">Esta área no tiene cargos asignados</div>';
             } else {
                 cargosHTML = cargos.map((cargo, index) => `
-                    <div style="
-                        background: var(--color-bg-tertiary, #141414);
-                        border: 1px solid var(--color-border-light, #545454);
-                        border-radius: var(--border-radius-small, 5px);
-                        padding: 12px 15px;
-                        margin-bottom: 10px;
-                        transition: all 0.2s ease;
-                    ">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="color: var(--color-text-primary, #ffffff); font-weight: 600; font-family: var(--font-family-primary, 'Orbitron', sans-serif); font-size: 13px;">
-                                <i class="fas fa-user-tie" style="color: var(--color-accent-secondary, #2f8cff); margin-right: 8px;"></i>
+                    <div class="swal-cargo-item">
+                        <div class="swal-cargo-header">
+                            <span class="swal-cargo-nombre">
+                                <i class="fas fa-user-tie"></i>
                                 ${cargo.nombre || 'Sin nombre'}
                             </span>
-                            <span style="
-                                background: var(--color-accent-secondary, #2f8cff);
-                                color: white;
-                                padding: 3px 10px;
-                                border-radius: 20px;
-                                font-size: 11px;
-                                font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
-                            ">Cargo #${index + 1}</span>
+                            <span class="swal-cargo-badge">Cargo #${index + 1}</span>
                         </div>
-                        <div style="
-                            color: var(--color-text-secondary, #cccccc);
-                            font-size: 12px;
-                            margin-left: 5px;
-                            padding-left: 10px;
-                            border-left: 2px solid var(--color-accent-secondary, #2f8cff);
-                            font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
-                            line-height: 1.5;
-                        ">
+                        <div class="swal-cargo-descripcion">
                             ${cargo.descripcion || 'Sin descripción'}
                         </div>
                     </div>
                 `).join('');
             }
             
-            const fechaCreacion = area.getFechaCreacionFormateada ? area.getFechaCreacionFormateada() : 'No disponible';
-            const fechaActualizacion = area.getFechaActualizacionFormateada ? area.getFechaActualizacionFormateada() : 'No disponible';
-            
             Swal.fire({
-                title: `
-                    <div style="display: flex; align-items: center; gap: 12px; color: var(--color-text-primary, #ffffff);">
-                        <i class="fas fa-building" style="color: var(--color-accent-primary, #c0c0c0); font-size: 26px;"></i>
-                        <span style="font-family: var(--font-family-primary, 'Orbitron', sans-serif); color: var(--color-text-primary, #ffffff); text-transform: uppercase; letter-spacing: 1px;">${area.nombreArea}</span>
-                    </div>
-                `,
+                title: `<div class="swal-detalles-titulo"><i class="fas fa-building"></i> ${area.nombreArea}</div>`,
                 html: `
-                    <div style="text-align: left; color: var(--color-text-secondary, #cccccc); font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);">
-                        <!-- Estado y Organización -->
-                        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light, #545454);">
-                            <span style="
-                                background: rgba(0, 255, 149, 0.1);
-                                color: var(--color-success, #00ff95);
-                                padding: 5px 16px;
-                                border-radius: 20px;
-                                border: 1px solid rgba(0, 255, 149, 0.3);
-                                font-size: 12px;
-                                text-transform: uppercase;
-                                font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
-                                letter-spacing: 0.5px;
-                            ">
-                                <i class="fas fa-circle" style="font-size: 8px; margin-right: 6px;"></i>
-                                Activa
-                            </span>
-                            <span style="color: var(--color-text-secondary, #cccccc); font-size: 13px;">
-                                <i class="fas fa-building" style="color: var(--color-accent-secondary, #2f8cff); margin-right: 8px;"></i>
-                                ${area.nombreOrganizacion || this.userManager.currentUser.organizacion}
-                            </span>
+                    <div class="swal-detalles-container">
+                        <div class="swal-estado-organizacion">
+                            <span class="swal-estado-badge"><i class="fas fa-circle"></i> Activa</span>
+                            <span class="swal-organizacion"><i class="fas fa-building"></i> ${area.nombreOrganizacion || this.userManager.currentUser.organizacion}</span>
                         </div>
                         
-                        <!-- Descripción -->
-                        <div style="margin-bottom: 25px;">
-                            <h6 style="color: var(--color-accent-primary, #c0c0c0); font-family: var(--font-family-primary, 'Orbitron', sans-serif); font-size: 13px; margin-bottom: 12px; border-bottom: 1px solid var(--color-border-light, #545454); padding-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <i class="fas fa-align-left" style="color: var(--color-accent-secondary, #2f8cff); margin-right: 10px;"></i>
-                                Descripción
-                            </h6>
-                            <p style="color: var(--color-text-secondary, #cccccc); margin: 0; padding-left: 8px; font-size: 13px; line-height: 1.6;">
-                                ${area.descripcion || 'No hay descripción disponible para esta área.'}
-                            </p>
+                        <div class="swal-seccion">
+                            <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> Descripción</h6>
+                            <p class="swal-descripcion">${area.descripcion || 'No hay descripción disponible para esta área.'}</p>
                         </div>
                         
-                        <!-- Cargos -->
-                        <div style="margin-bottom: 25px;">
-                            <h6 style="color: var(--color-accent-primary, #c0c0c0); font-family: var(--font-family-primary, 'Orbitron', sans-serif); font-size: 13px; margin-bottom: 12px; border-bottom: 1px solid var(--color-border-light, #545454); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <span>
-                                    <i class="fas fa-briefcase" style="color: var(--color-accent-secondary, #2f8cff); margin-right: 10px;"></i>
-                                    Cargos
-                                </span>
-                                <span style="
-                                    background: var(--color-accent-secondary, #2f8cff);
-                                    color: white;
-                                    padding: 4px 12px;
-                                    border-radius: 20px;
-                                    font-size: 11px;
-                                    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
-                                ">${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}</span>
-                            </h6>
-                            <div style="max-height: 280px; overflow-y: auto; padding-right: 5px;">
-                                ${cargosHTML}
+                        <div class="swal-seccion">
+                            <div class="swal-cargos-titulo">
+                                <h6 class="swal-seccion-titulo"><i class="fas fa-briefcase"></i> Cargos</h6>
+                                <span class="swal-cargos-count">${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}</span>
                             </div>
+                            <div class="swal-cargos-container">${cargosHTML}</div>
                         </div>
                         
-                        <!-- Información del Sistema -->
-                        <div style="
-                            background: var(--color-bg-secondary, #0a0a0a);
-                            border: 1px solid var(--color-border-light, #545454);
-                            border-radius: var(--border-radius-medium, 10px);
-                            padding: 18px;
-                            margin-top: 15px;
-                            box-shadow: var(--shadow-small, 0 2px 8px rgba(0,0,0,0.3));
-                        ">
-                            <h6 style="color: var(--color-accent-primary, #c0c0c0); font-family: var(--font-family-primary, 'Orbitron', sans-serif); font-size: 12px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <i class="fas fa-info-circle" style="color: var(--color-accent-secondary, #2f8cff); margin-right: 10px;"></i>
-                                Información del Sistema
-                            </h6>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                                <div>
-                                    <small style="color: var(--color-accent-primary, #c0c0c0); display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; opacity: 0.8;">ID del Área</small>
-                                    <code style="color: var(--color-accent-secondary, #2f8cff); background: var(--color-bg-tertiary, #141414); padding: 4px 8px; border-radius: 4px; font-size: 11px; border: 1px solid var(--color-border-light, #545454);">${area.id}</code>
-                                </div>
-                                <div>
-                                    <small style="color: var(--color-accent-primary, #c0c0c0); display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; opacity: 0.8;">Colección</small>
-                                    <code style="color: var(--color-accent-secondary, #2f8cff); background: var(--color-bg-tertiary, #141414); padding: 4px 8px; border-radius: 4px; font-size: 11px; border: 1px solid var(--color-border-light, #545454);">areas_${this.userManager.currentUser.organizacionCamelCase}</code>
-                                </div>
-                                <div>
-                                    <small style="color: var(--color-accent-primary, #c0c0c0); display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; opacity: 0.8;">Fecha Creación</small>
-                                    <span style="color: var(--color-text-secondary, #cccccc); font-size: 12px;">
-                                        <i class="fas fa-calendar" style="color: var(--color-accent-secondary, #2f8cff); margin-right: 6px;"></i>
-                                        ${fechaCreacion}
-                                    </span>
-                                </div>
-                                <div>
-                                    <small style="color: var(--color-accent-primary, #c0c0c0); display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; opacity: 0.8;">Última Actualización</small>
-                                    <span style="color: var(--color-text-secondary, #cccccc); font-size: 12px;">
-                                        <i class="fas fa-clock" style="color: var(--color-accent-secondary, #2f8cff); margin-right: 6px;"></i>
-                                        ${fechaActualizacion}
-                                    </span>
-                                </div>
-                                <div style="grid-column: span 2;">
-                                    <small style="color: var(--color-accent-primary, #c0c0c0); display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; opacity: 0.8;">Creado por</small>
-                                    <span style="color: var(--color-text-secondary, #cccccc); font-size: 12px;">
-                                        <i class="fas fa-user" style="color: var(--color-accent-secondary, #2f8cff); margin-right: 6px;"></i>
-                                        ${area.creadoPor || this.userManager.currentUser.nombreCompleto}
-                                    </span>
-                                </div>
+                        <div class="swal-info-sistema">
+                            <h6 class="swal-seccion-titulo"><i class="fas fa-info-circle"></i> Información del Sistema</h6>
+                            <div class="swal-info-grid">
+                                <div><small>ID del Área</small><code>${area.id}</code></div>
+                                <div><small>Colección</small><code>areas_${this.userManager.currentUser.organizacionCamelCase}</code></div>
+                                <div><small>Fecha Creación</small><span><i class="fas fa-calendar"></i> ${area.getFechaCreacionFormateada?.() || 'No disponible'}</span></div>
+                                <div><small>Última Actualización</small><span><i class="fas fa-clock"></i> ${area.getFechaActualizacionFormateada?.() || 'No disponible'}</span></div>
+                                <div class="swal-info-full"><small>Creado por</small><span><i class="fas fa-user"></i> ${area.creadoPor || this.userManager.currentUser.nombreCompleto}</span></div>
                             </div>
                         </div>
                     </div>
                 `,
                 icon: 'info',
                 iconColor: '#2f8cff',
-                background: '#0a0a0a',
-                color: '#ffffff',
-                confirmButtonText: '<i class="fas fa-edit" style="margin-right: 8px;"></i>Editar Área',
+                confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
                 confirmButtonColor: '#2f8cff',
                 showCancelButton: true,
-                cancelButtonText: '<i class="fas fa-times" style="margin-right: 6px;"></i>Cerrar',
+                cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
                 cancelButtonColor: '#545454',
                 customClass: {
-                    popup: 'swal-dark',
+                    popup: 'swal-dark swal-detalles',
                     title: 'swal-title',
                     htmlContainer: 'swal-html',
                     confirmButton: 'swal-confirm-btn',
                     cancelButton: 'swal-cancel-btn'
                 },
-                buttonsStyling: true,
                 reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
                     this.irAEditarArea(area.id);
                 }
             });
-            
         } catch (error) {
-            console.error('❌ Error mostrando detalles:', error);
             this.mostrarError('Error: ' + error.message);
         }
     }
@@ -733,9 +521,7 @@ class AreasController {
         const tbody = document.getElementById('tablaAreasBody');
         if (!tbody) return;
         
-        // Limpiar estado de expansión al recargar tabla
         this.filaExpandida = null;
-        
         const areasPaginadas = this.paginarAreas(this.areas, this.paginacionActual);
         
         tbody.innerHTML = '';
@@ -754,21 +540,19 @@ class AreasController {
         }
         
         areasPaginadas.forEach((area) => {
-            const fila = this.crearFilaArea(area);
-            tbody.appendChild(fila);
+            tbody.appendChild(this.crearFilaArea(area));
         });
         
         this.actualizarPaginacion(this.areas.length);
     }
     
-    // ========== 🔥 CREAR FILA CON FLECHA ESTILO CATEGORÍAS ==========
+    // ========== CREAR FILA CON BADGE ROJO PARA CARGOS ==========
     
     crearFilaArea(area) {
         const fila = document.createElement('tr');
         fila.id = `fila-${area.id}`;
         fila.className = 'area-row';
         
-        // ✅ AGREGAR CLASE 'expanded' SI ESTÁ EXPANDIDA
         if (this.filaExpandida === area.id) {
             fila.classList.add('expanded');
         }
@@ -777,66 +561,38 @@ class AreasController {
         
         fila.innerHTML = `
             <td class="text-center">
-                <span class="toggle-icon">
-                    <i class="fas fa-chevron-right"></i>
-                </span>
+                <span class="toggle-icon"><i class="fas fa-chevron-right"></i></span>
             </td>
             <td>
                 <div class="d-flex align-items-center">
                     <div>
-                        <strong class="area-nombre" style="cursor: pointer;">${area.nombreArea}</strong>
+                        <strong class="area-nombre">${area.nombreArea}</strong>
                         <div class="text-muted small">${area.descripcion?.substring(0, 60) || ''}${area.descripcion?.length > 60 ? '...' : ''}</div>
                     </div>
                 </div>
             </td>
             <td>${area.nombreOrganizacion || this.userManager.currentUser.organizacion}</td>
             <td>
-                <span class="badge bg-primary" style="cursor: pointer;">
+                <span class="cargo-count-badge">
                     <i class="fas fa-briefcase me-1"></i>${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
                 </span>
             </td>
             <td>${area.getEstadoBadge ? area.getEstadoBadge() : '<span class="badge badge-activo">Activa</span>'}</td>
-            <td>
-                <div class="small">${area.getFechaCreacionFormateada ? area.getFechaCreacionFormateada() : 'No disponible'}</div>
-            </td>
-            <td>
-                <div class="action-buttons">
-                    ${this.obtenerBotonesAccion(area)}
-                </div>
-            </td>
+            <td><div class="small">${area.getFechaCreacionFormateada?.() || 'No disponible'}</div></td>
+            <td><div class="action-buttons">${this.obtenerBotonesAccion(area)}</div></td>
         `;
         
-        // Evento principal en toda la fila
         fila.addEventListener('click', (e) => this.toggleCargos(area.id, e));
         
-        // ✅ Evento específico para la flecha
         const toggleIcon = fila.querySelector('.toggle-icon');
-        if (toggleIcon) {
-            toggleIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleCargos(area.id, e);
-            });
-        }
+        if (toggleIcon) toggleIcon.addEventListener('click', (e) => { e.stopPropagation(); this.toggleCargos(area.id, e); });
         
-        // Evento específico para el badge de cargos
-        const badgeCargos = fila.querySelector('.badge.bg-primary');
-        if (badgeCargos) {
-            badgeCargos.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleCargos(area.id, e);
-            });
-        }
+        const badgeCargos = fila.querySelector('.cargo-count-badge');
+        if (badgeCargos) badgeCargos.addEventListener('click', (e) => { e.stopPropagation(); this.toggleCargos(area.id, e); });
         
-        // Evento para el nombre del área
         const areaNombre = fila.querySelector('.area-nombre');
-        if (areaNombre) {
-            areaNombre.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleCargos(area.id, e);
-            });
-        }
+        if (areaNombre) areaNombre.addEventListener('click', (e) => { e.stopPropagation(); this.toggleCargos(area.id, e); });
         
-        // Eventos para botones de acción (con stopPropagation)
         setTimeout(() => {
             fila.querySelectorAll('[data-action]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -865,12 +621,9 @@ class AreasController {
         `;
     }
     
-    // ========== UTILIDADES ==========
-    
     paginarAreas(listaAreas, pagina) {
         const inicio = (pagina - 1) * this.elementosPorPagina;
-        const fin = inicio + this.elementosPorPagina;
-        return listaAreas.slice(inicio, fin);
+        return listaAreas.slice(inicio, inicio + this.elementosPorPagina);
     }
     
     actualizarPaginacion(totalElementos) {
@@ -889,35 +642,22 @@ class AreasController {
             
             const liAnterior = document.createElement('li');
             liAnterior.className = `page-item ${this.paginacionActual === 1 ? 'disabled' : ''}`;
-            liAnterior.innerHTML = `<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>`;
-            liAnterior.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (this.paginacionActual > 1) {
-                    this.cambiarPagina(this.paginacionActual - 1);
-                }
-            });
+            liAnterior.innerHTML = '<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>';
+            liAnterior.addEventListener('click', (e) => { e.preventDefault(); if (this.paginacionActual > 1) this.cambiarPagina(this.paginacionActual - 1); });
             paginacionElement.appendChild(liAnterior);
             
             for (let i = 1; i <= totalPaginas; i++) {
                 const li = document.createElement('li');
                 li.className = `page-item ${this.paginacionActual === i ? 'active' : ''}`;
                 li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-                li.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.cambiarPagina(i);
-                });
+                li.addEventListener('click', (e) => { e.preventDefault(); this.cambiarPagina(i); });
                 paginacionElement.appendChild(li);
             }
             
             const liSiguiente = document.createElement('li');
             liSiguiente.className = `page-item ${this.paginacionActual === totalPaginas ? 'disabled' : ''}`;
-            liSiguiente.innerHTML = `<a class="page-link" href="#" aria-label="Siguiente"><span aria-hidden="true">&raquo;</span></a>`;
-            liSiguiente.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (this.paginacionActual < totalPaginas) {
-                    this.cambiarPagina(this.paginacionActual + 1);
-                }
-            });
+            liSiguiente.innerHTML = '<a class="page-link" href="#" aria-label="Siguiente"><span aria-hidden="true">&raquo;</span></a>';
+            liSiguiente.addEventListener('click', (e) => { e.preventDefault(); if (this.paginacionActual < totalPaginas) this.cambiarPagina(this.paginacionActual + 1); });
             paginacionElement.appendChild(liSiguiente);
         }
     }
@@ -955,35 +695,22 @@ class AreasController {
     }
     
     mostrarNotificacion(mensaje, tipo) {
-        const notificacionesPrevias = document.querySelectorAll('.notificacion-flotante');
-        notificacionesPrevias.forEach(n => n.remove());
-        
         const alert = document.createElement('div');
         alert.className = `alert alert-${tipo} alert-dismissible fade show position-fixed notificacion-flotante`;
-        alert.style.cssText = `
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-            max-width: 400px;
-            box-shadow: var(--shadow-normal, 0 4px 16px rgba(0,0,0,0.5));
-            border-left: 4px solid ${tipo === 'success' ? '#00ff95' : '#ff4d4d'};
-            background: var(--color-bg-secondary, #0a0a0a);
-            color: var(--color-text-secondary, #cccccc);
-            border: 1px solid var(--color-border-light, #545454);
-        `;
+        alert.setAttribute('role', 'alert');
         
         const icono = tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+        const color = tipo === 'success' ? '#00ff95' : '#ff4d4d';
         
         alert.innerHTML = `
             <div class="d-flex align-items-center">
-                <i class="fas ${icono} me-3 fs-4" style="color: ${tipo === 'success' ? '#00ff95' : '#ff4d4d'};"></i>
+                <i class="fas ${icono} me-3 fs-4" style="color: ${color};"></i>
                 <div>
-                    <strong style="color: var(--color-text-primary, #ffffff);">${tipo === 'success' ? 'Éxito' : 'Error'}</strong><br>
+                    <strong>${tipo === 'success' ? 'Éxito' : 'Error'}</strong><br>
                     <span>${mensaje}</span>
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar" style="filter: invert(1) brightness(2);"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         `;
         
         document.body.appendChild(alert);

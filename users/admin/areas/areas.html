@@ -13,7 +13,7 @@
     <!-- Fuentes del sistema Centinela -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     
-    <!-- SweetAlert2 - PARA LOS DETALLES CON ESTILO OSCURO -->
+    <!-- SweetAlert2 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
@@ -22,7 +22,7 @@
 </head>
 <body>
     <canvas id="particle-canvas"></canvas>
-    <!-- Contenedor principal con estilo oscuro -->
+    
     <div class="container-fluid py-4">
         <!-- Header -->
         <div class="row mb-4">
@@ -39,18 +39,13 @@
             </div>
         </div>
         
-        <!-- Vista de Lista (por defecto) -->
+        <!-- Vista de Lista -->
         <div id="vistaLista">
-            <!-- Tabla de Áreas -->
             <div class="row">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="card-header">
                             <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Áreas</h5>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="toggleEliminadas">
-                                <label class="form-check-label" for="toggleEliminadas">Mostrar eliminadas</label>
-                            </div>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -83,25 +78,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para Confirmar Eliminación -->
-    <div class="modal fade" id="modalConfirmar" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirmar Acción</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p id="confirmarMensaje">¿Está seguro de realizar esta acción?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="btnConfirmarAccion">Confirmar</button>
                 </div>
             </div>
         </div>

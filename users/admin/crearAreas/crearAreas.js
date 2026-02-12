@@ -1,4 +1,4 @@
-// crearAreas.js - MÓDULO PARA CREACIÓN DE ÁREAS
+// crearAreas.js - MÓDULO PARA CREACIÓN DE ÁREAS (SOLO SWEETALERT2)
 console.log('🚀 crear-areas.js iniciando...');
 
 // Variable global para debugging
@@ -14,12 +14,10 @@ async function cargarDependencias() {
     try {
         console.log('1️⃣ Cargando dependencias...');
         
-        // Cargar firebase-config
         const firebaseModule = await import('/config/firebase-config.js');
         db = firebaseModule.db;
         console.log('✅ Firebase cargado');
         
-        // Cargar funciones de Firestore
         const firestoreModule = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
         ({ 
             query,
@@ -32,13 +30,11 @@ async function cargarDependencias() {
         } = firestoreModule);
         console.log('✅ Firestore functions cargadas');
         
-        // Cargar clases de área
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
         console.log('✅ Clases cargadas');
         
-        // Iniciar aplicación
         iniciarAplicacion();
         
     } catch (error) {
@@ -80,7 +76,6 @@ function inicializarController() {
         const app = new CrearAreaController();
         window.crearAreaDebug.controller = app;
         
-        // Inicializar
         app.init();
         
         console.log('✅ Controlador de creación listo');
@@ -113,20 +108,9 @@ class CrearAreaController {
         this.areaCreadaReciente = null;
         this.loadingOverlay = null;
         this.notificacionActual = null;
-        this.elementoConFocoAnterior = null;
         
         // Array para almacenar los cargos
         this.cargos = [];
-        
-        // Inicializar modales de Bootstrap
-        this.modalConfirmacion = new bootstrap.Modal(document.getElementById('modalConfirmacion'), {
-            focus: true,
-            keyboard: true
-        });
-        this.modalExito = new bootstrap.Modal(document.getElementById('modalExito'), {
-            focus: true,
-            keyboard: true
-        });
     }
     
     // MÉTODO MEJORADO PARA CARGAR USUARIO
@@ -136,7 +120,6 @@ class CrearAreaController {
         try {
             let userData = null;
             
-            // PRIMERO: Intentar cargar desde adminInfo (para administradores)
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -159,25 +142,21 @@ class CrearAreaController {
                 };
             }
             
-            // SEGUNDO: Si no hay admin, intentar desde userData (para usuarios regulares)
             if (!userData) {
                 const storedUserData = localStorage.getItem('userData');
                 if (storedUserData) {
                     userData = JSON.parse(storedUserData);
                     console.log('👤 Datos de usuario encontrados:', userData);
-                    
                     userData.nombreCompleto = userData.nombreCompleto || userData.nombre || 'Usuario';
                     userData.esResponsable = false;
                 }
             }
             
-            // TERCERO: Verificar datos mínimos
             if (!userData) {
                 console.error('❌ No se encontraron datos de usuario');
                 return null;
             }
             
-            // CUARTO: Validar y completar datos faltantes
             if (!userData.id) userData.id = `user_${Date.now()}`;
             if (!userData.organizacion) userData.organizacion = 'Sin organización';
             if (!userData.organizacionCamelCase) {
@@ -216,10 +195,8 @@ class CrearAreaController {
         }
         
         try {
-            // Limpiar opciones actuales
             responsableSelect.innerHTML = '<option value="">Seleccionar responsable...</option>';
             
-            // 1. AGREGAR AL ADMIN ACTUAL COMO PRIMERA OPCIÓN
             if (this.userManager.currentUser) {
                 const adminOption = document.createElement('option');
                 adminOption.value = 'admin_fijo';
@@ -232,21 +209,17 @@ class CrearAreaController {
                 console.log('✅ Admin agregado como responsable:', this.userManager.currentUser.nombreCompleto);
             }
             
-            // 2. INTENTAR CARGAR COLABORADORES DESDE EL SISTEMA
             const colaboradores = await this.cargarColaboradoresDesdeSistema();
             if (colaboradores && colaboradores.length > 0) {
-                // Separador visual
                 const separator = document.createElement('option');
                 separator.disabled = true;
                 separator.text = '────────── COLABORADORES ──────────';
                 responsableSelect.appendChild(separator);
                 
-                // Agregar colaboradores
                 colaboradores.forEach(colaborador => {
                     const option = document.createElement('option');
                     option.value = colaborador.id || colaborador.userId || `colab_${Date.now()}`;
                     
-                    // Formatear nombre para mostrar
                     let nombreMostrar = colaborador.nombre || 'Colaborador';
                     if (colaborador.apellido) {
                         nombreMostrar += ` ${colaborador.apellido}`;
@@ -261,14 +234,12 @@ class CrearAreaController {
                 
                 console.log(`✅ ${colaboradores.length} colaboradores cargados`);
             } else {
-                // Si no hay colaboradores, agregar mensaje
                 const sinColabOption = document.createElement('option');
                 sinColabOption.disabled = true;
                 sinColabOption.text = '────────── SIN COLABORADORES ──────────';
                 responsableSelect.appendChild(sinColabOption);
             }
             
-            // 3. AGREGAR OPCIÓN PARA ASIGNAR NUEVO
             const otroSeparator = document.createElement('option');
             otroSeparator.disabled = true;
             otroSeparator.text = '────────── OTRAS OPCIONES ──────────';
@@ -290,7 +261,6 @@ class CrearAreaController {
         console.log('📋 Buscando colaboradores en el sistema...');
         
         try {
-            // 1. Buscar en localStorage primero
             const orgKey = this.userManager.currentUser.organizacionCamelCase;
             const colaboradoresStorage = localStorage.getItem(`colaboradores_${orgKey}`);
             
@@ -302,7 +272,6 @@ class CrearAreaController {
                 }
             }
             
-            // 2. Si el AreaManager tiene método para obtener colaboradores
             if (this.areaManager && typeof this.areaManager.obtenerColaboradoresPorOrganizacion === 'function') {
                 console.log('🔍 Buscando colaboradores en Firebase...');
                 const colaboradoresFB = await this.areaManager.obtenerColaboradoresPorOrganizacion(orgKey);
@@ -314,7 +283,6 @@ class CrearAreaController {
                 }
             }
             
-            // 3. Si no hay método específico, buscar usuarios de la organización
             const usuariosStorage = localStorage.getItem('usuariosOrganizacion');
             if (usuariosStorage) {
                 const usuarios = JSON.parse(usuariosStorage);
@@ -355,29 +323,27 @@ class CrearAreaController {
             orgCamelCase: this.userManager.currentUser.organizacionCamelCase
         });
         
-        // Limpiar opciones existentes
         organizacionSelect.innerHTML = '';
         
-        // Crear y agregar la opción de la organización del usuario
         const option = document.createElement('option');
         option.value = this.userManager.currentUser.organizacionCamelCase || 'adminOrg';
         option.text = `${organizacionUsuario} (Organización del Administrador)`;
         option.selected = true;
         organizacionSelect.add(option);
         
-        // Hacer readonly y estilizar
         organizacionSelect.disabled = true;
         organizacionSelect.style.backgroundColor = '#f8f9fa';
         organizacionSelect.style.cursor = 'not-allowed';
         
         console.log('✅ Organización configurada automáticamente:', organizacionUsuario);
         
-        // Agregar información adicional en la interfaz
         this.mostrarInfoOrganizacion();
     }
     
     // MOSTRAR INFORMACIÓN DE LA ORGANIZACIÓN EN LA INTERFAZ
     mostrarInfoOrganizacion() {
+        if (document.querySelector('.organizacion-info')) return;
+        
         const formHeader = document.querySelector('.card-header');
         if (!formHeader || !this.userManager.currentUser) return;
         
@@ -412,13 +378,8 @@ class CrearAreaController {
         this.inicializarEventos();
         this.inicializarValidaciones();
         
-        // Configurar organización automáticamente
         this.configurarOrganizacionAutomatica();
-        
-        // Cargar responsables
         this.cargarResponsables();
-        
-        // Inicializar gestión de cargos
         this.inicializarGestionCargos();
         
         console.log('✅ Aplicación de creación iniciada');
@@ -430,11 +391,8 @@ class CrearAreaController {
         const ids = [
             'btnVolverLista', 'formCrearArea', 'nombreArea',
             'organizacion', 'descripcionArea', 'contadorCaracteres', 
-            'responsable', 'btnCancelar', 'btnGuardarBorrador', 
-            'btnCrearArea', 'modalConfirmacion', 'modalExito', 
-            'btnConfirmarCreacion', 'btnCrearOtra', 'btnVerArea', 
-            'exitoNombreArea', 'exitoOrganizacion', 'exitoResponsable', 
-            'exitoFecha', 'exitoCodigo', 'btnAgregarCargo', 'cargosList', 'cargosCounter'
+            'responsable', 'btnCancelar', 'btnCrearArea',
+            'btnAgregarCargo', 'cargosList', 'cargosCounter'
         ];
         
         ids.forEach(id => {
@@ -447,35 +405,24 @@ class CrearAreaController {
         console.log('🎮 Configurando eventos...');
         
         try {
-            // Botón volver
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
                 btnVolverLista.addEventListener('click', () => this.volverALista());
                 console.log('✅ Evento btnVolverLista');
             }
             
-            // Contador de caracteres
             const descripcionArea = document.getElementById('descripcionArea');
             if (descripcionArea) {
                 descripcionArea.addEventListener('input', () => this.actualizarContadorCaracteres());
                 console.log('✅ Evento descripcionArea');
             }
             
-            // Botón cancelar
             const btnCancelar = document.getElementById('btnCancelar');
             if (btnCancelar) {
                 btnCancelar.addEventListener('click', () => this.cancelarCreacion());
                 console.log('✅ Evento btnCancelar');
             }
             
-            // Botón guardar borrador
-            const btnGuardarBorrador = document.getElementById('btnGuardarBorrador');
-            if (btnGuardarBorrador) {
-                btnGuardarBorrador.addEventListener('click', () => this.guardarBorrador());
-                console.log('✅ Evento btnGuardarBorrador');
-            }
-            
-            // Formulario submit
             const formCrearArea = document.getElementById('formCrearArea');
             if (formCrearArea) {
                 formCrearArea.addEventListener('submit', (e) => {
@@ -485,60 +432,10 @@ class CrearAreaController {
                 console.log('✅ Evento formCrearArea');
             }
             
-            // Confirmación modal
-            const btnConfirmarCreacion = document.getElementById('btnConfirmarCreacion');
-            if (btnConfirmarCreacion) {
-                btnConfirmarCreacion.addEventListener('click', () => this.confirmarCreacion());
-                console.log('✅ Evento btnConfirmarCreacion');
-            }
-            
-            // Botones después de creación exitosa
-            const btnCrearOtra = document.getElementById('btnCrearOtra');
-            if (btnCrearOtra) {
-                btnCrearOtra.addEventListener('click', () => this.crearOtraArea());
-                console.log('✅ Evento btnCrearOtra');
-            }
-            
-            const btnVerArea = document.getElementById('btnVerArea');
-            if (btnVerArea) {
-                btnVerArea.addEventListener('click', () => this.verAreaCreada());
-                console.log('✅ Evento btnVerArea');
-            }
-            
-            // Eventos para manejar foco en modales
-            this.configurarEventosFocoModal();
-            
             console.log('✅ Todos los eventos configurados');
             
         } catch (error) {
             console.error('❌ Error configurando eventos:', error);
-        }
-    }
-    
-    // CONFIGURAR EVENTOS DE FOCO PARA MODALES
-    configurarEventosFocoModal() {
-        // Modal de confirmación
-        const modalConfirmacion = document.getElementById('modalConfirmacion');
-        if (modalConfirmacion) {
-            modalConfirmacion.addEventListener('shown.bs.modal', () => {
-                this.manejarAperturaModal('confirmacion');
-            });
-            
-            modalConfirmacion.addEventListener('hidden.bs.modal', () => {
-                this.manejarCierreModal('confirmacion');
-            });
-        }
-        
-        // Modal de éxito
-        const modalExito = document.getElementById('modalExito');
-        if (modalExito) {
-            modalExito.addEventListener('shown.bs.modal', () => {
-                this.manejarAperturaModal('exito');
-            });
-            
-            modalExito.addEventListener('hidden.bs.modal', () => {
-                this.manejarCierreModal('exito');
-            });
         }
     }
     
@@ -556,12 +453,7 @@ class CrearAreaController {
         if (descripcionArea && contador) {
             const longitud = descripcionArea.value.length;
             contador.textContent = longitud;
-            
-            if (longitud > 450) {
-                contador.className = 'text-warning';
-            } else {
-                contador.className = 'text-success';
-            }
+            contador.className = longitud > 450 ? 'text-warning' : 'text-success';
         }
     }
     
@@ -569,7 +461,7 @@ class CrearAreaController {
     
     volverALista() {
         console.log('⬅️ Volviendo a lista de áreas...');
-        window.location.href = '/areas.html';
+        window.location.href = '/users/admin/areas/areas.html';
     }
     
     cancelarCreacion() {
@@ -595,40 +487,6 @@ class CrearAreaController {
     
     validarFormulario() {
         console.log('✅ Validando formulario...');
-        
-        const form = document.getElementById('formCrearArea');
-        if (!form) {
-            this.mostrarError('Formulario no encontrado');
-            return false;
-        }
-        
-        try {
-            if (!this.validacionManual()) {
-                return false;
-            }
-            
-            if (typeof form.checkValidity === 'function') {
-                const checkValidity = form.checkValidity.bind(form);
-                if (!checkValidity()) {
-                    if (typeof form.reportValidity === 'function') {
-                        const reportValidity = form.reportValidity.bind(form);
-                        reportValidity();
-                    }
-                    return false;
-                }
-            }
-            
-        } catch (error) {
-            console.error('Error en validación HTML5:', error);
-            return this.validacionManual();
-        }
-        
-        console.log('✅ Formulario válido');
-        return true;
-    }
-    
-    validacionManual() {
-        console.log('🔍 Validación manual...');
         
         const nombreArea = document.getElementById('nombreArea')?.value.trim();
         const descripcion = document.getElementById('descripcionArea')?.value.trim();
@@ -666,7 +524,6 @@ class CrearAreaController {
             return false;
         }
         
-        // VALIDACIÓN DE CARGOS: Al menos un cargo con nombre
         const tieneCargoValido = this.cargos.some(c => c.nombre && c.nombre.trim() !== '');
         if (!tieneCargoValido) {
             this.mostrarError('Debe agregar al menos un cargo con nombre para el área');
@@ -690,7 +547,6 @@ class CrearAreaController {
             console.log('📋 Datos a crear:', datosArea);
             console.log('👤 Usuario que crea:', this.userManager.currentUser);
             
-            // Verificar si el área ya existe
             const existe = await this.verificarAreaExistenteEnColeccion(
                 datosArea.nombreArea,
                 datosArea.organizacionCamelCase
@@ -702,7 +558,35 @@ class CrearAreaController {
             }
             
             this.areaEnProceso = datosArea;
-            this.mostrarModalConfirmacion(datosArea);
+            
+            // MODAL DE CONFIRMACIÓN CON SWEETALERT2
+            const cantidadCargos = Object.keys(datosArea.cargos || {}).length;
+            
+            const result = await Swal.fire({
+                title: '¿Confirmar creación?',
+                html: `
+                    <div style="text-align: left;">
+                        <p>¿Está seguro de crear la siguiente área?</p>
+                        <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                            <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">${datosArea.nombreArea}</h6>
+                            <p style="margin-bottom: 5px;"><small><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</small></p>
+                            <p style="margin-bottom: 5px;"><small><strong>Colección:</strong> areas_${datosArea.organizacionCamelCase}</small></p>
+                            <p style="margin-bottom: 5px;"><small><strong>Cargos:</strong> ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}</small></p>
+                            <p style="margin-bottom: 0;"><small><strong>Descripción:</strong> ${datosArea.descripcion.substring(0, 100)}${datosArea.descripcion.length > 100 ? '...' : ''}</small></p>
+                        </div>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, crear área',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#2f8cff',
+                cancelButtonColor: '#545454'
+            });
+            
+            if (result.isConfirmed) {
+                await this.confirmarCreacion();
+            }
             
         } catch (error) {
             console.error('❌ Error en validación:', error);
@@ -717,7 +601,6 @@ class CrearAreaController {
             
             const collectionName = `areas_${organizacionCamelCase}`;
             
-            // Crear query para buscar por nombre del área
             const q = query(
                 collection(db, collectionName),
                 where("nombreArea", "==", nombreArea)
@@ -751,7 +634,6 @@ class CrearAreaController {
             console.log('✅ Evento btnAgregarCargo');
         }
         
-        // Agregar un cargo por defecto
         this.agregarCargo();
     }
     
@@ -770,7 +652,6 @@ class CrearAreaController {
         this.renderizarCargos();
         this.actualizarContadorCargos();
         
-        // Enfocar en el nombre del nuevo cargo
         setTimeout(() => {
             const input = document.getElementById(`cargo_nombre_${cargoId}`);
             if (input) input.focus();
@@ -890,13 +771,10 @@ class CrearAreaController {
     obtenerDatosFormulario() {
         console.log('📋 Obteniendo datos del formulario...');
         
-        const userOrg = this.userManager.currentUser.organizacion;
         const userOrgCamel = this.userManager.currentUser.organizacionCamelCase;
         
-        // Filtrar solo cargos con nombre
         const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
         
-        // Convertir array de cargos a objeto para la clase Area
         const cargosObject = {};
         cargosValidos.forEach(cargo => {
             const cargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
@@ -909,12 +787,9 @@ class CrearAreaController {
         console.log('💼 Cargos válidos:', cargosValidos.length);
         
         return {
-            // CAMPOS DE LA CLASE AREA
             nombreArea: document.getElementById('nombreArea').value.trim(),
             descripcion: document.getElementById('descripcionArea').value.trim(),
             cargos: cargosObject,
-            
-            // METADATOS
             organizacionCamelCase: userOrgCamel,
             creadoPor: this.userManager.currentUser.id,
             actualizadoPor: this.userManager.currentUser.id,
@@ -938,81 +813,14 @@ class CrearAreaController {
             icon: 'error',
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
+            confirmButtonText: 'Ir al login',
+            confirmButtonColor: '#2f8cff'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
     }
     
     // ========== MÉTODOS DE CREACIÓN ==========
-    
-    mostrarModalConfirmacion(datosArea) {
-        console.log('📝 Mostrando modal de confirmación...');
-        
-        // Guardar elemento con foco actual
-        this.elementoConFocoAnterior = document.activeElement;
-        
-        const mensaje = document.getElementById('confirmacionMensaje');
-        if (mensaje && datosArea) {
-            const cantidadCargos = Object.keys(datosArea.cargos || {}).length;
-            
-            mensaje.innerHTML = `
-                <p>¿Está seguro de crear la siguiente área?</p>
-                <div class="card mt-3">
-                    <div class="card-body">
-                        <h6 class="mb-2">${datosArea.nombreArea}</h6>
-                        <p class="mb-1"><small><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</small></p>
-                        <p class="mb-1"><small><strong>Colección:</strong> areas_${datosArea.organizacionCamelCase}</small></p>
-                        <p class="mb-1"><small><strong>Cargos:</strong> ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}</small></p>
-                        <p class="mb-0"><small><strong>Descripción:</strong> ${datosArea.descripcion.substring(0, 100)}${datosArea.descripcion.length > 100 ? '...' : ''}</small></p>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Mostrar modal
-        this.modalConfirmacion.show();
-    }
-    
-    // MANEJAR APERTURA DE MODAL
-    manejarAperturaModal(tipo) {
-        const modalElement = tipo === 'confirmacion' 
-            ? document.getElementById('modalConfirmacion')
-            : document.getElementById('modalExito');
-            
-        if (modalElement) {
-            // Encontrar el primer botón enfocable
-            const focusableElements = modalElement.querySelectorAll(
-                'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-            );
-            
-            if (focusableElements.length > 0) {
-                setTimeout(() => {
-                    focusableElements[0].focus();
-                }, 10);
-            }
-        }
-    }
-    
-    // MANEJAR CIERRE DE MODAL
-    manejarCierreModal(tipo) {
-        setTimeout(() => {
-            // Restaurar foco al elemento anterior si existe
-            if (this.elementoConFocoAnterior && 
-                this.elementoConFocoAnterior.isConnected) {
-                this.elementoConFocoAnterior.focus();
-            } else {
-                // Si no hay elemento anterior, enfocar algo seguro
-                const safeElement = tipo === 'confirmacion' 
-                    ? document.getElementById('btnCrearArea')
-                    : document.getElementById('nombreArea');
-                    
-                if (safeElement && safeElement.isConnected) {
-                    safeElement.focus();
-                }
-            }
-        }, 10);
-    }
     
     async confirmarCreacion() {
         try {
@@ -1022,23 +830,61 @@ class CrearAreaController {
                 throw new Error('No hay datos de área para crear');
             }
             
-            // Cerrar modal de confirmación
-            this.modalConfirmacion.hide();
-            
-            // Mostrar estado de carga
             this.mostrarCargando('Creando área...');
             
             console.log('📤 Enviando datos a crearArea:', this.areaEnProceso);
             
-            // Crear el área
             const nuevaArea = await this.crearAreaEnColeccionEspecifica(this.areaEnProceso);
             
             this.ocultarCargando();
             
             console.log('✅ Área creada exitosamente:', nuevaArea);
             
-            // Mostrar modal de éxito
-            this.mostrarModalExito(nuevaArea);
+            this.areaCreadaReciente = nuevaArea;
+            
+            // MODAL DE ÉXITO CON SWEETALERT2
+            const cantidadCargos = Object.keys(nuevaArea.cargos || {}).length;
+            const fecha = new Date().toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            await Swal.fire({
+                title: '¡Área creada exitosamente!',
+                html: `
+                    <div style="text-align: center;">
+                        <i class="fas fa-check-circle" style="font-size: 64px; color: var(--color-success); margin-bottom: 20px;"></i>
+                        <h4 style="color: var(--color-success); margin-bottom: 20px;">¡Área creada correctamente!</h4>
+                        <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 8px; text-align: left;">
+                            <p><strong>Nombre del Área:</strong> ${nuevaArea.nombreArea}</p>
+                            <p><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</p>
+                            <p><strong>Responsable:</strong> ${this.userManager.currentUser.nombreCompleto}</p>
+                            <p><strong>Fecha de Creación:</strong> ${fecha}</p>
+                            <p><strong>Código de Área:</strong> ${nuevaArea.id} (${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'})</p>
+                        </div>
+                        <div style="background: rgba(47, 140, 255, 0.1); padding: 10px; border-radius: 8px; margin-top: 15px; text-align: left;">
+                            <i class="fas fa-info-circle" style="color: var(--color-accent-secondary);"></i>
+                            El área ha sido registrada en el sistema. ¿Qué desea hacer?
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                showConfirmButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Ver lista de áreas',
+                denyButtonText: 'Crear otra área',
+                confirmButtonColor: '#2f8cff',
+                denyButtonColor: '#00ff95'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.verAreaCreada();
+                } else if (result.isDenied) {
+                    this.crearOtraArea();
+                }
+            });
             
         } catch (error) {
             console.error('❌ Error creando área:', error);
@@ -1057,19 +903,14 @@ class CrearAreaController {
             
             console.log(`📂 Colección destino: ${collectionName}`);
             
-            // Generar ID único para el área
             const areaId = this.generarAreaId(datosArea.nombreArea, organizacionCamelCase);
             
             console.log(`🆔 ID generado: ${areaId}`);
             
-            // Datos completos para Firestore - CON CARGOS
             const areaFirestoreData = {
-                // CAMPOS DE LA CLASE AREA
                 nombreArea: datosArea.nombreArea,
                 descripcion: datosArea.descripcion || '',
                 cargos: datosArea.cargos || {},
-                
-                // METADATOS ADICIONALES
                 organizacionCamelCase: organizacionCamelCase,
                 creadoPor: datosArea.creadoPor || '',
                 actualizadoPor: datosArea.actualizadoPor || '',
@@ -1079,13 +920,11 @@ class CrearAreaController {
             
             console.log('📝 Datos para Firestore:', areaFirestoreData);
             
-            // Guardar en Firestore en la colección específica
             const areaRef = doc(db, collectionName, areaId);
             await setDoc(areaRef, areaFirestoreData);
             
             console.log(`✅ Área guardada en: ${collectionName}/${areaId}`);
             
-            // Crear instancia de Area para retornar
             const nuevaArea = new Area(areaId, {
                 ...areaFirestoreData,
                 fechaCreacion: new Date(),
@@ -1115,47 +954,13 @@ class CrearAreaController {
         return `${organizacionCamelCase}_area_${nombreNormalizado}_${timestamp}_${random}`;
     }
     
-    mostrarModalExito(areaCreada) {
-        console.log('🎉 Mostrando modal de éxito...');
-        
-        const fecha = new Date(areaCreada.fechaCreacion || new Date()).toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
-        const cantidadCargos = Object.keys(areaCreada.cargos || {}).length;
-        
-        document.getElementById('exitoNombreArea').textContent = areaCreada.nombreArea || 'No disponible';
-        document.getElementById('exitoOrganizacion').textContent = this.userManager.currentUser.organizacion || 'No disponible';
-        document.getElementById('exitoResponsable').textContent = this.userManager.currentUser.nombreCompleto || 'No asignado';
-        document.getElementById('exitoFecha').textContent = fecha;
-        document.getElementById('exitoCodigo').textContent = `${areaCreada.id || 'Generando...'} (${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'})`;
-        
-        // Guardar referencia al área creada
-        this.areaCreadaReciente = areaCreada;
-        
-        // Guardar elemento con foco actual
-        this.elementoConFocoAnterior = document.activeElement;
-        
-        // Mostrar modal
-        this.modalExito.show();
-    }
-    
     // ========== ACCIONES POST-CREACIÓN ==========
     
     crearOtraArea() {
         console.log('🔄 Preparando para crear otra área...');
         
-        // Cerrar modal
-        this.modalExito.hide();
-        
-        // Limpiar formulario
         this.limpiarFormulario();
         
-        // Enfocar en primer campo después de un breve retraso
         setTimeout(() => {
             const nombreArea = document.getElementById('nombreArea');
             if (nombreArea) {
@@ -1166,9 +971,7 @@ class CrearAreaController {
     
     verAreaCreada() {
         console.log('👁️ Redirigiendo para ver área creada...');
-        
-        // Redirigir a la tabla de áreas
-        window.location.href = '/areas.html';
+        window.location.href = '/users/admin/areas/areas.html';
     }
     
     // ========== MÉTODOS AUXILIARES ==========
@@ -1181,11 +984,9 @@ class CrearAreaController {
             form.reset();
         }
         
-        // Limpiar cargos y agregar uno por defecto
         this.cargos = [];
         this.agregarCargo();
         
-        // Restablecer responsable al admin
         const responsableSelect = document.getElementById('responsable');
         if (responsableSelect) {
             for (let i = 0; i < responsableSelect.options.length; i++) {
@@ -1196,19 +997,12 @@ class CrearAreaController {
             }
         }
         
-        // Actualizar contadores
         this.actualizarContadorCaracteres();
         this.actualizarContadorCargos();
         
-        // Limpiar datos temporales
         this.areaEnProceso = null;
         
         console.log('✅ Formulario limpio');
-    }
-    
-    guardarBorrador() {
-        console.log('💾 Guardando borrador...');
-        this.mostrarNotificacion('Función de guardar borrador en desarrollo', 'info');
     }
     
     // ========== MÉTODOS DE INTERFAZ ==========
@@ -1261,42 +1055,21 @@ class CrearAreaController {
     }
     
     mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
-        if (this.notificacionActual) {
-            this.notificacionActual.remove();
-        }
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: duracion,
+            timerProgressBar: true
+        });
         
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-        alert.style.cssText = `
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        `;
+        let icono = tipo;
+        if (tipo === 'danger') icono = 'error';
         
-        const iconos = {
-            success: 'fa-check-circle',
-            danger: 'fa-exclamation-triangle',
-            warning: 'fa-exclamation-circle',
-            info: 'fa-info-circle'
-        };
-        
-        alert.innerHTML = `
-            <i class="fas ${iconos[tipo] || 'fa-info-circle'} me-2"></i>
-            ${mensaje}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-        `;
-        
-        document.body.appendChild(alert);
-        this.notificacionActual = alert;
-        
-        setTimeout(() => {
-            if (alert.parentNode) {
-                alert.classList.remove('show');
-                setTimeout(() => alert.remove(), 300);
-            }
-        }, duracion);
+        Toast.fire({
+            icon: icono,
+            title: mensaje
+        });
     }
 }
 

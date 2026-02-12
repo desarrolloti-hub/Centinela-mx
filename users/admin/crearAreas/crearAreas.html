@@ -28,25 +28,6 @@
             color: #2c3e50;
         }
         
-        /* Estilos para modales */
-        .modal-exito-icon {
-            font-size: 4rem;
-            color: #28a745;
-        }
-        
-        .modal-exito-details {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-        }
-        
-        .modal-exito-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        
         /* Para mostrar nombres largos */
         select#responsable option {
             white-space: normal !important;
@@ -109,7 +90,6 @@
                                     <label for="organizacion" class="form-label">Organización *</label>
                                     <select class="form-select" id="organizacion" required>
                                         <option value="">Cargando organización...</option>
-                                        <!-- Se cargarán dinámicamente -->
                                     </select>
                                     <div class="form-text">Organización a la que pertenece el área</div>
                                 </div>
@@ -135,7 +115,6 @@
                                     <label for="responsable" class="form-label">Responsable del Área</label>
                                     <select class="form-select" id="responsable">
                                         <option value="">Cargando responsables...</option>
-                                        <!-- Se cargarán dinámicamente -->
                                     </select>
                                     <div class="form-text mt-1">
                                         <i class="fas fa-user me-1"></i>
@@ -159,7 +138,6 @@
                                             <p>No hay cargos agregados</p>
                                             <small class="text-muted">Haga clic en "Agregar Cargo" para añadir uno</small>
                                         </div>
-                                        <!-- Los cargos se agregarán aquí dinámicamente -->
                                     </div>
                                     
                                     <!-- Botón para agregar cargo -->
@@ -178,89 +156,16 @@
                                 Los campos marcados con * son obligatorios. Todos los datos serán verificados antes de guardar.
                             </div>
                             
-                            <!-- Botones de acción -->
+                            <!-- Botones de acción - SIN GUARDAR BORRADOR -->
                             <div class="d-flex justify-content-end gap-3">
                                 <button type="button" class="btn btn-secondary" id="btnCancelar">
                                     <i class="fas fa-times me-2"></i>Cancelar
-                                </button>
-                                <button type="button" class="btn btn-warning" id="btnGuardarBorrador">
-                                    <i class="fas fa-save me-2"></i>Guardar Borrador
                                 </button>
                                 <button type="submit" class="btn btn-primary" id="btnCrearArea">
                                     <i class="fas fa-check me-2"></i>Crear Área
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- MODAL DE CONFIRMACIÓN -->
-    <div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-labelledby="modalConfirmacionLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="modalConfirmacionLabel">
-                        <i class="fas fa-check-circle me-2"></i>Confirmar Creación de Área
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="confirmacionMensaje">
-                        <!-- Contenido del modal -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" tabindex="-1">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnConfirmarCreacion" tabindex="0">
-                        <i class="fas fa-check me-2"></i>Confirmar Creación
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- MODAL DE ÉXITO (ÁREA CREADA) -->
-    <div class="modal fade" id="modalExito" tabindex="-1" aria-labelledby="modalExitoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="modalExitoLabel">
-                        <i class="fas fa-check-circle me-2"></i>¡Área Creada Exitosamente!
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <div class="modal-exito-icon mb-3">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <h4 class="text-success mb-3">¡Área creada correctamente!</h4>
-                    
-                    <div class="modal-exito-details text-start mb-4">
-                        <div id="exitoDetalles">
-                            <p><strong>Nombre del Área:</strong> <span id="exitoNombreArea">Cargando...</span></p>
-                            <p><strong>Organización:</strong> <span id="exitoOrganizacion">Cargando...</span></p>
-                            <p><strong>Responsable:</strong> <span id="exitoResponsable">Cargando...</span></p>
-                            <p><strong>Fecha de Creación:</strong> <span id="exitoFecha">Cargando...</span></p>
-                            <p><strong>Código de Área:</strong> <span id="exitoCodigo">Cargando...</span></p>
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-info text-start">
-                        <i class="fas fa-info-circle me-2"></i>
-                        El área ha sido registrada en el sistema. Puedes verla en la lista de áreas o crear una nueva.
-                    </div>
-                </div>
-                <div class="modal-footer justify-content-center">
-                    <div class="modal-exito-buttons">
-                        <button type="button" class="btn btn-outline-primary" id="btnCrearOtra">
-                            <i class="fas fa-plus-circle me-2"></i>Crear Otra Área
-                        </button>
-                        <button type="button" class="btn btn-primary" id="btnVerArea">
-                            <i class="fas fa-eye me-2"></i>Ver Área Creada
-                        </button>
                     </div>
                 </div>
             </div>
