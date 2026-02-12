@@ -1,5 +1,5 @@
-// editar-area.js - MÓDULO PARA EDICIÓN/CREACIÓN DE ÁREAS
-console.log('🚀 editar-area.js iniciando...');
+// editarAreas.js - MÓDULO PARA EDICIÓN DE ÁREAS (SIN BOOTSTRAP)
+console.log('🚀 editarAreas.js iniciando...');
 
 // Variable global para debugging
 window.editarAreaDebug = {
@@ -8,24 +8,35 @@ window.editarAreaDebug = {
 };
 
 // Cargar dependencias
-let Area, AreaManager, db;
+let Area, AreaManager, db, query, serverTimestamp, collection, doc, getDocs, setDoc, where, updateDoc, getDoc;
 
 async function cargarDependencias() {
     try {
         console.log('1️⃣ Cargando dependencias...');
         
-        // Cargar firebase-config
         const firebaseModule = await import('/config/firebase-config.js');
         db = firebaseModule.db;
         console.log('✅ Firebase cargado');
         
-        // Cargar clases
+        const firestoreModule = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+        ({ 
+            query,
+            serverTimestamp,
+            collection,
+            doc,
+            getDocs,
+            setDoc,
+            where,
+            updateDoc,
+            getDoc
+        } = firestoreModule);
+        console.log('✅ Firestore functions cargadas');
+        
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
         console.log('✅ Clases cargadas');
         
-        // Iniciar aplicación
         iniciarAplicacion();
         
     } catch (error) {
@@ -67,7 +78,6 @@ function inicializarController() {
         const app = new EditarAreaController();
         window.editarAreaDebug.controller = app;
         
-        // Inicializar
         app.init();
         
         console.log('✅ Controlador de edición listo');
@@ -87,33 +97,287 @@ class EditarAreaController {
         console.log('🛠️ Creando EditarAreaController...');
         
         this.areaManager = new AreaManager();
+        this.userManager = this.cargarUsuarioDesdeStorage();
+        
+        if (!this.userManager || !this.userManager.currentUser) {
+            console.error('❌ No se pudo cargar información del usuario');
+            this.redirigirAlLogin();
+            throw new Error('Usuario no autenticado');
+        }
+        
+        console.log('✅ Usuario cargado:', this.userManager.currentUser);
         this.areaActual = null;
         this.datosOriginales = null;
-        this.modoCreacion = false; // Indica si estamos creando nueva área
+        this.loadingOverlay = null;
         
-        // Usuario demo (DEBE SER IGUAL QUE EN areas.js)
-        this.userManager = {
-    currentUser: {
-        id: 'admin_default',
-        nombre: 'Administrador',
-        cargo: 'administrador',
-        organizacion: 'Tu Empresa',  // MISMO NOMBRE QUE EN LOS OTROS
-        organizacionCamelCase: 'tuEmpresa'  // MISMO CAMELCASE QUE EN LOS OTROS
-    }
-};
-        
-        console.log('✅ Controller creado');
+        // Array para almacenar los cargos
+        this.cargos = [];
     }
     
-    async init() {
+    // MÉTODO PARA CARGAR USUARIO
+    cargarUsuarioDesdeStorage() {
+        console.log('📂 Cargando datos del usuario desde almacenamiento...');
+        
+        try {
+            let userData = null;
+            
+            const adminInfo = localStorage.getItem('adminInfo');
+            if (adminInfo) {
+                const adminData = JSON.parse(adminInfo);
+                console.log('🔑 Datos de admin encontrados:', adminData);
+                
+                userData = {
+                    id: adminData.id || `admin_${Date.now()}`,
+                    nombre: adminData.nombreCompleto || 'Administrador',
+                    nombreCompleto: adminData.nombreCompleto || 'Administrador',
+                    cargo: 'administrador',
+                    organizacion: adminData.organizacion || 'Sin organización',
+                    organizacionCamelCase: adminData.organizacionCamelCase || this.convertirACamelCase(adminData.organizacion),
+                    correo: adminData.correoElectronico || '',
+                    fotoUsuario: adminData.fotoUsuario,
+                    fotoOrganizacion: adminData.fotoOrganizacion,
+                    esSuperAdmin: adminData.esSuperAdmin || true,
+                    esAdminOrganizacion: adminData.esAdminOrganizacion || true,
+                    timestamp: adminData.timestamp || new Date().toISOString(),
+                    esResponsable: true
+                };
+            }
+            
+            if (!userData) {
+                const storedUserData = localStorage.getItem('userData');
+                if (storedUserData) {
+                    userData = JSON.parse(storedUserData);
+                    console.log('👤 Datos de usuario encontrados:', userData);
+                    userData.nombreCompleto = userData.nombreCompleto || userData.nombre || 'Usuario';
+                    userData.esResponsable = false;
+                }
+            }
+            
+            if (!userData) {
+                console.error('❌ No se encontraron datos de usuario');
+                return null;
+            }
+            
+            if (!userData.id) userData.id = `user_${Date.now()}`;
+            if (!userData.organizacion) userData.organizacion = 'Sin organización';
+            if (!userData.organizacionCamelCase) {
+                userData.organizacionCamelCase = this.convertirACamelCase(userData.organizacion);
+            }
+            if (!userData.cargo) userData.cargo = 'usuario';
+            if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
+            
+            console.log('✅ Usuario procesado:', {
+                id: userData.id,
+                nombre: userData.nombreCompleto,
+                cargo: userData.cargo,
+                organizacion: userData.organizacion,
+                organizacionCamelCase: userData.organizacionCamelCase
+            });
+            
+            return {
+                currentUser: userData
+            };
+            
+        } catch (error) {
+            console.error('❌ Error cargando usuario:', error);
+            return null;
+        }
+    }
+    
+    // MÉTODO PARA CARGAR RESPONSABLES
+    async cargarResponsables() {
+        console.log('👥 Cargando lista de responsables...');
+        
+        const responsableSelect = document.getElementById('responsable');
+        if (!responsableSelect) {
+            console.error('❌ Select de responsable no encontrado');
+            return;
+        }
+        
+        try {
+            responsableSelect.innerHTML = '<option value="">Seleccionar responsable...</option>';
+            
+            if (this.userManager.currentUser) {
+                const adminOption = document.createElement('option');
+                adminOption.value = 'admin_fijo';
+                adminOption.text = `${this.userManager.currentUser.nombreCompleto} (Administrador)`;
+                adminOption.selected = true;
+                adminOption.style.fontWeight = 'bold';
+                responsableSelect.appendChild(adminOption);
+                
+                console.log('✅ Admin agregado como responsable:', this.userManager.currentUser.nombreCompleto);
+            }
+            
+            const colaboradores = await this.cargarColaboradoresDesdeSistema();
+            if (colaboradores && colaboradores.length > 0) {
+                const separator = document.createElement('option');
+                separator.disabled = true;
+                separator.text = '────────── COLABORADORES ──────────';
+                responsableSelect.appendChild(separator);
+                
+                colaboradores.forEach(colaborador => {
+                    const option = document.createElement('option');
+                    option.value = colaborador.id || colaborador.userId || `colab_${Date.now()}`;
+                    
+                    let nombreMostrar = colaborador.nombre || 'Colaborador';
+                    if (colaborador.apellido) {
+                        nombreMostrar += ` ${colaborador.apellido}`;
+                    }
+                    if (colaborador.cargo) {
+                        nombreMostrar += ` (${colaborador.cargo})`;
+                    }
+                    
+                    option.text = nombreMostrar;
+                    responsableSelect.appendChild(option);
+                });
+                
+                console.log(`✅ ${colaboradores.length} colaboradores cargados`);
+            }
+            
+            const otroSeparator = document.createElement('option');
+            otroSeparator.disabled = true;
+            otroSeparator.text = '────────── OTRAS OPCIONES ──────────';
+            responsableSelect.appendChild(otroSeparator);
+            
+            const nuevoOption = document.createElement('option');
+            nuevoOption.value = 'nuevo';
+            nuevoOption.text = '🆕 Asignar nuevo responsable...';
+            responsableSelect.appendChild(nuevoOption);
+            
+        } catch (error) {
+            console.error('❌ Error cargando responsables:', error);
+            this.mostrarNotificacion('Se cargarán solo los responsables disponibles', 'warning');
+        }
+    }
+    
+    // MÉTODO PARA CARGAR COLABORADORES
+    async cargarColaboradoresDesdeSistema() {
+        console.log('📋 Buscando colaboradores en el sistema...');
+        
+        try {
+            const orgKey = this.userManager.currentUser.organizacionCamelCase;
+            const colaboradoresStorage = localStorage.getItem(`colaboradores_${orgKey}`);
+            
+            if (colaboradoresStorage) {
+                const colaboradores = JSON.parse(colaboradoresStorage);
+                if (colaboradores.length > 0) {
+                    console.log('✅ Colaboradores encontrados en localStorage:', colaboradores.length);
+                    return colaboradores;
+                }
+            }
+            
+            if (this.areaManager && typeof this.areaManager.obtenerColaboradoresPorOrganizacion === 'function') {
+                console.log('🔍 Buscando colaboradores en Firebase...');
+                const colaboradoresFB = await this.areaManager.obtenerColaboradoresPorOrganizacion(orgKey);
+                
+                if (colaboradoresFB && colaboradoresFB.length > 0) {
+                    localStorage.setItem(`colaboradores_${orgKey}`, JSON.stringify(colaboradoresFB));
+                    console.log('✅ Colaboradores cargados desde Firebase:', colaboradoresFB.length);
+                    return colaboradoresFB;
+                }
+            }
+            
+            const usuariosStorage = localStorage.getItem('usuariosOrganizacion');
+            if (usuariosStorage) {
+                const usuarios = JSON.parse(usuariosStorage);
+                const colaboradoresOrg = usuarios.filter(user => 
+                    user.organizacionCamelCase === orgKey && 
+                    user.id !== this.userManager.currentUser.id
+                );
+                
+                if (colaboradoresOrg.length > 0) {
+                    console.log('✅ Colaboradores encontrados en usuarios organizacionales:', colaboradoresOrg.length);
+                    return colaboradoresOrg;
+                }
+            }
+            
+            console.log('ℹ️ No se encontraron colaboradores adicionales');
+            return [];
+            
+        } catch (error) {
+            console.error('❌ Error cargando colaboradores:', error);
+            return [];
+        }
+    }
+    
+    // CONFIGURAR ORGANIZACIÓN AUTOMÁTICA
+    configurarOrganizacionAutomatica() {
+        console.log('🏢 Configurando organización automática...');
+        
+        const organizacionSelect = document.getElementById('organizacion');
+        if (!organizacionSelect || !this.userManager.currentUser) {
+            console.error('❌ No se puede configurar organización');
+            return;
+        }
+        
+        const organizacionUsuario = this.userManager.currentUser.organizacion;
+        
+        console.log('📝 Datos para organización:', {
+            organizacion: organizacionUsuario,
+            orgCamelCase: this.userManager.currentUser.organizacionCamelCase
+        });
+        
+        organizacionSelect.innerHTML = '';
+        
+        const option = document.createElement('option');
+        option.value = this.userManager.currentUser.organizacionCamelCase || 'adminOrg';
+        option.text = `${organizacionUsuario} (Organización del Administrador)`;
+        option.selected = true;
+        organizacionSelect.add(option);
+        
+        organizacionSelect.disabled = true;
+        organizacionSelect.style.backgroundColor = '#f8f9fa';
+        organizacionSelect.style.cursor = 'not-allowed';
+        
+        console.log('✅ Organización configurada automáticamente:', organizacionUsuario);
+        
+        this.mostrarInfoOrganizacion();
+    }
+    
+    // MOSTRAR INFORMACIÓN DE ORGANIZACIÓN
+    mostrarInfoOrganizacion() {
+        if (document.querySelector('.organizacion-info')) {
+            return;
+        }
+        
+        const formHeader = document.querySelector('.card-header');
+        if (!formHeader || !this.userManager.currentUser) return;
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'organizacion-info alert alert-info mt-3 mx-3';
+        infoDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-building me-3 fs-4"></i>
+                <div>
+                    <h6 class="mb-1">Organización: <strong>${this.userManager.currentUser.organizacion}</strong></h6>
+                    <p class="mb-0 text-muted small">
+                        <i class="fas fa-user-shield me-1"></i>
+                        Administrador: ${this.userManager.currentUser.nombreCompleto}
+                        ${this.userManager.currentUser.correo ? `(${this.userManager.currentUser.correo})` : ''}
+                    </p>
+                    <p class="mb-0 text-muted small">
+                        <i class="fas fa-key me-1"></i>
+                        ID Colección: <code>areas_${this.userManager.currentUser.organizacionCamelCase}</code>
+                    </p>
+                </div>
+            </div>
+        `;
+        
+        formHeader.parentNode.insertBefore(infoDiv, formHeader.nextSibling);
+    }
+    
+    init() {
         console.log('🎬 Iniciando aplicación de edición...');
+        console.log('👤 Usuario actual:', this.userManager.currentUser);
         
         this.verificarElementosDOM();
         this.inicializarEventos();
         this.inicializarValidaciones();
         
-        // Obtener ID del área desde la URL
-        await this.cargarArea();
+        this.configurarOrganizacionAutomatica();
+        this.cargarResponsables();
+        this.inicializarGestionCargos();
+        this.cargarArea();
         
         console.log('✅ Aplicación de edición iniciada');
     }
@@ -123,14 +387,10 @@ class EditarAreaController {
         
         const ids = [
             'btnVolverLista', 'formEditarArea', 'areaId', 'nombreArea',
-            'colorIdentificacion', 'btnColorRandom', 'iconoArea',
-            'iconoPreview', 'organizacion', 'descripcionArea',
-            'contadorCaracteres', 'responsable', 'capacidadMaxima',
-            'fechaCreacion', 'ultimaActualizacion', 'creadoPor', 'estadoActual',
-            'btnCancelar', 'btnDesactivarArea', 'btnGuardarCambios',
-            'modalConfirmacion', 'modalDesactivacion', 'modalExito',
-            'btnConfirmarGuardar', 'btnConfirmarDesactivacion',
-            'btnContinuarEdicion', 'btnVolverListaExito'
+            'organizacion', 'descripcionArea', 'contadorCaracteres', 
+            'responsable', 'btnCancelar', 'btnDesactivarArea', 'btnGuardarCambios',
+            'btnAgregarCargo', 'cargosList', 'cargosCounter',
+            'fechaCreacion', 'ultimaActualizacion', 'creadoPor', 'estadoActual'
         ];
         
         ids.forEach(id => {
@@ -143,49 +403,36 @@ class EditarAreaController {
         console.log('🎮 Configurando eventos...');
         
         try {
-            // Botón volver
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
                 btnVolverLista.addEventListener('click', () => this.volverALista());
                 console.log('✅ Evento btnVolverLista');
             }
             
-            // Botón color aleatorio
-            const btnColorRandom = document.getElementById('btnColorRandom');
-            if (btnColorRandom) {
-                btnColorRandom.addEventListener('click', () => this.generarColorAleatorio());
-                console.log('✅ Evento btnColorRandom');
-            }
-            
-            // Actualizar preview de icono
-            const iconoArea = document.getElementById('iconoArea');
-            if (iconoArea) {
-                iconoArea.addEventListener('change', () => this.actualizarIconoPreview());
-                console.log('✅ Evento iconoArea');
-            }
-            
-            // Contador de caracteres
             const descripcionArea = document.getElementById('descripcionArea');
             if (descripcionArea) {
                 descripcionArea.addEventListener('input', () => this.actualizarContadorCaracteres());
                 console.log('✅ Evento descripcionArea');
             }
             
-            // Botón cancelar
             const btnCancelar = document.getElementById('btnCancelar');
             if (btnCancelar) {
                 btnCancelar.addEventListener('click', () => this.cancelarEdicion());
                 console.log('✅ Evento btnCancelar');
             }
             
-            // Botón desactivar área (solo en modo edición)
             const btnDesactivarArea = document.getElementById('btnDesactivarArea');
             if (btnDesactivarArea) {
                 btnDesactivarArea.addEventListener('click', () => this.prepararDesactivacion());
                 console.log('✅ Evento btnDesactivarArea');
             }
             
-            // Formulario submit
+            const btnAgregarCargo = document.getElementById('btnAgregarCargo');
+            if (btnAgregarCargo) {
+                btnAgregarCargo.addEventListener('click', () => this.agregarCargo());
+                console.log('✅ Evento btnAgregarCargo');
+            }
+            
             const formEditarArea = document.getElementById('formEditarArea');
             if (formEditarArea) {
                 formEditarArea.addEventListener('submit', (e) => {
@@ -193,33 +440,6 @@ class EditarAreaController {
                     this.validarYPrepararGuardado();
                 });
                 console.log('✅ Evento formEditarArea');
-            }
-            
-            // Confirmación guardar cambios
-            const btnConfirmarGuardar = document.getElementById('btnConfirmarGuardar');
-            if (btnConfirmarGuardar) {
-                btnConfirmarGuardar.addEventListener('click', () => this.confirmarGuardado());
-                console.log('✅ Evento btnConfirmarGuardar');
-            }
-            
-            // Confirmación desactivación
-            const btnConfirmarDesactivacion = document.getElementById('btnConfirmarDesactivacion');
-            if (btnConfirmarDesactivacion) {
-                btnConfirmarDesactivacion.addEventListener('click', () => this.confirmarDesactivacion());
-                console.log('✅ Evento btnConfirmarDesactivacion');
-            }
-            
-            // Botones después de éxito
-            const btnContinuarEdicion = document.getElementById('btnContinuarEdicion');
-            if (btnContinuarEdicion) {
-                btnContinuarEdicion.addEventListener('click', () => this.continuarEdicion());
-                console.log('✅ Evento btnContinuarEdicion');
-            }
-            
-            const btnVolverListaExito = document.getElementById('btnVolverListaExito');
-            if (btnVolverListaExito) {
-                btnVolverListaExito.addEventListener('click', () => this.volverALista());
-                console.log('✅ Evento btnVolverListaExito');
             }
             
             console.log('✅ Todos los eventos configurados');
@@ -231,267 +451,7 @@ class EditarAreaController {
     
     inicializarValidaciones() {
         console.log('📋 Inicializando validaciones...');
-        
-        // Inicializar contador de caracteres
         this.actualizarContadorCaracteres();
-        
-        // Inicializar preview de icono
-        this.actualizarIconoPreview();
-    }
-    
-    // ========== CARGA DE DATOS ==========
-    
-    async cargarArea() {
-        try {
-            console.log('🔍 Intentando obtener área...');
-            
-            // Obtener parámetro 'id' de la URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const areaId = urlParams.get('id');
-            
-            if (areaId) {
-                console.log(`🔄 Cargando área existente con ID: ${areaId}`);
-                this.modoCreacion = false;
-                
-                // Mostrar carga
-                this.mostrarCargando('Cargando información del área...');
-                
-                // Cargar área desde Firebase
-                this.areaActual = await this.areaManager.getAreaById(areaId);
-                
-                if (this.areaActual) {
-                    // Cargar datos en formulario
-                    await this.cargarDatosEnFormulario();
-                    
-                    // Guardar datos originales para comparación
-                    this.datosOriginales = this.obtenerDatosFormulario();
-                    
-                    this.ocultarCargando();
-                    console.log('✅ Área cargada:', this.areaActual.nombreArea);
-                    
-                    // Actualizar título de la página
-                    this.actualizarTituloPagina(this.areaActual.nombreArea);
-                    
-                    return;
-                } else {
-                    console.warn('⚠️ Área no encontrada en Firebase');
-                    this.mostrarAdvertencia('Área no encontrada. Se creará una nueva área con los datos proporcionados.');
-                    this.modoCreacion = true;
-                }
-            } else {
-                console.log('🆕 Modo creación: No hay ID en la URL');
-                this.modoCreacion = true;
-            }
-            
-            // Si estamos en modo creación, inicializar formulario vacío
-            await this.inicializarFormularioCreacion();
-            
-        } catch (error) {
-            console.error('❌ Error cargando área:', error);
-            this.ocultarCargando();
-            this.mostrarError('Error cargando área: ' + error.message);
-            this.modoCreacion = true;
-            await this.inicializarFormularioCreacion();
-        }
-    }
-    
-    async inicializarFormularioCreacion() {
-        console.log('🆕 Inicializando formulario para creación...');
-        
-        // Configurar interfaz para creación
-        this.configurarInterfazModoCreacion();
-        
-        // Inicializar valores por defecto
-        document.getElementById('nombreArea').value = '';
-        document.getElementById('descripcionArea').value = '';
-        document.getElementById('colorIdentificacion').value = '#3498db';
-        document.getElementById('iconoArea').value = 'fas fa-building';
-        document.getElementById('capacidadMaxima').value = 0;
-        
-        // Limpiar campos de auditoría
-        document.getElementById('fechaCreacion').value = 'Nueva área';
-        document.getElementById('ultimaActualizacion').value = 'Nueva área';
-        document.getElementById('creadoPor').value = this.userManager.currentUser.nombre;
-        document.getElementById('estadoActual').value = 'Activo';
-        document.getElementById('estadoActual').className = 'form-control bg-success text-white';
-        
-        // Ocultar botón de desactivar en modo creación
-        const btnDesactivar = document.getElementById('btnDesactivarArea');
-        if (btnDesactivar) {
-            btnDesactivar.style.display = 'none';
-        }
-        
-        // Actualizar contador y preview
-        this.actualizarContadorCaracteres();
-        this.actualizarIconoPreview();
-        
-        console.log('✅ Formulario listo para creación');
-    }
-    
-    configurarInterfazModoCreacion() {
-        console.log('🎨 Configurando interfaz para creación...');
-        
-        // Actualizar título de la página
-        document.title = 'Crear Nueva Área - Sistema Centinela';
-        
-        // Actualizar encabezado
-        const titulo = document.querySelector('h1');
-        if (titulo) {
-            titulo.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Crear Nueva Área';
-        }
-        
-        const subtitulo = document.querySelector('.text-muted');
-        if (subtitulo) {
-            subtitulo.textContent = 'Complete el formulario para crear una nueva área';
-        }
-        
-        // Cambiar texto del botón guardar
-        const btnGuardar = document.getElementById('btnGuardarCambios');
-        if (btnGuardar) {
-            btnGuardar.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Crear Área';
-        }
-        
-        // Actualizar textos de confirmación
-        const confirmacionMensaje = document.getElementById('confirmacionMensaje');
-        if (confirmacionMensaje) {
-            confirmacionMensaje.innerHTML = `
-                <p>¿Está seguro de crear una nueva área con los siguientes datos?</p>
-            `;
-        }
-        
-        console.log('✅ Interfaz configurada para creación');
-    }
-    
-    actualizarTituloPagina(nombreArea) {
-        // Actualizar título de la página
-        document.title = `Editar ${nombreArea} - Sistema Centinela`;
-        
-        // Actualizar encabezado
-        const titulo = document.querySelector('h1');
-        if (titulo) {
-            titulo.innerHTML = `<i class="fas fa-edit me-2"></i>Editar Área: ${nombreArea}`;
-        }
-    }
-    
-    async cargarDatosEnFormulario() {
-        console.log('📝 Cargando datos en formulario...');
-        
-        if (!this.areaActual) return;
-        
-        // ID del área
-        const areaIdInput = document.getElementById('areaId');
-        if (areaIdInput) {
-            areaIdInput.value = this.areaActual.id;
-        }
-        
-        // Información básica
-        document.getElementById('nombreArea').value = this.areaActual.nombreArea || '';
-        document.getElementById('colorIdentificacion').value = this.areaActual.color || '#3498db';
-        document.getElementById('iconoArea').value = this.areaActual.icono || 'fas fa-building';
-        document.getElementById('descripcionArea').value = this.areaActual.descripcion || '';
-        document.getElementById('capacidadMaxima').value = this.areaActual.capacidadMaxima || 0;
-        
-        // Configurar organización (si está en el formulario)
-        const organizacionSelect = document.getElementById('organizacion');
-        if (organizacionSelect && this.areaActual.nombreOrganizacion) {
-            // Buscar opción que coincida con el nombre de la organización
-            for (let option of organizacionSelect.options) {
-                if (option.text === this.areaActual.nombreOrganizacion) {
-                    option.selected = true;
-                    break;
-                }
-            }
-        }
-        
-        // Información de auditoría
-        if (this.areaActual.getFechaCreacionFormateada) {
-            document.getElementById('fechaCreacion').value = this.areaActual.getFechaCreacionFormateada();
-        } else if (this.areaActual._formatearFecha) {
-            document.getElementById('fechaCreacion').value = this.areaActual._formatearFecha(this.areaActual.fechaCreacion);
-        } else {
-            document.getElementById('fechaCreacion').value = 'No disponible';
-        }
-        
-        const ultimaActualizacion = document.getElementById('ultimaActualizacion');
-        if (ultimaActualizacion) {
-            if (this.areaActual.fechaActualizacion && this.areaActual._formatearFecha) {
-                ultimaActualizacion.value = this.areaActual._formatearFecha(this.areaActual.fechaActualizacion);
-            } else {
-                ultimaActualizacion.value = 'No disponible';
-            }
-        }
-        
-        document.getElementById('creadoPor').value = this.areaActual.creadoPor || 'Desconocido';
-        
-        // Estado actual
-        const estadoText = this.areaActual.getEstado ? this.areaActual.getEstado() : 'Activo';
-        const estadoInput = document.getElementById('estadoActual');
-        if (estadoInput) {
-            estadoInput.value = estadoText;
-            
-            // Aplicar clases según estado
-            if (this.areaActual.eliminado) {
-                estadoInput.classList.add('bg-danger', 'text-white');
-            } else if (!this.areaActual.activo) {
-                estadoInput.classList.add('bg-warning', 'text-dark');
-            } else {
-                estadoInput.classList.add('bg-success', 'text-white');
-            }
-        }
-        
-        // Configurar botón de desactivar según estado
-        const btnDesactivar = document.getElementById('btnDesactivarArea');
-        if (btnDesactivar && !this.modoCreacion) {
-            if (this.areaActual.eliminado) {
-                btnDesactivar.innerHTML = '<i class="fas fa-trash-restore me-2"></i>Restaurar Área';
-                btnDesactivar.classList.remove('btn-danger');
-                btnDesactivar.classList.add('btn-success');
-            } else if (!this.areaActual.activo) {
-                btnDesactivar.innerHTML = '<i class="fas fa-power-on me-2"></i>Activar Área';
-                btnDesactivar.classList.remove('btn-danger');
-                btnDesactivar.classList.add('btn-success');
-            } else {
-                btnDesactivar.innerHTML = '<i class="fas fa-power-off me-2"></i>Desactivar Área';
-                btnDesactivar.classList.add('btn-danger');
-                btnDesactivar.classList.remove('btn-success');
-            }
-            btnDesactivar.style.display = 'block';
-        }
-        
-        // Actualizar contador y preview
-        this.actualizarContadorCaracteres();
-        this.actualizarIconoPreview();
-        
-        console.log('✅ Datos cargados en formulario');
-    }
-    
-    // ========== MÉTODOS DE INTERFAZ ==========
-    
-    generarColorAleatorio() {
-        const colores = [
-            '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
-            '#1abc9c', '#34495e', '#7f8c8d', '#d35400', '#c0392b'
-        ];
-        const colorInput = document.getElementById('colorIdentificacion');
-        if (colorInput) {
-            const colorAleatorio = colores[Math.floor(Math.random() * colores.length)];
-            colorInput.value = colorAleatorio;
-            this.mostrarNotificacion(`Color asignado: ${colorAleatorio}`, 'info', 2000);
-        }
-    }
-    
-    actualizarIconoPreview() {
-        const iconoArea = document.getElementById('iconoArea');
-        const iconoPreview = document.getElementById('iconoPreview');
-        
-        if (iconoArea && iconoPreview) {
-            const iconoSeleccionado = iconoArea.value;
-            if (iconoSeleccionado) {
-                iconoPreview.innerHTML = `<i class="${iconoSeleccionado}" style="font-size: 1.5rem;"></i>`;
-            } else {
-                iconoPreview.innerHTML = '<i class="fas fa-question-circle"></i>';
-            }
-        }
     }
     
     actualizarContadorCaracteres() {
@@ -501,82 +461,382 @@ class EditarAreaController {
         if (descripcionArea && contador) {
             const longitud = descripcionArea.value.length;
             contador.textContent = longitud;
+            contador.className = longitud > 450 ? 'text-warning' : 'text-success';
+        }
+    }
+    
+    // CARGA DE DATOS
+    async cargarArea() {
+        try {
+            console.log('🔍 Intentando obtener área...');
             
-            // Cambiar color según longitud
-            if (longitud < 50) {
-                contador.className = 'text-danger';
-            } else if (longitud > 450) {
-                contador.className = 'text-warning';
+            const urlParams = new URLSearchParams(window.location.search);
+            const areaId = urlParams.get('id');
+            
+            if (!areaId) {
+                console.error('❌ No se proporcionó ID de área');
+                this.mostrarError('No se especificó qué área editar');
+                return;
+            }
+            
+            console.log(`🔄 Cargando área existente con ID: ${areaId}`);
+            this.mostrarCargando('Cargando información del área...');
+            
+            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
+            const areaRef = doc(db, collectionName, areaId);
+            const areaSnap = await getDoc(areaRef);
+            
+            if (areaSnap.exists()) {
+                const areaData = areaSnap.data();
+                this.areaActual = new Area(areaId, areaData);
+                
+                await this.cargarDatosEnFormulario();
+                this.datosOriginales = this.obtenerDatosFormulario();
+                
+                this.ocultarCargando();
+                console.log('✅ Área cargada:', this.areaActual.nombreArea);
+                
+                document.title = `Editar ${this.areaActual.nombreArea} - Sistema Centinela`;
+                const titulo = document.querySelector('h1');
+                if (titulo) {
+                    titulo.innerHTML = `<i class="fas fa-edit me-2"></i>Editar Área: ${this.areaActual.nombreArea}`;
+                }
             } else {
-                contador.className = 'text-success';
+                console.warn('⚠️ Área no encontrada');
+                this.ocultarCargando();
+                this.mostrarError('Área no encontrada');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error cargando área:', error);
+            this.ocultarCargando();
+            this.mostrarError('Error cargando área: ' + error.message);
+        }
+    }
+    
+    async cargarDatosEnFormulario() {
+        console.log('📝 Cargando datos en formulario...');
+        
+        if (!this.areaActual) return;
+        
+        document.getElementById('areaId').value = this.areaActual.id;
+        document.getElementById('nombreArea').value = this.areaActual.nombreArea || '';
+        document.getElementById('descripcionArea').value = this.areaActual.descripcion || '';
+        
+        await this.cargarResponsableActual();
+        this.cargarCargosExistentes();
+        
+        const fechaCreacionInput = document.getElementById('fechaCreacion');
+        if (fechaCreacionInput) {
+            fechaCreacionInput.value = this.areaActual.fechaCreacion ? 
+                new Date(this.areaActual.fechaCreacion).toLocaleDateString('es-ES', {
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                }) : 'No disponible';
+        }
+        
+        const ultimaActualizacionInput = document.getElementById('ultimaActualizacion');
+        if (ultimaActualizacionInput) {
+            ultimaActualizacionInput.value = this.areaActual.fechaActualizacion ? 
+                new Date(this.areaActual.fechaActualizacion).toLocaleDateString('es-ES', {
+                    year: 'numeric', month: 'long', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                }) : 'No disponible';
+        }
+        
+        const creadoPorInput = document.getElementById('creadoPor');
+        if (creadoPorInput) {
+            creadoPorInput.value = this.areaActual.creadoPor || 'Desconocido';
+        }
+        
+        const estadoInput = document.getElementById('estadoActual');
+        if (estadoInput) {
+            estadoInput.value = 'Activa';
+            estadoInput.className = 'form-control bg-success text-white';
+        }
+        
+        this.actualizarContadorCaracteres();
+        console.log('✅ Datos cargados en formulario');
+    }
+    
+    async cargarResponsableActual() {
+        const responsableSelect = document.getElementById('responsable');
+        if (!responsableSelect) return;
+        
+        if (this.areaActual.responsable) {
+            let responsableAsignado = false;
+            
+            for (let i = 0; i < responsableSelect.options.length; i++) {
+                if (responsableSelect.options[i].value === this.areaActual.responsable) {
+                    responsableSelect.selectedIndex = i;
+                    responsableAsignado = true;
+                    break;
+                }
+            }
+            
+            if (!responsableAsignado) {
+                const option = document.createElement('option');
+                option.value = this.areaActual.responsable;
+                option.text = this.areaActual.responsableNombre || 'Responsable asignado';
+                option.selected = true;
+                responsableSelect.appendChild(option);
+            }
+        } else {
+            for (let i = 0; i < responsableSelect.options.length; i++) {
+                if (responsableSelect.options[i].value === 'admin_fijo') {
+                    responsableSelect.selectedIndex = i;
+                    break;
+                }
             }
         }
     }
     
-    // ========== MÉTODOS DE VALIDACIÓN ==========
+    // GESTIÓN DE CARGOS
+    inicializarGestionCargos() {
+        console.log('💼 Inicializando gestión de cargos...');
+        
+        const btnAgregarCargo = document.getElementById('btnAgregarCargo');
+        if (btnAgregarCargo) {
+            btnAgregarCargo.addEventListener('click', () => this.agregarCargo());
+            console.log('✅ Evento btnAgregarCargo');
+        }
+    }
     
+    cargarCargosExistentes() {
+        console.log('💼 Cargando cargos existentes...');
+        
+        this.cargos = [];
+        
+        if (this.areaActual.cargos) {
+            if (Array.isArray(this.areaActual.cargos)) {
+                // Si es un array, cada elemento debe tener su propio ID
+                this.areaActual.cargos.forEach((cargo, index) => {
+                    if (cargo && cargo.nombre) {
+                        this.cargos.push({
+                            // Si el cargo tiene ID propio, úsalo; si no, genera uno basado en el nombre
+                            id: cargo.id || `cargo_${cargo.nombre.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+                            nombre: cargo.nombre || '',
+                            descripcion: cargo.descripcion || ''
+                        });
+                    }
+                });
+            } else if (typeof this.areaActual.cargos === 'object') {
+                // Formato objeto con claves como IDs - PRESERVAR IDs ORIGINALES
+                Object.keys(this.areaActual.cargos).forEach(key => {
+                    const cargo = this.areaActual.cargos[key];
+                    if (cargo && cargo.nombre) {
+                        this.cargos.push({
+                            id: key, // USAR EL ID ORIGINAL DE FIREBASE SIEMPRE
+                            nombre: cargo.nombre || '',
+                            descripcion: cargo.descripcion || ''
+                        });
+                    }
+                });
+            }
+        }
+        
+        if (this.cargos.length === 0) {
+            this.agregarCargo();
+        } else {
+            this.renderizarCargos();
+            this.actualizarContadorCargos();
+        }
+    }
+    
+    agregarCargo() {
+        console.log('➕ Agregando nuevo cargo...');
+        
+        // Generar ID único para el nuevo cargo
+        const cargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+        
+        const nuevoCargo = {
+            id: cargoId,
+            nombre: '',
+            descripcion: ''
+        };
+        
+        this.cargos.push(nuevoCargo);
+        this.renderizarCargos();
+        this.actualizarContadorCargos();
+        
+        setTimeout(() => {
+            const input = document.getElementById(`cargo_nombre_${cargoId}`);
+            if (input) input.focus();
+        }, 100);
+    }
+    
+    eliminarCargo(cargoId) {
+        console.log('🗑️ Eliminando cargo:', cargoId);
+        
+        Swal.fire({
+            title: '¿Eliminar cargo?',
+            text: "Esta acción no se puede deshacer",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.cargos = this.cargos.filter(c => c.id !== cargoId);
+                this.renderizarCargos();
+                this.actualizarContadorCargos();
+                this.mostrarNotificacion('Cargo eliminado', 'success');
+            }
+        });
+    }
+    
+    renderizarCargos() {
+        console.log('🖼️ Renderizando cargos...');
+        
+        const cargosList = document.getElementById('cargosList');
+        if (!cargosList) return;
+        
+        if (this.cargos.length === 0) {
+            cargosList.innerHTML = `
+                <div class="cargos-empty" id="cargosEmpty">
+                    <i class="fas fa-briefcase mb-2"></i>
+                    <p>No hay cargos agregados</p>
+                    <small class="text-muted">Haga clic en "Agregar Cargo" para añadir uno</small>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        this.cargos.forEach((cargo, index) => {
+            html += `
+                <div class="cargo-item" id="cargo_${cargo.id}">
+                    <div class="cargo-header">
+                        <h6 class="cargo-titulo">
+                            <i class="fas fa-briefcase me-2"></i>
+                            Cargo #${index + 1}
+                        </h6>
+                        <button type="button" class="btn btn-eliminar-cargo" onclick="window.editarAreaDebug.controller.eliminarCargo('${cargo.id}')">
+                            <i class="fas fa-trash-alt me-1"></i>
+                            Eliminar
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre del Cargo *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                                <input type="text" class="form-control" 
+                                       id="cargo_nombre_${cargo.id}"
+                                       value="${this.escapeHTML(cargo.nombre)}"
+                                       placeholder="Ej: Gerente, Analista, Coordinador"
+                                       onchange="window.editarAreaDebug.controller.actualizarCargo('${cargo.id}', 'nombre', this.value)">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Descripción del Cargo</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                                <input type="text" class="form-control" 
+                                       id="cargo_descripcion_${cargo.id}"
+                                       value="${this.escapeHTML(cargo.descripcion)}"
+                                       placeholder="Responsabilidades principales"
+                                       onchange="window.editarAreaDebug.controller.actualizarCargo('${cargo.id}', 'descripcion', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        cargosList.innerHTML = html;
+    }
+    
+    actualizarCargo(cargoId, campo, valor) {
+        const cargo = this.cargos.find(c => c.id === cargoId);
+        if (cargo) {
+            cargo[campo] = valor;
+            console.log(`✅ Cargo ${cargoId} actualizado: ${campo} = ${valor}`);
+        }
+    }
+    
+    actualizarContadorCargos() {
+        const counter = document.getElementById('cargosCounter');
+        if (counter) {
+            counter.textContent = `(${this.cargos.length} ${this.cargos.length === 1 ? 'cargo' : 'cargos'})`;
+        }
+    }
+    
+    escapeHTML(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+    
+    // VALIDACIÓN
     validarFormulario() {
         console.log('✅ Validando formulario...');
         
-        const form = document.getElementById('formEditarArea');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return false;
-        }
+        const nombreArea = document.getElementById('nombreArea')?.value.trim();
+        const descripcion = document.getElementById('descripcionArea')?.value.trim();
+        const responsableSelect = document.getElementById('responsable');
         
-        const nombreArea = document.getElementById('nombreArea').value.trim();
-        const descripcion = document.getElementById('descripcionArea').value.trim();
-        
-        // Validar que el nombre no esté vacío
         if (!nombreArea) {
-            this.mostrarError('El nombre del área es obligatorio');
+            this.mostrarError('El nombre del área es requerido');
             return false;
         }
         
-        // Validar que el nombre no sea demasiado corto
+        if (!descripcion) {
+            this.mostrarError('La descripción es requerida');
+            return false;
+        }
+        
+        if (descripcion.length < 20) {
+            this.mostrarError('La descripción debe tener al menos 20 caracteres');
+            return false;
+        }
+        
         if (nombreArea.length < 3) {
             this.mostrarError('El nombre del área debe tener al menos 3 caracteres');
             return false;
         }
         
-        // Validar longitud mínima de descripción
-        if (descripcion.length < 50) {
-            this.mostrarError('La descripción debe tener al menos 50 caracteres');
+        if (responsableSelect && !responsableSelect.value) {
+            this.mostrarError('Debe seleccionar un responsable para el área');
             return false;
         }
         
-        // Validar longitud máxima de descripción
-        if (descripcion.length > 500) {
-            this.mostrarError('La descripción no puede exceder los 500 caracteres');
+        if (responsableSelect && 
+            (responsableSelect.value.includes('──────────') || 
+             responsableSelect.value === 'nuevo')) {
+            this.mostrarError('Debe seleccionar un responsable válido');
             return false;
         }
         
-        // Validar que haya seleccionado un icono
-        const icono = document.getElementById('iconoArea').value;
-        if (!icono) {
-            this.mostrarError('Debe seleccionar un icono para el área');
+        const tieneCargoValido = this.cargos.some(c => c.nombre && c.nombre.trim() !== '');
+        if (!tieneCargoValido) {
+            this.mostrarError('Debe agregar al menos un cargo con nombre para el área');
             return false;
         }
         
-        console.log('✅ Formulario válido');
+        console.log('✅ Validación manual exitosa');
         return true;
     }
     
     hayCambios() {
-        if (this.modoCreacion || !this.datosOriginales) return true;
+        if (!this.datosOriginales) return true;
         
         const datosActuales = this.obtenerDatosFormulario();
         
-        // Comparar datos actuales con originales
-        const camposComparar = ['nombreArea', 'descripcion', 'color', 'icono', 'capacidadMaxima'];
+        if (datosActuales.nombreArea !== this.datosOriginales.nombreArea) return true;
+        if (datosActuales.descripcion !== this.datosOriginales.descripcion) return true;
         
-        for (let campo of camposComparar) {
-            if (datosActuales[campo] !== this.datosOriginales[campo]) {
-                console.log(`📝 Cambio detectado en ${campo}:`, 
-                    this.datosOriginales[campo], '→', datosActuales[campo]);
-                return true;
-            }
-        }
+        const cargosActuales = JSON.stringify(datosActuales.cargos);
+        const cargosOriginales = JSON.stringify(this.datosOriginales.cargos || []);
+        if (cargosActuales !== cargosOriginales) return true;
+        
+        if (datosActuales.responsable !== this.datosOriginales.responsable) return true;
         
         return false;
     }
@@ -589,19 +849,28 @@ class EditarAreaController {
                 return;
             }
             
-            // Verificar si hay cambios (en modo edición)
-            if (!this.modoCreacion && !this.hayCambios()) {
-                this.mostrarInfo('No hay cambios para guardar');
+            if (!this.hayCambios()) {
+                this.mostrarNotificacion('No hay cambios para guardar', 'info');
                 return;
             }
             
-            // Obtener datos actualizados
             const datosActualizados = this.obtenerDatosFormulario();
-            
             console.log('📋 Datos a guardar:', datosActualizados);
             
-            // Mostrar modal de confirmación
-            this.mostrarModalConfirmacion(datosActualizados);
+            const result = await Swal.fire({
+                title: '¿Guardar cambios?',
+                html: this.generarHTMLCambios(datosActualizados),
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, guardar',
+                cancelButtonText: 'Cancelar'
+            });
+            
+            if (result.isConfirmed) {
+                await this.confirmarGuardado(datosActualizados);
+            }
             
         } catch (error) {
             console.error('❌ Error en validación:', error);
@@ -609,326 +878,315 @@ class EditarAreaController {
         }
     }
     
+    generarHTMLCambios(datosActualizados) {
+        let cambiosHTML = '<div style="text-align: left;">';
+        
+        if (this.datosOriginales) {
+            if (this.datosOriginales.nombreArea !== datosActualizados.nombreArea) {
+                cambiosHTML += `<p><strong>Nombre:</strong><br>
+                    <span style="color: #999; text-decoration: line-through;">${this.datosOriginales.nombreArea}</span><br>
+                    <span style="color: #28a745;">→ ${datosActualizados.nombreArea}</span></p>`;
+            }
+            
+            const cargosOriginalesCount = Object.keys(this.datosOriginales.cargos || {}).length;
+            const cargosActualesCount = Object.keys(datosActualizados.cargos || {}).length;
+            if (cargosOriginalesCount !== cargosActualesCount) {
+                cambiosHTML += `<p><strong>Cargos:</strong> ${cargosOriginalesCount} → ${cargosActualesCount}</p>`;
+            }
+            
+            if (this.datosOriginales.responsable !== datosActualizados.responsable) {
+                const responsableOriginal = this.datosOriginales.responsableNombre || 'No asignado';
+                const responsableNuevo = datosActualizados.responsableNombre || 'No asignado';
+                cambiosHTML += `<p><strong>Responsable:</strong> ${responsableOriginal} → ${responsableNuevo}</p>`;
+            }
+        }
+        
+        cambiosHTML += '</div>';
+        return cambiosHTML || '<p>No se detectaron cambios específicos</p>';
+    }
+    
     obtenerDatosFormulario() {
         console.log('📋 Obteniendo datos del formulario...');
         
-        // Obtener icono sin texto descriptivo
-        const iconoCompleto = document.getElementById('iconoArea').value;
-        const iconoClase = iconoCompleto.split(' ')[0];
+        const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
+        
+        const cargosObject = {};
+        cargosValidos.forEach(cargo => {
+            // PRESERVAR EL ID ORIGINAL SIEMPRE
+            cargosObject[cargo.id] = {
+                nombre: cargo.nombre.trim(),
+                descripcion: cargo.descripcion ? cargo.descripcion.trim() : ''
+            };
+        });
+        
+        const responsableSelect = document.getElementById('responsable');
+        let responsableId = '';
+        let responsableNombre = '';
+        
+        if (responsableSelect && responsableSelect.value && 
+            !responsableSelect.value.includes('──────────') && 
+            responsableSelect.value !== 'nuevo') {
+            responsableId = responsableSelect.value;
+            responsableNombre = responsableSelect.options[responsableSelect.selectedIndex]?.text || '';
+        }
+        
+        console.log('💼 Cargos válidos:', cargosValidos.length);
         
         return {
             nombreArea: document.getElementById('nombreArea').value.trim(),
             descripcion: document.getElementById('descripcionArea').value.trim(),
-            color: document.getElementById('colorIdentificacion').value,
-            icono: iconoClase,
-            capacidadMaxima: parseInt(document.getElementById('capacidadMaxima').value) || 0,
-            
-            // Campos que podrían estar en el formulario
-            organizacion: document.getElementById('organizacion')?.value || '',
-            responsable: document.getElementById('responsable')?.value || ''
+            cargos: cargosObject,
+            responsable: responsableId,
+            responsableNombre: responsableNombre,
+            organizacionCamelCase: this.userManager.currentUser.organizacionCamelCase,
+            actualizadoPor: this.userManager.currentUser.id,
+            fechaActualizacion: new Date().toISOString()
         };
     }
     
-    obtenerDatosCompletosParaFirebase(datosBasicos) {
-        // Datos completos para Firebase (igual que en crearAreas.js)
-        return {
-            nombreArea: datosBasicos.nombreArea,
-            descripcion: datosBasicos.descripcion,
-            caracteristicas: '', // Campo no presente en este formulario
-            color: datosBasicos.color,
-            icono: datosBasicos.icono,
-            capacidadMaxima: datosBasicos.capacidadMaxima,
-            presupuestoAnual: 0, // Valor por defecto
-            activo: true,
-            objetivos: [],
-            
-            // Usar la organización del usuario
-            nombreOrganizacion: this.userManager.currentUser.organizacion,
-            organizacionCamelCase: this.userManager.currentUser.organizacionCamelCase
-        };
+    convertirACamelCase(texto) {
+        if (!texto) return 'sinOrganizacion';
+        return texto
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+            .replace(/[^a-zA-Z0-9]/g, '');
     }
     
-    // ========== MÉTODOS DE GUARDADO ==========
-    
-    mostrarModalConfirmacion(datosActualizados) {
-        console.log('📝 Mostrando modal de confirmación...');
-        
-        const mensaje = document.getElementById('confirmacionMensaje');
-        if (mensaje) {
-            let cambiosHTML = '';
-            let tituloModal = '';
-            
-            if (this.modoCreacion) {
-                tituloModal = 'Crear Nueva Área';
-                cambiosHTML = `
-                    <div class="card mt-3">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="area-color me-3" style="background-color: ${datosActualizados.color}; width: 20px; height: 20px; border-radius: 3px;"></div>
-                                <h6 class="mb-0">${datosActualizados.nombreArea}</h6>
-                            </div>
-                            <p class="mb-1"><small><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</small></p>
-                            <p class="mb-1"><small><strong>Icono:</strong> <i class="${datosActualizados.icono}"></i></small></p>
-                            <p class="mb-0"><small><strong>Descripción:</strong> ${datosActualizados.descripcion.substring(0, 100)}${datosActualizados.descripcion.length > 100 ? '...' : ''}</small></p>
-                        </div>
-                    </div>
-                `;
-            } else {
-                tituloModal = 'Guardar Cambios';
-                if (this.datosOriginales) {
-                    if (this.datosOriginales.nombreArea !== datosActualizados.nombreArea) {
-                        cambiosHTML += `<p><strong>Nombre:</strong> ${this.datosOriginales.nombreArea} → ${datosActualizados.nombreArea}</p>`;
-                    }
-                    
-                    if (this.datosOriginales.color !== datosActualizados.color) {
-                        cambiosHTML += `
-                            <p>
-                                <strong>Color:</strong> 
-                                <span class="d-inline-block me-2" style="background-color: ${this.datosOriginales.color}; width: 15px; height: 15px; border-radius: 3px;"></span>
-                                → 
-                                <span class="d-inline-block" style="background-color: ${datosActualizados.color}; width: 15px; height: 15px; border-radius: 3px;"></span>
-                            </p>
-                        `;
-                    }
-                    
-                    if (this.datosOriginales.icono !== datosActualizados.icono) {
-                        cambiosHTML += `<p><strong>Icono:</strong> <i class="${this.datosOriginales.icono}"></i> → <i class="${datosActualizados.icono}"></i></p>`;
-                    }
-                    
-                    if (this.datosOriginales.capacidadMaxima !== datosActualizados.capacidadMaxima) {
-                        cambiosHTML += `<p><strong>Capacidad máxima:</strong> ${this.datosOriginales.capacidadMaxima} → ${datosActualizados.capacidadMaxima}</p>`;
-                    }
-                    
-                    if (!cambiosHTML) {
-                        cambiosHTML = '<p class="text-muted">No se detectaron cambios específicos</p>';
-                    }
-                }
-                
-                cambiosHTML = `
-                    <div class="card mt-3">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2 text-muted">Cambios detectados:</h6>
-                            ${cambiosHTML}
-                            <p class="mt-2 mb-0"><small><strong>Descripción:</strong> ${datosActualizados.descripcion.substring(0, 80)}${datosActualizados.descripcion.length > 80 ? '...' : ''}</small></p>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            const mensajePrincipal = this.modoCreacion ? 
-                '¿Está seguro de crear una nueva área con los siguientes datos?' : 
-                '¿Está seguro de guardar los siguientes cambios?';
-            
-            mensaje.innerHTML = `
-                <p>${mensajePrincipal}</p>
-                ${cambiosHTML}
-            `;
-            
-            // Actualizar título del modal
-            const modalTitulo = document.querySelector('#modalConfirmacion .modal-title');
-            if (modalTitulo) {
-                modalTitulo.innerHTML = `<i class="fas ${this.modoCreacion ? 'fa-plus-circle' : 'fa-save'} me-2"></i>${tituloModal}`;
-            }
-            
-            // Actualizar texto del botón confirmar
-            const btnConfirmar = document.getElementById('btnConfirmarGuardar');
-            if (btnConfirmar) {
-                btnConfirmar.textContent = this.modoCreacion ? 'Sí, Crear Área' : 'Sí, Guardar Cambios';
-            }
-        }
-        
-        // Mostrar modal
-        const modal = new bootstrap.Modal(document.getElementById('modalConfirmacion'));
-        modal.show();
+    redirigirAlLogin() {
+        Swal.fire({
+            icon: 'error',
+            title: 'Sesión expirada',
+            text: 'Debes iniciar sesión para continuar',
+            confirmButtonText: 'Ir al login'
+        }).then(() => {
+            window.location.href = '/users/visitors/login/login.html';
+        });
     }
     
-    async confirmarGuardado() {
+    // GUARDADO
+    async confirmarGuardado(datosActualizados) {
         try {
             console.log('✅ Confirmando guardado...');
             
-            // Cerrar modal de confirmación
-            const modalConfirmacion = bootstrap.Modal.getInstance(document.getElementById('modalConfirmacion'));
-            if (modalConfirmacion) {
-                modalConfirmacion.hide();
+            if (!this.areaActual) {
+                throw new Error('No hay área para actualizar');
             }
             
-            // Mostrar estado de carga
-            this.mostrarCargando(this.modoCreacion ? 'Creando nueva área...' : 'Actualizando área...');
+            this.mostrarCargando('Actualizando área...');
             
-            // Obtener datos actualizados
-            const datosActualizados = this.obtenerDatosFormulario();
+            console.log('📤 Enviando datos a actualizar:', datosActualizados);
             
-            let resultado;
+            const areaActualizada = await this.actualizarAreaEnFirebase(datosActualizados);
             
-            if (this.modoCreacion) {
-                // CREAR NUEVA ÁREA
-                const datosCompletos = this.obtenerDatosCompletosParaFirebase(datosActualizados);
-                
-                console.log('🆕 Creando nueva área:', datosCompletos.nombreArea);
-                
-                // Usar el método crearArea del AreaManager (igual que en crearAreas.js)
-                resultado = await this.areaManager.crearArea(
-                    datosCompletos,
-                    this.userManager.currentUser.id, // idOrganizacion
-                    this.userManager
-                );
-                
-                // Guardar referencia al área creada
-                this.areaActual = resultado;
-                this.modoCreacion = false; // Ahora estamos en modo edición
-                
-            } else {
-                // ACTUALIZAR ÁREA EXISTENTE
-                console.log('🔄 Actualizando área existente:', this.areaActual.id);
-                
-                resultado = await this.areaManager.actualizarArea(
-                    this.areaActual.id,
-                    datosActualizados,
-                    this.userManager.currentUser.id
-                );
-                
-                // Actualizar referencia local
-                this.areaActual = resultado;
-            }
+            this.ocultarCargando();
+            console.log('✅ Área actualizada exitosamente:', areaActualizada);
             
-            // Actualizar datos originales
+            this.areaActual = areaActualizada;
             this.datosOriginales = this.obtenerDatosFormulario();
             
-            // Ocultar carga
-            this.ocultarCargando();
-            
-            console.log('✅ Operación exitosa:', this.areaActual.nombreArea);
-            
-            // Mostrar modal de éxito
-            this.mostrarModalExito(
-                this.modoCreacion ? 'Área creada correctamente' : 'Área actualizada correctamente'
-            );
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Área actualizada!',
+                text: 'Los cambios han sido guardados correctamente',
+                confirmButtonText: 'Continuar editando',
+                showCancelButton: true,
+                cancelButtonText: 'Volver a la lista',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.continuarEdicion();
+                } else {
+                    this.volverALista();
+                }
+            });
             
         } catch (error) {
-            console.error('❌ Error en guardado:', error);
+            console.error('❌ Error actualizando área:', error);
             this.ocultarCargando();
-            this.mostrarError('Error: ' + error.message);
+            this.mostrarError('Error actualizando área: ' + error.message);
         }
     }
     
-    // ========== MÉTODOS DE DESACTIVACIÓN (solo modo edición) ==========
+    async actualizarAreaEnFirebase(datosActualizados) {
+        try {
+            console.log('🚀 Actualizando área en Firebase...');
+            
+            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
+            const areaId = this.areaActual.id;
+            
+            console.log(`📂 Colección destino: ${collectionName}`);
+            console.log(`🆔 ID del área: ${areaId}`);
+            
+            // Obtener los cargos actuales de Firebase
+            const areaRef = doc(db, collectionName, areaId);
+            const areaSnap = await getDoc(areaRef);
+            const cargosActuales = areaSnap.exists() ? areaSnap.data().cargos || {} : {};
+            
+            console.log('📂 Cargos actuales en Firebase:', cargosActuales);
+            console.log('📝 Cargos del formulario:', datosActualizados.cargos);
+            
+            // Construir objeto de cargos preservando IDs existentes
+            const cargosParaGuardar = {};
+            
+            // Procesar cada cargo del formulario
+            Object.keys(datosActualizados.cargos).forEach(key => {
+                const cargoData = datosActualizados.cargos[key];
+                
+                // Buscar si existe un cargo con el MISMO NOMBRE en los cargos actuales
+                let idExistente = null;
+                for (const [id, cargo] of Object.entries(cargosActuales)) {
+                    if (cargo.nombre === cargoData.nombre) {
+                        idExistente = id;
+                        break;
+                    }
+                }
+                
+                // Si es un cargo nuevo o no se encontró por nombre, verificar si es el MISMO ID
+                if (!idExistente && cargosActuales[key]) {
+                    // Si el ID ya existe en Firebase, preservarlo
+                    idExistente = key;
+                }
+                
+                // Usar ID existente si se encontró, de lo contrario mantener el nuevo ID
+                const cargoId = idExistente || key;
+                
+                cargosParaGuardar[cargoId] = {
+                    nombre: cargoData.nombre,
+                    descripcion: cargoData.descripcion || ''
+                };
+            });
+            
+            console.log('📝 Cargos a guardar (con IDs preservados):', cargosParaGuardar);
+            
+            const updateData = {
+                nombreArea: datosActualizados.nombreArea,
+                descripcion: datosActualizados.descripcion || '',
+                cargos: cargosParaGuardar,
+                responsable: datosActualizados.responsable || '',
+                responsableNombre: datosActualizados.responsableNombre || '',
+                actualizadoPor: this.userManager.currentUser.id,
+                fechaActualizacion: serverTimestamp()
+            };
+            
+            console.log('📝 Datos para actualizar:', updateData);
+            
+            await updateDoc(areaRef, updateData);
+            
+            console.log(`✅ Área actualizada en: ${collectionName}/${areaId}`);
+            
+            const areaActualizada = new Area(areaId, {
+                ...this.areaActual,
+                ...updateData,
+                fechaActualizacion: new Date()
+            });
+            
+            return areaActualizada;
+            
+        } catch (error) {
+            console.error('❌ Error en actualizarAreaEnFirebase:', error);
+            throw error;
+        }
+    }
     
+    // DESACTIVACIÓN
     prepararDesactivacion() {
         console.log('🔄 Preparando desactivación...');
         
-        if (!this.areaActual || this.modoCreacion) return;
+        if (!this.areaActual) return;
         
-        const modal = document.getElementById('modalDesactivacion');
-        const mensaje = document.getElementById('desactivacionMensaje');
-        
-        if (!this.areaActual.activo || this.areaActual.eliminado) {
-            // Modo restauración/activación
-            const titulo = modal.querySelector('.modal-title');
-            const btnConfirmar = document.getElementById('btnConfirmarDesactivacion');
-            
-            if (this.areaActual.eliminado) {
-                titulo.innerHTML = '<i class="fas fa-trash-restore me-2"></i>Confirmar Restauración';
-                mensaje.textContent = '¿Está seguro de restaurar esta área?';
-                btnConfirmar.innerHTML = 'Sí, Restaurar Área';
-                btnConfirmar.classList.remove('btn-danger');
-                btnConfirmar.classList.add('btn-success');
-            } else {
-                titulo.innerHTML = '<i class="fas fa-power-on me-2"></i>Confirmar Activación';
-                mensaje.textContent = '¿Está seguro de activar esta área?';
-                btnConfirmar.innerHTML = 'Sí, Activar Área';
-                btnConfirmar.classList.remove('btn-danger');
-                btnConfirmar.classList.add('btn-success');
+        Swal.fire({
+            title: '¿Desactivar área?',
+            html: `
+                <div style="text-align: left;">
+                    <div class="alert alert-danger mb-3">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <strong>¡Atención!</strong> Esta acción desactivará el área.
+                    </div>
+                    <p><strong>Área:</strong> ${this.areaActual.nombreArea}</p>
+                    <div class="mb-3">
+                        <label for="swal-motivo" class="form-label">Motivo de desactivación (opcional):</label>
+                        <textarea id="swal-motivo" class="form-control" rows="2" placeholder="Explique brevemente el motivo..."></textarea>
+                    </div>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, desactivar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const motivo = document.getElementById('swal-motivo')?.value || '';
+                return this.confirmarDesactivacion(motivo);
             }
-        } else {
-            // Modo desactivación normal
-            const titulo = modal.querySelector('.modal-title');
-            const btnConfirmar = document.getElementById('btnConfirmarDesactivacion');
-            
-            titulo.innerHTML = '<i class="fas fa-power-off me-2"></i>Confirmar Desactivación';
-            mensaje.textContent = '¿Está seguro de desactivar esta área? Esta acción puede ser reversible.';
-            btnConfirmar.innerHTML = 'Sí, Desactivar Área';
-            btnConfirmar.classList.add('btn-danger');
-            btnConfirmar.classList.remove('btn-success');
-        }
-        
-        // Mostrar modal
-        const modalInstance = new bootstrap.Modal(modal);
-        modalInstance.show();
+        });
     }
     
-    async confirmarDesactivacion() {
+    async confirmarDesactivacion(motivo = '') {
         try {
-            console.log('🔄 Confirmando cambio de estado...');
+            console.log('🔄 Confirmando desactivación...');
             
-            if (!this.areaActual || this.modoCreacion) return;
+            if (!this.areaActual) return;
             
-            // Cerrar modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalDesactivacion'));
-            modal.hide();
+            this.mostrarCargando('Desactivando área...');
             
-            // Mostrar carga
-            this.mostrarCargando('Procesando...');
+            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
+            const areaRef = doc(db, collectionName, this.areaActual.id);
             
-            let resultado;
-            let mensajeExito;
+            await updateDoc(areaRef, {
+                estado: 'inactiva',
+                desactivadoPor: this.userManager.currentUser.id,
+                fechaDesactivacion: serverTimestamp(),
+                motivoDesactivacion: motivo
+            });
             
-            if (this.areaActual.eliminado) {
-                // Restaurar área
-                resultado = await this.areaManager.restaurarArea(
-                    this.areaActual.id,
-                    this.userManager.currentUser.id
-                );
-                mensajeExito = 'Área restaurada correctamente';
-            } else if (!this.areaActual.activo) {
-                // Activar área
-                resultado = await this.areaManager.activarArea(
-                    this.areaActual.id,
-                    this.userManager.currentUser.id
-                );
-                mensajeExito = 'Área activada correctamente';
-            } else {
-                // Desactivar área
-                resultado = await this.areaManager.desactivarArea(
-                    this.areaActual.id,
-                    this.userManager.currentUser.id
-                );
-                mensajeExito = 'Área desactivada correctamente';
-            }
+            this.ocultarCargando();
             
-            if (resultado) {
-                // Recargar datos del área
-                this.areaActual = await this.areaManager.getAreaById(this.areaActual.id);
-                
-                // Actualizar interfaz
-                await this.cargarDatosEnFormulario();
-                
-                this.ocultarCargando();
-                this.mostrarModalExito(mensajeExito);
-                
-                console.log('✅ Estado actualizado:', mensajeExito);
-            }
+            await Swal.fire({
+                icon: 'success',
+                title: 'Área desactivada',
+                text: 'El área ha sido desactivada correctamente',
+                confirmButtonText: 'Volver a la lista',
+                confirmButtonColor: '#3085d6'
+            });
+            
+            console.log('✅ Área desactivada correctamente');
+            this.volverALista();
             
         } catch (error) {
-            console.error('❌ Error cambiando estado:', error);
+            console.error('❌ Error desactivando área:', error);
             this.ocultarCargando();
-            this.mostrarError('Error cambiando estado: ' + error.message);
+            this.mostrarError('Error desactivando área: ' + error.message);
         }
     }
     
-    // ========== MÉTODOS DE NAVEGACIÓN ==========
-    
+    // NAVEGACIÓN
     volverALista() {
         console.log('⬅️ Volviendo a lista de áreas...');
-        window.location.href = '/areas.html';
+        window.location.href = '/users/admin/areas/areas.html';
     }
     
     cancelarEdicion() {
         console.log('❌ Cancelando edición...');
         
         if (this.hayCambios()) {
-            if (confirm('¿Está seguro de cancelar? Los cambios no guardados se perderán.')) {
-                this.volverALista();
-            }
+            Swal.fire({
+                title: '¿Cancelar edición?',
+                text: "Los cambios no guardados se perderán",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, cancelar',
+                cancelButtonText: 'No, continuar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.volverALista();
+                }
+            });
         } else {
             this.volverALista();
         }
@@ -936,43 +1194,21 @@ class EditarAreaController {
     
     continuarEdicion() {
         console.log('✏️ Continuando edición...');
-        // El modal ya se cierra automáticamente
-        // Enfocar en el primer campo
+        
         setTimeout(() => {
-            document.getElementById('nombreArea').focus();
+            const nombreArea = document.getElementById('nombreArea');
+            if (nombreArea) {
+                nombreArea.focus();
+            }
         }, 300);
     }
     
-    // ========== MÉTODOS DE INTERFAZ ==========
-    
-    mostrarModalExito(mensaje) {
-        console.log('🎉 Mostrando modal de éxito...');
-        
-        const titulo = document.getElementById('exitoTitulo');
-        const mensajeElemento = document.getElementById('exitoMensaje');
-        
-        if (titulo && mensajeElemento) {
-            titulo.textContent = '¡Operación Exitosa!';
-            mensajeElemento.textContent = mensaje;
-        }
-        
-        // Actualizar botón "Continuar Editando" según el modo
-        const btnContinuar = document.getElementById('btnContinuarEdicion');
-        if (btnContinuar) {
-            btnContinuar.textContent = this.modoCreacion ? 'Crear Otra Área' : 'Seguir Editando';
-        }
-        
-        const modal = new bootstrap.Modal(document.getElementById('modalExito'));
-        modal.show();
-    }
-    
+    // INTERFAZ
     mostrarCargando(mensaje = 'Cargando...') {
-        // Remover overlay anterior si existe
-        if (this.loadingOverlay && this.loadingOverlay.parentNode) {
-            this.loadingOverlay.remove();
+        if (this.loadingOverlay) {
+            this.ocultarCargando();
         }
         
-        // Crear overlay de carga
         const overlay = document.createElement('div');
         overlay.className = 'loading-overlay';
         overlay.style.cssText = `
@@ -981,23 +1217,22 @@ class EditarAreaController {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.7);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 9999;
+            flex-direction: column;
         `;
         
         overlay.innerHTML = `
-            <div class="spinner-border text-light" role="status">
+            <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status">
                 <span class="visually-hidden">${mensaje}</span>
             </div>
-            <div class="ms-3 text-light">${mensaje}</div>
+            <div class="text-light fs-5">${mensaje}</div>
         `;
         
         document.body.appendChild(overlay);
-        
-        // Guardar referencia para removerlo después
         this.loadingOverlay = overlay;
     }
     
@@ -1008,66 +1243,30 @@ class EditarAreaController {
         }
     }
     
-    mostrarExito(mensaje) {
-        this.mostrarNotificacion(mensaje, 'success');
-    }
-    
     mostrarError(mensaje) {
         this.mostrarNotificacion(mensaje, 'danger');
     }
     
-    mostrarInfo(mensaje) {
-        this.mostrarNotificacion(mensaje, 'info');
-    }
-    
-    mostrarAdvertencia(mensaje) {
-        this.mostrarNotificacion(mensaje, 'warning');
-    }
-    
     mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
-        // Remover notificación anterior si existe
-        if (this.notificacionActual) {
-            this.notificacionActual.remove();
-        }
-        
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-        alert.style.cssText = `
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        `;
-        
-        const iconos = {
-            success: 'fa-check-circle',
-            danger: 'fa-exclamation-triangle',
-            warning: 'fa-exclamation-circle',
-            info: 'fa-info-circle'
-        };
-        
-        alert.innerHTML = `
-            <i class="fas ${iconos[tipo] || 'fa-info-circle'} me-2"></i>
-            ${mensaje}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(alert);
-        
-        // Guardar referencia
-        this.notificacionActual = alert;
-        
-        // Auto-remover después de la duración
-        setTimeout(() => {
-            if (alert.parentNode) {
-                alert.classList.remove('show');
-                setTimeout(() => alert.remove(), 300);
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: duracion,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
             }
-        }, duracion);
+        });
+        
+        Toast.fire({
+            icon: tipo === 'danger' ? 'error' : tipo,
+            title: mensaje
+        });
     }
 }
 
-// ========== INICIAR APLICACIÓN ==========
-console.log('🎬 Iniciando carga de editar-area.js...');
+// INICIAR APLICACIÓN
+console.log('🎬 Iniciando carga de editarAreas.js...');
 cargarDependencias();

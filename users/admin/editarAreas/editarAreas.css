@@ -191,17 +191,18 @@ h6 i {
     font-size: 14px !important;
 }
 
-.form-label::after {
+.form-label[for]:not([for="motivoDesactivacion"])::after {
     content: " *";
     color: var(--color-danger);
     opacity: 0.8;
 }
 
-.form-label:has(+ :not(:required))::after {
+.form-label[for="responsable"]::after,
+.form-label[for="motivoDesactivacion"]::after {
     content: "" !important;
 }
 
-.form-control, .form-select, .form-control-color {
+.form-control, .form-select {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
@@ -211,7 +212,7 @@ h6 i {
     font-family: var(--font-family-secondary) !important;
 }
 
-.form-control:focus, .form-select:focus, .form-control-color:focus {
+.form-control:focus, .form-select:focus {
     border-color: var(--color-accent-secondary) !important;
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
     background: var(--color-bg-secondary) !important;
@@ -220,12 +221,6 @@ h6 i {
 
 .form-control::placeholder {
     color: rgba(255, 255, 255, 0.3) !important;
-}
-
-.form-control-color {
-    height: 45px !important;
-    padding: 5px !important;
-    cursor: pointer !important;
 }
 
 .form-text {
@@ -260,34 +255,49 @@ h6 i {
     cursor: not-allowed !important;
 }
 
-/* Botón de color aleatorio */
-#btnColorRandom {
+/* =============================================
+   ESTILOS PARA CARGOS
+   ============================================= */
+.cargos-container {
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-medium);
+    padding: 20px;
+    min-height: 150px;
+}
+
+.cargos-empty {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--color-text-secondary);
+}
+
+.cargos-empty i {
+    font-size: 48px;
+    color: var(--color-border-light);
+}
+
+.btn-agregar-cargo {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-secondary) !important;
+    color: var(--color-text-primary) !important;
+    padding: 10px 20px !important;
+    border-radius: var(--border-radius-medium) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
     transition: all 0.3s ease !important;
 }
 
-#btnColorRandom:hover {
+.btn-agregar-cargo:hover {
     background: var(--color-hover) !important;
     border-color: var(--color-accent-primary) !important;
-    color: var(--color-text-primary) !important;
 }
 
-/* Selector de iconos */
-.icon-selector {
-    position: relative;
-}
-
-.icon-selector select option {
-    background: var(--color-bg-tertiary) !important;
-    color: var(--color-text-primary) !important;
-    padding: 10px !important;
-}
-
-#iconoPreview {
-    color: var(--color-accent-primary);
-    font-size: 20px;
+.cargos-counter {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    margin-left: 10px;
 }
 
 /* =============================================
@@ -410,6 +420,12 @@ h6 i {
     padding: 20px 25px !important;
 }
 
+.modal-header.bg-primary,
+.modal-header.bg-danger,
+.modal-header.bg-success {
+    background: rgba(20, 20, 20, 0.95) !important;
+}
+
 .modal-title {
     display: flex !important;
     align-items: center !important;
@@ -441,46 +457,24 @@ h6 i {
     padding: 20px 25px !important;
 }
 
-/* Modal de desactivación específico */
-#modalDesactivacion .modal-body {
-    padding: 25px !important;
-}
-
-#modalDesactivacion .alert-danger {
-    margin-bottom: 20px !important;
-}
-
 /* Modal de éxito específico */
-#modalExito .modal-body {
-    padding: 40px 25px !important;
+.modal-exito-icon {
+    font-size: 4rem;
+    color: var(--color-success);
 }
 
-#modalExito .fa-check-circle {
-    color: var(--color-success) !important;
+.modal-exito-details {
+    background: var(--color-bg-tertiary);
+    border-radius: var(--border-radius-medium);
+    padding: 15px;
+    border: 1px solid var(--color-border-light);
 }
 
-#btnContinuarEdicion, #btnVolverListaExito {
-    padding: 10px 20px !important;
-    font-family: var(--font-family-secondary) !important;
-    font-weight: 600 !important;
-    border-radius: var(--border-radius-medium) !important;
-    transition: all 0.3s ease !important;
-    min-width: 180px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-}
-
-#btnContinuarEdicion {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-}
-
-#btnContinuarEdicion:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    border-color: var(--color-accent-primary) !important;
+.modal-exito-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
 }
 
 /* =============================================
@@ -510,13 +504,13 @@ h6 i {
    ============================================= */
 /* Efecto de brillo en hover para botones */
 #btnVolverLista, #btnCancelar, #btnDesactivarArea, #btnGuardarCambios,
-#btnContinuarEdicion, #btnVolverListaExito, .modal-footer .btn {
+#btnAgregarCargo, .modal-footer .btn {
     position: relative;
     overflow: hidden;
 }
 
 #btnVolverLista::after, #btnCancelar::after, #btnDesactivarArea::after,
-#btnGuardarCambios::after, #btnContinuarEdicion::after, #btnVolverListaExito::after,
+#btnGuardarCambios::after, #btnAgregarCargo::after,
 .modal-footer .btn::after {
     content: '';
     position: absolute;
@@ -536,7 +530,7 @@ h6 i {
 }
 
 #btnVolverLista:hover::after, #btnCancelar:hover::after, #btnDesactivarArea:hover::after,
-#btnGuardarCambios:hover::after, #btnContinuarEdicion:hover::after, #btnVolverListaExito:hover::after,
+#btnGuardarCambios:hover::after, #btnAgregarCargo:hover::after,
 .modal-footer .btn:hover::after {
     opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
@@ -554,10 +548,25 @@ h6 i {
 }
 
 /* =============================================
+   ESTILOS PARA SELECT OPTIONS
+   ============================================= */
+select#responsable option,
+select#organizacion option {
+    white-space: normal !important;
+    word-wrap: break-word;
+    padding: 8px 4px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.form-select {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* =============================================
    RESPONSIVE DESIGN
    ============================================= */
-
-/* TABLET (768px - 1023px) */
 @media (max-width: 1023px) {
     .container-fluid {
         padding: 20px !important;
@@ -590,7 +599,6 @@ h6 i {
     }
 }
 
-/* MÓVIL (768px hacia abajo) */
 @media (max-width: 768px) {
     body {
         padding: 10px !important;
@@ -619,11 +627,7 @@ h6 i {
         padding: 15px !important;
     }
     
-    h6.border-bottom {
-        font-size: 13px !important;
-    }
-    
-    .form-control, .form-select, .form-control-color {
+    .form-control, .form-select {
         padding: 10px 12px !important;
         font-size: 14px !important;
     }
@@ -635,21 +639,11 @@ h6 i {
     .modal-dialog {
         margin: 0.5rem !important;
     }
-    
-    .modal-content {
-        padding: 15px !important;
-        margin: 0 !important;
-    }
 }
 
-/* MÓVIL PEQUEÑO (480px hacia abajo) */
 @media (max-width: 480px) {
     .container-fluid {
         padding: 10px !important;
-    }
-    
-    .row.mb-4:first-child {
-        padding: 12px !important;
     }
     
     #btnVolverLista {
@@ -658,27 +652,13 @@ h6 i {
         min-width: auto !important;
     }
     
-    .card-header {
-        padding: 12px 15px !important;
-    }
-    
-    .card-header h5 {
-        font-size: 14px !important;
-    }
-    
     #btnCancelar, #btnDesactivarArea, #btnGuardarCambios {
         padding: 10px 15px !important;
         font-size: 13px !important;
         min-width: auto !important;
     }
     
-    .modal-body {
-        padding: 15px !important;
-    }
-    
-    #btnContinuarEdicion, #btnVolverListaExito {
-        min-width: 140px !important;
-        padding: 8px 15px !important;
-        font-size: 13px !important;
+    .modal-exito-buttons {
+        flex-direction: column !important;
     }
 }
