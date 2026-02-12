@@ -1,6 +1,6 @@
 /**
  * EDITAR CATEGORÍAS - Sistema Centinela
- * VERSIÓN CORREGIDA - Integración completa con CategoriaManager
+ * VERSIÓN CORREGIDA - Compatible con la clase Categoria (objetos, no Maps)
  */
 
 // =============================================
@@ -25,7 +25,6 @@ async function inicializarCategoriaManager() {
 
         console.log('✅ CategoriaManager cargado correctamente');
         console.log('📁 Colección:', categoriaManager?.nombreColeccion);
-        console.log('🏢 Empresa:', categoriaManager?.empresaNombre);
 
         return true;
     } catch (error) {
@@ -180,7 +179,7 @@ function mostrarInfoEmpresa() {
                 ${logoSrc || '<i class="fas fa-building"></i>'}
                 <span>
                     <span style="opacity: 0.8;">Empresa:</span> 
-                    <strong style="color: #34d399;">${empresaActual?.nombre || categoriaActual?.empresaNombre || 'No especificada'}</strong>
+                    <strong style="color: #34d399;">${empresaActual?.nombre || categoriaActual?.organizacionNombre || 'No especificada'}</strong>
                 </span>
                 <span style="opacity: 0.6; font-size: 12px; border-left: 1px solid rgba(16,185,129,0.3); padding-left: 12px;">
                     <i class="fas fa-database"></i> ${categoriaManager?.nombreColeccion || ''}
@@ -196,6 +195,10 @@ function mostrarInfoEmpresa() {
     }
 }
 
+/**
+ * CARGA LA CATEGORÍA DESDE FIRESTORE
+ * CORREGIDO: Maneja objetos, NO Maps
+ */
 async function cargarCategoria(id) {
     if (!categoriaManager) {
         mostrarNotificacion('Error: Sistema no inicializado', 'error');
@@ -203,7 +206,7 @@ async function cargarCategoria(id) {
     }
 
     try {
-        categoriaActual = await categoriaManager.obtenerCategoria(id);
+        categoriaActual = await categoriaManager.obtenerCategoriaPorId(id);
 
         if (!categoriaActual) {
             mostrarNotificacion('Categoría no encontrada', 'error');
@@ -211,16 +214,31 @@ async function cargarCategoria(id) {
             return;
         }
 
-        // Convertir subcategorías de Map a Array de objetos
-        subcategorias = [];
-        categoriaActual.subcategorias.forEach((subMap, subId) => {
-            const subObj = {};
-            subMap.forEach((value, key) => {
-                subObj[key] = value;
-            });
-            subcategorias.push(subObj);
-        });
+        console.log('📦 Categoría cargada:', categoriaActual);
+        console.log('📁 Subcategorías (objeto):', categoriaActual.subcategorias);
 
+        // 🔥 CORREGIDO: Convertir objeto de subcategorías a array
+        subcategorias = [];
+        
+        if (categoriaActual.subcategorias && typeof categoriaActual.subcategorias === 'object') {
+            // Iterar sobre las propiedades del objeto
+            Object.keys(categoriaActual.subcategorias).forEach(key => {
+                const sub = categoriaActual.subcategorias[key];
+                if (sub && typeof sub === 'object') {
+                    subcategorias.push({
+                        id: key,
+                        nombre: sub.nombre || '',
+                        descripcion: sub.descripcion || '',
+                        fechaCreacion: sub.fechaCreacion || new Date().toISOString(),
+                        fechaActualizacion: sub.fechaActualizacion || new Date().toISOString(),
+                        heredaColor: sub.heredaColor !== undefined ? sub.heredaColor : true,
+                        color: sub.color || null
+                    });
+                }
+            });
+        }
+
+        // Ordenar por nombre
         subcategorias.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 
         actualizarUICategoria();
@@ -230,7 +248,6 @@ async function cargarCategoria(id) {
             id: categoriaActual.id,
             nombre: categoriaActual.nombre,
             subcategorias: subcategorias.length,
-            empresa: categoriaActual.empresaNombre,
             color: categoriaActual.color
         });
 
@@ -263,48 +280,6 @@ function actualizarUICategoria() {
     if (colorHex) {
         colorHex.textContent = categoriaActual.color || '#2f8cff';
     }
-
-    // Mostrar información de empresa
-    const container = document.querySelector('.card-body');
-    if (container && !document.getElementById('info-empresa-edicion')) {
-        const infoEmpresa = document.createElement('div');
-        infoEmpresa.id = 'info-empresa-edicion';
-        infoEmpresa.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            color: #10b981;
-            padding: 12px 20px;
-            border-radius: 12px;
-            font-size: 14px;
-            margin-bottom: 20px;
-        `;
-
-        let logoSrc = '';
-        if (empresaActual?.logo) {
-            logoSrc = `<img src="${empresaActual.logo}" alt="Logo" style="width: 24px; height: 24px; border-radius: 6px; object-fit: cover; margin-right: 8px;">`;
-        }
-
-        infoEmpresa.innerHTML = `
-            ${logoSrc || '<i class="fas fa-building" style="font-size: 20px;"></i>'}
-            <div>
-                <span style="opacity: 0.8;">Editando categoría de:</span>
-                <strong style="color: #34d399; margin-left: 4px;">${categoriaActual.empresaNombre || empresaActual?.nombre || 'No especificada'}</strong>
-                <div style="margin-top: 4px;">
-                    <small style="opacity: 0.6;">
-                        <i class="fas fa-fingerprint"></i> ID: ${categoriaActual.id.substring(0, 12)}...
-                    </small>
-                    <small style="opacity: 0.6; margin-left: 12px;">
-                        <i class="fas fa-list"></i> Subcategorías: ${categoriaActual.subcategorias.size}
-                    </small>
-                </div>
-            </div>
-        `;
-
-        container.prepend(infoEmpresa);
-    }
 }
 
 function cargarSubcategorias() {
@@ -324,7 +299,7 @@ function cargarSubcategorias() {
                 <p style="color: var(--text-dim); margin-bottom: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">
                     Esta categoría aún no tiene subcategorías. Crea la primera haciendo clic en el botón superior.
                 </p>
-                <button class="btn btn-warning" onclick="abrirEditorSubcategoria('crear')" style="background: linear-gradient(135deg, #f97316, #ea580c); border: none; padding: 12px 24px;">
+                <button class="btn-add-subcategoria" onclick="abrirEditorSubcategoria('crear')" style="background: linear-gradient(135deg, #f97316, #ea580c); border: none; padding: 12px 24px; border-radius: 30px; color: white; font-weight: 600;">
                     <i class="fas fa-plus-circle me-2"></i>Agregar Subcategoría
                 </button>
             </div>
@@ -395,13 +370,13 @@ function crearTarjetaSubcategoria(sub) {
             </div>
         </div>
         <div style="display: flex; gap: 8px; margin-left: 20px;">
-            <button class="btn btn-sm" onclick="abrirEditorSubcategoria('editar', '${sub.id}')" 
+            <button class="btn-sub-action edit" onclick="abrirEditorSubcategoria('editar', '${sub.id}')" 
                     style="background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3); color: #f97316; padding: 8px 12px; border-radius: 8px;"
                     onmouseenter="this.style.background='rgba(249,115,22,0.2)'; this.style.borderColor='#f97316';"
                     onmouseleave="this.style.background='rgba(249,115,22,0.1)'; this.style.borderColor='rgba(249,115,22,0.3)';">
                 <i class="fas fa-edit"></i>
             </button>
-            <button class="btn btn-sm" onclick="eliminarSubcategoria('${sub.id}')"
+            <button class="btn-sub-action delete" onclick="eliminarSubcategoria('${sub.id}')"
                     style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 8px 12px; border-radius: 8px;"
                     onmouseenter="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='#ef4444';"
                     onmouseleave="this.style.background='rgba(239,68,68,0.1)'; this.style.borderColor='rgba(239,68,68,0.3)';">
@@ -413,6 +388,10 @@ function crearTarjetaSubcategoria(sub) {
     return div;
 }
 
+/**
+ * ABRIR EDITOR DE SUBCATEGORÍA
+ * CORREGIDO: Funciona con objetos, no Maps
+ */
 function abrirEditorSubcategoria(modo, subcategoriaId = null) {
     if (!categoriaActual) {
         mostrarNotificacion('Error: Categoría no cargada', 'error');
@@ -446,7 +425,6 @@ function abrirEditorSubcategoria(modo, subcategoriaId = null) {
         const preview = document.getElementById('subcategoriaColorPreview');
         if (preview) {
             preview.style.backgroundColor = colorBase;
-            preview.style.boxShadow = `0 0 0 2px rgba(16,185,129,0.3)`;
         }
         const hex = document.getElementById('subcategoriaColorHex');
         if (hex) hex.textContent = colorBase;
@@ -479,7 +457,6 @@ function abrirEditorSubcategoria(modo, subcategoriaId = null) {
             const preview = document.getElementById('subcategoriaColorPreview');
             if (preview) {
                 preview.style.backgroundColor = colorValue;
-                preview.style.boxShadow = `0 0 0 2px rgba(249,115,22,0.3)`;
             }
             const hex = document.getElementById('subcategoriaColorHex');
             if (hex) hex.textContent = colorValue;
@@ -502,6 +479,10 @@ function cerrarEditorSubcategoria() {
     subcategoriaEditando = null;
 }
 
+/**
+ * GUARDAR SUBCATEGORÍA (CREAR O EDITAR)
+ * CORREGIDO: Actualiza el objeto subcategorias correctamente
+ */
 async function guardarSubcategoria() {
     if (!categoriaManager || !categoriaActual) {
         mostrarNotificacion('Error: Sistema no inicializado', 'error');
@@ -528,64 +509,56 @@ async function guardarSubcategoria() {
         const subId = document.getElementById('subcategoriaId').value;
 
         if (modoEdicionSubcategoria === 'crear') {
-            // Verificar si ya existe subcategoría con ese nombre
+            // 🔥 CORREGIDO: Usar el método de la clase Categoria
             if (categoriaActual.existeSubcategoria(nombre)) {
                 throw new Error(`Ya existe una subcategoría con el nombre "${nombre}" en esta categoría`);
             }
 
-            // Agregar subcategoría
-            const nuevaSubId = categoriaActual.agregarSubcategoria(nombre, descripcion);
-
-            // Configurar color si es personalizado
+            // Agregar subcategoría - esto genera un ID temporal
+            const nuevoSubId = categoriaActual.agregarSubcategoria(nombre, descripcion, heredaColor, color);
+            
+            // Si no hereda color, asignar color personalizado
             if (!heredaColor && color) {
-                const subMap = categoriaActual.obtenerSubcategoria(nuevaSubId);
-                if (subMap) {
-                    subMap.set('color', color);
-                    subMap.set('heredaColor', false);
-                }
+                categoriaActual.subcategorias[nuevoSubId].color = color;
+                categoriaActual.subcategorias[nuevoSubId].heredaColor = false;
             }
-
-            // Guardar cambios en Firestore
-            await categoriaManager.actualizarCategoria(categoriaActual.id, {
-                nombre: categoriaActual.nombre,
-                descripcion: categoriaActual.descripcion,
-                color: categoriaActual.color
-            });
 
             mostrarNotificacion('✅ Subcategoría creada exitosamente', 'success');
 
         } else if (modoEdicionSubcategoria === 'editar' && subId) {
-            const subMap = categoriaActual.obtenerSubcategoria(subId);
-            if (subMap) {
-                // Verificar si el nombre ya existe en otra subcategoría
-                const nombreAnterior = subMap.get('nombre');
-                if (nombre !== nombreAnterior && categoriaActual.existeSubcategoria(nombre)) {
-                    throw new Error(`Ya existe otra subcategoría con el nombre "${nombre}"`);
-                }
-
-                // Actualizar datos
-                subMap.set('nombre', nombre);
-                subMap.set('descripcion', descripcion);
-                subMap.set('heredaColor', heredaColor);
-                if (!heredaColor && color) {
-                    subMap.set('color', color);
-                } else {
-                    subMap.delete('color');
-                }
-                subMap.set('fechaActualizacion', new Date().toISOString());
+            // Verificar si el nombre ya existe en otra subcategoría
+            const subExistente = categoriaActual.subcategorias[subId];
+            if (!subExistente) {
+                throw new Error('Subcategoría no encontrada');
             }
 
-            // Guardar cambios en Firestore
-            await categoriaManager.actualizarCategoria(categoriaActual.id, {
-                nombre: categoriaActual.nombre,
-                descripcion: categoriaActual.descripcion,
-                color: categoriaActual.color
-            });
+            const nombreAnterior = subExistente.nombre;
+            if (nombre !== nombreAnterior && categoriaActual.existeSubcategoria(nombre)) {
+                throw new Error(`Ya existe otra subcategoría con el nombre "${nombre}"`);
+            }
+
+            // 🔥 CORREGIDO: Actualizar directamente en el objeto
+            categoriaActual.subcategorias[subId] = {
+                ...categoriaActual.subcategorias[subId],
+                nombre: nombre,
+                descripcion: descripcion,
+                heredaColor: heredaColor,
+                color: !heredaColor ? color : null,
+                fechaActualizacion: new Date().toISOString()
+            };
 
             mostrarNotificacion('✅ Subcategoría actualizada correctamente', 'success');
         }
 
-        // Recargar categoría para actualizar datos
+        // 🔥 IMPORTANTE: Guardar TODA la categoría en Firestore
+        await categoriaManager.actualizarCategoria(categoriaActual.id, {
+            nombre: categoriaActual.nombre,
+            descripcion: categoriaActual.descripcion,
+            color: categoriaActual.color,
+            subcategorias: categoriaActual.subcategorias // Enviar el objeto completo
+        });
+
+        // Recargar categoría para obtener los datos actualizados
         await cargarCategoria(categoriaActual.id);
         cerrarEditorSubcategoria();
 
@@ -598,6 +571,10 @@ async function guardarSubcategoria() {
     }
 }
 
+/**
+ * ELIMINAR SUBCATEGORÍA
+ * CORREGIDO: Usa el método de la clase Categoria
+ */
 async function eliminarSubcategoria(subcategoriaId) {
     if (!categoriaManager || !categoriaActual) {
         mostrarNotificacion('Error: Sistema no inicializado', 'error');
@@ -618,22 +595,6 @@ async function eliminarSubcategoria(subcategoriaId) {
                 <p style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
                     <strong style="color: #ef4444; font-size: 18px;">${escapeHTML(sub.nombre || '')}</strong>
                 </p>
-                <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; text-align: left; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <i class="fas fa-folder" style="color: #2f8cff;"></i>
-                        <span style="color: #d1d5db;">Categoría: <strong>${escapeHTML(categoriaActual.nombre)}</strong></span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <i class="fas fa-building" style="color: #10b981;"></i>
-                        <span style="color: #d1d5db;">Empresa: <strong>${escapeHTML(categoriaActual.empresaNombre || empresaActual?.nombre || 'No especificada')}</strong></span>
-                    </div>
-                    ${sub.color ? `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="width: 16px; height: 16px; background-color: ${sub.color}; border-radius: 4px;"></span>
-                        <span style="color: #d1d5db;">Color: <strong>${sub.color}</strong></span>
-                    </div>
-                    ` : ''}
-                </div>
                 <p style="color: #9ca3af; font-size: 14px;">Esta acción no se puede deshacer.</p>
             </div>
         `,
@@ -649,23 +610,22 @@ async function eliminarSubcategoria(subcategoriaId) {
 
     if (result.isConfirmed) {
         try {
+            // 🔥 CORREGIDO: Usar el método de la clase
             categoriaActual.eliminarSubcategoria(subcategoriaId);
+
+            // Guardar cambios en Firestore
             await categoriaManager.actualizarCategoria(categoriaActual.id, {
                 nombre: categoriaActual.nombre,
                 descripcion: categoriaActual.descripcion,
-                color: categoriaActual.color
+                color: categoriaActual.color,
+                subcategorias: categoriaActual.subcategorias
             });
 
             await cargarCategoria(categoriaActual.id);
 
             Swal.fire({
                 title: '¡Eliminada!',
-                html: `
-                    <div style="text-align: center;">
-                        <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 16px;"></i>
-                        <p>La subcategoría <strong style="color: #ef4444;">"${escapeHTML(sub.nombre || '')}"</strong> ha sido eliminada.</p>
-                    </div>
-                `,
+                text: `La subcategoría "${sub.nombre}" ha sido eliminada.`,
                 icon: 'success',
                 confirmButtonColor: '#10b981',
                 background: '#0a0a0a',
@@ -682,6 +642,9 @@ async function eliminarSubcategoria(subcategoriaId) {
     }
 }
 
+/**
+ * GUARDAR CATEGORÍA (CAMBIO DE NOMBRE/COLOR)
+ */
 async function guardarCategoria() {
     if (!categoriaManager || !categoriaActual) {
         mostrarNotificacion('Error: Sistema no inicializado', 'error');
@@ -707,15 +670,16 @@ async function guardarCategoria() {
         const nombreAnterior = categoriaActual.nombre;
         const colorAnterior = categoriaActual.color;
 
+        // Actualizar el objeto actual
         categoriaActual.nombre = nombre;
         categoriaActual.color = color;
 
-        // Actualizar en Firestore
+        // 🔥 IMPORTANTE: Enviar TODOS los datos, incluyendo subcategorías
         await categoriaManager.actualizarCategoria(categoriaActual.id, {
             nombre: categoriaActual.nombre,
             descripcion: categoriaActual.descripcion,
             color: categoriaActual.color,
-            estado: categoriaActual.estado
+            subcategorias: categoriaActual.subcategorias // NO perder las subcategorías
         });
 
         // Recargar categoría para confirmar cambios
@@ -727,8 +691,6 @@ async function guardarCategoria() {
                 <div style="text-align: center;">
                     <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 16px;"></i>
                     <p>La categoría ha sido actualizada correctamente.</p>
-                    ${nombre !== nombreAnterior ? `<p style="color: #9ca3af; font-size: 14px;">"${escapeHTML(nombreAnterior)}" → <strong style="color: #10b981;">"${escapeHTML(nombre)}"</strong></p>` : ''}
-                    ${color !== colorAnterior ? `<p style="color: #9ca3af; font-size: 14px;">Color: <span style="display: inline-block; width: 16px; height: 16px; background-color: ${colorAnterior}; border-radius: 4px; margin: 0 4px;"></span> → <span style="display: inline-block; width: 16px; height: 16px; background-color: ${color}; border-radius: 4px; margin: 0 4px;"></span></p>` : ''}
                 </div>
             `,
             icon: 'success',
@@ -766,45 +728,31 @@ function cancelarEdicion() {
     const hayCambiosEnCategoria = nombreActual !== categoriaActual.nombre ||
         colorActual !== categoriaActual.color;
 
-    const subcategoriasOriginales = [];
-    categoriaActual.subcategorias.forEach((subMap) => {
-        const subObj = {};
-        subMap.forEach((value, key) => { subObj[key] = value; });
-        subcategoriasOriginales.push(subObj);
+    // Verificar cambios en subcategorías
+    const subcategoriasActuales = [];
+    Object.keys(categoriaActual.subcategorias || {}).forEach(key => {
+        const sub = categoriaActual.subcategorias[key];
+        subcategoriasActuales.push({
+            id: key,
+            nombre: sub.nombre,
+            descripcion: sub.descripcion,
+            color: sub.color,
+            heredaColor: sub.heredaColor
+        });
     });
 
-    const hayCambiosEnSubcategorias =
-        JSON.stringify(subcategorias.map(s => ({
-            id: s.id,
-            nombre: s.nombre,
-            descripcion: s.descripcion,
-            color: s.color,
-            heredaColor: s.heredaColor
-        }))) !==
-        JSON.stringify(subcategoriasOriginales.map(s => ({
-            id: s.id,
-            nombre: s.nombre,
-            descripcion: s.descripcion,
-            color: s.color,
-            heredaColor: s.heredaColor
-        })));
+    const hayCambiosEnSubcategorias = JSON.stringify(subcategorias.map(s => ({
+        id: s.id,
+        nombre: s.nombre,
+        descripcion: s.descripcion,
+        color: s.color,
+        heredaColor: s.heredaColor
+    }))) !== JSON.stringify(subcategoriasActuales);
 
     if (hayCambiosEnCategoria || hayCambiosEnSubcategorias) {
         Swal.fire({
             title: '¿Cancelar edición?',
-            html: `
-                <div style="text-align: center;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b; margin-bottom: 16px;"></i>
-                    <p style="margin-bottom: 12px;">Tienes cambios sin guardar.</p>
-                    <p style="color: #9ca3af; font-size: 14px; margin-bottom: 16px;">¿Seguro que quieres salir sin guardar?</p>
-                    <div style="background: rgba(245, 158, 11, 0.1); padding: 12px; border-radius: 8px; text-align: left;">
-                        <span style="color: #f59e0b;">
-                            <i class="fas fa-info-circle"></i> 
-                            Se perderán los cambios en categoría y subcategorías.
-                        </span>
-                    </div>
-                </div>
-            `,
+            text: 'Tienes cambios sin guardar. ¿Seguro que quieres salir?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
@@ -827,14 +775,10 @@ function inicializarComponentes() {
     // Configurar color picker de categoría
     const colorPicker = document.getElementById('colorPicker');
     if (colorPicker) {
-        colorPicker.value = categoriaActual?.color || '#2f8cff';
         colorPicker.addEventListener('input', function (e) {
             const preview = document.getElementById('colorPreview');
             const hex = document.getElementById('colorHex');
-            if (preview) {
-                preview.style.backgroundColor = e.target.value;
-                preview.style.boxShadow = `0 0 0 2px rgba(47,140,255,0.3)`;
-            }
+            if (preview) preview.style.backgroundColor = e.target.value;
             if (hex) hex.textContent = e.target.value;
         });
     }
@@ -848,10 +792,7 @@ function inicializarComponentes() {
             const hex = document.getElementById('colorHex');
 
             if (colorPicker) colorPicker.value = color;
-            if (preview) {
-                preview.style.backgroundColor = color;
-                preview.style.boxShadow = `0 0 0 2px rgba(47,140,255,0.3)`;
-            }
+            if (preview) preview.style.backgroundColor = color;
             if (hex) hex.textContent = color;
 
             document.querySelectorAll('.preset-dot').forEach(b => b.classList.remove('active'));
@@ -865,32 +806,10 @@ function inicializarComponentes() {
         colorSubcategoria.addEventListener('input', function (e) {
             const preview = document.getElementById('subcategoriaColorPreview');
             const hex = document.getElementById('subcategoriaColorHex');
-            if (preview) {
-                preview.style.backgroundColor = e.target.value;
-                preview.style.boxShadow = `0 0 0 2px rgba(249,115,22,0.3)`;
-            }
+            if (preview) preview.style.backgroundColor = e.target.value;
             if (hex) hex.textContent = e.target.value;
         });
     }
-
-    // Configurar preset colors para subcategoría
-    document.querySelectorAll('.subcategoria-preset-dot').forEach(btn => {
-        if (btn) {
-            btn.addEventListener('click', function () {
-                const color = this.dataset.color;
-                const colorInput = document.getElementById('colorSubcategoria');
-                const preview = document.getElementById('subcategoriaColorPreview');
-                const hex = document.getElementById('subcategoriaColorHex');
-
-                if (colorInput) colorInput.value = color;
-                if (preview) {
-                    preview.style.backgroundColor = color;
-                    preview.style.boxShadow = `0 0 0 2px rgba(249,115,22,0.3)`;
-                }
-                if (hex) hex.textContent = color;
-            });
-        }
-    });
 }
 
 function inicializarEventos() {
@@ -917,19 +836,6 @@ function inicializarEventos() {
             const group = document.getElementById('colorPersonalizadoGroup');
             if (group) {
                 group.style.display = this.checked ? 'none' : 'block';
-
-                // Si se desmarca, establecer color predeterminado
-                if (!this.checked) {
-                    const colorBase = categoriaActual?.color || '#2f8cff';
-                    document.getElementById('colorSubcategoria').value = colorBase;
-                    const preview = document.getElementById('subcategoriaColorPreview');
-                    if (preview) {
-                        preview.style.backgroundColor = colorBase;
-                        preview.style.boxShadow = `0 0 0 2px rgba(249,115,22,0.3)`;
-                    }
-                    const hex = document.getElementById('subcategoriaColorHex');
-                    if (hex) hex.textContent = colorBase;
-                }
             }
         });
     }
