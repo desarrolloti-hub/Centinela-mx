@@ -1,4 +1,4 @@
-// editarAreas.js - MÓDULO PARA EDICIÓN DE ÁREAS (SIN BOOTSTRAP)
+// editarAreas.js - VERSIÓN COMPLETA CON SOLO SWEETALERT2 (SIN MODALES BOOTSTRAP)
 console.log('🚀 editarAreas.js iniciando...');
 
 // Variable global para debugging
@@ -609,11 +609,9 @@ class EditarAreaController {
         
         if (this.areaActual.cargos) {
             if (Array.isArray(this.areaActual.cargos)) {
-                // Si es un array, cada elemento debe tener su propio ID
                 this.areaActual.cargos.forEach((cargo, index) => {
                     if (cargo && cargo.nombre) {
                         this.cargos.push({
-                            // Si el cargo tiene ID propio, úsalo; si no, genera uno basado en el nombre
                             id: cargo.id || `cargo_${cargo.nombre.toLowerCase().replace(/\s+/g, '_')}_${index}`,
                             nombre: cargo.nombre || '',
                             descripcion: cargo.descripcion || ''
@@ -621,12 +619,11 @@ class EditarAreaController {
                     }
                 });
             } else if (typeof this.areaActual.cargos === 'object') {
-                // Formato objeto con claves como IDs - PRESERVAR IDs ORIGINALES
                 Object.keys(this.areaActual.cargos).forEach(key => {
                     const cargo = this.areaActual.cargos[key];
                     if (cargo && cargo.nombre) {
                         this.cargos.push({
-                            id: key, // USAR EL ID ORIGINAL DE FIREBASE SIEMPRE
+                            id: key,
                             nombre: cargo.nombre || '',
                             descripcion: cargo.descripcion || ''
                         });
@@ -646,7 +643,6 @@ class EditarAreaController {
     agregarCargo() {
         console.log('➕ Agregando nuevo cargo...');
         
-        // Generar ID único para el nuevo cargo
         const cargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
         
         const nuevoCargo = {
@@ -673,16 +669,35 @@ class EditarAreaController {
             text: "Esta acción no se puede deshacer",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
+            confirmButtonColor: '#ff4d4d',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                popup: 'swal-dark',
+                title: 'swal-title',
+                htmlContainer: 'swal-html',
+                confirmButton: 'swal-confirm-btn-danger',
+                cancelButton: 'swal-cancel-btn'
+            }
         }).then((result) => {
             if (result.isConfirmed) {
                 this.cargos = this.cargos.filter(c => c.id !== cargoId);
                 this.renderizarCargos();
                 this.actualizarContadorCargos();
-                this.mostrarNotificacion('Cargo eliminado', 'success');
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Eliminado',
+                    text: 'El cargo fue eliminado correctamente',
+                    confirmButtonColor: '#2f8cff',
+                    customClass: {
+                        popup: 'swal-dark',
+                        title: 'swal-title',
+                        htmlContainer: 'swal-html',
+                        confirmButton: 'swal-confirm-btn'
+                    }
+                });
             }
         });
     }
@@ -862,10 +877,17 @@ class EditarAreaController {
                 html: this.generarHTMLCambios(datosActualizados),
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#6c757d',
+                confirmButtonColor: '#2f8cff',
+                cancelButtonColor: '#545454',
                 confirmButtonText: 'Sí, guardar',
-                cancelButtonText: 'Cancelar'
+                cancelButtonText: 'Cancelar',
+                customClass: {
+                    popup: 'swal-dark',
+                    title: 'swal-title',
+                    htmlContainer: 'swal-html',
+                    confirmButton: 'swal-confirm-btn',
+                    cancelButton: 'swal-cancel-btn'
+                }
             });
             
             if (result.isConfirmed) {
@@ -885,7 +907,7 @@ class EditarAreaController {
             if (this.datosOriginales.nombreArea !== datosActualizados.nombreArea) {
                 cambiosHTML += `<p><strong>Nombre:</strong><br>
                     <span style="color: #999; text-decoration: line-through;">${this.datosOriginales.nombreArea}</span><br>
-                    <span style="color: #28a745;">→ ${datosActualizados.nombreArea}</span></p>`;
+                    <span style="color: #00ff95;">→ ${datosActualizados.nombreArea}</span></p>`;
             }
             
             const cargosOriginalesCount = Object.keys(this.datosOriginales.cargos || {}).length;
@@ -912,7 +934,6 @@ class EditarAreaController {
         
         const cargosObject = {};
         cargosValidos.forEach(cargo => {
-            // PRESERVAR EL ID ORIGINAL SIEMPRE
             cargosObject[cargo.id] = {
                 nombre: cargo.nombre.trim(),
                 descripcion: cargo.descripcion ? cargo.descripcion.trim() : ''
@@ -959,13 +980,39 @@ class EditarAreaController {
             icon: 'error',
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
+            confirmButtonText: 'Ir al login',
+            confirmButtonColor: '#2f8cff',
+            customClass: {
+                popup: 'swal-dark',
+                title: 'swal-title',
+                htmlContainer: 'swal-html',
+                confirmButton: 'swal-confirm-btn'
+            }
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
     }
     
-    // GUARDADO
+    // ========== 🔥 ALERTA DE CIERRE AUTOMÁTICO ==========
+    async mostrarAlertaGuardadoExitoso() {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            customClass: {
+                popup: 'swal-dark'
+            }
+        });
+        
+        await Toast.fire({
+            icon: 'success',
+            title: '✅ Cambios guardados correctamente'
+        });
+    }
+    
+    // ========== 🔥 GUARDADO CON CIERRE AUTOMÁTICO ==========
     async confirmarGuardado(datosActualizados) {
         try {
             console.log('✅ Confirmando guardado...');
@@ -986,22 +1033,11 @@ class EditarAreaController {
             this.areaActual = areaActualizada;
             this.datosOriginales = this.obtenerDatosFormulario();
             
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Área actualizada!',
-                text: 'Los cambios han sido guardados correctamente',
-                confirmButtonText: 'Continuar editando',
-                showCancelButton: true,
-                cancelButtonText: 'Volver a la lista',
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#6c757d'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    this.continuarEdicion();
-                } else {
-                    this.volverALista();
-                }
-            });
+            await this.mostrarAlertaGuardadoExitoso();
+            
+            setTimeout(() => {
+                this.volverALista();
+            }, 3100);
             
         } catch (error) {
             console.error('❌ Error actualizando área:', error);
@@ -1020,7 +1056,6 @@ class EditarAreaController {
             console.log(`📂 Colección destino: ${collectionName}`);
             console.log(`🆔 ID del área: ${areaId}`);
             
-            // Obtener los cargos actuales de Firebase
             const areaRef = doc(db, collectionName, areaId);
             const areaSnap = await getDoc(areaRef);
             const cargosActuales = areaSnap.exists() ? areaSnap.data().cargos || {} : {};
@@ -1028,14 +1063,11 @@ class EditarAreaController {
             console.log('📂 Cargos actuales en Firebase:', cargosActuales);
             console.log('📝 Cargos del formulario:', datosActualizados.cargos);
             
-            // Construir objeto de cargos preservando IDs existentes
             const cargosParaGuardar = {};
             
-            // Procesar cada cargo del formulario
             Object.keys(datosActualizados.cargos).forEach(key => {
                 const cargoData = datosActualizados.cargos[key];
                 
-                // Buscar si existe un cargo con el MISMO NOMBRE en los cargos actuales
                 let idExistente = null;
                 for (const [id, cargo] of Object.entries(cargosActuales)) {
                     if (cargo.nombre === cargoData.nombre) {
@@ -1044,13 +1076,10 @@ class EditarAreaController {
                     }
                 }
                 
-                // Si es un cargo nuevo o no se encontró por nombre, verificar si es el MISMO ID
                 if (!idExistente && cargosActuales[key]) {
-                    // Si el ID ya existe en Firebase, preservarlo
                     idExistente = key;
                 }
                 
-                // Usar ID existente si se encontró, de lo contrario mantener el nuevo ID
                 const cargoId = idExistente || key;
                 
                 cargosParaGuardar[cargoId] = {
@@ -1114,10 +1143,17 @@ class EditarAreaController {
             `,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
+            confirmButtonColor: '#ff4d4d',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Sí, desactivar',
             cancelButtonText: 'Cancelar',
+            customClass: {
+                popup: 'swal-dark',
+                title: 'swal-title',
+                htmlContainer: 'swal-html',
+                confirmButton: 'swal-confirm-btn-danger',
+                cancelButton: 'swal-cancel-btn'
+            },
             preConfirm: () => {
                 const motivo = document.getElementById('swal-motivo')?.value || '';
                 return this.confirmarDesactivacion(motivo);
@@ -1145,16 +1181,27 @@ class EditarAreaController {
             
             this.ocultarCargando();
             
-            await Swal.fire({
-                icon: 'success',
-                title: 'Área desactivada',
-                text: 'El área ha sido desactivada correctamente',
-                confirmButtonText: 'Volver a la lista',
-                confirmButtonColor: '#3085d6'
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'swal-dark'
+                }
+            });
+            
+            await Toast.fire({
+                icon: 'warning',
+                title: 'Área desactivada'
             });
             
             console.log('✅ Área desactivada correctamente');
-            this.volverALista();
+            
+            setTimeout(() => {
+                this.volverALista();
+            }, 3100);
             
         } catch (error) {
             console.error('❌ Error desactivando área:', error);
@@ -1178,10 +1225,17 @@ class EditarAreaController {
                 text: "Los cambios no guardados se perderán",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
+                confirmButtonColor: '#ff4d4d',
                 cancelButtonColor: '#3085d6',
                 confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar'
+                cancelButtonText: 'No, continuar',
+                customClass: {
+                    popup: 'swal-dark',
+                    title: 'swal-title',
+                    htmlContainer: 'swal-html',
+                    confirmButton: 'swal-confirm-btn-danger',
+                    cancelButton: 'swal-cancel-btn'
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
                     this.volverALista();
@@ -1254,14 +1308,16 @@ class EditarAreaController {
             showConfirmButton: false,
             timer: duracion,
             timerProgressBar: true,
-            didOpen: (toast) => {
-                toast.addEventListener('mouseenter', Swal.stopTimer);
-                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            customClass: {
+                popup: 'swal-dark'
             }
         });
         
+        let icono = tipo;
+        if (tipo === 'danger') icono = 'error';
+        
         Toast.fire({
-            icon: tipo === 'danger' ? 'error' : tipo,
+            icon: icono,
             title: mensaje
         });
     }

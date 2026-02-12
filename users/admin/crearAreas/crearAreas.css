@@ -700,3 +700,141 @@ h6 i {
         padding: 20px !important;
     }
 }
+/* =============================================
+   ESTILOS PARA SWEETALERT2 - TEMA OSCURO CENTINELA
+   ============================================= */
+
+/* Estilos generales para SweetAlert2 */
+.swal2-popup {
+    background: var(--color-bg-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-large) !important;
+    box-shadow: var(--shadow-large) !important;
+    font-family: var(--font-family-secondary) !important;
+}
+
+.swal2-title {
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+}
+
+.swal2-html-container {
+    color: var(--color-text-secondary) !important;
+    font-family: var(--font-family-secondary) !important;
+}
+
+/* Iconos de SweetAlert2 */
+.swal2-icon.swal2-success {
+    color: var(--color-success) !important;
+    border-color: var(--color-success) !important;
+}
+
+.swal2-icon.swal2-error {
+    color: var(--color-danger) !important;
+    border-color: var(--color-danger) !important;
+}
+
+.swal2-icon.swal2-warning {
+    color: var(--color-warning) !important;
+    border-color: var(--color-warning) !important;
+}
+
+.swal2-icon.swal2-info {
+    color: var(--color-info) !important;
+    border-color: var(--color-info) !important;
+}
+
+.swal2-icon.swal2-question {
+    color: var(--color-accent-secondary) !important;
+    border-color: var(--color-accent-secondary) !important;
+}
+
+/* Botones de SweetAlert2 */
+.swal2-confirm {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-secondary) !important;
+    color: var(--color-text-primary) !important;
+    padding: 12px 25px !important;
+    border-radius: var(--border-radius-medium) !important;
+    font-weight: 600 !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 14px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.3s ease !important;
+}
+
+.swal2-confirm:hover {
+    transform: translateY(-2px) !important;
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border-color: var(--color-accent-secondary) !important;
+    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
+}
+
+.swal2-cancel {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+    padding: 12px 25px !important;
+    border-radius: var(--border-radius-medium) !important;
+    font-weight: 600 !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 14px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.3s ease !important;
+}
+
+.swal2-cancel:hover {
+    transform: translateY(-2px) !important;
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border-color: var(--color-danger) !important;
+    color: var(--color-danger) !important;
+    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
+}
+
+/* =============================================
+   ESTILOS PARA TOASTS (CIERRE AUTOMÁTICO)
+   ============================================= */
+
+.swal2-toast {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-medium) !important;
+    box-shadow: var(--shadow-normal) !important;
+    padding: 15px 20px !important;
+}
+
+.swal2-toast .swal2-title {
+    font-family: var(--font-family-secondary) !important;
+    font-size: 14px !important;
+    color: var(--color-text-primary) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.swal2-toast .swal2-icon {
+    margin: 0 10px 0 0 !important;
+    border-width: 2px !important;
+}
+
+/* Barra de progreso del toast */
+.swal2-timer-progress-bar {
+    background: var(--color-accent-secondary) !important;
+    height: 3px !important;
+}
+
+/* Botón cerrar del toast */
+.swal2-close {
+    color: var(--color-text-secondary) !important;
+    font-size: 24px !important;
+    transition: all 0.3s ease !important;
+}
+
+.swal2-close:hover {
+    color: var(--color-text-primary) !important;
+    transform: rotate(90deg) !important;
+}

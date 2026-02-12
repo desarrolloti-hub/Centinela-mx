@@ -1,43 +1,4 @@
 /* =============================================
-   VARIABLES ESPECÍFICAS PARA EDITAR ÁREAS
-   ============================================= */
-:root {
-    /* COLORES PRINCIPALES */
-    --color-bg-primary: #000000;
-    --color-bg-secondary: #0a0a0a;
-    --color-bg-tertiary: #141414;
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #cccccc;
-    --color-accent-primary: #c0c0c0;
-    --color-accent-secondary: #2f8cff;
-    --color-border-light: #545454;
-    --color-hover: #1a1a1a;
-    
-    /* COLORES DE ESTADO */
-    --color-success: #00ff95;
-    --color-danger: #ff4d4d;
-    --color-warning: #ffcc00;
-    --color-info: #00cfff;
-    
-    /* SOMBRAS */
-    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
-    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
-    
-    /* BORDES */
-    --border-radius-small: 5px;
-    --border-radius-medium: 10px;
-    --border-radius-large: 15px;
-    
-    /* TRANSICIONES */
-    --transition-default: 0.3s ease;
-    
-    /* FUENTES */
-    --font-family-primary: 'Orbitron', sans-serif;
-    --font-family-secondary: 'Rajdhani', sans-serif;
-}
-
-/* =============================================
    ESTILOS GENERALES
    ============================================= */
 body {
@@ -247,14 +208,6 @@ h6 i {
     border-left: none !important;
 }
 
-/* Campos de solo lectura (auditoría) */
-.form-control.bg-dark {
-    background: var(--color-bg-primary) !important;
-    border-color: var(--color-border-light) !important;
-    color: var(--color-text-secondary) !important;
-    cursor: not-allowed !important;
-}
-
 /* =============================================
    ESTILOS PARA CARGOS
    ============================================= */
@@ -348,7 +301,7 @@ h6 i {
     margin-top: 20px;
 }
 
-#btnCancelar, #btnDesactivarArea, #btnGuardarCambios {
+#btnCancelar, #btnGuardarCambios {
     padding: 12px 30px !important;
     font-family: var(--font-family-secondary) !important;
     font-weight: 600 !important;
@@ -372,20 +325,6 @@ h6 i {
     transform: translateY(-2px) !important;
     border-color: var(--color-danger) !important;
     color: var(--color-danger) !important;
-}
-
-#btnDesactivarArea {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-danger) !important;
-    color: var(--color-danger) !important;
-}
-
-#btnDesactivarArea:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px) !important;
-    color: white !important;
-    border-color: #ff3333 !important;
-    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
 }
 
 #btnGuardarCambios {
@@ -420,12 +359,6 @@ h6 i {
     padding: 20px 25px !important;
 }
 
-.modal-header.bg-primary,
-.modal-header.bg-danger,
-.modal-header.bg-success {
-    background: rgba(20, 20, 20, 0.95) !important;
-}
-
 .modal-title {
     display: flex !important;
     align-items: center !important;
@@ -457,26 +390,6 @@ h6 i {
     padding: 20px 25px !important;
 }
 
-/* Modal de éxito específico */
-.modal-exito-icon {
-    font-size: 4rem;
-    color: var(--color-success);
-}
-
-.modal-exito-details {
-    background: var(--color-bg-tertiary);
-    border-radius: var(--border-radius-medium);
-    padding: 15px;
-    border: 1px solid var(--color-border-light);
-}
-
-.modal-exito-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 20px;
-}
-
 /* =============================================
    CONTADOR DE CARACTERES
    ============================================= */
@@ -502,14 +415,13 @@ h6 i {
 /* =============================================
    EFECTOS ESPECIALES
    ============================================= */
-/* Efecto de brillo en hover para botones */
-#btnVolverLista, #btnCancelar, #btnDesactivarArea, #btnGuardarCambios,
+#btnVolverLista, #btnCancelar, #btnGuardarCambios,
 #btnAgregarCargo, .modal-footer .btn {
     position: relative;
     overflow: hidden;
 }
 
-#btnVolverLista::after, #btnCancelar::after, #btnDesactivarArea::after,
+#btnVolverLista::after, #btnCancelar::after,
 #btnGuardarCambios::after, #btnAgregarCargo::after,
 .modal-footer .btn::after {
     content: '';
@@ -529,7 +441,7 @@ h6 i {
     opacity: 0;
 }
 
-#btnVolverLista:hover::after, #btnCancelar:hover::after, #btnDesactivarArea:hover::after,
+#btnVolverLista:hover::after, #btnCancelar:hover::after,
 #btnGuardarCambios:hover::after, #btnAgregarCargo:hover::after,
 .modal-footer .btn:hover::after {
     opacity: 1;
@@ -539,6 +451,25 @@ h6 i {
 /* =============================================
    ESTILOS PARA VALIDACIÓN
    ============================================= */
+/* =============================================
+   ESTILOS PARA VALIDACIÓN
+   ============================================= */
+/* =============================================
+   ESTILOS PARA VALIDACIÓN E ILUMINACIÓN
+   ============================================= */
+
+/* ILUMINACIÓN DEL CONTENEDOR MIENTRAS ESCRIBES (SIN COLOR BLANCO) */
+.form-control:focus,
+.form-select:focus,
+textarea.form-control:focus,
+input.form-control:focus {
+    border-color: var(--color-accent-secondary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
+    background: var(--color-bg-secondary) !important;
+    /* ELIMINADO: color y text-shadow */
+}
+
+/* Validaciones - CORREGIDO */
 .form-control:invalid:not(:focus):not(:placeholder-shown) {
     border-color: var(--color-danger) !important;
 }
@@ -546,7 +477,6 @@ h6 i {
 .form-control:valid:not(:focus):not(:placeholder-shown) {
     border-color: var(--color-success) !important;
 }
-
 /* =============================================
    ESTILOS PARA SELECT OPTIONS
    ============================================= */
@@ -588,7 +518,7 @@ select#organizacion option {
         padding: 20px !important;
     }
     
-    #btnCancelar, #btnDesactivarArea, #btnGuardarCambios {
+    #btnCancelar, #btnGuardarCambios {
         width: 100% !important;
         margin-bottom: 10px !important;
     }
@@ -652,13 +582,179 @@ select#organizacion option {
         min-width: auto !important;
     }
     
-    #btnCancelar, #btnDesactivarArea, #btnGuardarCambios {
+    #btnCancelar, #btnGuardarCambios {
         padding: 10px 15px !important;
         font-size: 13px !important;
         min-width: auto !important;
     }
-    
-    .modal-exito-buttons {
-        flex-direction: column !important;
-    }
+}
+
+/* =============================================
+   ESTILOS PARA QUE SE VEAN LAS LETRAS (AGREGADO)
+   ============================================= */
+
+/* Organización info - texto visible */
+.organizacion-info {
+    background: var(--color-bg-tertiary) !important;
+    border-left: 4px solid var(--color-accent-secondary) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.organizacion-info h6,
+.organizacion-info strong,
+.organizacion-info p,
+.organizacion-info span,
+.organizacion-info code {
+    color: var(--color-text-primary) !important;
+}
+
+.organizacion-info .text-muted {
+    color: var(--color-text-secondary) !important;
+}
+
+.organizacion-info code {
+    background: var(--color-bg-primary) !important;
+    padding: 2px 6px;
+    border-radius: var(--border-radius-small);
+}
+
+/* Mensaje de validación */
+.alert-info.mb-4 {
+    background: rgba(47, 140, 255, 0.1) !important;
+    border: 1px solid rgba(47, 140, 255, 0.3) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.alert-info.mb-4 i,
+.alert-info.mb-4 strong,
+.alert-info.mb-4 span {
+    color: var(--color-text-primary) !important;
+}
+
+/* Campos de solo lectura */
+.form-control[readonly],
+#fechaCreacion,
+#ultimaActualizacion,
+#creadoPor,
+#estadoActual {
+    background: var(--color-bg-tertiary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+    cursor: not-allowed !important;
+}
+
+#estadoActual {
+    color: var(--color-success) !important;
+}
+
+/* =============================================
+   ESTILOS PARA SWEETALERT2
+   ============================================= */
+.swal2-popup {
+    background: var(--color-bg-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-large) !important;
+    box-shadow: var(--shadow-large) !important;
+    font-family: var(--font-family-secondary) !important;
+}
+
+.swal2-title {
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+}
+
+.swal2-html-container {
+    color: var(--color-text-secondary) !important;
+}
+
+.swal2-confirm {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border-radius: var(--border-radius-medium) !important;
+    font-family: var(--font-family-primary) !important;
+}
+
+.swal2-cancel {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+    border-radius: var(--border-radius-medium) !important;
+    font-family: var(--font-family-primary) !important;
+}
+
+.swal2-toast {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-medium) !important;
+    box-shadow: var(--shadow-normal) !important;
+}
+
+.swal2-toast .swal2-title {
+    color: var(--color-text-primary) !important;
+}
+
+.swal2-timer-progress-bar {
+    background: var(--color-accent-secondary) !important;
+}
+/* =============================================
+   ESTILOS PARA CARGOS - SOLO LETRAS VISIBLES
+   ============================================= */
+
+/* Header de cada cargo */
+.cargo-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 15px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid var(--color-border-light) !important;
+}
+
+/* Título CARGO # */
+.cargo-titulo {
+    color: var(--color-accent-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 14px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin: 0 !important;
+}
+
+.cargo-titulo i {
+    color: var(--color-accent-secondary) !important;
+    margin-right: 8px !important;
+}
+
+/* Botón ELIMINAR */
+.btn-eliminar-cargo {
+    color: var(--color-danger) !important;
+    font-family: var(--font-family-secondary) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    background: transparent !important;
+    border: 1px solid var(--color-danger) !important;
+    padding: 6px 15px !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.btn-eliminar-cargo i {
+    color: var(--color-danger) !important;
+    font-size: 14px !important;
+}
+
+.btn-eliminar-cargo:hover {
+    background: rgba(255, 77, 77, 0.1) !important;
+    border-color: var(--color-danger) !important;
+    color: var(--color-danger) !important;
+    transform: translateY(-2px) !important;
+}
+
+.btn-eliminar-cargo:hover i {
+    color: var(--color-danger) !important;
 }
