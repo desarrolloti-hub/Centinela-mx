@@ -9,60 +9,84 @@ import {
     deleteDoc,
     doc,
     query,
-    where
+    where,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 /**
  * Clase Categoria - Representa una categoría con sus subcategorías
+ * VERSIÓN CORREGIDA - Usa objetos, NO Maps para Firestore
  */
 class Categoria {
     constructor(id, data) {
         this.id = id;
         this.nombre = data.nombre || '';
         this.descripcion = data.descripcion || '';
-        this.fechaCreacion = data.fechaCreacion || new Date().toISOString();
-        this.fechaActualizacion = data.fechaActualizacion || new Date().toISOString();
-        this.empresaId = data.empresaId || '';
-        this.empresaNombre = data.empresaNombre || '';
         this.color = data.color || '#2f8cff';
         this.estado = data.estado || 'activa';
-        this.subcategorias = new Map();
+        this.empresaId = data.empresaId || '';
+        this.empresaNombre = data.empresaNombre || '';
         
-        // Cargar subcategorías si existen
-        if (data.subcategorias && Array.isArray(data.subcategorias)) {
-            data.subcategorias.forEach(subcat => {
-                if (subcat && subcat.id) {
-                    const subcatMap = new Map();
-                    subcatMap.set('id', subcat.id);
-                    subcatMap.set('nombre', subcat.nombre || '');
-                    subcatMap.set('descripcion', subcat.descripcion || '');
-                    subcatMap.set('fechaCreacion', subcat.fechaCreacion || new Date().toISOString());
-                    subcatMap.set('fechaActualizacion', subcat.fechaActualizacion || new Date().toISOString());
-                    subcatMap.set('color', subcat.color || null);
-                    subcatMap.set('heredaColor', subcat.heredaColor !== undefined ? subcat.heredaColor : true);
-                    this.subcategorias.set(subcat.id, subcatMap);
-                }
-            });
+        // Fechas
+        this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
+        this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
+        
+        // SUBCATEGORÍAS: Siempre como objeto, NUNCA como Map
+        this.subcategorias = {};
+        
+        if (data.subcategorias) {
+            if (typeof data.subcategorias === 'object') {
+                // Copiar manteniendo la estructura exacta
+                this.subcategorias = JSON.parse(JSON.stringify(data.subcategorias));
+            }
         }
     }
 
+    // ========== MÉTODOS DE UTILIDAD ==========
+    
+    _convertirFecha(fecha) {
+        if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
+        if (fecha instanceof Date) return fecha;
+        if (typeof fecha === 'string' || typeof fecha === 'number') return new Date(fecha);
+        return new Date();
+    }
+    
+    _formatearFecha(date) {
+        if (!date) return 'No disponible';
+        try {
+            const fecha = this._convertirFecha(date);
+            return fecha.toLocaleDateString('es-ES', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        } catch (e) {
+            return 'Fecha inválida';
+        }
+    }
+
+    // ========== GESTIÓN DE SUBCATEGORÍAS ==========
+    
     /**
      * Agrega una nueva subcategoría
      */
     agregarSubcategoria(nombre, descripcion = '') {
         try {
+            if (!nombre || nombre.trim() === '') {
+                throw new Error('El nombre de la subcategoría es requerido');
+            }
+            
             const subcatId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             
-            const subcatMap = new Map();
-            subcatMap.set('id', subcatId);
-            subcatMap.set('nombre', nombre || '');
-            subcatMap.set('descripcion', descripcion || '');
-            subcatMap.set('fechaCreacion', new Date().toISOString());
-            subcatMap.set('fechaActualizacion', new Date().toISOString());
-            subcatMap.set('heredaColor', true);
-            subcatMap.set('color', null);
+            this.subcategorias[subcatId] = {
+                id: subcatId,
+                nombre: nombre.trim(),
+                descripcion: descripcion.trim() || '',
+                fechaCreacion: new Date().toISOString(),
+                fechaActualizacion: new Date().toISOString(),
+                heredaColor: true,
+                color: null
+            };
             
-            this.subcategorias.set(subcatId, subcatMap);
             return subcatId;
             
         } catch (error) {
@@ -76,7 +100,11 @@ class Categoria {
      */
     eliminarSubcategoria(subcatId) {
         try {
-            return this.subcategorias.delete(subcatId);
+            if (this.subcategorias[subcatId]) {
+                delete this.subcategorias[subcatId];
+                return true;
+            }
+            return false;
         } catch (error) {
             console.error("Error eliminando subcategoría:", error);
             return false;
@@ -87,7 +115,7 @@ class Categoria {
      * Obtiene una subcategoría por su ID
      */
     obtenerSubcategoria(subcatId) {
-        return this.subcategorias.get(subcatId) || null;
+        return this.subcategorias[subcatId] || null;
     }
 
     /**
@@ -95,17 +123,16 @@ class Categoria {
      */
     actualizarSubcategoria(subcatId, nuevosDatos) {
         try {
-            const subcategoria = this.obtenerSubcategoria(subcatId);
-            
-            if (!subcategoria) {
+            if (!this.subcategorias[subcatId]) {
                 return false;
             }
             
-            Object.keys(nuevosDatos).forEach(key => {
-                subcategoria.set(key, nuevosDatos[key]);
-            });
+            this.subcategorias[subcatId] = {
+                ...this.subcategorias[subcatId],
+                ...nuevosDatos,
+                fechaActualizacion: new Date().toISOString()
+            };
             
-            subcategoria.set('fechaActualizacion', new Date().toISOString());
             return true;
             
         } catch (error) {
@@ -120,9 +147,9 @@ class Categoria {
     existeSubcategoria(nombreSubcategoria) {
         const nombre = nombreSubcategoria.toLowerCase().trim();
         
-        for (const subcat of this.subcategorias.values()) {
-            const subcatNombre = subcat.get('nombre') || '';
-            if (subcatNombre.toLowerCase().trim() === nombre) {
+        for (const subcatId in this.subcategorias) {
+            const subcat = this.subcategorias[subcatId];
+            if (subcat.nombre && subcat.nombre.toLowerCase().trim() === nombre) {
                 return true;
             }
         }
@@ -130,8 +157,28 @@ class Categoria {
     }
 
     /**
-     * Valida la categoría
+     * Obtiene todas las subcategorías como array
      */
+    getSubcategoriasAsArray() {
+        const subcategoriasArray = [];
+        for (const subcatId in this.subcategorias) {
+            subcategoriasArray.push({
+                id: subcatId,
+                ...this.subcategorias[subcatId]
+            });
+        }
+        return subcategoriasArray;
+    }
+
+    /**
+     * Obtiene cantidad de subcategorías
+     */
+    getCantidadSubcategorias() {
+        return Object.keys(this.subcategorias).length;
+    }
+
+    // ========== VALIDACIÓN ==========
+    
     validar() {
         const errores = [];
         
@@ -149,258 +196,378 @@ class Categoria {
         };
     }
 
+    // ========== Getters ==========
+    
+    getFechaCreacionFormateada() {
+        return this._formatearFecha(this.fechaCreacion);
+    }
+    
+    getFechaActualizacionFormateada() {
+        return this._formatearFecha(this.fechaActualizacion);
+    }
+
+    // ========== FIRESTORE ==========
+    
     /**
      * Convierte la categoría a formato Firestore
      */
     toFirestore() {
-        const subcategoriasArray = [];
-        
-        for (const subcat of this.subcategorias.values()) {
-            const subcatObj = {};
-            for (const [key, value] of subcat.entries()) {
-                subcatObj[key] = value;
-            }
-            subcategoriasArray.push(subcatObj);
-        }
-        
         return {
             nombre: this.nombre,
             descripcion: this.descripcion,
             color: this.color,
             estado: this.estado,
-            subcategorias: subcategoriasArray,
             empresaId: this.empresaId,
             empresaNombre: this.empresaNombre,
+            subcategorias: this.subcategorias || {},
             fechaCreacion: this.fechaCreacion,
             fechaActualizacion: new Date().toISOString()
         };
     }
 
     /**
-     * Obtiene un resumen de la categoría
+     * Para enviar a Firestore con serverTimestamp
      */
-    obtenerResumen() {
+    toFirestoreCreate() {
+        return {
+            nombre: this.nombre,
+            descripcion: this.descripcion,
+            color: this.color,
+            estado: this.estado,
+            empresaId: this.empresaId,
+            empresaNombre: this.empresaNombre,
+            subcategorias: this.subcategorias || {},
+            fechaCreacion: serverTimestamp(),
+            fechaActualizacion: serverTimestamp()
+        };
+    }
+
+    /**
+     * Obtiene un resumen de la categoría para UI
+     */
+    toUI() {
         return {
             id: this.id,
             nombre: this.nombre,
             descripcion: this.descripcion,
             color: this.color,
             estado: this.estado,
-            totalSubcategorias: this.subcategorias.size,
-            fechaCreacion: this.fechaCreacion,
-            fechaActualizacion: this.fechaActualizacion,
+            totalSubcategorias: this.getCantidadSubcategorias(),
+            subcategorias: this.getSubcategoriasAsArray(),
             empresaId: this.empresaId,
-            empresaNombre: this.empresaNombre
+            empresaNombre: this.empresaNombre,
+            fechaCreacion: this.getFechaCreacionFormateada(),
+            fechaActualizacion: this.getFechaActualizacionFormateada()
         };
     }
 }
 
 /**
  * Clase CategoriaManager - Gestiona las operaciones con categorías en Firestore
+ * VERSIÓN CORREGIDA - Colecciones dinámicas como en áreas
  */
 class CategoriaManager {
-    constructor(empresaNombre = null, empresaId = null) {
-        this.categorias = new Map();
+    constructor() {
+        this.categorias = [];
+        this.empresaNombre = null;
+        this.empresaId = null;
+        this.nombreColeccion = null;
         
-        // Obtener datos de empresa
-        const datosEmpresa = this.obtenerDatosEmpresa();
+        // Intentar cargar datos de empresa al instanciar
+        this._cargarDatosEmpresa();
         
-        // Priorizar parámetros sobre localStorage
-        this.empresaNombre = empresaNombre || datosEmpresa.nombre;
-        this.empresaId = empresaId || datosEmpresa.id;
-        
-        // Generar nombre de colección
-        this.nombreColeccion = this.generarNombreColeccion();
-        this.coleccionRef = this.nombreColeccion ? collection(db, this.nombreColeccion) : null;
-        
-        console.log('🏢 CategoriaManager inicializado:', {
-            empresaNombre: this.empresaNombre,
-            empresaId: this.empresaId,
-            coleccion: this.nombreColeccion
-        });
+        console.log('✅ CategoriaManager inicializado');
     }
 
-    /**
-     * Obtiene datos de la empresa desde localStorage
-     */
-    obtenerDatosEmpresa() {
+    // ========== MÉTODOS PRIVADOS ==========
+    
+    _cargarDatosEmpresa() {
         try {
-            // Intentar obtener de userData (formato principal)
-            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-            
-            // Obtener organización de múltiples fuentes
-            let organizacion = userData.organizacion || 
-                              localStorage.getItem('userOrganizacion') || 
-                              'default';
-            
-            let organizacionCamelCase = userData.organizacionCamelCase || 
-                                       localStorage.getItem('userOrganizacionCamelCase') || 
-                                       this.generarCamelCase(organizacion);
-            
-            // Si no hay organización, intentar obtener de otros campos
-            if (organizacion === 'default' && userData.empresa) {
-                organizacion = userData.empresa;
-                organizacionCamelCase = this.generarCamelCase(organizacion);
+            // Intentar obtener de adminInfo (para administradores)
+            const adminInfo = localStorage.getItem('adminInfo');
+            if (adminInfo) {
+                const adminData = JSON.parse(adminInfo);
+                this.empresaNombre = adminData.organizacion || 'Sin organización';
+                this.empresaId = adminData.organizacionCamelCase || this._generarCamelCase(this.empresaNombre);
+                return;
             }
             
-            return {
-                nombre: organizacion,
-                id: organizacionCamelCase
-            };
+            // Intentar obtener de userData
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            this.empresaNombre = userData.organizacion || userData.empresa || 'Sin organización';
+            this.empresaId = userData.organizacionCamelCase || this._generarCamelCase(this.empresaNombre);
+            
         } catch (error) {
-            console.error('Error obteniendo datos de empresa:', error);
-            return { nombre: 'default', id: 'default' };
+            console.error('Error cargando datos de empresa:', error);
+            this.empresaNombre = 'Sin organización';
+            this.empresaId = 'sinOrganizacion';
         }
+        
+        // Generar nombre de colección
+        this.nombreColeccion = this._getCollectionName();
     }
-
-    /**
-     * Genera camelCase a partir de un texto
-     */
-    generarCamelCase(texto) {
-        if (!texto || typeof texto !== 'string') return 'default';
+    
+    _generarCamelCase(texto) {
+        if (!texto || typeof texto !== 'string') return 'sinOrganizacion';
         return texto
             .toLowerCase()
-            .split(' ')
-            .map((palabra, index) => {
-                if (index === 0) return palabra;
-                return palabra.charAt(0).toUpperCase() + palabra.slice(1);
-            })
-            .join('')
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
             .replace(/[^a-zA-Z0-9]/g, '');
     }
 
     /**
-     * Genera nombre de colección para Firestore
+     * Genera nombre de colección dinámico (IGUAL QUE ÁREAS)
      */
-    generarNombreColeccion() {
-        if (!this.empresaNombre || this.empresaNombre === 'default') {
-            return 'categorias_default';
-        }
-        
-        const camelCase = this.empresaId || this.generarCamelCase(this.empresaNombre);
-        return `categorias_${camelCase}`;
+    _getCollectionName(empresaIdOverride = null) {
+        const orgId = empresaIdOverride || this.empresaId || 'sinOrganizacion';
+        return `categorias_${orgId}`;
     }
 
     /**
-     * Crea una nueva categoría
+     * Genera ID único para categoría
+     */
+    _generarCategoriaId(nombre, empresaId) {
+        const nombreNormalizado = nombre
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '_')
+            .substring(0, 30);
+        
+        const timestamp = Date.now();
+        const random = Math.floor(Math.random() * 10000);
+        const org = empresaId || this.empresaId || 'sinOrganizacion';
+        
+        return `${org}_cat_${nombreNormalizado}_${timestamp}_${random}`;
+    }
+
+    // ========== MÉTODOS CRUD ==========
+    
+    /**
+     * Crea una nueva categoría (IGUAL QUE ÁREAS)
      */
     async crearCategoria(data) {
         try {
-            if (!this.coleccionRef) {
-                throw new Error('No se pudo determinar la colección. Verifica que hay una sesión activa.');
-            }
-
+            // Validar datos mínimos
             if (!data.nombre || data.nombre.trim() === '') {
                 throw new Error('El nombre de la categoría es requerido');
             }
             
-            // Verificar si ya existe una categoría con ese nombre
-            const q = query(this.coleccionRef, 
-                          where('nombre', '==', data.nombre.trim()));
-            const querySnapshot = await getDocs(q);
-            
-            if (!querySnapshot.empty) {
-                throw new Error(`Ya existe una categoría con el nombre "${data.nombre}" en tu empresa`);
+            // Asegurar que tenemos datos de empresa
+            if (!this.empresaId) {
+                this._cargarDatosEmpresa();
             }
             
-            const docRef = doc(this.coleccionRef);
-            const id = docRef.id;
+            const empresaId = this.empresaId;
+            const empresaNombre = this.empresaNombre;
+            const collectionName = this._getCollectionName();
             
-            const nuevaCategoria = new Categoria(id, {
-                ...data,
-                empresaId: this.empresaId,
-                empresaNombre: this.empresaNombre,
-                fechaCreacion: new Date().toISOString(),
+            console.log(`📝 Creando categoría en colección: ${collectionName}`);
+            
+            // Verificar si ya existe
+            const existe = await this.verificarCategoriaExistente(data.nombre.trim(), empresaId);
+            if (existe) {
+                throw new Error(`Ya existe una categoría con el nombre "${data.nombre}"`);
+            }
+            
+            // Generar ID único
+            const categoriaId = this._generarCategoriaId(data.nombre, empresaId);
+            
+            // Procesar subcategorías si vienen en el data
+            let subcategorias = {};
+            if (data.subcategorias) {
+                if (Array.isArray(data.subcategorias)) {
+                    data.subcategorias.forEach(subcat => {
+                        const subcatId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+                        subcategorias[subcatId] = {
+                            id: subcatId,
+                            nombre: subcat.nombre || '',
+                            descripcion: subcat.descripcion || '',
+                            fechaCreacion: new Date().toISOString(),
+                            fechaActualizacion: new Date().toISOString(),
+                            heredaColor: true,
+                            color: null
+                        };
+                    });
+                } else if (typeof data.subcategorias === 'object') {
+                    subcategorias = JSON.parse(JSON.stringify(data.subcategorias));
+                }
+            }
+            
+            // Datos para Firestore
+            const categoriaFirestoreData = {
+                nombre: data.nombre.trim(),
+                descripcion: data.descripcion?.trim() || '',
                 color: data.color || '#2f8cff',
-                estado: data.estado || 'activa'
+                estado: data.estado || 'activa',
+                empresaId: empresaId,
+                empresaNombre: empresaNombre,
+                subcategorias: subcategorias,
+                fechaCreacion: serverTimestamp(),
+                fechaActualizacion: serverTimestamp()
+            };
+            
+            console.log('📤 Guardando en Firestore:', {
+                coleccion: collectionName,
+                id: categoriaId,
+                nombre: data.nombre
             });
             
-            const validacion = nuevaCategoria.validar();
-            if (!validacion.isValid) {
-                throw new Error(validacion.errores.join(', '));
-            }
+            // Guardar en Firestore
+            const categoriaRef = doc(db, collectionName, categoriaId);
+            await setDoc(categoriaRef, categoriaFirestoreData);
             
-            await setDoc(docRef, nuevaCategoria.toFirestore());
-            this.categorias.set(id, nuevaCategoria);
+            // Crear instancia para retornar
+            const nuevaCategoria = new Categoria(categoriaId, {
+                ...categoriaFirestoreData,
+                fechaCreacion: new Date(),
+                fechaActualizacion: new Date()
+            });
+            
+            // Agregar a memoria
+            this.categorias.unshift(nuevaCategoria);
+            
+            console.log(`✅ Categoría creada exitosamente en ${collectionName}/${categoriaId}`);
             return nuevaCategoria;
             
         } catch (error) {
-            console.error("Error creando categoría:", error);
+            console.error('❌ Error creando categoría:', error);
             throw error;
         }
     }
 
     /**
-     * Obtiene una categoría por su ID
+     * Obtiene todas las categorías de una empresa
      */
-    async obtenerCategoria(id) {
+    async obtenerCategoriasPorEmpresa(empresaIdOverride = null) {
         try {
-            if (!this.coleccionRef) {
-                throw new Error('No se pudo determinar la colección');
-            }
-
-            if (this.categorias.has(id)) {
-                return this.categorias.get(id);
-            }
+            const orgId = empresaIdOverride || this.empresaId;
             
-            const docRef = doc(db, this.nombreColeccion, id);
-            const docSnap = await getDoc(docRef);
-            
-            if (!docSnap.exists()) {
-                return null;
+            if (!orgId) {
+                console.warn('⚠️ No se proporcionó ID de empresa');
+                return [];
             }
             
-            const categoria = new Categoria(id, docSnap.data());
-            this.categorias.set(id, categoria);
-            return categoria;
+            const collectionName = this._getCollectionName(orgId);
+            console.log(`🔍 Obteniendo categorías de: ${collectionName}`);
+            
+            const categoriasCollection = collection(db, collectionName);
+            const categoriasSnapshot = await getDocs(categoriasCollection);
+            const categorias = [];
+            
+            categoriasSnapshot.forEach(doc => {
+                try {
+                    const data = doc.data();
+                    const categoria = new Categoria(doc.id, { ...data, id: doc.id });
+                    categorias.push(categoria);
+                } catch (error) {
+                    console.error(`❌ Error procesando categoría ${doc.id}:`, error);
+                }
+            });
+            
+            // Ordenar por fecha (más recientes primero)
+            categorias.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
+            this.categorias = categorias;
+            
+            console.log(`✅ Encontradas ${categorias.length} categorías en ${collectionName}`);
+            return categorias;
             
         } catch (error) {
-            console.error("Error obteniendo categoría:", error);
-            throw error;
+            console.error('❌ Error obteniendo categorías:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Obtiene una categoría por ID
+     */
+    async obtenerCategoriaPorId(categoriaId, empresaIdOverride = null) {
+        const orgId = empresaIdOverride || this.empresaId;
+        
+        if (!orgId) {
+            console.error('❌ Se requiere ID de empresa');
+            return null;
+        }
+        
+        // Buscar en memoria primero
+        const categoriaInMemory = this.categorias.find(cat => cat.id === categoriaId);
+        if (categoriaInMemory) return categoriaInMemory;
+        
+        try {
+            const collectionName = this._getCollectionName(orgId);
+            const categoriaRef = doc(db, collectionName, categoriaId);
+            const categoriaSnap = await getDoc(categoriaRef);
+            
+            if (categoriaSnap.exists()) {
+                const data = categoriaSnap.data();
+                const categoria = new Categoria(categoriaId, { ...data, id: categoriaId });
+                this.categorias.push(categoria);
+                return categoria;
+            }
+            
+            return null;
+            
+        } catch (error) {
+            console.error('❌ Error obteniendo categoría:', error);
+            return null;
         }
     }
 
     /**
      * Actualiza una categoría existente
      */
-    async actualizarCategoria(id, nuevosDatos) {
+    async actualizarCategoria(categoriaId, nuevosDatos, empresaIdOverride = null) {
         try {
-            if (!this.coleccionRef) {
-                throw new Error('No se pudo determinar la colección');
-            }
-
-            const categoria = await this.obtenerCategoria(id);
+            const orgId = empresaIdOverride || this.empresaId;
             
-            if (!categoria) {
-                throw new Error(`Categoría ${id} no encontrada`);
+            if (!orgId) {
+                throw new Error('Se requiere ID de empresa');
             }
             
-            // Verificar si el nombre ya existe en otra categoría
-            if (nuevosDatos.nombre && nuevosDatos.nombre !== categoria.nombre) {
-                const q = query(this.coleccionRef, 
-                              where('nombre', '==', nuevosDatos.nombre.trim()));
-                const querySnapshot = await getDocs(q);
-                
-                const exists = querySnapshot.docs.some(doc => doc.id !== id);
-                if (exists) {
-                    throw new Error(`Ya existe una categoría con el nombre "${nuevosDatos.nombre}" en tu empresa`);
+            const collectionName = this._getCollectionName(orgId);
+            const categoriaRef = doc(db, collectionName, categoriaId);
+            const categoriaSnap = await getDoc(categoriaRef);
+            
+            if (!categoriaSnap.exists()) {
+                throw new Error(`Categoría con ID ${categoriaId} no encontrada`);
+            }
+            
+            // Si se está cambiando el nombre, verificar que no exista otra
+            if (nuevosDatos.nombre && nuevosDatos.nombre !== categoriaSnap.data().nombre) {
+                const existe = await this.verificarCategoriaExistente(nuevosDatos.nombre, orgId, categoriaId);
+                if (existe) {
+                    throw new Error(`Ya existe otra categoría con el nombre "${nuevosDatos.nombre}"`);
                 }
-                categoria.nombre = nuevosDatos.nombre;
             }
             
-            // Actualizar otros campos
-            if (nuevosDatos.descripcion !== undefined) categoria.descripcion = nuevosDatos.descripcion;
-            if (nuevosDatos.color !== undefined) categoria.color = nuevosDatos.color;
-            if (nuevosDatos.estado !== undefined) categoria.estado = nuevosDatos.estado;
+            // Datos actualizados
+            const datosActualizados = {
+                ...nuevosDatos,
+                fechaActualizacion: serverTimestamp()
+            };
             
-            // Guardar en Firestore
-            const docRef = doc(db, this.nombreColeccion, id);
-            await updateDoc(docRef, categoria.toFirestore());
+            // Actualizar en Firestore
+            await updateDoc(categoriaRef, datosActualizados);
             
-            return true;
+            // Actualizar en memoria
+            const categoriaIndex = this.categorias.findIndex(c => c.id === categoriaId);
+            if (categoriaIndex !== -1) {
+                const categoriaActual = this.categorias[categoriaIndex];
+                Object.keys(datosActualizados).forEach(key => {
+                    if (key !== 'id') {
+                        categoriaActual[key] = datosActualizados[key];
+                    }
+                });
+                categoriaActual.fechaActualizacion = new Date();
+            }
+            
+            console.log(`✅ Categoría actualizada en ${collectionName}/${categoriaId}`);
+            return await this.obtenerCategoriaPorId(categoriaId, orgId);
             
         } catch (error) {
-            console.error("Error actualizando categoría:", error);
+            console.error('❌ Error actualizando categoría:', error);
             throw error;
         }
     }
@@ -408,81 +575,145 @@ class CategoriaManager {
     /**
      * Elimina una categoría (solo si no tiene subcategorías)
      */
-    async eliminarCategoria(id) {
+    async eliminarCategoria(categoriaId, empresaIdOverride = null) {
         try {
-            if (!this.coleccionRef) {
-                throw new Error('No se pudo determinar la colección');
+            const orgId = empresaIdOverride || this.empresaId;
+            
+            if (!orgId) {
+                throw new Error('Se requiere ID de empresa');
             }
-
-            const categoria = await this.obtenerCategoria(id);
+            
+            // Verificar que existe y no tiene subcategorías
+            const categoria = await this.obtenerCategoriaPorId(categoriaId, orgId);
             
             if (!categoria) {
-                throw new Error(`Categoría ${id} no encontrada`);
+                throw new Error(`Categoría ${categoriaId} no encontrada`);
             }
             
-            if (categoria.subcategorias.size > 0) {
+            if (categoria.getCantidadSubcategorias() > 0) {
                 throw new Error('No se puede eliminar una categoría con subcategorías');
             }
             
-            const docRef = doc(db, this.nombreColeccion, id);
-            await deleteDoc(docRef);
+            const collectionName = this._getCollectionName(orgId);
+            const categoriaRef = doc(db, collectionName, categoriaId);
             
-            this.categorias.delete(id);
+            // Eliminar de Firestore
+            await deleteDoc(categoriaRef);
+            
+            // Eliminar de memoria
+            const categoriaIndex = this.categorias.findIndex(c => c.id === categoriaId);
+            if (categoriaIndex !== -1) {
+                this.categorias.splice(categoriaIndex, 1);
+            }
+            
+            console.log(`✅ Categoría eliminada permanentemente de ${collectionName}:`, categoriaId);
             return true;
             
         } catch (error) {
-            console.error("Error eliminando categoría:", error);
+            console.error('❌ Error eliminando categoría:', error);
             throw error;
         }
     }
 
     /**
-     * Carga todas las categorías desde Firestore
+     * Verifica si ya existe una categoría con el mismo nombre
      */
-    async cargarTodasCategorias() {
+    async verificarCategoriaExistente(nombre, empresaId, excludeId = null) {
         try {
-            if (!this.coleccionRef) {
-                console.warn('No se pudo determinar la colección');
-                return [];
+            if (!empresaId) {
+                empresaId = this.empresaId;
             }
-
-            const querySnapshot = await getDocs(this.coleccionRef);
-            this.categorias.clear();
             
-            const categoriasArray = [];
-            querySnapshot.forEach((docSnap) => {
-                const categoria = new Categoria(docSnap.id, docSnap.data());
-                this.categorias.set(docSnap.id, categoria);
-                categoriasArray.push(categoria);
+            const collectionName = this._getCollectionName(empresaId);
+            const categoriasCollection = collection(db, collectionName);
+            
+            const q = query(
+                categoriasCollection,
+                where("nombre", "==", nombre)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            if (excludeId) {
+                return querySnapshot.docs.some(doc => doc.id !== excludeId);
+            }
+            
+            return !querySnapshot.empty;
+            
+        } catch (error) {
+            console.error("❌ Error verificando categoría:", error);
+            return false;
+        }
+    }
+
+    /**
+     * Agrega una subcategoría a una categoría existente
+     */
+    async agregarSubcategoria(categoriaId, nombreSubcategoria, descripcion = '', empresaIdOverride = null) {
+        try {
+            const orgId = empresaIdOverride || this.empresaId;
+            
+            if (!orgId) {
+                throw new Error('Se requiere ID de empresa');
+            }
+            
+            const categoria = await this.obtenerCategoriaPorId(categoriaId, orgId);
+            
+            if (!categoria) {
+                throw new Error('Categoría no encontrada');
+            }
+            
+            // Verificar si ya existe subcategoría con ese nombre
+            if (categoria.existeSubcategoria(nombreSubcategoria)) {
+                throw new Error(`Ya existe una subcategoría con el nombre "${nombreSubcategoria}"`);
+            }
+            
+            // Agregar subcategoría al objeto
+            const subcatId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+            
+            categoria.subcategorias[subcatId] = {
+                id: subcatId,
+                nombre: nombreSubcategoria.trim(),
+                descripcion: descripcion.trim() || '',
+                fechaCreacion: new Date().toISOString(),
+                fechaActualizacion: new Date().toISOString(),
+                heredaColor: true,
+                color: null
+            };
+            
+            // Actualizar en Firestore
+            const collectionName = this._getCollectionName(orgId);
+            const categoriaRef = doc(db, collectionName, categoriaId);
+            
+            await updateDoc(categoriaRef, {
+                subcategorias: categoria.subcategorias,
+                fechaActualizacion: serverTimestamp()
             });
             
-            return categoriasArray;
+            console.log(`✅ Subcategoría "${nombreSubcategoria}" agregada a ${categoria.nombre}`);
+            return subcatId;
+            
         } catch (error) {
-            console.error("Error cargando categorías:", error);
+            console.error('❌ Error agregando subcategoría:', error);
             throw error;
         }
+    }
+
+    /**
+     * Carga todas las categorías (alias para mantener compatibilidad)
+     */
+    async cargarTodasCategorias() {
+        return await this.obtenerCategoriasPorEmpresa();
     }
 
     /**
      * Obtiene todas las categorías (desde caché o Firestore)
      */
     async obtenerTodasCategorias() {
-        if (!this.coleccionRef) {
-            console.warn('No se pudo determinar la colección');
-            return [];
-        }
-        
-        if (this.categorias.size === 0) {
+        if (this.categorias.length === 0) {
             return await this.cargarTodasCategorias();
         }
-        return Array.from(this.categorias.values());
-    }
-
-    /**
-     * Obtiene una categoría por ID (alias para mantener compatibilidad)
-     */
-    async obtenerCategoriaPorId(id) {
-        return await this.obtenerCategoria(id);
+        return this.categorias;
     }
 }
 

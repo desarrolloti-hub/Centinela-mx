@@ -533,3 +533,139 @@ textarea.form-control {
 .crear-categoria-container {
     animation: fadeInUp 0.5s ease;
 }
+
+/* =============================================
+   ESTILOS PARA SUBCATEGORÍAS - AGREGAR
+   ============================================= */
+
+.subcategorias-container {
+    background: rgba(20, 20, 20, 0.5);
+    border-radius: var(--border-radius-medium);
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--color-border-light);
+}
+
+.subcategoria-item {
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-light);
+    border-left-width: 4px !important;
+    border-radius: var(--border-radius-small);
+    padding: 15px;
+    margin-bottom: 15px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.subcategoria-item:hover {
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 15px rgba(192, 192, 192, 0.1);
+}
+
+.subcategoria-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.subcategoria-titulo {
+    color: var(--color-accent-primary);
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-badge {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.btn-eliminar-subcategoria {
+    background: rgba(255, 77, 77, 0.1) !important;
+    border: 1px solid var(--color-danger) !important;
+    color: var(--color-danger) !important;
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    border-radius: var(--border-radius-small) !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-eliminar-subcategoria:hover {
+    background: var(--color-danger) !important;
+    color: white !important;
+    transform: translateY(-2px);
+}
+
+.btn-agregar-subcategoria {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-secondary) !important;
+    color: var(--color-accent-secondary) !important;
+    padding: 10px 20px !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.btn-agregar-subcategoria:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(47, 140, 255, 0.2);
+}
+
+.subcategoria-color-info {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.subcategoria-color-info i {
+    color: var(--color-accent-primary);
+}
+
+.subcategorias-empty {
+    text-align: center;
+    padding: 30px;
+    color: var(--color-text-secondary);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-medium);
+    border: 1px dashed var(--color-border-light);
+}
+
+.subcategorias-empty i {
+    font-size: 24px;
+    color: var(--color-accent-primary);
+    margin-bottom: 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .subcategoria-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .btn-eliminar-subcategoria {
+        width: 100%;
+    }
+}
