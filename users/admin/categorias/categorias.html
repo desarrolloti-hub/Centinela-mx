@@ -1,134 +1,113 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRUD Categorías - Sistema Centinela</title>
-    
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- Fuentes del sistema Centinela -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
+
     <!-- ESTILOS DEL NAVBAR Y FOOTER (personalization.css) -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
-    <!-- TUS ESTILOS - VAN DESPUÉS PARA SOBREESCRIBIR -->
+
+    <!-- TUS ESTILOS - SIN BOOTSTRAP -->
     <link rel="stylesheet" href="categorias.css">
-    
+
     <!-- Favicon -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
 </head>
+
 <body>
     <canvas id="particle-canvas"></canvas>
+
     <!-- Contenedor principal con estilo oscuro -->
-    <div class="container-fluid py-4">
+    <div class="container-fluid">
         <!-- Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="h3"><i class="fas fa-tags me-2"></i>Gestión de Categorías</h1>
-                        <p class="text-muted">Administra las categorías de tu organización</p>
-                    </div>
-                    <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn btn-primary btn-lg">
-                        <i class="fas fa-plus me-2"></i>Nueva Categoría
-                    </a>
+        <div class="header-container">
+            <div class="header-title">
+                <h1><i class="fas fa-tags"></i>Gestión de Categorías</h1>
+                <p>Administra las categorías de tu organización</p>
+            </div>
+            <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria">
+                <i class="fas fa-plus"></i>Nueva Categoría
+            </a>
+        </div>
+
+        <!-- Tabla de Categorías -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list"></i>Lista de Categorías</h5>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="toggleEliminadas">
+                    <label class="form-check-label" for="toggleEliminadas">Mostrar eliminadas</label>
                 </div>
             </div>
-        </div>
-        
-        <!-- Tabla de Categorías -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Categorías</h5>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="toggleEliminadas">
-                            <label class="form-check-label" for="toggleEliminadas">Mostrar eliminadas</label>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover" id="tablaCategorias">
-                                <thead>
-                                    <tr>
-                                        <th width="30"><i class="fas fa-chevron-down"></i></th>
-                                        <th>Nombre</th>
-                                        <th>Color</th>
-                                        <th>Subcategorías</th>
-                                        <th width="200">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tablaCategoriasBody">
-                                    <!-- Se llenará dinámicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <!-- Paginación -->
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div id="paginationInfo" class="text-muted"></div>
-                            <nav>
-                                <ul class="pagination" id="pagination">
-                                    <!-- Se llenará dinámicamente -->
-                                </ul>
-                            </nav>
-                        </div>
-                    </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="tablaCategorias">
+                        <thead>
+                            <tr>
+                                <th width="30"><i class="fas fa-chevron-down"></i></th>
+                                <th>Nombre</th>
+                                <th>Color</th>
+                                <th>Subcategorías</th>
+                                <th width="180">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaCategoriasBody">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                <div class="pagination-container">
+                    <div class="pagination-info" id="paginationInfo"></div>
+                    <nav>
+                        <ul class="pagination" id="pagination">
+                            <!-- Se llenará dinámicamente -->
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Modal para Ver Detalles -->
-    <div class="modal fade" id="modalDetalles" tabindex="-1" aria-hidden="true">
+    <div class="modal" id="modalDetalles">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles de la Categoría</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title"><i class="fas fa-info-circle"></i>Detalles de la Categoría</h5>
+                    <button type="button" class="btn-close" onclick="cerrarModal('modalDetalles')">&times;</button>
                 </div>
                 <div class="modal-body" id="detallesContent">
                     <!-- Se llenará dinámicamente -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para Confirmar Eliminación -->
-    <div class="modal fade" id="modalConfirmar" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirmar Acción</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p id="confirmarMensaje">¿Está seguro de realizar esta acción?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="btnConfirmarAccion">Confirmar</button>
+                    <button type="button" class="btn btn-secondary"
+                        onclick="cerrarModal('modalDetalles')">Cerrar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="/components/themeloader.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
     <script type="module" src="categorias.js"></script>
 </body>
+
 </html>
