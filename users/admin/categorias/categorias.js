@@ -1,6 +1,6 @@
 /**
  * CATEGORÍAS - Sistema Centinela
- * VERSIÓN FINAL - CON SWEETALERT2 Y ELIMINACIÓN CORREGIDA
+ * VERSIÓN FINAL - CON ELIMINACIÓN EN CASCADA (FORZADA)
  */
 
 // =============================================
@@ -103,7 +103,6 @@ window.verDetalles = async function (categoriaId) {
                 // Es un Map
                 categoria.subcategorias.forEach((value, key) => {
                     if (value && typeof value === 'object') {
-                        // Convertir Map a objeto si es necesario
                         if (value instanceof Map) {
                             const subObj = {};
                             value.forEach((v, k) => { subObj[k] = v; });
@@ -208,7 +207,8 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId) {
 };
 
 // =============================================
-// 🎯 ELIMINAR CON SWEETALERT2
+// 🎯 ELIMINAR CATEGORÍA CON TODAS SUS SUBCATEGORÍAS
+// 🔥 CORREGIDO: Elimina primero las subcategorías y luego la categoría
 // =============================================
 window.eliminarCategoria = async function (categoriaId) {
     event?.stopPropagation();
@@ -216,68 +216,182 @@ window.eliminarCategoria = async function (categoriaId) {
     const categoria = categoriasCache.find(c => c.id === categoriaId);
     if (!categoria) return;
 
-    // Verificar si tiene subcategorías
-    let tieneSubcategorias = false;
+    // Contar subcategorías
+    let subcategoriasIds = [];
+    let numSub = 0;
+    
     if (categoria.subcategorias) {
         if (typeof categoria.subcategorias === 'object') {
-            if (categoria.subcategorias.size !== undefined) {
-                tieneSubcategorias = categoria.subcategorias.size > 0;
+            if (categoria.subcategorias.forEach) {
+                // Es un Map - obtener los IDs
+                categoria.subcategorias.forEach((value, key) => {
+                    subcategoriasIds.push(key);
+                });
+                numSub = categoria.subcategorias.size;
             } else {
-                tieneSubcategorias = Object.keys(categoria.subcategorias).length > 0;
+                // Es un objeto plano
+                subcategoriasIds = Object.keys(categoria.subcategorias);
+                numSub = subcategoriasIds.length;
             }
         }
     }
 
-    if (tieneSubcategorias) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No se puede eliminar',
-            text: `La categoría "${categoria.nombre}" tiene subcategorías asociadas`,
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: '#2f8cff',
-            confirmButtonText: 'Entendido'
-        });
-        return;
-    }
-
+    // SweetAlert personalizado para eliminación en cascada
     const result = await Swal.fire({
         title: '¿Eliminar categoría?',
-        text: `Estás a punto de eliminar "${categoria.nombre}"`,
+        html: `
+            <div style="text-align: center; padding: 10px;">
+                <div style="font-size: 64px; color: #ef4444; margin-bottom: 16px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 style="color: #ffffff; margin-bottom: 16px; font-size: 20px;">
+                    "${escapeHTML(categoria.nombre)}"
+                </h3>
+                
+                ${numSub > 0 ? `
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                            <i class="fas fa-folder-open" style="color: #ef4444; font-size: 20px;"></i>
+                            <span style="color: #ef4444; font-weight: 600; font-size: 16px;">
+                                Esta categoría tiene ${numSub} subcategoría${numSub !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        <p style="color: #fca5a5; margin: 0; font-size: 14px;">
+                            <i class="fas fa-trash"></i> 
+                            Se eliminarán TODAS las subcategorías junto con la categoría
+                        </p>
+                    </div>
+                ` : `
+                    <p style="color: #9ca3af; margin-bottom: 16px;">
+                        Esta categoría no tiene subcategorías asociadas.
+                    </p>
+                `}
+                
+                <p style="color: #9ca3af; font-size: 14px; margin-top: 8px;">
+                    <i class="fas fa-info-circle"></i> 
+                    Esta acción <strong style="color: #ef4444;">no se puede deshacer</strong>.
+                </p>
+            </div>
+        `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sí, eliminar',
+        confirmButtonText: numSub > 0 ? 'Sí, eliminar todo' : 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
-        background: 'var(--color-bg-secondary)',
-        color: 'var(--color-text-primary)',
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#6b7280',
-        reverseButtons: true
+        background: 'var(--color-bg-secondary)',
+        color: 'var(--color-text-primary)',
+        reverseButtons: true,
+        focusCancel: true
     });
 
     if (result.isConfirmed) {
         try {
-            await categoriaManager.eliminarCategoria(categoriaId);
+            // Mostrar loading
+            Swal.fire({
+                title: 'Eliminando...',
+                html: `
+                    <div style="text-align: center; padding: 10px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #ef4444; margin-bottom: 16px;"></i>
+                        <p style="color: #ffffff; margin-bottom: 8px;">Eliminando categoría y ${numSub > 0 ? `sus ${numSub} subcategorías` : ''}...</p>
+                        <p style="color: #9ca3af; font-size: 12px;">Por favor espera...</p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
 
+            // 🔥 PASO 1: Eliminar todas las subcategorías UNA POR UNA
+            if (numSub > 0) {
+                console.log(`🗑️ Eliminando ${numSub} subcategorías de "${categoria.nombre}"...`);
+                
+                for (const subId of subcategoriasIds) {
+                    try {
+                        // Eliminar subcategoría del objeto local
+                        if (categoria.eliminarSubcategoria) {
+                            categoria.eliminarSubcategoria(subId);
+                        } else if (categoria.subcategorias && categoria.subcategorias.delete) {
+                            categoria.subcategorias.delete(subId);
+                        } else if (categoria.subcategorias && typeof categoria.subcategorias === 'object') {
+                            delete categoria.subcategorias[subId];
+                        }
+                    } catch (subError) {
+                        console.warn(`Error eliminando subcategoría ${subId}:`, subError);
+                        // Continuamos aunque una subcategoría falle
+                    }
+                }
+
+                // 🔥 PASO 2: Actualizar la categoría SIN subcategorías
+                await categoriaManager.actualizarCategoria(categoriaId, {
+                    nombre: categoria.nombre,
+                    descripcion: categoria.descripcion,
+                    color: categoria.color,
+                    subcategorias: {} // Vaciar todas las subcategorías
+                });
+                
+                console.log(`✅ Subcategorías eliminadas correctamente`);
+            }
+
+            // 🔥 PASO 3: AHORA SÍ, eliminar la categoría (ya no tiene subcategorías)
+            await categoriaManager.eliminarCategoria(categoriaId);
+            console.log(`✅ Categoría "${categoria.nombre}" eliminada correctamente`);
+
+            // Cerrar loading
+            Swal.close();
+
+            // Mostrar éxito
             await Swal.fire({
                 icon: 'success',
-                title: '¡Eliminada!',
-                text: `La categoría "${categoria.nombre}" ha sido eliminada`,
+                title: '¡Categoría eliminada!',
+                html: `
+                    <div style="text-align: center;">
+                        <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 16px;"></i>
+                        <p style="color: #ffffff; margin-bottom: 8px;">
+                            <strong style="color: #10b981;">"${escapeHTML(categoria.nombre)}"</strong> 
+                            ha sido eliminada
+                        </p>
+                        ${numSub > 0 ? `
+                            <p style="color: #9ca3af; font-size: 14px;">
+                                <i class="fas fa-folder-open"></i> 
+                                Se eliminaron ${numSub} subcategoría${numSub !== 1 ? 's' : ''}
+                            </p>
+                        ` : ''}
+                    </div>
+                `,
                 background: 'var(--color-bg-secondary)',
                 color: 'var(--color-text-primary)',
                 confirmButtonColor: '#10b981',
-                timer: 2000,
+                timer: 3000,
                 timerProgressBar: true
             });
 
+            // Recargar categorías
             await cargarCategorias();
 
         } catch (error) {
-            console.error('Error:', error);
+            console.error('❌ Error al eliminar categoría:', error);
+            
+            Swal.close();
+            
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: `No se pudo eliminar: ${error.message}`,
+                html: `
+                    <div style="text-align: left; padding: 10px;">
+                        <p style="color: #ef4444; margin-bottom: 12px;">
+                            <i class="fas fa-exclamation-circle"></i> 
+                            No se pudo eliminar la categoría
+                        </p>
+                        <div style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                            <p style="margin: 0; color: #ef4444; font-size: 13px;">
+                                <strong>Error:</strong> ${error.message || 'Error desconocido'}
+                            </p>
+                        </div>
+                    </div>
+                `,
                 background: 'var(--color-bg-secondary)',
                 color: 'var(--color-text-primary)',
                 confirmButtonColor: '#2f8cff'
@@ -287,7 +401,7 @@ window.eliminarCategoria = async function (categoriaId) {
 };
 
 // =============================================
-// 🎯 ELIMINAR SUBCATEGORÍA - VERSIÓN CORREGIDA
+// 🎯 ELIMINAR SUBCATEGORÍA DESDE LA TABLA
 // =============================================
 window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
     event?.stopPropagation();
@@ -305,14 +419,14 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
         return;
     }
 
-    // 🔥 CORREGIDO: Obtener la subcategoría correctamente
+    // Obtener la subcategoría
     let subcategoria = null;
     let subcategoriaNombre = '';
 
     try {
         if (categoria.subcategorias) {
             if (typeof categoria.subcategorias === 'object') {
-                // CASO 1: Es un Map
+                // Caso 1: Es un Map
                 if (categoria.subcategorias.get) {
                     const subMap = categoria.subcategorias.get(subcategoriaId);
                     if (subMap) {
@@ -324,7 +438,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
                         }
                     }
                 }
-                // CASO 2: Es un objeto plano
+                // Caso 2: Es un objeto plano
                 else if (categoria.subcategorias[subcategoriaId]) {
                     subcategoria = categoria.subcategorias[subcategoriaId];
                 }
@@ -336,21 +450,17 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
 
     // Si no encontramos la subcategoría, intentamos buscarla en el array
     if (!subcategoria) {
-        // Intentar convertir a array y buscar
-        let subArray = [];
-        if (categoria.subcategorias) {
-            if (categoria.subcategorias.forEach) {
-                categoria.subcategorias.forEach((value, key) => {
-                    if (key === subcategoriaId) {
-                        if (value instanceof Map) {
-                            subcategoria = {};
-                            value.forEach((v, k) => { subcategoria[k] = v; });
-                        } else {
-                            subcategoria = value;
-                        }
+        if (categoria.subcategorias && categoria.subcategorias.forEach) {
+            categoria.subcategorias.forEach((value, key) => {
+                if (key === subcategoriaId) {
+                    if (value instanceof Map) {
+                        subcategoria = {};
+                        value.forEach((v, k) => { subcategoria[k] = v; });
+                    } else {
+                        subcategoria = value;
                     }
-                });
-            }
+                }
+            });
         }
     }
 
@@ -372,7 +482,23 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
     // Confirmación con SweetAlert2
     const result = await Swal.fire({
         title: '¿Eliminar subcategoría?',
-        html: `Estás a punto de eliminar "<strong style="color: #ef4444;">${subcategoriaNombre}</strong>"<br>de la categoría "<strong>${categoria.nombre}</strong>"`,
+        html: `
+            <div style="text-align: center; padding: 10px;">
+                <div style="font-size: 48px; color: #ef4444; margin-bottom: 16px;">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <p style="color: #ffffff; margin-bottom: 8px;">
+                    Eliminarás:
+                </p>
+                <p style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                    <strong style="color: #ef4444; font-size: 18px;">${escapeHTML(subcategoriaNombre)}</strong>
+                </p>
+                <p style="color: #9ca3af; font-size: 14px;">
+                    <i class="fas fa-info-circle"></i> 
+                    Esta acción <strong style="color: #ef4444;">no se puede deshacer</strong>.
+                </p>
+            </div>
+        `,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
@@ -386,7 +512,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
 
     if (result.isConfirmed) {
         try {
-            // 🔥 CORREGIDO: Eliminar subcategoría
+            // ELIMINAR SUBCATEGORÍA
             if (categoria.eliminarSubcategoria) {
                 categoria.eliminarSubcategoria(subcategoriaId);
             } else if (categoria.subcategorias && categoria.subcategorias.delete) {
@@ -399,7 +525,8 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
             await categoriaManager.actualizarCategoria(categoriaId, {
                 nombre: categoria.nombre,
                 descripcion: categoria.descripcion,
-                color: categoria.color
+                color: categoria.color,
+                subcategorias: categoria.subcategorias
             });
 
             await Swal.fire({
@@ -413,7 +540,14 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
                 timerProgressBar: true
             });
 
-            // Recargar subcategorías
+            // 🔥 IMPORTANTE: Recargar la categoría para obtener los datos actualizados
+            const categoriaActualizada = await categoriaManager.obtenerCategoriaPorId(categoriaId);
+            const index = categoriasCache.findIndex(c => c.id === categoriaId);
+            if (index !== -1) {
+                categoriasCache[index] = categoriaActualizada;
+            }
+
+            // Recargar subcategorías en la tabla
             await cargarSubcategorias(categoriaId);
 
             // Actualizar contador en la fila de categoría
@@ -421,11 +555,11 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
             if (categoriaRow) {
                 // Recalcular número de subcategorías
                 let numSub = 0;
-                if (categoria.subcategorias) {
-                    if (categoria.subcategorias.size !== undefined) {
-                        numSub = categoria.subcategorias.size;
+                if (categoriaActualizada.subcategorias) {
+                    if (categoriaActualizada.subcategorias.size !== undefined) {
+                        numSub = categoriaActualizada.subcategorias.size;
                     } else {
-                        numSub = Object.keys(categoria.subcategorias).length;
+                        numSub = Object.keys(categoriaActualizada.subcategorias).length;
                     }
                 }
 
@@ -434,11 +568,6 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
                     badge.innerHTML = `<i class="fas fa-folder${numSub > 0 ? '-open' : ''}"></i> ${numSub} ${numSub === 1 ? 'subcategoría' : 'subcategorías'}`;
                     badge.style.background = numSub > 0 ? 'rgba(16,185,129,0.2)' : 'rgba(107,114,128,0.2)';
                     badge.style.color = numSub > 0 ? '#10b981' : '#9ca3af';
-                }
-
-                const btnEliminar = categoriaRow.querySelector('.btn-outline-danger');
-                if (btnEliminar) {
-                    btnEliminar.disabled = numSub > 0;
                 }
             }
 
@@ -531,7 +660,7 @@ async function crearFilaCategoria(categoria, tbody) {
     tr.dataset.id = categoria.id;
 
     tr.onclick = (e) => {
-        if (!e.target.closest('.btn-group')) {
+        if (!e.target.closest('.btn-group') && !e.target.closest('.btn-sub-action')) {
             toggleSubcategorias(categoria.id);
         }
     };
@@ -557,7 +686,7 @@ async function crearFilaCategoria(categoria, tbody) {
         <td data-label="Nombre">
             <div style="display:flex; align-items:center;">
                 <div style="width:4px; height:24px; background:${color}; border-radius:2px; margin-right:12px;"></div>
-                <strong style="color:white;">${categoria.nombre}</strong>
+                <strong style="color:white;">${escapeHTML(categoria.nombre)}</strong>
             </div>
         </td>
         <td data-label="Color" style="text-align:center;">
@@ -582,7 +711,7 @@ async function crearFilaCategoria(categoria, tbody) {
                 <button type="button" class="btn btn-outline-warning" onclick="window.editarCategoria('${categoria.id}')" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button type="button" class="btn btn-outline-danger" onclick="window.eliminarCategoria('${categoria.id}')" title="Eliminar" ${numSub > 0 ? 'disabled' : ''}>
+                <button type="button" class="btn btn-outline-danger" onclick="window.eliminarCategoria('${categoria.id}')" title="Eliminar">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -603,7 +732,7 @@ async function crearFilaCategoria(categoria, tbody) {
                 <div class="subcategorias-header">
                     <h6>
                         <i class="fas fa-list-ul"></i>
-                        Subcategorías de <span style="color:#2f8cff;">"${categoria.nombre}"</span>
+                        Subcategorías de <span style="color:#2f8cff;">"${escapeHTML(categoria.nombre)}"</span>
                     </h6>
                     <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoria.id}')">
                         <i class="fas fa-plus-circle"></i> Agregar
@@ -644,20 +773,22 @@ async function cargarSubcategorias(categoriaId) {
                 if (categoria.subcategorias.forEach) {
                     categoria.subcategorias.forEach((value, key) => {
                         if (value && typeof value === 'object') {
-                            // Si el valor es un Map, convertirlo a objeto
                             if (value instanceof Map) {
                                 const subObj = {};
                                 value.forEach((v, k) => { subObj[k] = v; });
-                                subcategoriasArray.push(subObj);
+                                subcategoriasArray.push({ ...subObj, id: key });
                             } else {
-                                subcategoriasArray.push(value);
+                                subcategoriasArray.push({ ...value, id: key });
                             }
                         }
                     });
                 }
                 // CASO 2: Es un objeto plano
                 else {
-                    subcategoriasArray = Object.values(categoria.subcategorias);
+                    subcategoriasArray = Object.keys(categoria.subcategorias).map(key => ({
+                        ...categoria.subcategorias[key],
+                        id: key
+                    }));
                 }
             }
         }
@@ -709,14 +840,14 @@ async function cargarSubcategorias(categoriaId) {
                 <td style="padding:12px;">
                     <div style="display:flex; align-items:center; flex-wrap:wrap;">
                         <span style="display:inline-block; width:12px; height:12px; background:${colorSub}; border-radius:4px; margin-right:8px;"></span>
-                        <span style="color:white; margin-right:8px;">${sub.nombre || 'Sin nombre'}</span>
+                        <span style="color:white; margin-right:8px;">${escapeHTML(sub.nombre || 'Sin nombre')}</span>
                         ${hereda ?
                 '<span style="padding:2px 6px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:12px; font-size:10px;">Hereda</span>' :
                 sub.color ? '<span style="padding:2px 6px; background:rgba(249,115,22,0.1); color:#f97316; border-radius:12px; font-size:10px;">Propio</span>' : ''
             }
                     </div>
                 </td>
-                <td style="padding:12px; color:#d1d5db;">${sub.descripcion || '<span style="color:#6b7280;">-</span>'}</td>
+                <td style="padding:12px; color:#d1d5db;">${escapeHTML(sub.descripcion) || '<span style="color:#6b7280;">-</span>'}</td>
                 <td style="padding:12px;">
                     <div style="display:flex; align-items:center; gap:4px;">
                         <span style="display:inline-block; width:16px; height:16px; background:${colorSub}; border-radius:4px;"></span>
@@ -776,6 +907,16 @@ function toggleSubcategorias(categoriaId) {
         icon.classList.add('fa-chevron-right');
         categoriaExpandidaId = null;
     }
+}
+
+// =============================================
+// UTILIDADES
+// =============================================
+function escapeHTML(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // =============================================
