@@ -4,7 +4,7 @@ class NavbarComplete {
         this.isAdminDropdownOpen = false;
         this.currentAdmin = null;
         this.userManager = null;
-        this.init();      
+        this.init();
     }
 
     // Inicializa el navbar evitando duplicados
@@ -14,7 +14,7 @@ class NavbarComplete {
             return;
         }
 
-        window.NavbarCompleteLoaded = true; 
+        window.NavbarCompleteLoaded = true;
 
         // Esperar a que el DOM esté listo
         if (document.readyState === 'loading') {
@@ -28,8 +28,8 @@ class NavbarComplete {
     async setup() {
         try {
             this.removeOriginalNavbar();
-            this.createNavbar(); 
-            this.setupFunctionalities(); 
+            this.createNavbar();
+            this.setupFunctionalities();
             await this.loadAdminData(); // Cargar datos del administrador
             this.updateNavbarWithAdminData(); // Actualizar navbar con datos
             console.log('✅ Navbar completo inicializado con datos del admin');
@@ -41,13 +41,13 @@ class NavbarComplete {
     // Remueve el navbar original si existe
     removeOriginalNavbar() {
         const originalHeader = document.getElementById('main-header');
-        originalHeader?.remove(); 
+        originalHeader?.remove();
     }
 
     // Crea el navbar completo
     createNavbar() {
-        this.addStyles();   
-        this.insertHTML();       
+        this.addStyles();
+        this.insertHTML();
         this.adjustBodyPadding();
     }
 
@@ -932,10 +932,10 @@ class NavbarComplete {
             // Importar UserManager dinámicamente
             const { UserManager } = await import('/clases/user.js');
             this.userManager = new UserManager();
-            
+
             // Esperar a que UserManager cargue el usuario
             await new Promise(resolve => setTimeout(resolve, 1500));
-            
+
             if (this.userManager.currentUser) {
                 this.currentAdmin = this.userManager.currentUser;
                 console.log('👤 Admin cargado en navbar:', {
@@ -979,7 +979,7 @@ class NavbarComplete {
 
         // 3. Actualizar título del navbar si es necesario
         this.updateNavbarTitle();
-        
+
         // 4. Configurar eventos para los botones nuevos
         this.setupAdminButtons();
     }
@@ -1011,7 +1011,7 @@ class NavbarComplete {
         const orgTextLogo = document.getElementById('orgTextLogo');
         const orgLogoLink = document.getElementById('orgLogoLink');
         const orgLogoContainer = document.getElementById('orgLogoContainer');
-        
+
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
 
         // Si tiene logo de organización
@@ -1020,17 +1020,17 @@ class NavbarComplete {
             organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion}`;
             organizationLogoImg.style.display = 'block';
             orgTextLogo.style.display = 'none';
-            
+
             // Añadir tooltip y atributos
             organizationLogoImg.title = this.currentAdmin.organizacion;
             organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion);
-            
+
             console.log('🏢 Logo de organización actualizado:', this.currentAdmin.organizacion);
         } else {
             // Mostrar texto en lugar de imagen
             organizationLogoImg.style.display = 'none';
             orgTextLogo.style.display = 'flex';
-            
+
             // Crear texto con las iniciales de la organización
             const orgName = this.currentAdmin.organizacion || 'Organización';
             const initials = orgName
@@ -1039,16 +1039,16 @@ class NavbarComplete {
                 .join('')
                 .toUpperCase()
                 .substring(0, 3);
-            
+
             orgTextLogo.textContent = initials;
             orgTextLogo.title = orgName;
-            
+
             console.log('🏢 Texto de organización mostrado:', initials);
         }
 
         // Actualizar el enlace del logo para redirigir al dashboard
-        orgLogoLink.href = '/users/admin/dashboard/dashboard.html';
-        
+        orgLogoLink.href = '/users/admin/dashAdmin/dashAdmin.html';
+
         // Asegurar que el contenedor sea un círculo perfecto
         orgLogoContainer.style.borderRadius = '50%';
         orgLogoContainer.style.overflow = 'hidden';
@@ -1077,7 +1077,7 @@ class NavbarComplete {
         // Foto de perfil del administrador
         const adminProfileImg = document.getElementById('adminProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
-        
+
         if (adminProfileImg && profilePlaceholder) {
             if (this.currentAdmin.fotoUsuario) {
                 adminProfileImg.src = this.currentAdmin.fotoUsuario;
@@ -1105,7 +1105,7 @@ class NavbarComplete {
 
     // Configura todas las funcionalidades
     setupFunctionalities() {
-        this.setupMenu();  
+        this.setupMenu();
         this.setupScroll();
         this.loadFontAwesome();
         this.setupAdminDropdown();
@@ -1128,7 +1128,7 @@ class NavbarComplete {
             hamburgerBtn.classList.toggle('active', this.isMenuOpen);
             overlay.classList.toggle('active', this.isMenuOpen);
             document.body.classList.toggle('menu-open', this.isMenuOpen);
-            
+
             // Cerrar dropdown si está abierto
             if (!this.isMenuOpen && this.isAdminDropdownOpen) {
                 this.toggleAdminDropdown(false);
@@ -1142,7 +1142,7 @@ class NavbarComplete {
                 hamburgerBtn.classList.remove('active');
                 overlay.classList.remove('active');
                 document.body.classList.remove('menu-open');
-                
+
                 if (this.isAdminDropdownOpen) {
                     this.toggleAdminDropdown(false);
                 }
@@ -1151,7 +1151,7 @@ class NavbarComplete {
 
         hamburgerBtn.addEventListener('click', toggleMenu);
         overlay.addEventListener('click', closeMenu);
-        
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isMenuOpen) closeMenu();
         });
@@ -1180,8 +1180,8 @@ class NavbarComplete {
 
         // Cerrar dropdown al hacer clic fuera
         document.addEventListener('click', (e) => {
-            if (!dropdownBtn.contains(e.target) && 
-                !dropdownOptions.contains(e.target) && 
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
                 this.isAdminDropdownOpen) {
                 this.toggleAdminDropdown(false);
             }
@@ -1198,16 +1198,16 @@ class NavbarComplete {
     // Configura la funcionalidad de cerrar sesión
     setupLogout() {
         const logoutOption = document.getElementById('logoutOption');
-        
+
         if (!logoutOption) return;
 
         logoutOption.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // Confirmar cierre de sesión
             const confirmLogout = await this.showLogoutConfirmation();
-            
+
             if (confirmLogout) {
                 await this.performLogout();
             }
@@ -1243,7 +1243,7 @@ class NavbarComplete {
     // Realiza el cierre de sesión COMPLETO
     async performLogout() {
         console.log('🚪 Cerrando sesión COMPLETAMENTE...');
-        
+
         try {
             // 1. Cerrar sesión en Firebase si UserManager está disponible
             if (this.userManager && typeof this.userManager.logout === 'function') {
@@ -1253,21 +1253,21 @@ class NavbarComplete {
                 // Intentar cerrar sesión directamente si firebase está disponible
                 await this.signOutFirebaseDirectly();
             }
-            
+
             // 2. Limpiar TODOS los datos de almacenamiento local
             this.clearAllStorage();
-            
+
             console.log('🧹 TODOS los datos de sesión eliminados');
-            
+
             // 3. Mostrar mensaje de éxito
             await this.showLogoutSuccessMessage();
-            
+
             // 4. Redirigir a la página de login con parámetros para evitar caché
             this.redirectToLogin();
-            
+
         } catch (error) {
             console.error('❌ Error al cerrar sesión:', error);
-            
+
             // Aún así limpiar almacenamiento y redirigir
             this.clearAllStorage();
             this.redirectToLogin();
@@ -1283,10 +1283,10 @@ class NavbarComplete {
                 console.log('🔥 Sesión de Firebase cerrada directamente');
                 return;
             }
-            
+
             // Método 2: Intentar con la importación dinámica
             const { getAuth, signOut } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js');
-            
+
             // Buscar cualquier app de Firebase inicializada
             const firebaseApps = typeof firebase !== 'undefined' ? firebase.apps : [];
             if (firebaseApps && firebaseApps.length > 0) {
@@ -1294,7 +1294,7 @@ class NavbarComplete {
                 await signOut(auth);
                 console.log('🔥 Sesión de Firebase cerrada con app existente');
             }
-            
+
         } catch (error) {
             console.warn('⚠️ No se pudo cerrar sesión en Firebase directamente:', error);
             // Continuar de todos modos
@@ -1307,17 +1307,17 @@ class NavbarComplete {
             // Limpiar localStorage completamente
             localStorage.clear();
             console.log('🗑️ localStorage limpiado');
-            
+
             // Limpiar sessionStorage
             sessionStorage.clear();
             console.log('🗑️ sessionStorage limpiado');
-            
+
             // Limpiar cookies relacionadas con sesión
             this.clearSessionCookies();
-            
+
             // Limpiar indexedDB si es necesario
             this.clearIndexedDB();
-            
+
         } catch (error) {
             console.warn('⚠️ Error al limpiar almacenamiento:', error);
         }
@@ -1331,7 +1331,7 @@ class NavbarComplete {
                 const cookie = cookies[i];
                 const eqPos = cookie.indexOf('=');
                 const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-                
+
                 // Eliminar cookies relacionadas con sesión o auth
                 if (name.includes('session') || name.includes('auth') || name.includes('firebase')) {
                     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
@@ -1348,7 +1348,7 @@ class NavbarComplete {
         try {
             // Lista de bases de datos que podrían contener datos de sesión
             const databases = ['firebaseLocalStorageDb', 'firestore', 'centinela-db'];
-            
+
             for (const dbName of databases) {
                 try {
                     await indexedDB.deleteDatabase(dbName);
@@ -1386,13 +1386,13 @@ class NavbarComplete {
     redirectToLogin() {
         // Agregar timestamp para evitar caché
         const timestamp = new Date().getTime();
-        
+
         // Redirigir con parámetros para forzar cierre de sesión completo
         const loginUrl = `/users/visitors/login/login.html?logout=true&timestamp=${timestamp}&nocache=1`;
-        
+
         // Forzar recarga completa
         window.location.href = loginUrl;
-        
+
         // Doble seguridad: forzar recarga si no redirige en 1 segundo
         setTimeout(() => {
             window.location.replace(loginUrl);
@@ -1403,7 +1403,7 @@ class NavbarComplete {
     toggleAdminDropdown(show) {
         const dropdownBtn = document.getElementById('adminDropdownBtn');
         const dropdownOptions = document.getElementById('adminDropdownOptions');
-        
+
         if (dropdownBtn && dropdownOptions) {
             dropdownBtn.classList.toggle('active', show);
             dropdownOptions.classList.toggle('active', show);
