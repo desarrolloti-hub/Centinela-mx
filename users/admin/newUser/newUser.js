@@ -63,6 +63,7 @@ function obtenerElementosDOM() {
             orgPlaceholder: document.getElementById('orgPlaceholder'),
             orgImage: document.getElementById('orgImage'),
             editOrgOverlay: document.getElementById('editOrgOverlay'),
+            orgInfoText: document.getElementById('orgInfoText'),
             
             // Campos del formulario
             organization: document.getElementById('organization'),
@@ -78,6 +79,11 @@ function obtenerElementosDOM() {
             mainMessage: document.getElementById('mainMessage'),
             registerForm: document.getElementById('registerForm'),
             
+            // Títulos
+            adminNameSubtitle: document.getElementById('adminNameSubtitle'),
+            formMainTitle: document.getElementById('formMainTitle'),
+            formSubTitle: document.getElementById('formSubTitle'),
+            
             // Toggle de contraseñas
             toggleContrasenaBtns: document.querySelectorAll('.toggle-contrasena')
         };
@@ -86,7 +92,13 @@ function obtenerElementosDOM() {
         Swal.fire({
             icon: 'error',
             title: 'Error de configuración',
-            text: 'No se pudieron cargar los elementos del formulario.'
+            text: 'No se pudieron cargar los elementos del formulario.',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
         });
         return null;
     }
@@ -111,7 +123,12 @@ async function cargarAdministradorActual(userManager, elements) {
         Swal.fire({
             title: 'Cargando información...',
             allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+            didOpen: () => Swal.showLoading(),
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container'
+            }
         });
         
         // Obtener administrador actual desde UserManager
@@ -149,7 +166,14 @@ async function cargarAdministradorActual(userManager, elements) {
             icon: 'error',
             title: 'Error de sesión',
             text: error.message,
-            confirmButtonText: 'Ir al login'
+            confirmButtonText: 'Ir al login',
+            confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -176,6 +200,11 @@ function actualizarInterfazConAdmin(elements, admin) {
         }
     }
     
+    // Actualizar nombre del administrador en el subtítulo
+    if (elements.adminNameSubtitle) {
+        elements.adminNameSubtitle.textContent = `Administrador: ${admin.nombreCompleto} | ${admin.organizacion}`;
+    }
+    
     // Cargar logo de organización heredado
     if (admin.fotoOrganizacion && elements.orgCircle && elements.orgPlaceholder && elements.orgImage) {
         try {
@@ -190,12 +219,8 @@ function actualizarInterfazConAdmin(elements, admin) {
             }
             
             // Actualizar texto informativo
-            const orgSection = elements.orgCircle.closest('.photo-section');
-            if (orgSection) {
-                const infoText = orgSection.querySelector('.photo-info');
-                if (infoText) {
-                    infoText.textContent = 'Logo heredado del administrador. Los colaboradores verán este logo.';
-                }
+            if (elements.orgInfoText) {
+                elements.orgInfoText.textContent = 'Logo heredado del administrador. Los colaboradores verán este logo.';
             }
             
         } catch (error) {
@@ -204,36 +229,16 @@ function actualizarInterfazConAdmin(elements, admin) {
     }
     
     // Actualizar títulos con información del admin
-    actualizarTitulos(admin);
+    if (elements.formMainTitle) {
+        elements.formMainTitle.textContent = `CREAR COLABORADOR PARA ${admin.organizacion.toUpperCase()}`;
+    }
+    
+    if (elements.formSubTitle) {
+        elements.formSubTitle.textContent = `Completa los datos para crear un colaborador en ${admin.organizacion}`;
+    }
     
     // Mostrar mensaje informativo
     mostrarMensajeInfoAdmin(elements.mainMessage, admin);
-}
-
-function actualizarTitulos(admin) {
-    // Título principal
-    const mainTitle = document.querySelector('.edit-right-panel .edit-main-title');
-    if (mainTitle) {
-        mainTitle.textContent = `CREAR COLABORADOR PARA ${admin.organizacion.toUpperCase()}`;
-    }
-    
-    // Subtítulo
-    const subTitle = document.querySelector('.edit-right-panel .edit-sub-title');
-    if (subTitle) {
-        subTitle.textContent = `Completa los datos para crear un colaborador en ${admin.organizacion}`;
-    }
-    
-    // Título del panel izquierdo
-    const leftTitle = document.querySelector('.edit-left-panel .edit-main-title');
-    if (leftTitle) {
-        leftTitle.textContent = 'CREAR COLABORADOR';
-    }
-    
-    // Subtítulo del panel izquierdo
-    const leftSubTitle = document.querySelector('.edit-left-panel .edit-sub-title');
-    if (leftSubTitle) {
-        leftSubTitle.textContent = `Administrador: ${admin.nombreCompleto}`;
-    }
 }
 
 function mostrarMensajeInfoAdmin(element, admin) {
@@ -249,7 +254,6 @@ function mostrarMensajeInfoAdmin(element, admin) {
                 <div><strong>Administrador:</strong> ${admin.nombreCompleto}</div>
                 <div><strong>Organización:</strong> ${admin.organizacion}</div>
                 <div><strong>Plan:</strong> ${admin.plan ? admin.plan.toUpperCase() : 'GRATIS'}</div>
-                <div><strong>Tema:</strong> ${admin.theme || 'light'}</div>
             </div>
             <div style="margin-top: 8px; padding: 8px; background: var(--color-bg-secondary); border-radius: 4px; font-size: 0.8rem;">
                 <i class="fas fa-info-circle" style="margin-right: 5px;"></i>
@@ -319,7 +323,7 @@ function manejarSeleccionFoto(event, elements) {
             html: `
                 <div style="text-align: center;">
                     <img src="${e.target.result}" 
-                         class="preview-image">
+                         style="width: 150px; height: 150px; border-radius: 50%; border: 4px solid var(--color-accent-primary); margin-bottom: 20px; object-fit: cover;">
                     <p>¿Deseas usar esta imagen como foto de perfil del colaborador?</p>
                 </div>
             `,
@@ -327,8 +331,15 @@ function manejarSeleccionFoto(event, elements) {
             showCancelButton: true,
             confirmButtonText: 'SI, USAR ESTA FOTO',
             cancelButtonText: 'NO, CANCELAR',
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#d33'
+            confirmButtonColor: 'var(--color-success, #28a745)',
+            cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
+            }
         }).then((result) => {
             if (result.isConfirmed) {
                 actualizarFotoPerfil(e.target.result, elements);
@@ -350,7 +361,14 @@ function validarArchivo(file, maxSizeMB) {
             icon: 'error',
             title: 'Formato no válido',
             text: 'Solo se permiten archivos JPG, PNG, GIF o WebP',
-            confirmButtonText: 'ENTENDIDO'
+            confirmButtonText: 'ENTENDIDO',
+            confirmButtonColor: 'var(--color-danger, #ef4444)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
         });
         return false;
     }
@@ -360,7 +378,14 @@ function validarArchivo(file, maxSizeMB) {
             icon: 'error',
             title: 'Archivo demasiado grande',
             text: `El archivo excede el tamaño máximo permitido (${maxSizeMB}MB)`,
-            confirmButtonText: 'ENTENDIDO'
+            confirmButtonText: 'ENTENDIDO',
+            confirmButtonColor: 'var(--color-danger, #ef4444)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
         });
         return false;
     }
@@ -379,7 +404,13 @@ function actualizarFotoPerfil(imageSrc, elements) {
             title: '¡Foto cargada!',
             text: 'La foto de perfil se ha cargado correctamente',
             timer: 2000,
-            showConfirmButton: false
+            showConfirmButton: false,
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                timerProgressBar: 'swal2-timer-progress-bar'
+            }
         });
     }
 }
@@ -391,7 +422,7 @@ function configurarValidacionTiempoReal(elements) {
     if (elements.confirmarContrasena) {
         elements.confirmarContrasena.addEventListener('input', function() {
             if (elements.contrasena.value && this.value) {
-                this.style.borderColor = elements.contrasena.value === this.value ? '#28a745' : '#dc3545';
+                this.style.borderColor = elements.contrasena.value === this.value ? 'var(--color-success, #28a745)' : 'var(--color-danger, #dc3545)';
             } else {
                 this.style.borderColor = '';
             }
@@ -403,7 +434,7 @@ function configurarValidacionTiempoReal(elements) {
         elements.correoElectronico.addEventListener('blur', function() {
             if (this.value) {
                 const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value);
-                this.style.borderColor = isValid ? '#28a745' : '#dc3545';
+                this.style.borderColor = isValid ? 'var(--color-success, #28a745)' : 'var(--color-danger, #dc3545)';
             } else {
                 this.style.borderColor = '';
             }
@@ -476,7 +507,14 @@ async function registrarColaborador(event, elements, userManager, admin) {
             icon: 'error',
             title: 'Error de validación',
             html: errores.map(msg => `• ${msg}`).join('<br>'),
-            confirmButtonText: 'CORREGIR'
+            confirmButtonText: 'CORREGIR',
+            confirmButtonColor: 'var(--color-danger, #ef4444)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
         });
         return;
     }
@@ -490,11 +528,11 @@ async function registrarColaborador(event, elements, userManager, admin) {
                     <p><strong>Administrador creador:</strong> ${admin.nombreCompleto}</p>
                     <p><strong>Organización:</strong> ${admin.organizacion}</p>
                 </div>
-                <p><strong>Nombre del colaborador:</strong> ${elements.nombreCompleto.value.trim()}</p>
+                <p><strong>Nombre:</strong> ${elements.nombreCompleto.value.trim()}</p>
                 <p><strong>Email:</strong> ${elements.correoElectronico.value.trim()}</p>
                 <p><strong>Rol:</strong> ${elements.rol ? elements.rol.options[elements.rol.selectedIndex].text : 'No especificado'}</p>
                 <p><strong>Plan heredado:</strong> ${admin.plan ? admin.plan.toUpperCase() : 'GRATIS'}</p>
-                <p style="color: #ff9800; margin-top: 15px;">
+                <p style="color: var(--color-warning, #ff9800); margin-top: 15px;">
                     <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación al colaborador.
                 </p>
             </div>
@@ -503,9 +541,16 @@ async function registrarColaborador(event, elements, userManager, admin) {
         showCancelButton: true,
         confirmButtonText: 'CONFIRMAR REGISTRO',
         cancelButtonText: 'CANCELAR',
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#3085d6',
-        allowOutsideClick: false
+        confirmButtonColor: 'var(--color-success, #28a745)',
+        cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
+        allowOutsideClick: false,
+        customClass: {
+            popup: 'swal2-popup',
+            title: 'swal2-title',
+            htmlContainer: 'swal2-html-container',
+            confirmButton: 'swal2-confirm',
+            cancelButton: 'swal2-cancel'
+        }
     });
     
     if (!confirmResult.isConfirmed) return;
@@ -517,7 +562,12 @@ async function registrarColaborador(event, elements, userManager, admin) {
         allowOutsideClick: false,
         allowEscapeKey: false,
         showConfirmButton: false,
-        didOpen: () => Swal.showLoading()
+        didOpen: () => Swal.showLoading(),
+        customClass: {
+            popup: 'swal2-popup',
+            title: 'swal2-title',
+            htmlContainer: 'swal2-html-container'
+        }
     });
     
     try {
@@ -590,7 +640,7 @@ async function mostrarExitoRegistro(colaboradorData) {
         title: '¡COLABORADOR CREADO!',
         html: `
             <div style="text-align: center; padding: 20px;">
-                <div style="font-size: 60px; color: #28a745; margin-bottom: 20px;">
+                <div style="font-size: 60px; color: var(--color-success, #28a745); margin-bottom: 20px;">
                     <i class="fas fa-user-check"></i>
                 </div>
                 <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
@@ -619,16 +669,23 @@ async function mostrarExitoRegistro(colaboradorData) {
         showCancelButton: true,
         confirmButtonText: 'CREAR OTRO COLABORADOR',
         cancelButtonText: 'IR AL PANEL DE CONTROL',
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#3085d6',
-        allowOutsideClick: false
+        confirmButtonColor: 'var(--color-success, #28a745)',
+        cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
+        allowOutsideClick: false,
+        customClass: {
+            popup: 'swal2-popup',
+            title: 'swal2-title',
+            htmlContainer: 'swal2-html-container',
+            confirmButton: 'swal2-confirm',
+            cancelButton: 'swal2-cancel'
+        }
     });
     
     if (result.isConfirmed) {
         // Recargar página para nuevo registro
         location.reload();
     } else {
-        window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
+        window.location.href = '/users/admin/managementUser/managementUser.html';
     }
 }
 
@@ -684,14 +741,20 @@ function manejarErrorRegistro(error) {
         html: `
             <div style="text-align: left;">
                 <p>${errorMessage}</p>
-                <p style="color: #ff9800; margin-top: 15px; font-size: 0.9rem;">
+                <p style="color: var(--color-warning, #ff9800); margin-top: 15px; font-size: 0.9rem;">
                     <i class="fas fa-exclamation-triangle"></i> Si el problema persiste, contacta al soporte técnico.
                 </p>
             </div>
         `,
         confirmButtonText: 'ENTENDIDO',
-        confirmButtonColor: '#d33',
-        allowOutsideClick: true
+        confirmButtonColor: 'var(--color-danger, #ef4444)',
+        allowOutsideClick: true,
+        customClass: {
+            popup: 'swal2-popup',
+            title: 'swal2-title',
+            htmlContainer: 'swal2-html-container',
+            confirmButton: 'swal2-confirm'
+        }
     });
 }
 
@@ -705,11 +768,18 @@ function cancelarRegistro() {
         showCancelButton: true,
         confirmButtonText: 'Sí, cancelar',
         cancelButtonText: 'No, continuar',
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6'
+        confirmButtonColor: 'var(--color-danger, #ef4444)',
+        cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
+        customClass: {
+            popup: 'swal2-popup',
+            title: 'swal2-title',
+            htmlContainer: 'swal2-html-container',
+            confirmButton: 'swal2-confirm',
+            cancelButton: 'swal2-cancel'
+        }
     }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = '/users/admin/dashboard/dashboard.html';
+            window.location.href = '/users/admin/managementUser/managementUser.html';
         }
     });
 }
@@ -719,7 +789,14 @@ function mostrarErrorSistema(mensaje) {
         icon: 'error',
         title: 'Error del sistema',
         text: mensaje || 'Ha ocurrido un error inesperado',
-        confirmButtonText: 'ENTENDIDO'
+        confirmButtonText: 'ENTENDIDO',
+        confirmButtonColor: 'var(--color-danger, #ef4444)',
+        customClass: {
+            popup: 'swal2-popup',
+            title: 'swal2-title',
+            htmlContainer: 'swal2-html-container',
+            confirmButton: 'swal2-confirm'
+        }
     });
 }
 

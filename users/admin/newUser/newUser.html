@@ -4,22 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crear Colaborador | Centinela</title>
-    <!-- Estilos -->
-    <link rel="stylesheet" href="/components/personalization/personalization.css">
-    <!-- Particulas -->
     
+    <!-- ========== ESTILOS GLOBALES ========== -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    
+    <!-- ========== FUENTES Y TIPOGRAFÍA ========== -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Icono en barra de titulo -->
-    <link rel="icon" href="/assets/images/logo.png" type="image/png">
-    <!-- Archivo para PWA -->
-    <link rel="manifest" href="/manifest.json">
-    <!-- Estilos propios -->
-    <link rel="stylesheet" href="newUser.css">
-
-    <!-- sweetalert2 -->
-    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     
+    <!-- ========== ESTILOS PROPIOS ========== -->
+    <link rel="stylesheet" href="newUser.css">
+    
+    <!-- ========== ASSETS ========== -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- ========== SWEETALERT2 (SOLO JS, EL CSS VIENE DE personalization.css) ========== -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <canvas id="particle-canvas"></canvas>
@@ -34,8 +35,8 @@
             <!-- Panel izquierdo: Fotos -->
             <div class="edit-left-panel">
                 <header class="edit-header">
-                    <h1 class="edit-main-title">CREAR CUENTA</h1>
-                    <p class="edit-sub-title">Administrador del Sistema Centinela</p>
+                    <h1 class="edit-main-title">CREAR COLABORADOR</h1>
+                    <p class="edit-sub-title" id="adminNameSubtitle">Administrador del Sistema Centinela</p>
                 </header>
 
                 <!-- Foto de perfil -->
@@ -58,38 +59,36 @@
                         <input type="file" id="profile-input" class="file-input" accept="image/*">
                     </div>
                     
-                    <p class="photo-info">Haz clic en la foto o en el lápiz para cambiar tu imagen</p>
+                    <p class="photo-info">Haz clic en la foto o en el lápiz para cambiar la imagen</p>
                     <p class="photo-info">Formatos: JPG, PNG, GIF • Máximo: 5MB</p>
                 </section>
 
-                <!-- Logo de organización -->
+                <!-- Logo de organización (heredado) -->
                 <section class="photo-section">
                     <h2 class="section-title">
                         <i class="fas fa-building"></i>LOGO ORGANIZACIÓN
                     </h2>
                     
                     <div class="photo-container">
-                        <div class="profile-circle" id="orgCircle">
+                        <div class="profile-circle org-disabled" id="orgCircle">
                             <div class="placeholder-text" id="orgPlaceholder">
                                 <i class="fas fa-building"></i>
                                 <span>Logo organización</span>
                             </div>
                             <img src="" alt="Logo de la organización" class="profile-image" id="orgImage" style="display: none;">
-                            <div class="edit-overlay" id="editOrgOverlay">
+                            <div class="edit-overlay" id="editOrgOverlay" style="display: none;">
                                 <i class="fas fa-pencil-alt edit-icon"></i>
                             </div>
                         </div>
-                        <input type="file" id="org-input" class="file-input" accept="image/*">
                     </div>
                     
-                    <p class="photo-info">Haz clic para cambiar el logo de tu organización</p>
-                    <p class="photo-info">Recomendado: 500x500 px • Máximo: 10MB</p>
+                    <p class="photo-info" id="orgInfoText">Logo heredado del administrador</p>
                 </section>
 
                 <!-- Botón volver -->
                 <footer class="back-btn-container">
-                    <a href="/users/visitors/login/login.html" class="back-btn">
-                        <i class="fas fa-arrow-left"></i>VOLVER AL LOGIN
+                    <a href="/users/admin/managementUser/managementUser.html" class="back-btn">
+                        <i class="fas fa-arrow-left"></i>VOLVER A GESTIÓN
                     </a>
                 </footer>
             </div>
@@ -97,19 +96,19 @@
             <!-- Panel derecho: Formulario -->
             <div class="edit-right-panel">
                 <header class="edit-header">
-                    <h1 class="edit-main-title">DATOS DE REGISTRO</h1>
-                    <p class="edit-sub-title">Completa los datos para crear tu cuenta</p>
+                    <h1 class="edit-main-title" id="formMainTitle">CREAR COLABORADOR</h1>
+                    <p class="edit-sub-title" id="formSubTitle">Completa los datos para crear un colaborador</p>
                 </header>
 
                 <form class="edit-form-container" id="registerForm">
-                    <!-- Nombre de organización -->
+                    <!-- Organización (heredada - solo lectura) -->
                     <div class="form-field-group">
                         <label class="field-label" for="organization">
-                            <i class="fas fa-building"></i> NOMBRE DE LA ORGANIZACIÓN
+                            <i class="fas fa-building"></i> ORGANIZACIÓN
                         </label>
                         <div class="input-wrapper">
-                            <input class="form-input-field" type="text" id="organization" 
-                                   placeholder="Ingresa el nombre de tu organización" required>
+                            <input class="form-input-field readonly-field" type="text" id="organization" 
+                                   placeholder="Cargando..." readonly required>
                         </div>
                     </div>
 
@@ -120,7 +119,7 @@
                         </label>
                         <div class="input-wrapper">
                             <input class="form-input-field" type="text" id="nombreCompleto" 
-                                   placeholder="Ingresa tu nombre completo" required>
+                                   placeholder="Ingresa el nombre completo" required>
                         </div>
                     </div>
 
@@ -135,7 +134,7 @@
                         </div>
                     </div>
 
-                    <!-- ========== CAMPO DE CARGO AÑADIDO ========== -->
+                    <!-- CARGO / ROL -->
                     <div class="form-field-group">
                         <label class="field-label" for="rol">
                             <i class="fas fa-briefcase"></i> CARGO / ROL
@@ -154,17 +153,16 @@
                             </select>
                         </div>
                     </div>
-                    <!-- ========== FIN CAMPO DE CARGO ========== -->
 
                     <div class="divider"></div>
 
-                    <!-- Contraseñas -->
+                    <!-- Contraseña -->
                     <div class="form-field-group">
                         <label class="field-label" for="contrasena">
                             <i class="fas fa-key"></i> CONTRASEÑA
                         </label>
                         <div class="input-wrapper contrasena-field">
-                            <input class="form-input-field" type="contrasena" id="contrasena" 
+                            <input class="form-input-field" type="password" id="contrasena" 
                                    placeholder="********" required>
                             <button type="button" class="toggle-contrasena" data-target="contrasena">
                                 <i class="fas fa-eye"></i>
@@ -172,12 +170,13 @@
                         </div>
                     </div>
 
+                    <!-- Confirmar contraseña -->
                     <div class="form-field-group">
                         <label class="field-label" for="confirmarContrasena">
                             <i class="fas fa-key"></i> CONFIRMAR CONTRASEÑA
                         </label>
                         <div class="input-wrapper contrasena-field">
-                            <input class="form-input-field" type="contrasena" id="confirmarContrasena" 
+                            <input class="form-input-field" type="password" id="confirmarContrasena" 
                                    placeholder="********" required>
                             <button type="button" class="toggle-contrasena" data-target="confirmarContrasena">
                                 <i class="fas fa-eye"></i>
@@ -185,7 +184,7 @@
                         </div>
                     </div>
 
-                    <!-- Requisitos -->
+                    <!-- Requisitos de contraseña -->
                     <div class="contrasena-requirements">
                         <div class="requirements-title">REQUISITOS DE CONTRASEÑA SEGURA:</div>
                         <ul class="requirements-list">
@@ -202,7 +201,7 @@
                     <!-- Acciones -->
                     <div class="action-buttons">
                         <button type="submit" class="action-btn save-btn" id="registerBtn">
-                            <i class="fas fa-user-plus"></i>REGISTRARSE
+                            <i class="fas fa-user-plus"></i>CREAR COLABORADOR
                         </button>
                         <button type="button" class="action-btn cancel-btn" id="cancelBtn">
                             <i class="fas fa-times"></i>CANCELAR
@@ -233,14 +232,11 @@
         </div>
     </div>
 
-    <!-- Scripts externos -->
+    <!-- Scripts -->
     <script type="module" src="/components/themeloader.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <!-- SCRIPT PARA MANEJO DE ARCHIVOS Y FORMULARIO-->
     <script type="module" src="newUser.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

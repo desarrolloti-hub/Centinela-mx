@@ -109,9 +109,11 @@ document.addEventListener('DOMContentLoaded', function() {
             background: estilos.colors.bgPrimary,
             backdrop: `rgba(0, 0, 0, 0.8)`,
             customClass: {
-                popup: 'sweetalert-popup-custom',
-                title: 'sweetalert-title-custom',
-                content: 'sweetalert-content-custom'
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
             },
             allowOutsideClick: false
         }).then(() => {
@@ -369,15 +371,10 @@ document.addEventListener('DOMContentLoaded', function() {
             background: estilos.colors.bgPrimary,
             backdrop: `rgba(0, 0, 0, 0.8)`,
             customClass: {
-                popup: 'sweetalert-popup-custom',
-                title: 'sweetalert-title-custom',
-                content: 'sweetalert-content-custom'
-            },
-            didOpen: () => {
-                const progressBar = Swal.getHtmlContainer().querySelector('.swal2-progress-bar');
-                if (progressBar) {
-                    progressBar.style.background = `linear-gradient(90deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary})`;
-                }
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                timerProgressBar: 'swal2-timer-progress-bar'
             }
         });
     }
@@ -420,9 +417,11 @@ document.addEventListener('DOMContentLoaded', function() {
             background: estilos.colors.bgPrimary,
             backdrop: `rgba(0, 0, 0, 0.8)`,
             customClass: {
-                popup: 'sweetalert-popup-custom',
-                title: 'sweetalert-title-custom',
-                content: 'sweetalert-content-custom'
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
             },
             focusConfirm: false
         }).then(() => {
@@ -473,9 +472,11 @@ document.addEventListener('DOMContentLoaded', function() {
             background: estilos.colors.bgPrimary,
             backdrop: `rgba(0, 0, 0, 0.8)`,
             customClass: {
-                popup: 'sweetalert-popup-custom',
-                title: 'sweetalert-title-custom',
-                content: 'sweetalert-content-custom'
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
             },
             preConfirm: () => {
                 passwordInput.focus();
@@ -533,9 +534,9 @@ document.addEventListener('DOMContentLoaded', function() {
             background: estilos.colors.bgPrimary,
             backdrop: `rgba(0, 0, 0, 0.8)`,
             customClass: {
-                popup: 'sweetalert-popup-custom',
-                title: 'sweetalert-title-custom',
-                content: 'sweetalert-content-custom'
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container'
             },
             showCloseButton: true
         });
@@ -588,9 +589,9 @@ document.addEventListener('DOMContentLoaded', function() {
             background: estilos.colors.bgPrimary,
             backdrop: `rgba(0, 0, 0, 0.8)`,
             customClass: {
-                popup: 'sweetalert-popup-custom',
-                title: 'sweetalert-title-custom',
-                content: 'sweetalert-content-custom'
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container'
             },
             didOpen: () => {
                 const recoveryEmail = document.getElementById('recovery-email');
@@ -622,9 +623,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     background: estilos.colors.bgPrimary,
                     color: estilos.colors.primary,
                     customClass: {
-                        popup: 'sweetalert-popup-custom',
-                        title: 'sweetalert-title-custom',
-                        content: 'sweetalert-content-custom'
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm',
+                        cancelButton: 'swal2-cancel'
                     }
                 });
             } else {
@@ -635,9 +638,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     background: estilos.colors.bgPrimary,
                     color: estilos.colors.primary,
                     customClass: {
-                        popup: 'sweetalert-popup-custom',
-                        title: 'sweetalert-title-custom',
-                        content: 'sweetalert-content-custom'
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm',
+                        cancelButton: 'swal2-cancel'
                     }
                 });
             }
@@ -685,9 +690,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 background: estilos.colors.bgPrimary,
                 color: estilos.colors.primary,
                 customClass: {
-                    popup: 'sweetalert-popup-custom',
-                    title: 'sweetalert-title-custom',
-                    content: 'sweetalert-content-custom'
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm',
+                    cancelButton: 'swal2-cancel'
                 }
             });
             emailInput.focus();
@@ -721,9 +728,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 confirmButtonColor: estilos.colors.accentPrimary,
                 background: estilos.colors.bgPrimary,
                 customClass: {
-                    popup: 'sweetalert-popup-custom',
-                    title: 'sweetalert-title-custom',
-                    content: 'sweetalert-content-custom'
+                    popup: 'swal2-popup',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm',
+                    cancelButton: 'swal2-cancel'
                 }
             });
             passwordInput.focus();
@@ -818,9 +827,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     confirmButtonColor: estilos.colors.accentPrimary,
                     background: estilos.colors.bgPrimary,
                     customClass: {
-                        popup: 'sweetalert-popup-custom',
-                        title: 'sweetalert-title-custom',
-                        content: 'sweetalert-content-custom'
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm',
+                        cancelButton: 'swal2-cancel'
                     },
                     showCancelButton: true,
                     cancelButtonText: 'Entendido'
@@ -834,9 +845,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     background: estilos.colors.bgPrimary,
                     color: estilos.colors.primary,
                     customClass: {
-                        popup: 'sweetalert-popup-custom',
-                        title: 'sweetalert-title-custom',
-                        content: 'sweetalert-content-custom'
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm',
+                        cancelButton: 'swal2-cancel'
                     }
                 });
                 emailInput.focus();
@@ -849,9 +862,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     background: estilos.colors.bgPrimary,
                     color: estilos.colors.primary,
                     customClass: {
-                        popup: 'sweetalert-popup-custom',
-                        title: 'sweetalert-title-custom',
-                        content: 'sweetalert-content-custom'
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm',
+                        cancelButton: 'swal2-cancel'
                     }
                 });
                 
@@ -880,9 +895,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     confirmButtonColor: estilos.colors.accentSecondary,
                     background: estilos.colors.bgPrimary,
                     customClass: {
-                        popup: 'sweetalert-popup-custom',
-                        title: 'sweetalert-title-custom',
-                        content: 'sweetalert-content-custom'
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm',
+                        cancelButton: 'swal2-cancel'
                     }
                 });
                 
@@ -894,9 +911,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     background: estilos.colors.bgPrimary,
                     color: estilos.colors.primary,
                     customClass: {
-                        popup: 'sweetalert-popup-custom',
-                        title: 'sweetalert-title-custom',
-                        content: 'sweetalert-content-custom'
+                        popup: 'swal2-popup',
+                        title: 'swal2-title',
+                        htmlContainer: 'swal2-html-container',
+                        confirmButton: 'swal2-confirm',
+                        cancelButton: 'swal2-cancel'
                     }
                 });
                 emailInput.focus();
@@ -936,85 +955,5 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Sistema de login con SweetAlerts personalizados inicializado correctamente');
 });
-
-const sweetAlertStyles = document.createElement('style');
-sweetAlertStyles.textContent = `
-    .sweetalert-popup-custom {
-        background: var(--color-bg-primary) !important;
-        border: 1px solid var(--color-border-light) !important;
-        border-radius: var(--border-radius-large) !important;
-        backdrop-filter: blur(10px) !important;
-    }
-    
-    .sweetalert-title-custom {
-        color: var(--color-text-primary) !important;
-        font-family: var(--font-family-primary) !important;
-        font-weight: 600 !important;
-    }
-    
-    .sweetalert-content-custom {
-        color: var(--color-text-secondary) !important;
-        font-family: var(--font-family-secondary) !important;
-    }
-    
-    .swal2-confirm {
-        background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
-        color: var(--color-text-dark) !important;
-        border: none !important;
-        border-radius: var(--border-radius-medium) !important;
-        font-weight: bold !important;
-        transition: var(--transition-default) !important;
-    }
-    
-    .swal2-confirm:hover {
-        opacity: 0.9 !important;
-    }
-    
-    .swal2-cancel {
-        background: var(--color-bg-tertiary) !important;
-        color: var(--color-text-primary) !important;
-        border: 1px solid var(--color-border-light) !important;
-        border-radius: var(--border-radius-medium) !important;
-        transition: var(--transition-default) !important;
-    }
-    
-    .swal2-cancel:hover {
-        background: var(--color-accent-primary) !important;
-        color: var(--color-text-dark) !important;
-    }
-    
-    .swal2-progress-bar {
-        background: linear-gradient(90deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
-    }
-    
-    .swal2-icon {
-        border-color: var(--color-accent-secondary) !important;
-    }
-    
-    .swal2-icon.swal2-success {
-        border-color: var(--color-accent-secondary) !important;
-    }
-    
-    .swal2-icon.swal2-success .swal2-success-ring {
-        border-color: var(--color-accent-secondary) !important;
-    }
-    
-    .swal2-icon.swal2-error {
-        border-color: var(--color-accent-secondary) !important;
-    }
-    
-    .swal2-icon.swal2-warning {
-        border-color: var(--color-accent-primary) !important;
-    }
-    
-    .swal2-icon.swal2-info {
-        border-color: var(--color-accent-secondary) !important;
-    }
-    
-    .swal2-icon .swal2-icon-content {
-        color: var(--color-accent-secondary) !important;
-    }
-`;
-document.head.appendChild(sweetAlertStyles);
 
 console.log('login.js cargado - Con SweetAlerts usando variables CSS personalizadas');

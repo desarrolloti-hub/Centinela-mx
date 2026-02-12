@@ -1,6 +1,6 @@
 /**
  * EDITAR CATEGORÍAS - Sistema Centinela
- * VERSIÓN CORREGIDA - Compatible con la clase Categoria (objetos, no Maps)
+ * VERSIÓN CORREGIDA - SweetAlert usa temas de personalization.css
  */
 
 // =============================================
@@ -34,9 +34,9 @@ async function inicializarCategoriaManager() {
             title: 'Error crítico',
             html: `
                 <div style="text-align: left;">
-                    <p style="margin-bottom: 15px;">No se pudo cargar el módulo de categorías.</p>
-                    <div style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #ef4444;">
-                        <p style="margin: 0; color: #ef4444; font-size: 0.9em;">
+                    <p style="margin-bottom: 15px; color: var(--color-text-primary, #ffffff);">No se pudo cargar el módulo de categorías.</p>
+                    <div style="background: rgba(var(--color-danger-rgb, 239, 68, 68), 0.1); padding: 12px; border-radius: var(--border-radius-medium, 8px); border-left: 4px solid var(--color-danger, #ef4444);">
+                        <p style="margin: 0; color: var(--color-danger, #ef4444); font-size: 0.9em;">
                             <i class="fas fa-exclamation-triangle"></i> 
                             <strong>Error:</strong> ${error.message || 'Error desconocido'}
                         </p>
@@ -44,10 +44,17 @@ async function inicializarCategoriaManager() {
                 </div>
             `,
             icon: 'error',
-            background: '#0a0a0a',
-            color: '#ffffff',
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Recargar'
+            background: 'var(--color-bg-primary, #0a0a0a)',
+            color: 'var(--color-text-primary, #ffffff)',
+            confirmButtonColor: 'var(--color-danger, #ef4444)',
+            confirmButtonText: 'Recargar',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
+            }
         }).then(() => {
             window.location.reload();
         });
@@ -108,10 +115,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                 const editor = document.getElementById('subcategoriaEditorContainer');
                 if (editor) {
                     editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    editor.style.transition = 'box-shadow 0.3s ease';
-                    editor.style.boxShadow = '0 0 0 4px rgba(16, 185, 129, 0.5)';
+                    editor.style.transition = 'var(--transition-fast)';
+                    editor.style.boxShadow = '0 0 0 4px var(--color-accent-primary, #c0c0c0)';
                     setTimeout(() => {
-                        editor.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.25)';
+                        editor.style.boxShadow = '0 12px 28px var(--color-shadow)';
                     }, 1500);
                 }
             }, 200);
@@ -132,10 +139,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                     const editor = document.getElementById('subcategoriaEditorContainer');
                     if (editor) {
                         editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        editor.style.transition = 'box-shadow 0.3s ease';
-                        editor.style.boxShadow = '0 0 0 4px rgba(249, 115, 22, 0.5)';
+                        editor.style.transition = 'var(--transition-fast)';
+                        editor.style.boxShadow = '0 0 0 4px var(--color-active, #c0c0c0)';
                         setTimeout(() => {
-                            editor.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.25)';
+                            editor.style.boxShadow = '0 12px 28px var(--color-shadow)';
                         }, 1500);
                     }
                 }, 200);
@@ -160,11 +167,11 @@ function mostrarInfoEmpresa() {
                 display: inline-flex;
                 align-items: center;
                 gap: 12px;
-                background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
-                border: 1px solid rgba(16, 185, 129, 0.3);
-                color: #10b981;
+                background: linear-gradient(135deg, rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.15), rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.05));
+                border: 1px solid rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3);
+                color: var(--color-accent-primary, #c0c0c0);
                 padding: 10px 20px;
-                border-radius: 12px;
+                border-radius: var(--border-radius-large);
                 font-size: 14px;
                 margin-left: 16px;
                 backdrop-filter: blur(5px);
@@ -172,16 +179,16 @@ function mostrarInfoEmpresa() {
 
             let logoSrc = '';
             if (empresaActual?.logo) {
-                logoSrc = `<img src="${empresaActual.logo}" alt="Logo" style="width: 24px; height: 24px; border-radius: 6px; object-fit: cover;">`;
+                logoSrc = `<img src="${empresaActual.logo}" alt="Logo" style="width: 24px; height: 24px; border-radius: var(--border-radius-small); object-fit: cover;">`;
             }
 
             badgeEmpresa.innerHTML = `
                 ${logoSrc || '<i class="fas fa-building"></i>'}
                 <span>
                     <span style="opacity: 0.8;">Empresa:</span> 
-                    <strong style="color: #34d399;">${empresaActual?.nombre || categoriaActual?.organizacionNombre || 'No especificada'}</strong>
+                    <strong style="color: var(--color-accent-primary, #c0c0c0);">${empresaActual?.nombre || categoriaActual?.organizacionNombre || 'No especificada'}</strong>
                 </span>
-                <span style="opacity: 0.6; font-size: 12px; border-left: 1px solid rgba(16,185,129,0.3); padding-left: 12px;">
+                <span style="opacity: 0.6; font-size: 12px; border-left: 1px solid rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3); padding-left: 12px;">
                     <i class="fas fa-database"></i> ${categoriaManager?.nombreColeccion || ''}
                 </span>
             `;
@@ -197,7 +204,6 @@ function mostrarInfoEmpresa() {
 
 /**
  * CARGA LA CATEGORÍA DESDE FIRESTORE
- * CORREGIDO: Maneja objetos, NO Maps
  */
 async function cargarCategoria(id) {
     if (!categoriaManager) {
@@ -217,11 +223,10 @@ async function cargarCategoria(id) {
         console.log('📦 Categoría cargada:', categoriaActual);
         console.log('📁 Subcategorías (objeto):', categoriaActual.subcategorias);
 
-        // 🔥 CORREGIDO: Convertir objeto de subcategorías a array
+        // Convertir objeto de subcategorías a array
         subcategorias = [];
         
         if (categoriaActual.subcategorias && typeof categoriaActual.subcategorias === 'object') {
-            // Iterar sobre las propiedades del objeto
             Object.keys(categoriaActual.subcategorias).forEach(key => {
                 const sub = categoriaActual.subcategorias[key];
                 if (sub && typeof sub === 'object') {
@@ -263,22 +268,22 @@ function actualizarUICategoria() {
     // Actualizar título
     const tituloElement = document.querySelector('.dashboard-title span');
     if (tituloElement) {
-        tituloElement.innerHTML = `Editar <span style="color: #2f8cff; font-weight: 700;">${escapeHTML(categoriaActual.nombre)}</span>`;
+        tituloElement.innerHTML = `Editar <span style="color: var(--color-accent-primary, #c0c0c0); font-weight: 700;">${escapeHTML(categoriaActual.nombre)}</span>`;
     }
 
     // Actualizar campos del formulario
     document.getElementById('nombreCategoria').value = categoriaActual.nombre || '';
-    document.getElementById('colorPicker').value = categoriaActual.color || '#2f8cff';
+    document.getElementById('colorPicker').value = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
 
     // Actualizar previsualización de color
     const colorPreview = document.getElementById('colorPreview');
     if (colorPreview) {
-        colorPreview.style.backgroundColor = categoriaActual.color || '#2f8cff';
+        colorPreview.style.backgroundColor = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
     }
 
     const colorHex = document.getElementById('colorHex');
     if (colorHex) {
-        colorHex.textContent = categoriaActual.color || '#2f8cff';
+        colorHex.textContent = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
     }
 }
 
@@ -292,14 +297,14 @@ function cargarSubcategorias() {
     if (!subcategorias || subcategorias.length === 0) {
         lista.innerHTML = `
             <div class="empty-state" style="text-align: center; padding: 48px 20px;">
-                <div style="font-size: 64px; color: rgba(249, 115, 22, 0.2); margin-bottom: 16px;">
+                <div style="font-size: 64px; color: rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.2); margin-bottom: 16px;">
                     <i class="fas fa-folder-open"></i>
                 </div>
-                <h3 style="color: #f97316; margin-bottom: 12px;">No hay subcategorías</h3>
-                <p style="color: var(--text-dim); margin-bottom: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                <h3 style="color: var(--color-accent-primary, #c0c0c0); margin-bottom: 12px;">No hay subcategorías</h3>
+                <p style="color: var(--color-text-secondary); margin-bottom: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">
                     Esta categoría aún no tiene subcategorías. Crea la primera haciendo clic en el botón superior.
                 </p>
-                <button class="btn-add-subcategoria" onclick="abrirEditorSubcategoria('crear')" style="background: linear-gradient(135deg, #f97316, #ea580c); border: none; padding: 12px 24px; border-radius: 30px; color: white; font-weight: 600;">
+                <button class="btn-add-subcategoria" onclick="abrirEditorSubcategoria('crear')" style="background: linear-gradient(135deg, var(--color-accent-primary, #c0c0c0), var(--color-active, #c0c0c0)); border: none; padding: 12px 24px; border-radius: 30px; color: var(--color-text-dark, #000000); font-weight: 600; cursor: pointer;">
                     <i class="fas fa-plus-circle me-2"></i>Agregar Subcategoría
                 </button>
             </div>
@@ -324,46 +329,46 @@ function crearTarjetaSubcategoria(sub) {
         align-items: center;
         justify-content: space-between;
         padding: 16px;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
+        background: rgba(var(--color-bg-light-rgb, 255, 255, 255), 0.02);
+        border: 1px solid var(--color-border-light);
+        border-radius: var(--border-radius-large);
         margin-bottom: 12px;
-        transition: all 0.2s ease;
+        transition: var(--transition-default);
     `;
 
     div.onmouseenter = function () {
-        this.style.background = 'rgba(47, 140, 255, 0.05)';
-        this.style.borderColor = 'rgba(47, 140, 255, 0.3)';
+        this.style.background = 'rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.05)';
+        this.style.borderColor = 'rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3)';
     };
     div.onmouseleave = function () {
-        this.style.background = 'rgba(255, 255, 255, 0.02)';
-        this.style.borderColor = 'var(--border-color)';
+        this.style.background = 'rgba(var(--color-bg-light-rgb, 255, 255, 255), 0.02)';
+        this.style.borderColor = 'var(--color-border-light)';
     };
 
     // Determinar color de la subcategoría
     let colorActual = sub.color;
     if (!colorActual || sub.heredaColor) {
-        colorActual = categoriaActual.color || '#2f8cff';
+        colorActual = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
     }
 
-    const badgeColor = sub.heredaColor ? '#10b981' : '#f97316';
+    const badgeColor = sub.heredaColor ? 'var(--color-accent-primary, #c0c0c0)' : 'var(--color-active, #c0c0c0)';
     const badgeIcon = sub.heredaColor ? 'fa-paint-brush' : 'fa-palette';
     const badgeText = sub.heredaColor ? 'Hereda color' : 'Color propio';
     const descripcion = sub.descripcion || 'Sin descripción';
 
     div.innerHTML = `
         <div style="display: flex; align-items: flex-start; gap: 16px; flex: 1;">
-            <div style="width: 40px; height: 40px; background-color: ${colorActual}; border-radius: 10px; border: 2px solid rgba(255,255,255,0.1);"></div>
+            <div style="width: 40px; height: 40px; background-color: ${colorActual}; border-radius: var(--border-radius-medium); border: 2px solid rgba(255,255,255,0.1);"></div>
             <div style="flex: 1;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: #fff;">${escapeHTML(sub.nombre || 'Sin nombre')}</h4>
+                    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--color-text-primary);">${escapeHTML(sub.nombre || 'Sin nombre')}</h4>
                     <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: ${badgeColor}15; color: ${badgeColor}; border-radius: 20px; font-size: 11px; font-weight: 500;">
                         <i class="fas ${badgeIcon}" style="font-size: 10px;"></i>
                         ${badgeText}
                     </span>
                 </div>
-                <p style="margin: 0 0 6px 0; color: #d1d5db; font-size: 14px;">${escapeHTML(descripcion)}</p>
-                <small style="color: #6b7280; font-size: 11px;">
+                <p style="margin: 0 0 6px 0; color: var(--color-text-secondary); font-size: 14px;">${escapeHTML(descripcion)}</p>
+                <small style="color: var(--color-text-dim, #6b7280); font-size: 11px;">
                     <i class="fas fa-fingerprint"></i> ID: ${sub.id?.substring(0, 8) || ''}...
                     ${sub.fechaActualizacion ? ` | <i class="fas fa-clock"></i> ${new Date(sub.fechaActualizacion).toLocaleDateString()}` : ''}
                 </small>
@@ -371,15 +376,15 @@ function crearTarjetaSubcategoria(sub) {
         </div>
         <div style="display: flex; gap: 8px; margin-left: 20px;">
             <button class="btn-sub-action edit" onclick="abrirEditorSubcategoria('editar', '${sub.id}')" 
-                    style="background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3); color: #f97316; padding: 8px 12px; border-radius: 8px;"
-                    onmouseenter="this.style.background='rgba(249,115,22,0.2)'; this.style.borderColor='#f97316';"
-                    onmouseleave="this.style.background='rgba(249,115,22,0.1)'; this.style.borderColor='rgba(249,115,22,0.3)';">
+                    style="background: rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.1); border: 1px solid rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3); color: var(--color-accent-primary, #c0c0c0); padding: 8px 12px; border-radius: var(--border-radius-medium); cursor: pointer; transition: var(--transition-fast);"
+                    onmouseenter="this.style.background='rgba(var(--color-accent-primary-rgb, 192,192,192),0.2)'; this.style.borderColor='var(--color-accent-primary, #c0c0c0)';"
+                    onmouseleave="this.style.background='rgba(var(--color-accent-primary-rgb, 192,192,192),0.1)'; this.style.borderColor='rgba(var(--color-accent-primary-rgb, 192,192,192),0.3)';">
                 <i class="fas fa-edit"></i>
             </button>
             <button class="btn-sub-action delete" onclick="eliminarSubcategoria('${sub.id}')"
-                    style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 8px 12px; border-radius: 8px;"
-                    onmouseenter="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='#ef4444';"
-                    onmouseleave="this.style.background='rgba(239,68,68,0.1)'; this.style.borderColor='rgba(239,68,68,0.3)';">
+                    style="background: rgba(var(--color-danger-rgb, 239, 68, 68), 0.1); border: 1px solid rgba(var(--color-danger-rgb, 239, 68, 68), 0.3); color: var(--color-danger, #ef4444); padding: 8px 12px; border-radius: var(--border-radius-medium); cursor: pointer; transition: var(--transition-fast);"
+                    onmouseenter="this.style.background='rgba(var(--color-danger-rgb, 239,68,68),0.2)'; this.style.borderColor='var(--color-danger, #ef4444)';"
+                    onmouseleave="this.style.background='rgba(var(--color-danger-rgb, 239,68,68),0.1)'; this.style.borderColor='rgba(var(--color-danger-rgb, 239,68,68),0.3)';">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -390,7 +395,6 @@ function crearTarjetaSubcategoria(sub) {
 
 /**
  * ABRIR EDITOR DE SUBCATEGORÍA
- * CORREGIDO: Funciona con objetos, no Maps
  */
 function abrirEditorSubcategoria(modo, subcategoriaId = null) {
     if (!categoriaActual) {
@@ -414,13 +418,13 @@ function abrirEditorSubcategoria(modo, subcategoriaId = null) {
     if (modo === 'crear') {
         titulo.textContent = 'Nueva Subcategoría';
         icono.className = 'fas fa-plus-circle';
-        icono.style.color = '#10b981';
+        icono.style.color = 'var(--color-accent-primary, #c0c0c0)';
 
         document.getElementById('heredarColorPadre').checked = true;
         document.getElementById('colorPersonalizadoGroup').style.display = 'none';
 
         // Color base para nueva subcategoría
-        const colorBase = categoriaActual.color || '#2f8cff';
+        const colorBase = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
         document.getElementById('colorSubcategoria').value = colorBase;
         const preview = document.getElementById('subcategoriaColorPreview');
         if (preview) {
@@ -439,7 +443,7 @@ function abrirEditorSubcategoria(modo, subcategoriaId = null) {
         subcategoriaEditando = sub;
         titulo.textContent = `Editar: ${sub.nombre || 'Subcategoría'}`;
         icono.className = 'fas fa-edit';
-        icono.style.color = '#f97316';
+        icono.style.color = 'var(--color-active, #c0c0c0)';
 
         document.getElementById('nombreSubcategoria').value = sub.nombre || '';
         document.getElementById('descripcionSubcategoria').value = sub.descripcion || '';
@@ -452,7 +456,7 @@ function abrirEditorSubcategoria(modo, subcategoriaId = null) {
             document.getElementById('colorPersonalizadoGroup').style.display = 'none';
         } else {
             document.getElementById('colorPersonalizadoGroup').style.display = 'block';
-            const colorValue = sub.color || categoriaActual.color || '#2f8cff';
+            const colorValue = sub.color || categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
             document.getElementById('colorSubcategoria').value = colorValue;
             const preview = document.getElementById('subcategoriaColorPreview');
             if (preview) {
@@ -481,7 +485,6 @@ function cerrarEditorSubcategoria() {
 
 /**
  * GUARDAR SUBCATEGORÍA (CREAR O EDITAR)
- * CORREGIDO: Actualiza el objeto subcategorias correctamente
  */
 async function guardarSubcategoria() {
     if (!categoriaManager || !categoriaActual) {
@@ -509,15 +512,12 @@ async function guardarSubcategoria() {
         const subId = document.getElementById('subcategoriaId').value;
 
         if (modoEdicionSubcategoria === 'crear') {
-            // 🔥 CORREGIDO: Usar el método de la clase Categoria
             if (categoriaActual.existeSubcategoria(nombre)) {
                 throw new Error(`Ya existe una subcategoría con el nombre "${nombre}" en esta categoría`);
             }
 
-            // Agregar subcategoría - esto genera un ID temporal
             const nuevoSubId = categoriaActual.agregarSubcategoria(nombre, descripcion, heredaColor, color);
             
-            // Si no hereda color, asignar color personalizado
             if (!heredaColor && color) {
                 categoriaActual.subcategorias[nuevoSubId].color = color;
                 categoriaActual.subcategorias[nuevoSubId].heredaColor = false;
@@ -526,7 +526,6 @@ async function guardarSubcategoria() {
             mostrarNotificacion('✅ Subcategoría creada exitosamente', 'success');
 
         } else if (modoEdicionSubcategoria === 'editar' && subId) {
-            // Verificar si el nombre ya existe en otra subcategoría
             const subExistente = categoriaActual.subcategorias[subId];
             if (!subExistente) {
                 throw new Error('Subcategoría no encontrada');
@@ -537,7 +536,6 @@ async function guardarSubcategoria() {
                 throw new Error(`Ya existe otra subcategoría con el nombre "${nombre}"`);
             }
 
-            // 🔥 CORREGIDO: Actualizar directamente en el objeto
             categoriaActual.subcategorias[subId] = {
                 ...categoriaActual.subcategorias[subId],
                 nombre: nombre,
@@ -550,15 +548,13 @@ async function guardarSubcategoria() {
             mostrarNotificacion('✅ Subcategoría actualizada correctamente', 'success');
         }
 
-        // 🔥 IMPORTANTE: Guardar TODA la categoría en Firestore
         await categoriaManager.actualizarCategoria(categoriaActual.id, {
             nombre: categoriaActual.nombre,
             descripcion: categoriaActual.descripcion,
             color: categoriaActual.color,
-            subcategorias: categoriaActual.subcategorias // Enviar el objeto completo
+            subcategorias: categoriaActual.subcategorias
         });
 
-        // Recargar categoría para obtener los datos actualizados
         await cargarCategoria(categoriaActual.id);
         cerrarEditorSubcategoria();
 
@@ -572,8 +568,7 @@ async function guardarSubcategoria() {
 }
 
 /**
- * ELIMINAR SUBCATEGORÍA
- * CORREGIDO: Usa el método de la clase Categoria
+ * ELIMINAR SUBCATEGORÍA - CON TARJETAS BONITAS
  */
 async function eliminarSubcategoria(subcategoriaId) {
     if (!categoriaManager || !categoriaActual) {
@@ -584,36 +579,67 @@ async function eliminarSubcategoria(subcategoriaId) {
     const sub = subcategorias.find(s => s.id === subcategoriaId);
     if (!sub) return;
 
+    // Determinar color para mostrar
+    let colorPreview = sub.color;
+    if (!colorPreview || sub.heredaColor) {
+        colorPreview = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+    }
+
     const result = await Swal.fire({
         title: '¿Eliminar subcategoría?',
         html: `
-            <div style="text-align: center; padding: 10px;">
-                <div style="font-size: 64px; color: #ef4444; margin-bottom: 16px;">
-                    <i class="fas fa-exclamation-triangle"></i>
+            <div style="text-align: left; padding: 10px;">
+                <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px;">
+                    <div style="width: 60px; height: 60px; background-color: ${colorPreview}; border-radius: var(--border-radius-medium, 8px); border: 2px solid var(--color-border-light, rgba(255,255,255,0.1)); box-shadow: var(--shadow-small, 0 2px 8px var(--color-shadow));"></div>
+                    <div>
+                        <h3 style="margin: 0 0 8px 0; color: var(--color-text-primary, #ffffff); font-size: 20px; font-weight: 600;">${escapeHTML(sub.nombre || 'Sin nombre')}</h3>
+                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.15); color: var(--color-accent-primary, #c0c0c0); border-radius: var(--border-radius-pill, 30px); font-size: 12px;">
+                            <i class="fas ${sub.heredaColor ? 'fa-paint-brush' : 'fa-palette'}"></i>
+                            ${sub.heredaColor ? 'Hereda color' : 'Color propio'}
+                        </span>
+                    </div>
                 </div>
-                <h5 style="margin-bottom: 16px; color: #fff;">Estás a punto de eliminar:</h5>
-                <p style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                    <strong style="color: #ef4444; font-size: 18px;">${escapeHTML(sub.nombre || '')}</strong>
-                </p>
-                <p style="color: #9ca3af; font-size: 14px;">Esta acción no se puede deshacer.</p>
+                
+                <div style="background: var(--color-bg-tertiary, #0000007a); border-radius: var(--border-radius-medium, 8px); padding: 16px; margin-bottom: 20px; border: 1px solid var(--color-border-light, rgba(255,255,255,0.1));">
+                    <p style="margin: 0 0 12px 0; color: var(--color-text-secondary, rgba(255,255,255,0.8)); font-size: 14px;">
+                        <i class="fas fa-info-circle" style="color: var(--color-accent-primary, #c0c0c0); margin-right: 8px;"></i>
+                        ${sub.descripcion || 'Sin descripción'}
+                    </p>
+                    <div style="display: flex; gap: 20px; color: var(--color-text-dim, #6b7280); font-size: 12px;">
+                        <span><i class="fas fa-fingerprint"></i> ID: ${sub.id?.substring(0, 8) || ''}...</span>
+                        <span><i class="fas fa-clock"></i> ${sub.fechaActualizacion ? new Date(sub.fechaActualizacion).toLocaleDateString() : 'Fecha desconocida'}</span>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(var(--color-danger-rgb, 239, 68, 68), 0.1); border-left: 4px solid var(--color-danger, #ef4444); padding: 12px 16px; border-radius: var(--border-radius-medium, 8px);">
+                    <p style="margin: 0; color: var(--color-text-secondary, rgba(255,255,255,0.8)); font-size: 13px;">
+                        <i class="fas fa-exclamation-triangle" style="color: var(--color-danger, #ef4444); margin-right: 8px;"></i>
+                        Esta acción no se puede deshacer. La subcategoría se eliminará permanentemente.
+                    </p>
+                </div>
             </div>
         `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280',
+        confirmButtonColor: 'var(--color-danger, #ef4444)',
+        cancelButtonColor: 'var(--color-bg-tertiary, #6b7280)',
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
-        background: '#0a0a0a',
-        color: '#ffffff'
+        background: 'var(--color-bg-primary, #0a0a0a)',
+        color: 'var(--color-text-primary, #ffffff)',
+        customClass: {
+            popup: 'swal2-popup',
+            title: 'swal2-title',
+            htmlContainer: 'swal2-html-container',
+            confirmButton: 'swal2-confirm',
+            cancelButton: 'swal2-cancel'
+        }
     });
 
     if (result.isConfirmed) {
         try {
-            // 🔥 CORREGIDO: Usar el método de la clase
             categoriaActual.eliminarSubcategoria(subcategoriaId);
 
-            // Guardar cambios en Firestore
             await categoriaManager.actualizarCategoria(categoriaActual.id, {
                 nombre: categoriaActual.nombre,
                 descripcion: categoriaActual.descripcion,
@@ -625,14 +651,31 @@ async function eliminarSubcategoria(subcategoriaId) {
 
             Swal.fire({
                 title: '¡Eliminada!',
-                text: `La subcategoría "${sub.nombre}" ha sido eliminada.`,
+                html: `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 64px; color: var(--color-accent-primary, #c0c0c0); margin-bottom: 16px;">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <p style="color: var(--color-text-primary, #ffffff); font-size: 16px; margin-bottom: 8px;">
+                            La subcategoría <strong style="color: var(--color-accent-primary, #c0c0c0);">"${escapeHTML(sub.nombre)}"</strong>
+                        </p>
+                        <p style="color: var(--color-text-secondary, rgba(255,255,255,0.8)); font-size: 14px;">
+                            ha sido eliminada correctamente.
+                        </p>
+                    </div>
+                `,
                 icon: 'success',
-                confirmButtonColor: '#10b981',
-                background: '#0a0a0a',
-                color: '#ffffff',
-                timer: 2000,
+                confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
+                background: 'var(--color-bg-primary, #0a0a0a)',
+                color: 'var(--color-text-primary, #ffffff)',
+                timer: 2500,
                 timerProgressBar: true,
-                showConfirmButton: false
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'swal2-popup',
+                    htmlContainer: 'swal2-html-container',
+                    timerProgressBar: 'swal2-timer-progress-bar'
+                }
             });
 
         } catch (error) {
@@ -643,7 +686,7 @@ async function eliminarSubcategoria(subcategoriaId) {
 }
 
 /**
- * GUARDAR CATEGORÍA (CAMBIO DE NOMBRE/COLOR)
+ * GUARDAR CATEGORÍA
  */
 async function guardarCategoria() {
     if (!categoriaManager || !categoriaActual) {
@@ -667,49 +710,47 @@ async function guardarCategoria() {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
         btn.disabled = true;
 
-        const nombreAnterior = categoriaActual.nombre;
-        const colorAnterior = categoriaActual.color;
-
-        // Actualizar el objeto actual
         categoriaActual.nombre = nombre;
         categoriaActual.color = color;
 
-        // 🔥 IMPORTANTE: Enviar TODOS los datos, incluyendo subcategorías
         await categoriaManager.actualizarCategoria(categoriaActual.id, {
             nombre: categoriaActual.nombre,
             descripcion: categoriaActual.descripcion,
             color: categoriaActual.color,
-            subcategorias: categoriaActual.subcategorias // NO perder las subcategorías
+            subcategorias: categoriaActual.subcategorias
         });
 
-        // Recargar categoría para confirmar cambios
         await cargarCategoria(categoriaActual.id);
 
         Swal.fire({
             title: '¡Guardado!',
             html: `
                 <div style="text-align: center;">
-                    <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 16px;"></i>
-                    <p>La categoría ha sido actualizada correctamente.</p>
+                    <i class="fas fa-check-circle" style="font-size: 48px; color: var(--color-accent-primary, #c0c0c0); margin-bottom: 16px;"></i>
+                    <p style="color: var(--color-text-primary, #ffffff);">La categoría ha sido actualizada correctamente.</p>
                 </div>
             `,
             icon: 'success',
-            confirmButtonColor: '#10b981',
-            background: '#0a0a0a',
-            color: '#ffffff',
+            confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
+            background: 'var(--color-bg-primary, #0a0a0a)',
+            color: 'var(--color-text-primary, #ffffff)',
             timer: 2000,
             timerProgressBar: true,
-            showConfirmButton: false
+            showConfirmButton: false,
+            customClass: {
+                popup: 'swal2-popup',
+                htmlContainer: 'swal2-html-container',
+                timerProgressBar: 'swal2-timer-progress-bar'
+            }
         });
 
     } catch (error) {
         console.error('Error al guardar categoría:', error);
         mostrarNotificacion(`Error: ${error.message}`, 'error');
 
-        // Revertir cambios locales si hay error
         if (categoriaActual) {
             document.getElementById('nombreCategoria').value = categoriaActual.nombre;
-            document.getElementById('colorPicker').value = categoriaActual.color || '#2f8cff';
+            document.getElementById('colorPicker').value = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
         }
     } finally {
         btn.innerHTML = originalHTML;
@@ -728,7 +769,6 @@ function cancelarEdicion() {
     const hayCambiosEnCategoria = nombreActual !== categoriaActual.nombre ||
         colorActual !== categoriaActual.color;
 
-    // Verificar cambios en subcategorías
     const subcategoriasActuales = [];
     Object.keys(categoriaActual.subcategorias || {}).forEach(key => {
         const sub = categoriaActual.subcategorias[key];
@@ -755,12 +795,19 @@ function cancelarEdicion() {
             text: 'Tienes cambios sin guardar. ¿Seguro que quieres salir?',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
+            confirmButtonColor: 'var(--color-danger, #ef4444)',
+            cancelButtonColor: 'var(--color-bg-tertiary, #6b7280)',
             confirmButtonText: 'Sí, salir',
             cancelButtonText: 'Seguir editando',
-            background: '#0a0a0a',
-            color: '#ffffff'
+            background: 'var(--color-bg-primary, #0a0a0a)',
+            color: 'var(--color-text-primary, #ffffff)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
+            }
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = '/users/admin/categorias/categorias.html';
@@ -875,10 +922,10 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
     noti.className = 'notificacion-flotante';
 
     const colores = {
-        success: '#10b981',
-        error: '#ef4444',
-        info: '#2f8cff',
-        warning: '#f59e0b'
+        success: 'var(--color-accent-primary, #c0c0c0)',
+        error: 'var(--color-danger, #ef4444)',
+        info: 'var(--color-accent-primary, #c0c0c0)',
+        warning: 'var(--color-active, #c0c0c0)'
     };
 
     const iconos = {
@@ -893,18 +940,18 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
         bottom: 24px;
         right: 24px;
         background: ${colores[tipo] || colores.info};
-        color: white;
+        color: var(--color-text-dark, #000000);
         padding: 16px 24px;
-        border-radius: 12px;
+        border-radius: var(--border-radius-large);
         font-size: 14px;
         font-weight: 500;
         display: flex;
         align-items: center;
         gap: 12px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        box-shadow: var(--shadow-normal);
         z-index: 9999;
-        animation: slideInRight 0.3s ease;
-        border: 1px solid rgba(255,255,255,0.1);
+        animation: slideInRight var(--transition-fast);
+        border: 1px solid var(--color-border-light);
         backdrop-filter: blur(10px);
         max-width: 400px;
     `;
@@ -912,7 +959,7 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
     noti.innerHTML = `
         <i class="fas ${iconos[tipo] || 'fa-info-circle'}" style="font-size: 20px;"></i>
         <span style="flex: 1;">${mensaje}</span>
-        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; opacity: 0.7; cursor: pointer; padding: 4px;">
+        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--color-text-dark, #000000); opacity: 0.7; cursor: pointer; padding: 4px;">
             <i class="fas fa-times"></i>
         </button>
     `;
@@ -932,7 +979,7 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
     }
 
     setTimeout(() => {
-        noti.style.animation = 'slideInRight 0.3s ease reverse';
+        noti.style.animation = 'slideInRight var(--transition-fast) reverse';
         setTimeout(() => noti.remove(), 300);
     }, 5000);
 }

@@ -559,127 +559,10 @@
 }
 
 /* =============================================
-   ESTILOS SWEETALERT2 - TODOS EN CSS
+   COMPONENTES PERSONALIZADOS PARA SWEETALERT
+   (NO SON ESTILOS NATIVOS, SON CONTENIDO HTML)
    ============================================= */
 
-/* POPUP GENERAL */
-.swal2-popup {
-    background: var(--color-bg-tertiary) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-medium) !important;
-    border: 1px solid var(--color-border-light) !important;
-    box-shadow: var(--shadow-large) !important;
-    backdrop-filter: blur(8px) !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-.swal2-title {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    font-weight: 700 !important;
-    font-size: 1.5rem !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-}
-
-.swal2-html-container {
-    color: var(--color-text-secondary) !important;
-    font-family: var(--font-family-secondary) !important;
-    font-size: 1rem !important;
-    line-height: 1.5 !important;
-}
-
-/* BOTONES */
-.swal2-confirm {
-    background: var(--color-accent-primary) !important;
-    color: var(--color-text-dark) !important;
-    border: none !important;
-    border-radius: var(--border-radius-small) !important;
-    padding: 0.75rem 1.5rem !important;
-    font-family: var(--font-family-primary) !important;
-    font-weight: 600 !important;
-    transition: var(--transition-default) !important;
-    box-shadow: var(--shadow-small) !important;
-}
-
-.swal2-confirm:hover {
-    background: var(--color-active) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: var(--shadow-normal) !important;
-}
-
-.swal2-cancel {
-    background: transparent !important;
-    color: var(--color-text-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-small) !important;
-    padding: 0.75rem 1.5rem !important;
-    font-family: var(--font-family-primary) !important;
-    font-weight: 600 !important;
-    transition: var(--transition-default) !important;
-}
-
-.swal2-cancel:hover {
-    background: var(--color-hover) !important;
-    border-color: var(--color-accent-primary) !important;
-    color: var(--color-accent-primary) !important;
-}
-
-/* INPUTS */
-.swal2-input, .swal2-textarea, .swal2-select {
-    background: var(--color-bg-secondary) !important;
-    color: var(--color-text-primary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-small) !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-.swal2-input:focus, .swal2-textarea:focus {
-    border-color: var(--color-accent-primary) !important;
-    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.3) !important;
-}
-
-/* ICONOS */
-.swal2-icon {
-    border-color: var(--color-accent-primary) !important;
-}
-
-.swal2-icon .swal2-icon-content {
-    color: var(--color-accent-primary) !important;
-}
-
-/* ANIMACIONES */
-@keyframes centinelaSweetAlertIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9) translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes centinelaSweetAlertOut {
-    from {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-    to {
-        opacity: 0;
-        transform: scale(0.9) translateY(-20px);
-    }
-}
-
-.swal2-show {
-    animation: centinelaSweetAlertIn 0.3s ease !important;
-}
-
-.swal2-hide {
-    animation: centinelaSweetAlertOut 0.3s ease !important;
-}
-
-/* COMPONENTES PERSONALIZADOS */
 .swal-user-info {
     text-align: center;
     margin-bottom: 1rem;
@@ -889,18 +772,6 @@
     gap: 8px;
 }
 
-/* BOTÓN CERRAR PERSONALIZADO */
-.swal2-close {
-    color: var(--color-text-primary) !important;
-    font-size: 28px !important;
-    transition: all 0.3s ease !important;
-}
-
-.swal2-close:hover {
-    color: var(--color-accent-primary) !important;
-    transform: rotate(90deg) !important;
-}
-
 /* =============================================
    RESPONSIVE DESIGN - MOBILE FIRST
    ============================================= */
@@ -1073,7 +944,7 @@
         flex-shrink: 0;
     }
     
-    /* SWEETALERT EN MÓVIL */
+    /* SWEETALERT EN MÓVIL - SOLO RESPONSIVE */
     .swal2-popup {
         width: 90% !important;
         margin: 10px !important;

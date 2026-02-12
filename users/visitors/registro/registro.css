@@ -575,182 +575,6 @@ body {
     box-shadow: var(--shadow-normal);
 }
 
-/* ========== SWEETALERT2 - ESTILOS PERSONALIZADOS ========== */
-/* OVERLAY */
-.swal2-popup {
-    background: var(--color-bg-tertiary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-medium) !important;
-    color: var(--color-text-primary) !important;
-    font-family: 'Rajdhani', sans-serif !important;
-    backdrop-filter: blur(10px) !important;
-    box-shadow: var(--shadow-large) !important;
-}
-
-.swal2-backdrop-show {
-    background-color: rgba(0, 0, 0, 0.8) !important;
-    backdrop-filter: blur(5px) !important;
-}
-
-/* ICONOS */
-.swal2-icon {
-    border-width: 3px !important;
-    width: 60px !important;
-    height: 60px !important;
-    margin: 1.5rem auto 1rem !important;
-}
-
-.swal2-icon-content {
-    font-size: 2.5rem !important;
-}
-
-/* TÍTULOS Y TEXTO */
-.swal2-title {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    font-size: 1.4rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1.2px !important;
-    margin-bottom: 0.5rem !important;
-    text-shadow: var(--text-shadow-effect) !important;
-}
-
-.swal2-html-container {
-    color: var(--color-text-secondary) !important;
-    font-family: 'Rajdhani', sans-serif !important;
-    font-size: 0.9rem !important;
-    line-height: 1.4 !important;
-}
-
-/* BOTONES */
-.swal2-actions {
-    margin: 1.5rem auto 0 !important;
-    gap: 0.75rem !important;
-}
-
-.swal2-styled {
-    border: none !important;
-    border-radius: var(--border-radius-small) !important;
-    padding: 0.75rem 1.5rem !important;
-    font-family: 'Rajdhani', sans-serif !important;
-    font-size: 0.8rem !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.6px !important;
-    height: 45px !important;
-    min-width: 120px !important;
-    transition: var(--transition-default) !important;
-    box-shadow: var(--shadow-small) !important;
-    cursor: pointer !important;
-}
-
-.swal2-styled:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: var(--shadow-normal) !important;
-}
-
-.swal2-styled.swal2-confirm {
-    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary)) !important;
-    color: var(--color-text-dark) !important;
-}
-
-.swal2-styled.swal2-confirm:hover {
-    background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary)) !important;
-}
-
-.swal2-styled.swal2-deny {
-    background: linear-gradient(135deg, #95a5a6, #7f8c8d) !important;
-    color: white !important;
-}
-
-.swal2-styled.swal2-deny:hover {
-    background: linear-gradient(135deg, #7f8c8d, #95a5a6) !important;
-}
-
-.swal2-styled.swal2-cancel {
-    background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary)) !important;
-    color: var(--color-text-primary) !important;
-    border: 1px solid var(--color-border-light) !important;
-}
-
-.swal2-styled.swal2-cancel:hover {
-    background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary)) !important;
-    border-color: var(--color-accent-primary) !important;
-}
-
-/* LOADER */
-.swal2-loading {
-    border-color: var(--color-accent-primary) transparent var(--color-accent-primary) transparent !important;
-}
-
-/* INPUTS */
-.swal2-input,
-.swal2-textarea {
-    background: var(--color-bg-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-small) !important;
-    color: var(--color-text-primary) !important;
-    font-family: 'Rajdhani', sans-serif !important;
-    font-size: 0.9rem !important;
-    padding: 0.75rem !important;
-    transition: var(--transition-default) !important;
-}
-
-.swal2-input:focus,
-.swal2-textarea:focus {
-    border-color: var(--color-accent-primary) !important;
-    outline: none !important;
-    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.1) !important;
-}
-
-.swal2-validation-message {
-    background: rgba(244, 67, 54, 0.1) !important;
-    color: #F44336 !important;
-    border-left: 3px solid #F44336 !important;
-}
-
-/* FOOTER */
-.swal2-footer {
-    border-top: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-tertiary) !important;
-    font-size: 0.8rem !important;
-}
-
-/* ICONOS POR TIPO */
-.swal2-success {
-    border-color: var(--color-accent-primary) !important;
-    color: var(--color-accent-primary) !important;
-}
-
-.swal2-success [class^="swal2-success-line"] {
-    background-color: var(--color-accent-primary) !important;
-}
-
-.swal2-success .swal2-success-ring {
-    border-color: rgba(192, 192, 192, 0.3) !important;
-}
-
-.swal2-warning {
-    border-color: #ff9800 !important;
-    color: #ff9800 !important;
-}
-
-.swal2-error {
-    border-color: #f44336 !important;
-    color: #f44336 !important;
-}
-
-.swal2-info {
-    border-color: #2196f3 !important;
-    color: #2196f3 !important;
-}
-
-.swal2-question {
-    border-color: #9c27b0 !important;
-    color: #9c27b0 !important;
-}
-
 /* ========== RESPONSIVE ========== */
 @media (max-width: 1100px) {
     .edit-wrapper {
@@ -783,7 +607,7 @@ body {
         flex-direction: column;
     }
     
-    /* SweetAlert2 responsive */
+    /* SweetAlert2 responsive - usando estilos de personalization.css */
     .swal2-popup {
         width: 90% !important;
     }
@@ -821,27 +645,6 @@ body {
     .action-buttons {
         gap: 0.75rem;
     }
-    
-    /* SweetAlert2 responsive */
-    .swal2-title {
-        font-size: 1.1rem !important;
-    }
-    
-    .swal2-styled {
-        padding: 0.6rem 1rem !important;
-        height: 40px !important;
-        min-width: auto !important;
-        font-size: 0.75rem !important;
-    }
-    
-    .swal2-icon {
-        width: 50px !important;
-        height: 50px !important;
-    }
-    
-    .swal2-icon-content {
-        font-size: 2rem !important;
-    }
 }
 
 @media (max-width: 480px) {
@@ -870,7 +673,7 @@ body {
         font-size: 0.8125rem;
     }
     
-    /* SweetAlert2 responsive */
+    /* SweetAlert2 responsive - usando estilos de personalization.css */
     .swal2-actions {
         flex-direction: column !important;
         width: 100% !important;

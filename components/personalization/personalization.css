@@ -125,3 +125,214 @@
     --footer-social-hover: var(--color-accent-secondary);
     --footer-border-accent: var(--color-accent-footer);
 }
+
+/* =============================================
+   SWEETALERT - TEMA CENTINELA GLOBAL (COMPLETO)
+   ============================================= */
+
+/* Popup principal */
+.swal2-popup {
+    background: var(--color-bg-primary, #000000) !important;
+    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1)) !important;
+    border-radius: var(--border-radius-large, 12px) !important;
+    box-shadow: var(--shadow-large, 0 10px 25px rgba(0, 0, 0, 0.15)) !important;
+    color: var(--color-text-primary, #ffffff) !important;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+/* Título */
+.swal2-title {
+    color: var(--color-text-primary, #ffffff) !important;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
+    border-bottom: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1)) !important;
+    padding: 24px 32px !important;
+    background: linear-gradient(90deg, rgba(192, 192, 192, 0.1), transparent) !important;
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+}
+
+/* Contenedor HTML */
+.swal2-html-container {
+    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8)) !important;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+    padding: 24px 32px !important;
+    text-align: left !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+}
+
+/* Botón de confirmación */
+.swal2-confirm {
+    background: var(--color-accent-primary, #c0c0c0) !important;
+    color: var(--color-text-dark, #000000) !important;
+    border: none !important;
+    border-radius: var(--border-radius-xl, 30px) !important;
+    padding: 12px 28px !important;
+    font-weight: 600 !important;
+    transition: var(--transition-fast, all 0.15s ease) !important;
+    box-shadow: var(--shadow-normal, 0 5px 15px var(--color-shadow)) !important;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.swal2-confirm:hover {
+    background: var(--color-active, #c0c0c0) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-normal, 0 5px 15px var(--color-shadow)) !important;
+}
+
+/* Botón de cancelar */
+.swal2-cancel {
+    background: transparent !important;
+    color: var(--color-text-dim, #6b7280) !important;
+    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1)) !important;
+    border-radius: var(--border-radius-xl, 30px) !important;
+    padding: 12px 28px !important;
+    font-weight: 500 !important;
+    transition: var(--transition-fast, all 0.15s ease) !important;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
+}
+
+.swal2-cancel:hover {
+    background: rgba(239, 68, 68, 0.05) !important;
+    border-color: var(--color-danger, #ef4444) !important;
+    color: var(--color-danger, #ef4444) !important;
+}
+
+/* Botón de confirmación para acciones peligrosas */
+.swal2-confirm.swal2-styled[style*="background-color: rgb(239, 68, 68)"] {
+    background: var(--color-danger, #ef4444) !important;
+    color: var(--color-text-light, #ffffff) !important;
+}
+
+/* INPUTS */
+.swal2-input,
+.swal2-textarea,
+.swal2-select {
+    background: var(--color-bg-secondary, #00000000) !important;
+    color: var(--color-text-primary, #ffffff) !important;
+    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1)) !important;
+    border-radius: var(--border-radius-medium, 8px) !important;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+    padding: 12px !important;
+}
+
+.swal2-input:focus,
+.swal2-textarea:focus {
+    border-color: var(--color-accent-primary, #c0c0c0) !important;
+    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.2) !important;
+    outline: none !important;
+}
+
+/* Íconos */
+.swal2-icon {
+    border-width: 3px !important;
+    width: 60px !important;
+    height: 60px !important;
+    margin: 1.5rem auto 1rem !important;
+}
+
+.swal2-icon-content {
+    font-size: 2.5rem !important;
+}
+
+.swal2-icon.swal2-warning {
+    border-color: var(--color-danger, #ef4444) !important;
+    color: var(--color-danger, #ef4444) !important;
+}
+
+.swal2-icon.swal2-success {
+    border-color: var(--color-accent-primary, #c0c0c0) !important;
+    color: var(--color-accent-primary, #c0c0c0) !important;
+}
+
+.swal2-success-ring {
+    border-color: var(--color-accent-primary, #c0c0c0) !important;
+}
+
+.swal2-icon.swal2-error {
+    border-color: var(--color-danger, #ef4444) !important;
+    color: var(--color-danger, #ef4444) !important;
+}
+
+.swal2-icon.swal2-info {
+    border-color: var(--color-accent-primary, #c0c0c0) !important;
+    color: var(--color-accent-primary, #c0c0c0) !important;
+}
+
+.swal2-icon.swal2-question {
+    border-color: var(--color-accent-primary, #c0c0c0) !important;
+    color: var(--color-accent-primary, #c0c0c0) !important;
+}
+
+/* Barra de progreso */
+.swal2-timer-progress-bar {
+    background: var(--color-accent-primary, #c0c0c0) !important;
+}
+
+/* Animaciones */
+@keyframes swal2-show {
+    0% {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes swal2-hide {
+    0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+}
+
+.swal2-show {
+    animation: swal2-show 0.3s ease !important;
+}
+
+.swal2-hide {
+    animation: swal2-hide 0.3s ease !important;
+}
+
+/* Botón cerrar */
+.swal2-close {
+    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8)) !important;
+    font-size: 28px !important;
+    transition: var(--transition-default, all 0.3s ease-in-out) !important;
+}
+
+.swal2-close:hover {
+    color: var(--color-accent-primary, #c0c0c0) !important;
+    transform: rotate(90deg) !important;
+}
+
+/* Validation message */
+.swal2-validation-message {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: var(--color-danger, #ef4444) !important;
+    border-left: 3px solid var(--color-danger, #ef4444) !important;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+}
+
+/* Footer */
+.swal2-footer {
+    border-top: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1)) !important;
+    color: var(--color-text-dim, #6b7280) !important;
+    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+}
+
+/* Loader */
+.swal2-loader {
+    border-color: var(--color-accent-primary, #c0c0c0) transparent var(--color-accent-primary, #c0c0c0) transparent !important;
+}
