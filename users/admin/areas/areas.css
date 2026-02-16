@@ -3,6 +3,49 @@
    NO REDEFINIR VARIABLES GLOBALES - USAR LAS DE personalization.css
    ============================================= */
 
+:root {
+    /* COLORES PRINCIPALES */
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #0a0a0a;
+    --color-bg-tertiary: #141414;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #cccccc;
+    --color-text-light: #ffffff;
+    --color-accent-primary: #c0c0c0;
+    --color-accent-secondary: #2f8cff;
+    --color-border-light: #545454;
+    --color-border-dark: #333333;
+    --color-hover: #1a1a1a;
+    --color-icon-primary: #9caba4;
+    
+    /* COLORES DE ESTADO */
+    --color-success: #00ff95;
+    --color-danger: #ff4d4d;
+    --color-warning: #ffcc00;
+    --color-info: #00cfff;
+    
+    /* SOMBRAS */
+    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
+    
+    /* BORDES */
+    --border-radius-small: 5px;
+    --border-radius-medium: 10px;
+    --border-radius-large: 15px;
+    --border-radius-circle: 50%;
+    
+    /* TRANSICIONES */
+    --transition-fast: 0.2s ease;
+    --transition-default: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* FUENTES */
+    --font-family-primary: 'Orbitron', sans-serif;
+    --font-family-secondary: sans-serif;
+}
+
+
 /* =============================================
    ESTILOS GENERALES
    ============================================= */
@@ -1062,3 +1105,4 @@ tr.area-row.expanded .toggle-icon i {
         -webkit-overflow-scrolling: touch;
     }
 }
+

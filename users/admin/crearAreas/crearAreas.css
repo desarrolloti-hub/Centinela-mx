@@ -34,7 +34,7 @@
     
     /* FUENTES */
     --font-family-primary: 'Orbitron', sans-serif;
-    --font-family-secondary: 'Rajdhani', sans-serif;
+    --font-family-secondary: sans-serif;
 }
 
 /* =============================================
@@ -705,6 +705,11 @@ h6 i {
    ============================================= */
 
 /* Estilos generales para SweetAlert2 */
+/* =============================================
+   ESTILOS PARA SWEETALERT2 - VERSIÓN COMPACTA
+   ============================================= */
+
+/* Cuadro principal - MÁS PEQUEÑO */
 .swal2-popup {
     background: var(--color-bg-secondary) !important;
     color: var(--color-text-primary) !important;
@@ -712,88 +717,107 @@ h6 i {
     border-radius: var(--border-radius-large) !important;
     box-shadow: var(--shadow-large) !important;
     font-family: var(--font-family-secondary) !important;
+    
+    /* 📏 TAMAÑO COMPACTO */
+    width: 450px !important;
+    padding: 0.8rem !important;
+    font-size: 12px !important;
 }
 
+/* Título más pequeño */
 .swal2-title {
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-primary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.10px;
+    
+    /* 📏 TAMAÑO COMPACTO */
+    font-size: 16px !important;
+    margin: 0.2rem 0 0.5rem !important;
+    padding: 0 !important;
 }
 
+/* Contenedor del HTML - COMPACTO */
 .swal2-html-container {
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary) !important;
+    line-height: 1.4;
+    
+    /* 📏 TAMAÑO COMPACTO */
+    font-size: 12px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
 }
 
-/* Iconos de SweetAlert2 */
-.swal2-icon.swal2-success {
-    color: var(--color-success) !important;
-    border-color: var(--color-success) !important;
+/* Para el resumen de cambios (los badges) */
+.swal2-html-container div[style*="display: flex"] {
+    margin: 8px 0 !important;
+    gap: 8px !important;
 }
 
-.swal2-icon.swal2-error {
-    color: var(--color-danger) !important;
-    border-color: var(--color-danger) !important;
+/* Para los badges (0 nuevos, 1 modificados) */
+.swal2-html-container span[style*="border-radius: 20px"] {
+    padding: 3px 8px !important;
+    font-size: 11px !important;
 }
 
-.swal2-icon.swal2-warning {
-    color: var(--color-warning) !important;
-    border-color: var(--color-warning) !important;
+/* Para los títulos de sección (Cargos Modificados) */
+.swal2-html-container h6 {
+    font-size: 13px !important;
+    margin: 8px 0 4px !important;
+    color: var(--color-accent-primary) !important;
 }
 
-.swal2-icon.swal2-info {
-    color: var(--color-info) !important;
-    border-color: var(--color-info) !important;
+/* Para los items de cargos */
+.swal2-html-container div[style*="background: rgba(255, 204, 0, 0.05)"] {
+    padding: 8px !important;
+    margin-bottom: 6px !important;
 }
 
-.swal2-icon.swal2-question {
-    color: var(--color-accent-secondary) !important;
-    border-color: var(--color-accent-secondary) !important;
+/* Para el texto de los cargos */
+.swal2-html-container strong {
+    font-size: 12px !important;
+    margin-bottom: 3px !important;
 }
 
-/* Botones de SweetAlert2 */
-.swal2-confirm {
+.swal2-html-container span[style*="color: #999"] {
+    font-size: 11px !important;
+}
+
+/* Para los botones de acción */
+.swal2-actions {
+    margin: 0.8rem 0 0.3rem !important;
+    gap: 8px !important;
+}
+
+.swal2-confirm, .swal2-cancel {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-secondary) !important;
     color: var(--color-text-primary) !important;
-    padding: 12px 25px !important;
     border-radius: var(--border-radius-medium) !important;
-    font-weight: 600 !important;
     font-family: var(--font-family-primary) !important;
-    font-size: 14px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    transition: all 0.3s ease !important;
-}
-
-.swal2-confirm:hover {
-    transform: translateY(-2px) !important;
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    border-color: var(--color-accent-secondary) !important;
-    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    
+    /* 📏 BOTONES COMPACTOS */
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+    min-width: 100px !important;
 }
 
 .swal2-cancel {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-    padding: 12px 25px !important;
-    border-radius: var(--border-radius-medium) !important;
-    font-weight: 600 !important;
-    font-family: var(--font-family-primary) !important;
-    font-size: 14px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    transition: all 0.3s ease !important;
 }
 
-.swal2-cancel:hover {
-    transform: translateY(-2px) !important;
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    border-color: var(--color-danger) !important;
-    color: var(--color-danger) !important;
-    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
+/* Para el texto de cambios (original tachado y nuevo) */
+.swal2-html-container span[style*="color: #999"] {
+    font-size: 11px !important;
+}
+
+.swal2-html-container span[style*="color: #00ff95"] {
+    font-size: 11px !important;
 }
 
 /* =============================================
@@ -838,3 +862,4 @@ h6 i {
     color: var(--color-text-primary) !important;
     transform: rotate(90deg) !important;
 }
+

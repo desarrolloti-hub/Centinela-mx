@@ -1,4 +1,4 @@
-// editarAreas.js - VERSIÓN COMPLETA CON SOLO SWEETALERT2 (SIN MODALES BOOTSTRAP)
+// editarAreas.js - VERSIÓN COMPLETA CON SOLO SWEETALERT2 (SIN CARGOS AUTOMÁTICOS)
 console.log('🚀 editarAreas.js iniciando...');
 
 // Variable global para debugging
@@ -390,7 +390,8 @@ class EditarAreaController {
             'organizacion', 'descripcionArea', 'contadorCaracteres', 
             'responsable', 'btnCancelar', 'btnDesactivarArea', 'btnGuardarCambios',
             'btnAgregarCargo', 'cargosList', 'cargosCounter',
-            'fechaCreacion', 'ultimaActualizacion', 'creadoPor', 'estadoActual'
+            'fechaCreacion', 'ultimaActualizacion', 'creadoPor', 'estadoActual',
+            'btnVerDetalles'
         ];
         
         ids.forEach(id => {
@@ -405,40 +406,71 @@ class EditarAreaController {
         try {
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
-                btnVolverLista.addEventListener('click', () => this.volverALista());
+                btnVolverLista.replaceWith(btnVolverLista.cloneNode(true));
+                const nuevoBtnVolver = document.getElementById('btnVolverLista');
+                nuevoBtnVolver.addEventListener('click', () => this.volverALista());
                 console.log('✅ Evento btnVolverLista');
             }
             
             const descripcionArea = document.getElementById('descripcionArea');
             if (descripcionArea) {
-                descripcionArea.addEventListener('input', () => this.actualizarContadorCaracteres());
+                descripcionArea.removeEventListener('input', this._inputHandler);
+                this._inputHandler = () => this.actualizarContadorCaracteres();
+                descripcionArea.addEventListener('input', this._inputHandler);
                 console.log('✅ Evento descripcionArea');
             }
             
             const btnCancelar = document.getElementById('btnCancelar');
             if (btnCancelar) {
-                btnCancelar.addEventListener('click', () => this.cancelarEdicion());
+                btnCancelar.replaceWith(btnCancelar.cloneNode(true));
+                const nuevoBtnCancelar = document.getElementById('btnCancelar');
+                nuevoBtnCancelar.addEventListener('click', () => this.cancelarEdicion());
                 console.log('✅ Evento btnCancelar');
             }
             
             const btnDesactivarArea = document.getElementById('btnDesactivarArea');
             if (btnDesactivarArea) {
-                btnDesactivarArea.addEventListener('click', () => this.prepararDesactivacion());
+                btnDesactivarArea.replaceWith(btnDesactivarArea.cloneNode(true));
+                const nuevoBtnDesactivar = document.getElementById('btnDesactivarArea');
+                nuevoBtnDesactivar.addEventListener('click', () => this.prepararDesactivacion());
                 console.log('✅ Evento btnDesactivarArea');
             }
             
             const btnAgregarCargo = document.getElementById('btnAgregarCargo');
             if (btnAgregarCargo) {
-                btnAgregarCargo.addEventListener('click', () => this.agregarCargo());
+                const nuevoBoton = btnAgregarCargo.cloneNode(true);
+                btnAgregarCargo.parentNode.replaceChild(nuevoBoton, btnAgregarCargo);
+                nuevoBoton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('✅ Click en Agregar Cargo');
+                    this.agregarCargo();
+                });
                 console.log('✅ Evento btnAgregarCargo');
+            }
+            
+            // ✅ NUEVO: Botón Ver Detalles
+            const btnVerDetalles = document.getElementById('btnVerDetalles');
+            if (btnVerDetalles) {
+                btnVerDetalles.replaceWith(btnVerDetalles.cloneNode(true));
+                const nuevoBtnVer = document.getElementById('btnVerDetalles');
+                nuevoBtnVer.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('👁️ Click en Ver Detalles');
+                    this.verDetallesArea();
+                });
+                console.log('✅ Evento btnVerDetalles');
             }
             
             const formEditarArea = document.getElementById('formEditarArea');
             if (formEditarArea) {
-                formEditarArea.addEventListener('submit', (e) => {
+                formEditarArea.removeEventListener('submit', this._submitHandler);
+                this._submitHandler = (e) => {
                     e.preventDefault();
                     this.validarYPrepararGuardado();
-                });
+                };
+                formEditarArea.addEventListener('submit', this._submitHandler);
                 console.log('✅ Evento formEditarArea');
             }
             
@@ -465,55 +497,76 @@ class EditarAreaController {
         }
     }
     
-    // CARGA DE DATOS
     async cargarArea() {
-        try {
-            console.log('🔍 Intentando obtener área...');
+    try {
+        console.log('🔍 Intentando obtener área...');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const areaId = urlParams.get('id');
+        
+        if (!areaId) {
+            console.error('❌ No se proporcionó ID de área');
+            this.mostrarError('No se especificó qué área editar');
+            return;
+        }
+        
+        console.log(`🔄 Cargando área existente con ID: ${areaId}`);
+        this.mostrarCargando('Cargando información del área...');
+        
+        const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
+        const areaRef = doc(db, collectionName, areaId);
+        const areaSnap = await getDoc(areaRef);
+        
+        if (areaSnap.exists()) {
+            const areaData = areaSnap.data();
+            this.areaActual = new Area(areaId, areaData);
             
-            const urlParams = new URLSearchParams(window.location.search);
-            const areaId = urlParams.get('id');
+            await this.cargarDatosEnFormulario();
+            this.datosOriginales = this.obtenerDatosFormulario();
             
-            if (!areaId) {
-                console.error('❌ No se proporcionó ID de área');
-                this.mostrarError('No se especificó qué área editar');
-                return;
-            }
+            this.ocultarCargando();
+            console.log('✅ Área cargada:', this.areaActual.nombreArea);
             
-            console.log(`🔄 Cargando área existente con ID: ${areaId}`);
-            this.mostrarCargando('Cargando información del área...');
-            
-            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
-            const areaRef = doc(db, collectionName, areaId);
-            const areaSnap = await getDoc(areaRef);
-            
-            if (areaSnap.exists()) {
-                const areaData = areaSnap.data();
-                this.areaActual = new Area(areaId, areaData);
-                
-                await this.cargarDatosEnFormulario();
-                this.datosOriginales = this.obtenerDatosFormulario();
-                
-                this.ocultarCargando();
-                console.log('✅ Área cargada:', this.areaActual.nombreArea);
-                
-                document.title = `Editar ${this.areaActual.nombreArea} - Sistema Centinela`;
+            // ✅ NUEVO CÓDIGO - ESTO ES LO QUE DEJAS
+            document.title = `Editar ${this.areaActual.nombreArea} - Sistema Centinela`;
+
+            // Buscar el span específico para el nombre del área
+            const nombreTitulo = document.getElementById('nombreAreaTitulo');
+
+            if (nombreTitulo) {
+                // ✅ Opción 1: Si ya tienes el span en el HTML
+                nombreTitulo.textContent = this.areaActual.nombreArea;
+            } else {
+                // ✅ Opción 2: Si no tienes el span, buscar el h1 y actualizar sin borrar nada
                 const titulo = document.querySelector('h1');
                 if (titulo) {
-                    titulo.innerHTML = `<i class="fas fa-edit me-2"></i>Editar Área: ${this.areaActual.nombreArea}`;
+                    // Verificar si ya tiene "Editar Área:"
+                    if (titulo.innerHTML.includes('Editar Área') && !titulo.innerHTML.includes(this.areaActual.nombreArea)) {
+                        // Agregar el nombre después de "Editar Área"
+                        titulo.innerHTML = titulo.innerHTML.replace(
+                            'Editar Área', 
+                            `Editar Área: ${this.areaActual.nombreArea}`
+                        );
+                    } else if (!titulo.innerHTML.includes('Editar Área:')) {
+                        // Si no tiene "Editar Área:", agregarlo al final
+                        titulo.innerHTML += `: ${this.areaActual.nombreArea}`;
+                    }
                 }
-            } else {
-                console.warn('⚠️ Área no encontrada');
-                this.ocultarCargando();
-                this.mostrarError('Área no encontrada');
             }
+            // ✅ FIN DEL NUEVO CÓDIGO
             
-        } catch (error) {
-            console.error('❌ Error cargando área:', error);
+        } else {
+            console.warn('⚠️ Área no encontrada');
             this.ocultarCargando();
-            this.mostrarError('Error cargando área: ' + error.message);
+            this.mostrarError('Área no encontrada');
         }
+        
+    } catch (error) {
+        console.error('❌ Error cargando área:', error);
+        this.ocultarCargando();
+        this.mostrarError('Error cargando área: ' + error.message);
     }
-    
+}
     async cargarDatosEnFormulario() {
         console.log('📝 Cargando datos en formulario...');
         
@@ -591,15 +644,11 @@ class EditarAreaController {
         }
     }
     
-    // GESTIÓN DE CARGOS
+    // ========== GESTIÓN DE CARGOS ==========
+    
     inicializarGestionCargos() {
         console.log('💼 Inicializando gestión de cargos...');
-        
-        const btnAgregarCargo = document.getElementById('btnAgregarCargo');
-        if (btnAgregarCargo) {
-            btnAgregarCargo.addEventListener('click', () => this.agregarCargo());
-            console.log('✅ Evento btnAgregarCargo');
-        }
+        // Vacío - El evento ya está en inicializarEventos()
     }
     
     cargarCargosExistentes() {
@@ -630,14 +679,15 @@ class EditarAreaController {
                     }
                 });
             }
+            
+            if (this.cargos.length > 0) {
+                this.renderizarCargos();
+                this.actualizarContadorCargos();
+                return;
+            }
         }
         
-        if (this.cargos.length === 0) {
-            this.agregarCargo();
-        } else {
-            this.renderizarCargos();
-            this.actualizarContadorCargos();
-        }
+        this.renderizarCargos();
     }
     
     agregarCargo() {
@@ -789,6 +839,470 @@ class EditarAreaController {
             .replace(/'/g, "&#039;");
     }
     
+    // ========== 🔥 VER DETALLES DEL ÁREA CON SWEETALERT2 ==========
+    
+    async verDetallesArea() {
+        try {
+            console.log('👁️ Mostrando detalles del área...');
+            
+            if (!this.areaActual) {
+                this.mostrarError('No hay área cargada');
+                return;
+            }
+
+            const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
+            const cantidadCargos = cargosValidos.length;
+            
+            // Generar HTML para cargos
+            let cargosHTML = '';
+            
+            if (cargosValidos.length === 0) {
+                cargosHTML = `
+                    <div style="
+                        text-align: center;
+                        padding: 30px;
+                        background: var(--color-bg-tertiary);
+                        border-radius: var(--border-radius-medium);
+                        border: 1px dashed var(--color-border-light);
+                    ">
+                        <i class="fas fa-briefcase" style="font-size: 48px; color: var(--color-accent-secondary); margin-bottom: 15px;"></i>
+                        <p style="color: var(--color-text-secondary); margin: 0; font-size: 14px;">
+                            Esta área no tiene cargos asignados
+                        </p>
+                    </div>
+                `;
+            } else {
+                cargosHTML = cargosValidos.map((cargo, index) => `
+                    <div style="
+                        background: var(--color-bg-tertiary);
+                        border: 1px solid var(--color-border-light);
+                        border-radius: var(--border-radius-medium);
+                        padding: 18px;
+                        margin-bottom: 15px;
+                        transition: all 0.2s ease;
+                    ">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span style="
+                                    background: var(--color-accent-secondary);
+                                    color: white;
+                                    width: 28px;
+                                    height: 28px;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    border-radius: 50%;
+                                    font-size: 13px;
+                                    font-weight: bold;
+                                ">${index + 1}</span>
+                                <strong style="
+                                    color: var(--color-text-primary);
+                                    font-family: var(--font-family-primary);
+                                    font-size: 14px;
+                                    text-transform: uppercase;
+                                    letter-spacing: 0.5px;
+                                ">
+                                    ${cargo.nombre}
+                                </strong>
+                            </div>
+                            <span style="
+                                background: rgba(47, 140, 255, 0.1);
+                                color: var(--color-accent-secondary);
+                                padding: 4px 12px;
+                                border-radius: 20px;
+                                font-size: 11px;
+                                border: 1px solid rgba(47, 140, 255, 0.3);
+                                font-family: var(--font-family-secondary);
+                                text-transform: uppercase;
+                            ">
+                                <i class="fas fa-briefcase me-1"></i>Cargo
+                            </span>
+                        </div>
+                        ${cargo.descripcion ? `
+                            <div style="
+                                margin-left: 40px;
+                                padding-left: 15px;
+                                border-left: 2px solid var(--color-accent-secondary);
+                                color: var(--color-text-secondary);
+                                font-size: 13px;
+                                line-height: 1.6;
+                                font-family: var(--font-family-secondary);
+                            ">
+                                ${cargo.descripcion}
+                            </div>
+                        ` : `
+                            <div style="
+                                margin-left: 40px;
+                                padding-left: 15px;
+                                border-left: 2px solid var(--color-border-light);
+                                color: var(--color-text-secondary);
+                                font-size: 12px;
+                                font-style: italic;
+                                font-family: var(--font-family-secondary);
+                            ">
+                                Sin descripción
+                            </div>
+                        `}
+                    </div>
+                `).join('');
+            }
+
+            // Información del área
+            const fechaCreacion = this.areaActual.fechaCreacion ? 
+                new Date(this.areaActual.fechaCreacion).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'No disponible';
+
+            const fechaActualizacion = this.areaActual.fechaActualizacion ? 
+                new Date(this.areaActual.fechaActualizacion).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'No disponible';
+
+            const responsableNombre = this.areaActual.responsableNombre || 
+                (document.getElementById('responsable')?.selectedOptions[0]?.text || 'No asignado');
+
+            await Swal.fire({
+                title: `
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 5px 0;">
+                        <i class="fas fa-building" style="color: var(--color-accent-primary); font-size: 28px;"></i>
+                        <span style="
+                            color: var(--color-text-primary);
+                            font-family: var(--font-family-primary);
+                            font-size: 22px;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                        ">
+                            ${this.areaActual.nombreArea}
+                        </span>
+                    </div>
+                `,
+                html: `
+                    <div style="text-align: left; max-height: 70vh; overflow-y: auto; padding-right: 5px;">
+                        <!-- Estado y Organización -->
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding: 15px 20px;
+                            background: var(--color-bg-tertiary);
+                            border-radius: var(--border-radius-medium);
+                            margin-bottom: 20px;
+                            border: 1px solid var(--color-border-light);
+                        ">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="
+                                    background: rgba(0, 255, 149, 0.1);
+                                    color: var(--color-success);
+                                    padding: 6px 16px;
+                                    border-radius: 20px;
+                                    font-size: 12px;
+                                    border: 1px solid rgba(0, 255, 149, 0.3);
+                                    font-family: var(--font-family-secondary);
+                                    text-transform: uppercase;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                ">
+                                    <i class="fas fa-circle" style="font-size: 8px;"></i>
+                                    Activa
+                                </span>
+                                <span style="
+                                    color: var(--color-text-secondary);
+                                    font-size: 13px;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                ">
+                                    <i class="fas fa-building" style="color: var(--color-accent-secondary);"></i>
+                                    ${this.userManager.currentUser.organizacion}
+                                </span>
+                            </div>
+                            <span style="
+                                background: var(--color-accent-secondary);
+                                color: white;
+                                padding: 4px 12px;
+                                border-radius: 20px;
+                                font-size: 11px;
+                                font-family: var(--font-family-secondary);
+                            ">
+                                <i class="fas fa-hashtag me-1"></i>
+                                ${this.areaActual.id.substring(0, 8)}...
+                            </span>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div style="margin-bottom: 25px;">
+                            <h6 style="
+                                color: var(--color-accent-primary);
+                                font-family: var(--font-family-primary);
+                                font-size: 13px;
+                                margin-bottom: 12px;
+                                border-bottom: 1px solid var(--color-border-light);
+                                padding-bottom: 8px;
+                                text-transform: uppercase;
+                                letter-spacing: 0.5px;
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                            ">
+                                <i class="fas fa-align-left" style="color: var(--color-accent-secondary);"></i>
+                                Descripción
+                            </h6>
+                            <div style="
+                                background: var(--color-bg-tertiary);
+                                border: 1px solid var(--color-border-light);
+                                border-radius: var(--border-radius-medium);
+                                padding: 15px 20px;
+                                color: var(--color-text-secondary);
+                                font-size: 14px;
+                                line-height: 1.6;
+                                font-family: var(--font-family-secondary);
+                            ">
+                                ${this.areaActual.descripcion || 'No hay descripción disponible'}
+                            </div>
+                        </div>
+
+                        <!-- Responsable -->
+                        <div style="margin-bottom: 25px;">
+                            <h6 style="
+                                color: var(--color-accent-primary);
+                                font-family: var(--font-family-primary);
+                                font-size: 13px;
+                                margin-bottom: 12px;
+                                border-bottom: 1px solid var(--color-border-light);
+                                padding-bottom: 8px;
+                                text-transform: uppercase;
+                                letter-spacing: 0.5px;
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                            ">
+                                <i class="fas fa-user-tie" style="color: var(--color-accent-secondary);"></i>
+                                Responsable del Área
+                            </h6>
+                            <div style="
+                                background: var(--color-bg-tertiary);
+                                border: 1px solid var(--color-border-light);
+                                border-radius: var(--border-radius-medium);
+                                padding: 12px 20px;
+                                display: flex;
+                                align-items: center;
+                                gap: 12px;
+                            ">
+                                <i class="fas fa-user-circle" style="font-size: 32px; color: var(--color-accent-secondary);"></i>
+                                <div>
+                                    <strong style="color: var(--color-text-primary); font-size: 15px; display: block;">
+                                        ${responsableNombre}
+                                    </strong>
+                                    <small style="color: var(--color-text-secondary);">
+                                        ${responsableNombre.includes('Administrador') ? 'Administrador del sistema' : 'Responsable asignado'}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cargos -->
+                        <div style="margin-bottom: 25px;">
+                            <div style="
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                margin-bottom: 12px;
+                                border-bottom: 1px solid var(--color-border-light);
+                                padding-bottom: 8px;
+                            ">
+                                <h6 style="
+                                    color: var(--color-accent-primary);
+                                    font-family: var(--font-family-primary);
+                                    font-size: 13px;
+                                    margin: 0;
+                                    text-transform: uppercase;
+                                    letter-spacing: 0.5px;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 8px;
+                                ">
+                                    <i class="fas fa-briefcase" style="color: var(--color-accent-secondary);"></i>
+                                    Cargos del Área
+                                </h6>
+                                <span style="
+                                    background: var(--color-accent-secondary);
+                                    color: white;
+                                    padding: 4px 14px;
+                                    border-radius: 20px;
+                                    font-size: 11px;
+                                    font-family: var(--font-family-secondary);
+                                ">
+                                    ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
+                                </span>
+                            </div>
+                            <div style="max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                                ${cargosHTML}
+                            </div>
+                        </div>
+
+                        <!-- Información del Sistema -->
+                        <div style="
+                            background: var(--color-bg-tertiary);
+                            border: 1px solid var(--color-border-light);
+                            border-radius: var(--border-radius-medium);
+                            padding: 20px;
+                            margin-top: 10px;
+                        ">
+                            <h6 style="
+                                color: var(--color-accent-primary);
+                                font-family: var(--font-family-primary);
+                                font-size: 12px;
+                                margin-bottom: 15px;
+                                text-transform: uppercase;
+                                letter-spacing: 0.5px;
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                            ">
+                                <i class="fas fa-info-circle" style="color: var(--color-accent-secondary);"></i>
+                                Información del Sistema
+                            </h6>
+                            <div style="
+                                display: grid;
+                                grid-template-columns: 1fr 1fr;
+                                gap: 15px;
+                            ">
+                                <div>
+                                    <small style="
+                                        color: var(--color-accent-primary);
+                                        display: block;
+                                        margin-bottom: 4px;
+                                        font-size: 10px;
+                                        text-transform: uppercase;
+                                        opacity: 0.8;
+                                    ">ID del Área</small>
+                                    <code style="
+                                        color: var(--color-accent-secondary);
+                                        background: var(--color-bg-primary);
+                                        padding: 4px 8px;
+                                        border-radius: 4px;
+                                        font-size: 11px;
+                                        border: 1px solid var(--color-border-light);
+                                    ">${this.areaActual.id}</code>
+                                </div>
+                                <div>
+                                    <small style="
+                                        color: var(--color-accent-primary);
+                                        display: block;
+                                        margin-bottom: 4px;
+                                        font-size: 10px;
+                                        text-transform: uppercase;
+                                        opacity: 0.8;
+                                    ">Colección</small>
+                                    <code style="
+                                        color: var(--color-accent-secondary);
+                                        background: var(--color-bg-primary);
+                                        padding: 4px 8px;
+                                        border-radius: 4px;
+                                        font-size: 11px;
+                                        border: 1px solid var(--color-border-light);
+                                    ">areas_${this.userManager.currentUser.organizacionCamelCase}</code>
+                                </div>
+                                <div>
+                                    <small style="
+                                        color: var(--color-accent-primary);
+                                        display: block;
+                                        margin-bottom: 4px;
+                                        font-size: 10px;
+                                        text-transform: uppercase;
+                                        opacity: 0.8;
+                                    ">Fecha de Creación</small>
+                                    <span style="
+                                        color: var(--color-text-secondary);
+                                        font-size: 12px;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 6px;
+                                    ">
+                                        <i class="fas fa-calendar" style="color: var(--color-accent-secondary);"></i>
+                                        ${fechaCreacion}
+                                    </span>
+                                </div>
+                                <div>
+                                    <small style="
+                                        color: var(--color-accent-primary);
+                                        display: block;
+                                        margin-bottom: 4px;
+                                        font-size: 10px;
+                                        text-transform: uppercase;
+                                        opacity: 0.8;
+                                    ">Última Actualización</small>
+                                    <span style="
+                                        color: var(--color-text-secondary);
+                                        font-size: 12px;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 6px;
+                                    ">
+                                        <i class="fas fa-clock" style="color: var(--color-accent-secondary);"></i>
+                                        ${fechaActualizacion}
+                                    </span>
+                                </div>
+                                <div style="grid-column: span 2;">
+                                    <small style="
+                                        color: var(--color-accent-primary);
+                                        display: block;
+                                        margin-bottom: 4px;
+                                        font-size: 10px;
+                                        text-transform: uppercase;
+                                        opacity: 0.8;
+                                    ">Creado por</small>
+                                    <span style="
+                                        color: var(--color-text-secondary);
+                                        font-size: 12px;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 6px;
+                                    ">
+                                        <i class="fas fa-user" style="color: var(--color-accent-secondary);"></i>
+                                        ${this.areaActual.creadoPor || 'Desconocido'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                icon: 'info',
+                iconColor: '#2f8cff',
+                confirmButtonText: '<i class="fas fa-check me-2"></i>Cerrar',
+                confirmButtonColor: '#2f8cff',
+                showCancelButton: true,
+                cancelButtonText: '<i class="fas fa-edit me-2"></i>Editar Área',
+                cancelButtonColor: '#545454',
+                customClass: {
+                    popup: 'swal-dark',
+                    title: 'swal-title',
+                    htmlContainer: 'swal-html',
+                    confirmButton: 'swal-confirm-btn',
+                    cancelButton: 'swal-cancel-btn'
+                },
+                reverseButtons: true
+            }).then((result) => {
+                if (result.dismiss === Swal.DismissReason.cancel) {
+                    document.getElementById('nombreArea')?.focus();
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error mostrando detalles:', error);
+            this.mostrarError('Error al cargar los detalles');
+        }
+    }
+    
     // VALIDACIÓN
     validarFormulario() {
         console.log('✅ Validando formulario...');
@@ -900,32 +1414,196 @@ class EditarAreaController {
         }
     }
     
-    generarHTMLCambios(datosActualizados) {
-        let cambiosHTML = '<div style="text-align: left;">';
-        
-        if (this.datosOriginales) {
-            if (this.datosOriginales.nombreArea !== datosActualizados.nombreArea) {
-                cambiosHTML += `<p><strong>Nombre:</strong><br>
-                    <span style="color: #999; text-decoration: line-through;">${this.datosOriginales.nombreArea}</span><br>
-                    <span style="color: #00ff95;">→ ${datosActualizados.nombreArea}</span></p>`;
-            }
-            
-            const cargosOriginalesCount = Object.keys(this.datosOriginales.cargos || {}).length;
-            const cargosActualesCount = Object.keys(datosActualizados.cargos || {}).length;
-            if (cargosOriginalesCount !== cargosActualesCount) {
-                cambiosHTML += `<p><strong>Cargos:</strong> ${cargosOriginalesCount} → ${cargosActualesCount}</p>`;
-            }
-            
-            if (this.datosOriginales.responsable !== datosActualizados.responsable) {
-                const responsableOriginal = this.datosOriginales.responsableNombre || 'No asignado';
-                const responsableNuevo = datosActualizados.responsableNombre || 'No asignado';
-                cambiosHTML += `<p><strong>Responsable:</strong> ${responsableOriginal} → ${responsableNuevo}</p>`;
-            }
+ generarHTMLCambios(datosActualizados) {
+    let cambiosHTML = '<div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 10px;">';
+    
+    if (this.datosOriginales) {
+        // ========== 1. CAMBIOS EN NOMBRE ==========
+        if (this.datosOriginales.nombreArea !== datosActualizados.nombreArea) {
+            cambiosHTML += `
+                <div style="margin-bottom: 20px; padding: 10px; background: rgba(47, 140, 255, 0.1); border-radius: 8px;">
+                    <h6 style="color: var(--color-accent-secondary); margin-bottom: 8px;">
+                        <i class="fas fa-tag me-2"></i>Nombre del Área
+                    </h6>
+                    <div style="color: #777171; text-decoration: line-through; margin-bottom: 5px;">
+                        ${this.datosOriginales.nombreArea}
+                    </div>
+                    <div style="color: #21a16c;">
+                        <i class="fas fa-arrow-right me-2"></i>${datosActualizados.nombreArea}
+                    </div>
+                </div>
+            `;
         }
         
-        cambiosHTML += '</div>';
-        return cambiosHTML || '<p>No se detectaron cambios específicos</p>';
+        // ========== 2. CAMBIOS EN DESCRIPCIÓN ==========
+        if (this.datosOriginales.descripcion !== datosActualizados.descripcion) {
+            cambiosHTML += `
+                <div style="margin-bottom: 20px; padding: 10px; background: rgba(0, 255, 149, 0.1); border-radius: 8px;">
+                    <h6 style="color: var(--color-success); margin-bottom: 8px;">
+                        <i class="fas fa-align-left me-2"></i>Descripción
+                    </h6>
+                    <div style="color: #999; text-decoration: line-through; margin-bottom: 5px;">
+                        ${this.datosOriginales.descripcion.substring(0, 80)}${this.datosOriginales.descripcion.length > 80 ? '...' : ''}
+                    </div>
+                    <div style="color: #17a56a;">
+                        <i class="fas fa-arrow-right me-2"></i>${datosActualizados.descripcion.substring(0, 80)}${datosActualizados.descripcion.length > 80 ? '...' : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ========== 3. ANÁLISIS DE CARGOS ==========
+        const cargosOriginal = this.datosOriginales.cargos || {};
+        const cargosNuevos = datosActualizados.cargos || {};
+        
+        // Convertir a arrays
+        const cargosOriginalArray = Object.entries(cargosOriginal).map(([id, cargo]) => ({
+            id,
+            nombre: cargo.nombre || '',
+            descripcion: cargo.descripcion || ''
+        }));
+        
+        const cargosNuevosArray = Object.entries(cargosNuevos).map(([id, cargo]) => ({
+            id,
+            nombre: cargo.nombre || '',
+            descripcion: cargo.descripcion || ''
+        }));
+        
+        // Identificar cargos nuevos y modificados
+        const cargosAgregados = [];
+        const cargosModificados = [];
+        
+        cargosNuevosArray.forEach(nuevo => {
+            const original = cargosOriginalArray.find(c => c.id === nuevo.id);
+            
+            if (!original) {
+                // Cargo nuevo
+                cargosAgregados.push(nuevo);
+            } else {
+                // Verificar si hubo cambios
+                if (original.nombre !== nuevo.nombre || original.descripcion !== nuevo.descripcion) {
+                    cargosModificados.push({
+                        id: nuevo.id,
+                        nombreOriginal: original.nombre,
+                        nombreNuevo: nuevo.nombre,
+                        descripcionOriginal: original.descripcion,
+                        descripcionNuevo: nuevo.descripcion
+                    });
+                }
+            }
+        });
+        
+        // ========== 4. RESUMEN DE CARGOS ==========
+        if (cargosAgregados.length > 0 || cargosModificados.length > 0) {
+            cambiosHTML += `
+                <div style="margin-bottom: 15px;">
+                    <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">
+                        <i class="fas fa-briefcase me-2"></i>Cambios en Cargos
+                    </h6>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <span style="background: rgba(0, 255, 149, 0.1); color: #00ff95; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0, 255, 149, 0.3);">
+                            <i class="fas fa-plus-circle me-1"></i>${cargosAgregados.length} nuevos
+                        </span>
+                        <span style="background: rgba(255, 204, 0, 0.1); color: #ffcc00; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255, 204, 0, 0.3);">
+                            <i class="fas fa-edit me-1"></i>${cargosModificados.length} modificados
+                        </span>
+                    </div>
+            `;
+            
+            // ========== 5. CARGOS NUEVOS ==========
+            if (cargosAgregados.length > 0) {
+                cambiosHTML += `
+                    <div style="margin-bottom: 20px;">
+                        <h6 style="color: #00ff95; font-size: 13px; margin-bottom: 8px;">
+                            <i class="fas fa-plus-circle me-2"></i>Cargos Nuevos:
+                        </h6>
+                `;
+                
+                cargosAgregados.forEach((cargo, index) => {
+                    cambiosHTML += `
+                        <div style="background: rgba(0, 255, 149, 0.05); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #00ff95;">
+                            <strong style="color: white; display: block; margin-bottom: 5px;">
+                                #${index + 1}: ${cargo.nombre}
+                            </strong>
+                            <span style="color: #ccc; font-size: 12px;">
+                                ${cargo.descripcion || '<i>Sin descripción</i>'}
+                            </span>
+                        </div>
+                    `;
+                });
+                
+                cambiosHTML += `</div>`;
+            }
+            
+            // ========== 6. CARGOS MODIFICADOS ==========
+            if (cargosModificados.length > 0) {
+                cambiosHTML += `
+                    <div style="margin-bottom: 15px;">
+                        <h6 style="color: #ffcc00; font-size: 13px; margin-bottom: 8px;">
+                            <i class="fas fa-edit me-2"></i>Cargos Modificados:
+                        </h6>
+                `;
+                
+                cargosModificados.forEach((cargo, index) => {
+                    cambiosHTML += `
+                        <div style="background: rgba(255, 204, 0, 0.05); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #ffcc00;">
+                            <strong style="color: white; display: block; margin-bottom: 8px;">
+                                #${index + 1}: ${cargo.nombreNuevo}
+                            </strong>
+                            <div style="margin-left: 5px;">
+                                ${cargo.nombreOriginal !== cargo.nombreNuevo ? `
+                                    <div style="margin-bottom: 5px;">
+                                        <span style="color: #999; font-size: 11px;">Nombre:</span>
+                                        <span style="color: #999; text-decoration: line-through; margin: 0 5px;">${cargo.nombreOriginal}</span>
+                                        <span style="color: #00ff95;">→ ${cargo.nombreNuevo}</span>
+                                    </div>
+                                ` : ''}
+                                ${cargo.descripcionOriginal !== cargo.descripcionNuevo ? `
+                                    <div>
+                                        <span style="color: #999; font-size: 11px;">Descripción:</span>
+                                        <span style="color: #999; text-decoration: line-through; margin: 0 5px;">${cargo.descripcionOriginal.substring(0, 30)}${cargo.descripcionOriginal.length > 30 ? '...' : ''}</span>
+                                        <span style="color: #00ff95;">→ ${cargo.descripcionNuevo.substring(0, 30)}${cargo.descripcionNuevo.length > 30 ? '...' : ''}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                cambiosHTML += `</div>`;
+            }
+            
+            cambiosHTML += `</div>`; // Cerrar div de cargos
+        }
+        
+        // ========== 7. CAMBIOS EN RESPONSABLE ==========
+        if (this.datosOriginales.responsable !== datosActualizados.responsable) {
+            const responsableOriginal = this.datosOriginales.responsableNombre || 'No asignado';
+            const responsableNuevo = datosActualizados.responsableNombre || 'No asignado';
+            
+            cambiosHTML += `
+                <div style="margin-top: 15px; padding: 10px; background: rgba(47, 140, 255, 0.1); border-radius: 8px;">
+                    <h6 style="color: var(--color-accent-secondary); margin-bottom: 8px;">
+                        <i class="fas fa-user-tie me-2"></i>Responsable
+                    </h6>
+                    <div style="color: #999; text-decoration: line-through; margin-bottom: 5px;">
+                        ${responsableOriginal}
+                    </div>
+                    <div style="color: #00ff95;">
+                        <i class="fas fa-arrow-right me-2"></i>${responsableNuevo}
+                    </div>
+                </div>
+            `;
+        }
     }
+    
+    if (cambiosHTML === '<div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 10px;">') {
+        cambiosHTML += '<p style="color: var(--color-text-secondary); text-align: center; padding: 20px;">No se detectaron cambios</p>';
+    }
+    
+    cambiosHTML += '</div>';
+    return cambiosHTML;
+}
     
     obtenerDatosFormulario() {
         console.log('📋 Obteniendo datos del formulario...');

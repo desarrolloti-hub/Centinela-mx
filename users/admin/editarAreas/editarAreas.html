@@ -16,58 +16,35 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     
     <!-- Nuestros estilos -->
-    <link rel="stylesheet" href="editarAreas.css">
-    <style>
-        /* Estilos personalizados */
-        .organizacion-info {
-            border-left: 4px solid #3498db;
-            background-color: #1d1d1d !important;
-        }
-        
-        .organizacion-info i.fa-building {
-            color: #2c3e50;
-        }
-        
-        /* Para mostrar nombres largos */
-        select#responsable option {
-            white-space: normal !important;
-            word-wrap: break-word;
-            padding: 8px 4px;
-        }
-        
-        .form-select {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-    </style>
-</head>
-<body>
-    <canvas id="particle-canvas"></canvas>
+        <link rel="stylesheet" href="editarAreas.css">
+    </head>
+    <body>
+        <canvas id="particle-canvas"></canvas>
     
     <!-- Contenedor principal -->
     <div class="container-fluid py-4">
         <!-- Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="h3"><i class="fas fa-edit me-2"></i>Editar Área</h1>
-                        <p class="text-muted">Modifique la información del área seleccionada</p>
-                    </div>
-                    <button id="btnVolverLista" class="btn btn-secondary btn-lg">
-                        <i class="fas fa-arrow-left me-2"></i>Volver a la Lista
-                    </button>
-                </div>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Área: <span id="nombreAreaTitulo">Cargando...</span>
+                </h1>
+                <p class="text-muted">Modifique la información del área seleccionada</p>
             </div>
+            <button id="btnVolverLista" class="btn btn-secondary btn-lg">
+                <i class="fas fa-arrow-left me-2"></i>Volver a la Lista
+            </button>
         </div>
-        
+    </div>
+</div>
         <!-- Formulario de Edición -->
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Información del Área</h5>
-                    </div>
+                    
                     <div class="card-body">
                         <form id="formEditarArea">
                             <input type="hidden" id="areaId">
@@ -184,3 +161,4 @@
     <script type="module" src="editarAreas.js"></script>
 </body>
 </html>
+
