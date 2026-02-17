@@ -115,7 +115,6 @@ class ParticleSystem {
             
             body.particulas-active {
                 margin: 0;
-                font-family: 'Rajdhani', sans-serif;
                 background-color: var(--color-bg-primary, #000000);
                 /* Color de fondo por si el canvas tarda en cargar */
             }

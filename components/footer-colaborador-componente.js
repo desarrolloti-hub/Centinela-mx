@@ -23,7 +23,6 @@ class FooterComponent {
             this.removeOriginalFooter();  
             this.createFooter();          
             this.updateDateTime();       
-            console.log('✅ Footer inicializado');
         } catch (error) {
             console.error('❌ Error:', error);
         }
