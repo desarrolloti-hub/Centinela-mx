@@ -29,8 +29,14 @@ class NavbarComplete {
             this.removeOriginalNavbar();
             this.createNavbar();
             this.setupFunctionalities();
-            await this.loadAdminData();
+            
+            // PRIMERO: Cargar desde localStorage (inmediato)
+            this.loadAdminDataFromLocalStorage();
             this.updateNavbarWithAdminData();
+            
+            // SEGUNDO: Cargar desde Firebase para actualizar (si hay cambios)
+            await this.loadAdminDataFromFirebase();
+            
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
         }
@@ -838,7 +844,7 @@ class NavbarComplete {
                     <div class="logo-separator"></div>
                     
                     <!-- Logo de la organización -->
-                    <a href="/users/admin/dashboard/dashboard.html" class="navbar-logo-link" id="orgLogoLink">
+                    <a href="/users/admin/dashAdmin/dashAdmin.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
                             <img src="/assets/images/logo.png" alt="Logo Organización" 
                                  class="navbar-logo-img" id="orgLogoImg">
@@ -969,37 +975,175 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // Carga los datos del administrador actual
-    async loadAdminData() {
+    // CARGA DESDE LOCALSTORAGE (inmediata)
+    loadAdminDataFromLocalStorage() {
+        try {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            if (!isLoggedIn) {
+                return false;
+            }
+            
+            const userDataString = localStorage.getItem('userData');
+            
+            if (userDataString) {
+                const userData = JSON.parse(userDataString);
+                
+                let fotoUsuario = null;
+                let fotoOrganizacion = null;
+                
+                if (userData.fotoUsuario && userData.fotoUsuario.length > 10) {
+                    fotoUsuario = userData.fotoUsuario;
+                } else {
+                    const userFotoKey = localStorage.getItem('userFoto');
+                    if (userFotoKey && userFotoKey.length > 10) {
+                        fotoUsuario = userFotoKey;
+                    }
+                }
+                
+                if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) {
+                    fotoOrganizacion = userData.fotoOrganizacion;
+                } else {
+                    const orgLogoKey = localStorage.getItem('organizacionLogo');
+                    if (orgLogoKey && orgLogoKey.length > 10) {
+                        fotoOrganizacion = orgLogoKey;
+                    }
+                }
+                
+                this.currentAdmin = {
+                    id: userData.id || localStorage.getItem('userId'),
+                    uid: userData.id,
+                    correoElectronico: userData.email || localStorage.getItem('userEmail'),
+                    nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'),
+                    cargo: userData.cargo || localStorage.getItem('userRole'),
+                    organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
+                    organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
+                    fotoUsuario: fotoUsuario,
+                    fotoOrganizacion: fotoOrganizacion,
+                    status: userData.status || 'activo',
+                    verificado: userData.verificado || true,
+                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
+                };
+                
+                return true;
+            }
+            
+            this.currentAdmin = {
+                id: localStorage.getItem('userId'),
+                correoElectronico: localStorage.getItem('userEmail'),
+                nombreCompleto: localStorage.getItem('userNombre'),
+                cargo: localStorage.getItem('userRole'),
+                organizacion: localStorage.getItem('userOrganizacion'),
+                organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
+                fotoUsuario: localStorage.getItem('userFoto') || null,
+                fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
+            };
+            
+            if (this.currentAdmin.nombreCompleto && this.currentAdmin.cargo) {
+                return true;
+            }
+            
+            return false;
+            
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // CARGA DESDE FIREBASE (actualización)
+    async loadAdminDataFromFirebase() {
         try {
             // Importar UserManager dinámicamente
             const { UserManager } = await import('/clases/user.js');
             this.userManager = new UserManager();
 
-            // Esperar a que UserManager cargue el usuario
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Esperar un poco a que UserManager cargue
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             if (this.userManager.currentUser) {
-                this.currentAdmin = this.userManager.currentUser;
-            } else {
-                // Intentar cargar desde localStorage
-                try {
-                    const storedUser = JSON.parse(localStorage.getItem('centinela-currentUser'));
-                    if (storedUser && storedUser.cargo === 'administrador') {
-                        this.currentAdmin = storedUser;
-                    }
-                } catch (e) {
-                    // Silencioso - no mostrar warning
+                const firebaseUser = this.userManager.currentUser;
+                
+                // Verificar si hubo cambios comparando con localStorage
+                let needsUpdate = false;
+                
+                if (!this.currentAdmin) {
+                    needsUpdate = true;
+                } else {
+                    if (firebaseUser.nombreCompleto !== this.currentAdmin.nombreCompleto) needsUpdate = true;
+                    if (firebaseUser.fotoUsuario !== this.currentAdmin.fotoUsuario) needsUpdate = true;
+                    if (firebaseUser.fotoOrganizacion !== this.currentAdmin.fotoOrganizacion) needsUpdate = true;
+                    if (firebaseUser.organizacion !== this.currentAdmin.organizacion) needsUpdate = true;
+                    if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
+                }
+                
+                if (needsUpdate) {
+                    this.currentAdmin = {
+                        ...this.currentAdmin,
+                        ...firebaseUser
+                    };
+                    
+                    // Actualizar el navbar con los nuevos datos
+                    this.updateNavbarWithAdminData();
+                    
+                    // Actualizar localStorage para futuras cargas
+                    this.updateLocalStorageFromFirebase(firebaseUser);
                 }
             }
+            
         } catch (error) {
-            console.error('❌ Error al cargar datos del admin:', error);
+            // Silencioso - no interrumpir la experiencia del usuario
+        }
+    }
+
+    // Actualiza localStorage con datos de Firebase
+    updateLocalStorageFromFirebase(userData) {
+        try {
+            // Actualizar userData
+            const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const updatedUserData = {
+                ...currentUserData,
+                id: userData.id,
+                uid: userData.id,
+                email: userData.correoElectronico,
+                nombreCompleto: userData.nombreCompleto,
+                cargo: userData.cargo,
+                organizacion: userData.organizacion,
+                organizacionCamelCase: userData.organizacionCamelCase,
+                fotoUsuario: userData.fotoUsuario,
+                fotoOrganizacion: userData.fotoOrganizacion,
+                status: userData.status,
+                verificado: userData.verificado,
+                ultimoAcceso: userData.ultimoAcceso
+            };
+            
+            localStorage.setItem('userData', JSON.stringify(updatedUserData));
+            
+            // Actualizar claves individuales
+            if (userData.fotoUsuario) localStorage.setItem('userFoto', userData.fotoUsuario);
+            if (userData.fotoOrganizacion) localStorage.setItem('organizacionLogo', userData.fotoOrganizacion);
+            if (userData.nombreCompleto) localStorage.setItem('userNombre', userData.nombreCompleto);
+            if (userData.correoElectronico) localStorage.setItem('userEmail', userData.correoElectronico);
+            if (userData.cargo) localStorage.setItem('userRole', userData.cargo);
+            if (userData.organizacion) localStorage.setItem('userOrganizacion', userData.organizacion);
+            if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
+            
+        } catch (error) {
+            // Silencioso
         }
     }
 
     // Actualiza el navbar con los datos del administrador
     updateNavbarWithAdminData() {
         if (!this.currentAdmin) {
+            // Mostrar valores por defecto si no hay datos
+            const adminName = document.getElementById('adminName');
+            const adminEmail = document.getElementById('adminEmail');
+            const adminOrganization = document.getElementById('adminOrganization');
+            
+            if (adminName) adminName.textContent = 'No autenticado';
+            if (adminEmail) adminEmail.textContent = 'Inicia sesión para continuar';
+            if (adminOrganization) adminOrganization.textContent = '';
+            
             return;
         }
 
@@ -1050,31 +1194,18 @@ class NavbarComplete {
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
 
         // Si tiene logo de organización
-        if (this.currentAdmin.fotoOrganizacion) {
+        if (this.currentAdmin?.fotoOrganizacion && this.currentAdmin.fotoOrganizacion.length > 10) {
             organizationLogoImg.src = this.currentAdmin.fotoOrganizacion;
-            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion}`;
+            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion || 'Organización'}`;
             organizationLogoImg.style.display = 'block';
             orgTextLogo.style.display = 'none';
 
             // Añadir tooltip y atributos
-            organizationLogoImg.title = this.currentAdmin.organizacion;
-            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion);
+            organizationLogoImg.title = this.currentAdmin.organizacion || 'Organización';
+            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion || '');
         } else {
             // Mostrar texto en lugar de imagen
-            organizationLogoImg.style.display = 'none';
-            orgTextLogo.style.display = 'flex';
-
-            // Crear texto con las iniciales de la organización
-            const orgName = this.currentAdmin.organizacion || 'Organización';
-            const initials = orgName
-                .split(' ')
-                .map(word => word.charAt(0))
-                .join('')
-                .toUpperCase()
-                .substring(0, 3);
-
-            orgTextLogo.textContent = initials;
-            orgTextLogo.title = orgName;
+            this.showOrgTextLogo();
         }
 
         // Actualizar el enlace del logo para redirigir al dashboard
@@ -1085,24 +1216,46 @@ class NavbarComplete {
         orgLogoContainer.style.overflow = 'hidden';
     }
 
+    // Muestra iniciales cuando no hay logo
+    showOrgTextLogo() {
+        const organizationLogoImg = document.getElementById('orgLogoImg');
+        const orgTextLogo = document.getElementById('orgTextLogo');
+        
+        if (!organizationLogoImg || !orgTextLogo) return;
+        
+        organizationLogoImg.style.display = 'none';
+        orgTextLogo.style.display = 'flex';
+        
+        const orgName = this.currentAdmin?.organizacion || 'Organización';
+        const initials = orgName
+            .split(' ')
+            .map(word => word.charAt(0))
+            .join('')
+            .toUpperCase()
+            .substring(0, 3);
+        
+        orgTextLogo.textContent = initials;
+        orgTextLogo.title = orgName;
+    }
+
     // Actualiza la información del administrador en el menú
     updateAdminMenuInfo() {
         // Nombre del administrador
         const adminName = document.getElementById('adminName');
         if (adminName) {
-            adminName.textContent = this.currentAdmin.nombreCompleto || 'Administrador';
+            adminName.textContent = this.currentAdmin?.nombreCompleto || 'Administrador';
         }
 
         // Email del administrador
         const adminEmail = document.getElementById('adminEmail');
         if (adminEmail) {
-            adminEmail.textContent = this.currentAdmin.correoElectronico || 'No especificado';
+            adminEmail.textContent = this.currentAdmin?.correoElectronico || 'No especificado';
         }
 
         // Organización del administrador
         const adminOrganization = document.getElementById('adminOrganization');
         if (adminOrganization) {
-            adminOrganization.textContent = this.currentAdmin.organizacion || 'Sin organización';
+            adminOrganization.textContent = this.currentAdmin?.organizacion || 'Sin organización';
         }
 
         // Foto de perfil del administrador
@@ -1110,14 +1263,36 @@ class NavbarComplete {
         const profilePlaceholder = document.getElementById('profilePlaceholder');
 
         if (adminProfileImg && profilePlaceholder) {
-            if (this.currentAdmin.fotoUsuario) {
+            if (this.currentAdmin?.fotoUsuario && this.currentAdmin.fotoUsuario.length > 10) {
                 adminProfileImg.src = this.currentAdmin.fotoUsuario;
                 adminProfileImg.style.display = 'block';
                 profilePlaceholder.style.display = 'none';
+                adminProfileImg.alt = `Foto de ${this.currentAdmin.nombreCompleto || 'Administrador'}`;
             } else {
-                adminProfileImg.style.display = 'none';
-                profilePlaceholder.style.display = 'flex';
+                this.showProfilePlaceholder();
             }
+        }
+    }
+
+    // Muestra placeholder cuando no hay foto
+    showProfilePlaceholder() {
+        const adminProfileImg = document.getElementById('adminProfileImg');
+        const profilePlaceholder = document.getElementById('profilePlaceholder');
+        
+        if (!adminProfileImg || !profilePlaceholder) return;
+        
+        adminProfileImg.style.display = 'none';
+        profilePlaceholder.style.display = 'flex';
+        
+        const placeholderText = profilePlaceholder.querySelector('span');
+        if (placeholderText && this.currentAdmin?.nombreCompleto) {
+            const initials = this.currentAdmin.nombreCompleto
+                .split(' ')
+                .map(word => word.charAt(0))
+                .join('')
+                .toUpperCase()
+                .substring(0, 2);
+            placeholderText.textContent = initials;
         }
     }
 
@@ -1279,8 +1454,6 @@ class NavbarComplete {
             this.redirectToLogin();
 
         } catch (error) {
-            console.error('❌ Error al cerrar sesión:', error);
-
             // Aún así limpiar almacenamiento y redirigir
             this.clearAllStorage();
             this.redirectToLogin();
