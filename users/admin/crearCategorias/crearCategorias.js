@@ -1,8 +1,7 @@
 // crearCategorias.js - VERSIÓN FINAL
 // SIN empresaId/estado, con herencia de color configurable
-console.log('🚀 crearCategorias.js iniciando...');
 
-// Variable global para debugging
+// Variable global para debugging (opcional, puedes eliminarla si no la usas)
 window.crearCategoriaDebug = {
     estado: 'iniciando',
     controller: null
@@ -13,122 +12,108 @@ window.crearCategoriaDebug = {
 // =============================================
 class CrearCategoriaController {
     constructor() {
-        console.log('🛠️ Creando CrearCategoriaController...');
-        
         this.categoriaManager = null;
         this.usuarioActual = null;
         this.categoriaEnProceso = null;
         this.categoriaCreadaReciente = null;
         this.loadingOverlay = null;
         this.notificacionActual = null;
-        
+
         // Array para almacenar subcategorías
         this.subcategorias = [];
-        
+
         // Inicializar
         this._init();
     }
 
     // ========== INICIALIZACIÓN ==========
-    
+
     async _init() {
         try {
-            console.log('🎬 Inicializando controlador...');
-            
             // 1. Cargar usuario
             this._cargarUsuario();
-            
+
             if (!this.usuarioActual) {
                 throw new Error('No se pudo cargar información del usuario');
             }
-            
-            console.log('✅ Usuario cargado:', this.usuarioActual);
-            
+
             // 2. Cargar CategoriaManager
             await this._cargarCategoriaManager();
-            
+
             // 3. Configurar eventos
             this._configurarEventos();
-            
+
             // 4. Configurar organización automática
             this._configurarOrganizacion();
-            
+
             // 5. Inicializar validaciones
             this._inicializarValidaciones();
-            
+
             // 6. Inicializar gestión de subcategorías
             this._inicializarGestionSubcategorias();
-            
+
             // 7. Actualizar UI con información de la organización
             this._actualizarInfoOrganizacion();
-            
-            console.log('✅ Controlador inicializado correctamente');
+
             window.crearCategoriaDebug.controller = this;
-            
+
         } catch (error) {
-            console.error('❌ Error inicializando:', error);
+            console.error('Error inicializando:', error); // Solo este console.error importante
             this._mostrarError('Error al inicializar: ' + error.message);
             this._redirigirAlLogin();
         }
     }
 
     // ========== CARGA DE DEPENDENCIAS ==========
-    
+
     async _cargarCategoriaManager() {
         try {
             const { CategoriaManager } = await import('/clases/categoria.js');
             this.categoriaManager = new CategoriaManager();
-            console.log('✅ CategoriaManager cargado');
-            console.log('📁 Colección por defecto:', this.categoriaManager.nombreColeccion);
         } catch (error) {
-            console.error('❌ Error cargando CategoriaManager:', error);
+            console.error('Error cargando CategoriaManager:', error); // Solo este console.error importante
             throw error;
         }
     }
 
     // ========== CARGA DE USUARIO ==========
-    
+
     _cargarUsuario() {
-        console.log('📂 Cargando datos del usuario...');
-        
         try {
             // PRIMERO: Intentar adminInfo (para administradores)
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-                console.log('🔑 Datos de admin encontrados');
-                
+
                 this.usuarioActual = {
                     id: adminData.id || `admin_${Date.now()}`,
                     uid: adminData.uid || adminData.id,
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
                     organizacion: adminData.organizacion || 'Sin organización',
-                    organizacionCamelCase: adminData.organizacionCamelCase || 
-                                          this._generarCamelCase(adminData.organizacion),
+                    organizacionCamelCase: adminData.organizacionCamelCase ||
+                        this._generarCamelCase(adminData.organizacion),
                     correo: adminData.correoElectronico || ''
                 };
                 return;
             }
-            
+
             // SEGUNDO: Intentar userData
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             if (userData && Object.keys(userData).length > 0) {
-                console.log('👤 Datos de usuario encontrados');
-                
+
                 this.usuarioActual = {
                     id: userData.uid || userData.id || `user_${Date.now()}`,
                     uid: userData.uid || userData.id,
                     nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
-                    organizacionCamelCase: userData.organizacionCamelCase || 
-                                          this._generarCamelCase(userData.organizacion || userData.empresa),
+                    organizacionCamelCase: userData.organizacionCamelCase ||
+                        this._generarCamelCase(userData.organizacion || userData.empresa),
                     correo: userData.correo || userData.email || ''
                 };
                 return;
             }
-            
+
             // TERCERO: Datos por defecto (para desarrollo)
-            console.warn('⚠️ Usando datos por defecto');
             this.usuarioActual = {
                 id: `admin_${Date.now()}`,
                 uid: `admin_${Date.now()}`,
@@ -137,9 +122,9 @@ class CrearCategoriaController {
                 organizacionCamelCase: 'pollosRay',
                 correo: 'admin@centinela.com'
             };
-            
+
         } catch (error) {
-            console.error('❌ Error cargando usuario:', error);
+            console.error('Error cargando usuario:', error); // Solo este console.error importante
             throw error;
         }
     }
@@ -155,33 +140,26 @@ class CrearCategoriaController {
     }
 
     // ========== CONFIGURACIÓN DE ORGANIZACIÓN ==========
-    
+
     _configurarOrganizacion() {
-        console.log('🏢 Configurando organización automática...');
-        
         const orgCamelCaseInput = document.getElementById('organizacionCamelCase');
         const orgNombreInput = document.getElementById('organizacionNombre');
-        
+
         if (orgCamelCaseInput) {
             orgCamelCaseInput.value = this.usuarioActual.organizacionCamelCase;
         }
-        
+
         if (orgNombreInput) {
             orgNombreInput.value = this.usuarioActual.organizacion;
         }
-        
-        console.log('✅ Organización configurada:', {
-            nombre: this.usuarioActual.organizacion,
-            camelCase: this.usuarioActual.organizacionCamelCase
-        });
     }
 
     _actualizarInfoOrganizacion() {
         const container = document.getElementById('organizacionInfoContainer');
         if (!container) return;
-        
+
         const coleccion = `categorias_${this.usuarioActual.organizacionCamelCase}`;
-        
+
         container.innerHTML = `
             <div class="organizacion-info">
                 <i class="fas fa-building organizacion-icono"></i>
@@ -201,7 +179,7 @@ class CrearCategoriaController {
                 </div>
             </div>
         `;
-        
+
         const coleccionDisplay = document.getElementById('coleccionDisplay');
         if (coleccionDisplay) {
             coleccionDisplay.textContent = coleccion;
@@ -209,23 +187,21 @@ class CrearCategoriaController {
     }
 
     // ========== CONFIGURACIÓN DE EVENTOS ==========
-    
+
     _configurarEventos() {
-        console.log('🎮 Configurando eventos...');
-        
         try {
             // Botón Volver
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
                 btnVolverLista.addEventListener('click', () => this._volverALista());
             }
-            
+
             // Botón Cancelar
             const btnCancel = document.getElementById('btnCancel');
             if (btnCancel) {
                 btnCancel.addEventListener('click', () => this._cancelarCreacion());
             }
-            
+
             // Formulario Submit
             const form = document.getElementById('crearCategoriaForm');
             if (form) {
@@ -234,52 +210,49 @@ class CrearCategoriaController {
                     this._validarYGuardar();
                 });
             }
-            
+
             // Color Preview
             const colorPreviewCard = document.getElementById('colorPreviewCard');
             const colorPickerNative = document.getElementById('colorPickerNative');
-            
+
             if (colorPreviewCard && colorPickerNative) {
                 colorPreviewCard.addEventListener('click', () => {
                     colorPickerNative.click();
                 });
-                
+
                 colorPickerNative.addEventListener('input', (e) => {
                     const color = e.target.value;
                     document.getElementById('colorDisplay').style.backgroundColor = color;
                     document.getElementById('colorHex').textContent = color;
-                    
+
                     // Actualizar previsualización de colores en subcategorías
                     this._renderizarSubcategorias();
                 });
             }
-            
+
             // Contador de caracteres
             const descripcionInput = document.getElementById('descripcionCategoria');
             if (descripcionInput) {
                 descripcionInput.addEventListener('input', () => this._actualizarContadorCaracteres());
             }
-            
-            console.log('✅ Todos los eventos configurados');
-            
+
         } catch (error) {
-            console.error('❌ Error configurando eventos:', error);
+            console.error('Error configurando eventos:', error); // Solo este console.error importante
         }
     }
 
     _inicializarValidaciones() {
-        console.log('📋 Inicializando validaciones...');
         this._actualizarContadorCaracteres();
     }
 
     _actualizarContadorCaracteres() {
         const descripcion = document.getElementById('descripcionCategoria');
         const contador = document.getElementById('contadorCaracteres');
-        
+
         if (descripcion && contador) {
             const longitud = descripcion.value.length;
             contador.textContent = longitud;
-            
+
             if (longitud > 500) {
                 contador.style.color = 'var(--color-danger)';
             } else if (longitud > 400) {
@@ -291,10 +264,8 @@ class CrearCategoriaController {
     }
 
     // ========== GESTIÓN DE SUBCATEGORÍAS ==========
-    
+
     _inicializarGestionSubcategorias() {
-        console.log('📂 Inicializando gestión de subcategorías...');
-        
         const btnAgregar = document.getElementById('btnAgregarSubcategoria');
         if (btnAgregar) {
             btnAgregar.addEventListener('click', () => this._agregarSubcategoria());
@@ -302,10 +273,8 @@ class CrearCategoriaController {
     }
 
     _agregarSubcategoria() {
-        console.log('➕ Agregando subcategoría...');
-        
         const subcatId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        
+
         this.subcategorias.push({
             id: subcatId,
             nombre: '',
@@ -313,10 +282,10 @@ class CrearCategoriaController {
             heredaColor: true,
             colorPersonalizado: '#ff5733'
         });
-        
+
         this._renderizarSubcategorias();
         this._actualizarContadorSubcategorias();
-        
+
         // Enfocar en el nombre
         setTimeout(() => {
             const input = document.getElementById(`subcat_nombre_${subcatId}`);
@@ -325,8 +294,6 @@ class CrearCategoriaController {
     }
 
     _eliminarSubcategoria(subcatId) {
-        console.log('🗑️ Eliminando subcategoría:', subcatId);
-        
         Swal.fire({
             title: '¿Eliminar subcategoría?',
             text: 'Esta acción no se puede deshacer',
@@ -334,7 +301,6 @@ class CrearCategoriaController {
             showCancelButton: true,
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar'
-            // Estilos eliminados
         }).then((result) => {
             if (result.isConfirmed) {
                 this.subcategorias = this.subcategorias.filter(s => s.id !== subcatId);
@@ -370,7 +336,7 @@ class CrearCategoriaController {
     _renderizarSubcategorias() {
         const container = document.getElementById('subcategoriasList');
         if (!container) return;
-        
+
         if (this.subcategorias.length === 0) {
             container.innerHTML = `
                 <div class="subcategorias-empty">
@@ -383,13 +349,13 @@ class CrearCategoriaController {
             `;
             return;
         }
-        
+
         let html = '';
         const colorCategoria = document.getElementById('colorPickerNative')?.value || '#2f8cff';
-        
+
         this.subcategorias.forEach((subcat, index) => {
             const colorEfectivo = subcat.heredaColor ? colorCategoria : (subcat.colorPersonalizado || '#ff5733');
-            
+
             html += `
                 <div class="subcategoria-item" id="subcategoria_${subcat.id}" style="border-left-color: ${colorEfectivo};">
                     <div class="subcategoria-header">
@@ -462,7 +428,7 @@ class CrearCategoriaController {
                 </div>
             `;
         });
-        
+
         container.innerHTML = html;
     }
 
@@ -485,39 +451,36 @@ class CrearCategoriaController {
     }
 
     // ========== VALIDACIÓN Y GUARDADO ==========
-    
+
     _validarYGuardar() {
-        console.log('✅ Validando formulario...');
-        
         // Validar nombre
         const nombreInput = document.getElementById('nombreCategoria');
         const nombre = nombreInput.value.trim();
-        
+
         if (!nombre) {
             nombreInput.classList.add('is-invalid');
             this._mostrarError('El nombre de la categoría es obligatorio');
             return;
         }
-        
+
         if (nombre.length < 3) {
             nombreInput.classList.add('is-invalid');
             this._mostrarError('El nombre debe tener al menos 3 caracteres');
             return;
         }
-        
+
         nombreInput.classList.remove('is-invalid');
-        
+
         // Validar subcategorías
         const subcategoriasValidas = this.subcategorias.filter(s => s.nombre && s.nombre.trim() !== '');
         if (this.subcategorias.length > 0 && subcategoriasValidas.length === 0) {
             this._mostrarError('Las subcategorías agregadas deben tener nombre');
             return;
         }
-        
+
         // Obtener datos
         const datos = this._obtenerDatosFormulario(subcategoriasValidas);
-        console.log('📋 Datos a guardar:', datos);
-        
+
         // Guardar
         this._guardarCategoria(datos);
     }
@@ -526,11 +489,10 @@ class CrearCategoriaController {
         const nombre = document.getElementById('nombreCategoria').value.trim();
         const descripcion = document.getElementById('descripcionCategoria').value.trim();
         const color = document.getElementById('colorPickerNative')?.value || '#2f8cff';
-        
+
         // Procesar subcategorías - SOLO IDs TEMPORALES
-        // Firebase generará IDs reales al guardar
         const subcategorias = {};
-        
+
         subcategoriasValidas.forEach(subcat => {
             const tempId = subcat.id;
             subcategorias[tempId] = {
@@ -543,50 +505,44 @@ class CrearCategoriaController {
                 color: !subcat.heredaColor ? (subcat.colorPersonalizado || null) : null
             };
         });
-        
+
         return {
             nombre: nombre,
             descripcion: descripcion,
             color: color,
             subcategorias: subcategorias,
-            // Metadatos para el manager (no se guardan en Firestore)
             organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
             organizacionNombre: this.usuarioActual.organizacion
         };
     }
 
     async _guardarCategoria(datos) {
-        console.log('💾 Guardando categoría...');
-        
         const btnSave = document.getElementById('btnSave');
         const originalHTML = btnSave.innerHTML;
-        
+
         try {
             btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
             btnSave.disabled = true;
-            
+
             // Verificar si ya existe
             const existe = await this.categoriaManager.verificarCategoriaExistente(
                 datos.nombre,
                 this.usuarioActual.organizacionCamelCase
             );
-            
+
             if (existe) {
                 this._mostrarError(`Ya existe una categoría con el nombre "${datos.nombre}"`);
                 return;
             }
-            
-            // Crear categoría (addDoc genera ID automático)
+
+            // Crear categoría
             const nuevaCategoria = await this.categoriaManager.crearCategoria(datos);
-            
-            console.log('✅✅✅ CATEGORÍA CREADA:', nuevaCategoria);
-            console.log('🆔 ID GENERADO POR FIREBASE:', nuevaCategoria.id);
-            
+
             this.categoriaCreadaReciente = nuevaCategoria;
-            
+
             // Mostrar éxito
             const subcatCount = nuevaCategoria.getCantidadSubcategorias();
-            
+
             await Swal.fire({
                 title: '¡Categoría creada!',
                 html: `
@@ -612,13 +568,12 @@ class CrearCategoriaController {
                 `,
                 icon: 'success',
                 confirmButtonText: 'Ver categorías'
-                // Estilos eliminados
             }).then(() => {
                 this._volverALista();
             });
-            
+
         } catch (error) {
-            console.error('❌ Error guardando categoría:', error);
+            console.error('Error guardando categoría:', error); // Solo este console.error importante
             this._mostrarError(error.message || 'No se pudo crear la categoría');
         } finally {
             btnSave.innerHTML = originalHTML;
@@ -627,15 +582,12 @@ class CrearCategoriaController {
     }
 
     // ========== NAVEGACIÓN ==========
-    
+
     _volverALista() {
-        console.log('⬅️ Volviendo a lista de categorías...');
         window.location.href = '/users/admin/categorias/categorias.html';
     }
 
     _cancelarCreacion() {
-        console.log('❌ Cancelando creación...');
-        
         Swal.fire({
             title: '¿Cancelar?',
             text: 'Los cambios no guardados se perderán',
@@ -644,7 +596,6 @@ class CrearCategoriaController {
             confirmButtonText: 'Sí, cancelar',
             cancelButtonText: 'No, continuar',
             confirmButtonColor: '#d33'
-            // Estilos eliminados
         }).then((result) => {
             if (result.isConfirmed) {
                 this._volverALista();
@@ -658,14 +609,13 @@ class CrearCategoriaController {
             title: 'Sesión no válida',
             text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login'
-            // Estilos eliminados
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
     }
 
     // ========== UTILIDADES ==========
-    
+
     _mostrarError(mensaje) {
         this._mostrarNotificacion(mensaje, 'danger');
     }
@@ -674,17 +624,17 @@ class CrearCategoriaController {
         if (this.notificacionActual) {
             this.notificacionActual.remove();
         }
-        
+
         const notificacion = document.createElement('div');
         notificacion.className = `notificacion notificacion-${tipo}`;
-        
+
         const iconos = {
             success: 'fa-check-circle',
             danger: 'fa-exclamation-triangle',
             warning: 'fa-exclamation-circle',
             info: 'fa-info-circle'
         };
-        
+
         notificacion.innerHTML = `
             <i class="fas ${iconos[tipo] || 'fa-info-circle'}"></i>
             <div style="flex: 1;">${mensaje}</div>
@@ -692,10 +642,10 @@ class CrearCategoriaController {
                 <i class="fas fa-times"></i>
             </button>
         `;
-        
+
         document.body.appendChild(notificacion);
         this.notificacionActual = notificacion;
-        
+
         setTimeout(() => {
             if (notificacion.parentNode) {
                 notificacion.remove();
@@ -707,14 +657,14 @@ class CrearCategoriaController {
         if (this.loadingOverlay) {
             this.loadingOverlay.remove();
         }
-        
+
         const overlay = document.createElement('div');
         overlay.className = 'loading-overlay';
         overlay.innerHTML = `
             <div class="spinner"></div>
             <div class="loading-text">${mensaje}</div>
         `;
-        
+
         document.body.appendChild(overlay);
         this.loadingOverlay = overlay;
     }
@@ -731,6 +681,5 @@ class CrearCategoriaController {
 // INICIALIZACIÓN
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM cargado - Iniciando crearCategorias...');
     window.crearCategoriaDebug.controller = new CrearCategoriaController();
 });
