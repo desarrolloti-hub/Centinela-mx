@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <p style="margin: 0 0 10px 0; color: ${estilos.colors.accentSecondary}; font-weight: bold;">
                             <i class="fas fa-key" style="color: ${estilos.colors.accentSecondary}; margin-right: 8px;"></i> ¿Olvidaste tu contraseña?
                         </p>
-                        <button onclick="mostrarRecuperacionContraseña()" 
+                        <button onclick="window.mostrarRecuperacionContraseña()" 
                                 style="width: 100%; padding: 10px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; font-weight: bold; transition: ${estilos.transition};"
                                 onmouseover="this.style.opacity='0.9';"
                                 onmouseout="this.style.opacity='1';">
@@ -439,7 +439,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }).then((result) => {
             if (result.dismiss === Swal.DismissReason.cancel) {
-                mostrarRecuperacionContraseña();
+                window.mostrarRecuperacionContraseña();
             }
         });
     }
@@ -456,14 +456,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0;">
-                        <button onclick="irARegistro()" 
+                        <button onclick="window.irARegistro()" 
                                 style="padding: 12px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: ${estilos.borderRadius}; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; transition: ${estilos.transition};"
                                 onmouseover="this.style.opacity='0.9';"
                                 onmouseout="this.style.opacity='1';">
                             <i class="fas fa-user-plus" style="font-size: 1.5em; margin-bottom: 5px;"></i>
                             <span>Registrarse</span>
                         </button>
-                        <button onclick="mostrarRecuperacionContraseña()" 
+                        <button onclick="window.mostrarRecuperacionContraseña()" 
                                 style="padding: 12px; background: linear-gradient(135deg, ${estilos.colors.accentSecondary}, ${estilos.colors.accentPrimary}); color: ${estilos.colors.textDark}; border: none; border-radius: ${estilos.borderRadius}; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; transition: ${estilos.transition};"
                                 onmouseover="this.style.opacity='0.9';"
                                 onmouseout="this.style.opacity='1';">
@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // FUNCIÓN: Mostrar SweetAlert2 para recuperación de contraseña
+    // FUNCIÓN: Mostrar SweetAlert2 para recuperación de contraseña (MODIFICADA PARA USAR USERMANAGER)
     function mostrarRecuperacionContraseña() {
         Swal.fire({
             title: `<span style="color: ${estilos.colors.accentSecondary}; font-size: 1.5em; font-family: ${estilos.fontFamily};">Recuperar Contraseña</span>`,
@@ -518,14 +518,17 @@ document.addEventListener('DOMContentLoaded', function () {
                         </p>
                         <ol style="margin: 5px 0 0 20px; color: ${estilos.colors.secondary}; font-size: 0.85em;">
                             <li>Recibirás un correo con un enlace seguro</li>
+                            <li>Revisa tu bandeja de entrada y SPAM</li>
                             <li>Haz clic en el enlace para restablecer</li>
                             <li>Crea una nueva contraseña segura</li>
                             <li>Inicia sesión con tus nuevas credenciales</li>
                         </ol>
                     </div>
                     
+                    <div id="recovery-status" style="margin: 10px 0; display: none;"></div>
+                    
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button onclick="enviarRecuperacion()" 
+                        <button id="send-recovery-btn" 
                                 style="flex: 2; padding: 12px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: ${estilos.borderRadius}; cursor: pointer; font-weight: bold; transition: ${estilos.transition};"
                                 onmouseover="this.style.opacity='0.9';"
                                 onmouseout="this.style.opacity='1';">
@@ -555,53 +558,97 @@ document.addEventListener('DOMContentLoaded', function () {
                     recoveryEmail.focus();
                     recoveryEmail.select();
                 }
+                
+                // Agregar evento al botón de envío
+                const sendBtn = document.getElementById('send-recovery-btn');
+                if (sendBtn) {
+                    sendBtn.addEventListener('click', async function() {
+                        const email = document.getElementById('recovery-email').value;
+                        const statusDiv = document.getElementById('recovery-status');
+                        
+                        if (!email) {
+                            statusDiv.style.display = 'block';
+                            statusDiv.innerHTML = `
+                                <div style="padding: 10px; background: rgba(244, 67, 54, 0.2); border: 1px solid #f44336; border-radius: 5px; color: #f44336;">
+                                    <i class="fas fa-exclamation-circle"></i> Por favor ingresa tu correo electrónico
+                                </div>
+                            `;
+                            return;
+                        }
+                        
+                        if (!validateEmail(email)) {
+                            statusDiv.style.display = 'block';
+                            statusDiv.innerHTML = `
+                                <div style="padding: 10px; background: rgba(244, 67, 54, 0.2); border: 1px solid #f44336; border-radius: 5px; color: #f44336;">
+                                    <i class="fas fa-exclamation-circle"></i> El formato del correo no es válido
+                                </div>
+                            `;
+                            return;
+                        }
+                        
+                        // Deshabilitar botón y mostrar loader
+                        sendBtn.disabled = true;
+                        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ENVIANDO...';
+                        
+                        statusDiv.style.display = 'block';
+                        statusDiv.innerHTML = `
+                            <div style="padding: 10px; background: rgba(33, 150, 243, 0.2); border: 1px solid #2196F3; border-radius: 5px; color: #2196F3;">
+                                <i class="fas fa-spinner fa-spin"></i> Enviando correo de recuperación...
+                            </div>
+                        `;
+                        
+                        try {
+                            // ✅ USAR EL MÉTODO DE USERMANAGER EN LUGAR DE INICIALIZAR FIREBASE
+                            const resultado = await userManager.enviarCorreoRecuperacion(email);
+                            
+                            if (resultado.success) {
+                                statusDiv.innerHTML = `
+                                    <div style="padding: 10px; background: rgba(76, 175, 80, 0.2); border: 1px solid #4CAF50; border-radius: 5px; color: #4CAF50;">
+                                        <i class="fas fa-check-circle"></i> ${resultado.message}
+                                    </div>
+                                `;
+                                
+                                // Cambiar el texto del botón
+                                sendBtn.innerHTML = '<i class="fas fa-check"></i> ENVIADO';
+                                
+                                // Opcional: cerrar después de 3 segundos
+                                setTimeout(() => {
+                                    Swal.close();
+                                }, 3000);
+                            } else {
+                                statusDiv.innerHTML = `
+                                    <div style="padding: 10px; background: rgba(244, 67, 54, 0.2); border: 1px solid #f44336; border-radius: 5px; color: #f44336;">
+                                        <i class="fas fa-exclamation-circle"></i> ${resultado.message}
+                                    </div>
+                                `;
+                                
+                                // Rehabilitar botón
+                                sendBtn.disabled = false;
+                                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Enlace';
+                            }
+                        } catch (error) {
+                            console.error('Error inesperado:', error);
+                            statusDiv.innerHTML = `
+                                <div style="padding: 10px; background: rgba(244, 67, 54, 0.2); border: 1px solid #f44336; border-radius: 5px; color: #f44336;">
+                                    <i class="fas fa-exclamation-circle"></i> Error inesperado. Intenta nuevamente.
+                                </div>
+                            `;
+                            sendBtn.disabled = false;
+                            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Enlace';
+                        }
+                    });
+                }
             }
         });
     }
 
+    // Exponer funciones globalmente
     window.irARegistro = function () {
         window.location.href = '/users/visitors/registro/registro.html';
     };
 
     window.mostrarRecuperacionContraseña = function () {
         mostrarRecuperacionContraseña();
-    };
-
-    window.enviarRecuperacion = function () {
-        const recoveryEmail = document.getElementById('recovery-email');
-        if (recoveryEmail && recoveryEmail.value) {
-            if (validateEmail(recoveryEmail.value)) {
-                Swal.fire({
-                    title: 'Enlace enviado',
-                    text: `Se ha enviado un enlace de recuperación a ${recoveryEmail.value}`,
-                    confirmButtonColor: estilos.colors.accentSecondary,
-                    background: estilos.colors.bgPrimary,
-                    color: estilos.colors.primary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    }
-                });
-            } else {
-                Swal.fire({
-                    title: 'Correo inválido',
-                    text: 'Por favor ingresa un correo válido',
-                    confirmButtonColor: estilos.colors.accentPrimary,
-                    background: estilos.colors.bgPrimary,
-                    color: estilos.colors.primary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    }
-                });
-            }
-        }
     };
 
     if (passwordToggle && passwordInput) {
@@ -750,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </p>
                             </div>
                             <div style="margin-top: 15px;">
-                                <button onclick="mostrarRecuperacionContraseña()" 
+                                <button onclick="window.mostrarRecuperacionContraseña()" 
                                         style="width: 100%; padding: 10px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: ${estilos.transition};"
                                         onmouseover="this.style.opacity='0.9';"
                                         onmouseout="this.style.opacity='1';">
@@ -818,7 +865,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 </p>
                             </div>
                             <div style="margin-top: 15px;">
-                                <button onclick="reenviarVerificacion()" 
+                                <button onclick="window.reenviarVerificacion()" 
                                         style="width: 100%; padding: 10px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: ${estilos.transition};"
                                         onmouseover="this.style.opacity='0.9';"
                                         onmouseout="this.style.opacity='1';">
@@ -867,7 +914,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (forgotPasswordLink) {
         forgotPasswordLink.addEventListener('click', function (e) {
             e.preventDefault();
-            mostrarRecuperacionContraseña();
+            window.mostrarRecuperacionContraseña();
         });
     }
 

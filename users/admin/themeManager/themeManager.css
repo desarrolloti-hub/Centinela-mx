@@ -6,7 +6,7 @@
 }
 
 body {
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif);
+    font-family: var(--font-family-secondary, 'Orbitron', sans-serif);
     background: var(--color-bg-primary);
     color: var(--color-text-primary);
     min-height: 100vh;
