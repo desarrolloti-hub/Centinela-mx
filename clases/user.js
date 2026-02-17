@@ -700,7 +700,7 @@ class UserManager {
             console.log('📧 Enviando correo de recuperación a:', email);
             
             const actionCodeSettings = {
-                url: window.location.origin + '/users/visitors/login/verifyEmail.html',
+                url: window.location.origin + '/verifyEmail.html',
                 handleCodeInApp: true
             };
             
