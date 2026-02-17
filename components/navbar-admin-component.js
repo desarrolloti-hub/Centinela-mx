@@ -10,7 +10,6 @@ class NavbarComplete {
     // Inicializa el navbar evitando duplicados
     init() {
         if (window.NavbarCompleteLoaded) {
-            console.log('🔄 Navbar ya cargado');
             return;
         }
 
@@ -30,11 +29,10 @@ class NavbarComplete {
             this.removeOriginalNavbar();
             this.createNavbar();
             this.setupFunctionalities();
-            await this.loadAdminData(); // Cargar datos del administrador
-            this.updateNavbarWithAdminData(); // Actualizar navbar con datos
-            console.log('✅ Navbar completo inicializado con datos del admin');
+            await this.loadAdminData();
+            this.updateNavbarWithAdminData();
         } catch (error) {
-            console.error('❌ Error:', error);
+            console.error('❌ Error en inicialización:', error);
         }
     }
 
@@ -75,12 +73,12 @@ class NavbarComplete {
                 box-shadow: var(--navbar-scrolled-shadow);
             }
             
-            /* Sección superior: Logo | Título | Botón hamburguesa - MODIFICADO */
+            /* Sección superior: Logo | Título | Botón hamburguesa */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 5px 20px; /* Más padding horizontal */
+                padding: 5px 20px;
                 min-height: 50px;
                 margin: 0;
                 position: relative;
@@ -88,24 +86,24 @@ class NavbarComplete {
                 box-sizing: border-box;
             }
             
-            /* Contenedor izquierdo para el logo - PEGADO A LA IZQUIERDA */
+            /* Contenedor izquierdo para el logo */
             .navbar-left-container {
                 display: flex;
                 align-items: center;
                 justify-content: flex-start;
-                gap: 10px; /* Espacio entre logos */
-                flex: 0 0 auto; /* No crece, no se encoge */
-                margin-right: auto; /* Empuja todo lo demás a la derecha */
+                gap: 10px;
+                flex: 0 0 auto;
+                margin-right: auto;
             }
             
-            /* Logo del sistema - CÍRCULO PERFECTO */
+            /* Logo del sistema */
             .navbar-logo-link {
                 display: flex;
                 align-items: center;
                 text-decoration: none;
                 z-index: 1003;
                 height: 70px;
-                flex: 0 0 auto; /* Tamaño fijo */
+                flex: 0 0 auto;
             }
 
             /* Contenedor para logo circular */
@@ -120,7 +118,7 @@ class NavbarComplete {
                 align-items: center;
                 justify-content: center;
                 transition: all 0.3s ease;
-                flex-shrink: 0; /* No se encoge */
+                flex-shrink: 0;
             }
 
             /* Todos los logos en círculo perfecto */
@@ -151,7 +149,7 @@ class NavbarComplete {
                 );
                 margin: 0 5px;
                 border-radius: 1px;
-                flex-shrink: 0; /* No se encoge */
+                flex-shrink: 0;
             }
             
             /* Logo de organización cuando es texto */
@@ -168,10 +166,10 @@ class NavbarComplete {
                 font-size: 14px;
                 text-align: center;
                 border: 3px solid var(--color-accent-primary);
-                flex-shrink: 0; /* No se encoge */
+                flex-shrink: 0;
             }
             
-            /* Título "CENTINELA" centrado - AHORA ABSOLUTO */
+            /* Título "CENTINELA" centrado */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -190,16 +188,16 @@ class NavbarComplete {
                 width: max-content;
             }
             
-            /* Contenedor derecho para el botón hamburguesa - PEGADO A LA DERECHA */
+            /* Contenedor derecho para el botón hamburguesa */
             .navbar-right-container {
                 display: flex;
                 align-items: center;
                 justify-content: flex-end;
-                flex: 0 0 auto; /* Tamaño fijo */
-                margin-left: auto; /* Empuja todo lo demás a la izquierda */
+                flex: 0 0 auto;
+                margin-left: auto;
             }
             
-            /* Botón hamburguesa - PEGADO A LA DERECHA */
+            /* Botón hamburguesa */
             .navbar-hamburger-btn {
                 display: flex;
                 flex-direction: column;
@@ -214,7 +212,7 @@ class NavbarComplete {
                 position: relative;
                 z-index: 1002;
                 transition: var(--transition-default);
-                flex-shrink: 0; /* No se encoge */
+                flex-shrink: 0;
             }
             
             /* Líneas del botón hamburguesa */
@@ -463,7 +461,7 @@ class NavbarComplete {
                 font-family: 'Orbitron', sans-serif;
             }
             
-            /* Sección de espacios vacíos (sin texto) */
+            /* Sección de espacios vacíos */
             .menu-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -595,7 +593,7 @@ class NavbarComplete {
                 color: white;
             }
             
-            /* Overlay para cerrar el menú (en móvil) */
+            /* Overlay para cerrar el menú */
             .navbar-mobile-overlay {
                 position: fixed;
                 top: 0;
@@ -637,7 +635,6 @@ class NavbarComplete {
                 
                 .navbar-title {
                     font-size: 22px;
-                    /* En móviles, el título puede ajustarse */
                 }
 
                 body.menu-open {
@@ -673,7 +670,6 @@ class NavbarComplete {
                 
                 .navbar-title {
                     font-size: 18px;
-                    /* En móviles pequeños, el título puede ocultarse si hay poco espacio */
                     white-space: normal;
                     max-width: 150px;
                     overflow: hidden;
@@ -706,7 +702,7 @@ class NavbarComplete {
                 }
             }
             
-            /* Para pantallas muy pequeñas (menos de 480px) */
+            /* Para pantallas muy pequeñas */
             @media (max-width: 480px) {
                 .navbar-top-section {
                     padding: 5px 10px;
@@ -781,7 +777,7 @@ class NavbarComplete {
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
-                    <!-- Logo del sistema Centinela - CÍRCULO - PEGADO A LA IZQUIERDA -->
+                    <!-- Logo del sistema Centinela -->
                     <a href="/users/admin/dashAdmin/dashAdmin.html" class="navbar-logo-link">
                         <div class="logo-circle-container">
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
@@ -791,7 +787,7 @@ class NavbarComplete {
                     <!-- BARRA SEPARADORA ENTRE LOGOS -->
                     <div class="logo-separator"></div>
                     
-                    <!-- Logo de la organización - CÍRCULO -->
+                    <!-- Logo de la organización -->
                     <a href="/users/admin/dashboard/dashboard.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
                             <img src="/assets/images/logo.png" alt="Logo Organización" 
@@ -801,11 +797,11 @@ class NavbarComplete {
                     </a>
                 </div>
                 
-                <!-- Título CENTRADO ABSOLUTAMENTE -->
+                <!-- Título centrado -->
                 <h1 class="navbar-title">CENTINELA</h1>
                 
                 <div class="navbar-right-container">
-                    <!-- Botón hamburguesa - PEGADO A LA DERECHA -->
+                    <!-- Botón hamburguesa -->
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
                         <span class="hamburger-line"></span>
                         <span class="hamburger-line"></span>
@@ -814,7 +810,7 @@ class NavbarComplete {
                 </div>
             </div>
             
-            <!-- Overlay para cerrar menú en móvil -->
+            <!-- Overlay para cerrar menú -->
             <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
             
             <!-- Menú lateral -->
@@ -878,7 +874,7 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- Sección de espacios vacíos (reducidos a 6 espacios) -->
+                <!-- Sección de espacios vacíos -->
                 <div class="menu-section">
                     <div class="empty-menu-item"></div>
                 </div>
@@ -938,38 +934,27 @@ class NavbarComplete {
 
             if (this.userManager.currentUser) {
                 this.currentAdmin = this.userManager.currentUser;
-                console.log('👤 Admin cargado en navbar:', {
-                    nombre: this.currentAdmin.nombreCompleto,
-                    email: this.currentAdmin.correoElectronico,
-                    organizacion: this.currentAdmin.organizacion,
-                    fotoUsuario: this.currentAdmin.fotoUsuario ? 'Sí' : 'No',
-                    fotoOrganizacion: this.currentAdmin.fotoOrganizacion ? 'Sí' : 'No'
-                });
             } else {
                 // Intentar cargar desde localStorage
                 try {
                     const storedUser = JSON.parse(localStorage.getItem('centinela-currentUser'));
                     if (storedUser && storedUser.cargo === 'administrador') {
                         this.currentAdmin = storedUser;
-                        console.log('👤 Admin cargado desde localStorage en navbar');
                     }
                 } catch (e) {
-                    console.warn('No se pudo cargar admin desde localStorage');
+                    // Silencioso - no mostrar warning
                 }
             }
         } catch (error) {
-            console.error('❌ Error al cargar datos del admin en navbar:', error);
+            console.error('❌ Error al cargar datos del admin:', error);
         }
     }
 
     // Actualiza el navbar con los datos del administrador
     updateNavbarWithAdminData() {
         if (!this.currentAdmin) {
-            console.log('⚠️ No hay datos de admin para mostrar en navbar');
             return;
         }
-
-        console.log('🔄 Actualizando navbar con datos del admin...');
 
         // 1. Actualizar segundo logo (logo de la organización)
         this.updateOrganizationLogo();
@@ -977,10 +962,7 @@ class NavbarComplete {
         // 2. Actualizar información en el menú desplegable
         this.updateAdminMenuInfo();
 
-        // 3. Actualizar título del navbar si es necesario
-        this.updateNavbarTitle();
-
-        // 4. Configurar eventos para los botones nuevos
+        // 3. Configurar eventos para los botones nuevos
         this.setupAdminButtons();
     }
 
@@ -990,7 +972,6 @@ class NavbarComplete {
         const areasBtn = document.getElementById('areasBtn');
         if (areasBtn) {
             areasBtn.addEventListener('click', (e) => {
-                console.log('📍 Navegando a Áreas...');
                 // La navegación se maneja automáticamente por el href
             });
         }
@@ -999,7 +980,6 @@ class NavbarComplete {
         const themeManagerBtn = document.getElementById('themeManagerBtn');
         if (themeManagerBtn) {
             themeManagerBtn.addEventListener('click', (e) => {
-                console.log('🎨 Navegando a Personalización de colores...');
                 // La navegación se maneja automáticamente por el href
             });
         }
@@ -1024,8 +1004,6 @@ class NavbarComplete {
             // Añadir tooltip y atributos
             organizationLogoImg.title = this.currentAdmin.organizacion;
             organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion);
-
-            console.log('🏢 Logo de organización actualizado:', this.currentAdmin.organizacion);
         } else {
             // Mostrar texto en lugar de imagen
             organizationLogoImg.style.display = 'none';
@@ -1042,8 +1020,6 @@ class NavbarComplete {
 
             orgTextLogo.textContent = initials;
             orgTextLogo.title = orgName;
-
-            console.log('🏢 Texto de organización mostrado:', initials);
         }
 
         // Actualizar el enlace del logo para redirigir al dashboard
@@ -1083,23 +1059,10 @@ class NavbarComplete {
                 adminProfileImg.src = this.currentAdmin.fotoUsuario;
                 adminProfileImg.style.display = 'block';
                 profilePlaceholder.style.display = 'none';
-                console.log('👤 Foto de admin cargada');
             } else {
                 adminProfileImg.style.display = 'none';
                 profilePlaceholder.style.display = 'flex';
-                console.log('👤 Placeholder de foto mostrado');
             }
-        }
-
-        console.log('✅ Información del admin actualizada en el menú');
-    }
-
-    // Actualiza el título del navbar si es necesario
-    updateNavbarTitle() {
-        const navbarTitle = document.querySelector('.navbar-title');
-        if (navbarTitle && this.currentAdmin.organizacion) {
-            // Opcional: Cambiar el título para incluir el nombre de la organización
-            // navbarTitle.textContent = `CENTINELA - ${this.currentAdmin.organizacion}`;
         }
     }
 
@@ -1110,7 +1073,7 @@ class NavbarComplete {
         this.loadFontAwesome();
         this.setupAdminDropdown();
         this.loadOrbitronFont();
-        this.setupLogout(); // Añadido para cerrar sesión
+        this.setupLogout();
     }
 
     // Configura el menú hamburguesa
@@ -1242,13 +1205,10 @@ class NavbarComplete {
 
     // Realiza el cierre de sesión COMPLETO
     async performLogout() {
-        console.log('🚪 Cerrando sesión COMPLETAMENTE...');
-
         try {
             // 1. Cerrar sesión en Firebase si UserManager está disponible
             if (this.userManager && typeof this.userManager.logout === 'function') {
                 await this.userManager.logout();
-                console.log('🔥 Sesión de Firebase cerrada a través de UserManager');
             } else {
                 // Intentar cerrar sesión directamente si firebase está disponible
                 await this.signOutFirebaseDirectly();
@@ -1256,8 +1216,6 @@ class NavbarComplete {
 
             // 2. Limpiar TODOS los datos de almacenamiento local
             this.clearAllStorage();
-
-            console.log('🧹 TODOS los datos de sesión eliminados');
 
             // 3. Mostrar mensaje de éxito
             await this.showLogoutSuccessMessage();
@@ -1280,7 +1238,6 @@ class NavbarComplete {
             // Método 1: Si firebase está disponible globalmente
             if (typeof firebase !== 'undefined' && firebase.auth) {
                 await firebase.auth().signOut();
-                console.log('🔥 Sesión de Firebase cerrada directamente');
                 return;
             }
 
@@ -1292,12 +1249,10 @@ class NavbarComplete {
             if (firebaseApps && firebaseApps.length > 0) {
                 const auth = getAuth(firebaseApps[0]);
                 await signOut(auth);
-                console.log('🔥 Sesión de Firebase cerrada con app existente');
             }
 
         } catch (error) {
-            console.warn('⚠️ No se pudo cerrar sesión en Firebase directamente:', error);
-            // Continuar de todos modos
+            // Silencioso - continuar de todos modos
         }
     }
 
@@ -1306,11 +1261,9 @@ class NavbarComplete {
         try {
             // Limpiar localStorage completamente
             localStorage.clear();
-            console.log('🗑️ localStorage limpiado');
 
             // Limpiar sessionStorage
             sessionStorage.clear();
-            console.log('🗑️ sessionStorage limpiado');
 
             // Limpiar cookies relacionadas con sesión
             this.clearSessionCookies();
@@ -1319,7 +1272,7 @@ class NavbarComplete {
             this.clearIndexedDB();
 
         } catch (error) {
-            console.warn('⚠️ Error al limpiar almacenamiento:', error);
+            // Silencioso
         }
     }
 
@@ -1337,9 +1290,8 @@ class NavbarComplete {
                     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
                 }
             }
-            console.log('🍪 Cookies de sesión limpiadas');
         } catch (error) {
-            console.warn('⚠️ Error al limpiar cookies:', error);
+            // Silencioso
         }
     }
 
@@ -1352,13 +1304,12 @@ class NavbarComplete {
             for (const dbName of databases) {
                 try {
                     await indexedDB.deleteDatabase(dbName);
-                    console.log(`🗃️ indexedDB ${dbName} eliminada`);
                 } catch (e) {
                     // La base de datos podría no existir, continuar
                 }
             }
         } catch (error) {
-            console.warn('⚠️ Error al limpiar indexedDB:', error);
+            // Silencioso
         }
     }
 

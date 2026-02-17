@@ -37,12 +37,6 @@ class ThemeLoader {
                 for (let i = 0; i < 20; i++) {
                     if (this.userManager.currentUser) {
                         const user = this.userManager.currentUser;
-                        console.log('👤 Usuario autenticado encontrado:', {
-                            nombre: user.nombreCompleto,
-                            rol: user.cargo,
-                            organizacion: user.organizacion,
-                            theme: user.theme
-                        });
                         this.loadTheme();
                         this.startThemeMonitoring();
                         return;
@@ -50,7 +44,6 @@ class ThemeLoader {
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
                 // Si no hay usuario después de 10 segundos, cargar default
-                console.log('⏰ Tiempo de espera agotado, usando tema predeterminado');
                 this.loadTheme();
                 this.startThemeMonitoring();
             };
@@ -73,8 +66,6 @@ class ThemeLoader {
             const themeFromLocalStorage = this.loadThemeFromLocalStorage();
 
             if (themeFromLocalStorage) {
-                console.log('📂 Tema cargado de localStorage:', themeFromLocalStorage);
-
                 // Aplicar tema desde localStorage inmediatamente
                 this.applyThemeDirectly(themeFromLocalStorage);
 
@@ -90,8 +81,6 @@ class ThemeLoader {
             if (this.userManager?.currentUser) {
                 const user = this.userManager.currentUser;
                 const userTheme = user.theme || 'default';
-
-                console.log(`👤 Usando tema del usuario (${user.cargo}):`, user.nombreCompleto);
 
                 this.applyThemeDirectly(userTheme);
                 this.saveThemeToLocalStorage(userTheme);
@@ -150,14 +139,9 @@ class ThemeLoader {
             const user = this.userManager.currentUser;
             const userTheme = user.theme || 'default';
 
-            console.log(`🔍 Verificando tema con usuario (${user.cargo})...`);
-
             if (userTheme !== currentThemeId) {
-                console.log(`🔄 Actualizando tema: ${currentThemeId} → ${userTheme}`);
                 this.applyThemeDirectly(userTheme);
                 this.saveThemeToLocalStorage(userTheme);
-            } else {
-                console.log(`✅ Tema coincide con usuario`);
             }
 
         } catch (error) {
@@ -192,7 +176,6 @@ class ThemeLoader {
             }
 
             // Si hay diferencia, actualizar desde BD
-            console.log(`🔄 Tema difiere: localStorage=${currentThemeId}, BD=${dbThemeId}`);
             this.applyThemeDirectly(dbThemeId);
             this.saveThemeToLocalStorage(dbThemeId);
 
@@ -220,8 +203,6 @@ class ThemeLoader {
             this.applyDefaultTheme();
             return;
         }
-
-        console.log(`🎨 APLICANDO DIRECTAMENTE: ${theme.name}`);
 
         // Activar flag para evitar loops
         this.isApplyingTheme = true;
@@ -332,7 +313,6 @@ class ThemeLoader {
 
             const themeData = JSON.parse(savedTheme);
             if (themeData.themeId && themeData.themeId !== this.currentThemeId) {
-                console.log('🔄 Cambio detectado en localStorage:', themeData.themeId);
                 this.applyThemeDirectly(themeData.themeId);
             }
         } catch (error) {
@@ -370,11 +350,7 @@ class ThemeLoader {
                 return;
             }
 
-            console.log('🔍 Verificando cambios en BD...');
-
             if (currentTheme !== this.currentThemeId) {
-                console.log(`🔄 ¡CAMBIO DETECTADO EN BD! ${this.currentThemeId} → ${currentTheme}`);
-
                 // Aplicar directamente
                 this.applyThemeDirectly(currentTheme);
 
@@ -399,7 +375,6 @@ class ThemeLoader {
                 // Debounce para evitar múltiples aplicaciones rápidas
                 clearTimeout(themeChangedTimeout);
                 themeChangedTimeout = setTimeout(() => {
-                    console.log('🎨 Procesando cambio desde admin...');
                     this.applyThemeDirectly(event.detail.themeId);
 
                     // Guardar en localStorage
@@ -414,7 +389,6 @@ class ThemeLoader {
                 try {
                     const themeData = JSON.parse(event.newValue);
                     if (themeData && themeData.themeId) {
-                        console.log('🔄 Tema cambiado desde otra pestaña:', themeData.themeId);
                         setTimeout(() => {
                             this.applyThemeDirectly(themeData.themeId);
                         }, 1000);
