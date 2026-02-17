@@ -1,3 +1,4 @@
+
 // crearAreas.js - MÓDULO PARA CREACIÓN DE ÁREAS (SOLO SWEETALERT2)
 console.log('🚀 crear-areas.js iniciando...');
 
@@ -634,7 +635,6 @@ class CrearAreaController {
             console.log('✅ Evento btnAgregarCargo');
         }
         
-        this.agregarCargo();
     }
     
     agregarCargo() {
@@ -877,7 +877,7 @@ class CrearAreaController {
                 confirmButtonText: 'Ver lista de áreas',
                 denyButtonText: 'Crear otra área',
                 confirmButtonColor: '#2f8cff',
-                denyButtonColor: '#00ff95'
+                denyButtonColor: '#3a9871'
             }).then((result) => {
                 if (result.isConfirmed) {
                     this.verAreaCreada();

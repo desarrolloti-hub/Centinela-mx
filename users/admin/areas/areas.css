@@ -3,6 +3,49 @@
    NO REDEFINIR VARIABLES GLOBALES - USAR LAS DE personalization.css
    ============================================= */
 
+:root {
+    /* COLORES PRINCIPALES */
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #0a0a0a;
+    --color-bg-tertiary: #141414;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #cccccc;
+    --color-text-light: #ffffff;
+    --color-accent-primary: #c0c0c0;
+    --color-accent-secondary: #2f8cff;
+    --color-border-light: #545454;
+    --color-border-dark: #333333;
+    --color-hover: #1a1a1a;
+    --color-icon-primary: #9caba4;
+    
+    /* COLORES DE ESTADO */
+    --color-success: #00ff95;
+    --color-danger: #ff4d4d;
+    --color-warning: #ffcc00;
+    --color-info: #00cfff;
+    
+    /* SOMBRAS */
+    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
+    
+    /* BORDES */
+    --border-radius-small: 5px;
+    --border-radius-medium: 10px;
+    --border-radius-large: 15px;
+    --border-radius-circle: 50%;
+    
+    /* TRANSICIONES */
+    --transition-fast: 0.2s ease;
+    --transition-default: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* FUENTES */
+    --font-family-primary: 'Orbitron', sans-serif;
+    --font-family-secondary: sans-serif;
+}
+
+
 /* =============================================
    ESTILOS GENERALES
    ============================================= */
@@ -45,6 +88,7 @@ h1.h3 {
     text-transform: uppercase;
     letter-spacing: 1px;
     margin: 0;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -58,7 +102,7 @@ h1.h3 i {
 .text-muted {
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary);
-    margin-top: 5px;
+    margin-top: 0;
     font-size: 14px;
 }
 
@@ -480,9 +524,9 @@ tr.area-row.expanded .toggle-icon i {
 .notificacion-flotante {
     top: 20px;
     right: 20px;
-    z-index: 9999;
+    z-index: 999;
     min-width: 300px;
-    max-width: 400px;
+    max-width: 200px;
     box-shadow: var(--shadow-normal);
     border-left: 4px solid;
     background: var(--color-bg-secondary);
@@ -498,88 +542,112 @@ tr.area-row.expanded .toggle-icon i {
    COMPONENTES PERSONALIZADOS PARA SWEETALERT
    (NO SON ESTILOS NATIVOS, SON CONTENIDO HTML)
    ============================================= */
+/* =============================================
+   COMPONENTES PERSONALIZADOS PARA SWEETALERT
+   (NO SON ESTILOS NATIVOS, SON CONTENIDO HTML)
+   ============================================= */
 .swal-detalles {
-    width: 800px !important;
-    max-width: 95vw !important;
+    width: 650px !important;        /* Más ancho para horizontal */
+    max-width: 90vw !important;
 }
 
 .swal-detalles-titulo {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     color: var(--color-text-primary);
     font-family: var(--font-family-primary);
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-size: 18px !important;
+    margin: 0 0 10px 0 !important;
 }
 
 .swal-detalles-titulo i {
     color: var(--color-accent-primary);
-    font-size: 26px;
+    font-size: 20px !important;
 }
 
+/* ===== CONTENEDOR PRINCIPAL EN HORIZONTAL ===== */
 .swal-detalles-container {
-    text-align: left;
-    color: var(--color-text-secondary);
-    font-family: var(--font-family-secondary);
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;  /* DOS COLUMNAS */
+    gap: 12px !important;
 }
 
+/* Estado y organización - OCUPA LAS DOS COLUMNAS */
 .swal-estado-organizacion {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    grid-column: span 2 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin-bottom: 5px !important;
+    padding-bottom: 8px !important;
     border-bottom: 1px solid var(--color-border-light);
+    flex-wrap: wrap !important;
 }
 
 .swal-estado-badge {
     background: rgba(0, 255, 149, 0.1);
     color: var(--color-success, #00ff95);
-    padding: 5px 16px;
+    padding: 3px 10px !important;
     border-radius: 20px;
     border: 1px solid rgba(0, 255, 149, 0.3);
-    font-size: 12px;
+    font-size: 11px !important;
     text-transform: uppercase;
     font-family: var(--font-family-secondary);
-    letter-spacing: 0.5px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    white-space: nowrap !important;
 }
 
 .swal-estado-badge i {
-    font-size: 8px;
+    font-size: 6px !important;
 }
 
 .swal-organizacion {
     color: var(--color-text-secondary);
-    font-size: 13px;
+    font-size: 11px !important;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    white-space: nowrap !important;
 }
 
 .swal-organizacion i {
     color: var(--color-accent-secondary);
 }
 
+/* ===== SECCIONES EN HORIZONTAL ===== */
 .swal-seccion {
-    margin-bottom: 25px;
+    margin-bottom: 0 !important;
+}
+
+/* Primera sección (Descripción) - Columna 1 */
+.swal-seccion:first-of-type {
+    grid-column: 1 !important;
+}
+
+/* Segunda sección (Cargos) - Columna 2 */
+.swal-seccion:last-of-type {
+    grid-column: 2 !important;
 }
 
 .swal-seccion-titulo {
     color: var(--color-accent-primary);
     font-family: var(--font-family-primary);
-    font-size: 13px;
-    margin-bottom: 12px;
+    font-size: 12px !important;
+    margin: 0 0 4px 0 !important;
     border-bottom: 1px solid var(--color-border-light);
-    padding-bottom: 8px;
+    padding-bottom: 3px !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
 }
 
 .swal-seccion-titulo i {
@@ -589,60 +657,44 @@ tr.area-row.expanded .toggle-icon i {
 .swal-descripcion {
     color: var(--color-text-secondary);
     margin: 0;
-    padding-left: 8px;
-    font-size: 13px;
-    line-height: 1.6;
+    padding-left: 5px;
+    font-size: 11px !important;
+    line-height: 1.4;
+    word-break: break-word;
 }
 
+/* Título de cargos y contador */
 .swal-cargos-titulo {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 6px !important;
     border-bottom: 1px solid var(--color-border-light);
-    padding-bottom: 8px;
+    padding-bottom: 3px !important;
 }
 
 .swal-cargos-count {
     background: var(--color-accent-secondary);
     color: white;
-    padding: 4px 12px;
+    padding: 2px 8px !important;
     border-radius: 20px;
-    font-size: 11px;
+    font-size: 10px !important;
     font-family: var(--font-family-secondary);
+    white-space: nowrap !important;
 }
 
 .swal-cargos-container {
-    max-height: 280px;
-    overflow-y: auto;
-    padding-right: 5px;
-}
-
-.swal-cargos-container::-webkit-scrollbar {
-    width: 5px;
-}
-
-.swal-cargos-container::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 10px;
-}
-
-.swal-cargos-container::-webkit-scrollbar-thumb {
-    background: var(--color-accent-primary);
-    border-radius: 10px;
-}
-
-.swal-cargos-container::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent-secondary);
+    padding-right: 2px;
+    max-height: 150px !important;
+    overflow-y: auto !important;
 }
 
 .swal-cargo-item {
     background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-small);
-    padding: 12px 15px;
-    margin-bottom: 10px;
-    transition: all 0.2s ease;
+    padding: 5px 8px !important;
+    margin-bottom: 4px !important;
 }
 
 .swal-cargo-item:hover {
@@ -654,64 +706,57 @@ tr.area-row.expanded .toggle-icon i {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 2px !important;
 }
 
 .swal-cargo-nombre {
     color: var(--color-text-primary);
     font-weight: 600;
     font-family: var(--font-family-primary);
-    font-size: 13px;
+    font-size: 11px !important;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .swal-cargo-nombre i {
     color: var(--color-accent-secondary);
+    font-size: 9px !important;
 }
 
 .swal-cargo-badge {
     background: var(--color-accent-secondary);
     color: white;
-    padding: 3px 10px;
+    padding: 1px 5px !important;
     border-radius: 20px;
-    font-size: 11px;
+    font-size: 8px !important;
     font-family: var(--font-family-secondary);
 }
 
 .swal-cargo-descripcion {
     color: var(--color-text-secondary);
-    font-size: 12px;
-    margin-left: 5px;
-    padding-left: 10px;
+    font-size: 10px !important;
+    margin-left: 2px;
+    padding-left: 6px;
     border-left: 2px solid var(--color-accent-secondary);
     font-family: var(--font-family-secondary);
-    line-height: 1.5;
+    line-height: 1.3;
 }
 
-.swal-cargos-empty {
-    text-align: center;
-    padding: 20px;
-    color: var(--color-text-secondary);
-    background: rgba(20,20,20,0.5);
-    border-radius: var(--border-radius-small);
-    font-size: 13px;
-}
-
+/* Información del sistema - OCUPA LAS DOS COLUMNAS */
 .swal-info-sistema {
+    grid-column: span 2 !important;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-medium);
-    padding: 18px;
-    margin-top: 15px;
-    box-shadow: var(--shadow-small);
+    padding: 8px !important;
+    margin-top: 8px !important;
 }
 
 .swal-info-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    grid-template-columns: 1fr 1fr 1fr 1fr;  /* CUATRO COLUMNAS */
+    gap: 6px !important;
 }
 
 .swal-info-grid div {
@@ -722,8 +767,8 @@ tr.area-row.expanded .toggle-icon i {
 .swal-info-grid small {
     color: var(--color-accent-primary);
     display: block;
-    margin-bottom: 4px;
-    font-size: 11px;
+    margin-bottom: 1px;
+    font-size: 8px !important;
     text-transform: uppercase;
     opacity: 0.8;
 }
@@ -731,18 +776,19 @@ tr.area-row.expanded .toggle-icon i {
 .swal-info-grid code {
     color: var(--color-accent-secondary);
     background: var(--color-bg-tertiary);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 1px 3px !important;
+    border-radius: 3px;
+    font-size: 9px !important;
     border: 1px solid var(--color-border-light);
+    word-break: break-all;
 }
 
 .swal-info-grid span {
     color: var(--color-text-secondary);
-    font-size: 12px;
+    font-size: 9px !important;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 3px;
 }
 
 .swal-info-grid span i {
@@ -750,7 +796,26 @@ tr.area-row.expanded .toggle-icon i {
 }
 
 .swal-info-full {
-    grid-column: span 2;
+    grid-column: span 4 !important;
+}
+
+/* Scrollbar */
+.swal-detalles::-webkit-scrollbar {
+    width: 4px;
+}
+
+.swal-detalles::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+}
+
+.swal-detalles::-webkit-scrollbar-thumb {
+    background: var(--color-accent-primary);
+    border-radius: 4px;
+}
+
+.swal-detalles::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent-secondary);
 }
 
 /* =============================================

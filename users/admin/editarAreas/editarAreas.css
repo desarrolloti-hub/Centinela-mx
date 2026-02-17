@@ -1,4 +1,12 @@
 /* =============================================
+   VARIABLES GLOBALES
+   ============================================= */
+:root {
+    --font-family-primary: 'Orbitron', sans-serif;
+    --font-family-secondary: sans-serif;
+}
+
+/* =============================================
    ESTILOS GENERALES
    ============================================= */
 body {
@@ -22,7 +30,7 @@ body {
 }
 
 /* =============================================
-   HEADER PRINCIPAL
+   HEADER PRINCIPAL (TÍTULOS)
    ============================================= */
 .row.mb-4:first-child {
     background: rgba(15, 15, 15, 0.9);
@@ -58,7 +66,7 @@ h1.h3 i {
 }
 
 /* =============================================
-   BOTONES PRINCIPALES
+   BOTONES PRINCIPALES (TÍTULOS)
    ============================================= */
 #btnVolverLista {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
@@ -124,7 +132,7 @@ h1.h3 i {
 }
 
 /* =============================================
-   SECCIONES DEL FORMULARIO
+   SECCIONES DEL FORMULARIO (SUBTÍTULOS)
    ============================================= */
 h6.border-bottom {
     color: var(--color-text-primary) !important;
@@ -142,7 +150,7 @@ h6 i {
 }
 
 /* =============================================
-   FORMULARIOS
+   FORMULARIOS (TODO SANS-SERIF)
    ============================================= */
 .form-label {
     color: var(--color-text-primary) !important;
@@ -178,10 +186,12 @@ h6 i {
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
     background: var(--color-bg-secondary) !important;
     outline: none !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .form-control::placeholder {
     color: rgba(255, 255, 255, 0.3) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .form-text {
@@ -202,6 +212,7 @@ h6 i {
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-secondary) !important;
     padding: 12px 15px !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .input-group .form-control {
@@ -223,11 +234,17 @@ h6 i {
     text-align: center;
     padding: 30px 20px;
     color: var(--color-text-secondary);
+    font-family: var(--font-family-secondary) !important;
 }
 
 .cargos-empty i {
     font-size: 48px;
     color: var(--color-border-light);
+}
+
+.cargos-empty p,
+.cargos-empty small {
+    font-family: var(--font-family-secondary) !important;
 }
 
 .btn-agregar-cargo {
@@ -240,6 +257,7 @@ h6 i {
     align-items: center !important;
     gap: 8px !important;
     transition: all 0.3s ease !important;
+    font-family: var(--font-family-primary) !important;
 }
 
 .btn-agregar-cargo:hover {
@@ -251,15 +269,17 @@ h6 i {
     color: var(--color-text-secondary);
     font-size: 12px;
     margin-left: 10px;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* =============================================
-   ALERTAS
+   ALERTAS (TEXTO NORMAL)
    ============================================= */
 .alert {
     border-radius: var(--border-radius-small) !important;
     border: 1px solid !important;
     padding: 15px 20px !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .alert-info {
@@ -293,7 +313,7 @@ h6 i {
 }
 
 /* =============================================
-   BOTONES DEL FORMULARIO
+   BOTONES DEL FORMULARIO (TEXTO NORMAL)
    ============================================= */
 .d-flex.justify-content-end.gap-3 {
     padding-top: 20px;
@@ -349,6 +369,7 @@ h6 i {
     border-radius: var(--border-radius-large) !important;
     box-shadow: var(--shadow-large) !important;
     color: var(--color-text-secondary) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .modal-header {
@@ -364,6 +385,7 @@ h6 i {
     align-items: center !important;
     gap: 10px !important;
     font-size: 16px !important;
+    font-family: var(--font-family-primary) !important;
 }
 
 .modal-title i {
@@ -383,19 +405,22 @@ h6 i {
 
 .modal-body {
     padding: 25px !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .modal-footer {
     border-top: 1px solid var(--color-border-light) !important;
     padding: 20px 25px !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* =============================================
-   CONTADOR DE CARACTERES
+   CONTADOR DE CARACTERES (TEXTO NORMAL)
    ============================================= */
 #contadorCaracteres {
     color: var(--color-accent-primary);
     font-weight: 600;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* =============================================
@@ -451,14 +476,6 @@ h6 i {
 /* =============================================
    ESTILOS PARA VALIDACIÓN
    ============================================= */
-/* =============================================
-   ESTILOS PARA VALIDACIÓN
-   ============================================= */
-/* =============================================
-   ESTILOS PARA VALIDACIÓN E ILUMINACIÓN
-   ============================================= */
-
-/* ILUMINACIÓN DEL CONTENEDOR MIENTRAS ESCRIBES (SIN COLOR BLANCO) */
 .form-control:focus,
 .form-select:focus,
 textarea.form-control:focus,
@@ -466,10 +483,8 @@ input.form-control:focus {
     border-color: var(--color-accent-secondary) !important;
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
     background: var(--color-bg-secondary) !important;
-    /* ELIMINADO: color y text-shadow */
 }
 
-/* Validaciones - CORREGIDO */
 .form-control:invalid:not(:focus):not(:placeholder-shown) {
     border-color: var(--color-danger) !important;
 }
@@ -477,6 +492,7 @@ input.form-control:focus {
 .form-control:valid:not(:focus):not(:placeholder-shown) {
     border-color: var(--color-success) !important;
 }
+
 /* =============================================
    ESTILOS PARA SELECT OPTIONS
    ============================================= */
@@ -487,6 +503,7 @@ select#organizacion option {
     padding: 8px 4px;
     background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
+    font-family: var(--font-family-secondary) !important;
 }
 
 .form-select {
@@ -590,14 +607,13 @@ select#organizacion option {
 }
 
 /* =============================================
-   ESTILOS PARA QUE SE VEAN LAS LETRAS (AGREGADO)
+   ESTILOS PARA ORGANIZACIÓN INFO
    ============================================= */
-
-/* Organización info - texto visible */
 .organizacion-info {
     background: var(--color-bg-tertiary) !important;
     border-left: 4px solid var(--color-accent-secondary) !important;
     color: var(--color-text-primary) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .organizacion-info h6,
@@ -606,6 +622,11 @@ select#organizacion option {
 .organizacion-info span,
 .organizacion-info code {
     color: var(--color-text-primary) !important;
+    font-family: var(--font-family-secondary) !important;
+}
+
+.organizacion-info h6 {
+    font-family: var(--font-family-primary) !important;
 }
 
 .organizacion-info .text-muted {
@@ -618,11 +639,14 @@ select#organizacion option {
     border-radius: var(--border-radius-small);
 }
 
-/* Mensaje de validación */
+/* =============================================
+   MENSAJE DE VALIDACIÓN
+   ============================================= */
 .alert-info.mb-4 {
     background: rgba(47, 140, 255, 0.1) !important;
     border: 1px solid rgba(47, 140, 255, 0.3) !important;
     color: var(--color-text-primary) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .alert-info.mb-4 i,
@@ -631,7 +655,9 @@ select#organizacion option {
     color: var(--color-text-primary) !important;
 }
 
-/* Campos de solo lectura */
+/* =============================================
+   CAMPOS DE SOLO LECTURA
+   ============================================= */
 .form-control[readonly],
 #fechaCreacion,
 #ultimaActualizacion,
@@ -641,6 +667,7 @@ select#organizacion option {
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
     cursor: not-allowed !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 #estadoActual {
@@ -662,10 +689,14 @@ select#organizacion option {
 .swal2-title {
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-primary) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .swal2-html-container {
     color: var(--color-text-secondary) !important;
+    font-family: var(--font-family-secondary) !important;
+    line-height: 1.5;
 }
 
 .swal2-confirm {
@@ -674,6 +705,10 @@ select#organizacion option {
     color: var(--color-text-primary) !important;
     border-radius: var(--border-radius-medium) !important;
     font-family: var(--font-family-primary) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    font-size: 14px;
 }
 
 .swal2-cancel {
@@ -682,6 +717,10 @@ select#organizacion option {
     color: var(--color-text-primary) !important;
     border-radius: var(--border-radius-medium) !important;
     font-family: var(--font-family-primary) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    font-size: 14px;
 }
 
 .swal2-toast {
@@ -689,20 +728,35 @@ select#organizacion option {
     border: 1px solid var(--color-border-light) !important;
     border-radius: var(--border-radius-medium) !important;
     box-shadow: var(--shadow-normal) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .swal2-toast .swal2-title {
     color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    text-transform: uppercase;
+    font-size: 14px;
 }
 
 .swal2-timer-progress-bar {
     background: var(--color-accent-secondary) !important;
 }
-/* =============================================
-   ESTILOS PARA CARGOS - SOLO LETRAS VISIBLES
-   ============================================= */
 
-/* Header de cada cargo */
+.swal2-icon {
+    font-family: var(--font-family-secondary) !important;
+}
+
+.swal2-icon-content {
+    font-family: var(--font-family-secondary) !important;
+}
+
+.swal2-actions button {
+    font-family: var(--font-family-primary) !important;
+}
+
+/* =============================================
+   ESTILOS PARA CARGOS
+   ============================================= */
 .cargo-header {
     display: flex !important;
     justify-content: space-between !important;
@@ -712,7 +766,6 @@ select#organizacion option {
     border-bottom: 1px solid var(--color-border-light) !important;
 }
 
-/* Título CARGO # */
 .cargo-titulo {
     color: var(--color-accent-primary) !important;
     font-family: var(--font-family-primary) !important;
@@ -726,35 +779,99 @@ select#organizacion option {
     color: var(--color-accent-secondary) !important;
     margin-right: 8px !important;
 }
-
-/* Botón ELIMINAR */
 .btn-eliminar-cargo {
-    color: var(--color-danger) !important;
-    font-family: var(--font-family-secondary) !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    background: transparent !important;
-    border: 1px solid var(--color-danger) !important;
-    padding: 6px 15px !important;
-    border-radius: var(--border-radius-medium) !important;
-    transition: all 0.3s ease !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 6px !important;
+    color: white !important;  /* ← TEXTO BLANCO */
+    border: 1px solid #ff4d4d !important;  /* ← BORDE ROJO BRILLANTE */
 }
-
-.btn-eliminar-cargo i {
-    color: var(--color-danger) !important;
-    font-size: 14px !important;
-}
-
 .btn-eliminar-cargo:hover {
-    background: rgba(255, 77, 77, 0.1) !important;
-    border-color: var(--color-danger) !important;
-    color: var(--color-danger) !important;
+    background: rgba(255, 77, 77, 0.2) !important;  /* Fondo rojo tenue */
+    border-color: #ff4d4d !important;
+    color: #ff4d4d !important;  /* Texto rojo brillante */
     transform: translateY(-2px) !important;
 }
 
 .btn-eliminar-cargo:hover i {
-    color: var(--color-danger) !important;
+    color: #ff4d4d !important;  /* Icono rojo */
 }
+
+        /* Estilos personalizados */
+        .organizacion-info {
+            border-left: 4px solid #3498db;
+            background-color: #1d1d1d !important;
+        }
+        
+        .organizacion-info i.fa-building {
+            color: #2c3e50;
+        }
+        
+        /* Para mostrar nombres largos */
+        select#responsable option {
+            white-space: normal !important;
+            word-wrap: break-word;
+            padding: 8px 4px;
+        }
+        
+        .form-select {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Estilos para el botón Ver Detalles */
+        #btnVerDetalles {
+            background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+            border: 1px solid var(--color-info) !important;
+            color: var(--color-info) !important;
+            padding: 12px 30px !important;
+            font-family: var(--font-family-secondary) !important;
+            font-weight: 600 !important;
+            border-radius: var(--border-radius-medium) !important;
+            transition: all 0.3s ease !important;
+            min-width: 180px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 10px !important;
+        }
+
+        #btnVerDetalles:hover {
+            background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+            transform: translateY(-2px) !important;
+            border-color: var(--color-info) !important;
+            box-shadow: 0 5px 15px rgba(0, 207, 255, 0.2) !important;
+        }
+
+        /* Ajustes responsive para el botón */
+        @media (max-width: 768px) {
+            #btnVerDetalles {
+                width: 100% !important;
+                margin-bottom: 10px !important;
+                min-width: auto !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #btnVerDetalles {
+                padding: 10px 15px !important;
+                font-size: 13px !important;
+            }
+        }
+        .organizacion-info {
+            border-left: 4px solid #3498db;
+            background-color: #1d1d1d !important;
+        }
+        
+        .organizacion-info i.fa-building {
+            color: #2c3e50;
+        }
+        
+        /* Para mostrar nombres largos */
+        select#responsable option {
+            white-space: normal !important;
+            word-wrap: break-word;
+            padding: 8px 4px;
+        }
+        
+        .form-select {
+            max-height: 200px;
+            overflow-y: auto;
+        }
