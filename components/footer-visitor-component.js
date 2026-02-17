@@ -4,12 +4,9 @@
 
     // Evitar carga duplicada
     if (window.FooterComponentLoaded) {
-        console.log('🔄 Footer component ya cargado, omitiendo...');
         return;
     }
     window.FooterComponentLoaded = true;
-
-    console.log('🚀 Iniciando footer component...');
 
     // Inicializar cuando el DOM esté listo
     if (document.readyState === 'loading') {
@@ -23,7 +20,6 @@
             removeOriginalFooter();
             await createFooterComponent();
             setupFooterFunctionalities();
-            console.log('✅ Footer component inicializado correctamente');
         } catch (error) {
             console.error('❌ Error al inicializar footer:', error);
         }
@@ -33,7 +29,6 @@
         const originalFooter = document.querySelector('footer');
         if (originalFooter) {
             originalFooter.remove();
-            console.log('🗑️ Footer original removido');
         }
     }
 
@@ -447,14 +442,12 @@
                 link.setAttribute('rel', 'noopener noreferrer');
             }
         });
-
-        console.log('🔧 Funcionalidades del footer configuradas');
     }
 
     // API pública
     window.FooterComponent = {
         refresh: function () {
-            console.log('🔄 Footer actualizado');
+            // Método para actualizar footer si es necesario
         },
         getVersion: function () {
             return '1.1.0-simplified';
@@ -468,6 +461,4 @@
         faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
         document.head.appendChild(faLink);
     }
-
-    console.log('✅ Footer component cargado y listo');
 })();

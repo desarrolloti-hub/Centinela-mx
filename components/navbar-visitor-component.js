@@ -4,12 +4,9 @@
 
     // Evitar carga duplicada
     if (window.NavbarCompleteLoaded) {
-        console.log('🔄 Navbar completo ya cargado, omitiendo...');
         return;
     }
     window.NavbarCompleteLoaded = true;
-
-    console.log('🚀 Iniciando navbar completo...');
 
     // Inicializar cuando el DOM esté listo
     if (document.readyState === 'loading') {
@@ -23,7 +20,6 @@
             removeOriginalNavbar();
             await createCompleteNavbar();
             setupAllFunctionalities();
-            console.log('✅ Navbar completo inicializado correctamente');
         } catch (error) {
             console.error('❌ Error al inicializar navbar:', error);
         }
@@ -33,7 +29,6 @@
         const originalHeader = document.getElementById('main-header');
         if (originalHeader) {
             originalHeader.remove();
-            console.log('🗑️ Navbar original removido');
         }
     }
 

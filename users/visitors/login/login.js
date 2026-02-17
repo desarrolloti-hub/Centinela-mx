@@ -8,7 +8,7 @@ import { UserManager } from '/clases/user.js';
 // FUNCIÓN AUXILIAR: Convertir texto a camelCase
 function toCamelCase(text) {
     if (!text || typeof text !== 'string') return '';
-    
+
     return text
         .toLowerCase()
         .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
@@ -39,7 +39,7 @@ function configurarSweetAlertEstilos() {
         hover: getCSSVariable('--color-hover') || 'rgba(245, 215, 66, 0)',
         active: getCSSVariable('--color-active') || '#c0c0c0'
     };
-    
+
     return {
         colors: colors,
         fontFamily: getCSSVariable('--font-family-primary') || "'Orbitron', sans-serif",
@@ -49,12 +49,9 @@ function configurarSweetAlertEstilos() {
 }
 
 // INICIALIZACIÓN PRINCIPAL - Se ejecuta cuando el DOM está completamente cargado
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Login page loaded - Sistema de sesión con SweetAlerts personalizados');
-    
+document.addEventListener('DOMContentLoaded', function () {
     const estilos = configurarSweetAlertEstilos();
-    console.log('Estilos CSS cargados:', estilos.colors);
-    
+
     const loginForm = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
@@ -63,27 +60,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginSubmitBtn = document.getElementById('loginSubmitBtn');
     const forgotPasswordLink = document.getElementById('forgotPassword');
     const registerBtn = document.getElementById('registerBtn');
-    
+
     if (!loginForm || !emailInput || !passwordInput) {
         console.error('Elementos del formulario no encontrados');
-        mostrarSweetAlertErrorCritico('Error de Configuración', 
+        mostrarSweetAlertErrorCritico('Error de Configuración',
             'El formulario de login no está configurado correctamente.', estilos);
         return;
     }
-    
-    console.log('Elementos del formulario encontrados');
-    
+
     let userManager;
     try {
         userManager = new UserManager();
-        console.log('UserManager inicializado:', userManager);
     } catch (error) {
         console.error('Error al crear UserManager:', error);
-        mostrarSweetAlertErrorCritico('Sistema No Disponible', 
+        mostrarSweetAlertErrorCritico('Sistema No Disponible',
             'Error al inicializar el sistema de autenticación.', estilos);
         return;
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert para error crítico
     function mostrarSweetAlertErrorCritico(titulo, mensaje, estilos) {
         Swal.fire({
@@ -120,22 +114,22 @@ document.addEventListener('DOMContentLoaded', function() {
             location.reload();
         });
     }
-    
+
     function clearMessage() {
         if (loginMessage) {
             loginMessage.innerHTML = '';
             loginMessage.style.display = 'none';
         }
     }
-    
+
     function validateEmail(email) {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
     }
-    
+
     function toggleButtonState(enabled = true, text = null) {
         if (!loginSubmitBtn) return;
-        
+
         if (enabled) {
             loginSubmitBtn.disabled = false;
             loginSubmitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> INICIAR SESIÓN';
@@ -148,18 +142,18 @@ document.addEventListener('DOMContentLoaded', function() {
             loginSubmitBtn.style.cursor = 'not-allowed';
         }
     }
-    
+
     // ===============================================================
     // 🔥 FUNCIÓN MEJORADA: Guarda usuario en localStorage con imágenes
     // ===============================================================
     function saveUserToLocalStorage(user) {
         try {
             const organizacionCamelCase = toCamelCase(user.organizacion);
-            
+
             // ✅ EXTRAER FOTOS DE TODAS LAS POSIBLES UBICACIONES
             let fotoUsuario = null;
             let fotoOrganizacion = null;
-            
+
             // Buscar foto de usuario en TODAS las propiedades posibles
             if (user.fotoUsuario) fotoUsuario = user.fotoUsuario;
             else if (user.fotoURL) fotoUsuario = user.fotoURL;
@@ -167,25 +161,14 @@ document.addEventListener('DOMContentLoaded', function() {
             else if (user.photoURL) fotoUsuario = user.photoURL;
             else if (user.avatar) fotoUsuario = user.avatar;
             else if (user.imagenPerfil) fotoUsuario = user.imagenPerfil;
-            
+
             // Buscar foto de organización en TODAS las propiedades posibles
             if (user.fotoOrganizacion) fotoOrganizacion = user.fotoOrganizacion;
             else if (user.logoOrganizacion) fotoOrganizacion = user.logoOrganizacion;
             else if (user.logo) fotoOrganizacion = user.logo;
             else if (user.organizacionLogo) fotoOrganizacion = user.organizacionLogo;
             else if (user.logoUrl) fotoOrganizacion = user.logoUrl;
-            
-            // LOG DETALLADO DE QUÉ ENCONTRAMOS
-            console.log('📸 BÚSQUEDA DE IMÁGENES EN USER:', {
-                nombre: user.nombreCompleto,
-                fotoUsuario_encontrada: !!fotoUsuario,
-                fotoUsuario_length: fotoUsuario ? fotoUsuario.length : 0,
-                fotoUsuario_inicio: fotoUsuario ? fotoUsuario.substring(0, 50) + '...' : null,
-                fotoOrganizacion_encontrada: !!fotoOrganizacion,
-                fotoOrganizacion_length: fotoOrganizacion ? fotoOrganizacion.length : 0,
-                fotoOrganizacion_inicio: fotoOrganizacion ? fotoOrganizacion.substring(0, 50) + '...' : null
-            });
-            
+
             const userData = {
                 id: user.id,
                 email: user.email || user.correoElectronico,
@@ -195,11 +178,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 organizacionCamelCase: organizacionCamelCase,
                 status: user.status,
                 verificado: user.verificado,
-                
+
                 // ✅ GUARDAR IMÁGENES EXPLÍCITAMENTE
                 fotoUsuario: fotoUsuario || '',
                 fotoOrganizacion: fotoOrganizacion || '',
-                
+
                 ultimoAcceso: new Date().toISOString(),
                 sessionStart: new Date().toISOString(),
                 fechaLogin: new Date().toLocaleDateString('es-ES', {
@@ -210,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     minute: '2-digit'
                 })
             };
-            
+
             localStorage.setItem('userData', JSON.stringify(userData));
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userRole', user.cargo);
@@ -219,46 +202,31 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('userOrganizacionCamelCase', organizacionCamelCase);
             localStorage.setItem('userNombre', user.nombreCompleto);
             localStorage.setItem('userEmail', user.email || user.correoElectronico || '');
-            
+
             // ✅ GUARDAR IMÁGENES EN KEYS INDIVIDUALES
             if (fotoUsuario) {
                 localStorage.setItem('userFoto', fotoUsuario);
-                console.log('📸 Foto de usuario guardada en localStorage (userFoto) - Length:', fotoUsuario.length);
             } else {
                 localStorage.removeItem('userFoto');
             }
-            
+
             if (fotoOrganizacion) {
                 localStorage.setItem('organizacionLogo', fotoOrganizacion);
-                console.log('🏢 Logo de organización guardado en localStorage (organizacionLogo) - Length:', fotoOrganizacion.length);
             } else {
                 localStorage.removeItem('organizacionLogo');
             }
-            
-            // VERIFICAR QUE SE GUARDARON CORRECTAMENTE
-            const savedUserData = JSON.parse(localStorage.getItem('userData') || '{}');
-            console.log('✅ VERIFICACIÓN DE localStorage:', {
-                userData_fotoUsuario: !!savedUserData.fotoUsuario,
-                userData_fotoUsuario_length: savedUserData.fotoUsuario ? savedUserData.fotoUsuario.length : 0,
-                userData_fotoOrganizacion: !!savedUserData.fotoOrganizacion,
-                userData_fotoOrganizacion_length: savedUserData.fotoOrganizacion ? savedUserData.fotoOrganizacion.length : 0,
-                userFoto_key: !!localStorage.getItem('userFoto'),
-                userFoto_length: localStorage.getItem('userFoto') ? localStorage.getItem('userFoto').length : 0,
-                organizacionLogo_key: !!localStorage.getItem('organizacionLogo'),
-                organizacionLogo_length: localStorage.getItem('organizacionLogo') ? localStorage.getItem('organizacionLogo').length : 0
-            });
-            
+
             return true;
         } catch (error) {
             console.error('❌ Error al guardar en localStorage:', error);
             return false;
         }
     }
-    
+
     function saveUserToSessionStorage(user) {
         try {
             const organizacionCamelCase = toCamelCase(user.organizacion);
-            
+
             const sessionData = {
                 id: user.id,
                 email: user.email,
@@ -273,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 userAgent: navigator.userAgent,
                 screenResolution: `${window.screen.width}x${window.screen.height}`
             };
-            
+
             sessionStorage.setItem('currentSession', JSON.stringify(sessionData));
             sessionStorage.setItem('isAuthenticated', 'true');
             sessionStorage.setItem('sessionStart', new Date().toISOString());
@@ -281,59 +249,46 @@ document.addEventListener('DOMContentLoaded', function() {
             sessionStorage.setItem('sessionOrganizacionCamelCase', organizacionCamelCase);
             sessionStorage.setItem('sessionUser', user.nombreCompleto);
             sessionStorage.setItem('sessionRole', user.cargo);
-            
-            console.log('Sesión guardada en sessionStorage:', {
-                sessionId: sessionData.sessionId,
-                user: user.nombreCompleto,
-                organizacion: user.organizacion,
-                organizacionCamelCase: organizacionCamelCase,
-                timestamp: sessionData.sessionStartFormatted
-            });
-            
+
             return true;
         } catch (error) {
             console.error('Error al guardar en sessionStorage:', error);
             return false;
         }
     }
-    
+
     function checkExistingSession() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             const hasSession = sessionStorage.getItem('isAuthenticated') === 'true';
-            
+
             if (isLoggedIn && hasSession) {
                 const userData = JSON.parse(localStorage.getItem('userData') || '{}');
                 const sessionData = JSON.parse(sessionStorage.getItem('currentSession') || '{}');
-                
+
                 console.log('Sesión existente encontrada:', {
                     usuario: userData.nombreCompleto,
                     organizacion: userData.organizacion,
-                    organizacionCamelCase: userData.organizacionCamelCase,
                     tieneFotoUsuario: !!userData.fotoUsuario,
-                    tieneFotoOrganizacion: !!userData.fotoOrganizacion,
-                    sessionId: sessionData.sessionId,
-                    tiempoSesion: sessionData.sessionStart
+                    tieneFotoOrganizacion: !!userData.fotoOrganizacion
                 });
             }
-            
+
             return false;
         } catch (error) {
             console.error('Error al verificar sesión:', error);
             return false;
         }
     }
-    
+
     function logOrganizationInfo(organizacion, organizacionCamelCase) {
-        console.log('INFORMACIÓN DE ORGANIZACIÓN:');
-        console.log('   Nombre original:', organizacion);
-        console.log('   CamelCase:', organizacionCamelCase);
+        console.log('INFORMACIÓN DE ORGANIZACIÓN:', organizacion, organizacionCamelCase);
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 de éxito en login
     function mostrarSweetAlertExito(user) {
         const organizacionCamelCase = toCamelCase(user.organizacion);
-        
+
         Swal.fire({
             title: `<span style="color: ${estilos.colors.accentSecondary}; font-size: 1.8em; font-family: ${estilos.fontFamily};">¡Bienvenido!</span>`,
             html: `
@@ -378,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 para correo inválido
     function mostrarSweetAlertCorreoInvalido() {
         Swal.fire({
@@ -429,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
             emailInput.select();
         });
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 para contraseña incorrecta
     function mostrarSweetAlertContraseñaIncorrecta() {
         Swal.fire({
@@ -488,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 para usuario no encontrado
     function mostrarSweetAlertUsuarioNoEncontrado(email) {
         Swal.fire({
@@ -541,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showCloseButton: true
         });
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 para recuperación de contraseña
     function mostrarRecuperacionContraseña() {
         Swal.fire({
@@ -603,16 +558,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    window.irARegistro = function() {
+
+    window.irARegistro = function () {
         window.location.href = '/users/visitors/registro/registro.html';
     };
-    
-    window.mostrarRecuperacionContraseña = function() {
+
+    window.mostrarRecuperacionContraseña = function () {
         mostrarRecuperacionContraseña();
     };
-    
-    window.enviarRecuperacion = function() {
+
+    window.enviarRecuperacion = function () {
         const recoveryEmail = document.getElementById('recovery-email');
         if (recoveryEmail && recoveryEmail.value) {
             if (validateEmail(recoveryEmail.value)) {
@@ -648,11 +603,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     };
-    
+
     if (passwordToggle && passwordInput) {
-        passwordToggle.addEventListener('click', function() {
+        passwordToggle.addEventListener('click', function () {
             const icon = this.querySelector('i');
-            
+
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 icon.classList.replace('fa-eye', 'fa-eye-slash');
@@ -664,24 +619,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.setAttribute('aria-label', 'Mostrar contraseña');
                 this.style.color = estilos.colors.accentPrimary;
             }
-            
+
             passwordInput.focus();
         });
-        
-        console.log('Botón mostrar/ocultar contraseña configurado');
     }
-    
-    loginForm.addEventListener('submit', async function(event) {
+
+    loginForm.addEventListener('submit', async function (event) {
         event.preventDefault();
-        console.log('Formulario de login enviado');
-        
+
         clearMessage();
-        
+
         const email = emailInput.value.trim();
         const password = passwordInput.value;
-        
-        console.log('Datos ingresados:', { email: email, passwordLength: password.length });
-        
+
         if (!email || !password) {
             Swal.fire({
                 title: 'Campos incompletos',
@@ -700,12 +650,12 @@ document.addEventListener('DOMContentLoaded', function() {
             emailInput.focus();
             return;
         }
-        
+
         if (!validateEmail(email)) {
             mostrarSweetAlertCorreoInvalido();
             return;
         }
-        
+
         if (password.length < 6) {
             Swal.fire({
                 title: 'Contraseña muy corta',
@@ -739,69 +689,54 @@ document.addEventListener('DOMContentLoaded', function() {
             passwordInput.select();
             return;
         }
-        
+
         toggleButtonState(false, '<i class="fas fa-spinner fa-spin"></i> VERIFICANDO...');
-        
+
         try {
-            console.log('Intentando iniciar sesión con:', email);
-            
             const user = await userManager.iniciarSesion(email, password);
-            
+
             console.log('✅ Login exitoso:', {
                 id: user.id,
                 nombre: user.nombreCompleto,
                 cargo: user.cargo,
                 organizacion: user.organizacion,
-                status: user.status,
-                verificado: user.verificado,
                 tieneFotoUsuario: !!(user.fotoUsuario || user.fotoURL),
                 tieneFotoOrganizacion: !!user.fotoOrganizacion
             });
-            
+
             const organizacionCamelCase = toCamelCase(user.organizacion);
             logOrganizationInfo(user.organizacion, organizacionCamelCase);
-            
+
             const savedToLocal = saveUserToLocalStorage(user);
             const savedToSession = saveUserToSessionStorage(user);
-            
-            if (savedToLocal && savedToSession) {
-                console.log('✅ Datos de usuario guardados correctamente con imágenes');
-            } else {
-                console.log('⚠️ Algunos datos no se guardaron completamente');
-            }
-            
+
             toggleButtonState(false, '<i class="fas fa-check"></i> SESIÓN INICIADA');
-            
+
             mostrarSweetAlertExito(user);
-            
+
             setTimeout(() => {
-                console.log('Redirigiendo usuario...');
-                
                 if (user.cargo === 'administrador') {
-                    console.log('Redirigiendo a dashboard de administrador');
                     window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
                 } else if (user.cargo === 'colaborador') {
-                    console.log('Redirigiendo a dashboard de colaborador');
                     window.location.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
                 } else {
-                    console.log('Tipo de usuario desconocido, redirigiendo a inicio');
                     window.location.href = '/index.html';
                 }
             }, 2500);
-            
+
         } catch (error) {
             console.error('❌ Error en login:', error);
-            
+
             toggleButtonState(true);
-            
-            if (error.message.includes('auth/invalid-credential') || 
+
+            if (error.message.includes('auth/invalid-credential') ||
                 error.message.includes('auth/wrong-password')) {
                 mostrarSweetAlertContraseñaIncorrecta();
-                
+
             } else if (error.message.includes('auth/user-not-found') ||
-                      error.message.includes('no encontrado')) {
+                error.message.includes('no encontrado')) {
                 mostrarSweetAlertUsuarioNoEncontrado(email);
-                
+
             } else if (error.message.includes('auth/too-many-requests')) {
                 Swal.fire({
                     title: 'Demasiados intentos',
@@ -836,7 +771,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     showCancelButton: true,
                     cancelButtonText: 'Entendido'
                 });
-                
+
             } else if (error.message.includes('auth/network-request-failed')) {
                 Swal.fire({
                     title: 'Error de conexión',
@@ -853,7 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
                 emailInput.focus();
-                
+
             } else if (error.message.includes('desactivada') || error.message.includes('inhabilitada')) {
                 Swal.fire({
                     title: 'Cuenta desactivada',
@@ -869,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         cancelButton: 'swal2-cancel'
                     }
                 });
-                
+
             } else if (error.message.includes('no está verificado')) {
                 Swal.fire({
                     title: 'Email no verificado',
@@ -902,7 +837,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         cancelButton: 'swal2-cancel'
                     }
                 });
-                
+
             } else {
                 Swal.fire({
                     title: 'Error en el login',
@@ -922,38 +857,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
-    document.addEventListener('keydown', function(e) {
+
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && document.activeElement === passwordInput) {
-            console.log('Enter presionado en campo contraseña');
             loginForm.dispatchEvent(new Event('submit'));
         }
     });
-    
+
     if (forgotPasswordLink) {
-        forgotPasswordLink.addEventListener('click', function(e) {
+        forgotPasswordLink.addEventListener('click', function (e) {
             e.preventDefault();
-            console.log('Clic en recuperar contraseña');
             mostrarRecuperacionContraseña();
         });
     }
-    
-    if (registerBtn) {
-        registerBtn.addEventListener('click', function(e) {
-            console.log('Clic en botón registrarse');
-        });
-    }
-    
+
     checkExistingSession();
-    
+
     setTimeout(() => {
         if (emailInput) {
             emailInput.focus();
-            console.log('Campo email enfocado automáticamente');
         }
     }, 300);
-    
-    console.log('Sistema de login con SweetAlerts personalizados inicializado correctamente');
 });
-
-console.log('login.js cargado - Con SweetAlerts usando variables CSS personalizadas');

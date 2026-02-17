@@ -19,9 +19,7 @@ class ThemeLoader {
         this.lastCheckTime = 0;
         this.minCheckInterval = 30000; // 30 segundos mínimo entre verificaciones
         this.lastDatabaseCheck = 0;
-        
-        console.log('🎨 ThemeLoader VERSIÓN OPTIMIZADA - LocalStorage First');
-        
+
         // Inicializar UserManager
         this.initUserManager();
     }
@@ -31,9 +29,8 @@ class ThemeLoader {
     // =============================================
     async initUserManager() {
         try {
-            console.log('🔄 Inicializando UserManager...');
             this.userManager = new UserManager();
-            
+
             // ✅ CORREGIDO: Esperar a que el usuario esté disponible
             const waitForUser = async () => {
                 // Intentar cada 500ms hasta 20 intentos (10 segundos)
@@ -57,10 +54,9 @@ class ThemeLoader {
                 this.loadTheme();
                 this.startThemeMonitoring();
             };
-            
+
             waitForUser();
-            console.log('✅ UserManager inicializado');
-            
+
         } catch (error) {
             console.error('❌ Error inicializando UserManager:', error);
             this.applyThemeDirectly('default');
@@ -71,53 +67,46 @@ class ThemeLoader {
     // CARGAR TEMA - CORREGIDO PARA COLABORADORES
     // =============================================
     async loadTheme() {
-        console.log('🎨 CARGANDO TEMA (ESTRATEGIA OPTIMIZADA)...');
-        
+
         try {
             // PRIMERO: Cargar desde localStorage (SIEMPRE)
             const themeFromLocalStorage = this.loadThemeFromLocalStorage();
-            
+
             if (themeFromLocalStorage) {
                 console.log('📂 Tema cargado de localStorage:', themeFromLocalStorage);
-                
+
                 // Aplicar tema desde localStorage inmediatamente
                 this.applyThemeDirectly(themeFromLocalStorage);
-                
+
                 // LUEGO: Verificar usuario para actualizar si es necesario
                 setTimeout(() => {
                     this.verifyWithUserTheme(themeFromLocalStorage);
                 }, 1500);
-                
+
                 return;
             }
-            
+
             // SEGUNDO: Si hay usuario autenticado, usar su tema
             if (this.userManager?.currentUser) {
                 const user = this.userManager.currentUser;
                 const userTheme = user.theme || 'default';
-                const userRole = user.cargo || 'colaborador';
-                
-                console.log(`👤 Usando tema del usuario (${userRole}):`, {
-                    nombre: user.nombreCompleto,
-                    organizacion: user.organizacion,
-                    theme: userTheme
-                });
-                
+
+                console.log(`👤 Usando tema del usuario (${user.cargo}):`, user.nombreCompleto);
+
                 this.applyThemeDirectly(userTheme);
                 this.saveThemeToLocalStorage(userTheme);
                 return;
             }
-            
+
             // TERCERO: Si no hay nada, usar default
-            console.log('⚫ Sin datos de tema, usando predeterminado');
             this.applyThemeDirectly('default');
-            
+
         } catch (error) {
             console.error('🔥 ERROR CARGANDO TEMA:', error);
             this.applyThemeDirectly('default');
         }
     }
-    
+
     // =============================================
     // CARGAR TEMA DESDE LOCALSTORAGE
     // =============================================
@@ -125,64 +114,52 @@ class ThemeLoader {
         try {
             const savedTheme = localStorage.getItem('centinela-theme');
             if (!savedTheme) return null;
-            
+
             const themeData = JSON.parse(savedTheme);
-            
+
             // Verificar que no sea muy viejo (más de 7 días)
             const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 días
             if (themeData.timestamp && (Date.now() - themeData.timestamp) > maxAge) {
-                console.log('🕰️ Datos de localStorage muy viejos, ignorando');
                 return null;
             }
-            
+
             return themeData.themeId || null;
-            
+
         } catch (e) {
-            console.warn('⚠️ Error leyendo localStorage:', e);
             return null;
         }
     }
-    
+
     // =============================================
     // VERIFICAR TEMA CON USUARIO - CORREGIDO PARA COLABORADORES
     // =============================================
     async verifyWithUserTheme(currentThemeId) {
         try {
             if (!this.userManager) {
-                console.log('⚠️ UserManager no disponible');
                 return;
             }
-            
+
             // Esperar un poco más a que cargue el usuario
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             // ✅ IMPORTANTE: userManager.currentUser funciona para TODOS los roles
-            // porque loadCurrentUser() ya busca en administradores Y colaboradores
             if (!this.userManager.currentUser) {
-                console.log('👤 No hay usuario autenticado para verificar tema');
                 return;
             }
-            
+
             const user = this.userManager.currentUser;
             const userTheme = user.theme || 'default';
-            const userRole = user.cargo || 'colaborador';
-            
-            console.log(`🔍 Verificando tema:`, {
-                usuario: user.nombreCompleto,
-                rol: userRole,
-                organizacion: user.organizacion,
-                localStorage: currentThemeId,
-                usuarioTheme: userTheme
-            });
-            
+
+            console.log(`🔍 Verificando tema con usuario (${user.cargo})...`);
+
             if (userTheme !== currentThemeId) {
-                console.log(`🔄 Actualizando tema desde usuario (${userRole}): ${currentThemeId} → ${userTheme}`);
+                console.log(`🔄 Actualizando tema: ${currentThemeId} → ${userTheme}`);
                 this.applyThemeDirectly(userTheme);
                 this.saveThemeToLocalStorage(userTheme);
             } else {
-                console.log(`✅ Tema coincide con usuario (${userRole})`);
+                console.log(`✅ Tema coincide con usuario`);
             }
-            
+
         } catch (error) {
             console.error('❌ Error verificando tema con usuario:', error);
         }
@@ -194,39 +171,33 @@ class ThemeLoader {
     async verifyWithDatabase(currentThemeId) {
         const now = Date.now();
         const timeSinceLastCheck = now - this.lastDatabaseCheck;
-        
+
         // Solo verificar BD si han pasado más de 1 hora desde la última verificación
         if (timeSinceLastCheck < 3600000) { // 1 hora
-            console.log('⏰ Aún no es necesario verificar BD');
             return;
         }
-        
-        console.log('🔍 Verificando tema con base de datos...');
-        
+
         try {
             if (!this.userManager || !this.userManager.currentUser) {
-                console.log('👤 No hay usuario para verificar BD');
                 return;
             }
-            
+
             const currentUser = this.userManager.currentUser;
             const dbThemeId = currentUser.theme || 'default';
-            const userRole = currentUser.cargo || 'colaborador';
-            
+
             // Si el tema coincide con el actual, no hacer nada
             if (dbThemeId === currentThemeId) {
-                console.log(`✅ Tema coincide con BD (${userRole}), todo correcto`);
                 this.lastDatabaseCheck = now;
                 return;
             }
-            
+
             // Si hay diferencia, actualizar desde BD
-            console.log(`🔄 Tema difiere: localStorage=${currentThemeId}, BD=${dbThemeId} (${userRole})`);
+            console.log(`🔄 Tema difiere: localStorage=${currentThemeId}, BD=${dbThemeId}`);
             this.applyThemeDirectly(dbThemeId);
             this.saveThemeToLocalStorage(dbThemeId);
-            
+
             this.lastDatabaseCheck = now;
-            
+
         } catch (error) {
             console.error('❌ Error verificando con BD:', error);
         }
@@ -238,27 +209,26 @@ class ThemeLoader {
     applyThemeDirectly(themeId) {
         // Verificar si ya está aplicado el mismo tema
         if (this.currentThemeId === themeId) {
-            console.log(`ℹ️ Tema ${themeId} ya está aplicado, omitiendo`);
             return;
         }
-        
+
         const themePresets = this.getThemePresets();
         const theme = themePresets[themeId];
-        
+
         if (!theme) {
             console.error(`❌ TEMA ${themeId} NO ENCONTRADO`);
             this.applyDefaultTheme();
             return;
         }
-        
+
         console.log(`🎨 APLICANDO DIRECTAMENTE: ${theme.name}`);
-        
+
         // Activar flag para evitar loops
         this.isApplyingTheme = true;
-        
+
         // Aplicar colores
         this.applyColors(theme.colors);
-        
+
         // Actualizar estado
         this.currentThemeId = themeId;
         this.lastAppliedTheme = {
@@ -266,7 +236,7 @@ class ThemeLoader {
             name: theme.name,
             appliedAt: new Date()
         };
-        
+
         // Disparar evento themeApplied
         document.dispatchEvent(new CustomEvent('themeApplied', {
             detail: {
@@ -277,9 +247,7 @@ class ThemeLoader {
                 appliedDirectly: true
             }
         }));
-        
-        console.log(`✅ TEMA "${theme.name}" APLICADO DIRECTAMENTE`);
-        
+
         // Desactivar flag después de un tiempo
         setTimeout(() => {
             this.isApplyingTheme = false;
@@ -307,9 +275,8 @@ class ThemeLoader {
                 timestamp: Date.now()
             };
             localStorage.setItem('centinela-theme', JSON.stringify(themeData));
-            console.log('💾 Tema guardado en localStorage:', themeId);
         } catch (e) {
-            console.warn('No se pudo guardar tema en localStorage');
+            // Silenciar error de localStorage
         }
     }
 
@@ -329,24 +296,22 @@ class ThemeLoader {
         const defaultTheme = this.getThemePresets()['default'];
         this.applyColors(defaultTheme.colors);
         this.currentThemeId = 'default';
-        console.log('🎨 Tema predeterminado aplicado');
     }
 
     // =============================================
     // MONITOREO EN TIEMPO REAL - OPTIMIZADO
     // =============================================
     startThemeMonitoring() {
-        console.log('🔄 INICIANDO MONITOREO DE TEMAS (1 hora entre verificaciones BD)');
-        
+
         if (this.checkInterval) {
             clearInterval(this.checkInterval);
         }
-        
+
         // Solo verificar BD cada 1 hora
         this.checkInterval = setInterval(() => {
             this.checkForThemeChanges();
         }, this.checkIntervalMs);
-        
+
         // Escuchar cambios en la pestaña (solo actualizar desde localStorage)
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
@@ -356,7 +321,7 @@ class ThemeLoader {
             }
         });
     }
-    
+
     // =============================================
     // VERIFICAR CAMBIOS EN LOCALSTORAGE
     // =============================================
@@ -364,14 +329,14 @@ class ThemeLoader {
         try {
             const savedTheme = localStorage.getItem('centinela-theme');
             if (!savedTheme) return;
-            
+
             const themeData = JSON.parse(savedTheme);
             if (themeData.themeId && themeData.themeId !== this.currentThemeId) {
                 console.log('🔄 Cambio detectado en localStorage:', themeData.themeId);
                 this.applyThemeDirectly(themeData.themeId);
             }
         } catch (error) {
-            console.warn('Error verificando localStorage:', error);
+            // Silenciar error
         }
     }
 
@@ -385,46 +350,38 @@ class ThemeLoader {
             if (now - this.lastCheckTime < this.minCheckInterval) {
                 return;
             }
-            
+
             this.lastCheckTime = now;
-            
+
             // Evitar verificación si ya estamos aplicando un tema
             if (this.isApplyingTheme) {
                 return;
             }
-            
+
             if (!this.userManager || !this.userManager.currentUser) {
-                console.log('👤 No hay usuario autenticado para verificar cambios');
                 return;
             }
-            
+
             const currentUser = this.userManager.currentUser;
             const currentTheme = currentUser.theme || 'default';
-            const userRole = currentUser.cargo || 'colaborador';
-            
+
             // Si ya estamos aplicando este tema, no hacer nada
             if (currentTheme === this.currentThemeId) {
                 return;
             }
-            
-            console.log('🔍 Verificando cambios en BD:', {
-                temaActual: this.currentThemeId,
-                temaEnBase: currentTheme,
-                usuario: currentUser.id,
-                rol: userRole,
-                organizacion: currentUser.organizacion
-            });
-            
+
+            console.log('🔍 Verificando cambios en BD...');
+
             if (currentTheme !== this.currentThemeId) {
-                console.log(`🔄 ¡CAMBIO DETECTADO EN BD (${userRole})! ${this.currentThemeId} → ${currentTheme}`);
-                
+                console.log(`🔄 ¡CAMBIO DETECTADO EN BD! ${this.currentThemeId} → ${currentTheme}`);
+
                 // Aplicar directamente
                 this.applyThemeDirectly(currentTheme);
-                
+
                 // Guardar en localStorage
                 this.saveThemeToLocalStorage(currentTheme);
             }
-            
+
         } catch (error) {
             console.error('Error en monitoreo:', error);
             this.isApplyingTheme = false;
@@ -439,20 +396,18 @@ class ThemeLoader {
         let themeChangedTimeout;
         document.addEventListener('themeChanged', (event) => {
             if (event.detail?.themeId) {
-                console.log('🎨 Cambio desde admin recibido:', event.detail.themeId);
-                
                 // Debounce para evitar múltiples aplicaciones rápidas
                 clearTimeout(themeChangedTimeout);
                 themeChangedTimeout = setTimeout(() => {
                     console.log('🎨 Procesando cambio desde admin...');
                     this.applyThemeDirectly(event.detail.themeId);
-                    
+
                     // Guardar en localStorage
                     this.saveThemeToLocalStorage(event.detail.themeId);
                 }, 500);
             }
         });
-        
+
         // Escuchar cambios en localStorage de otras pestañas
         window.addEventListener('storage', (event) => {
             if (event.key === 'centinela-theme') {
@@ -475,25 +430,22 @@ class ThemeLoader {
     // INICIALIZACIÓN COMPLETA
     // =============================================
     async init() {
-        console.log('🚀 INICIANDO THEME LOADER (VERSIÓN OPTIMIZADA)...');
-        
+
         // Esperar DOM
         if (document.readyState === 'loading') {
             await new Promise(resolve => {
                 document.addEventListener('DOMContentLoaded', resolve);
             });
         }
-        
+
         // Cargar tema inicial (desde localStorage primero)
         await this.loadTheme();
-        
+
         // Configurar monitoreo
         this.setupThemeSync();
-        
+
         // Hacer disponible globalmente
         window.themeLoader = this;
-        
-        console.log('✅ THEME LOADER LISTO (LocalStorage First)');
     }
 
     // =============================================
@@ -602,16 +554,16 @@ class ThemeLoader {
                 description: 'Tema inspirado en patrones de camuflaje',
                 colors: {
                     '--color-bg-primary': '#000000',
-                    '--color-bg-secondary': '#1a271a',    
-                    '--color-bg-tertiary': '#2d3d2d',    
-                    '--color-bg-light': '#e0ecd9',       
+                    '--color-bg-secondary': '#1a271a',
+                    '--color-bg-tertiary': '#2d3d2d',
+                    '--color-bg-light': '#e0ecd9',
                     '--color-text-primary': '#c2d4c2',
-                    '--color-text-secondary': '#7a8c7a',    
+                    '--color-text-secondary': '#7a8c7a',
                     '--color-text-light': '#e8f0e8',
                     '--color-text-dark': '#142014',
-                    '--color-accent-primary': '#5d6b3d',   
-                    '--color-accent-secondary': '#788f45', 
-                    '--color-accent-footer': '#4a5a30', 
+                    '--color-accent-primary': '#5d6b3d',
+                    '--color-accent-secondary': '#788f45',
+                    '--color-accent-footer': '#4a5a30',
                     '--color-shadow': 'rgba(93, 107, 61, 0.35)',
                     '--color-glow': 'rgba(120, 143, 69, 0.45)',
                     '--color-hover': 'rgba(93, 107, 61, 0.12)',
@@ -634,25 +586,25 @@ class ThemeLoader {
                 description: 'Tema inspirado en equipamiento militar y camuflaje',
                 colors: {
                     '--color-bg-primary': '#000000',
-                    '--color-bg-secondary': '#0d1c0d', 
-                    '--color-bg-tertiary': '#1a2c1a', 
-                    '--color-bg-light': '#e8f5e0',    
-                    '--color-text-primary': '#d4e8d4', 
-                    '--color-text-secondary': '#8ba88b',   
+                    '--color-bg-secondary': '#0d1c0d',
+                    '--color-bg-tertiary': '#1a2c1a',
+                    '--color-bg-light': '#e8f5e0',
+                    '--color-text-primary': '#d4e8d4',
+                    '--color-text-secondary': '#8ba88b',
                     '--color-text-light': '#f0f8f0',
                     '--color-text-dark': '#0a140a',
                     '--color-accent-primary': '#556b2f',
                     '--color-accent-secondary': '#6b8e23',
-                    '--color-accent-footer': '#4d5d2b',    
+                    '--color-accent-footer': '#4d5d2b',
                     '--color-shadow': 'rgba(85, 107, 47, 0.4)',
-                    '--color-glow': 'rgba(107, 142, 35, 0.5)',   
+                    '--color-glow': 'rgba(107, 142, 35, 0.5)',
                     '--color-hover': 'rgba(85, 107, 47, 0.15)',
-                    '--color-active': '#6b8e23', 
+                    '--color-active': '#6b8e23',
                     '--color-border-light': 'rgba(107, 142, 35, 0.25)',
                     '--color-border-dark': '#4d5d2b',
                     '--navbar-bg': '#0d1c0d',
                     '--navbar-text': '#d4e8d4',
-                    '--navbar-logo-text': '#6b8e23', 
+                    '--navbar-logo-text': '#6b8e23',
                     '--navbar-scrolled-bg': '#091409',
                     '--footer-bg-primary': '#0d1c0d',
                     '--footer-bg-secondary': '#1a2c1a',
@@ -761,30 +713,30 @@ class ThemeLoader {
                 name: 'Oro 24K',
                 description: 'Tema de máximo lujo con oro puro',
                 colors: {
-                    '--color-bg-primary': '#0c0a06',     
+                    '--color-bg-primary': '#0c0a06',
                     '--color-bg-secondary': '#1c170f',
-                    '--color-bg-tertiary': '#332c1f',  
-                    '--color-bg-light': '#f9efcc',  
+                    '--color-bg-tertiary': '#332c1f',
+                    '--color-bg-light': '#f9efcc',
                     '--color-text-primary': '#ffeaa7',
                     '--color-text-secondary': '#d4b483',
-                    '--color-text-light': '#fff4d1',       
+                    '--color-text-light': '#fff4d1',
                     '--color-text-dark': '#1c170f',
                     '--color-accent-primary': '#ffd166',
                     '--color-accent-secondary': '#f9c74f',
                     '--color-accent-footer': '#e6b422',
-                    '--color-shadow': 'rgba(255, 209, 102, 0.4)', 
+                    '--color-shadow': 'rgba(255, 209, 102, 0.4)',
                     '--color-glow': 'rgba(249, 199, 79, 0.6)',
                     '--color-hover': 'rgba(255, 209, 102, 0.15)',
                     '--color-active': '#f9c74f',
                     '--color-border-light': 'rgba(249, 199, 79, 0.3)',
                     '--color-border-dark': '#e6b422',
                     '--navbar-bg': 'linear-gradient(135deg, #1c170f 0%, #332c1f 100%)',
-                    '--navbar-text': '#ffeaa7',    
-                    '--navbar-logo-text': '#f9c74f',     
+                    '--navbar-text': '#ffeaa7',
+                    '--navbar-logo-text': '#f9c74f',
                     '--navbar-scrolled-bg': '#18130c',
                     '--footer-bg-primary': '#1c170f',
                     '--footer-bg-secondary': '#332c1f',
-                    '--footer-text-primary': '#ffeaa7', 
+                    '--footer-text-primary': '#ffeaa7',
                     '--footer-text-secondary': '#d4b483',
                     '--footer-social-bg': '#0c0a06'
                 }
@@ -895,39 +847,39 @@ class ThemeLoader {
         return [
             // Colores base
             '--color-bg-primary',
-            '--color-bg-secondary', 
+            '--color-bg-secondary',
             '--color-bg-tertiary',
             '--color-bg-light',
-            
+
             // Texto
             '--color-text-primary',
             '--color-text-secondary',
             '--color-text-light',
             '--color-text-dark',
-            
+
             // Acentos
             '--color-accent-primary',
             '--color-accent-secondary',
             '--color-accent-footer',
-            
+
             // Efectos
             '--color-shadow',
             '--color-glow',
-            
+
             // Estados
             '--color-hover',
             '--color-active',
-            
+
             // Bordes
             '--color-border-light',
             '--color-border-dark',
-            
+
             // Navbar
             '--navbar-bg',
             '--navbar-text',
             '--navbar-logo-text',
             '--navbar-scrolled-bg',
-            
+
             // Footer
             '--footer-bg-primary',
             '--footer-bg-secondary',
@@ -942,10 +894,6 @@ class ThemeLoader {
 // INICIALIZACIÓN AUTOMÁTICA
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('📄 DOM cargado - Iniciando ThemeLoader (VERSIÓN OPTIMIZADA)...');
-    
     const themeLoader = new ThemeLoader();
     await themeLoader.init();
-    
-    console.log('✅ ThemeLoader funcionando (LocalStorage First)');
 });
