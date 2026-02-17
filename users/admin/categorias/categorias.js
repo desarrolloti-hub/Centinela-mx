@@ -1,6 +1,6 @@
 /**
  * CATEGORÍAS - Sistema Centinela
- * VERSIÓN FINAL - CON ELIMINACIÓN EN CASCADA (FORZADA)
+ * VERSIÓN FINAL - CON ELIMINACIÓN EN CASCADA (FORZADA) Y MODAL CORREGIDO
  */
 
 // =============================================
@@ -45,25 +45,25 @@ function obtenerDatosEmpresa() {
 // =============================================
 // FUNCIONES GLOBALES
 // =============================================
-window.editarCategoria = function (id) {
+window.editarCategoria = function (id, event) {
     event?.stopPropagation();
     window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${id}`;
 };
 
-window.agregarSubcategoria = function (id) {
+window.agregarSubcategoria = function (id, event) {
     event?.stopPropagation();
     window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${id}&nuevaSubcategoria=true`;
 };
 
-window.editarSubcategoria = function (catId, subId) {
+window.editarSubcategoria = function (catId, subId, event) {
     event?.stopPropagation();
     window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${catId}&editarSubcategoria=${subId}`;
 };
 
 // =============================================
-// VER DETALLES
+// VER DETALLES (CORREGIDO: recibe event y actualiza título del modal)
 // =============================================
-window.verDetalles = async function (categoriaId) {
+window.verDetalles = async function (categoriaId, event) {
     event?.stopPropagation();
 
     const categoria = categoriasCache.find(c => c.id === categoriaId);
@@ -94,8 +94,7 @@ window.verDetalles = async function (categoriaId) {
     }
 
     const html = `
-        <div style="padding: 20px;">
-            <h4 style="color: white; margin-bottom: 20px;">${categoria.nombre}</h4>
+        <div style="padding: 10px;">
             <p><strong>Descripción:</strong> ${categoria.descripcion || 'Sin descripción'}</p>
             <p><strong>Color:</strong> 
                 <span style="display:inline-block; width:20px; height:20px; background:${categoria.color || '#2f8cff'}; border-radius:4px; vertical-align:middle;"></span> 
@@ -117,11 +116,12 @@ window.verDetalles = async function (categoriaId) {
         </div>
     `;
 
+    document.getElementById('modalTitulo').innerHTML = `<i class="fas fa-tag"></i> ${escapeHTML(categoria.nombre)}`;
     document.getElementById('detallesContent').innerHTML = html;
     abrirModal('modalDetalles');
 };
 
-window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId) {
+window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId, event) {
     event?.stopPropagation();
 
     const categoria = categoriasCache.find(c => c.id === categoriaId);
@@ -159,8 +159,7 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId) {
     }
 
     const html = `
-        <div style="padding: 20px;">
-            <h4 style="color: #f97316; margin-bottom: 20px;">${subcategoria.nombre || 'Sin nombre'}</h4>
+        <div style="padding: 10px;">
             <p><strong>Categoría padre:</strong> ${categoria.nombre}</p>
             <p><strong>Descripción:</strong> ${subcategoria.descripcion || 'Sin descripción'}</p>
             ${subcategoria.color ? `
@@ -173,6 +172,7 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId) {
         </div>
     `;
 
+    document.getElementById('modalTitulo').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHTML(subcategoria.nombre || 'Subcategoría')}`;
     document.getElementById('detallesContent').innerHTML = html;
     abrirModal('modalDetalles');
 };
@@ -181,7 +181,7 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId) {
 // 🎯 ELIMINAR CATEGORÍA CON TODAS SUS SUBCATEGORÍAS
 // 🔥 CORREGIDO: Elimina primero las subcategorías y luego la categoría
 // =============================================
-window.eliminarCategoria = async function (categoriaId) {
+window.eliminarCategoria = async function (categoriaId, event) {
     event?.stopPropagation();
 
     const categoria = categoriasCache.find(c => c.id === categoriaId);
@@ -207,7 +207,7 @@ window.eliminarCategoria = async function (categoriaId) {
         }
     }
 
-    // SweetAlert personalizado para eliminación en cascada - SOLO UN ICONO (el de SweetAlert)
+    // SweetAlert personalizado para eliminación en cascada
     const result = await Swal.fire({
         title: '¿Eliminar categoría?',
         html: `
@@ -240,7 +240,7 @@ window.eliminarCategoria = async function (categoriaId) {
                 </p>
             </div>
         `,
-        icon: 'warning', // Cambia a 'info' si prefieres un círculo con exclamación
+        icon: 'warning',
         showCancelButton: true,
         confirmButtonText: numSub > 0 ? 'Sí, eliminar todo' : 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
@@ -351,7 +351,7 @@ window.eliminarCategoria = async function (categoriaId) {
 // =============================================
 // 🎯 ELIMINAR SUBCATEGORÍA DESDE LA TABLA
 // =============================================
-window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
+window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event) {
     event?.stopPropagation();
 
     const categoria = categoriasCache.find(c => c.id === categoriaId);
@@ -632,13 +632,13 @@ async function crearFilaCategoria(categoria, tbody) {
         </td>
         <td data-label="Acciones">
             <div class="btn-group">
-                <button type="button" class="btn btn-outline-info" onclick="window.verDetalles('${categoria.id}')" title="Ver detalles">
+                <button type="button" class="btn btn-outline-info" onclick="window.verDetalles('${categoria.id}', event)" title="Ver detalles">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button type="button" class="btn btn-outline-warning" onclick="window.editarCategoria('${categoria.id}')" title="Editar">
+                <button type="button" class="btn btn-outline-warning" onclick="window.editarCategoria('${categoria.id}', event)" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button type="button" class="btn btn-outline-danger" onclick="window.eliminarCategoria('${categoria.id}')" title="Eliminar">
+                <button type="button" class="btn btn-outline-danger" onclick="window.eliminarCategoria('${categoria.id}', event)" title="Eliminar">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -661,7 +661,7 @@ async function crearFilaCategoria(categoria, tbody) {
                         <i class="fas fa-list-ul"></i>
                         Subcategorías de <span style="color:#2f8cff;">"${escapeHTML(categoria.nombre)}"</span>
                     </h6>
-                    <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoria.id}')">
+                    <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoria.id}', event)">
                         <i class="fas fa-plus-circle"></i> Agregar
                     </button>
                 </div>
@@ -726,7 +726,7 @@ async function cargarSubcategorias(categoriaId) {
             <div style="text-align:center; padding:30px; background:rgba(0,0,0,0.2); border-radius:8px;">
                 <i class="fas fa-folder-open" style="font-size:32px; color:#6b7280; margin-bottom:8px;"></i>
                 <p style="color:#6b7280; margin-bottom:12px;">No hay subcategorías</p>
-                <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoriaId}')">
+                <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoriaId}', event)">
                     <i class="fas fa-plus-circle"></i> Crear subcategoría
                 </button>
             </div>
@@ -780,13 +780,13 @@ async function cargarSubcategorias(categoriaId) {
                 </td>
                 <td data-label="Acciones">
                     <div class="subcategoria-acciones">
-                        <button class="btn" onclick="window.verDetallesSubcategoria('${categoriaId}', '${sub.id}')" title="Ver detalles">
+                        <button class="btn" onclick="window.verDetallesSubcategoria('${categoriaId}', '${sub.id}', event)" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn" onclick="window.editarSubcategoria('${categoriaId}', '${sub.id}')" title="Editar">
+                        <button class="btn" onclick="window.editarSubcategoria('${categoriaId}', '${sub.id}', event)" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-outline-danger" onclick="window.eliminarSubcategoria('${categoriaId}', '${sub.id}')" title="Eliminar">
+                        <button class="btn btn-outline-danger" onclick="window.eliminarSubcategoria('${categoriaId}', '${sub.id}', event)" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
