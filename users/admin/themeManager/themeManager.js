@@ -12,11 +12,6 @@ class ThemeManager {
         // Referencia al UserManager para obtener datos del usuario
         this.userManager = userManager || window.userManager;
         
-        console.log('🎨 ThemeManager creado', { 
-            tieneUserManager: !!this.userManager,
-            usuarioActual: this.userManager?.currentUser 
-        });
-        
         // Variables CSS del archivo personalization.css
         this.cssVariables = [
             // Colores base
@@ -459,11 +454,8 @@ class ThemeManager {
     // =============================================
     async init() {
         if (this.initialized) {
-            console.log('ThemeManager ya está inicializado');
             return;
         }
-        
-        console.log('Inicializando ThemeManager...');
         
         // Cargar tema desde el usuario
         await this.loadUserTheme();
@@ -482,9 +474,6 @@ class ThemeManager {
         
         this.initialized = true;
         
-        console.log('🎨 Theme Manager (Admin View) inicializado correctamente');
-        console.log('Temas disponibles:', Object.keys(this.getThemePresets()).length);
-        
         // Hacerlo disponible globalmente
         window.themeManager = this;
     }
@@ -493,8 +482,6 @@ class ThemeManager {
     // INICIALIZAR VISUALIZACIÓN DE COLORES
     // =============================================
     initColorDisplay() {
-        console.log('Inicializando visualización de colores...');
-        
         // Actualizar visualización inicial
         this.updateColorDisplay();
         
@@ -530,8 +517,6 @@ class ThemeManager {
                 }
             }
         });
-        
-        console.log('Visualización de colores actualizada');
     }
 
     // =============================================
@@ -540,16 +525,11 @@ class ThemeManager {
     generateThemeList() {
         const container = document.getElementById('themeList');
         if (!container) {
-            console.error('No se encontró el contenedor #themeList');
             return;
         }
         
-        console.log('Generando lista de temas...');
-        
         const themePresets = this.getThemePresets();
         const themeIds = Object.keys(themePresets);
-        
-        console.log(`Generando ${themeIds.length} temas`);
         
         container.innerHTML = '';
         
@@ -581,8 +561,6 @@ class ThemeManager {
             container.appendChild(themeElement);
         });
         
-        console.log('Lista de temas generada correctamente');
-        
         // Marcar tema actual como activo
         this.markCurrentTheme();
     }
@@ -591,8 +569,6 @@ class ThemeManager {
     // CONFIGURAR EVENT LISTENERS
     // =============================================
     setupEventListeners() {
-        console.log('Configurando event listeners...');
-        
         // Selección de temas
         document.addEventListener('click', (e) => {
             const themeItem = e.target.closest('.theme-item');
@@ -607,9 +583,6 @@ class ThemeManager {
             applyBtn.addEventListener('click', () => {
                 this.applySelectedTheme();
             });
-            console.log('Botón aplicar configurado');
-        } else {
-            console.error('No se encontró el botón #applyTheme');
         }
         
         // Botón restablecer
@@ -618,20 +591,13 @@ class ThemeManager {
             resetBtn.addEventListener('click', () => {
                 this.resetToDefault();
             });
-            console.log('Botón restablecer configurado');
-        } else {
-            console.error('No se encontró el botón #resetTheme');
         }
-        
-        console.log('Event listeners configurados correctamente');
     }
 
     // =============================================
     // FUNCIONALIDADES PRINCIPALES
     // =============================================
     selectThemeItem(themeItem) {
-        console.log('Seleccionando tema:', themeItem.dataset.themeId);
-        
         // Remover active de todos los temas
         document.querySelectorAll('.theme-item').forEach(item => {
             item.classList.remove('active');
@@ -655,11 +621,8 @@ class ThemeManager {
         const theme = themePresets[themeId];
         
         if (!theme) {
-            console.error('Tema no encontrado:', themeId);
             return;
         }
-        
-        console.log('Aplicando previsualización del tema:', theme.name);
         
         // Aplicar colores temporalmente (solo para previsualización)
         Object.keys(theme.colors).forEach(key => {
@@ -676,7 +639,6 @@ class ThemeManager {
     async applySelectedTheme() {
         if (!this.selectedThemeId) {
             this.showNotification('Selecciona un tema primero', 'warning');
-            console.warn('No hay tema seleccionado');
             return;
         }
         
@@ -684,14 +646,11 @@ class ThemeManager {
         const theme = themePresets[this.selectedThemeId];
         
         if (!theme) {
-            console.error('Tema no encontrado:', this.selectedThemeId);
             return;
         }
         
         // Verificar si SweetAlert2 está disponible
         if (typeof Swal === 'undefined') {
-            console.error('SweetAlert2 no está disponible');
-            alert(`¿Aplicar tema ${theme.name}?`);
             // Continuar con la aplicación del tema
         } else {
             // Mostrar confirmación con SweetAlert2 - CON CUSTOM CLASS
@@ -716,14 +675,11 @@ class ThemeManager {
             });
             
             if (!result.isConfirmed) {
-                console.log('Aplicación de tema cancelada por el usuario');
                 // Revertir previsualización
                 this.previewTheme(this.currentTheme);
                 return;
             }
         }
-        
-        console.log('Aplicando tema:', theme.name);
         
         // Aplicar tema permanentemente
         this.applyColors(theme.colors);
@@ -773,8 +729,6 @@ class ThemeManager {
             }
         });
         document.dispatchEvent(themeChangedEvent);
-        
-        console.log(`🎨 Evento themeChanged disparado para tema: ${theme.name}`);
     }
 
     applyColors(colors) {
@@ -807,7 +761,6 @@ class ThemeManager {
             });
             
             if (!result.isConfirmed) {
-                console.log('Restablecimiento cancelado por el usuario');
                 return;
             }
         } else {
@@ -816,7 +769,6 @@ class ThemeManager {
             }
         }
         
-        console.log('Restableciendo a tema predeterminado');
         this.selectedThemeId = 'default';
         await this.applySelectedTheme();
     }
@@ -840,8 +792,6 @@ class ThemeManager {
                 updateElement.textContent = new Date().toLocaleString();
             }
         }
-        
-        console.log('UI actualizada. Tema actual:', this.currentTheme);
     }
 
     markCurrentTheme() {
@@ -855,9 +805,6 @@ class ThemeManager {
         if (currentItem) {
             currentItem.classList.add('active');
             this.selectedThemeId = this.currentTheme;
-            console.log('Tema actual marcado como activo:', this.currentTheme);
-        } else {
-            console.warn('No se encontró el elemento del tema actual:', this.currentTheme);
         }
     }
 
@@ -870,10 +817,7 @@ class ThemeManager {
      */
     async saveThemeToUser(themeId) {
         try {
-            console.log('💾 Guardando tema en usuario:', themeId);
-            
             if (!this.userManager?.currentUser) {
-                console.warn('⚠️ No hay usuario autenticado, guardando en localStorage');
                 this.saveThemeToLocalStorage(themeId);
                 return 'Tema guardado localmente';
             }
@@ -914,11 +858,9 @@ class ThemeManager {
                 );
             }
             
-            console.log('✅ Tema guardado en usuario');
             return 'Tema guardado correctamente';
             
         } catch (error) {
-            console.error('❌ Error guardando tema:', error);
             // Fallback a localStorage
             this.saveThemeToLocalStorage(themeId);
             throw error;
@@ -955,16 +897,14 @@ class ThemeManager {
                         );
                         syncCount++;
                     } catch (error) {
-                        console.warn(`Error sincronizando tema a ${colaborador.nombreCompleto}:`, error);
+                        // Error controlado, continuar con otros
                     }
                 }
             }
             
-            console.log(`✅ Tema sincronizado a ${syncCount} colaboradores`);
             return syncCount;
             
         } catch (error) {
-            console.error('❌ Error sincronizando tema:', error);
             return 0;
         }
     }
@@ -974,15 +914,12 @@ class ThemeManager {
      */
     async loadUserTheme() {
         try {
-            console.log('🔍 Cargando tema desde usuario...');
-            
             let themeId = 'default';
             
             // 1. Intentar cargar desde localStorage primero
             const savedTheme = this.loadThemeFromLocalStorage();
             if (savedTheme) {
                 themeId = savedTheme;
-                console.log('📱 Tema cargado de localStorage:', themeId);
             }
             
             // 2. Si hay usuario autenticado, cargar su tema
@@ -990,7 +927,6 @@ class ThemeManager {
                 const userTheme = this.userManager.currentUser.theme;
                 if (userTheme && userTheme !== 'default') {
                     themeId = userTheme;
-                    console.log('👤 Tema cargado del usuario:', themeId);
                 }
             }
             
@@ -998,7 +934,6 @@ class ThemeManager {
             this.applyThemeById(themeId);
             
         } catch (error) {
-            console.error('❌ Error cargando tema:', error);
             this.applyDefaultTheme();
         }
     }
@@ -1015,10 +950,8 @@ class ThemeManager {
             };
             
             localStorage.setItem('centinela-theme', JSON.stringify(themeData));
-            console.log('💾 Tema guardado en localStorage:', themeId);
-            
         } catch (error) {
-            console.warn('⚠️ No se pudo guardar en localStorage:', error);
+            // Error controlado, no afecta funcionalidad
         }
     }
     
@@ -1033,7 +966,7 @@ class ThemeManager {
                 return themeData.themeId;
             }
         } catch (error) {
-            console.warn('⚠️ No se pudo leer tema de localStorage:', error);
+            // Error controlado
         }
         return null;
     }
@@ -1048,9 +981,7 @@ class ThemeManager {
         if (theme) {
             this.currentTheme = themeId;
             this.applyColors(theme.colors);
-            console.log(`🎨 Tema aplicado: ${theme.name}`);
         } else {
-            console.warn(`⚠️ Tema ${themeId} no encontrado, usando predeterminado`);
             this.applyDefaultTheme();
         }
     }
@@ -1062,19 +993,15 @@ class ThemeManager {
         const defaultTheme = this.getThemePresets()['default'];
         this.currentTheme = 'default';
         this.applyColors(defaultTheme.colors);
-        console.log('🎨 Tema predeterminado aplicado');
     }
 
     // =============================================
     // UTILIDADES
     // =============================================
     showNotification(message, type = 'success') {
-        console.log(`💬 Mostrando notificación: ${message} - Tipo: ${type}`);
-        
         // Verificar si SweetAlert2 está disponible
         if (typeof Swal === 'undefined') {
             // Fallback a alert normal
-            console.log(`[${type.toUpperCase()}] ${message}`);
             alert(message);
         } else {
             // Configurar icono según tipo
@@ -1137,8 +1064,6 @@ class ThemeManager {
 // INICIALIZACIÓN AUTOMÁTICA
 // =============================================
 export function initThemeManager() {
-    console.log('🎨 Inicializando ThemeManager...');
-    
     // Crear ThemeManager con UserManager si está disponible
     const themeManager = new ThemeManager(window.userManager);
     
@@ -1151,18 +1076,13 @@ export function initThemeManager() {
 // Inicialización automática si se usa como script
 if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', async () => {
-        console.log('📄 DOM cargado, inicializando ThemeManager...');
-        
         // Esperar a que UserManager esté disponible si existe
         if (!window.userManager && typeof UserManager !== 'undefined') {
-            console.log('👤 Creando UserManager para ThemeManager...');
             window.userManager = new UserManager();
         }
         
         const themeManager = new ThemeManager(window.userManager);
         await themeManager.init();
         window.themeManager = themeManager;
-        
-        console.log('✅ ThemeManager inicializado y disponible como window.themeManager');
     });
 }

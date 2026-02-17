@@ -689,6 +689,68 @@ class UserManager {
         }
     }
 
+    // ========== 🔥 NUEVO MÉTODO: ENVIAR CORREO DE RECUPERACIÓN ==========
+    /**
+     * Envía un correo de recuperación de contraseña
+     * @param {string} email - Correo electrónico del usuario
+     * @returns {Promise<Object>} Resultado del envío
+     */
+    async enviarCorreoRecuperacion(email) {
+        try {
+            console.log('📧 Enviando correo de recuperación a:', email);
+            
+            const actionCodeSettings = {
+                url: window.location.origin + '/users/visitors/login/verifyEmail.html',
+                handleCodeInApp: true
+            };
+            
+            await sendPasswordResetEmail(auth, email, actionCodeSettings);
+            
+            console.log('✅ Correo de recuperación enviado exitosamente');
+            
+            return {
+                success: true,
+                message: 'Correo enviado correctamente. Revisa tu bandeja de entrada y SPAM.'
+            };
+            
+        } catch (error) {
+            console.error('❌ Error enviando correo de recuperación:', error);
+            
+            // Manejar errores específicos
+            if (error.code === 'auth/user-not-found') {
+                return { 
+                    success: false, 
+                    message: 'No existe una cuenta con este correo electrónico.',
+                    code: 'user-not-found'
+                };
+            } else if (error.code === 'auth/invalid-email') {
+                return { 
+                    success: false, 
+                    message: 'El formato del correo no es válido.',
+                    code: 'invalid-email'
+                };
+            } else if (error.code === 'auth/too-many-requests') {
+                return { 
+                    success: false, 
+                    message: 'Demasiados intentos. Intenta más tarde.',
+                    code: 'too-many-requests'
+                };
+            } else if (error.code === 'auth/network-request-failed') {
+                return { 
+                    success: false, 
+                    message: 'Error de conexión. Verifica tu internet.',
+                    code: 'network-error'
+                };
+            } else {
+                return { 
+                    success: false, 
+                    message: 'Error al enviar el correo: ' + (error.message || 'Intenta nuevamente.'),
+                    code: 'unknown'
+                };
+            }
+        }
+    }
+
     // ========== MÉTODOS DE GESTIÓN DE ESTADO ==========
 
     /**

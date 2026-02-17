@@ -101,7 +101,7 @@
     /* Familias de fuentes */
     --font-family-primary: 'Orbitron', sans-serif;
     /* Fuente principal */
-    --font-family-secondary: 'Poppins', sans-serif;
+    --font-family-secondary: 'Orbitron', sans-serif;
     /* Fuente secundaria */
 
     /* ====== VARIABLES ESPECÍFICAS POR COMPONENTE ====== */
@@ -142,7 +142,7 @@
         0 0 30px rgba(192, 192, 192, 0.2),
         var(--shadow-large, 0 10px 25px rgba(0, 0, 0, 0.15)) !important;
     color: var(--color-text-primary, #ffffff) !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+    font-family: var(--font-family-secondary, 'Orbitron', sans-serif) !important;
     backdrop-filter: blur(10px) !important;
     position: relative !important;
     overflow: hidden !important;
@@ -204,7 +204,7 @@
 /* Contenedor HTML - Mejor espaciado */
 .swal2-html-container {
     color: var(--color-text-secondary, rgba(255, 255, 255, 0.9)) !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+    font-family: var(--font-family-secondary, 'Orbitron', sans-serif) !important;
     padding: 28px 32px !important;
     text-align: left !important;
     font-size: 1.1rem !important;
@@ -313,7 +313,7 @@
     color: var(--color-text-primary, #ffffff) !important;
     border: 1px solid rgba(192, 192, 192, 0.3) !important;
     border-radius: var(--border-radius-medium, 8px) !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+    font-family: var(--font-family-secondary, 'Orbitron', sans-serif) !important;
     padding: 14px !important;
     font-size: 1rem !important;
     transition: var(--transition-default, all 0.3s ease-in-out) !important;
@@ -434,7 +434,7 @@
 .swal2-footer {
     border-top: 1px solid rgba(192, 192, 192, 0.2) !important;
     color: var(--color-text-secondary, rgba(255, 255, 255, 0.7)) !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+    font-family: var(--font-family-secondary, 'Orbitron', sans-serif) !important;
     padding: 15px 24px !important;
     background: rgba(0, 0, 0, 0.3) !important;
 }
@@ -444,7 +444,7 @@
     background: rgba(239, 68, 68, 0.15) !important;
     color: #ef4444 !important;
     border-left: 4px solid #ef4444 !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
+    font-family: var(--font-family-secondary, 'Orbitron', sans-serif) !important;
     padding: 12px 20px !important;
     margin: 0 20px 20px !important;
     border-radius: var(--border-radius-medium, 8px) !important;
