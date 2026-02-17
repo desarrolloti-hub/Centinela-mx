@@ -23,7 +23,6 @@ async function inicializarCategoriaManager() {
         const { CategoriaManager } = await import('/clases/categoria.js');
         categoriaManager = new CategoriaManager();
 
-        mostrarInfoEmpresa();
         await cargarCategorias();
         return true;
     } catch (error) {
@@ -40,16 +39,6 @@ function obtenerDatosEmpresa() {
         };
     } catch (error) {
         empresaActual = { nombre: 'Mi Empresa' };
-    }
-}
-
-function mostrarInfoEmpresa() {
-    const badge = document.getElementById('badge-empresa');
-    const empresaNombreSpan = badge?.querySelector('.empresa-nombre');
-
-    if (badge && empresaNombreSpan) {
-        empresaNombreSpan.textContent = empresaActual.nombre || 'Mi Empresa';
-        badge.style.display = 'inline-flex';
     }
 }
 
@@ -165,7 +154,6 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId) {
             icon: 'error',
             title: 'Error',
             text: 'Subcategoría no encontrada'
-            // Estilos eliminados, se aplican desde personalization.css
         });
         return;
     }
@@ -219,14 +207,11 @@ window.eliminarCategoria = async function (categoriaId) {
         }
     }
 
-    // SweetAlert personalizado para eliminación en cascada
+    // SweetAlert personalizado para eliminación en cascada - SOLO UN ICONO (el de SweetAlert)
     const result = await Swal.fire({
         title: '¿Eliminar categoría?',
         html: `
             <div style="text-align: center; padding: 10px;">
-                <div style="font-size: 64px; color: #ef4444; margin-bottom: 16px;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
                 <h3 style="color: #ffffff; margin-bottom: 16px; font-size: 20px;">
                     "${escapeHTML(categoria.nombre)}"
                 </h3>
@@ -240,7 +225,6 @@ window.eliminarCategoria = async function (categoriaId) {
                             </span>
                         </div>
                         <p style="color: #fca5a5; margin: 0; font-size: 14px;">
-                            <i class="fas fa-trash"></i> 
                             Se eliminarán TODAS las subcategorías junto con la categoría
                         </p>
                     </div>
@@ -256,13 +240,12 @@ window.eliminarCategoria = async function (categoriaId) {
                 </p>
             </div>
         `,
-        icon: 'warning',
+        icon: 'warning', // Cambia a 'info' si prefieres un círculo con exclamación
         showCancelButton: true,
         confirmButtonText: numSub > 0 ? 'Sí, eliminar todo' : 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
         focusCancel: true
-        // Estilos eliminados, se aplican desde personalization.css
     });
 
     if (result.isConfirmed) {
@@ -280,7 +263,6 @@ window.eliminarCategoria = async function (categoriaId) {
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false
-                // Estilos eliminados
             });
 
             // 🔥 PASO 1: Eliminar todas las subcategorías UNA POR UNA
@@ -328,7 +310,6 @@ window.eliminarCategoria = async function (categoriaId) {
                         </p>
                         ${numSub > 0 ? `
                             <p style="color: #9ca3af; font-size: 14px;">
-                                <i class="fas fa-folder-open"></i> 
                                 Se eliminaron ${numSub} subcategoría${numSub !== 1 ? 's' : ''}
                             </p>
                         ` : ''}
@@ -336,7 +317,6 @@ window.eliminarCategoria = async function (categoriaId) {
                 `,
                 timer: 3000,
                 timerProgressBar: true
-                // Estilos eliminados
             });
 
             // Recargar categorías
@@ -363,7 +343,6 @@ window.eliminarCategoria = async function (categoriaId) {
                         </div>
                     </div>
                 `
-                // Estilos eliminados
             });
         }
     }
@@ -381,7 +360,6 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
             icon: 'error',
             title: 'Error',
             text: 'Categoría no encontrada'
-            // Estilos eliminados
         });
         return;
     }
@@ -438,7 +416,6 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
             icon: 'error',
             title: 'Error',
             text: 'Subcategoría no encontrada'
-            // Estilos eliminados
         });
         return;
     }
@@ -468,7 +445,6 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
         reverseButtons: true
-        // Estilos eliminados
     });
 
     if (result.isConfirmed) {
@@ -496,7 +472,6 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
                 text: `La subcategoría "${subcategoriaNombre}" ha sido eliminada`,
                 timer: 2000,
                 timerProgressBar: true
-                // Estilos eliminados
             });
 
             // 🔥 IMPORTANTE: Recargar la categoría para obtener los datos actualizados
@@ -536,7 +511,6 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
                 icon: 'error',
                 title: 'Error',
                 text: `No se pudo eliminar: ${error.message}`
-                // Estilos eliminados
             });
         }
     }
@@ -580,7 +554,7 @@ async function cargarCategorias() {
                         <div style="text-align:center;">
                             <i class="fas fa-tags" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
                             <h5 style="color:white;">No hay categorías</h5>
-                            <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria" style="display:inline-flex; margin-top:16px;">
+                            <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria-header" style="display:inline-flex; margin-top:16px;">
                                 <i class="fas fa-plus-circle"></i> Crear Categoría
                             </a>
                         </div>
@@ -603,7 +577,6 @@ async function cargarCategorias() {
             icon: 'error',
             title: 'Error',
             text: 'Error al cargar categorías'
-            // Estilos eliminados
         });
     }
 }

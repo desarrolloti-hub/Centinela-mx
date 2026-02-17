@@ -20,7 +20,7 @@
     <!-- ESTILOS DEL NAVBAR Y FOOTER (personalization.css) -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
 
-    <!-- TUS ESTILOS - SIN BOOTSTRAP -->
+    <!-- TUS ESTILOS - CON DISEÑO MEJORADO (ESTILO THEME MANAGER) -->
     <link rel="stylesheet" href="categorias.css">
 
     <!-- Favicon -->
@@ -30,34 +30,27 @@
 <body>
     <canvas id="particle-canvas"></canvas>
 
-    <!-- Contenedor principal con estilo oscuro -->
-    <div class="container-fluid">
-        <!-- Header mejorado con descripción -->
-        <div class="header-container">
-            <div class="header-title">
-                <h1>
-                    <i class="fas fa-tags"></i>
-                    Gestión de Categorías
-                    <span id="badge-empresa" class="badge-empresa" style="display: none;">
-                        <i class="fas fa-building"></i>
-                        <span class="empresa-nombre"></span>
-                    </span>
-                </h1>
-                <div class="header-description">
-                    Administra las categorías y subcategorías de tu organización. 
-                    Organiza, clasifica y personaliza los elementos del sistema.
-                </div>
+    <!-- Contenedor principal con estilo Theme Manager -->
+    <div class="admin-container">
+        <!-- Page Header - EXACTAMENTE COMO EL THEME MANAGER (SOBRE EL FONDO) -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-tags"></i>
+                Gestión de Categorías
+            </h1>
+            <div class="header-description">
+                Administra las categorías y subcategorías de tu organización. 
+                Organiza, clasifica y personaliza los elementos del sistema.
             </div>
-            <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria">
-                <i class="fas fa-plus"></i>Nueva Categoría
-            </a>
         </div>
 
-        <!-- Tabla de Categorías -->
+        <!-- Tabla de Categorías (dentro de su propia tarjeta) -->
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-list"></i>Lista de Categorías</h5>
-                <!-- BOTÓN ELIMINADO: toggleEliminadas -->
+                <h5><i class="fas fa-list"></i> Lista de Categorías</h5>
+                <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria-header">
+                    <i class="fas fa-plus"></i> Nueva Categoría
+                </a>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -90,20 +83,12 @@
         </div>
     </div>
 
-    <!-- Modal para Ver Detalles -->
+    <!-- Modal para Ver Detalles (sin botones de cierre) -->
     <div class="modal" id="modalDetalles">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-info-circle"></i>Detalles de la Categoría</h5>
-                    <button type="button" class="btn-close" onclick="cerrarModal('modalDetalles')">&times;</button>
-                </div>
                 <div class="modal-body" id="detallesContent">
                     <!-- Se llenará dinámicamente -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                        onclick="cerrarModal('modalDetalles')">Cerrar</button>
                 </div>
             </div>
         </div>
