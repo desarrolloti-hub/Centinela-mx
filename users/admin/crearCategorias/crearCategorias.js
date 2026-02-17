@@ -332,13 +332,9 @@ class CrearCategoriaController {
             text: 'Esta acción no se puede deshacer',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            background: '#0a0a0a',
-            color: '#fff',
-            backdrop: 'rgba(0,0,0,0.8)'
+            cancelButtonText: 'Cancelar'
+            // Estilos eliminados
         }).then((result) => {
             if (result.isConfirmed) {
                 this.subcategorias = this.subcategorias.filter(s => s.id !== subcatId);
@@ -615,11 +611,8 @@ class CrearCategoriaController {
                     </div>
                 `,
                 icon: 'success',
-                confirmButtonText: 'Ver categorías',
-                confirmButtonColor: '#2f8cff',
-                background: '#0a0a0a',
-                color: '#fff',
-                backdrop: 'rgba(0,0,0,0.8)'
+                confirmButtonText: 'Ver categorías'
+                // Estilos eliminados
             }).then(() => {
                 this._volverALista();
             });
@@ -650,11 +643,8 @@ class CrearCategoriaController {
             showCancelButton: true,
             confirmButtonText: 'Sí, cancelar',
             cancelButtonText: 'No, continuar',
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            background: '#0a0a0a',
-            color: '#fff',
-            backdrop: 'rgba(0,0,0,0.8)'
+            confirmButtonColor: '#d33'
+            // Estilos eliminados
         }).then((result) => {
             if (result.isConfirmed) {
                 this._volverALista();
@@ -667,11 +657,8 @@ class CrearCategoriaController {
             icon: 'error',
             title: 'Sesión no válida',
             text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login',
-            confirmButtonColor: '#2f8cff',
-            background: '#0a0a0a',
-            color: '#fff',
-            backdrop: 'rgba(0,0,0,0.8)'
+            confirmButtonText: 'Ir al login'
+            // Estilos eliminados
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });

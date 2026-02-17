@@ -46,7 +46,7 @@ function obtenerDatosEmpresa() {
 function mostrarInfoEmpresa() {
     const badge = document.getElementById('badge-empresa');
     const empresaNombreSpan = badge?.querySelector('.empresa-nombre');
-    
+
     if (badge && empresaNombreSpan) {
         empresaNombreSpan.textContent = empresaActual.nombre || 'Mi Empresa';
         badge.style.display = 'inline-flex';
@@ -164,10 +164,8 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId) {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Subcategoría no encontrada',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: '#2f8cff'
+            text: 'Subcategoría no encontrada'
+            // Estilos eliminados, se aplican desde personalization.css
         });
         return;
     }
@@ -262,12 +260,9 @@ window.eliminarCategoria = async function (categoriaId) {
         showCancelButton: true,
         confirmButtonText: numSub > 0 ? 'Sí, eliminar todo' : 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280',
-        background: 'var(--color-bg-secondary)',
-        color: 'var(--color-text-primary)',
         reverseButtons: true,
         focusCancel: true
+        // Estilos eliminados, se aplican desde personalization.css
     });
 
     if (result.isConfirmed) {
@@ -284,9 +279,8 @@ window.eliminarCategoria = async function (categoriaId) {
                 `,
                 allowOutsideClick: false,
                 allowEscapeKey: false,
-                showConfirmButton: false,
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)'
+                showConfirmButton: false
+                // Estilos eliminados
             });
 
             // 🔥 PASO 1: Eliminar todas las subcategorías UNA POR UNA
@@ -340,11 +334,9 @@ window.eliminarCategoria = async function (categoriaId) {
                         ` : ''}
                     </div>
                 `,
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: '#10b981',
                 timer: 3000,
                 timerProgressBar: true
+                // Estilos eliminados
             });
 
             // Recargar categorías
@@ -370,10 +362,8 @@ window.eliminarCategoria = async function (categoriaId) {
                             </p>
                         </div>
                     </div>
-                `,
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: '#2f8cff'
+                `
+                // Estilos eliminados
             });
         }
     }
@@ -390,10 +380,8 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Categoría no encontrada',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: '#2f8cff'
+            text: 'Categoría no encontrada'
+            // Estilos eliminados
         });
         return;
     }
@@ -449,10 +437,8 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Subcategoría no encontrada',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: '#2f8cff'
+            text: 'Subcategoría no encontrada'
+            // Estilos eliminados
         });
         return;
     }
@@ -481,11 +467,8 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',
-        background: 'var(--color-bg-secondary)',
-        color: 'var(--color-text-primary)',
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280',
         reverseButtons: true
+        // Estilos eliminados
     });
 
     if (result.isConfirmed) {
@@ -511,11 +494,9 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
                 icon: 'success',
                 title: '¡Eliminada!',
                 text: `La subcategoría "${subcategoriaNombre}" ha sido eliminada`,
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: '#10b981',
                 timer: 2000,
                 timerProgressBar: true
+                // Estilos eliminados
             });
 
             // 🔥 IMPORTANTE: Recargar la categoría para obtener los datos actualizados
@@ -554,10 +535,8 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: `No se pudo eliminar: ${error.message}`,
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: '#2f8cff'
+                text: `No se pudo eliminar: ${error.message}`
+                // Estilos eliminados
             });
         }
     }
@@ -623,10 +602,8 @@ async function cargarCategorias() {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error al cargar categorías',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: '#2f8cff'
+            text: 'Error al cargar categorías'
+            // Estilos eliminados
         });
     }
 }

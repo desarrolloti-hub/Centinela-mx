@@ -1,6 +1,7 @@
 /**
  * EDITAR CATEGORÍAS - Sistema Centinela
  * VERSIÓN CORREGIDA - SweetAlert usa temas de personalization.css
+ * (Estilos inline eliminados - Notificaciones centradas)
  */
 
 // =============================================
@@ -41,17 +42,7 @@ async function inicializarCategoriaManager() {
                 </div>
             `,
             icon: 'error',
-            background: 'var(--color-bg-primary, #0a0a0a)',
-            color: 'var(--color-text-primary, #ffffff)',
-            confirmButtonColor: 'var(--color-danger, #ef4444)',
-            confirmButtonText: 'Recargar',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            }
+            confirmButtonText: 'Recargar'
         }).then(() => {
             window.location.reload();
         });
@@ -551,7 +542,7 @@ async function guardarSubcategoria() {
 }
 
 /**
- * ELIMINAR SUBCATEGORÍA - CON TARJETAS BONITAS
+ * ELIMINAR SUBCATEGORÍA - SweetAlert sin estilos inline
  */
 async function eliminarSubcategoria(subcategoriaId) {
     if (!categoriaManager || !categoriaActual) {
@@ -604,19 +595,8 @@ async function eliminarSubcategoria(subcategoriaId) {
         `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: 'var(--color-danger, #ef4444)',
-        cancelButtonColor: 'var(--color-bg-tertiary, #6b7280)',
         confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar',
-        background: 'var(--color-bg-primary, #0a0a0a)',
-        color: 'var(--color-text-primary, #ffffff)',
-        customClass: {
-            popup: 'swal2-popup',
-            title: 'swal2-title',
-            htmlContainer: 'swal2-html-container',
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel'
-        }
+        cancelButtonText: 'Cancelar'
     });
 
     if (result.isConfirmed) {
@@ -648,17 +628,9 @@ async function eliminarSubcategoria(subcategoriaId) {
                     </div>
                 `,
                 icon: 'success',
-                confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
-                background: 'var(--color-bg-primary, #0a0a0a)',
-                color: 'var(--color-text-primary, #ffffff)',
                 timer: 2500,
                 timerProgressBar: true,
-                showConfirmButton: false,
-                customClass: {
-                    popup: 'swal2-popup',
-                    htmlContainer: 'swal2-html-container',
-                    timerProgressBar: 'swal2-timer-progress-bar'
-                }
+                showConfirmButton: false
             });
 
         } catch (error) {
@@ -714,17 +686,9 @@ async function guardarCategoria() {
                 </div>
             `,
             icon: 'success',
-            confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
-            background: 'var(--color-bg-primary, #0a0a0a)',
-            color: 'var(--color-text-primary, #ffffff)',
             timer: 2000,
             timerProgressBar: true,
-            showConfirmButton: false,
-            customClass: {
-                popup: 'swal2-popup',
-                htmlContainer: 'swal2-html-container',
-                timerProgressBar: 'swal2-timer-progress-bar'
-            }
+            showConfirmButton: false
         });
 
     } catch (error) {
@@ -778,19 +742,8 @@ function cancelarEdicion() {
             text: 'Tienes cambios sin guardar. ¿Seguro que quieres salir?',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: 'var(--color-danger, #ef4444)',
-            cancelButtonColor: 'var(--color-bg-tertiary, #6b7280)',
             confirmButtonText: 'Sí, salir',
-            cancelButtonText: 'Seguir editando',
-            background: 'var(--color-bg-primary, #0a0a0a)',
-            color: 'var(--color-text-primary, #ffffff)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            }
+            cancelButtonText: 'Seguir editando'
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = '/users/admin/categorias/categorias.html';
@@ -897,74 +850,25 @@ function inicializarEventos() {
     });
 }
 
+/**
+ * MOSTRAR NOTIFICACIÓN CON SWEETALERT2 (CENTRADA)
+ */
 function mostrarNotificacion(mensaje, tipo = 'success') {
-    const notisExistentes = document.querySelectorAll('.notificacion-flotante');
-    notisExistentes.forEach(n => n.remove());
-
-    const noti = document.createElement('div');
-    noti.className = 'notificacion-flotante';
-
-    const colores = {
-        success: 'var(--color-accent-primary, #c0c0c0)',
-        error: 'var(--color-danger, #ef4444)',
-        info: 'var(--color-accent-primary, #c0c0c0)',
-        warning: 'var(--color-active, #c0c0c0)'
-    };
-
-    const iconos = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-circle',
-        info: 'fa-info-circle',
-        warning: 'fa-exclamation-triangle'
-    };
-
-    noti.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        background: ${colores[tipo] || colores.info};
-        color: var(--color-text-dark, #000000);
-        padding: 16px 24px;
-        border-radius: var(--border-radius-large);
-        font-size: 14px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        box-shadow: var(--shadow-normal);
-        z-index: 9999;
-        animation: slideInRight var(--transition-fast);
-        border: 1px solid var(--color-border-light);
-        backdrop-filter: blur(10px);
-        max-width: 400px;
-    `;
-
-    noti.innerHTML = `
-        <i class="fas ${iconos[tipo] || 'fa-info-circle'}" style="font-size: 20px;"></i>
-        <span style="flex: 1;">${mensaje}</span>
-        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--color-text-dark, #000000); opacity: 0.7; cursor: pointer; padding: 4px;">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-
-    document.body.appendChild(noti);
-
-    if (!document.querySelector('#notificacion-styles')) {
-        const style = document.createElement('style');
-        style.id = 'notificacion-styles';
-        style.textContent = `
-            @keyframes slideInRight {
-                from { transform: translateX(100px); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    setTimeout(() => {
-        noti.style.animation = 'slideInRight var(--transition-fast) reverse';
-        setTimeout(() => noti.remove(), 300);
-    }, 5000);
+    Swal.fire({
+        title: tipo === 'success' ? 'Éxito' : 
+               tipo === 'error' ? 'Error' : 
+               tipo === 'warning' ? 'Advertencia' : 'Información',
+        text: mensaje,
+        icon: tipo,
+        timer: 2500,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        background: 'var(--color-bg-primary, #0a0a0a)',
+        color: 'var(--color-text-primary, #ffffff)',
+        iconColor: tipo === 'success' ? 'var(--color-accent-primary, #c0c0c0)' : 
+                  tipo === 'error' ? 'var(--color-danger, #ef4444)' : 
+                  tipo === 'warning' ? 'var(--color-warning, #f59e0b)' : 'var(--color-accent-primary, #c0c0c0)'
+    });
 }
 
 function escapeHTML(text) {
