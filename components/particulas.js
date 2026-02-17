@@ -177,7 +177,6 @@ class ParticleSystem {
                         this.secondaryColor = colors.secondary;
                         this.currentTheme = colors.themeId || 'default';
 
-                        console.log('📦 Colores cargados desde localStorage');
                         return true;
                     }
                 }
@@ -195,7 +194,6 @@ class ParticleSystem {
 
                         if (theme) {
                             this.loadThemeColors(themeData.themeId);
-                            console.log('📦 Tema cargado desde localStorage');
                             return true;
                         }
                     }
