@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function initCollaboratorForm() {
-    console.log('🚀 Iniciando formulario de registro de colaborador...');
     
     // Obtener elementos del DOM
     const elements = obtenerElementosDOM();
@@ -22,8 +21,7 @@ async function initCollaboratorForm() {
     
     // Instanciar UserManager
     const userManager = new UserManager();
-    console.log('✅ UserManager inicializado');
-    
+
     try {
         // Esperar a que el usuario actual esté disponible
         await esperarUsuarioActual(userManager);
@@ -37,9 +35,7 @@ async function initCollaboratorForm() {
         
         // Configurar handlers
         configurarHandlers(elements, userManager, currentAdmin);
-        
-        console.log('✅ Formulario de colaborador inicializado correctamente');
-        
+                
     } catch (error) {
         console.error('❌ Error inicializando formulario:', error);
         mostrarErrorSistema(error.message);
@@ -108,10 +104,8 @@ function obtenerElementosDOM() {
 async function esperarUsuarioActual(userManager, maxAttempts = 15, delay = 500) {
     for (let i = 0; i < maxAttempts; i++) {
         if (userManager.currentUser) {
-            console.log('✅ Usuario actual detectado después de', i + 1, 'intentos');
             return userManager.currentUser;
         }
-        console.log(`⏳ Esperando usuario... intento ${i + 1}/${maxAttempts}`);
         await new Promise(resolve => setTimeout(resolve, delay));
     }
     throw new Error('No se pudo detectar el usuario actual después de ' + maxAttempts + ' intentos');
@@ -146,14 +140,6 @@ async function cargarAdministradorActual(userManager, elements) {
         if (!admin.organizacion || !admin.organizacionCamelCase) {
             throw new Error('El administrador no tiene organización configurada');
         }
-        
-        console.log('👤 Administrador cargado:', {
-            nombre: admin.nombreCompleto,
-            email: admin.correoElectronico,
-            organizacion: admin.organizacion,
-            organizacionCamelCase: admin.organizacionCamelCase,
-            tieneLogo: !!admin.fotoOrganizacion
-        });
         
         Swal.close();
         return admin;
@@ -607,22 +593,13 @@ async function registrarColaborador(event, elements, userManager, admin) {
             }
         };
         
-        console.log('📝 Datos del colaborador a crear:', {
-            nombre: colaboradorData.nombreCompleto,
-            email: colaboradorData.correoElectronico,
-            organizacion: colaboradorData.organizacion,
-            coleccion: `colaboradores_${colaboradorData.organizacionCamelCase}`
-        });
-        
         // Crear colaborador usando UserManager
         const resultado = await userManager.createColaborador(
             colaboradorData,
             elements.contrasena.value,
             admin.id
         );
-        
-        console.log('✅ Colaborador creado exitosamente:', resultado);
-        
+                
         // Mostrar éxito
         Swal.close();
         await mostrarExitoRegistro(colaboradorData);
