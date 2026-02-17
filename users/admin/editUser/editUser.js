@@ -1,7 +1,5 @@
 // editUser.js - Editor de colaboradores (Versión limpia)
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📄 Editor de colaborador cargado');
-    
+document.addEventListener('DOMContentLoaded', async function() {    
     try {
         // Importar el módulo UserManager
         const userModule = await import('/clases/user.js');
@@ -26,9 +24,7 @@ let currentPhotoElements = null;
 
 // ==================== FUNCIONES PRINCIPALES ====================
 
-async function iniciarEditor(userManager) {
-    console.log('👨‍💼 Iniciando editor de colaborador...');
-    
+async function iniciarEditor(userManager) {    
     const collaboratorId = obtenerIdDesdeURL();
     if (!collaboratorId) return;
     
@@ -44,9 +40,7 @@ async function iniciarEditor(userManager) {
         configurarCambioPassword(elements, userManager);
         configurarEliminacion(elements, userManager);
         configurarSelectorStatus(elements);
-        
-        console.log('✅ Editor de colaborador inicializado correctamente');
-        
+                
     } catch (error) {
         console.error('❌ Error inicializando editor:', error);
         mostrarMensaje(elements.mainMessage, 'error', 
@@ -163,9 +157,7 @@ function mostrarErrorConfiguracion(error) {
     });
 }
 
-async function cargarDatosColaborador(userManager, collaboratorId, elements) {
-    console.log('📥 Cargando datos del colaborador');
-    
+async function cargarDatosColaborador(userManager, collaboratorId, elements) {    
     try {
         // Mostrar loader
         Swal.fire({
@@ -204,12 +196,6 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
         
         // Cerrar loader
         Swal.close();
-        
-        console.log('✅ Colaborador cargado:', {
-            id: collaborator.id,
-            nombre: collaborator.nombreCompleto,
-            email: collaborator.correoElectronico
-        });
         
         mostrarMensaje(elements.mainMessage, 'success', 
             `Editando colaborador: ${collaborator.nombreCompleto}`);
@@ -258,9 +244,7 @@ function deshabilitarLogoOrganizacion(elements) {
     }
 }
 
-function actualizarInterfaz(elements, collaborator) {
-    console.log('🎨 Actualizando interfaz...');
-    
+function actualizarInterfaz(elements, collaborator) {    
     // Datos personales
     if (elements.fullName && collaborator.nombreCompleto) {
         elements.fullName.value = collaborator.nombreCompleto;
@@ -373,9 +357,7 @@ function actualizarInterfaz(elements, collaborator) {
     const loginDate = formatDate(collaborator.ultimoLogin);
     if (elements.lastLoginDate) elements.lastLoginDate.textContent = loginDate.date;
     if (elements.lastLoginTime) elements.lastLoginTime.textContent = loginDate.time;
-    
-    console.log('✅ Interfaz actualizada');
-}
+    }
 
 function mostrarMensaje(element, type, text) {
     if (!element) return;
@@ -448,9 +430,7 @@ function configurarSelectorStatus(elements) {
             
             // Actualizar campo oculto
             const statusValue = this.getAttribute('data-status');
-            elements.statusInput.value = statusValue;
-            
-            console.log(`🔄 Status cambiado a: ${statusValue}`);
+            elements.statusInput.value = statusValue;            
         });
     });
 }
@@ -844,7 +824,6 @@ function configurarCambioPassword(elements, userManager) {
                 handleCodeInApp: false
             };
             
-            console.log('📧 Enviando correo de restablecimiento a:', userEmail);
             await sendPasswordResetEmail(firebaseModule.auth, userEmail, actionCodeSettings);
             
             // Cerrar loader
@@ -1114,5 +1093,3 @@ function configurarEliminacion(elements, userManager) {
         }
     });
 }
-
-console.log('✅ editUser.js cargado - Logo de organización no editable');

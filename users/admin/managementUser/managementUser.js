@@ -1,7 +1,5 @@
 // ========== INICIALIZACIÓN ==========
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 DOM cargado, iniciando gestor de colaboradores...');
-    
+document.addEventListener('DOMContentLoaded', async function() {    
     try {
         const { UserManager } = await import('/clases/user.js');
         const userManager = new UserManager();
@@ -15,12 +13,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         const admin = userManager.currentUser;
-        console.log('✅ Administrador encontrado:', {
-            nombre: admin.nombreCompleto,
-            organizacion: admin.organizacion,
-            organizacionCamelCase: admin.organizacionCamelCase,
-            id: admin.id
-        });
         
         localStorage.setItem('adminInfo', JSON.stringify({
             id: admin.id,
@@ -44,7 +36,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 // ========== CARGAR COLABORADORES ==========
 async function loadCollaborators(admin, userManager) {
-    console.log(`🔄 Cargando colaboradores para: ${admin.organizacion}`);
     
     try {
         showLoadingState();
@@ -53,8 +44,6 @@ async function loadCollaborators(admin, userManager) {
             admin.organizacionCamelCase,
             true
         );
-        
-        console.log(`✅ ${colaboradores.length} colaboradores encontrados (incluyendo inhabilitados)`);
         
         localStorage.setItem('colaboradoresList', JSON.stringify(
             colaboradores.map(col => ({
@@ -198,7 +187,6 @@ function updateStats(collaborators) {
     `;
     
     document.getElementById('refreshStats')?.addEventListener('click', async () => {
-        console.log('🔄 Recargando colaboradores...');
         location.reload();
     });
 }
@@ -342,9 +330,7 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
 }
 
 // ========== EDITAR COLABORADOR ==========
-async function editUser(collaboratorId, collaboratorName, admin) {
-    console.log(`✏️ Editando colaborador: ${collaboratorId} - ${collaboratorName}`);
-    
+async function editUser(collaboratorId, collaboratorName, admin) {    
     const selectedCollaborator = {
         id: collaboratorId,
         nombreCompleto: collaboratorName,
@@ -355,7 +341,6 @@ async function editUser(collaboratorId, collaboratorName, admin) {
     };
     
     localStorage.setItem('selectedCollaborator', JSON.stringify(selectedCollaborator));
-    console.log('💾 Colaborador guardado en localStorage:', selectedCollaborator);
     
     window.location.href = `/users/admin/editUser/editUser.html?id=${collaboratorId}&org=${admin.organizacionCamelCase}`;
 }
@@ -456,9 +441,7 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
 }
 
 // ========== ACTUALIZAR PÁGINA CON INFO DEL ADMIN ==========
-function updatePageWithAdminInfo(admin) {
-    console.log('🎨 Actualizando página con datos del admin...');
-    
+function updatePageWithAdminInfo(admin) {    
     const mainTitle = document.querySelector('.section-header h1');
     if (mainTitle && admin.organizacion) {
         mainTitle.innerHTML = `
@@ -588,5 +571,3 @@ function showError(message) {
         </tr>
     `;
 }
-
-console.log('✅ Script de gestión de colaboradores cargado');

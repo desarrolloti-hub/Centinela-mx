@@ -101,7 +101,7 @@
     /* Familias de fuentes */
     --font-family-primary: 'Orbitron', sans-serif;
     /* Fuente principal */
-    --font-family-secondary: 'Orbitron', sans-serif;
+    --font-family-secondary: sans-serif;
     /* Fuente secundaria */
 
     /* ====== VARIABLES ESPECÍFICAS POR COMPONENTE ====== */
