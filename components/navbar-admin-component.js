@@ -388,7 +388,7 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* Sección de navegación */
+            /* Sección de navegación - MODIFICADA: ahora solo Áreas y Categorías */
             .nav-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -436,28 +436,6 @@ class NavbarComplete {
             .nav-item-text {
                 font-size: 15px;
                 flex-grow: 1;
-                font-family: 'Orbitron', sans-serif;
-            }
-            
-            .nav-item-percentage {
-                font-size: 14px;
-                font-weight: 600;
-                color: var(--color-accent-primary);
-                font-family: 'Orbitron', sans-serif;
-            }
-            
-            .nav-item-priority {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-top: 5px;
-            }
-            
-            .priority-item {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                font-size: 13px;
                 font-family: 'Orbitron', sans-serif;
             }
             
@@ -543,7 +521,7 @@ class NavbarComplete {
             }
             
             .admin-dropdown-options.active {
-                max-height: 350px;
+                max-height: 450px; /* Aumentado para dar espacio a más opciones */
                 opacity: 1;
                 overflow: visible;
             }
@@ -562,6 +540,7 @@ class NavbarComplete {
                 color: var(--color-text-primary);
                 font-weight: 500;
                 font-family: 'Orbitron', sans-serif;
+                word-break: break-word;
             }
             
             .admin-dropdown-option:hover {
@@ -575,6 +554,13 @@ class NavbarComplete {
                 text-align: center;
                 font-size: 16px;
                 color: var(--color-accent-primary);
+                flex-shrink: 0;
+            }
+            
+            .admin-dropdown-option span {
+                flex: 1;
+                white-space: normal;
+                word-break: break-word;
             }
             
             /* Opción especial para cerrar sesión */
@@ -640,6 +626,20 @@ class NavbarComplete {
                 body.menu-open {
                     overflow: hidden;
                 }
+                
+                /* Mejoras responsive para el dropdown */
+                .admin-dropdown-option {
+                    padding: 12px 12px;
+                    gap: 10px;
+                }
+                
+                .admin-dropdown-option i {
+                    font-size: 14px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 14px;
+                }
             }
             
             /* Responsive para móvil */
@@ -700,6 +700,47 @@ class NavbarComplete {
                     width: 22px;
                     height: 2.5px;
                 }
+                
+                /* Mejoras responsive para el dropdown en móvil */
+                .admin-dropdown-options {
+                    padding: 12px;
+                }
+                
+                .admin-dropdown-options.active {
+                    max-height: 500px;
+                }
+                
+                .admin-dropdown-option {
+                    padding: 14px 12px;
+                    gap: 12px;
+                }
+                
+                .admin-dropdown-option i {
+                    font-size: 16px;
+                    width: 24px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 15px;
+                    line-height: 1.4;
+                }
+                
+                /* Ajustes para la sección de administración */
+                .nav-section-title {
+                    font-size: 15px;
+                }
+                
+                .nav-item {
+                    padding: 12px 15px;
+                }
+                
+                .nav-item i {
+                    font-size: 16px;
+                }
+                
+                .nav-item-text {
+                    font-size: 14px;
+                }
             }
             
             /* Para pantallas muy pequeñas */
@@ -737,6 +778,15 @@ class NavbarComplete {
                 .hamburger-line {
                     width: 20px;
                     height: 2px;
+                }
+                
+                /* Ajustes extra para pantallas muy pequeñas */
+                .admin-dropdown-option {
+                    padding: 12px 10px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 14px;
                 }
             }
             
@@ -843,7 +893,7 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- SECCIÓN DE ADMINISTRACIÓN: ÁREAS Y PERSONALIZACIÓN -->
+                <!-- SECCIÓN DE ADMINISTRACIÓN: ÁREAS Y CATEGORÍAS (sin Personalización) -->
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <i class="fa-solid fa-gear"></i>
@@ -857,18 +907,10 @@ class NavbarComplete {
                             <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
                         </a>
 
-                        <div class="nav-items-container">
                         <!-- Botón para CATEGORIAS -->
                         <a href="/users/admin/categorias/categorias.html" class="nav-item" id="categoriasBtn">
                             <i class="fa-solid fa-tags"></i>
                             <span class="nav-item-text">Categorías</span>
-                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
-                        </a>
-                        
-                        <!-- Botón para PERSONALIZACIÓN DE COLORES -->
-                        <a href="/users/admin/themeManager/themeManager.html" class="nav-item" id="themeManagerBtn">
-                            <i class="fa-solid fa-palette"></i>
-                            <span class="nav-item-text">Personalización de colores</span>
                             <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
                         </a>
                     </div>
@@ -894,6 +936,11 @@ class NavbarComplete {
                         <a href="/users/admin/managementUser/managementUser.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Gestionar Usuarios</span>
+                        </a>
+                        <!-- Botón de Personalización de colores movido AQUÍ, antes de cerrar sesión -->
+                        <a href="/users/admin/themeManager/themeManager.html" class="admin-dropdown-option" id="themeManagerBtn">
+                            <i class="fa-solid fa-palette"></i>
+                            <span>Personalización de colores</span>
                         </a>
                         <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
                             <i class="fa-solid fa-right-from-bracket"></i>
@@ -976,7 +1023,15 @@ class NavbarComplete {
             });
         }
 
-        // Botón de Personalización de colores
+        // Botón de Categorías
+        const categoriasBtn = document.getElementById('categoriasBtn');
+        if (categoriasBtn) {
+            categoriasBtn.addEventListener('click', (e) => {
+                // La navegación se maneja automáticamente por el href
+            });
+        }
+
+        // Botón de Personalización de colores (ahora en el dropdown)
         const themeManagerBtn = document.getElementById('themeManagerBtn');
         if (themeManagerBtn) {
             themeManagerBtn.addEventListener('click', (e) => {

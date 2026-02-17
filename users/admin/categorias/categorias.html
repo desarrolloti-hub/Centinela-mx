@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD Categorías - Sistema Centinela</title>
+    <title>Gestión de Categorías - Sistema Centinela</title>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,7 +14,7 @@
 
     <!-- Fuentes del sistema Centinela -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
     <!-- ESTILOS DEL NAVBAR Y FOOTER (personalization.css) -->
@@ -32,11 +32,21 @@
 
     <!-- Contenedor principal con estilo oscuro -->
     <div class="container-fluid">
-        <!-- Header -->
+        <!-- Header mejorado con descripción -->
         <div class="header-container">
             <div class="header-title">
-                <h1><i class="fas fa-tags"></i>Gestión de Categorías</h1>
-                <p>Administra las categorías de tu organización</p>
+                <h1>
+                    <i class="fas fa-tags"></i>
+                    Gestión de Categorías
+                    <span id="badge-empresa" class="badge-empresa" style="display: none;">
+                        <i class="fas fa-building"></i>
+                        <span class="empresa-nombre"></span>
+                    </span>
+                </h1>
+                <div class="header-description">
+                    Administra las categorías y subcategorías de tu organización. 
+                    Organiza, clasifica y personaliza los elementos del sistema.
+                </div>
             </div>
             <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria">
                 <i class="fas fa-plus"></i>Nueva Categoría

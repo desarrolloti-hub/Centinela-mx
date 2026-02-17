@@ -23,14 +23,11 @@ async function inicializarCategoriaManager() {
         const { CategoriaManager } = await import('/clases/categoria.js');
         categoriaManager = new CategoriaManager();
 
-        console.log('✅ CategoriaManager cargado');
-        console.log('📁 Colección:', categoriaManager?.nombreColeccion);
-
         mostrarInfoEmpresa();
         await cargarCategorias();
         return true;
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('❌ Error al inicializar categorías:', error);
         return false;
     }
 }
@@ -47,24 +44,12 @@ function obtenerDatosEmpresa() {
 }
 
 function mostrarInfoEmpresa() {
-    const header = document.querySelector('.header-title h1');
-    if (header && !document.getElementById('badge-empresa')) {
-        const badge = document.createElement('span');
-        badge.id = 'badge-empresa';
-        badge.style.cssText = `
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(16,185,129,0.1);
-            border: 1px solid rgba(16,185,129,0.3);
-            color: #10b981;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin-left: 12px;
-        `;
-        badge.innerHTML = `<i class="fas fa-building"></i> ${empresaActual.nombre}`;
-        header.appendChild(badge);
+    const badge = document.getElementById('badge-empresa');
+    const empresaNombreSpan = badge?.querySelector('.empresa-nombre');
+    
+    if (badge && empresaNombreSpan) {
+        empresaNombreSpan.textContent = empresaActual.nombre || 'Mi Empresa';
+        badge.style.display = 'inline-flex';
     }
 }
 
@@ -219,7 +204,7 @@ window.eliminarCategoria = async function (categoriaId) {
     // Contar subcategorías
     let subcategoriasIds = [];
     let numSub = 0;
-    
+
     if (categoria.subcategorias) {
         if (typeof categoria.subcategorias === 'object') {
             if (categoria.subcategorias.forEach) {
@@ -306,8 +291,6 @@ window.eliminarCategoria = async function (categoriaId) {
 
             // 🔥 PASO 1: Eliminar todas las subcategorías UNA POR UNA
             if (numSub > 0) {
-                console.log(`🗑️ Eliminando ${numSub} subcategorías de "${categoria.nombre}"...`);
-                
                 for (const subId of subcategoriasIds) {
                     try {
                         // Eliminar subcategoría del objeto local
@@ -319,7 +302,6 @@ window.eliminarCategoria = async function (categoriaId) {
                             delete categoria.subcategorias[subId];
                         }
                     } catch (subError) {
-                        console.warn(`Error eliminando subcategoría ${subId}:`, subError);
                         // Continuamos aunque una subcategoría falle
                     }
                 }
@@ -331,13 +313,10 @@ window.eliminarCategoria = async function (categoriaId) {
                     color: categoria.color,
                     subcategorias: {} // Vaciar todas las subcategorías
                 });
-                
-                console.log(`✅ Subcategorías eliminadas correctamente`);
             }
 
             // 🔥 PASO 3: AHORA SÍ, eliminar la categoría (ya no tiene subcategorías)
             await categoriaManager.eliminarCategoria(categoriaId);
-            console.log(`✅ Categoría "${categoria.nombre}" eliminada correctamente`);
 
             // Cerrar loading
             Swal.close();
@@ -373,9 +352,9 @@ window.eliminarCategoria = async function (categoriaId) {
 
         } catch (error) {
             console.error('❌ Error al eliminar categoría:', error);
-            
+
             Swal.close();
-            
+
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -445,7 +424,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
             }
         }
     } catch (e) {
-        console.error('Error al obtener subcategoría:', e);
+        // Silencioso
     }
 
     // Si no encontramos la subcategoría, intentamos buscarla en el array
@@ -467,7 +446,6 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
     subcategoriaNombre = subcategoria?.nombre || 'Sin nombre';
 
     if (!subcategoria) {
-        console.error('Subcategoría no encontrada:', { categoriaId, subcategoriaId, categoria });
         Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -572,7 +550,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId) {
             }
 
         } catch (error) {
-            console.error('Error al eliminar subcategoría:', error);
+            console.error('❌ Error al eliminar subcategoría:', error);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -615,7 +593,6 @@ async function cargarCategorias() {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">Cargando categorías...</td></tr>';
 
         categoriasCache = await categoriaManager.obtenerTodasCategorias();
-        console.log('📦 Categorías cargadas:', categoriasCache?.length || 0);
 
         if (!categoriasCache || categoriasCache.length === 0) {
             tbody.innerHTML = `
@@ -642,7 +619,7 @@ async function cargarCategorias() {
         }
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ Error al cargar categorías:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
@@ -752,7 +729,7 @@ async function crearFilaCategoria(categoria, tbody) {
 }
 
 // =============================================
-// CARGAR SUBCATEGORÍAS
+// CARGAR SUBCATEGORÍAS - VERSIÓN RESPONSIVE MEJORADA
 // =============================================
 async function cargarSubcategorias(categoriaId) {
     const categoria = categoriasCache.find(c => c.id === categoriaId);
@@ -760,8 +737,6 @@ async function cargarSubcategorias(categoriaId) {
 
     const container = document.getElementById(`sub-content-${categoriaId}`);
     if (!container) return;
-
-    console.log(`🔍 Cargando subcategorías de: ${categoria.nombre}`);
 
     // OBTENER SUBCATEGORÍAS
     let subcategoriasArray = [];
@@ -793,11 +768,8 @@ async function cargarSubcategorias(categoriaId) {
             }
         }
     } catch (e) {
-        console.warn('Error al obtener subcategorías:', e);
         subcategoriasArray = [];
     }
-
-    console.log(`📋 Encontradas: ${subcategoriasArray.length} subcategorías`);
 
     if (subcategoriasArray.length === 0) {
         container.innerHTML = `
@@ -816,15 +788,15 @@ async function cargarSubcategorias(categoriaId) {
     subcategoriasArray.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 
     let html = `
-        <div style="background:rgba(0,0,0,0.2); border-radius:8px; overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse; min-width:600px;">
+        <div class="subcategorias-tabla-wrapper">
+            <table class="subcategorias-tabla">
                 <thead>
-                    <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
-                        <th style="padding:12px; text-align:left; color:#9ca3af;">#</th>
-                        <th style="padding:12px; text-align:left; color:#9ca3af;">Nombre</th>
-                        <th style="padding:12px; text-align:left; color:#9ca3af;">Descripción</th>
-                        <th style="padding:12px; text-align:left; color:#9ca3af;">Color</th>
-                        <th style="padding:12px; text-align:left; color:#9ca3af;">Acciones</th>
+                    <tr>
+                        <th>#</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Color</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -835,27 +807,29 @@ async function cargarSubcategorias(categoriaId) {
         const hereda = sub.heredaColor ? true : false;
 
         html += `
-            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                <td style="padding:12px; color:#9ca3af;">${index + 1}</td>
-                <td style="padding:12px;">
-                    <div style="display:flex; align-items:center; flex-wrap:wrap;">
-                        <span style="display:inline-block; width:12px; height:12px; background:${colorSub}; border-radius:4px; margin-right:8px;"></span>
-                        <span style="color:white; margin-right:8px;">${escapeHTML(sub.nombre || 'Sin nombre')}</span>
+            <tr>
+                <td data-label="#">${index + 1}</td>
+                <td data-label="Nombre">
+                    <div class="subcategoria-nombre-contenedor">
+                        <span class="color-indicator" style="background-color: ${colorSub}; width:12px; height:12px;"></span>
+                        <span class="subcategoria-nombre-texto">${escapeHTML(sub.nombre || 'Sin nombre')}</span>
                         ${hereda ?
-                '<span style="padding:2px 6px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:12px; font-size:10px;">Hereda</span>' :
-                sub.color ? '<span style="padding:2px 6px; background:rgba(249,115,22,0.1); color:#f97316; border-radius:12px; font-size:10px;">Propio</span>' : ''
+                '<span class="subcategoria-badge badge-hereda">Hereda</span>' :
+                sub.color ? '<span class="subcategoria-badge badge-propio">Propio</span>' : ''
             }
                     </div>
                 </td>
-                <td style="padding:12px; color:#d1d5db;">${escapeHTML(sub.descripcion) || '<span style="color:#6b7280;">-</span>'}</td>
-                <td style="padding:12px;">
-                    <div style="display:flex; align-items:center; gap:4px;">
-                        <span style="display:inline-block; width:16px; height:16px; background:${colorSub}; border-radius:4px;"></span>
-                        <span style="color:#9ca3af; font-size:11px;">${colorSub}</span>
+                <td data-label="Descripción">
+                    <span class="subcategoria-descripcion">${escapeHTML(sub.descripcion) || '<span style="color:#6b7280;">-</span>'}</span>
+                </td>
+                <td data-label="Color">
+                    <div class="subcategoria-color-contenedor">
+                        <span class="subcategoria-color-muestra" style="background-color: ${colorSub};"></span>
+                        <span class="subcategoria-color-texto">${colorSub}</span>
                     </div>
                 </td>
-                <td style="padding:12px;">
-                    <div style="display:flex; gap:4px;">
+                <td data-label="Acciones">
+                    <div class="subcategoria-acciones">
                         <button class="btn" onclick="window.verDetallesSubcategoria('${categoriaId}', '${sub.id}')" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -923,8 +897,6 @@ function escapeHTML(text) {
 // INICIALIZACIÓN
 // =============================================
 document.addEventListener('DOMContentLoaded', async function () {
-    console.log('🚀 Inicializando sistema de categorías...');
-
     window.addEventListener('click', function (e) {
         if (e.target.classList.contains('modal')) {
             cerrarModal(e.target.id);

@@ -119,7 +119,7 @@ body {
 }
 
 /* =============================================
-   HEADER Y TÍTULOS
+   HEADER Y TÍTULOS - MEJORADO (SIN ELEMENTOS DECORATIVOS)
    ============================================= */
 .header-container {
     background: rgba(15, 15, 15, 0.9);
@@ -133,30 +133,115 @@ body {
     align-items: center;
     flex-wrap: wrap;
     gap: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ELIMINADO: efecto de brillo giratorio */
+
+.header-title {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-width: 250px;
 }
 
 .header-title h1 {
     font-family: var(--font-primary);
     color: var(--color-text-primary);
-    font-size: clamp(22px, 4vw, 26px);
+    font-size: clamp(24px, 4vw, 32px);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0;
+    letter-spacing: 2px;
+    margin: 0 0 8px 0;
     display: flex;
     align-items: center;
     gap: 12px;
+    text-shadow: 0 0 10px var(--color-accent-primary);
 }
 
 .header-title h1 i {
     color: var(--color-accent-primary);
-    font-size: 24px;
+    font-size: 28px;
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
 
-.header-title p {
-    color: var(--color-text-dim);
+.header-title .header-description {
+    color: var(--color-text-secondary);
     font-family: var(--font-secondary);
-    margin-top: 5px;
     font-size: 14px;
+    line-height: 1.6;
+    max-width: 600px;
+    padding-left: 40px;
+    position: relative;
+}
+
+/* ELIMINADO: línea decorativa de la descripción */
+
+/* Badge de empresa - MEJORADO PARA RESPONSIVE */
+.badge-empresa {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.1);
+    border: 1px solid rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3);
+    color: var(--color-accent-primary);
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-family: var(--font-secondary);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(5px);
+    transition: all var(--transition-default);
+    margin-left: 12px;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.badge-empresa i {
+    font-size: 14px;
+}
+
+.badge-empresa .empresa-nombre {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    white-space: nowrap;
+}
+
+/* Responsive para el badge */
+@media (max-width: 768px) {
+    .badge-empresa {
+        margin-left: 0;
+        margin-top: 8px;
+        width: 100%;
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
+        padding: 8px 12px;
+    }
+    
+    .badge-empresa .empresa-nombre {
+        max-width: none;
+        white-space: normal;
+        word-break: break-word;
+    }
+    
+    .header-title .header-description {
+        padding-left: 0;
+        padding-top: 20px;
+        font-size: 13px;
+    }
+    
+    /* ELIMINADO: línea decorativa responsive */
+}
+
+@media (max-width: 480px) {
+    .badge-empresa {
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
 }
 
 /* =============================================
@@ -183,13 +268,14 @@ body {
     text-decoration: none;
     position: relative;
     overflow: hidden;
+    z-index: 1;
 }
 
 .btn-nueva-categoria:hover {
     transform: translateY(-2px);
     background: linear-gradient(145deg, #1a1a1a, #0f0f0f);
     box-shadow: var(--shadow-glow);
-    border-color: #050404;
+    border-color: var(--color-accent-primary);
 }
 
 .btn-nueva-categoria i {
@@ -211,6 +297,7 @@ body {
     transform: rotate(30deg);
     transition: all 0.5s ease;
     opacity: 0;
+    z-index: -1;
 }
 
 .btn-nueva-categoria:hover::after {
@@ -258,11 +345,6 @@ body {
 .card-body {
     padding: 20px;
 }
-
-/* =============================================
-   TOGGLE SWITCH PERSONALIZADO - ELIMINADO
-   ============================================= */
-/* Sección eliminada - ya no se usa el toggle de eliminadas */
 
 /* =============================================
    TABLA PRINCIPAL - CORREGIDA
@@ -473,6 +555,8 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .subcategorias-header h6 {
@@ -506,6 +590,187 @@ body {
 .btn-agregar-sub:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-glow-green);
+}
+
+/* =============================================
+   TABLA DE SUBCATEGORÍAS - VERSIÓN RESPONSIVE MEJORADA
+   ============================================= */
+.subcategorias-tabla-wrapper {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-medium);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.subcategorias-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 100%;
+}
+
+.subcategorias-tabla th {
+    padding: 12px;
+    text-align: left;
+    color: #9ca3af;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+}
+
+.subcategorias-tabla td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--color-text-secondary);
+    vertical-align: middle;
+}
+
+/* Columna de nombre con ancho flexible */
+.subcategorias-tabla td:nth-child(2) {
+    max-width: 250px;
+    min-width: 150px;
+}
+
+/* Columna de descripción - ahora responsiva */
+.subcategorias-tabla td:nth-child(3) {
+    max-width: 300px;
+    min-width: 200px;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.subcategoria-nombre-contenedor {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.subcategoria-nombre-texto {
+    color: white;
+    word-break: break-word;
+}
+
+.subcategoria-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.badge-hereda {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.badge-propio {
+    background: rgba(249, 115, 22, 0.1);
+    color: #f97316;
+}
+
+.subcategoria-descripcion {
+    color: #d1d5db;
+    word-break: break-word;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+.subcategoria-color-contenedor {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.subcategoria-color-muestra {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-small);
+}
+
+.subcategoria-color-texto {
+    color: #9ca3af;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.subcategoria-acciones {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+/* Vista móvil para subcategorías */
+@media (max-width: 768px) {
+    .subcategorias-tabla,
+    .subcategorias-tabla thead,
+    .subcategorias-tabla tbody,
+    .subcategorias-tabla tr,
+    .subcategorias-tabla td {
+        display: block;
+    }
+
+    .subcategorias-tabla thead {
+        display: none;
+    }
+
+    .subcategorias-tabla tr {
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: var(--radius-medium);
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid var(--color-border-subtle);
+    }
+
+    .subcategorias-tabla td {
+        display: flex;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .subcategorias-tabla td:last-child {
+        border-bottom: none;
+    }
+
+    .subcategorias-tabla td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-accent-primary);
+        font-size: 11px;
+        text-transform: uppercase;
+        min-width: 90px;
+        width: 90px;
+        flex-shrink: 0;
+    }
+
+    .subcategorias-tabla td:nth-child(2),
+    .subcategorias-tabla td:nth-child(3) {
+        max-width: none;
+        min-width: 0;
+    }
+
+    .subcategoria-nombre-contenedor {
+        flex: 1;
+    }
+
+    .subcategoria-descripcion {
+        flex: 1;
+    }
+
+    .subcategoria-color-contenedor {
+        flex: 1;
+    }
+
+    .subcategoria-acciones {
+        flex: 1;
+        justify-content: flex-start;
+    }
 }
 
 /* =============================================
@@ -616,6 +881,8 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-top: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 .pagination-info {
@@ -628,6 +895,7 @@ body {
     display: flex;
     gap: 5px;
     list-style: none;
+    flex-wrap: wrap;
 }
 
 .page-link {
@@ -679,6 +947,8 @@ body {
 .modal-dialog {
     width: 90%;
     max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .modal-content {
@@ -696,6 +966,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 20;
 }
 
 .modal-title {
@@ -718,6 +991,21 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+    transition: color var(--transition-fast);
+}
+
+.btn-close:hover {
+    color: var(--color-accent-danger);
 }
 
 /* =============================================
@@ -757,6 +1045,8 @@ body {
     }
 }
 
+/* ELIMINADO: animación rotate que ya no se usa */
+
 /* =============================================
    RESPONSIVE DESIGN
    ============================================= */
@@ -787,6 +1077,7 @@ body {
 
     .header-title h1 {
         font-size: 20px;
+        flex-wrap: wrap;
     }
 
     .btn-nueva-categoria {
@@ -835,6 +1126,17 @@ body {
 
     .color-display {
         padding: 4px 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-title h1 {
+        font-size: 18px;
+        gap: 8px;
+    }
+    
+    .header-title h1 i {
+        font-size: 20px;
     }
 }
 

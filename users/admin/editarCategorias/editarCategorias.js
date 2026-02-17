@@ -23,9 +23,6 @@ async function inicializarCategoriaManager() {
         const { CategoriaManager } = await import('/clases/categoria.js');
         categoriaManager = new CategoriaManager();
 
-        console.log('✅ CategoriaManager cargado correctamente');
-        console.log('📁 Colección:', categoriaManager?.nombreColeccion);
-
         return true;
     } catch (error) {
         console.error('❌ Error al cargar CategoriaManager:', error);
@@ -75,7 +72,6 @@ function obtenerDatosEmpresa() {
             logo: organizacionLogo || userData.fotoOrganizacion || ''
         };
 
-        console.log('📊 Datos de empresa para edición:', empresaActual);
     } catch (error) {
         console.error('Error obteniendo datos de empresa:', error);
         empresaActual = { id: '', nombre: 'No especificada', camelCase: '' };
@@ -83,8 +79,6 @@ function obtenerDatosEmpresa() {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-    console.log('🚀 Inicializando editor de categorías...');
-
     const exito = await inicializarCategoriaManager();
     if (!exito) return;
 
@@ -150,7 +144,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 const subNombre = subcategorias.find(s => s.id === editarSubcategoriaId)?.nombre || 'subcategoría';
                 mostrarNotificacion(`✏️ Editando: ${subNombre}`, 'info');
             } else {
-                console.error('Subcategoría no encontrada:', editarSubcategoriaId);
                 mostrarNotificacion('Error: Subcategoría no encontrada', 'error');
             }
         }, 600);
@@ -220,9 +213,6 @@ async function cargarCategoria(id) {
             return;
         }
 
-        console.log('📦 Categoría cargada:', categoriaActual);
-        console.log('📁 Subcategorías (objeto):', categoriaActual.subcategorias);
-
         // Convertir objeto de subcategorías a array
         subcategorias = [];
         
@@ -248,13 +238,6 @@ async function cargarCategoria(id) {
 
         actualizarUICategoria();
         cargarSubcategorias();
-
-        console.log('✅ Categoría cargada:', {
-            id: categoriaActual.id,
-            nombre: categoriaActual.nombre,
-            subcategorias: subcategorias.length,
-            color: categoriaActual.color
-        });
 
     } catch (error) {
         console.error('Error al cargar categoría:', error);
