@@ -862,4 +862,24 @@ h6 i {
     color: var(--color-text-primary) !important;
     transform: rotate(90deg) !important;
 }
-
+  /* Estilos personalizados */
+        .organizacion-info {
+            border-left: 4px solid #3498db;
+            background-color: #1d1d1d !important;
+        }
+        
+        .organizacion-info i.fa-building {
+            color: #2c3e50;
+        }
+        
+        /* Para mostrar nombres largos */
+        select#responsable option {
+            white-space: normal !important;
+            word-wrap: break-word;
+            padding: 8px 4px;
+        }
+        
+        .form-select {
+            max-height: 200px;
+            overflow-y: auto;
+        }
