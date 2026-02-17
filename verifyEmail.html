@@ -531,8 +531,6 @@
         window.clearStorageAndRedirect = function(event) {
             event.preventDefault();
             
-            console.log('🧹 Limpiando localStorage y sessionStorage...');
-            
             // Limpiar localStorage
             localStorage.removeItem('userData');
             localStorage.removeItem('isLoggedIn');
@@ -556,9 +554,6 @@
             sessionStorage.removeItem('sessionOrganizacionCamelCase');
             sessionStorage.removeItem('sessionUser');
             sessionStorage.removeItem('sessionRole');
-            
-            console.log('✅ Storage limpiado correctamente');
-            console.log('🔄 Redirigiendo al login...');
             
             // Redirigir al login
             window.location.href = '/users/visitors/login/login.html';
@@ -587,12 +582,6 @@
         // Obtener parámetros de la URL
         function getUrlParams() {
             const params = new URLSearchParams(window.location.search);
-            console.log('Todos los parámetros de la URL:');
-            
-            for (let [key, value] of params) {
-                console.log(`  ${key}: ${value}`);
-            }
-            
             return {
                 mode: params.get('mode'),
                 oobCode: params.get('oobCode'),
@@ -650,8 +639,6 @@
 
         // ========== FUNCIÓN PARA RESTABLECER CONTRASEÑA ==========
         window.resetPassword = async function() {
-            console.log('resetPassword llamado');
-            
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const resetBtn = document.getElementById('resetBtn');
@@ -683,10 +670,8 @@
             }
             
             const codeToUse = actionCode;
-            console.log('Cambiando contraseña con código:', codeToUse);
             
             if (!codeToUse) {
-                console.error('❌ No hay actionCode disponible');
                 resetMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error: Código de verificación no encontrado.';
                 resetMessage.className = 'message message-error';
                 resetMessage.style.display = 'block';
@@ -702,8 +687,6 @@
             try {
                 await confirmPasswordReset(auth, codeToUse, newPassword);
                 
-                console.log('✅ Contraseña cambiada exitosamente');
-                
                 document.getElementById('status').className = 'status-icon success';
                 document.getElementById('status').innerHTML = '<i class="fas fa-check-circle"></i>';
                 document.getElementById('title').textContent = '¡Contraseña Cambiada!';
@@ -716,8 +699,6 @@
                 document.getElementById('actionButtons').style.display = 'block';
                 
             } catch (error) {
-                console.error('❌ Error cambiando contraseña:', error);
-                
                 resetBtn.disabled = false;
                 resetBtnText.style.display = 'inline';
                 resetBtnLoader.style.display = 'none';
@@ -743,27 +724,17 @@
 
         // ========== PROCESAR LA SOLICITUD ==========
         async function processRequest() {
-            console.log('✅ Auth importado desde firebase-config:', auth);
-            
             const params = getUrlParams();
-            console.log('Parámetros procesados:', params);
-            
             const actionCodeParam = params.oobCode;
             
             if (!actionCodeParam) {
-                console.error('No se encontró oobCode en los parámetros');
                 showNoParameters();
                 return;
             }
             
             actionCode = actionCodeParam;
             
-            console.log('Action code obtenido:', actionCodeParam);
-            console.log('Mode recibido:', params.mode);
-            
             const isResetPassword = params.mode === 'resetPassword' || params.mode === 'action' || params.mode === 'recoverEmail';
-            
-            console.log('Es reset password?', isResetPassword);
             
             if (isResetPassword || actionCodeParam) {
                 document.getElementById('status').className = 'status-icon warning';
