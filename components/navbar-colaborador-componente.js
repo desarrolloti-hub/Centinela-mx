@@ -10,7 +10,6 @@ class NavbarComplete {
     // Inicializa el navbar evitando duplicados
     init() {
         if (window.NavbarCompleteLoaded) {
-            console.log('🔄 Navbar ya cargado');
             return;
         }
 
@@ -31,7 +30,6 @@ class NavbarComplete {
             this.setupFunctionalities(); 
             this.loadUserDataFromLocalStorage();
             this.updateNavbarWithUserData();
-            console.log('✅ Navbar completo inicializado con datos del usuario');
         } catch (error) {
             console.error('❌ Error:', error);
         }
@@ -927,48 +925,29 @@ class NavbarComplete {
                 return false;
             }
             
-            console.log('🔍 VERIFICANDO localStorage:');
-            console.log('   - isLoggedIn:', localStorage.getItem('isLoggedIn'));
-            console.log('   - userData:', localStorage.getItem('userData') ? '✅ Existe' : '❌ No existe');
-            console.log('   - userFoto:', localStorage.getItem('userFoto') ? '✅ Existe' : '❌ No existe');
-            console.log('   - userFoto length:', localStorage.getItem('userFoto') ? localStorage.getItem('userFoto').length : 0);
-            console.log('   - organizacionLogo:', localStorage.getItem('organizacionLogo') ? '✅ Existe' : '❌ No existe');
-            console.log('   - organizacionLogo length:', localStorage.getItem('organizacionLogo') ? localStorage.getItem('organizacionLogo').length : 0);
-            
             const userDataString = localStorage.getItem('userData');
             
             if (userDataString) {
                 const userData = JSON.parse(userDataString);
-                
-                console.log('📦 Contenido de userData:', {
-                    tieneFotoUsuario: !!userData.fotoUsuario,
-                    fotoUsuarioLength: userData.fotoUsuario ? userData.fotoUsuario.length : 0,
-                    tieneFotoOrganizacion: !!userData.fotoOrganizacion,
-                    fotoOrganizacionLength: userData.fotoOrganizacion ? userData.fotoOrganizacion.length : 0
-                });
                 
                 let fotoUsuario = null;
                 let fotoOrganizacion = null;
                 
                 if (userData.fotoUsuario && userData.fotoUsuario.length > 10) {
                     fotoUsuario = userData.fotoUsuario;
-                    console.log('📸 Usando fotoUsuario de userData');
                 } else {
                     const userFotoKey = localStorage.getItem('userFoto');
                     if (userFotoKey && userFotoKey.length > 10) {
                         fotoUsuario = userFotoKey;
-                        console.log('📸 Usando userFoto de key individual');
                     }
                 }
                 
                 if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) {
                     fotoOrganizacion = userData.fotoOrganizacion;
-                    console.log('🏢 Usando fotoOrganizacion de userData');
                 } else {
                     const orgLogoKey = localStorage.getItem('organizacionLogo');
                     if (orgLogoKey && orgLogoKey.length > 10) {
                         fotoOrganizacion = orgLogoKey;
-                        console.log('🏢 Usando organizacionLogo de key individual');
                     }
                 }
                 
@@ -987,17 +966,6 @@ class NavbarComplete {
                     ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
                 };
                 
-                console.log('✅ Usuario cargado DESDE localStorage CON IMÁGENES:', {
-                    nombre: this.currentUser.nombreCompleto,
-                    email: this.currentUser.correoElectronico,
-                    cargo: this.currentUser.cargo,
-                    organizacion: this.currentUser.organizacion,
-                    tieneFotoUsuario: !!this.currentUser.fotoUsuario,
-                    fotoUsuarioLength: this.currentUser.fotoUsuario ? this.currentUser.fotoUsuario.length : 0,
-                    tieneFotoOrganizacion: !!this.currentUser.fotoOrganizacion,
-                    fotoOrganizacionLength: this.currentUser.fotoOrganizacion ? this.currentUser.fotoOrganizacion.length : 0
-                });
-                
                 this.userRole = this.currentUser.cargo?.toLowerCase() || 'colaborador';
                 return true;
             }
@@ -1014,7 +982,6 @@ class NavbarComplete {
             };
             
             if (this.currentUser.nombreCompleto && this.currentUser.cargo) {
-                console.log('✅ Usuario cargado desde claves individuales localStorage');
                 this.userRole = this.currentUser.cargo?.toLowerCase() || 'colaborador';
                 return true;
             }
@@ -1031,7 +998,6 @@ class NavbarComplete {
     // Actualiza el navbar con los datos del usuario
     updateNavbarWithUserData() {
         if (!this.currentUser) {
-            console.log('⚠️ No hay datos de usuario para mostrar');
             const userName = document.getElementById('userName');
             const userRole = document.getElementById('userRole');
             const userEmail = document.getElementById('userEmail');
@@ -1044,8 +1010,6 @@ class NavbarComplete {
             
             return;
         }
-
-        console.log('🔄 Actualizando navbar con datos del usuario...');
 
         this.updateOrganizationLogo();
         this.updateUserMenuInfo();
@@ -1068,10 +1032,8 @@ class NavbarComplete {
             orgTextLogo.style.display = 'none';
             organizationLogoImg.title = this.currentUser.organizacion;
             
-            console.log('🖼️ Logo de organización cargado desde localStorage (Base64) - Length:', this.currentUser.fotoOrganizacion.length);
             
             organizationLogoImg.onload = () => {
-                console.log('✅ Logo de organización cargado exitosamente');
             };
             organizationLogoImg.onerror = (e) => {
                 console.error('❌ Error al cargar logo de organización:', e);
@@ -1091,7 +1053,6 @@ class NavbarComplete {
         
         if (!organizationLogoImg || !orgTextLogo) return;
         
-        console.log('📝 Usando iniciales para logo de organización');
         organizationLogoImg.style.display = 'none';
         orgTextLogo.style.display = 'flex';
         
@@ -1131,10 +1092,8 @@ class NavbarComplete {
                 profilePlaceholder.style.display = 'none';
                 userProfileImg.alt = `Foto de ${this.currentUser.nombreCompleto}`;
                 
-                console.log('🖼️ Foto de perfil cargada desde localStorage (Base64) - Length:', this.currentUser.fotoUsuario.length);
                 
                 userProfileImg.onload = () => {
-                    console.log('✅ Foto de perfil cargada exitosamente');
                 };
                 userProfileImg.onerror = (e) => {
                     console.error('❌ Error al cargar foto de perfil:', e);
@@ -1153,7 +1112,6 @@ class NavbarComplete {
         
         if (!userProfileImg || !profilePlaceholder) return;
         
-        console.log('👤 Usando placeholder para foto de perfil');
         userProfileImg.style.display = 'none';
         profilePlaceholder.style.display = 'flex';
         
@@ -1316,7 +1274,6 @@ class NavbarComplete {
 
     // Realiza el cierre de sesión COMPLETO
     async performLogout() {
-        console.log('🚪 Cerrando sesión...');
         
         try {
             this.clearAllStorage();
@@ -1337,7 +1294,6 @@ class NavbarComplete {
             sessionStorage.clear();
             this.clearSessionCookies();
             this.clearIndexedDB();
-            console.log('🗑️ Todos los datos de sesión eliminados');
         } catch (error) {
             console.warn('⚠️ Error al limpiar almacenamiento:', error);
         }
