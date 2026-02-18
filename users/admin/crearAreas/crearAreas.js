@@ -618,8 +618,7 @@ class CrearAreaController {
                 title: '¡Área creada exitosamente!',
                 html: `
                     <div style="text-align: center;">
-                        <i class="fas fa-check-circle" style="font-size: 64px; color: var(--color-success); margin-bottom: 20px;"></i>
-                        <h4 style="color: var(--color-success); margin-bottom: 20px;">¡Área creada correctamente!</h4>
+                        
                         <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 8px; text-align: left;">
                             <p><strong>Nombre del Área:</strong> ${nuevaArea.nombreArea}</p>
                             <p><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</p>

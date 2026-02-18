@@ -35,6 +35,10 @@
     /* FUENTES */
     --font-family-primary: 'Orbitron', sans-serif;
     --font-family-secondary: sans-serif;
+    
+    /* ILUMINACIÓN - VALORES POR DEFECTO (TEMA OSCURO) */
+    --glow-intensity: 0.8;
+    --glow-color: var(--color-accent-primary);
 }
 
 /* =============================================
@@ -47,6 +51,7 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 20px;
+    
 }
 
 .container-fluid {
@@ -59,7 +64,7 @@ body {
 }
 
 /* =============================================
-   HEADER PRINCIPAL
+   HEADER PRINCIPAL CON ILUMINACIÓN DINÁMICA
    ============================================= */
 .row.mb-4:first-child {
     padding: 20px 25px;
@@ -78,19 +83,67 @@ h1.h3 {
     margin: 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
+    
+    
+    /* ✨ ILUMINACIÓN DINÁMICA QUE CAMBIA CON EL TEMA ✨ */
+    text-shadow: 0 0 8px var(--color-accent-primary),
+                 0 0 16px var(--color-accent-primary),
+                 0 0 24px var(--color-accent-primary);
+    animation: titleGlow 4s infinite alternate ease-in-out;
 }
 
 h1.h3 i {
-    color: var(--color-accent-primary);
+   
     font-size: 24px;
+    
+    /* ✨ ILUMINACIÓN PARA EL ICONO ✨ */
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+}
+
+/* ✨ ANIMACIÓN SUTIL PARA EL TÍTULO ✨ */
+@keyframes titleGlow {
+    0% {
+        text-shadow: 0 0 5px var(--color-accent-primary),
+                     0 0 10px var(--color-accent-primary),
+                     0 0 15px var(--color-accent-primary);
+        opacity: 0.95;
+    }
+    50% {
+        text-shadow: 0 0 10px var(--color-accent-primary),
+                     0 0 20px var(--color-accent-primary),
+                     0 0 30px var(--color-accent-primary);
+        opacity: 1;
+    }
+    100% {
+        text-shadow: 0 0 5px var(--color-accent-primary),
+                     0 0 10px var(--color-accent-primary),
+                     0 0 15px var(--color-accent-primary);
+        opacity: 0.95;
+    }
 }
 
 .text-muted {
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary);
     margin-top: 5px;
-    font-size: 14px;
+    font-size: 1.2rem;
+    position: relative;
+      margin-bottom: 30px; /* Reducido para acercar título al formulario */
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--color-border-light);
+    
+    /* ✨ ILUMINACIÓN SUTIL PARA LA DESCRIPCIÓN ✨ */
+    
+    opacity: 0.9;
+}
+
+/* ✨ EFECTO EXTRA PARA EL ÍCONO DE INFO ✨ */
+.text-muted i {
+    color: var(--color-accent-primary);
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+    margin-right: 6px;
 }
 
 /* =============================================
@@ -713,6 +766,38 @@ h6 i {
 }
 
 /* =============================================
+   ILUMINACIÓN POR TEMA (CLARO/OSCURO)
+   ============================================= */
+
+/* TEMA OSCURO (POR DEFECTO) - YA CONFIGURADO EN :ROOT */
+
+/* TEMA CLARO - Cuando se active, la iluminación se adapta */
+[data-theme="light"] {
+    --glow-intensity: 0.5;
+    /* En tema claro, la iluminación es más sutil */
+}
+
+[data-theme="light"] h1.h3 {
+    text-shadow: 0 0 5px rgba(192, 192, 192, 0.5),
+                 0 0 10px rgba(192, 192, 192, 0.3),
+                 0 0 15px rgba(192, 192, 192, 0.2);
+}
+
+[data-theme="light"] .text-muted {
+    text-shadow: 0 0 3px rgba(192, 192, 192, 0.3);
+}
+
+/* TEMA DE ALTO CONTRASTE */
+[data-theme="high-contrast"] h1.h3 {
+    text-shadow: 0 0 10px #ffffff,
+                 0 0 20px #ffffff;
+}
+
+[data-theme="high-contrast"] .text-muted {
+    text-shadow: 0 0 5px #ffffff;
+}
+
+/* =============================================
    ESTILOS PARA SWEETALERT2 - TEMA OSCURO CENTINELA
    ============================================= */
 
@@ -921,4 +1006,40 @@ select#responsable option {
         0 0 20px var(--color-accent-primary),
         0 0 30px var(--color-accent-primary) !important;
     color: var(--navbar-logo-text) !important;
+}
+/* =============================================
+   AJUSTE PARA NAVBAR EN RESPONSIVE
+   ============================================= */
+
+/* Ajuste general para que el contenido no quede debajo del navbar */
+body {
+    padding-top: 80px !important; /* Espacio para el navbar fijo */
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-top: 70px !important; /* Un poco menos en móvil */
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    
+    /* Asegurar que el header tenga suficiente espacio */
+    .row.mb-4:first-child,
+    .header-container,
+    .d-flex.flex-column.align-items-center.text-center {
+        margin-top: 10px !important;
+        padding-top: 10px !important;
+    }
+    
+    /* Ajustar el contenedor principal */
+    .container-fluid {
+        margin-top: 0 !important;
+        padding-top: 15px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding-top: 60px !important; /* Aún menos en móvil pequeño */
+    }
 }
