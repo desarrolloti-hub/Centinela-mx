@@ -228,8 +228,8 @@ h1.h3 i {
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary);
     margin-top: 5px;
-    font-size: 14px;
-    text-shadow: 0 0 5px var(--color-accent-primary);
+    font-size: 1.2rem;
+    
       margin-bottom: 30px; /* Reducido para acercar título al formulario */
     padding-bottom: 15px;
     border-bottom: 2px solid var(--color-border-light);
