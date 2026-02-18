@@ -128,14 +128,14 @@ h1.h3 i {
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary);
     margin-top: 5px;
-    font-size: 14px;
+    font-size: 1.2rem;
     position: relative;
       margin-bottom: 30px; /* Reducido para acercar título al formulario */
     padding-bottom: 15px;
     border-bottom: 2px solid var(--color-border-light);
     
     /* ✨ ILUMINACIÓN SUTIL PARA LA DESCRIPCIÓN ✨ */
-    text-shadow: 0 0 5px var(--color-accent-primary);
+    
     opacity: 0.9;
 }
 

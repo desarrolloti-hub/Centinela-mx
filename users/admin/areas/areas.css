@@ -55,7 +55,7 @@
 .header-title .header-description {
     color: var(--color-text-secondary);
     font-family: var(--font-family-secondary);
-    font-size: 14px;
+    font-size: 1.2rem;
     line-height: 1.6;
     margin: 0 auto;
     position: relative;
