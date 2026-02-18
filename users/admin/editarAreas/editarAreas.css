@@ -4,10 +4,14 @@
 :root {
     --font-family-primary: 'Orbitron', sans-serif;
     --font-family-secondary: sans-serif;
+    
+    /* ILUMINACIÓN - VALORES POR DEFECTO (TEMA OSCURO) */
+    --glow-intensity: 0.8;
+    --glow-color: var(--color-accent-primary);
 }
 
 /* =============================================
-   HEADER CENTRADO - NUEVA SECCIÓN
+   HEADER CENTRADO CON ILUMINACIÓN
    ============================================= */
 .header-container {
     background: transparent !important;
@@ -38,12 +42,42 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    text-shadow: 0 0 10px var(--color-accent-primary);
+    
+    /* ✨ ILUMINACIÓN DINÁMICA - IGUAL QUE EN CREAR ÁREAS ✨ */
+    text-shadow: 0 0 8px var(--color-accent-primary),
+                 0 0 16px var(--color-accent-primary),
+                 0 0 24px var(--color-accent-primary);
+    animation: titleGlow 4s infinite alternate ease-in-out;
 }
 
 .header-title h1 i {
     font-size: 28px;
+    color: var(--color-accent-primary);
+    
+    /* ✨ ILUMINACIÓN PARA EL ICONO ✨ */
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+}
 
+/* ✨ ANIMACIÓN SUTIL PARA EL TÍTULO ✨ */
+@keyframes titleGlow {
+    0% {
+        text-shadow: 0 0 5px var(--color-accent-primary),
+                     0 0 10px var(--color-accent-primary),
+                     0 0 15px var(--color-accent-primary);
+        opacity: 0.95;
+    }
+    50% {
+        text-shadow: 0 0 10px var(--color-accent-primary),
+                     0 0 20px var(--color-accent-primary),
+                     0 0 30px var(--color-accent-primary);
+        opacity: 1;
+    }
+    100% {
+        text-shadow: 0 0 5px var(--color-accent-primary),
+                     0 0 10px var(--color-accent-primary),
+                     0 0 15px var(--color-accent-primary);
+        opacity: 0.95;
+    }
 }
 
 .header-title .header-description {
@@ -51,11 +85,14 @@
     font-family: var(--font-family-secondary);
     font-size: 14px;
     line-height: 1.6;
-    margin: 0 auto;
+    margin: 0 auto 30px auto;
     position: relative;
-    padding: 0 20px;
+    padding: 0 20px 15px 20px;
     border-bottom: 2px solid var(--color-border-light);
-
+    
+    /* ✨ ILUMINACIÓN SUTIL PARA LA DESCRIPCIÓN ✨ */
+    text-shadow: 0 0 5px var(--color-accent-primary);
+    opacity: 0.9;
 }
 
 /* Línea decorativa superior */
@@ -70,16 +107,11 @@
     background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
 }
 
-/* Línea decorativa inferior */
-.header-title .header-description::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+/* ✨ EFECTO EXTRA PARA EL ÍCONO DE INFO EN LA DESCRIPCIÓN ✨ */
+.header-title .header-description i {
+    color: var(--color-accent-primary);
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+    margin-right: 6px;
 }
 
 /* =============================================
@@ -179,11 +211,17 @@ h1.h3 {
     display: flex;
     align-items: center;
     gap: 12px;
+    
+    /* ✨ ILUMINACIÓN PARA COMPATIBILIDAD ✨ */
+    text-shadow: 0 0 8px var(--color-accent-primary),
+                 0 0 16px var(--color-accent-primary),
+                 0 0 24px var(--color-accent-primary);
 }
 
 h1.h3 i {
-    color: var(--color-accent-primary);
+    
     font-size: 24px;
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
 
 .text-muted {
@@ -191,6 +229,10 @@ h1.h3 i {
     font-family: var(--font-family-secondary);
     margin-top: 5px;
     font-size: 14px;
+    text-shadow: 0 0 5px var(--color-accent-primary);
+      margin-bottom: 30px; /* Reducido para acercar título al formulario */
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--color-border-light);
 }
 
 /* =============================================
@@ -723,14 +765,6 @@ select#organizacion option {
         height: 2px;
     }
 
-    .header-title .header-description::after {
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 50px;
-        height: 2px;
-    }
-
     .row.mb-4:first-child {
         padding: 15px !important;
     }
@@ -1029,7 +1063,115 @@ select#organizacion option {
 }
 
 /* =============================================
-   FIN DEL ARCHIVO - NO AGREGAR MÁS ESTILOS
+   ILUMINACIÓN POR TEMA (CLARO/OSCURO)
    ============================================= */
-/* NOTA: Este archivo NO debe contener estilos para #complete-navbar 
-   ya que esos estilos están definidos en navbar-admin-component.js */
+
+/* TEMA CLARO - Cuando se active, la iluminación se adapta */
+[data-theme="light"] {
+    --glow-intensity: 0.5;
+}
+
+[data-theme="light"] .header-title h1 {
+    text-shadow: 0 0 5px rgba(192, 192, 192, 0.5),
+                 0 0 10px rgba(192, 192, 192, 0.3),
+                 0 0 15px rgba(192, 192, 192, 0.2);
+}
+
+[data-theme="light"] .header-title .header-description {
+    text-shadow: 0 0 3px rgba(192, 192, 192, 0.3);
+}
+
+[data-theme="light"] h1.h3 {
+    text-shadow: 0 0 5px rgba(192, 192, 192, 0.5),
+                 0 0 10px rgba(192, 192, 192, 0.3),
+                 0 0 15px rgba(192, 192, 192, 0.2);
+}
+
+[data-theme="light"] .text-muted {
+    text-shadow: 0 0 3px rgba(192, 192, 192, 0.3);
+}
+
+/* TEMA DE ALTO CONTRASTE */
+[data-theme="high-contrast"] .header-title h1 {
+    text-shadow: 0 0 10px #ffffff,
+                 0 0 20px #ffffff;
+}
+
+[data-theme="high-contrast"] .header-title .header-description {
+    text-shadow: 0 0 5px #ffffff;
+}
+
+[data-theme="high-contrast"] h1.h3 {
+    text-shadow: 0 0 10px #ffffff,
+                 0 0 20px #ffffff;
+}
+
+[data-theme="high-contrast"] .text-muted {
+    text-shadow: 0 0 5px #ffffff;
+}
+
+/* =============================================
+   FORZAR ESTILOS CORRECTOS DEL NAVBAR
+   ============================================= */
+
+/* Forzar círculo en la imagen del admin */
+#complete-navbar .admin-profile-circle {
+    border-radius: 50% !important;
+    overflow: hidden !important;
+}
+
+#complete-navbar .admin-profile-img {
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+/* Forzar destello en CENTINELA */
+#complete-navbar .navbar-title {
+    text-shadow: 0 0 10px var(--color-accent-primary),
+        0 0 20px var(--color-accent-primary),
+        0 0 30px var(--color-accent-primary) !important;
+    color: var(--navbar-logo-text) !important;
+}
+
+/* =============================================
+   AJUSTE PARA NAVBAR EN RESPONSIVE
+   ============================================= */
+
+/* Ajuste general para que el contenido no quede debajo del navbar */
+body {
+    padding-top: 80px !important; /* Espacio para el navbar fijo */
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-top: 70px !important; /* Un poco menos en móvil */
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    
+    /* Asegurar que el header tenga suficiente espacio */
+    .row.mb-4:first-child,
+    .header-container,
+    .d-flex.flex-column.align-items-center.text-center {
+        margin-top: 10px !important;
+        padding-top: 10px !important;
+    }
+    
+    /* Ajustar el contenedor principal */
+    .container-fluid {
+        margin-top: 0 !important;
+        padding-top: 15px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding-top: 60px !important; /* Aún menos en móvil pequeño */
+    }
+}
+
+/* =============================================
+   FIN DEL ARCHIVO
+   ============================================= */

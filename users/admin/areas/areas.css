@@ -43,6 +43,7 @@
     justify-content: center;
     gap: 12px;
     text-shadow: 0 0 10px var(--color-accent-primary);
+    
 }
 
 .header-title h1 i {
@@ -60,6 +61,9 @@
     position: relative;
     padding: 0 20px;
     max-width: 700px;
+    margin-bottom: 30px; /* Reducido para acercar título al formulario */
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--color-border-light);
 }
 
 /* Línea decorativa superior */
@@ -72,6 +76,7 @@
     width: 60px;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+
 }
 
 /* Línea decorativa inferior */
@@ -84,6 +89,7 @@
     width: 60px;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+  
 }
 
 /* Badge de empresa */
@@ -1244,4 +1250,40 @@ tr.area-row.expanded .toggle-icon i {
 
 .text-muted {
     color: var(--color-text-secondary) !important; /* o el color que quieras */
+}
+/* =============================================
+   AJUSTE PARA NAVBAR EN RESPONSIVE
+   ============================================= */
+
+/* Ajuste general para que el contenido no quede debajo del navbar */
+body {
+    padding-top: 80px !important; /* Espacio para el navbar fijo */
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-top: 70px !important; /* Un poco menos en móvil */
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    
+    /* Asegurar que el header tenga suficiente espacio */
+    .row.mb-4:first-child,
+    .header-container,
+    .d-flex.flex-column.align-items-center.text-center {
+        margin-top: 10px !important;
+        padding-top: 10px !important;
+    }
+    
+    /* Ajustar el contenedor principal */
+    .container-fluid {
+        margin-top: 0 !important;
+        padding-top: 15px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding-top: 60px !important; /* Aún menos en móvil pequeño */
+    }
 }
