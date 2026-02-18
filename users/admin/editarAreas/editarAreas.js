@@ -1,4 +1,4 @@
-// editarAreas.js - VERSIÓN COMPLETA CON SOLO SWEETALERT2 (SIN CARGOS AUTOMÁTICOS)
+// editarAreas.js - VERSIÓN COMPLETA CON SOLO SWEETALERT2
 
 // Variable global para debugging
 window.editarAreaDebug = {
@@ -6,27 +6,11 @@ window.editarAreaDebug = {
     controller: null
 };
 
-// Cargar dependencias
-let Area, AreaManager, db, query, serverTimestamp, collection, doc, getDocs, setDoc, where, updateDoc, getDoc;
+// ✅ CORREGIDO: Solo importamos las clases, NO Firebase directamente
+let Area, AreaManager;
 
 async function cargarDependencias() {
     try {        
-        const firebaseModule = await import('/config/firebase-config.js');
-        db = firebaseModule.db;
-        
-        const firestoreModule = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        ({ 
-            query,
-            serverTimestamp,
-            collection,
-            doc,
-            getDocs,
-            setDoc,
-            where,
-            updateDoc,
-            getDoc
-        } = firestoreModule);
-        
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
@@ -41,7 +25,6 @@ async function cargarDependencias() {
             <div class="alert alert-warning mt-3">
                 Verifica que los archivos existan:
                 <ul class="mb-0 mt-2">
-                    <li><code>/config/firebase-config.js</code></li>
                     <li><code>/clases/area.js</code></li>
                 </ul>
             </div>
@@ -98,7 +81,7 @@ class EditarAreaController {
         this.cargos = [];
     }
     
-    // MÉTODO PARA CARGAR USUARIO
+    // MÉTODO PARA CARGAR USUARIO - ✅ CORREGIDO
     cargarUsuarioDesdeStorage() {
         try {
             let userData = null;
@@ -111,7 +94,7 @@ class EditarAreaController {
                     id: adminData.id || `admin_${Date.now()}`,
                     nombre: adminData.nombreCompleto || 'Administrador',
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    cargo: 'administrador',
+                    rol: 'administrador',
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase || this.convertirACamelCase(adminData.organizacion),
                     correo: adminData.correoElectronico || '',
@@ -142,7 +125,7 @@ class EditarAreaController {
             if (!userData.organizacionCamelCase) {
                 userData.organizacionCamelCase = this.convertirACamelCase(userData.organizacion);
             }
-            if (!userData.cargo) userData.cargo = 'usuario';
+            if (!userData.rol) userData.rol = 'colaborador';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
             
             return {
@@ -364,13 +347,6 @@ class EditarAreaController {
                 nuevoBtnCancelar.addEventListener('click', () => this.cancelarEdicion());
             }
             
-            const btnDesactivarArea = document.getElementById('btnDesactivarArea');
-            if (btnDesactivarArea) {
-                btnDesactivarArea.replaceWith(btnDesactivarArea.cloneNode(true));
-                const nuevoBtnDesactivar = document.getElementById('btnDesactivarArea');
-                nuevoBtnDesactivar.addEventListener('click', () => this.prepararDesactivacion());
-            }
-            
             const btnAgregarCargo = document.getElementById('btnAgregarCargo');
             if (btnAgregarCargo) {
                 const nuevoBoton = btnAgregarCargo.cloneNode(true);
@@ -424,62 +400,63 @@ class EditarAreaController {
     }
     
     async cargarArea() {
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const areaId = urlParams.get('id');
-        
-        if (!areaId) {
-            console.error('❌ No se proporcionó ID de área');
-            this.mostrarError('No se especificó qué área editar');
-            return;
-        }
-        
-        this.mostrarCargando('Cargando información del área...');
-        
-        const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
-        const areaRef = doc(db, collectionName, areaId);
-        const areaSnap = await getDoc(areaRef);
-        
-        if (areaSnap.exists()) {
-            const areaData = areaSnap.data();
-            this.areaActual = new Area(areaId, areaData);
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const areaId = urlParams.get('id');
             
-            await this.cargarDatosEnFormulario();
-            this.datosOriginales = this.obtenerDatosFormulario();
-            
-            this.ocultarCargando();
-            
-            // Actualizar título
-            document.title = `Editar ${this.areaActual.nombreArea} - Sistema Centinela`;
-
-            const nombreTitulo = document.getElementById('nombreAreaTitulo');
-            if (nombreTitulo) {
-                nombreTitulo.textContent = this.areaActual.nombreArea;
-            } else {
-                const titulo = document.querySelector('h1');
-                if (titulo) {
-                    if (titulo.innerHTML.includes('Editar Área') && !titulo.innerHTML.includes(this.areaActual.nombreArea)) {
-                        titulo.innerHTML = titulo.innerHTML.replace(
-                            'Editar Área', 
-                            `Editar Área: ${this.areaActual.nombreArea}`
-                        );
-                    } else if (!titulo.innerHTML.includes('Editar Área:')) {
-                        titulo.innerHTML += `: ${this.areaActual.nombreArea}`;
-                    }
-                }
+            if (!areaId) {
+                console.error('❌ No se proporcionó ID de área');
+                this.mostrarError('No se especificó qué área editar');
+                return;
             }
             
-        } else {
+            this.mostrarCargando('Cargando información del área...');
+            
+            // ✅ CORREGIDO: Usar AreaManager para obtener el área
+            const area = await this.areaManager.getAreaById(
+                areaId, 
+                this.userManager.currentUser.organizacionCamelCase
+            );
+            
+            if (area) {
+                this.areaActual = area;
+                
+                await this.cargarDatosEnFormulario();
+                this.datosOriginales = this.obtenerDatosFormulario();
+                
+                this.ocultarCargando();
+                
+                // Actualizar título
+                document.title = `Editar ${this.areaActual.nombreArea} - Sistema Centinela`;
+
+                const nombreTitulo = document.getElementById('nombreAreaTitulo');
+                if (nombreTitulo) {
+                    nombreTitulo.textContent = this.areaActual.nombreArea;
+                } else {
+                    const titulo = document.querySelector('h1');
+                    if (titulo) {
+                        if (titulo.innerHTML.includes('Editar Área') && !titulo.innerHTML.includes(this.areaActual.nombreArea)) {
+                            titulo.innerHTML = titulo.innerHTML.replace(
+                                'Editar Área', 
+                                `Editar Área: ${this.areaActual.nombreArea}`
+                            );
+                        } else if (!titulo.innerHTML.includes('Editar Área:')) {
+                            titulo.innerHTML += `: ${this.areaActual.nombreArea}`;
+                        }
+                    }
+                }
+                
+            } else {
+                this.ocultarCargando();
+                this.mostrarError('Área no encontrada');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error cargando área:', error);
             this.ocultarCargando();
-            this.mostrarError('Área no encontrada');
+            this.mostrarError('Error cargando área: ' + error.message);
         }
-        
-    } catch (error) {
-        console.error('❌ Error cargando área:', error);
-        this.ocultarCargando();
-        this.mostrarError('Error cargando área: ' + error.message);
     }
-}
     
     async cargarDatosEnFormulario() {
         if (!this.areaActual) return;
@@ -1307,196 +1284,196 @@ class EditarAreaController {
         }
     }
     
- generarHTMLCambios(datosActualizados) {
-    let cambiosHTML = '<div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 10px;">';
-    
-    if (this.datosOriginales) {
-        // ========== 1. CAMBIOS EN NOMBRE ==========
-        if (this.datosOriginales.nombreArea !== datosActualizados.nombreArea) {
-            cambiosHTML += `
-                <div style="margin-bottom: 20px; padding: 10px; background: rgba(47, 140, 255, 0.1); border-radius: 8px;">
-                    <h6 style="color: var(--color-accent-secondary); margin-bottom: 8px;">
-                        <i class="fas fa-tag me-2"></i>Nombre del Área
-                    </h6>
-                    <div style="color: #777171; text-decoration: line-through; margin-bottom: 5px;">
-                        ${this.datosOriginales.nombreArea}
-                    </div>
-                    <div style="color: #21a16c;">
-                        <i class="fas fa-arrow-right me-2"></i>${datosActualizados.nombreArea}
-                    </div>
-                </div>
-            `;
-        }
+    generarHTMLCambios(datosActualizados) {
+        let cambiosHTML = '<div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 10px;">';
         
-        // ========== 2. CAMBIOS EN DESCRIPCIÓN ==========
-        if (this.datosOriginales.descripcion !== datosActualizados.descripcion) {
-            cambiosHTML += `
-                <div style="margin-bottom: 20px; padding: 10px; background: rgba(0, 255, 149, 0.1); border-radius: 8px;">
-                    <h6 style="color: var(--color-success); margin-bottom: 8px;">
-                        <i class="fas fa-align-left me-2"></i>Descripción
-                    </h6>
-                    <div style="color: #999; text-decoration: line-through; margin-bottom: 5px;">
-                        ${this.datosOriginales.descripcion.substring(0, 80)}${this.datosOriginales.descripcion.length > 80 ? '...' : ''}
-                    </div>
-                    <div style="color: #17a56a;">
-                        <i class="fas fa-arrow-right me-2"></i>${datosActualizados.descripcion.substring(0, 80)}${datosActualizados.descripcion.length > 80 ? '...' : ''}
-                    </div>
-                </div>
-            `;
-        }
-        
-        // ========== 3. ANÁLISIS DE CARGOS ==========
-        const cargosOriginal = this.datosOriginales.cargos || {};
-        const cargosNuevos = datosActualizados.cargos || {};
-        
-        // Convertir a arrays
-        const cargosOriginalArray = Object.entries(cargosOriginal).map(([id, cargo]) => ({
-            id,
-            nombre: cargo.nombre || '',
-            descripcion: cargo.descripcion || ''
-        }));
-        
-        const cargosNuevosArray = Object.entries(cargosNuevos).map(([id, cargo]) => ({
-            id,
-            nombre: cargo.nombre || '',
-            descripcion: cargo.descripcion || ''
-        }));
-        
-        // Identificar cargos nuevos y modificados
-        const cargosAgregados = [];
-        const cargosModificados = [];
-        
-        cargosNuevosArray.forEach(nuevo => {
-            const original = cargosOriginalArray.find(c => c.id === nuevo.id);
-            
-            if (!original) {
-                // Cargo nuevo
-                cargosAgregados.push(nuevo);
-            } else {
-                // Verificar si hubo cambios
-                if (original.nombre !== nuevo.nombre || original.descripcion !== nuevo.descripcion) {
-                    cargosModificados.push({
-                        id: nuevo.id,
-                        nombreOriginal: original.nombre,
-                        nombreNuevo: nuevo.nombre,
-                        descripcionOriginal: original.descripcion,
-                        descripcionNuevo: nuevo.descripcion
-                    });
-                }
-            }
-        });
-        
-        // ========== 4. RESUMEN DE CARGOS ==========
-        if (cargosAgregados.length > 0 || cargosModificados.length > 0) {
-            cambiosHTML += `
-                <div style="margin-bottom: 15px;">
-                    <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">
-                        <i class="fas fa-briefcase me-2"></i>Cambios en Cargos
-                    </h6>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                        <span style="background: rgba(0, 255, 149, 0.1); color: #00ff95; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0, 255, 149, 0.3);">
-                            <i class="fas fa-plus-circle me-1"></i>${cargosAgregados.length} nuevos
-                        </span>
-                        <span style="background: rgba(255, 204, 0, 0.1); color: #ffcc00; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255, 204, 0, 0.3);">
-                            <i class="fas fa-edit me-1"></i>${cargosModificados.length} modificados
-                        </span>
-                    </div>
-            `;
-            
-            // ========== 5. CARGOS NUEVOS ==========
-            if (cargosAgregados.length > 0) {
+        if (this.datosOriginales) {
+            // ========== 1. CAMBIOS EN NOMBRE ==========
+            if (this.datosOriginales.nombreArea !== datosActualizados.nombreArea) {
                 cambiosHTML += `
-                    <div style="margin-bottom: 20px;">
-                        <h6 style="color: #00ff95; font-size: 13px; margin-bottom: 8px;">
-                            <i class="fas fa-plus-circle me-2"></i>Cargos Nuevos:
+                    <div style="margin-bottom: 20px; padding: 10px; background: rgba(47, 140, 255, 0.1); border-radius: 8px;">
+                        <h6 style="color: var(--color-accent-secondary); margin-bottom: 8px;">
+                            <i class="fas fa-tag me-2"></i>Nombre del Área
                         </h6>
-                `;
-                
-                cargosAgregados.forEach((cargo, index) => {
-                    cambiosHTML += `
-                        <div style="background: rgba(0, 255, 149, 0.05); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #00ff95;">
-                            <strong style="color: white; display: block; margin-bottom: 5px;">
-                                #${index + 1}: ${cargo.nombre}
-                            </strong>
-                            <span style="color: #ccc; font-size: 12px;">
-                                ${cargo.descripcion || '<i>Sin descripción</i>'}
-                            </span>
+                        <div style="color: #777171; text-decoration: line-through; margin-bottom: 5px;">
+                            ${this.datosOriginales.nombreArea}
                         </div>
-                    `;
-                });
-                
-                cambiosHTML += `</div>`;
+                        <div style="color: #21a16c;">
+                            <i class="fas fa-arrow-right me-2"></i>${datosActualizados.nombreArea}
+                        </div>
+                    </div>
+                `;
             }
             
-            // ========== 6. CARGOS MODIFICADOS ==========
-            if (cargosModificados.length > 0) {
+            // ========== 2. CAMBIOS EN DESCRIPCIÓN ==========
+            if (this.datosOriginales.descripcion !== datosActualizados.descripcion) {
+                cambiosHTML += `
+                    <div style="margin-bottom: 20px; padding: 10px; background: rgba(0, 255, 149, 0.1); border-radius: 8px;">
+                        <h6 style="color: var(--color-success); margin-bottom: 8px;">
+                            <i class="fas fa-align-left me-2"></i>Descripción
+                        </h6>
+                        <div style="color: #999; text-decoration: line-through; margin-bottom: 5px;">
+                            ${this.datosOriginales.descripcion.substring(0, 80)}${this.datosOriginales.descripcion.length > 80 ? '...' : ''}
+                        </div>
+                        <div style="color: #17a56a;">
+                            <i class="fas fa-arrow-right me-2"></i>${datosActualizados.descripcion.substring(0, 80)}${datosActualizados.descripcion.length > 80 ? '...' : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // ========== 3. ANÁLISIS DE CARGOS ==========
+            const cargosOriginal = this.datosOriginales.cargos || {};
+            const cargosNuevos = datosActualizados.cargos || {};
+            
+            // Convertir a arrays
+            const cargosOriginalArray = Object.entries(cargosOriginal).map(([id, cargo]) => ({
+                id,
+                nombre: cargo.nombre || '',
+                descripcion: cargo.descripcion || ''
+            }));
+            
+            const cargosNuevosArray = Object.entries(cargosNuevos).map(([id, cargo]) => ({
+                id,
+                nombre: cargo.nombre || '',
+                descripcion: cargo.descripcion || ''
+            }));
+            
+            // Identificar cargos nuevos y modificados
+            const cargosAgregados = [];
+            const cargosModificados = [];
+            
+            cargosNuevosArray.forEach(nuevo => {
+                const original = cargosOriginalArray.find(c => c.id === nuevo.id);
+                
+                if (!original) {
+                    // Cargo nuevo
+                    cargosAgregados.push(nuevo);
+                } else {
+                    // Verificar si hubo cambios
+                    if (original.nombre !== nuevo.nombre || original.descripcion !== nuevo.descripcion) {
+                        cargosModificados.push({
+                            id: nuevo.id,
+                            nombreOriginal: original.nombre,
+                            nombreNuevo: nuevo.nombre,
+                            descripcionOriginal: original.descripcion,
+                            descripcionNuevo: nuevo.descripcion
+                        });
+                    }
+                }
+            });
+            
+            // ========== 4. RESUMEN DE CARGOS ==========
+            if (cargosAgregados.length > 0 || cargosModificados.length > 0) {
                 cambiosHTML += `
                     <div style="margin-bottom: 15px;">
-                        <h6 style="color: #ffcc00; font-size: 13px; margin-bottom: 8px;">
-                            <i class="fas fa-edit me-2"></i>Cargos Modificados:
+                        <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">
+                            <i class="fas fa-briefcase me-2"></i>Cambios en Cargos
                         </h6>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                            <span style="background: rgba(0, 255, 149, 0.1); color: #00ff95; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0, 255, 149, 0.3);">
+                                <i class="fas fa-plus-circle me-1"></i>${cargosAgregados.length} nuevos
+                            </span>
+                            <span style="background: rgba(255, 204, 0, 0.1); color: #ffcc00; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255, 204, 0, 0.3);">
+                                <i class="fas fa-edit me-1"></i>${cargosModificados.length} modificados
+                            </span>
+                        </div>
                 `;
                 
-                cargosModificados.forEach((cargo, index) => {
+                // ========== 5. CARGOS NUEVOS ==========
+                if (cargosAgregados.length > 0) {
                     cambiosHTML += `
-                        <div style="background: rgba(255, 204, 0, 0.05); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #ffcc00;">
-                            <strong style="color: white; display: block; margin-bottom: 8px;">
-                                #${index + 1}: ${cargo.nombreNuevo}
-                            </strong>
-                            <div style="margin-left: 5px;">
-                                ${cargo.nombreOriginal !== cargo.nombreNuevo ? `
-                                    <div style="margin-bottom: 5px;">
-                                        <span style="color: #999; font-size: 11px;">Nombre:</span>
-                                        <span style="color: #999; text-decoration: line-through; margin: 0 5px;">${cargo.nombreOriginal}</span>
-                                        <span style="color: #00ff95;">→ ${cargo.nombreNuevo}</span>
-                                    </div>
-                                ` : ''}
-                                ${cargo.descripcionOriginal !== cargo.descripcionNuevo ? `
-                                    <div>
-                                        <span style="color: #999; font-size: 11px;">Descripción:</span>
-                                        <span style="color: #999; text-decoration: line-through; margin: 0 5px;">${cargo.descripcionOriginal.substring(0, 30)}${cargo.descripcionOriginal.length > 30 ? '...' : ''}</span>
-                                        <span style="color: #00ff95;">→ ${cargo.descripcionNuevo.substring(0, 30)}${cargo.descripcionNuevo.length > 30 ? '...' : ''}</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <h6 style="color: #00ff95; font-size: 13px; margin-bottom: 8px;">
+                                <i class="fas fa-plus-circle me-2"></i>Cargos Nuevos:
+                            </h6>
                     `;
-                });
+                    
+                    cargosAgregados.forEach((cargo, index) => {
+                        cambiosHTML += `
+                            <div style="background: rgba(0, 255, 149, 0.05); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #00ff95;">
+                                <strong style="color: white; display: block; margin-bottom: 5px;">
+                                    #${index + 1}: ${cargo.nombre}
+                                </strong>
+                                <span style="color: #ccc; font-size: 12px;">
+                                    ${cargo.descripcion || '<i>Sin descripción</i>'}
+                                </span>
+                            </div>
+                        `;
+                    });
+                    
+                    cambiosHTML += `</div>`;
+                }
                 
-                cambiosHTML += `</div>`;
+                // ========== 6. CARGOS MODIFICADOS ==========
+                if (cargosModificados.length > 0) {
+                    cambiosHTML += `
+                        <div style="margin-bottom: 15px;">
+                            <h6 style="color: #ffcc00; font-size: 13px; margin-bottom: 8px;">
+                                <i class="fas fa-edit me-2"></i>Cargos Modificados:
+                            </h6>
+                    `;
+                    
+                    cargosModificados.forEach((cargo, index) => {
+                        cambiosHTML += `
+                            <div style="background: rgba(255, 204, 0, 0.05); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #ffcc00;">
+                                <strong style="color: white; display: block; margin-bottom: 8px;">
+                                    #${index + 1}: ${cargo.nombreNuevo}
+                                </strong>
+                                <div style="margin-left: 5px;">
+                                    ${cargo.nombreOriginal !== cargo.nombreNuevo ? `
+                                        <div style="margin-bottom: 5px;">
+                                            <span style="color: #999; font-size: 11px;">Nombre:</span>
+                                            <span style="color: #999; text-decoration: line-through; margin: 0 5px;">${cargo.nombreOriginal}</span>
+                                            <span style="color: #00ff95;">→ ${cargo.nombreNuevo}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${cargo.descripcionOriginal !== cargo.descripcionNuevo ? `
+                                        <div>
+                                            <span style="color: #999; font-size: 11px;">Descripción:</span>
+                                            <span style="color: #999; text-decoration: line-through; margin: 0 5px;">${cargo.descripcionOriginal.substring(0, 30)}${cargo.descripcionOriginal.length > 30 ? '...' : ''}</span>
+                                            <span style="color: #00ff95;">→ ${cargo.descripcionNuevo.substring(0, 30)}${cargo.descripcionNuevo.length > 30 ? '...' : ''}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    cambiosHTML += `</div>`;
+                }
+                
+                cambiosHTML += `</div>`; // Cerrar div de cargos
             }
             
-            cambiosHTML += `</div>`; // Cerrar div de cargos
+            // ========== 7. CAMBIOS EN RESPONSABLE ==========
+            if (this.datosOriginales.responsable !== datosActualizados.responsable) {
+                const responsableOriginal = this.datosOriginales.responsableNombre || 'No asignado';
+                const responsableNuevo = datosActualizados.responsableNombre || 'No asignado';
+                
+                cambiosHTML += `
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(47, 140, 255, 0.1); border-radius: 8px;">
+                        <h6 style="color: var(--color-accent-secondary); margin-bottom: 8px;">
+                            <i class="fas fa-user-tie me-2"></i>Responsable
+                        </h6>
+                        <div style="color: #999; text-decoration: line-through; margin-bottom: 5px;">
+                            ${responsableOriginal}
+                        </div>
+                        <div style="color: #00ff95;">
+                            <i class="fas fa-arrow-right me-2"></i>${responsableNuevo}
+                        </div>
+                    </div>
+                `;
+            }
         }
         
-        // ========== 7. CAMBIOS EN RESPONSABLE ==========
-        if (this.datosOriginales.responsable !== datosActualizados.responsable) {
-            const responsableOriginal = this.datosOriginales.responsableNombre || 'No asignado';
-            const responsableNuevo = datosActualizados.responsableNombre || 'No asignado';
-            
-            cambiosHTML += `
-                <div style="margin-top: 15px; padding: 10px; background: rgba(47, 140, 255, 0.1); border-radius: 8px;">
-                    <h6 style="color: var(--color-accent-secondary); margin-bottom: 8px;">
-                        <i class="fas fa-user-tie me-2"></i>Responsable
-                    </h6>
-                    <div style="color: #999; text-decoration: line-through; margin-bottom: 5px;">
-                        ${responsableOriginal}
-                    </div>
-                    <div style="color: #00ff95;">
-                        <i class="fas fa-arrow-right me-2"></i>${responsableNuevo}
-                    </div>
-                </div>
-            `;
+        if (cambiosHTML === '<div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 10px;">') {
+            cambiosHTML += '<p style="color: var(--color-text-secondary); text-align: center; padding: 20px;">No se detectaron cambios</p>';
         }
+        
+        cambiosHTML += '</div>';
+        return cambiosHTML;
     }
-    
-    if (cambiosHTML === '<div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 10px;">') {
-        cambiosHTML += '<p style="color: var(--color-text-secondary); text-align: center; padding: 20px;">No se detectaron cambios</p>';
-    }
-    
-    cambiosHTML += '</div>';
-    return cambiosHTML;
-}
     
     obtenerDatosFormulario() {
         const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
@@ -1525,10 +1502,7 @@ class EditarAreaController {
             descripcion: document.getElementById('descripcionArea').value.trim(),
             cargos: cargosObject,
             responsable: responsableId,
-            responsableNombre: responsableNombre,
-            organizacionCamelCase: this.userManager.currentUser.organizacionCamelCase,
-            actualizadoPor: this.userManager.currentUser.id,
-            fechaActualizacion: new Date().toISOString()
+            responsableNombre: responsableNombre
         };
     }
     
@@ -1588,11 +1562,18 @@ class EditarAreaController {
             
             this.mostrarCargando('Actualizando área...');
             
-            const areaActualizada = await this.actualizarAreaEnFirebase(datosActualizados);
+            // ✅ CORREGIDO: Usar AreaManager para actualizar
+            await this.areaManager.actualizarArea(
+                this.areaActual.id,
+                datosActualizados,
+                this.userManager.currentUser.id,
+                this.userManager.currentUser.organizacionCamelCase
+            );
             
             this.ocultarCargando();
             
-            this.areaActual = areaActualizada;
+            // Actualizar datos locales
+            Object.assign(this.areaActual, datosActualizados);
             this.datosOriginales = this.obtenerDatosFormulario();
             
             await this.mostrarAlertaGuardadoExitoso();
@@ -1605,150 +1586,6 @@ class EditarAreaController {
             console.error('❌ Error actualizando área:', error);
             this.ocultarCargando();
             this.mostrarError('Error actualizando área: ' + error.message);
-        }
-    }
-    
-    async actualizarAreaEnFirebase(datosActualizados) {
-        try {
-            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
-            const areaId = this.areaActual.id;
-            
-            const areaRef = doc(db, collectionName, areaId);
-            const areaSnap = await getDoc(areaRef);
-            const cargosActuales = areaSnap.exists() ? areaSnap.data().cargos || {} : {};
-            
-            const cargosParaGuardar = {};
-            
-            Object.keys(datosActualizados.cargos).forEach(key => {
-                const cargoData = datosActualizados.cargos[key];
-                
-                let idExistente = null;
-                for (const [id, cargo] of Object.entries(cargosActuales)) {
-                    if (cargo.nombre === cargoData.nombre) {
-                        idExistente = id;
-                        break;
-                    }
-                }
-                
-                if (!idExistente && cargosActuales[key]) {
-                    idExistente = key;
-                }
-                
-                const cargoId = idExistente || key;
-                
-                cargosParaGuardar[cargoId] = {
-                    nombre: cargoData.nombre,
-                    descripcion: cargoData.descripcion || ''
-                };
-            });
-            
-            const updateData = {
-                nombreArea: datosActualizados.nombreArea,
-                descripcion: datosActualizados.descripcion || '',
-                cargos: cargosParaGuardar,
-                responsable: datosActualizados.responsable || '',
-                responsableNombre: datosActualizados.responsableNombre || '',
-                actualizadoPor: this.userManager.currentUser.id,
-                fechaActualizacion: serverTimestamp()
-            };
-            
-            await updateDoc(areaRef, updateData);
-            
-            const areaActualizada = new Area(areaId, {
-                ...this.areaActual,
-                ...updateData,
-                fechaActualizacion: new Date()
-            });
-            
-            return areaActualizada;
-            
-        } catch (error) {
-            console.error('❌ Error en actualizarAreaEnFirebase:', error);
-            throw error;
-        }
-    }
-    
-    // DESACTIVACIÓN
-    prepararDesactivacion() {
-        if (!this.areaActual) return;
-        
-        Swal.fire({
-            title: '¿Desactivar área?',
-            html: `
-                <div style="text-align: left;">
-                    <div class="alert alert-danger mb-3">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <strong>¡Atención!</strong> Esta acción desactivará el área.
-                    </div>
-                    <p><strong>Área:</strong> ${this.areaActual.nombreArea}</p>
-                    <div class="mb-3">
-                        <label for="swal-motivo" class="form-label">Motivo de desactivación (opcional):</label>
-                        <textarea id="swal-motivo" class="form-control" rows="2" placeholder="Explique brevemente el motivo..."></textarea>
-                    </div>
-                </div>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ff4d4d',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, desactivar',
-            cancelButtonText: 'Cancelar',
-            customClass: {
-                popup: 'swal-dark',
-                title: 'swal-title',
-                htmlContainer: 'swal-html',
-                confirmButton: 'swal-confirm-btn-danger',
-                cancelButton: 'swal-cancel-btn'
-            },
-            preConfirm: () => {
-                const motivo = document.getElementById('swal-motivo')?.value || '';
-                return this.confirmarDesactivacion(motivo);
-            }
-        });
-    }
-    
-    async confirmarDesactivacion(motivo = '') {
-        try {
-            if (!this.areaActual) return;
-            
-            this.mostrarCargando('Desactivando área...');
-            
-            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
-            const areaRef = doc(db, collectionName, this.areaActual.id);
-            
-            await updateDoc(areaRef, {
-                estado: 'inactiva',
-                desactivadoPor: this.userManager.currentUser.id,
-                fechaDesactivacion: serverTimestamp(),
-                motivoDesactivacion: motivo
-            });
-            
-            this.ocultarCargando();
-            
-            const Toast = Swal.mixin({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'swal-dark'
-                }
-            });
-            
-            await Toast.fire({
-                icon: 'warning',
-                title: 'Área desactivada'
-            });
-            
-            setTimeout(() => {
-                this.volverALista();
-            }, 3100);
-            
-        } catch (error) {
-            console.error('❌ Error desactivando área:', error);
-            this.ocultarCargando();
-            this.mostrarError('Error desactivando área: ' + error.message);
         }
     }
     

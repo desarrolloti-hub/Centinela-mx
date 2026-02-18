@@ -68,6 +68,7 @@ function obtenerElementosDOM() {
             organization: document.getElementById('organization'),
             nombreCompleto: document.getElementById('nombreCompleto'),
             correoElectronico: document.getElementById('correoElectronico'),
+            // ✅ CORREGIDO: El ID del select es 'rol', no 'cargo'
             rol: document.getElementById('rol'),
             // SELECTORES
             areaSelect: document.getElementById('areaSelect'),
@@ -139,7 +140,8 @@ async function cargarAdministradorActual(userManager, elements) {
             throw new Error('No hay sesión activa de administrador');
         }
         
-        if (admin.cargo !== 'administrador') {
+        // ✅ CORREGIDO: Usar el método esAdministrador()
+        if (!admin.esAdministrador()) {
             throw new Error('Solo los administradores pueden crear colaboradores');
         }
         
@@ -263,7 +265,7 @@ async function cargarAreas(elements, admin) {
     if (!elements.areaSelect) return;
     
     try {
-        // Usar AreaManager para obtener las áreas (igual que en editUser.js)
+        // Usar AreaManager para obtener las áreas
         const areaManager = new AreaManager();
         
         console.log('🔍 Cargando áreas para organización:', admin.organizacionCamelCase);
@@ -573,7 +575,7 @@ function validarFormulario(elements) {
         errores.push('Las contraseñas no coinciden');
     }
     
-    // Rol en el sistema
+    // ✅ CORREGIDO: Validar que se haya seleccionado un rol en el sistema
     if (elements.rol && !elements.rol.value) {
         errores.push('Debes seleccionar un rol en el sistema');
     }
@@ -633,6 +635,7 @@ async function registrarColaborador(event, elements, userManager, admin) {
     let areaNombre = 'No asignada';
     let cargoNombre = 'No asignado';
     let cargoDescripcion = '';
+    let cargoObjeto = null; // Para guardar el objeto completo del cargo
     
     if (elements.areaSelect && elements.areaSelect.value) {
         const areas = elements.areaSelect._areasData || [];
@@ -648,6 +651,12 @@ async function registrarColaborador(event, elements, userManager, admin) {
         if (cargoSeleccionado) {
             cargoNombre = cargoSeleccionado.nombre || 'Cargo sin nombre';
             cargoDescripcion = cargoSeleccionado.descripcion || '';
+            // ✅ CORREGIDO: Guardar el objeto completo del cargo
+            cargoObjeto = {
+                id: cargoSeleccionado.id || elements.cargoEnAreaSelect.value,
+                nombre: cargoNombre,
+                descripcion: cargoDescripcion
+            };
         }
     }
     
@@ -706,7 +715,7 @@ async function registrarColaborador(event, elements, userManager, admin) {
     });
     
     try {
-        // Preparar datos del colaborador
+        // ✅ CORREGIDO: Estructura de datos del colaborador
         const colaboradorData = {
             nombreCompleto: elements.nombreCompleto.value.trim(),
             correoElectronico: elements.correoElectronico.value.trim(),
@@ -719,18 +728,23 @@ async function registrarColaborador(event, elements, userManager, admin) {
             theme: admin.theme || 'light',
             plan: admin.plan || 'gratis',
             
-            // Área y cargo asignados
+            // ✅ CORREGIDO: Usar el objeto `cargo` para la información del puesto
+            cargo: cargoObjeto, 
+            
+            // Mantener los campos planos por compatibilidad (puedes eliminarlos después)
             areaAsignadaId: elements.areaSelect ? elements.areaSelect.value : null,
             areaAsignadaNombre: areaNombre,
             cargoAsignadoId: elements.cargoEnAreaSelect ? elements.cargoEnAreaSelect.value : null,
             cargoAsignadoNombre: cargoNombre,
             cargoAsignadoDescripcion: cargoDescripcion,
             
-            // Campos específicos
+            // ✅ CORREGIDO: El campo `rol` es para el nivel de acceso
             rol: elements.rol ? elements.rol.value : 'colaborador',
             
+            // ✅ ELIMINADO: El campo `cargo` que antes usaba 'colaborador' como string
+            // Ya no se usa 'cargo' para el nivel de acceso
+            
             // Campos de sistema
-            cargo: 'colaborador',
             status: true,
             
             // Campos de trazabilidad
@@ -739,7 +753,7 @@ async function registrarColaborador(event, elements, userManager, admin) {
             creadoPorNombre: admin.nombreCompleto,
             fechaCreacion: new Date(),
             
-            // Permisos básicos
+            // Permisos básicos (pueden ser más específicos)
             permisosPersonalizados: {
                 dashboard: true,
                 verPerfil: true,

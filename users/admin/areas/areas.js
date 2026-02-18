@@ -6,17 +6,12 @@ window.appDebug = {
     controller: null
 };
 
-let Area, AreaManager, db, query, collection, getDocs, where;
+// ✅ CORREGIDO: Solo importamos las clases, NO Firebase directamente
+let Area, AreaManager;
 
 async function cargarDependencias() {
     try {
         console.log('1️⃣ Cargando dependencias...');
-
-        const firebaseModule = await import('/config/firebase-config.js');
-        db = firebaseModule.db;
-
-        const firestoreModule = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        ({ query, collection, getDocs, where } = firestoreModule);
 
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
@@ -39,7 +34,6 @@ function mostrarErrorInterfaz(mensaje) {
         <div class="alert alert-warning mt-3">
             Verifica que los archivos existan en:
             <ul class="mb-0 mt-2">
-                <li><code>/config/firebase-config.js</code></li>
                 <li><code>/clases/area.js</code></li>
             </ul>
         </div>
@@ -102,7 +96,7 @@ class AreasController {
                     id: adminData.id || `admin_${Date.now()}`,
                     nombre: adminData.nombreCompleto || 'Administrador',
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    cargo: 'administrador',
+                    rol: 'administrador',
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase || this.convertirACamelCase(adminData.organizacion),
                     correo: adminData.correoElectronico || '',
@@ -132,7 +126,7 @@ class AreasController {
             if (!userData.organizacionCamelCase) {
                 userData.organizacionCamelCase = this.convertirACamelCase(userData.organizacion);
             }
-            if (!userData.cargo) userData.cargo = 'usuario';
+            if (!userData.rol) userData.rol = 'colaborador';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
 
             return { currentUser: userData };
@@ -216,56 +210,15 @@ class AreasController {
             this.mostrarCargando();
 
             const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
-            this.areas = await this.obtenerAreasDeColeccionEspecifica(organizacionCamelCase);
+            
+            // ✅ CORREGIDO: Usar AreaManager para obtener áreas
+            this.areas = await this.areaManager.getAreasByOrganizacion(organizacionCamelCase);
 
             this.actualizarTabla();
             this.ocultarCargando();
         } catch (error) {
             console.error('❌ Error cargando áreas:', error);
             this.mostrarError('Error cargando áreas: ' + error.message);
-        }
-    }
-
-    async obtenerAreasDeColeccionEspecifica(organizacionCamelCase) {
-        try {
-            const collectionName = `areas_${organizacionCamelCase}`;
-            const q = query(collection(db, collectionName));
-            const querySnapshot = await getDocs(q);
-            const areas = [];
-
-            querySnapshot.forEach(doc => {
-                try {
-                    const data = doc.data();
-                    const area = new Area(doc.id, {
-                        ...data,
-                        id: doc.id,
-                        nombreOrganizacion: this.userManager.currentUser.organizacion
-                    });
-
-                    area.getEstadoBadge = function () {
-                        return '<span class="badge badge-activo">Activa</span>';
-                    };
-
-                    area.nombreOrganizacion = this.userManager.currentUser.organizacion;
-                    areas.push(area);
-                } catch (error) {
-                    console.error(`❌ Error procesando área ${doc.id}:`, error);
-                }
-            });
-
-            areas.sort((a, b) => {
-                const fechaA = a.fechaCreacion ? new Date(a.fechaCreacion) : new Date(0);
-                const fechaB = b.fechaCreacion ? new Date(b.fechaCreacion) : new Date(0);
-                return fechaB - fechaA;
-            });
-
-            return areas;
-
-        } catch (error) {
-            if (error.code === 'failed-precondition' || error.code === 'not-found') {
-                return [];
-            }
-            throw error;
         }
     }
 
@@ -373,10 +326,10 @@ class AreasController {
 
     async eliminarArea(areaId) {
         try {
-            const collectionName = `areas_${this.userManager.currentUser.organizacionCamelCase}`;
-            const { deleteDoc, doc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-            const areaRef = doc(db, collectionName, areaId);
-            await deleteDoc(areaRef);
+            const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
+            
+            // ✅ CORREGIDO: Usar AreaManager para eliminar
+            await this.areaManager.eliminarArea(areaId, this.userManager.currentUser.id, organizacionCamelCase);
 
             Swal.fire({
                 icon: 'success',
@@ -422,77 +375,76 @@ class AreasController {
         }
     }
 
-    // ========== VER DETALLES CON SWEETALERT - ORGANIZADO COMO LA IMAGEN ==========
-  // ========== VER DETALLES CON SWEETALERT - ESTILOS EN CSS ==========
-async verDetalles(areaId) {
-    try {
-        const area = this.areas.find(a => a.id === areaId);
-        if (!area) {
-            this.mostrarError('Área no encontrada');
-            return;
-        }
-        
-        const cantidadCargos = area.getCantidadCargos();
-        
-        Swal.fire({
-            title: `<div class="swal-titulo-container">
-                <div class="swal-titulo-area">
-                    <i class="fas fa-building"></i> Área: ${area.nombreArea}
-                </div>
-                <!-- El badge "Activa" se aplica con CSS, no necesitas ponerlo aquí -->
-            </div>`,
-            html: `
-                <div class="swal-detalles-container">
-                    <!-- DESCRIPCIÓN -->
-                    <div class="swal-seccion">
-                        <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> Descripción del Área</h6>
-                        <p class="swal-descripcion">${area.descripcion || 'No hay descripción disponible para esta área.'}</p>
+    // ========== VER DETALLES CON SWEETALERT - ESTILOS EN CSS ==========
+    async verDetalles(areaId) {
+        try {
+            const area = this.areas.find(a => a.id === areaId);
+            if (!area) {
+                this.mostrarError('Área no encontrada');
+                return;
+            }
+            
+            const cantidadCargos = area.getCantidadCargos();
+            
+            Swal.fire({
+                title: `<div class="swal-titulo-container">
+                    <div class="swal-titulo-area">
+                        <i class="fas fa-building"></i> Área: ${area.nombreArea}
                     </div>
-                    
-                    <!-- SOLO EL NÚMERO DE CARGOS -->
-                    <div class="swal-seccion">
-                        <h6 class="swal-seccion-titulo"><i class="fas fa-briefcase"></i> Cargos (${cantidadCargos})</h6>
-                    </div>
-                    
-                    <!-- INFORMACIÓN DEL SISTEMA -->
-                    <div class="swal-seccion">
-                        <h6 class="swal-seccion-titulo"><i class="fas fa-info-circle"></i> Información del Sistema</h6>
-                        <div class="swal-info-grid">
-                            <div class="swal-info-item">
-                                <small>Fecha Creación</small>
-                                <span><i class="fas fa-calendar"></i> ${area.getFechaCreacionFormateada?.() || 'No disponible'}</span>
-                            </div>
-                            <div class="swal-info-item">
-                                <small>Última Actualización</small>
-                                <span><i class="fas fa-clock"></i> ${area.getFechaActualizacionFormateada?.() || 'No disponible'}</span>
+                </div>`,
+                html: `
+                    <div class="swal-detalles-container">
+                        <!-- DESCRIPCIÓN -->
+                        <div class="swal-seccion">
+                            <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> Descripción del Área</h6>
+                            <p class="swal-descripcion">${area.descripcion || 'No hay descripción disponible para esta área.'}</p>
+                        </div>
+                        
+                        <!-- SOLO EL NÚMERO DE CARGOS -->
+                        <div class="swal-seccion">
+                            <h6 class="swal-seccion-titulo"><i class="fas fa-briefcase"></i> Cargos (${cantidadCargos})</h6>
+                        </div>
+                        
+                        <!-- INFORMACIÓN DEL SISTEMA -->
+                        <div class="swal-seccion">
+                            <h6 class="swal-seccion-titulo"><i class="fas fa-info-circle"></i> Información del Sistema</h6>
+                            <div class="swal-info-grid">
+                                <div class="swal-info-item">
+                                    <small>Fecha Creación</small>
+                                    <span><i class="fas fa-calendar"></i> ${area.getFechaCreacionFormateada?.() || 'No disponible'}</span>
+                                </div>
+                                <div class="swal-info-item">
+                                    <small>Última Actualización</small>
+                                    <span><i class="fas fa-clock"></i> ${area.getFechaActualizacionFormateada?.() || 'No disponible'}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            `,
-            icon: null,
-            confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
-            confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
-            showCancelButton: true,
-            cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
-            cancelButtonColor: 'var(--color-bg-tertiary, #545454)',
-            customClass: {
-                popup: 'swal2-popup swal-detalles-nuevo',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            },
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                this.irAEditarArea(area.id);
-            }
-        });
-    } catch (error) {
-        this.mostrarError('Error: ' + error.message);
+                `,
+                icon: null,
+                confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
+                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
+                showCancelButton: true,
+                cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
+                cancelButtonColor: 'var(--color-bg-tertiary, #545454)',
+                customClass: {
+                    popup: 'swal2-popup swal-detalles-nuevo',
+                    title: 'swal2-title',
+                    htmlContainer: 'swal2-html-container',
+                    confirmButton: 'swal2-confirm',
+                    cancelButton: 'swal2-cancel'
+                },
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.irAEditarArea(area.id);
+                }
+            });
+        } catch (error) {
+            this.mostrarError('Error: ' + error.message);
+        }
     }
-}
+
     // ========== INTERFAZ ==========
 
     actualizarTabla() {
@@ -549,7 +501,7 @@ async verDetalles(areaId) {
                     </div>
                 </div>
             </td>
-            <td>${area.nombreOrganizacion || this.userManager.currentUser.organizacion}</td>
+            <td>${area.organizacionCamelCase || this.userManager.currentUser.organizacion}</td>
             <td>
                 <span class="cargo-count-badge">
                     <i class="fas fa-briefcase me-1"></i>${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
@@ -655,7 +607,7 @@ async verDetalles(areaId) {
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Cargando...</span>
                         </div>
-                        <p class="mt-3">Cargando áreas de <code>areas_${this.userManager.currentUser.organizacionCamelCase}</code>...</p>
+                        <p class="mt-3">Cargando áreas...</p>
                     </td>
                 </tr>
             `;

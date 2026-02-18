@@ -1,4 +1,3 @@
-
 // crearAreas.js - MÓDULO PARA CREACIÓN DE ÁREAS (SOLO SWEETALERT2)
 console.log('🚀 crear-areas.js iniciando...');
 
@@ -8,28 +7,12 @@ window.crearAreaDebug = {
     controller: null
 };
 
-// Cargar dependencias
-let Area, AreaManager, db, query, serverTimestamp, collection, doc, getDocs, setDoc, where;
+// ✅ CORREGIDO: Solo importamos las clases, NO Firebase directamente
+let Area, AreaManager;
 
 async function cargarDependencias() {
     try {
         console.log('1️⃣ Cargando dependencias...');
-        
-        const firebaseModule = await import('/config/firebase-config.js');
-        db = firebaseModule.db;
-        console.log('✅ Firebase cargado');
-        
-        const firestoreModule = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        ({ 
-            query,
-            serverTimestamp,
-            collection,
-            doc,
-            getDocs,
-            setDoc,
-            where
-        } = firestoreModule);
-        console.log('✅ Firestore functions cargadas');
         
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
@@ -46,7 +29,6 @@ async function cargarDependencias() {
             <div class="alert alert-warning mt-3">
                 Verifica que los archivos existan:
                 <ul class="mb-0 mt-2">
-                    <li><code>/config/firebase-config.js</code></li>
                     <li><code>/clases/area.js</code></li>
                 </ul>
             </div>
@@ -114,7 +96,7 @@ class CrearAreaController {
         this.cargos = [];
     }
     
-    // MÉTODO MEJORADO PARA CARGAR USUARIO
+    // MÉTODO MEJORADO PARA CARGAR USUARIO - ✅ CORREGIDO
     cargarUsuarioDesdeStorage() {
         console.log('📂 Cargando datos del usuario desde almacenamiento...');
         
@@ -130,7 +112,7 @@ class CrearAreaController {
                     id: adminData.id || `admin_${Date.now()}`,
                     nombre: adminData.nombreCompleto || 'Administrador',
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    cargo: 'administrador',
+                    rol: 'administrador',
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase || this.convertirACamelCase(adminData.organizacion),
                     correo: adminData.correoElectronico || '',
@@ -163,13 +145,13 @@ class CrearAreaController {
             if (!userData.organizacionCamelCase) {
                 userData.organizacionCamelCase = this.convertirACamelCase(userData.organizacion);
             }
-            if (!userData.cargo) userData.cargo = 'usuario';
+            if (!userData.rol) userData.rol = 'colaborador';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
             
             console.log('✅ Usuario procesado:', {
                 id: userData.id,
                 nombre: userData.nombreCompleto,
-                cargo: userData.cargo,
+                rol: userData.rol,
                 organizacion: userData.organizacion,
                 organizacionCamelCase: userData.organizacionCamelCase,
                 esResponsable: userData.esResponsable || false
@@ -548,9 +530,10 @@ class CrearAreaController {
             console.log('📋 Datos a crear:', datosArea);
             console.log('👤 Usuario que crea:', this.userManager.currentUser);
             
-            const existe = await this.verificarAreaExistenteEnColeccion(
+            // ✅ CORREGIDO: Usar AreaManager para verificar existencia
+            const existe = await this.areaManager.verificarAreaExistente(
                 datosArea.nombreArea,
-                datosArea.organizacionCamelCase
+                this.userManager.currentUser.organizacionCamelCase
             );
             
             if (existe) {
@@ -592,35 +575,6 @@ class CrearAreaController {
         } catch (error) {
             console.error('❌ Error en validación:', error);
             this.mostrarError('Error validando datos: ' + error.message);
-        }
-    }
-    
-    // VERIFICAR ÁREA EXISTENTE EN COLECCIÓN ESPECÍFICA
-    async verificarAreaExistenteEnColeccion(nombreArea, organizacionCamelCase) {
-        try {
-            console.log(`🔍 Verificando si ya existe el área "${nombreArea}" en colección areas_${organizacionCamelCase}...`);
-            
-            const collectionName = `areas_${organizacionCamelCase}`;
-            
-            const q = query(
-                collection(db, collectionName),
-                where("nombreArea", "==", nombreArea)
-            );
-            
-            const querySnapshot = await getDocs(q);
-            const existe = !querySnapshot.empty;
-            
-            console.log(`✅ Verificación completada. ¿Existe?: ${existe}`);
-            
-            if (existe) {
-                console.log('⚠️ Ya existe un área con ese nombre:', nombreArea);
-            }
-            
-            return existe;
-            
-        } catch (error) {
-            console.error('❌ Error verificando área existente:', error);
-            return false;
         }
     }
     
@@ -791,10 +745,8 @@ class CrearAreaController {
             descripcion: document.getElementById('descripcionArea').value.trim(),
             cargos: cargosObject,
             organizacionCamelCase: userOrgCamel,
-            creadoPor: this.userManager.currentUser.id,
-            actualizadoPor: this.userManager.currentUser.id,
-            fechaCreacion: new Date().toISOString(),
-            fechaActualizacion: new Date().toISOString()
+            responsable: 'admin_fijo',
+            responsableNombre: this.userManager.currentUser.nombreCompleto
         };
     }
     
@@ -834,7 +786,8 @@ class CrearAreaController {
             
             console.log('📤 Enviando datos a crearArea:', this.areaEnProceso);
             
-            const nuevaArea = await this.crearAreaEnColeccionEspecifica(this.areaEnProceso);
+            // ✅ CORREGIDO: Usar AreaManager para crear el área
+            const nuevaArea = await this.areaManager.crearArea(this.areaEnProceso, this.userManager);
             
             this.ocultarCargando();
             
@@ -891,67 +844,6 @@ class CrearAreaController {
             this.ocultarCargando();
             this.mostrarError('Error creando área: ' + error.message);
         }
-    }
-    
-    // CREAR ÁREA EN COLECCIÓN ESPECÍFICA - CON CARGOS
-    async crearAreaEnColeccionEspecifica(datosArea) {
-        try {
-            console.log('🚀 Creando área en colección específica...');
-            
-            const organizacionCamelCase = datosArea.organizacionCamelCase;
-            const collectionName = `areas_${organizacionCamelCase}`;
-            
-            console.log(`📂 Colección destino: ${collectionName}`);
-            
-            const areaId = this.generarAreaId(datosArea.nombreArea, organizacionCamelCase);
-            
-            console.log(`🆔 ID generado: ${areaId}`);
-            
-            const areaFirestoreData = {
-                nombreArea: datosArea.nombreArea,
-                descripcion: datosArea.descripcion || '',
-                cargos: datosArea.cargos || {},
-                organizacionCamelCase: organizacionCamelCase,
-                creadoPor: datosArea.creadoPor || '',
-                actualizadoPor: datosArea.actualizadoPor || '',
-                fechaCreacion: serverTimestamp(),
-                fechaActualizacion: serverTimestamp()
-            };
-            
-            console.log('📝 Datos para Firestore:', areaFirestoreData);
-            
-            const areaRef = doc(db, collectionName, areaId);
-            await setDoc(areaRef, areaFirestoreData);
-            
-            console.log(`✅ Área guardada en: ${collectionName}/${areaId}`);
-            
-            const nuevaArea = new Area(areaId, {
-                ...areaFirestoreData,
-                fechaCreacion: new Date(),
-                fechaActualizacion: new Date()
-            });
-            
-            return nuevaArea;
-            
-        } catch (error) {
-            console.error('❌ Error en crearAreaEnColeccionEspecifica:', error);
-            throw error;
-        }
-    }
-    
-    // GENERAR ID ÚNICO PARA EL ÁREA
-    generarAreaId(nombreArea, organizacionCamelCase) {
-        const nombreNormalizado = nombreArea
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]/g, '_')
-            .substring(0, 30);
-        
-        const timestamp = Date.now();
-        const random = Math.floor(Math.random() * 10000);
-        
-        return `${organizacionCamelCase}_area_${nombreNormalizado}_${timestamp}_${random}`;
     }
     
     // ========== ACCIONES POST-CREACIÓN ==========

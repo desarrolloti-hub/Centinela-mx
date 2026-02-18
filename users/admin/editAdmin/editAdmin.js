@@ -256,7 +256,8 @@ function updateUI(elements, user) {
     }
 
     if (elements.position) {
-        elements.position.value = user.cargo || 'Administrador';
+        // ✅ CORREGIDO: Mostrar el rol en lugar del campo 'cargo'
+        elements.position.value = user.rol === 'administrador' ? 'Administrador' : 'Usuario';
     }
 
     // ==================== FOTO DE PERFIL ====================
@@ -517,10 +518,13 @@ function setupModalHandlers(elements, userManager) {
                 throw new Error('No hay usuario autenticado');
             }
 
+            // ✅ CORREGIDO: Usar userType correcto (basado en rol)
+            const userType = currentUser.esAdministrador() ? 'administrador' : 'colaborador';
+
             const success = await userManager.updateUser(
                 currentUser.id,
                 fieldToUpdate,
-                currentUser.cargo,
+                userType,
                 currentUser.organizacionCamelCase
             );
 
@@ -676,10 +680,13 @@ function setupSaveHandler(elements, userManager) {
                 nombreCompleto: nombre
             };
 
+            // ✅ CORREGIDO: Usar userType correcto (basado en rol)
+            const userType = currentUser.esAdministrador() ? 'administrador' : 'colaborador';
+
             await userManager.updateUser(
                 currentUser.id,
                 updateData,
-                currentUser.cargo,
+                userType,
                 currentUser.organizacionCamelCase
             );
 
@@ -1000,5 +1007,5 @@ async function showPasswordResetConfirmation(userManager) {
     }
 }
 
-// Único log informativo al final (puedes eliminarlo si quieres)
+// Único log informativo al final
 // console.log('✅ editAdmin.js cargado - Con customClass y variables CSS');

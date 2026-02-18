@@ -1015,7 +1015,8 @@ class NavbarComplete {
                     uid: userData.id,
                     correoElectronico: userData.email || localStorage.getItem('userEmail'),
                     nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'),
-                    cargo: userData.cargo || localStorage.getItem('userRole'),
+                    // ✅ CORREGIDO: Usar rol en lugar de cargo
+                    rol: userData.rol || localStorage.getItem('userRole'),
                     organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
                     organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
                     fotoUsuario: fotoUsuario,
@@ -1032,14 +1033,15 @@ class NavbarComplete {
                 id: localStorage.getItem('userId'),
                 correoElectronico: localStorage.getItem('userEmail'),
                 nombreCompleto: localStorage.getItem('userNombre'),
-                cargo: localStorage.getItem('userRole'),
+                // ✅ CORREGIDO: Usar rol en lugar de cargo
+                rol: localStorage.getItem('userRole'),
                 organizacion: localStorage.getItem('userOrganizacion'),
                 organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
                 fotoUsuario: localStorage.getItem('userFoto') || null,
                 fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
             };
             
-            if (this.currentAdmin.nombreCompleto && this.currentAdmin.cargo) {
+            if (this.currentAdmin.nombreCompleto && this.currentAdmin.rol) {
                 return true;
             }
             
@@ -1074,12 +1076,16 @@ class NavbarComplete {
                     if (firebaseUser.fotoOrganizacion !== this.currentAdmin.fotoOrganizacion) needsUpdate = true;
                     if (firebaseUser.organizacion !== this.currentAdmin.organizacion) needsUpdate = true;
                     if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
+                    // ✅ CORREGIDO: Verificar también el rol
+                    if (firebaseUser.rol !== this.currentAdmin.rol) needsUpdate = true;
                 }
                 
                 if (needsUpdate) {
                     this.currentAdmin = {
                         ...this.currentAdmin,
-                        ...firebaseUser
+                        ...firebaseUser,
+                        // Asegurar que rol se pase correctamente
+                        rol: firebaseUser.rol
                     };
                     
                     // Actualizar el navbar con los nuevos datos
@@ -1106,7 +1112,8 @@ class NavbarComplete {
                 uid: userData.id,
                 email: userData.correoElectronico,
                 nombreCompleto: userData.nombreCompleto,
-                cargo: userData.cargo,
+                // ✅ CORREGIDO: Guardar el rol
+                rol: userData.rol,
                 organizacion: userData.organizacion,
                 organizacionCamelCase: userData.organizacionCamelCase,
                 fotoUsuario: userData.fotoUsuario,
@@ -1123,7 +1130,8 @@ class NavbarComplete {
             if (userData.fotoOrganizacion) localStorage.setItem('organizacionLogo', userData.fotoOrganizacion);
             if (userData.nombreCompleto) localStorage.setItem('userNombre', userData.nombreCompleto);
             if (userData.correoElectronico) localStorage.setItem('userEmail', userData.correoElectronico);
-            if (userData.cargo) localStorage.setItem('userRole', userData.cargo);
+            // ✅ CORREGIDO: Guardar rol
+            if (userData.rol) localStorage.setItem('userRole', userData.rol);
             if (userData.organizacion) localStorage.setItem('userOrganizacion', userData.organizacion);
             if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
             

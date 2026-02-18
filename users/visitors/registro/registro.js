@@ -563,7 +563,7 @@ async function registrarAdministrador(event, elements, userManager) {
                         <p><strong>Organización:</strong> ${nombreOrganizacion}</p>
                         <p><strong>Nombre:</strong> ${elements.fullName.value.trim()}</p>
                         <p><strong>Email:</strong> ${elements.email.value.trim()}</p>
-                        <p><strong>Tipo de cuenta:</strong> SUPER ADMINISTRADOR</p>
+                        <p><strong>Rol:</strong> ADMINISTRADOR PRINCIPAL</p>
                     </div>
                     <p style="color: #ff9800; margin-top: 15px;">
                         <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación a tu email.
@@ -613,7 +613,9 @@ async function registrarAdministrador(event, elements, userManager) {
             correoElectronico: elements.email.value.trim(),
             fotoUsuario: profileImageBase64,
             fotoOrganizacion: orgImageBase64,
-            cargo: 'administrador',
+            // ✅ CORREGIDO: Asignar rol 'administrador' y cargo null
+            rol: 'administrador',
+            cargo: null,
             status: true,
             theme: 'Predeterminado',
             plan: 'gratis',
@@ -624,6 +626,9 @@ async function registrarAdministrador(event, elements, userManager) {
             organizacion: adminData.organizacion,
             nombre: adminData.nombreCompleto,
             email: adminData.correoElectronico,
+            // ✅ CORREGIDO: Mostrar rol y cargo
+            rol: adminData.rol,
+            cargo: adminData.cargo,
             camelCase: adminData.organizacionCamelCase
         });
         
@@ -670,7 +675,7 @@ async function mostrarExitoRegistro(adminData) {
                     <p><strong>Organización:</strong> ${adminData.organizacion}</p>
                     <p><strong>Administrador:</strong> ${adminData.nombreCompleto}</p>
                     <p><strong>Email:</strong> ${adminData.correoElectronico}</p>
-                    <p><strong>Rol:</strong> SUPER ADMINISTRADOR</p>
+                    <p><strong>Rol:</strong> ADMINISTRADOR PRINCIPAL</p>
                     <p><strong>Plan:</strong> ${adminData.plan.toUpperCase()}</p>
                 </div>
                 <div style="background: #fde8e8; padding: 15px; border-radius: 8px; margin-top: 20px;">

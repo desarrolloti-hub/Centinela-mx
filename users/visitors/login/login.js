@@ -173,7 +173,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 id: user.id,
                 email: user.email || user.correoElectronico,
                 nombreCompleto: user.nombreCompleto,
-                cargo: user.cargo,
+                // ✅ CORREGIDO: Guardar el ROL, no el cargo
+                rol: user.rol, 
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
                 status: user.status,
@@ -196,7 +197,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             localStorage.setItem('userData', JSON.stringify(userData));
             localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userRole', user.cargo);
+            // ✅ CORREGIDO: Guardar el rol también en una clave individual
+            localStorage.setItem('userRole', user.rol);
             localStorage.setItem('userId', user.id);
             localStorage.setItem('userOrganizacion', user.organizacion);
             localStorage.setItem('userOrganizacionCamelCase', organizacionCamelCase);
@@ -231,7 +233,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 id: user.id,
                 email: user.email,
                 nombreCompleto: user.nombreCompleto,
-                cargo: user.cargo,
+                // ✅ CORREGIDO: Guardar el ROL
+                rol: user.rol,
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
                 sessionId: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -248,7 +251,8 @@ document.addEventListener('DOMContentLoaded', function () {
             sessionStorage.setItem('sessionOrganizacion', user.organizacion);
             sessionStorage.setItem('sessionOrganizacionCamelCase', organizacionCamelCase);
             sessionStorage.setItem('sessionUser', user.nombreCompleto);
-            sessionStorage.setItem('sessionRole', user.cargo);
+            // ✅ CORREGIDO: Guardar el rol en sessionStorage también
+            sessionStorage.setItem('sessionRole', user.rol);
 
             return true;
         } catch (error) {
@@ -269,6 +273,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('Sesión existente encontrada:', {
                     usuario: userData.nombreCompleto,
                     organizacion: userData.organizacion,
+                    // ✅ CORREGIDO: Mostrar el rol
+                    rol: userData.rol,
                     tieneFotoUsuario: !!userData.fotoUsuario,
                     tieneFotoOrganizacion: !!userData.fotoOrganizacion
                 });
@@ -305,8 +311,8 @@ document.addEventListener('DOMContentLoaded', function () {
                             <span style="margin-left: 10px; color: ${estilos.colors.primary};"><strong>Organización:</strong> ${user.organizacion}</span>
                         </div>
                         <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                            <i class="fas fa-briefcase" style="color: ${estilos.colors.accentSecondary}; width: 20px;"></i>
-                            <span style="margin-left: 10px; color: ${estilos.colors.primary};"><strong>Cargo:</strong> ${user.cargo}</span>
+                            <i class="fas fa-id-badge" style="color: ${estilos.colors.accentSecondary}; width: 20px;"></i>
+                            <span style="margin-left: 10px; color: ${estilos.colors.primary};"><strong>Rol:</strong> ${user.rol === 'administrador' ? 'ADMINISTRADOR' : 'COLABORADOR'}</span>
                         </div>
                         <div style="display: flex; align-items: center;">
                             <i class="fas fa-user-shield" style="color: ${estilos.colors.accentPrimary}; width: 20px;"></i>
@@ -745,7 +751,8 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('✅ Login exitoso:', {
                 id: user.id,
                 nombre: user.nombreCompleto,
-                cargo: user.cargo,
+                // ✅ CORREGIDO: Mostrar el ROL
+                rol: user.rol,
                 organizacion: user.organizacion,
                 tieneFotoUsuario: !!(user.fotoUsuario || user.fotoURL),
                 tieneFotoOrganizacion: !!user.fotoOrganizacion
@@ -762,10 +769,13 @@ document.addEventListener('DOMContentLoaded', function () {
             mostrarSweetAlertExito(user);
 
             setTimeout(() => {
-                if (user.cargo === 'administrador') {
+                // ✅ CORREGIDO: Usar los métodos de verificación de rol
+                if (user.esAdministrador()) {
                     window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
-                } else if (user.cargo === 'colaborador') {
+                } else if (user.esColaborador()) {
                     window.location.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
+                } else if (user.esMaster()) {
+                    window.location.href = '/users/master/dashMaster/dashMaster.html';
                 } else {
                     window.location.href = '/index.html';
                 }

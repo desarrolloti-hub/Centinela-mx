@@ -43,13 +43,20 @@ class User {
         this.fotoUsuario = data.fotoUsuario || data.fotoURL || data.foto || '';
         this.fotoOrganizacion = data.fotoOrganizacion || data.logoOrganizacion || data.logo || '';
 
-        // ===== NUEVO: Datos de área y cargo =====
+        // ===== ✅ CORREGIDO: Separación clara de ROL y CARGO =====
+        // `rol` define el nivel de acceso en el sistema ('master', 'administrador', 'colaborador')
+        this.rol = data.rol || 'colaborador';
+        
+        // `cargo` es la información del puesto (hereda de AreaManager). Puede ser un objeto o null.
+        this.cargo = data.cargo || null; 
+
+        // Estos campos se mantienen por compatibilidad, pero idealmente deberían estar dentro del objeto `cargo`.
+        // Puedes eliminarlos más adelante cuando migres completamente a usar `this.cargo`.
         this.areaAsignadaId = data.areaAsignadaId || null;
         this.areaAsignadaNombre = data.areaAsignadaNombre || null;
         this.cargoAsignadoId = data.cargoAsignadoId || null;
         this.cargoAsignadoNombre = data.cargoAsignadoNombre || null;
         this.cargoAsignadoDescripcion = data.cargoAsignadoDescripcion || null;
-        this.rol = data.rol || 'colaborador'; // Rol en el sistema (colaborador, supervisor, etc.)
 
         // Fechas y timestamps
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
@@ -58,15 +65,14 @@ class User {
 
         // Configuraciones y preferencias
         this.theme = data.theme || this._obtenerThemeDelLocalStorage() || 'predeterminado';
-        this.cargo = data.cargo || 'colaborador'; // 'administrador' o 'colaborador'
 
         // Permisos y plan
         this.permisosPersonalizados = data.permisosPersonalizados || {};
-        this.plan = data.plan || 'gratis'; // 'gratis', 'basico', 'premium', 'empresa'
+        this.plan = data.plan || 'gratis';
 
         // Estado de verificación de email
         this.verificado = data.verificado || false;
-        this.emailVerified = data.emailVerified || false; // Estado de verificación de email en Auth
+        this.emailVerified = data.emailVerified || false;
 
         // Información de creación
         this.creadoPor = data.creadoPor || '';
@@ -137,6 +143,41 @@ class User {
 
         // Fallback a placeholder si el formato no es reconocido
         return 'https://via.placeholder.com/150/0a2540/ffffff?text=Invalid+Photo';
+    }
+
+    // ========== ✅ CORREGIDO: MÉTODOS DE VERIFICACIÓN DE ROL ==========
+
+    esMaster() {
+        return this.rol === 'master';
+    }
+
+    esAdministrador() {
+        return this.rol === 'administrador';
+    }
+
+    esColaborador() {
+        return this.rol === 'colaborador';
+    }
+
+    // ========== ✅ CORREGIDO: MÉTODO DE PERMISOS ==========
+    /**
+     * Verifica si el usuario tiene un permiso específico.
+     * @param {string} permiso - Nombre del permiso (ej. 'users.create', 'reports.view').
+     * @returns {boolean} True si tiene el permiso.
+     */
+    tienePermiso(permiso) {
+        // Master y Administrador tienen todos los permisos
+        if (this.esMaster() || this.esAdministrador()) {
+            return true;
+        }
+
+        // Colaborador: sus permisos se definen en el objeto 'permisosPersonalizados'
+        if (this.esColaborador()) {
+            return this.permisosPersonalizados[permiso] === true;
+        }
+
+        // Si por alguna razón el rol no es reconocido, no tiene permiso.
+        return false;
     }
 
     // ========== MÉTODOS DE ESTADO ==========
@@ -289,18 +330,20 @@ class UserManager {
                 const user = new User(userId, {
                     ...data,
                     idAuth: userId,
-                    cargo: 'administrador',
+                    // ✅ CORREGIDO: Asignar el rol correctamente. Para admin, el rol es 'administrador'
+                    rol: data.rol || 'administrador', 
+                    // ✅ CORREGIDO: Para admin, el cargo (puesto) se asigna desde los datos
+                    cargo: data.cargo || null, 
                     // Asegurar que las fotos se pasen explícitamente
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                     email: data.correoElectronico || data.email,
-                    // ===== NUEVO: Pasar datos de área y cargo =====
+                    // Pasar datos de área (por si acaso)
                     areaAsignadaId: data.areaAsignadaId,
                     areaAsignadaNombre: data.areaAsignadaNombre,
                     cargoAsignadoId: data.cargoAsignadoId,
                     cargoAsignadoNombre: data.cargoAsignadoNombre,
                     cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
-                    rol: data.rol,
                     creadoPorEmail: data.creadoPorEmail,
                     creadoPorNombre: data.creadoPorNombre,
                     actualizadoPor: data.actualizadoPor
@@ -339,18 +382,19 @@ class UserManager {
                     const user = new User(userId, {
                         ...data,
                         idAuth: userId,
-                        cargo: 'colaborador',
+                        // ✅ CORREGIDO: El rol para un colaborador es 'colaborador'
+                        rol: data.rol || 'colaborador',
+                        // ✅ CORREGIDO: El cargo (puesto) se asigna desde los datos
+                        cargo: data.cargo || null,
                         fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                         fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                         email: data.correoElectronico || data.email,
                         emailVerified: auth.currentUser?.emailVerified || false,
-                        // ===== NUEVO: Pasar datos de área y cargo =====
                         areaAsignadaId: data.areaAsignadaId,
                         areaAsignadaNombre: data.areaAsignadaNombre,
                         cargoAsignadoId: data.cargoAsignadoId,
                         cargoAsignadoNombre: data.cargoAsignadoNombre,
                         cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
-                        rol: data.rol,
                         creadoPorEmail: data.creadoPorEmail,
                         creadoPorNombre: data.creadoPorNombre,
                         actualizadoPor: data.actualizadoPor
@@ -444,7 +488,10 @@ class UserManager {
             const adminFirestoreData = {
                 ...adminData,
                 idAuth: uid,
-                cargo: 'administrador',
+                // ✅ CORREGIDO: El rol es 'administrador'
+                rol: 'administrador',
+                // ✅ CORREGIDO: El cargo (puesto) para un admin es null (o el que venga en adminData)
+                cargo: adminData.cargo || null, 
                 plan: adminData.plan || 'gratis',
                 verificado: false, // Hasta que verifique el email
                 emailVerified: false,
@@ -570,7 +617,10 @@ class UserManager {
             const colabFirestoreData = {
                 ...colaboradorData,
                 idAuth: uid,
-                cargo: 'colaborador',
+                // ✅ CORREGIDO: El rol para un nuevo colaborador es 'colaborador'
+                rol: 'colaborador',
+                // ✅ CORREGIDO: El cargo (puesto) se asigna desde los datos del formulario
+                cargo: colaboradorData.cargo || null,
                 organizacion: adminData.organizacion,
                 organizacionCamelCase: adminData.organizacionCamelCase,
                 fotoOrganizacion: adminData.fotoOrganizacion || adminData.logoOrganizacion || null,
@@ -691,7 +741,7 @@ class UserManager {
 
                 if (this.currentUser) {
                     // Actualizar en Firestore según el tipo de usuario
-                    if (this.currentUser.cargo === 'administrador') {
+                    if (this.currentUser.esAdministrador()) {
                         await updateDoc(doc(db, "administradores", this.currentUser.id), {
                             verificado: true,
                             emailVerified: true,
@@ -1157,7 +1207,7 @@ class UserManager {
             }
 
             // ===== PASO 5: Actualizar último login en Firestore =====
-            if (user.cargo === 'administrador') {
+            if (user.esAdministrador()) {
                 await updateDoc(doc(db, "administradores", uid), {
                     ultimoLogin: serverTimestamp(),
                     fechaActualizacion: serverTimestamp(),
@@ -1351,17 +1401,17 @@ class UserManager {
                 const user = new User(id, {
                     ...data,
                     idAuth: id,
-                    cargo: 'administrador',
+                    // ✅ CORREGIDO: Usar el rol de la BD o 'administrador' por defecto
+                    rol: data.rol || 'administrador',
+                    cargo: data.cargo || null,
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                     email: data.correoElectronico || data.email,
-                    // ===== NUEVO: Pasar datos de área y cargo =====
                     areaAsignadaId: data.areaAsignadaId,
                     areaAsignadaNombre: data.areaAsignadaNombre,
                     cargoAsignadoId: data.cargoAsignadoId,
                     cargoAsignadoNombre: data.cargoAsignadoNombre,
                     cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
-                    rol: data.rol,
                     creadoPorEmail: data.creadoPorEmail,
                     creadoPorNombre: data.creadoPorNombre,
                     actualizadoPor: data.actualizadoPor
@@ -1394,17 +1444,17 @@ class UserManager {
                         const user = new User(id, {
                             ...data,
                             idAuth: id,
-                            cargo: 'colaborador',
+                            // ✅ CORREGIDO: Usar el rol de la BD o 'colaborador' por defecto
+                            rol: data.rol || 'colaborador',
+                            cargo: data.cargo || null,
                             fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                             fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                             email: data.correoElectronico || data.email,
-                            // ===== NUEVO: Pasar datos de área y cargo =====
                             areaAsignadaId: data.areaAsignadaId,
                             areaAsignadaNombre: data.areaAsignadaNombre,
                             cargoAsignadoId: data.cargoAsignadoId,
                             cargoAsignadoNombre: data.cargoAsignadoNombre,
                             cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
-                            rol: data.rol,
                             creadoPorEmail: data.creadoPorEmail,
                             creadoPorNombre: data.creadoPorNombre,
                             actualizadoPor: data.actualizadoPor
@@ -1433,7 +1483,7 @@ class UserManager {
      * @returns {boolean} True si es administrador
      */
     esAdministrador() {
-        return this.currentUser && this.currentUser.cargo === 'administrador';
+        return this.currentUser && this.currentUser.esAdministrador();
     }
 
     /**
@@ -1442,15 +1492,7 @@ class UserManager {
      * @returns {boolean} True si tiene el permiso
      */
     tienePermiso(permiso) {
-        if (!this.currentUser) return false;
-
-        // Los administradores tienen todos los permisos
-        if (this.currentUser.cargo === 'administrador') {
-            return true;
-        }
-
-        // Los colaboradores tienen permisos personalizados
-        return this.currentUser.permisosPersonalizados[permiso] === true;
+        return this.currentUser && this.currentUser.tienePermiso(permiso);
     }
 }
 

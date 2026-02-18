@@ -6,7 +6,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        if (!userManager.currentUser || userManager.currentUser.cargo !== 'administrador') {
+        // ✅ CORREGIDO: Usar el método esAdministrador() en lugar de comparar cargo
+        if (!userManager.currentUser || !userManager.currentUser.esAdministrador()) {
             console.error('❌ No hay administrador autenticado');
             showNoAdminMessage();
             return;
@@ -19,6 +20,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             nombreCompleto: admin.nombreCompleto,
             organizacion: admin.organizacion,
             organizacionCamelCase: admin.organizacionCamelCase,
+            // ✅ CORREGIDO: Guardar el rol en lugar del cargo para consistencia
+            rol: admin.rol,
             correoElectronico: admin.correoElectronico,
             timestamp: new Date().toISOString()
         }));
@@ -50,6 +53,7 @@ async function loadCollaborators(admin, userManager) {
                 id: col.id,
                 nombreCompleto: col.nombreCompleto,
                 correoElectronico: col.correoElectronico,
+                // ✅ CORREGIDO: Guardar el rol en lugar del cargo para consistencia
                 rol: col.rol,
                 status: col.status,
                 organizacion: col.organizacion,

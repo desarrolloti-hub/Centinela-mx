@@ -521,11 +521,14 @@
         // Importar funciones necesarias de Firebase Auth
         import { 
             confirmPasswordReset, 
-            applyActionCode 
+            applyActionCode,
+            checkActionCode
         } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
         // Variables globales
         let actionCode = null;
+        let actionCodeInfo = null;
+        let actionMode = null;
         
         // ========== FUNCIÓN PARA LIMPIAR STORAGE Y REDIRIGIR ==========
         window.clearStorageAndRedirect = function(event) {
@@ -637,6 +640,49 @@
             }
         }
 
+        // ========== FUNCIÓN PARA VERIFICAR EMAIL ==========
+        async function verifyEmail() {
+            const statusEl = document.getElementById('status');
+            const titleEl = document.getElementById('title');
+            
+            try {
+                // Verificar el código de acción
+                await checkActionCode(auth, actionCode);
+                
+                // Aplicar la verificación
+                await applyActionCode(auth, actionCode);
+                
+                statusEl.className = 'status-icon success';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i>';
+                titleEl.textContent = '¡Email Verificado!';
+                showMessage('Tu correo electrónico ha sido verificado exitosamente. Ya puedes iniciar sesión.', 'success');
+                
+                document.getElementById('actionButtons').style.display = 'block';
+                
+            } catch (error) {
+                console.error('❌ Error verificando email:', error);
+                
+                statusEl.className = 'status-icon error';
+                statusEl.innerHTML = '<i class="fas fa-times-circle"></i>';
+                titleEl.textContent = 'Error de Verificación';
+                
+                let errorMsg = 'No se pudo verificar tu correo electrónico.';
+                
+                if (error.code === 'auth/expired-action-code') {
+                    errorMsg = 'El enlace de verificación ha expirado. Solicita un nuevo correo de verificación.';
+                } else if (error.code === 'auth/invalid-action-code') {
+                    errorMsg = 'El enlace de verificación no es válido o ya ha sido usado.';
+                } else if (error.code === 'auth/user-disabled') {
+                    errorMsg = 'Tu cuenta ha sido deshabilitada. Contacta al administrador.';
+                } else if (error.code === 'auth/user-not-found') {
+                    errorMsg = 'No se encontró el usuario asociado a este enlace.';
+                }
+                
+                showMessage(errorMsg, 'error');
+                document.getElementById('actionButtons').style.display = 'block';
+            }
+        }
+
         // ========== FUNCIÓN PARA RESTABLECER CONTRASEÑA ==========
         window.resetPassword = async function() {
             const newPassword = document.getElementById('newPassword').value;
@@ -711,7 +757,7 @@
                 } else if (error.code === 'auth/invalid-action-code') {
                     errorMsg = 'Enlace inválido o ya usado.';
                 } else if (error.code === 'auth/weak-password') {
-                    errorMsg = 'Contraseña muy débil. Usa al menos 8 caracteres.';
+                    errorMsg = 'Contraseña muy débil. Usa al menos 8 caracteres con mayúsculas, minúsculas, números y símbolos.';
                 } else {
                     errorMsg = `Error: ${error.message || 'Error desconocido'}`;
                 }
@@ -722,10 +768,54 @@
             }
         }
 
+        // ========== FUNCIÓN PARA RECUPERAR EMAIL ==========
+        async function recoverEmail() {
+            const statusEl = document.getElementById('status');
+            const titleEl = document.getElementById('title');
+            
+            try {
+                // Verificar el código de acción
+                const info = await checkActionCode(auth, actionCode);
+                
+                // Aplicar la recuperación
+                await applyActionCode(auth, actionCode);
+                
+                statusEl.className = 'status-icon success';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i>';
+                titleEl.textContent = '¡Email Recuperado!';
+                
+                const oldEmail = info.data.email || 'anterior';
+                const restoredEmail = info.data.restoredEmail || 'recuperado';
+                
+                showMessage(`Tu correo electrónico ha sido recuperado exitosamente. El email ${oldEmail} ha sido restaurado a ${restoredEmail}.`, 'success');
+                
+                document.getElementById('actionButtons').style.display = 'block';
+                
+            } catch (error) {
+                console.error('❌ Error recuperando email:', error);
+                
+                statusEl.className = 'status-icon error';
+                statusEl.innerHTML = '<i class="fas fa-times-circle"></i>';
+                titleEl.textContent = 'Error de Recuperación';
+                
+                let errorMsg = 'No se pudo recuperar tu correo electrónico.';
+                
+                if (error.code === 'auth/expired-action-code') {
+                    errorMsg = 'El enlace de recuperación ha expirado. Solicita uno nuevo.';
+                } else if (error.code === 'auth/invalid-action-code') {
+                    errorMsg = 'El enlace de recuperación no es válido o ya ha sido usado.';
+                }
+                
+                showMessage(errorMsg, 'error');
+                document.getElementById('actionButtons').style.display = 'block';
+            }
+        }
+
         // ========== PROCESAR LA SOLICITUD ==========
         async function processRequest() {
             const params = getUrlParams();
             const actionCodeParam = params.oobCode;
+            const mode = params.mode;
             
             if (!actionCodeParam) {
                 showNoParameters();
@@ -733,32 +823,83 @@
             }
             
             actionCode = actionCodeParam;
+            actionMode = mode;
             
-            const isResetPassword = params.mode === 'resetPassword' || params.mode === 'action' || params.mode === 'recoverEmail';
-            
-            if (isResetPassword || actionCodeParam) {
-                document.getElementById('status').className = 'status-icon warning';
-                document.getElementById('status').innerHTML = '<i class="fas fa-lock"></i>';
-                document.getElementById('title').textContent = 'Restablecer Contraseña';
-                showMessage('Ingresa tu nueva contraseña a continuación. El enlace expirará en 1 hora.', 'info');
+            try {
+                // Verificar el código de acción para obtener información
+                actionCodeInfo = await checkActionCode(auth, actionCode);
                 
-                document.getElementById('resetPasswordForm').style.display = 'block';
+                console.log('📋 Información del código de acción:', {
+                    mode: mode,
+                    data: actionCodeInfo.data
+                });
                 
-                const newPasswordInput = document.getElementById('newPassword');
-                if (newPasswordInput) {
-                    newPasswordInput.addEventListener('input', function() {
-                        updateStrengthBar(this.value);
-                    });
+                // Procesar según el modo
+                switch(mode) {
+                    case 'verifyEmail':
+                        document.getElementById('status').className = 'status-icon warning';
+                        document.getElementById('status').innerHTML = '<i class="fas fa-envelope"></i>';
+                        document.getElementById('title').textContent = 'Verificando Email...';
+                        showMessage('Verificando tu correo electrónico. Por favor espera...', 'info');
+                        
+                        await verifyEmail();
+                        break;
+                        
+                    case 'resetPassword':
+                        document.getElementById('status').className = 'status-icon warning';
+                        document.getElementById('status').innerHTML = '<i class="fas fa-lock"></i>';
+                        document.getElementById('title').textContent = 'Restablecer Contraseña';
+                        showMessage('Ingresa tu nueva contraseña a continuación. El enlace expirará en 1 hora.', 'info');
+                        
+                        document.getElementById('resetPasswordForm').style.display = 'block';
+                        
+                        const newPasswordInput = document.getElementById('newPassword');
+                        if (newPasswordInput) {
+                            newPasswordInput.addEventListener('input', function() {
+                                updateStrengthBar(this.value);
+                            });
+                        }
+                        break;
+                        
+                    case 'recoverEmail':
+                        document.getElementById('status').className = 'status-icon warning';
+                        document.getElementById('status').innerHTML = '<i class="fas fa-undo-alt"></i>';
+                        document.getElementById('title').textContent = 'Recuperando Email...';
+                        showMessage('Procesando la recuperación de tu correo electrónico. Por favor espera...', 'info');
+                        
+                        await recoverEmail();
+                        break;
+                        
+                    default:
+                        showMessage('Acción no reconocida. Por favor, verifica el enlace.', 'error');
+                        document.getElementById('status').className = 'status-icon error';
+                        document.getElementById('status').innerHTML = '<i class="fas fa-times-circle"></i>';
+                        document.getElementById('title').textContent = 'Error';
+                        document.getElementById('actionButtons').style.display = 'block';
                 }
                 
-                return;
+            } catch (error) {
+                console.error('❌ Error verificando código de acción:', error);
+                
+                document.getElementById('status').className = 'status-icon error';
+                document.getElementById('status').innerHTML = '<i class="fas fa-times-circle"></i>';
+                document.getElementById('title').textContent = 'Error';
+                
+                let errorMsg = 'El enlace no es válido o ha expirado.';
+                
+                if (error.code === 'auth/expired-action-code') {
+                    errorMsg = 'El enlace ha expirado. Solicita uno nuevo.';
+                } else if (error.code === 'auth/invalid-action-code') {
+                    errorMsg = 'El enlace no es válido o ya ha sido usado.';
+                } else if (error.code === 'auth/user-disabled') {
+                    errorMsg = 'Tu cuenta ha sido deshabilitada. Contacta al administrador.';
+                } else if (error.code === 'auth/user-not-found') {
+                    errorMsg = 'No se encontró el usuario asociado a este enlace.';
+                }
+                
+                showMessage(errorMsg, 'error');
+                document.getElementById('actionButtons').style.display = 'block';
             }
-            
-            showMessage('Acción no reconocida. Por favor, verifica el enlace.', 'error');
-            document.getElementById('status').className = 'status-icon error';
-            document.getElementById('status').innerHTML = '<i class="fas fa-times-circle"></i>';
-            document.getElementById('title').textContent = 'Error';
-            document.getElementById('actionButtons').style.display = 'block';
         }
 
         function showNoParameters() {

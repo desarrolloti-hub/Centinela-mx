@@ -224,7 +224,8 @@ class ThemeLoader {
                 themeId: themeId,
                 themeName: theme.name,
                 user: this.userManager?.currentUser?.id,
-                userRole: this.userManager?.currentUser?.cargo,
+                // ✅ CORREGIDO: Usar 'rol' en lugar de 'cargo' en el evento
+                userRole: this.userManager?.currentUser?.rol,
                 appliedDirectly: true
             }
         }));
@@ -251,7 +252,8 @@ class ThemeLoader {
                 themeId: themeId,
                 appliedAt: new Date().toISOString(),
                 user: this.userManager?.currentUser?.id || 'unknown',
-                userRole: this.userManager?.currentUser?.cargo || 'unknown',
+                // ✅ CORREGIDO: Usar 'rol' en lugar de 'cargo' en localStorage
+                userRole: this.userManager?.currentUser?.rol || 'unknown',
                 fromLoader: true,
                 timestamp: Date.now()
             };

@@ -915,7 +915,7 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // Carga los datos del usuario desde localStorage
+    // ✅ CORREGIDO: Carga los datos del usuario desde localStorage usando ROL
     loadUserDataFromLocalStorage() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -956,7 +956,8 @@ class NavbarComplete {
                     uid: userData.id,
                     correoElectronico: userData.email || localStorage.getItem('userEmail'),
                     nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'),
-                    cargo: userData.cargo || localStorage.getItem('userRole'),
+                    // ✅ CORREGIDO: Usar 'rol' en lugar de 'cargo'
+                    rol: userData.rol || localStorage.getItem('userRole'),
                     organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
                     organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
                     fotoUsuario: fotoUsuario,
@@ -966,7 +967,8 @@ class NavbarComplete {
                     ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
                 };
                 
-                this.userRole = this.currentUser.cargo?.toLowerCase() || 'colaborador';
+                // ✅ CORREGIDO: Guardar el rol
+                this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
                 return true;
             }
             
@@ -974,15 +976,16 @@ class NavbarComplete {
                 id: localStorage.getItem('userId'),
                 correoElectronico: localStorage.getItem('userEmail'),
                 nombreCompleto: localStorage.getItem('userNombre'),
-                cargo: localStorage.getItem('userRole'),
+                // ✅ CORREGIDO: Usar 'rol' en lugar de 'cargo'
+                rol: localStorage.getItem('userRole'),
                 organizacion: localStorage.getItem('userOrganizacion'),
                 organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
                 fotoUsuario: localStorage.getItem('userFoto') || null,
                 fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
             };
             
-            if (this.currentUser.nombreCompleto && this.currentUser.cargo) {
-                this.userRole = this.currentUser.cargo?.toLowerCase() || 'colaborador';
+            if (this.currentUser.nombreCompleto && this.currentUser.rol) {
+                this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
                 return true;
             }
             
@@ -995,7 +998,7 @@ class NavbarComplete {
         }
     }
 
-    // Actualiza el navbar con los datos del usuario
+    // ✅ CORREGIDO: Actualiza el navbar con los datos del usuario
     updateNavbarWithUserData() {
         if (!this.currentUser) {
             const userName = document.getElementById('userName');
@@ -1068,13 +1071,17 @@ class NavbarComplete {
         orgTextLogo.title = orgName;
     }
 
-    // Actualiza la información del usuario
+    // ✅ CORREGIDO: Actualiza la información del usuario mostrando el rol
     updateUserMenuInfo() {
         const userName = document.getElementById('userName');
         if (userName) userName.textContent = this.currentUser.nombreCompleto || 'Usuario';
 
         const userRole = document.getElementById('userRole');
-        if (userRole) userRole.textContent = 'Colaborador';
+        if (userRole) {
+            // ✅ CORREGIDO: Mostrar el rol capitalizado
+            const rol = this.currentUser.rol || 'colaborador';
+            userRole.textContent = rol.charAt(0).toUpperCase() + rol.slice(1).toLowerCase();
+        }
 
         const userEmail = document.getElementById('userEmail');
         if (userEmail) userEmail.textContent = this.currentUser.correoElectronico || 'No especificado';
@@ -1135,7 +1142,7 @@ class NavbarComplete {
         }
     }
 
-    // Capitaliza primera letra
+    // Capitaliza primera letra (ya no se usa pero se mantiene por compatibilidad)
     capitalizeFirst(string) {
         if (!string) return '';
         return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();

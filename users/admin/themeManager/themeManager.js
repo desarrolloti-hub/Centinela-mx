@@ -833,9 +833,9 @@ class ThemeManager {
                 fechaActualizacion: new Date()
             };
             
-            // Determinar tipo de usuario y colección
+            // ✅ CORREGIDO: Usar los métodos de verificación de rol
             let result;
-            if (currentUser.cargo === 'administrador') {
+            if (currentUser.esAdministrador()) {
                 result = await this.userManager.updateUser(
                     currentUser.id,
                     updateData,
@@ -872,7 +872,8 @@ class ThemeManager {
      */
     async syncThemeToColaboradores(themeId) {
         try {
-            if (!this.userManager?.currentUser || !this.userManager.esAdministrador()) {
+            // ✅ CORREGIDO: Usar los métodos de verificación de rol
+            if (!this.userManager?.currentUser || !this.userManager.currentUser.esAdministrador()) {
                 return 0;
             }
             

@@ -81,7 +81,7 @@ function obtenerIdDesdeURL() {
                 confirmButton: 'swal2-confirm'
             }
         }).then(() => {
-            window.location.href = 'gestionColaboradores.html';
+            window.location.href = '/users/admin/managementUser/managementUser.html';
         });
         return null;
     }
@@ -169,7 +169,7 @@ function mostrarErrorConfiguracion(error) {
         },
         allowOutsideClick: false
     }).then(() => {
-        window.location.href = 'gestionColaboradores.html';
+        window.location.href = '/users/admin/managementUser/managementUser.html';
     });
 }
 
@@ -193,7 +193,8 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
             throw new Error('Colaborador no encontrado');
         }
         
-        if (collaborator.cargo !== 'colaborador') {
+        // ✅ CORREGIDO: Verificar que sea colaborador por su rol, no por un campo 'cargo'
+        if (!collaborator.esColaborador()) {
             Swal.close();
             throw new Error('El usuario no es un colaborador');
         }
@@ -232,7 +233,7 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
                 confirmButton: 'swal2-confirm'
             }
         }).then(() => {
-            window.location.href = 'gestionColaboradores.html';
+            window.location.href = '/users/admin/managementUser/managementUser.html';
         });
         
         throw error;
@@ -268,6 +269,8 @@ function actualizarInterfaz(elements, collaborator) {
         statusValue = 'inactive';
     } else if (collaborator.status === 'pending') {
         statusValue = 'pending';
+    } else if (!collaborator.status) {
+        statusValue = 'inactive';
     }
     
     if (elements.statusInput) {
@@ -418,7 +421,7 @@ async function cargarAreas(userManager, elements) {
         elements.areaSelect.innerHTML = options;
         elements.areaSelect.disabled = false;
         
-        // --- CORRECCIÓN PRINCIPAL: Cargar área y cargo actuales ---
+        // Cargar área y cargo actuales
         if (collaborator.areaAsignadaId) {
             console.log('🔍 Área asignada encontrada:', collaborator.areaAsignadaId, collaborator.areaAsignadaNombre);
             
@@ -433,14 +436,14 @@ async function cargarAreas(userManager, elements) {
                 const event = new Event('change', { bubbles: true });
                 elements.areaSelect.dispatchEvent(event);
                 
-                // --- FUNCIÓN PARA SELECCIONAR CARGO ---
+                // Función para seleccionar cargo
                 const seleccionarCargo = () => {
                     if (collaborator.cargoAsignadoId || collaborator.cargoAsignadoNombre) {
                         console.log('🔍 Intentando seleccionar cargo:', collaborator.cargoAsignadoId, collaborator.cargoAsignadoNombre);
                         
                         const cargoSelect = elements.cargoEnAreaSelect;
                         
-                        // --- CORRECCIÓN: Buscar en los cargos del área ---
+                        // Buscar en los cargos del área
                         const areaSeleccionada = areas.find(a => a.id === collaborator.areaAsignadaId);
                         if (areaSeleccionada) {
                             const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
@@ -449,8 +452,7 @@ async function cargarAreas(userManager, elements) {
                             const cargoPorId = cargos.find(c => c.id === collaborator.cargoAsignadoId);
                             
                             if (cargoPorId) {
-                                // Ahora necesitamos encontrar el option que tiene este cargo
-                                // Como los options se generan con IDs temporales, necesitamos buscar por el nombre
+                                // Buscar por el nombre
                                 const optionPorNombre = Array.from(cargoSelect.options).find(
                                     opt => opt.text === cargoPorId.nombre
                                 );
@@ -586,7 +588,7 @@ function configurarHandlersBasicos(elements) {
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = 'gestionColaboradores.html';
+                    window.location.href = '/users/admin/managementUser/managementUser.html';
                 }
             });
         });
@@ -788,6 +790,7 @@ function configurarGuardado(elements, userManager) {
         let areaNombre = 'No asignada';
         let cargoNombre = 'No asignado';
         let cargoDescripcion = '';
+        let cargoObjeto = null; // Para guardar el objeto completo del cargo
         
         const areas = elements.areaSelect._areasData || [];
         const areaSeleccionada = areas.find(a => a.id === elements.areaSelect.value);
@@ -800,6 +803,12 @@ function configurarGuardado(elements, userManager) {
         if (cargoSeleccionado) {
             cargoNombre = cargoSeleccionado.nombre || 'Cargo sin nombre';
             cargoDescripcion = cargoSeleccionado.descripcion || '';
+            // ✅ CORREGIDO: Guardar el objeto completo del cargo
+            cargoObjeto = {
+                id: cargoSeleccionado.id || elements.cargoEnAreaSelect.value,
+                nombre: cargoNombre,
+                descripcion: cargoDescripcion
+            };
         }
         
         const result = await Swal.fire({
@@ -857,9 +866,13 @@ function configurarGuardado(elements, userManager) {
                 });
             }
             
+            // ✅ CORREGIDO: Estructura de datos a actualizar
             const updateData = {
                 nombreCompleto: elements.fullName.value.trim(),
                 status: elements.statusInput.value === 'active',
+                // ✅ CORREGIDO: Guardar el objeto completo del cargo
+                cargo: cargoObjeto,
+                // Mantener los campos planos por compatibilidad
                 areaAsignadaId: elements.areaSelect.value,
                 areaAsignadaNombre: areaNombre,
                 cargoAsignadoId: elements.cargoEnAreaSelect.value,
@@ -1199,11 +1212,10 @@ function configurarEliminacion(elements, userManager) {
         });
         
         try {
-            await userManager.inhabilitarUsuario(
+            await userManager.inactivarUsuario(
                 collaborator.id,
                 'colaborador',
-                collaborator.organizacionCamelCase,
-                'Inhabilitado por administrador'
+                collaborator.organizacionCamelCase
             );
             
             elements.statusInput.value = 'inactive';
@@ -1214,7 +1226,7 @@ function configurarEliminacion(elements, userManager) {
                 }
             });
             
-            collaborator.eliminado = true;
+            collaborator.status = false;
             
             Swal.close();
             Swal.fire({
@@ -1244,7 +1256,7 @@ function configurarEliminacion(elements, userManager) {
             });
             
             setTimeout(() => {
-                window.location.href = 'gestionColaboradores.html';
+                window.location.href = '/users/admin/managementUser/managementUser.html';
             }, 3000);
             
         } catch (error) {
