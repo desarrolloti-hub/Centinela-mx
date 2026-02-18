@@ -1,11 +1,10 @@
 /* =============================================
    managementUser.css - Estilos para gestión de colaboradores
-   Basado en categorías.css para mantener consistencia
    ============================================= */
 
 /* ========== CONTAINER PRINCIPAL ========== */
 .admin-container {
-    padding: 70px 20px 40px; /* Reducido de 80px a 70px */
+    padding: 100px 20px 40px;
     position: relative;
     z-index: 2;
     color: var(--color-text-secondary);
@@ -17,12 +16,13 @@
     animation: fadeInUp 0.5s ease;
 }
 
-/* ========== PAGE HEADER (COMO EN CATEGORÍAS) ========== */
+/* ========== PAGE HEADER - TÍTULO Y DESCRIPCIÓN (AHORA VISIBLE) ========== */
 .page-header {
-    margin-bottom: 20px; /* Reducido de 30px a 20px */
-    padding-bottom: 15px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
     border-bottom: 2px solid var(--color-border-light);
     text-align: center;
+    background: transparent;
 }
 
 .page-header h1 {
@@ -53,66 +53,64 @@
     line-height: 1.6;
 }
 
-/* ========== TABLE WRAPPER Y CARD HEADER ========== */
-.table-wrapper {
-    background: var(--color-bg-secondary);
-    border-radius: var(--border-radius-large);
-    padding: 0;
-    overflow-x: auto;
-    box-shadow: var(--shadow-normal);
-    border: 1px solid var(--color-border-light);
-    margin-top: 10px;
-    position: relative;
+.organization-name {
+    color: var(--color-accent-primary);
+    font-weight: bold;
 }
 
-.table-wrapper::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
+.admin-info-subtitle {
+    margin: 10px 0 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    font-family: var(--font-family-secondary);
 }
 
-.table-wrapper::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
+.admin-info-subtitle strong {
+    color: var(--color-text-primary);
 }
 
-.table-wrapper::-webkit-scrollbar-thumb {
-    background: var(--color-accent-primary);
-    border-radius: 10px;
+.admin-info-subtitle code {
+    background: var(--color-bg-tertiary);
+    padding: 2px 6px;
+    border-radius: var(--border-radius-small);
+    color: var(--color-accent-primary);
+    font-size: 0.85rem;
 }
 
-.table-wrapper::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent-secondary);
-}
-
-/* Header dentro de la tabla (como en categorías) */
-.card-header {
-    background: rgba(20, 20, 20, 0.95);
-    border-bottom: 1px solid var(--color-border-light);
-    padding: 20px 25px;
+/* ========== SECTION HEADER (para el botón y título secundario) ========== */
+.section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 30px;
     flex-wrap: wrap;
     gap: 15px;
+    background: rgba(15, 15, 15, 0.9);
+    padding: 20px 25px;
+    border-radius: var(--border-radius-medium);
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-normal);
 }
 
-.card-header h5 {
+/* TÍTULO SECUNDARIO */
+.section-title {
+    font-size: clamp(22px, 4vw, 26px);
     color: var(--color-text-primary);
-    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
-    font-size: 1.1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     margin: 0;
+    text-transform: uppercase;
+    font-family: var(--font-family-primary);
+    letter-spacing: 1px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
-.card-header h5 i {
+.section-title i {
     color: var(--color-accent-primary);
+    font-size: 24px;
 }
 
-/* Botón agregar (ahora dentro del card-header) */
+/* ========== BOTÓN AGREGAR ========== */
 .add-btn {
     background: var(--color-accent-primary);
     color: var(--color-text-dark);
@@ -146,6 +144,7 @@
     position: absolute;
     top: -50%;
     left: -50%;
+    width: 200%;
     height: 200%;
     background: linear-gradient(
         to bottom right,
@@ -155,13 +154,146 @@
     );
     transform: rotate(30deg);
     transition: all 0.5s ease;
+    opacity: 0;
 }
 
 .add-btn:hover::after {
+    opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
 }
 
+/* ========== ESTADÍSTICAS ========== */
+.stats-container {
+    margin: 20px 0;
+    padding: 20px;
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-large);
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-normal);
+}
+
+.stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.stats-header h3 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-family: var(--font-family-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stats-header h3 i {
+    color: var(--color-accent-primary);
+}
+
+.refresh-btn {
+    background: var(--color-accent-primary);
+    color: var(--color-text-dark);
+    border: none;
+    border-radius: var(--border-radius-small);
+    padding: 8px 16px;
+    transition: var(--transition-default);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.refresh-btn:hover {
+    background: var(--color-active);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+}
+
+.stat-card {
+    background: var(--color-bg-tertiary);
+    padding: 15px;
+    border-radius: var(--border-radius-medium);
+    border: 1px solid var(--color-border-light);
+}
+
+.stat-card.total {
+    border-left: 4px solid #3498db;
+}
+
+.stat-card.active {
+    border-left: 4px solid var(--color-success);
+}
+
+.stat-card.inactive {
+    border-left: 4px solid var(--color-danger);
+}
+
+.stat-card p {
+    margin: 0 0 5px 0;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.stat-card h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--color-text-primary);
+    font-family: var(--font-family-primary);
+}
+
+.stat-card.active h2 {
+    color: var(--color-success);
+}
+
+.stat-card.inactive h2 {
+    color: var(--color-danger);
+}
+
+.stat-card small {
+    color: var(--color-text-secondary);
+}
+
 /* ========== TABLA ========== */
+.table-wrapper {
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-large);
+    padding: 20px;
+    overflow-x: auto;
+    box-shadow: var(--shadow-normal);
+    border: 1px solid var(--color-border-light);
+    margin-top: 20px;
+    position: relative;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--color-accent-primary);
+    border-radius: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent-secondary);
+}
+
 .collaborators-table {
     width: 100%;
     border-collapse: collapse;
@@ -315,6 +447,7 @@
     position: absolute;
     top: -50%;
     left: -50%;
+    width: 200%;
     height: 200%;
     background: linear-gradient(
         to bottom right,
@@ -324,9 +457,11 @@
     );
     transform: rotate(30deg);
     transition: all 0.5s ease;
+    opacity: 0;
 }
 
 .row-btn:hover::after {
+    opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
 }
 
@@ -472,7 +607,6 @@
 
 /* =============================================
    COMPONENTES PERSONALIZADOS PARA SWEETALERT
-   (NO SON ESTILOS NATIVOS, SON CONTENIDO HTML)
    ============================================= */
 
 .swal-user-info {
@@ -684,29 +818,39 @@
     gap: 8px;
 }
 
-/* ========== RESPONSIVE DESIGN ========== */
+/* =============================================
+   RESPONSIVE DESIGN
+   ============================================= */
 
 /* TABLET (768px - 1023px) */
 @media (max-width: 1023px) {
     .admin-container {
-        padding: 60px 15px 30px; /* Reducido de 70px a 60px */
+        padding: 90px 15px 30px;
     }
     
     .page-header h1 {
         font-size: 2rem;
     }
     
-    .card-header {
-        padding: 15px 20px;
+    .section-header {
+        padding: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
     }
     
     .add-btn {
-        min-width: 160px;
-        padding: 10px 16px;
+        width: 100%;
+        max-width: 300px;
     }
     
     .table-wrapper {
-        margin-top: 5px;
+        padding: 15px;
+        margin: 0 -10px;
+        width: calc(100% + 20px);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
     }
     
     .stats-grid {
@@ -721,7 +865,7 @@
 /* MÓVIL (768px hacia abajo) */
 @media (max-width: 768px) {
     .admin-container {
-        padding: 50px 10px 20px; /* Reducido de 60px a 50px */
+        padding: 80px 10px 20px;
     }
     
     .page-header h1 {
@@ -735,15 +879,21 @@
         padding: 0 10px;
     }
     
-    .card-header {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 15px;
+    .section-title {
+        font-size: 20px;
+        text-align: center;
+        justify-content: center;
+        width: 100%;
     }
     
     .add-btn {
         width: 100%;
-        min-width: auto;
+        max-width: none;
+        margin: 0;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
     }
     
     /* TABLA CONVERTIDA A TARJETAS EN MÓVIL */
@@ -760,6 +910,8 @@
     .collaborators-table {
         min-width: 100%;
         display: block;
+        border-collapse: separate;
+        border-spacing: 0;
     }
     
     .collaborators-table thead {
@@ -776,26 +928,28 @@
         display: block;
         background: var(--color-bg-secondary);
         border: 1px solid var(--color-border-light);
-        border-radius: var(--border-radius-medium);
+        border-radius: var(--border-radius-large);
         padding: 20px;
         margin: 0;
         box-shadow: var(--shadow-small);
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .collaborators-table td {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 12px 0;
+        align-items: center;
+        padding: 12px 15px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         font-size: 14px;
         width: 100%;
         text-align: left;
+        box-sizing: border-box;
+        min-height: 50px;
     }
     
     .collaborators-table td:last-child {
         border-bottom: none;
-        padding-bottom: 0;
     }
     
     .collaborators-table td::before {
@@ -804,32 +958,52 @@
         color: var(--color-accent-primary);
         text-transform: uppercase;
         font-size: 11px;
-        margin-bottom: 8px;
+        min-width: 100px;
+        width: 100px;
         font-family: var(--font-family-primary);
-        width: 100%;
-        text-align: left;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+    }
+    
+    /* Estilos específicos para cada tipo de celda */
+    .collaborators-table td[data-label="NOMBRE"] .user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+    }
+    
+    .collaborators-table td[data-label="NOMBRE"] .user-avatar {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .collaborators-table td[data-label="NOMBRE"] .user-details {
+        flex: 1;
+    }
+    
+    .collaborators-table td[data-label="ESTADO"] .status {
+        margin: 0;
+        min-width: 80px;
     }
     
     /* CELDA DE ACCIONES EN MÓVIL */
     .collaborators-table td[data-label="ACCIONES"] {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        padding-top: 15px;
-        margin-top: 10px;
+        justify-content: space-between;
+        padding: 15px 15px 10px 15px;
         border-top: 1px solid var(--color-border-light);
-        text-align: center;
+        margin-top: 5px;
     }
     
     .collaborators-table td[data-label="ACCIONES"]::before {
         content: "ACCIONES";
-        display: block;
-        margin-bottom: 12px;
-        text-align: center;
-        width: 100%;
-        font-size: 12px;
+        min-width: 100px;
+        width: 100px;
         color: var(--color-accent-primary);
         font-weight: 600;
+        font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -837,25 +1011,22 @@
     .actions-cell {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        justify-content: center !important;
-        align-items: center !important;
-        width: 100% !important;
         gap: 10px !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        flex: 1 !important;
     }
     
     .row-btn {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        min-height: 44px;
-        margin: 0;
-        flex-shrink: 0;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
     }
     
-    /* SWEETALERT EN MÓVIL - SOLO RESPONSIVE */
+    /* SWEETALERT EN MÓVIL */
     .swal2-popup {
         width: 90% !important;
         margin: 10px !important;
@@ -874,19 +1045,19 @@
 /* MÓVIL PEQUEÑO (480px hacia abajo) */
 @media (max-width: 480px) {
     .admin-container {
-        padding: 40px 8px 15px; /* Reducido de 50px a 40px */
+        padding: 70px 8px 15px;
     }
     
     .page-header h1 {
         font-size: 1.5rem;
     }
     
-    .card-header {
-        padding: 12px;
+    .section-header {
+        padding: 15px;
     }
     
     .add-btn {
-        padding: 8px 12px;
+        padding: 10px 15px;
         font-size: 13px;
     }
     
@@ -895,32 +1066,68 @@
     }
     
     .collaborators-table td {
-        padding: 10px 0;
+        padding: 10px 12px;
     }
     
     .collaborators-table td::before {
+        min-width: 80px;
+        width: 80px;
         font-size: 10px;
     }
     
     .collaborators-table td[data-label="ACCIONES"]::before {
-        font-size: 11px;
-        margin-bottom: 10px;
+        min-width: 80px;
+        width: 80px;
     }
     
     .actions-cell {
-        gap: 8px !important;
+        gap: 6px !important;
     }
     
     .row-btn {
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+    }
+    
+    .row-btn i {
+        font-size: 14px !important;
     }
     
     .status {
-        align-self: flex-start;
-        margin-top: 5px;
+        min-width: 70px;
+        font-size: 0.8rem;
+        padding: 3px 6px;
+    }
+}
+
+/* MÓVIL EXTRA PEQUEÑO (360px hacia abajo) */
+@media (max-width: 360px) {
+    .collaborators-table td::before {
+        min-width: 70px;
+        width: 70px;
+        font-size: 9px;
+    }
+    
+    .collaborators-table td[data-label="ACCIONES"]::before {
+        min-width: 70px;
+        width: 70px;
+    }
+    
+    .actions-cell {
+        gap: 4px !important;
+    }
+    
+    .row-btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        min-height: 34px !important;
+    }
+    
+    .row-btn i {
+        font-size: 12px !important;
     }
 }
 
