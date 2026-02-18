@@ -96,7 +96,7 @@
     color: var(--color-accent-primary);
     padding: 6px 16px;
     border-radius: 30px;
-    font-size: 13px;
+    font-size: 14px;
     font-family: var(--font-family-secondary);
     font-weight: 500;
     letter-spacing: 0.5px;
@@ -122,11 +122,11 @@
    BOTÓN NUEVA ÁREA - ESTILO UNIFICADO (REDONDITO)
    ============================================= */
 #btnNuevaArea {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+ background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
     padding: 12px 25px !important;
-    border-radius: 50px !important;
+    border-radius: var(--border-radius-medium) !important;
     font-weight: 600 !important;
     font-family: var(--font-family-primary) !important;
     font-size: 14px !important;
@@ -140,14 +140,12 @@
     justify-content: center !important;
     position: relative;
     overflow: hidden;
-    border: none !important;
-    cursor: pointer;
 }
 
 #btnNuevaArea:hover {
-    transform: translateY(-2px) !important;
-    background: linear-gradient(145deg, #1a1a1a, #100f0f) !important;
-    box-shadow: 0 0 20px rgba(192, 192, 192, 0.3) !important;
+     transform: translateY(-2px) !important;
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.2) !important;
     border-color: var(--color-accent-primary) !important;
 }
 
@@ -303,7 +301,7 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary) !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     vertical-align: middle !important;
 }
 
@@ -562,7 +560,7 @@ tr.area-row.expanded .toggle-icon i {
     color: var(--color-text-secondary) !important;
     padding: 6px 12px !important;
     transition: all 0.3s ease !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
 }
 
 .pagination .page-link:hover {
@@ -580,7 +578,7 @@ tr.area-row.expanded .toggle-icon i {
 #paginationInfo {
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary) !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
 }
 
 /* =============================================
@@ -604,13 +602,13 @@ tr.area-row.expanded .toggle-icon i {
 
 /* Popup principal - más ancho para mostrar dos columnas */
 .swal2-popup.swal-detalles-nuevo {
-    width: 650px !important;
+    width: 500px !important;
     max-width: 90vw !important;
     background: var(--color-bg-secondary) !important;
     border: 1px solid var(--color-border-light) !important;
-    border-radius: 20px !important;
+    border-radius: 17px !important;
     box-shadow: var(--shadow-large) !important;
-    padding: 20px !important;
+    padding: 17px !important;
 }
 
 /* Contenedor del título con badge de estado */
@@ -677,7 +675,7 @@ tr.area-row.expanded .toggle-icon i {
     background: rgba(20, 20, 20, 0.3) !important;
     border: 1px solid var(--color-border-light) !important;
     border-radius: 12px !important;
-    padding: 15px !important;
+    padding: 12px !important;
 }
 
 /* Títulos de sección */
@@ -805,10 +803,11 @@ tr.area-row.expanded .toggle-icon i {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    justify-content: flex-end !important;
+    justify-content: center !important;
+    /* <--- AHORA CENTRADO */
     gap: 12px !important;
-    margin: 25px 0 5px 0 !important;
-    padding-top: 15px !important;
+
+    padding-top: 19px !important;
     border-top: 1px solid var(--color-border-light) !important;
     width: 100% !important;
 }
@@ -823,7 +822,7 @@ tr.area-row.expanded .toggle-icon i {
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
     font-weight: 600 !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     padding: 10px 25px !important;
     min-width: 130px !important;
     display: inline-flex !important;
@@ -1149,4 +1148,100 @@ tr.area-row.expanded .toggle-icon i {
 
 .error-carga h4 {
     color: var(--color-danger, #ff4d4d) !important;
+}
+
+/* =============================================
+   ESTILOS PARA CARGOS EN SWEETALERT (AGREGADO)
+   ============================================= */
+.swal-cargos-lista-simple {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.swal-cargos-lista-simple::-webkit-scrollbar {
+    width: 4px;
+}
+
+.swal-cargos-lista-simple::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.swal-cargos-lista-simple::-webkit-scrollbar-thumb {
+    background: var(--color-accent-secondary);
+    border-radius: 4px;
+}
+
+.swal-cargo-item-simple {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-border-light);
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.2s ease;
+}
+
+.swal-cargo-item-simple:hover {
+    border-color: var(--color-accent-secondary);
+    background: rgba(47, 140, 255, 0.05);
+}
+
+.swal-cargo-nombre-simple {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-family: var(--font-family-primary);
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px dashed var(--color-border-light);
+    padding-bottom: 5px;
+}
+
+.swal-cargo-nombre-simple i {
+    color: var(--color-accent-secondary);
+    font-size: 1rem;
+}
+
+.swal-cargo-descripcion-simple {
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    padding-left: 28px;
+    font-family: var(--font-family-secondary);
+}
+
+.swal-cargos-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--color-text-secondary);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    border: 1px dashed var(--color-border-light);
+    margin-top: 15px;
+}
+
+/* =============================================
+   ESTILOS PARA SWEETALERT DE ELIMINACIÓN
+   ============================================= */
+.swal2-popup.swal2-icon-warning {
+    width: 600px !important;
+}
+
+/* =============================================
+   TEXTO "ESTA ACCIÓN NO SE PUEDE DESHACER"
+   ============================================= */
+.swal2-popup.swal2-icon-warning .swal2-html-container {
+    font-size: 0.9rem !important;
+    /* Cambia este valor */
+}
+
+.text-muted {
+    color: var(--color-text-secondary) !important; /* o el color que quieras */
 }

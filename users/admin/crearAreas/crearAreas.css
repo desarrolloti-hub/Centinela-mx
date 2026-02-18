@@ -52,7 +52,6 @@ body {
 .container-fluid {
     border-radius: var(--border-radius-large);
     padding: 25px;
-
     box-shadow: var(--shadow-normal);
     max-width: min(1200px, 95vw);
     margin: 0 auto;
@@ -63,10 +62,8 @@ body {
    HEADER PRINCIPAL
    ============================================= */
 .row.mb-4:first-child {
-
     padding: 20px 25px;
     border-radius: var(--border-radius-medium);
-
     margin-bottom: 30px !important;
     box-shadow: var(--shadow-normal);
 }
@@ -902,80 +899,26 @@ select#responsable option {
 }
 
 /* =============================================
-   HEADER CENTRADO - CON LÍNEA DECORATIVA
+   FORZAR ESTILOS CORRECTOS DEL NAVBAR
    ============================================= */
-.header-container {
-    background: transparent !important;
-    padding: 0 0 30px 0;
-    margin-bottom: 20px;
-    position: relative;
-    width: 100%;
-    border: none !important;
-    box-shadow: none !important;
-    text-align: center !important;
+
+/* Forzar círculo en la imagen del admin */
+#complete-navbar .admin-profile-circle {
+    border-radius: 50% !important;
+    overflow: hidden !important;
 }
 
-.header-title {
-    position: relative;
-    z-index: 1;
-    max-width: 900px;
-    margin: 0 auto !important;
+#complete-navbar .admin-profile-img {
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
 }
 
-.header-title h1 {
-    font-family: var(--font-family-primary);
-    color: var(--color-text-primary);
-    font-size: clamp(24px, 4vw, 32px);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin: 0 0 15px 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    text-shadow: 0 0 10px var(--color-accent-primary);
-}
-
-.header-title h1 i {
-
-    font-size: 28px;
-    filter: drop-shadow(0 0 8px var(--color-accent-primary));
-
-}
-
-.header-title .header-description {
-    color: var(--color-text-secondary);
-    font-family: var(--font-family-secondary);
-    font-size: 14px;
-    line-height: 1.6;
-    margin: 0 auto;
-    position: relative;
-    padding: 0 20px;
-    border-bottom: 2px solid var(--color-border-light);
-}
-
-/* Línea decorativa superior */
-.header-title .header-description::before {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
-    border-bottom: 2px solid var(--color-border-light);
-}
-
-/* Línea decorativa inferior */
-.header-title .header-description::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
-    border-bottom: 2px solid var(--color-border-light);
+/* Forzar destello en CENTINELA */
+#complete-navbar .navbar-title {
+    text-shadow: 0 0 10px var(--color-accent-primary),
+        0 0 20px var(--color-accent-primary),
+        0 0 30px var(--color-accent-primary) !important;
+    color: var(--navbar-logo-text) !important;
 }
