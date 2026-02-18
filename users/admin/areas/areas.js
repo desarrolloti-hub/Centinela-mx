@@ -1,25 +1,20 @@
-// areas.js - VERSIÓN COMPLETA CON SWEETALERT2 (CLASES NATIVAS)
-console.log('🚀 areas.js iniciando...');
-
+// areas.js - VERSIÓN LIMPIA
 window.appDebug = {
     estado: 'iniciando',
     controller: null
 };
 
-// ✅ CORREGIDO: Solo importamos las clases, NO Firebase directamente
 let Area, AreaManager;
 
 async function cargarDependencias() {
     try {
-        console.log('1️⃣ Cargando dependencias...');
-
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
 
         iniciarAplicacion();
     } catch (error) {
-        console.error('❌ Error cargando dependencias:', error);
+        console.error('[Error]', error.message);
         mostrarErrorInterfaz(error.message);
     }
 }
@@ -30,13 +25,7 @@ function mostrarErrorInterfaz(mensaje) {
     errorDiv.className = 'alert alert-danger m-4 error-carga';
     errorDiv.innerHTML = `
         <h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error de Carga</h4>
-        <p><strong>Error:</strong> ${mensaje}</p>
-        <div class="alert alert-warning mt-3">
-            Verifica que los archivos existan en:
-            <ul class="mb-0 mt-2">
-                <li><code>/clases/area.js</code></li>
-            </ul>
-        </div>
+        <p>${mensaje}</p>
     `;
     container.prepend(errorDiv);
 }
@@ -51,21 +40,17 @@ function iniciarAplicacion() {
 
 function inicializarController() {
     try {
-        console.log('🎯 Inicializando controller...');
         const app = new AreasController();
         window.appDebug.controller = app;
         app.init();
-        console.log('✅ Aplicación lista');
     } catch (error) {
-        console.error('❌ Error inicializando:', error);
+        console.error('[Error]', error.message);
         mostrarErrorInterfaz(error.message);
     }
 }
 
 class AreasController {
     constructor() {
-        console.log('🛠️ Creando AreasController...');
-
         this.areaManager = new AreaManager();
         this.areas = [];
         this.paginacionActual = 1;
@@ -75,17 +60,12 @@ class AreasController {
         this.userManager = this.cargarUsuarioDesdeStorage();
 
         if (!this.userManager || !this.userManager.currentUser) {
-            console.error('❌ No se pudo cargar información del usuario');
             this.redirigirAlLogin();
             return;
         }
-
-        console.log('✅ Controller creado con usuario:', this.userManager.currentUser);
     }
 
     cargarUsuarioDesdeStorage() {
-        console.log('📂 Cargando datos del usuario desde almacenamiento...');
-
         try {
             let userData = null;
 
@@ -117,7 +97,6 @@ class AreasController {
             }
 
             if (!userData) {
-                console.error('❌ No se encontraron datos de usuario');
                 return null;
             }
 
@@ -132,7 +111,6 @@ class AreasController {
             return { currentUser: userData };
 
         } catch (error) {
-            console.error('❌ Error cargando usuario:', error);
             return null;
         }
     }
@@ -153,47 +131,26 @@ class AreasController {
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login',
-            confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
     }
 
     init() {
-        console.log('🎬 Iniciando aplicación...');
-
         if (!this.userManager || !this.userManager.currentUser) {
             this.redirigirAlLogin();
             return;
         }
 
-        this.verificarElementosDOM();
         this.inicializarEventos();
         this.cargarAreas();
     }
 
-    verificarElementosDOM() {
-        const ids = ['btnNuevaArea', 'tablaAreasBody', 'vistaLista'];
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-            console.log(`${el ? '✅' : '❌'} ${id}`);
-        });
-    }
-
     inicializarEventos() {
-        try {
-            const btnNuevaArea = document.getElementById('btnNuevaArea');
-            if (btnNuevaArea) {
-                btnNuevaArea.addEventListener('click', () => this.irACrearArea());
-            }
-        } catch (error) {
-            console.error('❌ Error configurando eventos:', error);
+        const btnNuevaArea = document.getElementById('btnNuevaArea');
+        if (btnNuevaArea) {
+            btnNuevaArea.addEventListener('click', () => this.irACrearArea());
         }
     }
 
@@ -210,19 +167,14 @@ class AreasController {
             this.mostrarCargando();
 
             const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
-            
-            // ✅ CORREGIDO: Usar AreaManager para obtener áreas
             this.areas = await this.areaManager.getAreasByOrganizacion(organizacionCamelCase);
 
             this.actualizarTabla();
             this.ocultarCargando();
         } catch (error) {
-            console.error('❌ Error cargando áreas:', error);
-            this.mostrarError('Error cargando áreas: ' + error.message);
+            this.mostrarError('Error cargando áreas');
         }
     }
-
-    // ========== DESPLEGABLE DE CARGOS ==========
 
     toggleCargos(areaId, event) {
         if (event?.target.closest('.action-buttons, [data-action], .btn')) {
@@ -298,8 +250,6 @@ class AreasController {
         filaReferencia.parentNode.insertBefore(filaCargos, filaReferencia.nextSibling);
     }
 
-    // ========== ELIMINAR CON SWEETALERT2 ==========
-
     solicitarEliminacion(areaId) {
         Swal.fire({
             title: '¿Eliminar área?',
@@ -309,14 +259,7 @@ class AreasController {
             confirmButtonColor: 'var(--color-danger, #ff4d4d)',
             cancelButtonColor: 'var(--color-accent-secondary, #3085d6)',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            }
+            cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
                 this.eliminarArea(areaId);
@@ -327,21 +270,13 @@ class AreasController {
     async eliminarArea(areaId) {
         try {
             const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
-            
-            // ✅ CORREGIDO: Usar AreaManager para eliminar
             await this.areaManager.eliminarArea(areaId, this.userManager.currentUser.id, organizacionCamelCase);
 
             Swal.fire({
                 icon: 'success',
                 title: 'Eliminado',
                 text: 'El área fue eliminada correctamente',
-                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm'
-                }
+                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)'
             });
 
             await this.cargarAreas();
@@ -349,14 +284,8 @@ class AreasController {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'No se pudo eliminar el área: ' + error.message,
-                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm'
-                }
+                text: 'No se pudo eliminar el área',
+                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)'
             });
         }
     }
@@ -375,7 +304,6 @@ class AreasController {
         }
     }
 
-    // ========== VER DETALLES CON SWEETALERT - ESTILOS EN CSS ==========
     async verDetalles(areaId) {
         try {
             const area = this.areas.find(a => a.id === areaId);
@@ -394,18 +322,15 @@ class AreasController {
                 </div>`,
                 html: `
                     <div class="swal-detalles-container">
-                        <!-- DESCRIPCIÓN -->
                         <div class="swal-seccion">
                             <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> Descripción del Área</h6>
                             <p class="swal-descripcion">${area.descripcion || 'No hay descripción disponible para esta área.'}</p>
                         </div>
                         
-                        <!-- SOLO EL NÚMERO DE CARGOS -->
                         <div class="swal-seccion">
                             <h6 class="swal-seccion-titulo"><i class="fas fa-briefcase"></i> Cargos (${cantidadCargos})</h6>
                         </div>
                         
-                        <!-- INFORMACIÓN DEL SISTEMA -->
                         <div class="swal-seccion">
                             <h6 class="swal-seccion-titulo"><i class="fas fa-info-circle"></i> Información del Sistema</h6>
                             <div class="swal-info-grid">
@@ -427,13 +352,6 @@ class AreasController {
                 showCancelButton: true,
                 cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
                 cancelButtonColor: 'var(--color-bg-tertiary, #545454)',
-                customClass: {
-                    popup: 'swal2-popup swal-detalles-nuevo',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm',
-                    cancelButton: 'swal2-cancel'
-                },
                 reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -441,11 +359,9 @@ class AreasController {
                 }
             });
         } catch (error) {
-            this.mostrarError('Error: ' + error.message);
+            this.mostrarError('Error al cargar detalles');
         }
     }
-
-    // ========== INTERFAZ ==========
 
     actualizarTabla() {
         const tbody = document.getElementById('tablaAreasBody');
@@ -462,7 +378,6 @@ class AreasController {
                     <td colspan="7" class="text-center py-5">
                         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                         <p class="text-muted">No se encontraron áreas</p>
-                        <p class="small text-muted">Colección: <code>areas_${this.userManager.currentUser.organizacionCamelCase}</code></p>
                     </td>
                 </tr>
             `;
@@ -475,8 +390,6 @@ class AreasController {
 
         this.actualizarPaginacion(this.areas.length);
     }
-
-    // ========== CREAR FILA CON BADGE ROJO PARA CARGOS ==========
 
     crearFilaArea(area) {
         const fila = document.createElement('tr');
@@ -616,41 +529,21 @@ class AreasController {
 
     ocultarCargando() { }
 
-    mostrarExito(mensaje) {
-        this.mostrarNotificacion(mensaje, 'success');
-    }
-
     mostrarError(mensaje) {
         this.mostrarNotificacion(mensaje, 'danger');
     }
 
     mostrarNotificacion(mensaje, tipo) {
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${tipo} alert-dismissible fade show position-fixed notificacion-flotante`;
-        alert.setAttribute('role', 'alert');
-
-        const icono = tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
-        const color = tipo === 'success' ? 'var(--color-success, #00ff95)' : 'var(--color-danger, #ff4d4d)';
-
-        alert.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="fas ${icono} me-3 fs-4" style="color: ${color};"></i>
-                <div>
-                    <strong>${tipo === 'success' ? 'Éxito' : 'Error'}</strong><br>
-                    <span>${mensaje}</span>
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-        `;
-
-        document.body.appendChild(alert);
-
-        setTimeout(() => {
-            if (alert.parentNode) {
-                alert.classList.remove('show');
-                setTimeout(() => alert.remove(), 300);
-            }
-        }, 5000);
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+        });
+        
+        let icono = tipo === 'danger' ? 'error' : tipo;
+        Toast.fire({ icon: icono, title: mensaje });
     }
 }
 

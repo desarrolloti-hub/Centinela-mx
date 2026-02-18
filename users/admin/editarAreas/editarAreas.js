@@ -1,16 +1,13 @@
-// editarAreas.js - VERSIÓN COMPLETA CON SOLO SWEETALERT2
-
-// Variable global para debugging
+// editarAreas.js - VERSIÓN LIMPIA
 window.editarAreaDebug = {
     estado: 'iniciando',
     controller: null
 };
 
-// ✅ CORREGIDO: Solo importamos las clases, NO Firebase directamente
 let Area, AreaManager;
 
 async function cargarDependencias() {
-    try {        
+    try {
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
@@ -18,25 +15,16 @@ async function cargarDependencias() {
         iniciarAplicacion();
         
     } catch (error) {
-        console.error('❌ Error cargando dependencias:', error);
-        mostrarErrorInterfaz(`
-            <h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error de Carga</h4>
-            <p><strong>Error:</strong> ${error.message}</p>
-            <div class="alert alert-warning mt-3">
-                Verifica que los archivos existan:
-                <ul class="mb-0 mt-2">
-                    <li><code>/clases/area.js</code></li>
-                </ul>
-            </div>
-        `);
+        console.error('[Error]', error.message);
+        mostrarErrorInterfaz(error.message);
     }
 }
 
-function mostrarErrorInterfaz(mensajeHTML) {
+function mostrarErrorInterfaz(mensaje) {
     const container = document.querySelector('.container-fluid') || document.body;
     const errorDiv = document.createElement('div');
     errorDiv.className = 'alert alert-danger m-4';
-    errorDiv.innerHTML = mensajeHTML;
+    errorDiv.innerHTML = `<h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${mensaje}</h4>`;
     container.prepend(errorDiv);
 }
 
@@ -54,15 +42,11 @@ function inicializarController() {
         window.editarAreaDebug.controller = app;
         app.init();
     } catch (error) {
-        console.error('❌ Error inicializando:', error);
-        mostrarErrorInterfaz(`
-            <h4 class="text-danger">Error de Inicialización</h4>
-            <p>${error.message}</p>
-        `);
+        console.error('[Error]', error.message);
+        mostrarErrorInterfaz(error.message);
     }
 }
 
-// ==================== CLASE EDITARAREACONTROLLER ====================
 class EditarAreaController {
     constructor() {
         this.areaManager = new AreaManager();
@@ -76,12 +60,11 @@ class EditarAreaController {
         this.areaActual = null;
         this.datosOriginales = null;
         this.loadingOverlay = null;
-        
-        // Array para almacenar los cargos
         this.cargos = [];
+        this._inputHandler = null;
+        this._submitHandler = null;
     }
     
-    // MÉTODO PARA CARGAR USUARIO - ✅ CORREGIDO
     cargarUsuarioDesdeStorage() {
         try {
             let userData = null;
@@ -89,7 +72,6 @@ class EditarAreaController {
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-                
                 userData = {
                     id: adminData.id || `admin_${Date.now()}`,
                     nombre: adminData.nombreCompleto || 'Administrador',
@@ -116,9 +98,7 @@ class EditarAreaController {
                 }
             }
             
-            if (!userData) {
-                return null;
-            }
+            if (!userData) return null;
             
             if (!userData.id) userData.id = `user_${Date.now()}`;
             if (!userData.organizacion) userData.organizacion = 'Sin organización';
@@ -128,23 +108,16 @@ class EditarAreaController {
             if (!userData.rol) userData.rol = 'colaborador';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
             
-            return {
-                currentUser: userData
-            };
+            return { currentUser: userData };
             
         } catch (error) {
-            console.error('❌ Error cargando usuario:', error);
             return null;
         }
     }
     
-    // MÉTODO PARA CARGAR RESPONSABLES
     async cargarResponsables() {
         const responsableSelect = document.getElementById('responsable');
-        if (!responsableSelect) {
-            console.error('❌ Select de responsable no encontrado');
-            return;
-        }
+        if (!responsableSelect) return;
         
         try {
             responsableSelect.innerHTML = '<option value="">Seleccionar responsable...</option>';
@@ -159,7 +132,7 @@ class EditarAreaController {
             }
             
             const colaboradores = await this.cargarColaboradoresDesdeSistema();
-            if (colaboradores && colaboradores.length > 0) {
+            if (colaboradores?.length > 0) {
                 const separator = document.createElement('option');
                 separator.disabled = true;
                 separator.text = '────────── COLABORADORES ──────────';
@@ -193,12 +166,10 @@ class EditarAreaController {
             responsableSelect.appendChild(nuevoOption);
             
         } catch (error) {
-            console.error('❌ Error cargando responsables:', error);
-            this.mostrarNotificacion('Se cargarán solo los responsables disponibles', 'warning');
+            this.mostrarNotificacion('Error cargando responsables', 'warning');
         }
     }
     
-    // MÉTODO PARA CARGAR COLABORADORES
     async cargarColaboradoresDesdeSistema() {
         try {
             const orgKey = this.userManager.currentUser.organizacionCamelCase;
@@ -206,15 +177,13 @@ class EditarAreaController {
             
             if (colaboradoresStorage) {
                 const colaboradores = JSON.parse(colaboradoresStorage);
-                if (colaboradores.length > 0) {
-                    return colaboradores;
-                }
+                if (colaboradores.length > 0) return colaboradores;
             }
             
             if (this.areaManager && typeof this.areaManager.obtenerColaboradoresPorOrganizacion === 'function') {
                 const colaboradoresFB = await this.areaManager.obtenerColaboradoresPorOrganizacion(orgKey);
                 
-                if (colaboradoresFB && colaboradoresFB.length > 0) {
+                if (colaboradoresFB?.length > 0) {
                     localStorage.setItem(`colaboradores_${orgKey}`, JSON.stringify(colaboradoresFB));
                     return colaboradoresFB;
                 }
@@ -223,31 +192,22 @@ class EditarAreaController {
             const usuariosStorage = localStorage.getItem('usuariosOrganizacion');
             if (usuariosStorage) {
                 const usuarios = JSON.parse(usuariosStorage);
-                const colaboradoresOrg = usuarios.filter(user => 
+                return usuarios.filter(user => 
                     user.organizacionCamelCase === orgKey && 
                     user.id !== this.userManager.currentUser.id
                 );
-                
-                if (colaboradoresOrg.length > 0) {
-                    return colaboradoresOrg;
-                }
             }
             
             return [];
             
         } catch (error) {
-            console.error('❌ Error cargando colaboradores:', error);
             return [];
         }
     }
     
-    // CONFIGURAR ORGANIZACIÓN AUTOMÁTICA
     configurarOrganizacionAutomatica() {
         const organizacionSelect = document.getElementById('organizacion');
-        if (!organizacionSelect || !this.userManager.currentUser) {
-            console.error('❌ No se puede configurar organización');
-            return;
-        }
+        if (!organizacionSelect || !this.userManager.currentUser) return;
         
         const organizacionUsuario = this.userManager.currentUser.organizacion;
         
@@ -266,11 +226,8 @@ class EditarAreaController {
         this.mostrarInfoOrganizacion();
     }
     
-    // MOSTRAR INFORMACIÓN DE ORGANIZACIÓN
     mostrarInfoOrganizacion() {
-        if (document.querySelector('.organizacion-info')) {
-            return;
-        }
+        if (document.querySelector('.organizacion-info')) return;
         
         const formHeader = document.querySelector('.card-header');
         if (!formHeader || !this.userManager.currentUser) return;
@@ -285,11 +242,6 @@ class EditarAreaController {
                     <p class="mb-0 text-muted small">
                         <i class="fas fa-user-shield me-1"></i>
                         Administrador: ${this.userManager.currentUser.nombreCompleto}
-                        ${this.userManager.currentUser.correo ? `(${this.userManager.currentUser.correo})` : ''}
-                    </p>
-                    <p class="mb-0 text-muted small">
-                        <i class="fas fa-key me-1"></i>
-                        ID Colección: <code>areas_${this.userManager.currentUser.organizacionCamelCase}</code>
                     </p>
                 </div>
             </div>
@@ -299,88 +251,62 @@ class EditarAreaController {
     }
     
     init() {
-        this.verificarElementosDOM();
         this.inicializarEventos();
         this.inicializarValidaciones();
-        
         this.configurarOrganizacionAutomatica();
         this.cargarResponsables();
         this.inicializarGestionCargos();
         this.cargarArea();
     }
     
-    verificarElementosDOM() {
-        const ids = [
-            'btnVolverLista', 'formEditarArea', 'areaId', 'nombreArea',
-            'organizacion', 'descripcionArea', 'contadorCaracteres', 
-            'responsable', 'btnCancelar', 'btnDesactivarArea', 'btnGuardarCambios',
-            'btnAgregarCargo', 'cargosList', 'cargosCounter',
-            'fechaCreacion', 'ultimaActualizacion', 'creadoPor', 'estadoActual',
-            'btnVerDetalles'
-        ];
-        
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-        });
-    }
-    
     inicializarEventos() {
-        try {
-            const btnVolverLista = document.getElementById('btnVolverLista');
-            if (btnVolverLista) {
-                btnVolverLista.replaceWith(btnVolverLista.cloneNode(true));
-                const nuevoBtnVolver = document.getElementById('btnVolverLista');
-                nuevoBtnVolver.addEventListener('click', () => this.volverALista());
-            }
-            
-            const descripcionArea = document.getElementById('descripcionArea');
-            if (descripcionArea) {
+        const btnVolverLista = document.getElementById('btnVolverLista');
+        if (btnVolverLista) {
+            btnVolverLista.addEventListener('click', () => this.volverALista());
+        }
+        
+        const descripcionArea = document.getElementById('descripcionArea');
+        if (descripcionArea) {
+            if (this._inputHandler) {
                 descripcionArea.removeEventListener('input', this._inputHandler);
-                this._inputHandler = () => this.actualizarContadorCaracteres();
-                descripcionArea.addEventListener('input', this._inputHandler);
             }
-            
-            const btnCancelar = document.getElementById('btnCancelar');
-            if (btnCancelar) {
-                btnCancelar.replaceWith(btnCancelar.cloneNode(true));
-                const nuevoBtnCancelar = document.getElementById('btnCancelar');
-                nuevoBtnCancelar.addEventListener('click', () => this.cancelarEdicion());
-            }
-            
-            const btnAgregarCargo = document.getElementById('btnAgregarCargo');
-            if (btnAgregarCargo) {
-                const nuevoBoton = btnAgregarCargo.cloneNode(true);
-                btnAgregarCargo.parentNode.replaceChild(nuevoBoton, btnAgregarCargo);
-                nuevoBoton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.agregarCargo();
-                });
-            }
-            
-            const btnVerDetalles = document.getElementById('btnVerDetalles');
-            if (btnVerDetalles) {
-                btnVerDetalles.replaceWith(btnVerDetalles.cloneNode(true));
-                const nuevoBtnVer = document.getElementById('btnVerDetalles');
-                nuevoBtnVer.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.verDetallesArea();
-                });
-            }
-            
-            const formEditarArea = document.getElementById('formEditarArea');
-            if (formEditarArea) {
+            this._inputHandler = () => this.actualizarContadorCaracteres();
+            descripcionArea.addEventListener('input', this._inputHandler);
+        }
+        
+        const btnCancelar = document.getElementById('btnCancelar');
+        if (btnCancelar) {
+            btnCancelar.addEventListener('click', () => this.cancelarEdicion());
+        }
+        
+        const btnAgregarCargo = document.getElementById('btnAgregarCargo');
+        if (btnAgregarCargo) {
+            btnAgregarCargo.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.agregarCargo();
+            });
+        }
+        
+        const btnVerDetalles = document.getElementById('btnVerDetalles');
+        if (btnVerDetalles) {
+            btnVerDetalles.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.verDetallesArea();
+            });
+        }
+        
+        const formEditarArea = document.getElementById('formEditarArea');
+        if (formEditarArea) {
+            if (this._submitHandler) {
                 formEditarArea.removeEventListener('submit', this._submitHandler);
-                this._submitHandler = (e) => {
-                    e.preventDefault();
-                    this.validarYPrepararGuardado();
-                };
-                formEditarArea.addEventListener('submit', this._submitHandler);
             }
-            
-        } catch (error) {
-            console.error('❌ Error configurando eventos:', error);
+            this._submitHandler = (e) => {
+                e.preventDefault();
+                this.validarYPrepararGuardado();
+            };
+            formEditarArea.addEventListener('submit', this._submitHandler);
         }
     }
     
@@ -395,7 +321,6 @@ class EditarAreaController {
         if (descripcionArea && contador) {
             const longitud = descripcionArea.value.length;
             contador.textContent = longitud;
-            contador.className = longitud > 450 ? 'text-warning' : 'text-success';
         }
     }
     
@@ -405,14 +330,12 @@ class EditarAreaController {
             const areaId = urlParams.get('id');
             
             if (!areaId) {
-                console.error('❌ No se proporcionó ID de área');
                 this.mostrarError('No se especificó qué área editar');
                 return;
             }
             
-            this.mostrarCargando('Cargando información del área...');
+            this.mostrarCargando('Cargando información...');
             
-            // ✅ CORREGIDO: Usar AreaManager para obtener el área
             const area = await this.areaManager.getAreaById(
                 areaId, 
                 this.userManager.currentUser.organizacionCamelCase
@@ -420,41 +343,24 @@ class EditarAreaController {
             
             if (area) {
                 this.areaActual = area;
-                
                 await this.cargarDatosEnFormulario();
                 this.datosOriginales = this.obtenerDatosFormulario();
-                
                 this.ocultarCargando();
                 
-                // Actualizar título
                 document.title = `Editar ${this.areaActual.nombreArea} - Sistema Centinela`;
-
+                
                 const nombreTitulo = document.getElementById('nombreAreaTitulo');
                 if (nombreTitulo) {
                     nombreTitulo.textContent = this.areaActual.nombreArea;
-                } else {
-                    const titulo = document.querySelector('h1');
-                    if (titulo) {
-                        if (titulo.innerHTML.includes('Editar Área') && !titulo.innerHTML.includes(this.areaActual.nombreArea)) {
-                            titulo.innerHTML = titulo.innerHTML.replace(
-                                'Editar Área', 
-                                `Editar Área: ${this.areaActual.nombreArea}`
-                            );
-                        } else if (!titulo.innerHTML.includes('Editar Área:')) {
-                            titulo.innerHTML += `: ${this.areaActual.nombreArea}`;
-                        }
-                    }
                 }
-                
             } else {
                 this.ocultarCargando();
                 this.mostrarError('Área no encontrada');
             }
             
         } catch (error) {
-            console.error('❌ Error cargando área:', error);
             this.ocultarCargando();
-            this.mostrarError('Error cargando área: ' + error.message);
+            this.mostrarError('Error cargando área');
         }
     }
     
@@ -532,11 +438,7 @@ class EditarAreaController {
         }
     }
     
-    // ========== GESTIÓN DE CARGOS ==========
-    
-    inicializarGestionCargos() {
-        // Vacío - El evento ya está en inicializarEventos()
-    }
+    inicializarGestionCargos() {}
     
     cargarCargosExistentes() {
         this.cargos = [];
@@ -544,9 +446,9 @@ class EditarAreaController {
         if (this.areaActual.cargos) {
             if (Array.isArray(this.areaActual.cargos)) {
                 this.areaActual.cargos.forEach((cargo, index) => {
-                    if (cargo && cargo.nombre) {
+                    if (cargo?.nombre) {
                         this.cargos.push({
-                            id: cargo.id || `cargo_${cargo.nombre.toLowerCase().replace(/\s+/g, '_')}_${index}`,
+                            id: cargo.id || `cargo_${index}_${Date.now()}`,
                             nombre: cargo.nombre || '',
                             descripcion: cargo.descripcion || ''
                         });
@@ -555,7 +457,7 @@ class EditarAreaController {
             } else if (typeof this.areaActual.cargos === 'object') {
                 Object.keys(this.areaActual.cargos).forEach(key => {
                     const cargo = this.areaActual.cargos[key];
-                    if (cargo && cargo.nombre) {
+                    if (cargo?.nombre) {
                         this.cargos.push({
                             id: key,
                             nombre: cargo.nombre || '',
@@ -603,14 +505,7 @@ class EditarAreaController {
             confirmButtonColor: '#ff4d4d',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            customClass: {
-                popup: 'swal-dark',
-                title: 'swal-title',
-                htmlContainer: 'swal-html',
-                confirmButton: 'swal-confirm-btn-danger',
-                cancelButton: 'swal-cancel-btn'
-            }
+            cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
                 this.cargos = this.cargos.filter(c => c.id !== cargoId);
@@ -621,13 +516,7 @@ class EditarAreaController {
                     icon: 'success',
                     title: 'Eliminado',
                     text: 'El cargo fue eliminado correctamente',
-                    confirmButtonColor: '#2f8cff',
-                    customClass: {
-                        popup: 'swal-dark',
-                        title: 'swal-title',
-                        htmlContainer: 'swal-html',
-                        confirmButton: 'swal-confirm-btn'
-                    }
+                    confirmButtonColor: '#2f8cff'
                 });
             }
         });
@@ -717,8 +606,6 @@ class EditarAreaController {
             .replace(/'/g, "&#039;");
     }
     
-    // ========== 🔥 VER DETALLES DEL ÁREA CON SWEETALERT2 ==========
-    
     async verDetallesArea() {
         try {
             if (!this.areaActual) {
@@ -729,443 +616,96 @@ class EditarAreaController {
             const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
             const cantidadCargos = cargosValidos.length;
             
-            // Generar HTML para cargos
             let cargosHTML = '';
             
             if (cargosValidos.length === 0) {
                 cargosHTML = `
-                    <div style="
-                        text-align: center;
-                        padding: 30px;
-                        background: var(--color-bg-tertiary);
-                        border-radius: var(--border-radius-medium);
-                        border: 1px dashed var(--color-border-light);
-                    ">
+                    <div style="text-align: center; padding: 30px; background: var(--color-bg-tertiary); border-radius: var(--border-radius-medium);">
                         <i class="fas fa-briefcase" style="font-size: 48px; color: var(--color-accent-secondary); margin-bottom: 15px;"></i>
-                        <p style="color: var(--color-text-secondary); margin: 0; font-size: 14px;">
-                            Esta área no tiene cargos asignados
-                        </p>
+                        <p style="color: var(--color-text-secondary); margin: 0;">Esta área no tiene cargos asignados</p>
                     </div>
                 `;
             } else {
                 cargosHTML = cargosValidos.map((cargo, index) => `
-                    <div style="
-                        background: var(--color-bg-tertiary);
-                        border: 1px solid var(--color-border-light);
-                        border-radius: var(--border-radius-medium);
-                        padding: 18px;
-                        margin-bottom: 15px;
-                        transition: all 0.2s ease;
-                    ">
+                    <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); border-radius: var(--border-radius-medium); padding: 18px; margin-bottom: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                <span style="
-                                    background: var(--color-accent-secondary);
-                                    color: white;
-                                    width: 28px;
-                                    height: 28px;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    border-radius: 50%;
-                                    font-size: 13px;
-                                    font-weight: bold;
-                                ">${index + 1}</span>
-                                <strong style="
-                                    color: var(--color-text-primary);
-                                    font-family: var(--font-family-primary);
-                                    font-size: 14px;
-                                    text-transform: uppercase;
-                                    letter-spacing: 0.5px;
-                                ">
-                                    ${cargo.nombre}
-                                </strong>
+                                <span style="background: var(--color-accent-secondary); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 13px;">${index + 1}</span>
+                                <strong style="color: var(--color-text-primary);">${cargo.nombre}</strong>
                             </div>
-                            <span style="
-                                background: rgba(47, 140, 255, 0.1);
-                                color: var(--color-accent-secondary);
-                                padding: 4px 12px;
-                                border-radius: 20px;
-                                font-size: 11px;
-                                border: 1px solid rgba(47, 140, 255, 0.3);
-                                font-family: var(--font-family-secondary);
-                                text-transform: uppercase;
-                            ">
-                                <i class="fas fa-briefcase me-1"></i>Cargo
-                            </span>
                         </div>
                         ${cargo.descripcion ? `
-                            <div style="
-                                margin-left: 40px;
-                                padding-left: 15px;
-                                border-left: 2px solid var(--color-accent-secondary);
-                                color: var(--color-text-secondary);
-                                font-size: 13px;
-                                line-height: 1.6;
-                                font-family: var(--font-family-secondary);
-                            ">
+                            <div style="margin-left: 40px; padding-left: 15px; border-left: 2px solid var(--color-accent-secondary); color: var(--color-text-secondary); font-size: 13px;">
                                 ${cargo.descripcion}
                             </div>
-                        ` : `
-                            <div style="
-                                margin-left: 40px;
-                                padding-left: 15px;
-                                border-left: 2px solid var(--color-border-light);
-                                color: var(--color-text-secondary);
-                                font-size: 12px;
-                                font-style: italic;
-                                font-family: var(--font-family-secondary);
-                            ">
-                                Sin descripción
-                            </div>
-                        `}
+                        ` : ''}
                     </div>
                 `).join('');
             }
 
-            // Información del área
             const fechaCreacion = this.areaActual.fechaCreacion ? 
                 new Date(this.areaActual.fechaCreacion).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 }) : 'No disponible';
 
             const fechaActualizacion = this.areaActual.fechaActualizacion ? 
                 new Date(this.areaActual.fechaActualizacion).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 }) : 'No disponible';
 
             const responsableNombre = this.areaActual.responsableNombre || 
                 (document.getElementById('responsable')?.selectedOptions[0]?.text || 'No asignado');
 
             await Swal.fire({
-                title: `
-                    <div style="display: flex; align-items: center; gap: 12px; padding: 5px 0;">
-                        <i class="fas fa-building" style="color: var(--color-accent-primary); font-size: 28px;"></i>
-                        <span style="
-                            color: var(--color-text-primary);
-                            font-family: var(--font-family-primary);
-                            font-size: 22px;
-                            text-transform: uppercase;
-                            letter-spacing: 1px;
-                        ">
-                            ${this.areaActual.nombreArea}
-                        </span>
-                    </div>
-                `,
+                title: this.areaActual.nombreArea,
                 html: `
                     <div style="text-align: left; max-height: 70vh; overflow-y: auto; padding-right: 5px;">
-                        <!-- Estado y Organización -->
-                        <div style="
-                            display: flex;
-                            align-items: center;
-                            justify-content: space-between;
-                            padding: 15px 20px;
-                            background: var(--color-bg-tertiary);
-                            border-radius: var(--border-radius-medium);
-                            margin-bottom: 20px;
-                            border: 1px solid var(--color-border-light);
-                        ">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="
-                                    background: rgba(0, 255, 149, 0.1);
-                                    color: var(--color-success);
-                                    padding: 6px 16px;
-                                    border-radius: 20px;
-                                    font-size: 12px;
-                                    border: 1px solid rgba(0, 255, 149, 0.3);
-                                    font-family: var(--font-family-secondary);
-                                    text-transform: uppercase;
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 6px;
-                                ">
-                                    <i class="fas fa-circle" style="font-size: 8px;"></i>
-                                    Activa
-                                </span>
-                                <span style="
-                                    color: var(--color-text-secondary);
-                                    font-size: 13px;
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 6px;
-                                ">
-                                    <i class="fas fa-building" style="color: var(--color-accent-secondary);"></i>
-                                    ${this.userManager.currentUser.organizacion}
-                                </span>
-                            </div>
-                            <span style="
-                                background: var(--color-accent-secondary);
-                                color: white;
-                                padding: 4px 12px;
-                                border-radius: 20px;
-                                font-size: 11px;
-                                font-family: var(--font-family-secondary);
-                            ">
-                                <i class="fas fa-hashtag me-1"></i>
-                                ${this.areaActual.id.substring(0, 8)}...
-                            </span>
+                        <div style="background: var(--color-bg-tertiary); padding: 15px 20px; border-radius: var(--border-radius-medium); margin-bottom: 20px;">
+                            <p style="color: var(--color-text-secondary);"><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</p>
                         </div>
 
-                        <!-- Descripción -->
                         <div style="margin-bottom: 25px;">
-                            <h6 style="
-                                color: var(--color-accent-primary);
-                                font-family: var(--font-family-primary);
-                                font-size: 13px;
-                                margin-bottom: 12px;
-                                border-bottom: 1px solid var(--color-border-light);
-                                padding-bottom: 8px;
-                                text-transform: uppercase;
-                                letter-spacing: 0.5px;
-                                display: flex;
-                                align-items: center;
-                                gap: 8px;
-                            ">
-                                <i class="fas fa-align-left" style="color: var(--color-accent-secondary);"></i>
-                                Descripción
-                            </h6>
-                            <div style="
-                                background: var(--color-bg-tertiary);
-                                border: 1px solid var(--color-border-light);
-                                border-radius: var(--border-radius-medium);
-                                padding: 15px 20px;
-                                color: var(--color-text-secondary);
-                                font-size: 14px;
-                                line-height: 1.6;
-                                font-family: var(--font-family-secondary);
-                            ">
+                            <h6 style="color: var(--color-accent-primary); margin-bottom: 12px;">Descripción</h6>
+                            <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); border-radius: var(--border-radius-medium); padding: 15px 20px; color: var(--color-text-secondary);">
                                 ${this.areaActual.descripcion || 'No hay descripción disponible'}
                             </div>
                         </div>
 
-                        <!-- Responsable -->
                         <div style="margin-bottom: 25px;">
-                            <h6 style="
-                                color: var(--color-accent-primary);
-                                font-family: var(--font-family-primary);
-                                font-size: 13px;
-                                margin-bottom: 12px;
-                                border-bottom: 1px solid var(--color-border-light);
-                                padding-bottom: 8px;
-                                text-transform: uppercase;
-                                letter-spacing: 0.5px;
-                                display: flex;
-                                align-items: center;
-                                gap: 8px;
-                            ">
-                                <i class="fas fa-user-tie" style="color: var(--color-accent-secondary);"></i>
-                                Responsable del Área
-                            </h6>
-                            <div style="
-                                background: var(--color-bg-tertiary);
-                                border: 1px solid var(--color-border-light);
-                                border-radius: var(--border-radius-medium);
-                                padding: 12px 20px;
-                                display: flex;
-                                align-items: center;
-                                gap: 12px;
-                            ">
-                                <i class="fas fa-user-circle" style="font-size: 32px; color: var(--color-accent-secondary);"></i>
-                                <div>
-                                    <strong style="color: var(--color-text-primary); font-size: 15px; display: block;">
-                                        ${responsableNombre}
-                                    </strong>
-                                    <small style="color: var(--color-text-secondary);">
-                                        ${responsableNombre.includes('Administrador') ? 'Administrador del sistema' : 'Responsable asignado'}
-                                    </small>
-                                </div>
+                            <h6 style="color: var(--color-accent-primary); margin-bottom: 12px;">Responsable</h6>
+                            <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); border-radius: var(--border-radius-medium); padding: 12px 20px;">
+                                <i class="fas fa-user-circle" style="font-size: 32px; color: var(--color-accent-secondary); margin-right: 12px;"></i>
+                                <span>${responsableNombre}</span>
                             </div>
                         </div>
 
-                        <!-- Cargos -->
                         <div style="margin-bottom: 25px;">
-                            <div style="
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                margin-bottom: 12px;
-                                border-bottom: 1px solid var(--color-border-light);
-                                padding-bottom: 8px;
-                            ">
-                                <h6 style="
-                                    color: var(--color-accent-primary);
-                                    font-family: var(--font-family-primary);
-                                    font-size: 13px;
-                                    margin: 0;
-                                    text-transform: uppercase;
-                                    letter-spacing: 0.5px;
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 8px;
-                                ">
-                                    <i class="fas fa-briefcase" style="color: var(--color-accent-secondary);"></i>
-                                    Cargos del Área
-                                </h6>
-                                <span style="
-                                    background: var(--color-accent-secondary);
-                                    color: white;
-                                    padding: 4px 14px;
-                                    border-radius: 20px;
-                                    font-size: 11px;
-                                    font-family: var(--font-family-secondary);
-                                ">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h6 style="color: var(--color-accent-primary); margin: 0;">Cargos del Área</h6>
+                                <span style="background: var(--color-accent-secondary); color: white; padding: 4px 14px; border-radius: 20px; font-size: 11px;">
                                     ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
                                 </span>
                             </div>
-                            <div style="max-height: 300px; overflow-y: auto; padding-right: 5px;">
-                                ${cargosHTML}
-                            </div>
+                            <div style="max-height: 300px; overflow-y: auto;">${cargosHTML}</div>
                         </div>
 
-                        <!-- Información del Sistema -->
-                        <div style="
-                            background: var(--color-bg-tertiary);
-                            border: 1px solid var(--color-border-light);
-                            border-radius: var(--border-radius-medium);
-                            padding: 20px;
-                            margin-top: 10px;
-                        ">
-                            <h6 style="
-                                color: var(--color-accent-primary);
-                                font-family: var(--font-family-primary);
-                                font-size: 12px;
-                                margin-bottom: 15px;
-                                text-transform: uppercase;
-                                letter-spacing: 0.5px;
-                                display: flex;
-                                align-items: center;
-                                gap: 8px;
-                            ">
-                                <i class="fas fa-info-circle" style="color: var(--color-accent-secondary);"></i>
-                                Información del Sistema
-                            </h6>
-                            <div style="
-                                display: grid;
-                                grid-template-columns: 1fr 1fr;
-                                gap: 15px;
-                            ">
-                                <div>
-                                    <small style="
-                                        color: var(--color-accent-primary);
-                                        display: block;
-                                        margin-bottom: 4px;
-                                        font-size: 10px;
-                                        text-transform: uppercase;
-                                        opacity: 0.8;
-                                    ">ID del Área</small>
-                                    <code style="
-                                        color: var(--color-accent-secondary);
-                                        background: var(--color-bg-primary);
-                                        padding: 4px 8px;
-                                        border-radius: 4px;
-                                        font-size: 11px;
-                                        border: 1px solid var(--color-border-light);
-                                    ">${this.areaActual.id}</code>
-                                </div>
-                                <div>
-                                    <small style="
-                                        color: var(--color-accent-primary);
-                                        display: block;
-                                        margin-bottom: 4px;
-                                        font-size: 10px;
-                                        text-transform: uppercase;
-                                        opacity: 0.8;
-                                    ">Colección</small>
-                                    <code style="
-                                        color: var(--color-accent-secondary);
-                                        background: var(--color-bg-primary);
-                                        padding: 4px 8px;
-                                        border-radius: 4px;
-                                        font-size: 11px;
-                                        border: 1px solid var(--color-border-light);
-                                    ">areas_${this.userManager.currentUser.organizacionCamelCase}</code>
-                                </div>
-                                <div>
-                                    <small style="
-                                        color: var(--color-accent-primary);
-                                        display: block;
-                                        margin-bottom: 4px;
-                                        font-size: 10px;
-                                        text-transform: uppercase;
-                                        opacity: 0.8;
-                                    ">Fecha de Creación</small>
-                                    <span style="
-                                        color: var(--color-text-secondary);
-                                        font-size: 12px;
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 6px;
-                                    ">
-                                        <i class="fas fa-calendar" style="color: var(--color-accent-secondary);"></i>
-                                        ${fechaCreacion}
-                                    </span>
-                                </div>
-                                <div>
-                                    <small style="
-                                        color: var(--color-accent-primary);
-                                        display: block;
-                                        margin-bottom: 4px;
-                                        font-size: 10px;
-                                        text-transform: uppercase;
-                                        opacity: 0.8;
-                                    ">Última Actualización</small>
-                                    <span style="
-                                        color: var(--color-text-secondary);
-                                        font-size: 12px;
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 6px;
-                                    ">
-                                        <i class="fas fa-clock" style="color: var(--color-accent-secondary);"></i>
-                                        ${fechaActualizacion}
-                                    </span>
-                                </div>
-                                <div style="grid-column: span 2;">
-                                    <small style="
-                                        color: var(--color-accent-primary);
-                                        display: block;
-                                        margin-bottom: 4px;
-                                        font-size: 10px;
-                                        text-transform: uppercase;
-                                        opacity: 0.8;
-                                    ">Creado por</small>
-                                    <span style="
-                                        color: var(--color-text-secondary);
-                                        font-size: 12px;
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 6px;
-                                    ">
-                                        <i class="fas fa-user" style="color: var(--color-accent-secondary);"></i>
-                                        ${this.areaActual.creadoPor || 'Desconocido'}
-                                    </span>
-                                </div>
+                        <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); border-radius: var(--border-radius-medium); padding: 20px;">
+                            <h6 style="color: var(--color-accent-primary); margin-bottom: 15px;">Información del Sistema</h6>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div><small>Fecha Creación</small><br><span>${fechaCreacion}</span></div>
+                                <div><small>Última Actualización</small><br><span>${fechaActualizacion}</span></div>
+                                <div><small>Creado por</small><br><span>${this.areaActual.creadoPor || 'Desconocido'}</span></div>
                             </div>
                         </div>
                     </div>
                 `,
                 icon: 'info',
                 iconColor: '#2f8cff',
-                confirmButtonText: '<i class="fas fa-check me-2"></i>Cerrar',
+                confirmButtonText: 'Cerrar',
                 confirmButtonColor: '#2f8cff',
                 showCancelButton: true,
-                cancelButtonText: '<i class="fas fa-edit me-2"></i>Editar Área',
+                cancelButtonText: 'Editar Área',
                 cancelButtonColor: '#545454',
-                customClass: {
-                    popup: 'swal-dark',
-                    title: 'swal-title',
-                    htmlContainer: 'swal-html',
-                    confirmButton: 'swal-confirm-btn',
-                    cancelButton: 'swal-cancel-btn'
-                },
                 reverseButtons: true
             }).then((result) => {
                 if (result.dismiss === Swal.DismissReason.cancel) {
@@ -1174,12 +714,10 @@ class EditarAreaController {
             });
 
         } catch (error) {
-            console.error('❌ Error mostrando detalles:', error);
             this.mostrarError('Error al cargar los detalles');
         }
     }
     
-    // VALIDACIÓN
     validarFormulario() {
         const nombreArea = document.getElementById('nombreArea')?.value.trim();
         const descripcion = document.getElementById('descripcionArea')?.value.trim();
@@ -1206,7 +744,7 @@ class EditarAreaController {
         }
         
         if (responsableSelect && !responsableSelect.value) {
-            this.mostrarError('Debe seleccionar un responsable para el área');
+            this.mostrarError('Debe seleccionar un responsable');
             return false;
         }
         
@@ -1219,7 +757,7 @@ class EditarAreaController {
         
         const tieneCargoValido = this.cargos.some(c => c.nombre && c.nombre.trim() !== '');
         if (!tieneCargoValido) {
-            this.mostrarError('Debe agregar al menos un cargo con nombre para el área');
+            this.mostrarError('Debe agregar al menos un cargo con nombre');
             return false;
         }
         
@@ -1245,9 +783,7 @@ class EditarAreaController {
     
     async validarYPrepararGuardado() {
         try {
-            if (!this.validarFormulario()) {
-                return;
-            }
+            if (!this.validarFormulario()) return;
             
             if (!this.hayCambios()) {
                 this.mostrarNotificacion('No hay cambios para guardar', 'info');
@@ -1258,20 +794,13 @@ class EditarAreaController {
             
             const result = await Swal.fire({
                 title: '¿Guardar cambios?',
-                html: this.generarHTMLCambios(datosActualizados),
+                html: '<p>¿Está seguro de guardar los cambios realizados?</p>',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#2f8cff',
                 cancelButtonColor: '#545454',
                 confirmButtonText: 'Sí, guardar',
-                cancelButtonText: 'Cancelar',
-                customClass: {
-                    popup: 'swal-dark',
-                    title: 'swal-title',
-                    htmlContainer: 'swal-html',
-                    confirmButton: 'swal-confirm-btn',
-                    cancelButton: 'swal-cancel-btn'
-                }
+                cancelButtonText: 'Cancelar'
             });
             
             if (result.isConfirmed) {
@@ -1279,200 +808,8 @@ class EditarAreaController {
             }
             
         } catch (error) {
-            console.error('❌ Error en validación:', error);
-            this.mostrarError('Error validando datos: ' + error.message);
+            this.mostrarError('Error validando datos');
         }
-    }
-    
-    generarHTMLCambios(datosActualizados) {
-        let cambiosHTML = '<div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 10px;">';
-        
-        if (this.datosOriginales) {
-            // ========== 1. CAMBIOS EN NOMBRE ==========
-            if (this.datosOriginales.nombreArea !== datosActualizados.nombreArea) {
-                cambiosHTML += `
-                    <div style="margin-bottom: 20px; padding: 10px; background: rgba(47, 140, 255, 0.1); border-radius: 8px;">
-                        <h6 style="color: var(--color-accent-secondary); margin-bottom: 8px;">
-                            <i class="fas fa-tag me-2"></i>Nombre del Área
-                        </h6>
-                        <div style="color: #777171; text-decoration: line-through; margin-bottom: 5px;">
-                            ${this.datosOriginales.nombreArea}
-                        </div>
-                        <div style="color: #21a16c;">
-                            <i class="fas fa-arrow-right me-2"></i>${datosActualizados.nombreArea}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // ========== 2. CAMBIOS EN DESCRIPCIÓN ==========
-            if (this.datosOriginales.descripcion !== datosActualizados.descripcion) {
-                cambiosHTML += `
-                    <div style="margin-bottom: 20px; padding: 10px; background: rgba(0, 255, 149, 0.1); border-radius: 8px;">
-                        <h6 style="color: var(--color-success); margin-bottom: 8px;">
-                            <i class="fas fa-align-left me-2"></i>Descripción
-                        </h6>
-                        <div style="color: #999; text-decoration: line-through; margin-bottom: 5px;">
-                            ${this.datosOriginales.descripcion.substring(0, 80)}${this.datosOriginales.descripcion.length > 80 ? '...' : ''}
-                        </div>
-                        <div style="color: #17a56a;">
-                            <i class="fas fa-arrow-right me-2"></i>${datosActualizados.descripcion.substring(0, 80)}${datosActualizados.descripcion.length > 80 ? '...' : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // ========== 3. ANÁLISIS DE CARGOS ==========
-            const cargosOriginal = this.datosOriginales.cargos || {};
-            const cargosNuevos = datosActualizados.cargos || {};
-            
-            // Convertir a arrays
-            const cargosOriginalArray = Object.entries(cargosOriginal).map(([id, cargo]) => ({
-                id,
-                nombre: cargo.nombre || '',
-                descripcion: cargo.descripcion || ''
-            }));
-            
-            const cargosNuevosArray = Object.entries(cargosNuevos).map(([id, cargo]) => ({
-                id,
-                nombre: cargo.nombre || '',
-                descripcion: cargo.descripcion || ''
-            }));
-            
-            // Identificar cargos nuevos y modificados
-            const cargosAgregados = [];
-            const cargosModificados = [];
-            
-            cargosNuevosArray.forEach(nuevo => {
-                const original = cargosOriginalArray.find(c => c.id === nuevo.id);
-                
-                if (!original) {
-                    // Cargo nuevo
-                    cargosAgregados.push(nuevo);
-                } else {
-                    // Verificar si hubo cambios
-                    if (original.nombre !== nuevo.nombre || original.descripcion !== nuevo.descripcion) {
-                        cargosModificados.push({
-                            id: nuevo.id,
-                            nombreOriginal: original.nombre,
-                            nombreNuevo: nuevo.nombre,
-                            descripcionOriginal: original.descripcion,
-                            descripcionNuevo: nuevo.descripcion
-                        });
-                    }
-                }
-            });
-            
-            // ========== 4. RESUMEN DE CARGOS ==========
-            if (cargosAgregados.length > 0 || cargosModificados.length > 0) {
-                cambiosHTML += `
-                    <div style="margin-bottom: 15px;">
-                        <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">
-                            <i class="fas fa-briefcase me-2"></i>Cambios en Cargos
-                        </h6>
-                        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                            <span style="background: rgba(0, 255, 149, 0.1); color: #00ff95; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0, 255, 149, 0.3);">
-                                <i class="fas fa-plus-circle me-1"></i>${cargosAgregados.length} nuevos
-                            </span>
-                            <span style="background: rgba(255, 204, 0, 0.1); color: #ffcc00; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255, 204, 0, 0.3);">
-                                <i class="fas fa-edit me-1"></i>${cargosModificados.length} modificados
-                            </span>
-                        </div>
-                `;
-                
-                // ========== 5. CARGOS NUEVOS ==========
-                if (cargosAgregados.length > 0) {
-                    cambiosHTML += `
-                        <div style="margin-bottom: 20px;">
-                            <h6 style="color: #00ff95; font-size: 13px; margin-bottom: 8px;">
-                                <i class="fas fa-plus-circle me-2"></i>Cargos Nuevos:
-                            </h6>
-                    `;
-                    
-                    cargosAgregados.forEach((cargo, index) => {
-                        cambiosHTML += `
-                            <div style="background: rgba(0, 255, 149, 0.05); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #00ff95;">
-                                <strong style="color: white; display: block; margin-bottom: 5px;">
-                                    #${index + 1}: ${cargo.nombre}
-                                </strong>
-                                <span style="color: #ccc; font-size: 12px;">
-                                    ${cargo.descripcion || '<i>Sin descripción</i>'}
-                                </span>
-                            </div>
-                        `;
-                    });
-                    
-                    cambiosHTML += `</div>`;
-                }
-                
-                // ========== 6. CARGOS MODIFICADOS ==========
-                if (cargosModificados.length > 0) {
-                    cambiosHTML += `
-                        <div style="margin-bottom: 15px;">
-                            <h6 style="color: #ffcc00; font-size: 13px; margin-bottom: 8px;">
-                                <i class="fas fa-edit me-2"></i>Cargos Modificados:
-                            </h6>
-                    `;
-                    
-                    cargosModificados.forEach((cargo, index) => {
-                        cambiosHTML += `
-                            <div style="background: rgba(255, 204, 0, 0.05); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #ffcc00;">
-                                <strong style="color: white; display: block; margin-bottom: 8px;">
-                                    #${index + 1}: ${cargo.nombreNuevo}
-                                </strong>
-                                <div style="margin-left: 5px;">
-                                    ${cargo.nombreOriginal !== cargo.nombreNuevo ? `
-                                        <div style="margin-bottom: 5px;">
-                                            <span style="color: #999; font-size: 11px;">Nombre:</span>
-                                            <span style="color: #999; text-decoration: line-through; margin: 0 5px;">${cargo.nombreOriginal}</span>
-                                            <span style="color: #00ff95;">→ ${cargo.nombreNuevo}</span>
-                                        </div>
-                                    ` : ''}
-                                    ${cargo.descripcionOriginal !== cargo.descripcionNuevo ? `
-                                        <div>
-                                            <span style="color: #999; font-size: 11px;">Descripción:</span>
-                                            <span style="color: #999; text-decoration: line-through; margin: 0 5px;">${cargo.descripcionOriginal.substring(0, 30)}${cargo.descripcionOriginal.length > 30 ? '...' : ''}</span>
-                                            <span style="color: #00ff95;">→ ${cargo.descripcionNuevo.substring(0, 30)}${cargo.descripcionNuevo.length > 30 ? '...' : ''}</span>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    cambiosHTML += `</div>`;
-                }
-                
-                cambiosHTML += `</div>`; // Cerrar div de cargos
-            }
-            
-            // ========== 7. CAMBIOS EN RESPONSABLE ==========
-            if (this.datosOriginales.responsable !== datosActualizados.responsable) {
-                const responsableOriginal = this.datosOriginales.responsableNombre || 'No asignado';
-                const responsableNuevo = datosActualizados.responsableNombre || 'No asignado';
-                
-                cambiosHTML += `
-                    <div style="margin-top: 15px; padding: 10px; background: rgba(47, 140, 255, 0.1); border-radius: 8px;">
-                        <h6 style="color: var(--color-accent-secondary); margin-bottom: 8px;">
-                            <i class="fas fa-user-tie me-2"></i>Responsable
-                        </h6>
-                        <div style="color: #999; text-decoration: line-through; margin-bottom: 5px;">
-                            ${responsableOriginal}
-                        </div>
-                        <div style="color: #00ff95;">
-                            <i class="fas fa-arrow-right me-2"></i>${responsableNuevo}
-                        </div>
-                    </div>
-                `;
-            }
-        }
-        
-        if (cambiosHTML === '<div style="text-align: left; max-height: 400px; overflow-y: auto; padding-right: 10px;">') {
-            cambiosHTML += '<p style="color: var(--color-text-secondary); text-align: center; padding: 20px;">No se detectaron cambios</p>';
-        }
-        
-        cambiosHTML += '</div>';
-        return cambiosHTML;
     }
     
     obtenerDatosFormulario() {
@@ -1522,38 +859,24 @@ class EditarAreaController {
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login',
-            confirmButtonColor: '#2f8cff',
-            customClass: {
-                popup: 'swal-dark',
-                title: 'swal-title',
-                htmlContainer: 'swal-html',
-                confirmButton: 'swal-confirm-btn'
-            }
+            confirmButtonColor: '#2f8cff'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
     }
     
-    // ========== 🔥 ALERTA DE CIERRE AUTOMÁTICO ==========
     async mostrarAlertaGuardadoExitoso() {
         const Toast = Swal.mixin({
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
             timer: 3000,
-            timerProgressBar: true,
-            customClass: {
-                popup: 'swal-dark'
-            }
+            timerProgressBar: true
         });
         
-        await Toast.fire({
-            icon: 'success',
-            title: '✅ Cambios guardados correctamente'
-        });
+        await Toast.fire({ icon: 'success', title: 'Cambios guardados correctamente' });
     }
     
-    // ========== 🔥 GUARDADO CON CIERRE AUTOMÁTICO ==========
     async confirmarGuardado(datosActualizados) {
         try {
             if (!this.areaActual) {
@@ -1562,7 +885,6 @@ class EditarAreaController {
             
             this.mostrarCargando('Actualizando área...');
             
-            // ✅ CORREGIDO: Usar AreaManager para actualizar
             await this.areaManager.actualizarArea(
                 this.areaActual.id,
                 datosActualizados,
@@ -1572,24 +894,19 @@ class EditarAreaController {
             
             this.ocultarCargando();
             
-            // Actualizar datos locales
             Object.assign(this.areaActual, datosActualizados);
             this.datosOriginales = this.obtenerDatosFormulario();
             
             await this.mostrarAlertaGuardadoExitoso();
             
-            setTimeout(() => {
-                this.volverALista();
-            }, 3100);
+            setTimeout(() => this.volverALista(), 3100);
             
         } catch (error) {
-            console.error('❌ Error actualizando área:', error);
             this.ocultarCargando();
-            this.mostrarError('Error actualizando área: ' + error.message);
+            this.mostrarError('Error actualizando área');
         }
     }
     
-    // NAVEGACIÓN
     volverALista() {
         window.location.href = '/users/admin/areas/areas.html';
     }
@@ -1604,38 +921,17 @@ class EditarAreaController {
                 confirmButtonColor: '#ff4d4d',
                 cancelButtonColor: '#3085d6',
                 confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar',
-                customClass: {
-                    popup: 'swal-dark',
-                    title: 'swal-title',
-                    htmlContainer: 'swal-html',
-                    confirmButton: 'swal-confirm-btn-danger',
-                    cancelButton: 'swal-cancel-btn'
-                }
+                cancelButtonText: 'No, continuar'
             }).then((result) => {
-                if (result.isConfirmed) {
-                    this.volverALista();
-                }
+                if (result.isConfirmed) this.volverALista();
             });
         } else {
             this.volverALista();
         }
     }
     
-    continuarEdicion() {
-        setTimeout(() => {
-            const nombreArea = document.getElementById('nombreArea');
-            if (nombreArea) {
-                nombreArea.focus();
-            }
-        }, 300);
-    }
-    
-    // INTERFAZ
     mostrarCargando(mensaje = 'Cargando...') {
-        if (this.loadingOverlay) {
-            this.ocultarCargando();
-        }
+        if (this.loadingOverlay) this.ocultarCargando();
         
         const overlay = document.createElement('div');
         overlay.className = 'loading-overlay';
@@ -1665,7 +961,7 @@ class EditarAreaController {
     }
     
     ocultarCargando() {
-        if (this.loadingOverlay && this.loadingOverlay.parentNode) {
+        if (this.loadingOverlay?.parentNode) {
             this.loadingOverlay.remove();
             this.loadingOverlay = null;
         }
@@ -1681,21 +977,12 @@ class EditarAreaController {
             position: 'top-end',
             showConfirmButton: false,
             timer: duracion,
-            timerProgressBar: true,
-            customClass: {
-                popup: 'swal-dark'
-            }
+            timerProgressBar: true
         });
         
-        let icono = tipo;
-        if (tipo === 'danger') icono = 'error';
-        
-        Toast.fire({
-            icon: icono,
-            title: mensaje
-        });
+        let icono = tipo === 'danger' ? 'error' : tipo;
+        Toast.fire({ icon: icono, title: mensaje });
     }
 }
 
-// INICIAR APLICACIÓN
 cargarDependencias();

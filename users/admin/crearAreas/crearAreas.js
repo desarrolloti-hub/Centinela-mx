@@ -1,46 +1,31 @@
-// crearAreas.js - MÓDULO PARA CREACIÓN DE ÁREAS (SOLO SWEETALERT2)
-console.log('🚀 crear-areas.js iniciando...');
+// crearAreas.js - VERSIÓN LIMPIA (sin cambios necesarios, pero asegurando que los cargos se envían correctamente)
 
-// Variable global para debugging
 window.crearAreaDebug = {
     estado: 'iniciando',
     controller: null
 };
 
-// ✅ CORREGIDO: Solo importamos las clases, NO Firebase directamente
 let Area, AreaManager;
 
 async function cargarDependencias() {
     try {
-        console.log('1️⃣ Cargando dependencias...');
-        
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
-        console.log('✅ Clases cargadas');
         
         iniciarAplicacion();
         
     } catch (error) {
-        console.error('❌ Error cargando dependencias:', error);
-        mostrarErrorInterfaz(`
-            <h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error de Carga</h4>
-            <p><strong>Error:</strong> ${error.message}</p>
-            <div class="alert alert-warning mt-3">
-                Verifica que los archivos existan:
-                <ul class="mb-0 mt-2">
-                    <li><code>/clases/area.js</code></li>
-                </ul>
-            </div>
-        `);
+        console.error('[Error]', error.message);
+        mostrarErrorInterfaz(error.message);
     }
 }
 
-function mostrarErrorInterfaz(mensajeHTML) {
+function mostrarErrorInterfaz(mensaje) {
     const container = document.querySelector('.container-fluid') || document.body;
     const errorDiv = document.createElement('div');
     errorDiv.className = 'alert alert-danger m-4';
-    errorDiv.innerHTML = mensajeHTML;
+    errorDiv.innerHTML = `<h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${mensaje}</h4>`;
     container.prepend(errorDiv);
 }
 
@@ -54,60 +39,38 @@ function iniciarAplicacion() {
 
 function inicializarController() {
     try {
-        console.log('🎯 Inicializando CrearAreaController...');
-        
         const app = new CrearAreaController();
         window.crearAreaDebug.controller = app;
-        
         app.init();
-        
-        console.log('✅ Controlador de creación listo');
-        
     } catch (error) {
-        console.error('❌ Error inicializando:', error);
-        mostrarErrorInterfaz(`
-            <h4 class="text-danger">Error de Inicialización</h4>
-            <p>${error.message}</p>
-        `);
+        console.error('[Error]', error.message);
+        mostrarErrorInterfaz(error.message);
     }
 }
 
-// ==================== CLASE CREARAREACONTROLLER ====================
 class CrearAreaController {
     constructor() {
-        console.log('🛠️ Creando CrearAreaController...');
-        
         this.areaManager = new AreaManager();
         this.userManager = this.cargarUsuarioDesdeStorage();
         
         if (!this.userManager || !this.userManager.currentUser) {
-            console.error('❌ No se pudo cargar información del usuario');
             this.redirigirAlLogin();
             throw new Error('Usuario no autenticado');
         }
         
-        console.log('✅ Usuario cargado:', this.userManager.currentUser);
         this.areaEnProceso = null;
         this.areaCreadaReciente = null;
         this.loadingOverlay = null;
-        this.notificacionActual = null;
-        
-        // Array para almacenar los cargos
         this.cargos = [];
     }
     
-    // MÉTODO MEJORADO PARA CARGAR USUARIO - ✅ CORREGIDO
     cargarUsuarioDesdeStorage() {
-        console.log('📂 Cargando datos del usuario desde almacenamiento...');
-        
         try {
             let userData = null;
             
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-                console.log('🔑 Datos de admin encontrados:', adminData);
-                
                 userData = {
                     id: adminData.id || `admin_${Date.now()}`,
                     nombre: adminData.nombreCompleto || 'Administrador',
@@ -129,14 +92,12 @@ class CrearAreaController {
                 const storedUserData = localStorage.getItem('userData');
                 if (storedUserData) {
                     userData = JSON.parse(storedUserData);
-                    console.log('👤 Datos de usuario encontrados:', userData);
                     userData.nombreCompleto = userData.nombreCompleto || userData.nombre || 'Usuario';
                     userData.esResponsable = false;
                 }
             }
             
             if (!userData) {
-                console.error('❌ No se encontraron datos de usuario');
                 return null;
             }
             
@@ -148,34 +109,16 @@ class CrearAreaController {
             if (!userData.rol) userData.rol = 'colaborador';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
             
-            console.log('✅ Usuario procesado:', {
-                id: userData.id,
-                nombre: userData.nombreCompleto,
-                rol: userData.rol,
-                organizacion: userData.organizacion,
-                organizacionCamelCase: userData.organizacionCamelCase,
-                esResponsable: userData.esResponsable || false
-            });
-            
-            return {
-                currentUser: userData
-            };
+            return { currentUser: userData };
             
         } catch (error) {
-            console.error('❌ Error cargando usuario:', error);
             return null;
         }
     }
     
-    // MÉTODO PARA CARGAR RESPONSABLES
     async cargarResponsables() {
-        console.log('👥 Cargando lista de responsables...');
-        
         const responsableSelect = document.getElementById('responsable');
-        if (!responsableSelect) {
-            console.error('❌ Select de responsable no encontrado');
-            return;
-        }
+        if (!responsableSelect) return;
         
         try {
             responsableSelect.innerHTML = '<option value="">Seleccionar responsable...</option>';
@@ -186,14 +129,11 @@ class CrearAreaController {
                 adminOption.text = `${this.userManager.currentUser.nombreCompleto} (Administrador)`;
                 adminOption.selected = true;
                 adminOption.style.fontWeight = 'bold';
-                adminOption.style.color = '#2c3e50';
                 responsableSelect.appendChild(adminOption);
-                
-                console.log('✅ Admin agregado como responsable:', this.userManager.currentUser.nombreCompleto);
             }
             
             const colaboradores = await this.cargarColaboradoresDesdeSistema();
-            if (colaboradores && colaboradores.length > 0) {
+            if (colaboradores?.length > 0) {
                 const separator = document.createElement('option');
                 separator.disabled = true;
                 separator.text = '────────── COLABORADORES ──────────';
@@ -214,13 +154,6 @@ class CrearAreaController {
                     option.text = nombreMostrar;
                     responsableSelect.appendChild(option);
                 });
-                
-                console.log(`✅ ${colaboradores.length} colaboradores cargados`);
-            } else {
-                const sinColabOption = document.createElement('option');
-                sinColabOption.disabled = true;
-                sinColabOption.text = '────────── SIN COLABORADORES ──────────';
-                responsableSelect.appendChild(sinColabOption);
             }
             
             const otroSeparator = document.createElement('option');
@@ -234,15 +167,11 @@ class CrearAreaController {
             responsableSelect.appendChild(nuevoOption);
             
         } catch (error) {
-            console.error('❌ Error cargando responsables:', error);
-            this.mostrarNotificacion('Se cargarán solo los responsables disponibles', 'warning');
+            this.mostrarNotificacion('Error cargando responsables', 'warning');
         }
     }
     
-    // MÉTODO PARA CARGAR COLABORADORES DESDE EL SISTEMA
     async cargarColaboradoresDesdeSistema() {
-        console.log('📋 Buscando colaboradores en el sistema...');
-        
         try {
             const orgKey = this.userManager.currentUser.organizacionCamelCase;
             const colaboradoresStorage = localStorage.getItem(`colaboradores_${orgKey}`);
@@ -250,18 +179,15 @@ class CrearAreaController {
             if (colaboradoresStorage) {
                 const colaboradores = JSON.parse(colaboradoresStorage);
                 if (colaboradores.length > 0) {
-                    console.log('✅ Colaboradores encontrados en localStorage:', colaboradores.length);
                     return colaboradores;
                 }
             }
             
             if (this.areaManager && typeof this.areaManager.obtenerColaboradoresPorOrganizacion === 'function') {
-                console.log('🔍 Buscando colaboradores en Firebase...');
                 const colaboradoresFB = await this.areaManager.obtenerColaboradoresPorOrganizacion(orgKey);
                 
-                if (colaboradoresFB && colaboradoresFB.length > 0) {
+                if (colaboradoresFB?.length > 0) {
                     localStorage.setItem(`colaboradores_${orgKey}`, JSON.stringify(colaboradoresFB));
-                    console.log('✅ Colaboradores cargados desde Firebase:', colaboradoresFB.length);
                     return colaboradoresFB;
                 }
             }
@@ -269,42 +195,24 @@ class CrearAreaController {
             const usuariosStorage = localStorage.getItem('usuariosOrganizacion');
             if (usuariosStorage) {
                 const usuarios = JSON.parse(usuariosStorage);
-                const colaboradoresOrg = usuarios.filter(user => 
+                return usuarios.filter(user => 
                     user.organizacionCamelCase === orgKey && 
                     user.id !== this.userManager.currentUser.id
                 );
-                
-                if (colaboradoresOrg.length > 0) {
-                    console.log('✅ Colaboradores encontrados en usuarios organizacionales:', colaboradoresOrg.length);
-                    return colaboradoresOrg;
-                }
             }
             
-            console.log('ℹ️ No se encontraron colaboradores adicionales');
             return [];
             
         } catch (error) {
-            console.error('❌ Error cargando colaboradores del sistema:', error);
             return [];
         }
     }
     
-    // MÉTODO PARA CONFIGURAR ORGANIZACIÓN AUTOMÁTICA
     configurarOrganizacionAutomatica() {
-        console.log('🏢 Configurando organización automática...');
-        
         const organizacionSelect = document.getElementById('organizacion');
-        if (!organizacionSelect || !this.userManager.currentUser) {
-            console.error('❌ No se puede configurar organización');
-            return;
-        }
+        if (!organizacionSelect || !this.userManager.currentUser) return;
         
         const organizacionUsuario = this.userManager.currentUser.organizacion;
-        
-        console.log('📝 Datos para organización:', {
-            organizacion: organizacionUsuario,
-            orgCamelCase: this.userManager.currentUser.organizacionCamelCase
-        });
         
         organizacionSelect.innerHTML = '';
         
@@ -318,12 +226,9 @@ class CrearAreaController {
         organizacionSelect.style.backgroundColor = '#f8f9fa';
         organizacionSelect.style.cursor = 'not-allowed';
         
-        console.log('✅ Organización configurada automáticamente:', organizacionUsuario);
-        
         this.mostrarInfoOrganizacion();
     }
     
-    // MOSTRAR INFORMACIÓN DE LA ORGANIZACIÓN EN LA INTERFAZ
     mostrarInfoOrganizacion() {
         if (document.querySelector('.organizacion-info')) return;
         
@@ -340,11 +245,6 @@ class CrearAreaController {
                     <p class="mb-0 text-muted small">
                         <i class="fas fa-user-shield me-1"></i>
                         Administrador: ${this.userManager.currentUser.nombreCompleto}
-                        ${this.userManager.currentUser.correo ? `(${this.userManager.currentUser.correo})` : ''}
-                    </p>
-                    <p class="mb-0 text-muted small">
-                        <i class="fas fa-key me-1"></i>
-                        ID Colección: <code>areas_${this.userManager.currentUser.organizacionCamelCase}</code>
                     </p>
                 </div>
             </div>
@@ -354,80 +254,41 @@ class CrearAreaController {
     }
     
     init() {
-        console.log('🎬 Iniciando aplicación de creación...');
-        console.log('👤 Usuario actual:', this.userManager.currentUser);
-        
-        this.verificarElementosDOM();
         this.inicializarEventos();
         this.inicializarValidaciones();
-        
         this.configurarOrganizacionAutomatica();
         this.cargarResponsables();
         this.inicializarGestionCargos();
-        
-        console.log('✅ Aplicación de creación iniciada');
-    }
-    
-    verificarElementosDOM() {
-        console.log('🔍 Verificando elementos del formulario...');
-        
-        const ids = [
-            'btnVolverLista', 'formCrearArea', 'nombreArea',
-            'organizacion', 'descripcionArea', 'contadorCaracteres', 
-            'responsable', 'btnCancelar', 'btnCrearArea',
-            'btnAgregarCargo', 'cargosList', 'cargosCounter'
-        ];
-        
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-            console.log(`${el ? '✅' : '❌'} ${id}`);
-        });
     }
     
     inicializarEventos() {
-        console.log('🎮 Configurando eventos...');
+        const btnVolverLista = document.getElementById('btnVolverLista');
+        if (btnVolverLista) {
+            btnVolverLista.addEventListener('click', () => this.volverALista());
+        }
         
-        try {
-            const btnVolverLista = document.getElementById('btnVolverLista');
-            if (btnVolverLista) {
-                btnVolverLista.addEventListener('click', () => this.volverALista());
-                console.log('✅ Evento btnVolverLista');
-            }
-            
-            const descripcionArea = document.getElementById('descripcionArea');
-            if (descripcionArea) {
-                descripcionArea.addEventListener('input', () => this.actualizarContadorCaracteres());
-                console.log('✅ Evento descripcionArea');
-            }
-            
-            const btnCancelar = document.getElementById('btnCancelar');
-            if (btnCancelar) {
-                btnCancelar.addEventListener('click', () => this.cancelarCreacion());
-                console.log('✅ Evento btnCancelar');
-            }
-            
-            const formCrearArea = document.getElementById('formCrearArea');
-            if (formCrearArea) {
-                formCrearArea.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.validarYPrepararCreacion();
-                });
-                console.log('✅ Evento formCrearArea');
-            }
-            
-            console.log('✅ Todos los eventos configurados');
-            
-        } catch (error) {
-            console.error('❌ Error configurando eventos:', error);
+        const descripcionArea = document.getElementById('descripcionArea');
+        if (descripcionArea) {
+            descripcionArea.addEventListener('input', () => this.actualizarContadorCaracteres());
+        }
+        
+        const btnCancelar = document.getElementById('btnCancelar');
+        if (btnCancelar) {
+            btnCancelar.addEventListener('click', () => this.cancelarCreacion());
+        }
+        
+        const formCrearArea = document.getElementById('formCrearArea');
+        if (formCrearArea) {
+            formCrearArea.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.validarYPrepararCreacion();
+            });
         }
     }
     
     inicializarValidaciones() {
-        console.log('📋 Inicializando validaciones...');
         this.actualizarContadorCaracteres();
     }
-    
-    // ========== MÉTODOS DE INTERFAZ ==========
     
     actualizarContadorCaracteres() {
         const descripcionArea = document.getElementById('descripcionArea');
@@ -436,20 +297,14 @@ class CrearAreaController {
         if (descripcionArea && contador) {
             const longitud = descripcionArea.value.length;
             contador.textContent = longitud;
-            contador.className = longitud > 450 ? 'text-warning' : 'text-success';
         }
     }
     
-    // ========== MÉTODOS DE NAVEGACIÓN ==========
-    
     volverALista() {
-        console.log('⬅️ Volviendo a lista de áreas...');
         window.location.href = '/users/admin/areas/areas.html';
     }
     
     cancelarCreacion() {
-        console.log('❌ Cancelando creación...');
-        
         Swal.fire({
             title: '¿Cancelar registro?',
             text: "Se perderán todos los datos ingresados",
@@ -466,11 +321,7 @@ class CrearAreaController {
         });
     }
     
-    // ========== MÉTODOS DE VALIDACIÓN ==========
-    
     validarFormulario() {
-        console.log('✅ Validando formulario...');
-        
         const nombreArea = document.getElementById('nombreArea')?.value.trim();
         const descripcion = document.getElementById('descripcionArea')?.value.trim();
         const responsableSelect = document.getElementById('responsable');
@@ -509,28 +360,19 @@ class CrearAreaController {
         
         const tieneCargoValido = this.cargos.some(c => c.nombre && c.nombre.trim() !== '');
         if (!tieneCargoValido) {
-            this.mostrarError('Debe agregar al menos un cargo con nombre para el área');
+            this.mostrarError('Debe agregar al menos un cargo con nombre');
             return false;
         }
         
-        console.log('✅ Validación manual exitosa');
         return true;
     }
     
     async validarYPrepararCreacion() {
         try {
-            console.log('🔄 Validando y preparando creación...');
-            
-            if (!this.validarFormulario()) {
-                return;
-            }
+            if (!this.validarFormulario()) return;
             
             const datosArea = this.obtenerDatosFormulario();
             
-            console.log('📋 Datos a crear:', datosArea);
-            console.log('👤 Usuario que crea:', this.userManager.currentUser);
-            
-            // ✅ CORREGIDO: Usar AreaManager para verificar existencia
             const existe = await this.areaManager.verificarAreaExistente(
                 datosArea.nombreArea,
                 this.userManager.currentUser.organizacionCamelCase
@@ -543,8 +385,7 @@ class CrearAreaController {
             
             this.areaEnProceso = datosArea;
             
-            // MODAL DE CONFIRMACIÓN CON SWEETALERT2
-            const cantidadCargos = Object.keys(datosArea.cargos || {}).length;
+            const cantidadCargos = this.cargos.length;
             
             const result = await Swal.fire({
                 title: '¿Confirmar creación?',
@@ -554,9 +395,7 @@ class CrearAreaController {
                         <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 8px; margin-top: 10px;">
                             <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">${datosArea.nombreArea}</h6>
                             <p style="margin-bottom: 5px;"><small><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</small></p>
-                            <p style="margin-bottom: 5px;"><small><strong>Colección:</strong> areas_${datosArea.organizacionCamelCase}</small></p>
-                            <p style="margin-bottom: 5px;"><small><strong>Cargos:</strong> ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}</small></p>
-                            <p style="margin-bottom: 0;"><small><strong>Descripción:</strong> ${datosArea.descripcion.substring(0, 100)}${datosArea.descripcion.length > 100 ? '...' : ''}</small></p>
+                            <p style="margin-bottom: 5px;"><small><strong>Cargos:</strong> ${cantidadCargos}</small></p>
                         </div>
                     </div>
                 `,
@@ -573,28 +412,21 @@ class CrearAreaController {
             }
             
         } catch (error) {
-            console.error('❌ Error en validación:', error);
-            this.mostrarError('Error validando datos: ' + error.message);
+            this.mostrarError('Error validando datos');
         }
     }
     
-    // ========== MÉTODOS PARA GESTIÓN DE CARGOS ==========
-    
     inicializarGestionCargos() {
-        console.log('💼 Inicializando gestión de cargos...');
-        
         const btnAgregarCargo = document.getElementById('btnAgregarCargo');
         if (btnAgregarCargo) {
             btnAgregarCargo.addEventListener('click', () => this.agregarCargo());
-            console.log('✅ Evento btnAgregarCargo');
         }
-        
     }
     
     agregarCargo() {
-        console.log('➕ Agregando nuevo cargo...');
-        
-        const cargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+        // 🔥 Los IDs locales son SOLO para el frontend
+        // El AreaManager generará IDs de Firebase al guardar
+        const cargoId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
         
         const nuevoCargo = {
             id: cargoId,
@@ -613,8 +445,6 @@ class CrearAreaController {
     }
     
     eliminarCargo(cargoId) {
-        console.log('🗑️ Eliminando cargo:', cargoId);
-        
         Swal.fire({
             title: '¿Eliminar cargo?',
             text: "Esta acción no se puede deshacer",
@@ -635,8 +465,6 @@ class CrearAreaController {
     }
     
     renderizarCargos() {
-        console.log('🖼️ Renderizando cargos...');
-        
         const cargosList = document.getElementById('cargosList');
         if (!cargosList) return;
         
@@ -700,7 +528,6 @@ class CrearAreaController {
         const cargo = this.cargos.find(c => c.id === cargoId);
         if (cargo) {
             cargo[campo] = valor;
-            console.log(`✅ Cargo ${cargoId} actualizado: ${campo} = ${valor}`);
         }
     }
     
@@ -713,7 +540,7 @@ class CrearAreaController {
     
     escapeHTML(text) {
         if (!text) return '';
-        return text
+        return String(text)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
@@ -721,24 +548,23 @@ class CrearAreaController {
             .replace(/'/g, "&#039;");
     }
     
-    // OBTENER DATOS DEL FORMULARIO - CON CARGOS
     obtenerDatosFormulario() {
-        console.log('📋 Obteniendo datos del formulario...');
-        
         const userOrgCamel = this.userManager.currentUser.organizacionCamelCase;
         
-        const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
+        // 🔥 SOLO enviamos los nombres y descripciones de los cargos
+        // El AreaManager generará los IDs de Firebase
+        const cargosArray = this.cargos
+            .filter(c => c.nombre && c.nombre.trim() !== '')
+            .map(c => ({
+                nombre: c.nombre.trim(),
+                descripcion: c.descripcion ? c.descripcion.trim() : ''
+            }));
         
+        // Convertir a objeto con índices numéricos (temporal)
         const cargosObject = {};
-        cargosValidos.forEach(cargo => {
-            const cargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
-            cargosObject[cargoId] = {
-                nombre: cargo.nombre.trim(),
-                descripcion: cargo.descripcion ? cargo.descripcion.trim() : ''
-            };
+        cargosArray.forEach((cargo, index) => {
+            cargosObject[`cargo_${index}`] = cargo;
         });
-        
-        console.log('💼 Cargos válidos:', cargosValidos.length);
         
         return {
             nombreArea: document.getElementById('nombreArea').value.trim(),
@@ -772,38 +598,21 @@ class CrearAreaController {
         });
     }
     
-    // ========== MÉTODOS DE CREACIÓN ==========
-    
     async confirmarCreacion() {
         try {
-            console.log('✅ Confirmando creación de área...');
-            
             if (!this.areaEnProceso) {
                 throw new Error('No hay datos de área para crear');
             }
             
             this.mostrarCargando('Creando área...');
             
-            console.log('📤 Enviando datos a crearArea:', this.areaEnProceso);
-            
-            // ✅ CORREGIDO: Usar AreaManager para crear el área
             const nuevaArea = await this.areaManager.crearArea(this.areaEnProceso, this.userManager);
             
             this.ocultarCargando();
             
-            console.log('✅ Área creada exitosamente:', nuevaArea);
-            
             this.areaCreadaReciente = nuevaArea;
             
-            // MODAL DE ÉXITO CON SWEETALERT2
             const cantidadCargos = Object.keys(nuevaArea.cargos || {}).length;
-            const fecha = new Date().toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
             
             await Swal.fire({
                 title: '¡Área creada exitosamente!',
@@ -815,12 +624,7 @@ class CrearAreaController {
                             <p><strong>Nombre del Área:</strong> ${nuevaArea.nombreArea}</p>
                             <p><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</p>
                             <p><strong>Responsable:</strong> ${this.userManager.currentUser.nombreCompleto}</p>
-                            <p><strong>Fecha de Creación:</strong> ${fecha}</p>
-                            <p><strong>Código de Área:</strong> ${nuevaArea.id} (${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'})</p>
-                        </div>
-                        <div style="background: rgba(47, 140, 255, 0.1); padding: 10px; border-radius: 8px; margin-top: 15px; text-align: left;">
-                            <i class="fas fa-info-circle" style="color: var(--color-accent-secondary);"></i>
-                            El área ha sido registrada en el sistema. ¿Qué desea hacer?
+                            <p><strong>Cargos:</strong> ${cantidadCargos}</p>
                         </div>
                     </div>
                 `,
@@ -840,41 +644,27 @@ class CrearAreaController {
             });
             
         } catch (error) {
-            console.error('❌ Error creando área:', error);
             this.ocultarCargando();
-            this.mostrarError('Error creando área: ' + error.message);
+            this.mostrarError('Error creando área');
         }
     }
     
-    // ========== ACCIONES POST-CREACIÓN ==========
-    
     crearOtraArea() {
-        console.log('🔄 Preparando para crear otra área...');
-        
         this.limpiarFormulario();
         
         setTimeout(() => {
             const nombreArea = document.getElementById('nombreArea');
-            if (nombreArea) {
-                nombreArea.focus();
-            }
+            if (nombreArea) nombreArea.focus();
         }, 100);
     }
     
     verAreaCreada() {
-        console.log('👁️ Redirigiendo para ver área creada...');
         window.location.href = '/users/admin/areas/areas.html';
     }
     
-    // ========== MÉTODOS AUXILIARES ==========
-    
     limpiarFormulario() {
-        console.log('🧹 Limpiando formulario...');
-        
         const form = document.getElementById('formCrearArea');
-        if (form) {
-            form.reset();
-        }
+        if (form) form.reset();
         
         this.cargos = [];
         this.agregarCargo();
@@ -891,18 +681,11 @@ class CrearAreaController {
         
         this.actualizarContadorCaracteres();
         this.actualizarContadorCargos();
-        
         this.areaEnProceso = null;
-        
-        console.log('✅ Formulario limpio');
     }
     
-    // ========== MÉTODOS DE INTERFAZ ==========
-    
     mostrarCargando(mensaje = 'Cargando...') {
-        if (this.loadingOverlay) {
-            this.ocultarCargando();
-        }
+        if (this.loadingOverlay) this.ocultarCargando();
         
         const overlay = document.createElement('div');
         overlay.className = 'loading-overlay';
@@ -932,14 +715,10 @@ class CrearAreaController {
     }
     
     ocultarCargando() {
-        if (this.loadingOverlay && this.loadingOverlay.parentNode) {
+        if (this.loadingOverlay?.parentNode) {
             this.loadingOverlay.remove();
             this.loadingOverlay = null;
         }
-    }
-    
-    mostrarExito(mensaje) {
-        this.mostrarNotificacion(mensaje, 'success');
     }
     
     mostrarError(mensaje) {
@@ -955,16 +734,9 @@ class CrearAreaController {
             timerProgressBar: true
         });
         
-        let icono = tipo;
-        if (tipo === 'danger') icono = 'error';
-        
-        Toast.fire({
-            icon: icono,
-            title: mensaje
-        });
+        let icono = tipo === 'danger' ? 'error' : tipo;
+        Toast.fire({ icon: icono, title: mensaje });
     }
 }
 
-// ========== INICIAR APLICACIÓN ==========
-console.log('🎬 Iniciando carga de crear-areas.js...');
 cargarDependencias();
