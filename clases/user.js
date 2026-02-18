@@ -50,13 +50,8 @@ class User {
         // `cargo` es la información del puesto (hereda de AreaManager). Puede ser un objeto o null.
         this.cargo = data.cargo || null; 
 
-        // Estos campos se mantienen por compatibilidad, pero idealmente deberían estar dentro del objeto `cargo`.
-        // Puedes eliminarlos más adelante cuando migres completamente a usar `this.cargo`.
+        // ✅ SOLO EL ID DEL ÁREA SE MANTIENE
         this.areaAsignadaId = data.areaAsignadaId || null;
-        this.areaAsignadaNombre = data.areaAsignadaNombre || null;
-        this.cargoAsignadoId = data.cargoAsignadoId || null;
-        this.cargoAsignadoNombre = data.cargoAsignadoNombre || null;
-        this.cargoAsignadoDescripcion = data.cargoAsignadoDescripcion || null;
 
         // Fechas y timestamps
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
@@ -338,12 +333,8 @@ class UserManager {
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                     email: data.correoElectronico || data.email,
-                    // Pasar datos de área (por si acaso)
+                    // ✅ Solo el ID del área
                     areaAsignadaId: data.areaAsignadaId,
-                    areaAsignadaNombre: data.areaAsignadaNombre,
-                    cargoAsignadoId: data.cargoAsignadoId,
-                    cargoAsignadoNombre: data.cargoAsignadoNombre,
-                    cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
                     creadoPorEmail: data.creadoPorEmail,
                     creadoPorNombre: data.creadoPorNombre,
                     actualizadoPor: data.actualizadoPor
@@ -390,11 +381,8 @@ class UserManager {
                         fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                         email: data.correoElectronico || data.email,
                         emailVerified: auth.currentUser?.emailVerified || false,
+                        // ✅ Solo el ID del área
                         areaAsignadaId: data.areaAsignadaId,
-                        areaAsignadaNombre: data.areaAsignadaNombre,
-                        cargoAsignadoId: data.cargoAsignadoId,
-                        cargoAsignadoNombre: data.cargoAsignadoNombre,
-                        cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
                         creadoPorEmail: data.creadoPorEmail,
                         creadoPorNombre: data.creadoPorNombre,
                         actualizadoPor: data.actualizadoPor
@@ -1407,11 +1395,8 @@ class UserManager {
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                     email: data.correoElectronico || data.email,
+                    // ✅ Solo el ID del área
                     areaAsignadaId: data.areaAsignadaId,
-                    areaAsignadaNombre: data.areaAsignadaNombre,
-                    cargoAsignadoId: data.cargoAsignadoId,
-                    cargoAsignadoNombre: data.cargoAsignadoNombre,
-                    cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
                     creadoPorEmail: data.creadoPorEmail,
                     creadoPorNombre: data.creadoPorNombre,
                     actualizadoPor: data.actualizadoPor
@@ -1450,11 +1435,8 @@ class UserManager {
                             fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                             fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                             email: data.correoElectronico || data.email,
+                            // ✅ Solo el ID del área
                             areaAsignadaId: data.areaAsignadaId,
-                            areaAsignadaNombre: data.areaAsignadaNombre,
-                            cargoAsignadoId: data.cargoAsignadoId,
-                            cargoAsignadoNombre: data.cargoAsignadoNombre,
-                            cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
                             creadoPorEmail: data.creadoPorEmail,
                             creadoPorNombre: data.creadoPorNombre,
                             actualizadoPor: data.actualizadoPor

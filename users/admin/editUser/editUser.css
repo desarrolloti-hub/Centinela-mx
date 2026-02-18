@@ -326,7 +326,6 @@ body {
 }
 
 /* ========== SELECT PERSONALIZADO ========== */
-.form-input-field[type="select"],
 select.form-input-field {
     appearance: none;
     -webkit-appearance: none;
@@ -393,7 +392,6 @@ select.form-input-field option:active {
         color: var(--color-text-dark) !important;
     }
     
-    /* Para Firefox en Windows */
     select.form-input-field:-moz-focusring {
         color: transparent !important;
         text-shadow: 0 0 0 var(--color-text-primary) !important;
@@ -407,14 +405,12 @@ select.form-input-field:focus {
     box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.3);
 }
 
-/* Forzar fondo oscuro para el dropdown */
 select.form-input-field > option,
 select.form-input-field optgroup {
     background-color: var(--color-bg-tertiary) !important;
     color: var(--color-text-primary) !important;
 }
 
-/* Estilo para el contenedor del dropdown en Chrome */
 @media screen and (-webkit-min-device-pixel-ratio:0) {
     select.form-input-field {
         background-color: var(--color-bg-tertiary) !important;
@@ -432,19 +428,16 @@ select.form-input-field optgroup {
     }
 }
 
-/* ===== ESTILO PARA EL BORDE CUANDO ESTÁ ABIERTO ===== */
 select.form-input-field:active,
 select.form-input-field:focus-within {
     border-color: var(--color-accent-primary);
 }
 
-/* ===== MENSAJE DE ERROR CUANDO NO HAY OPCIONES ===== */
 select.form-input-field option:disabled {
     color: var(--color-text-secondary) !important;
     opacity: 0.7;
 }
 
-/* ===== SCROLLBAR PERSONALIZADA PARA EL DROPDOWN ===== */
 select.form-input-field::-webkit-scrollbar {
     width: 8px;
     background-color: var(--color-bg-secondary);
@@ -463,30 +456,6 @@ select.form-input-field::-webkit-scrollbar-track {
     background-color: var(--color-bg-tertiary);
 }
 
-/* ===== RESPONSIVE PARA SELECTS ===== */
-@media (max-width: 768px) {
-    select.form-input-field {
-        font-size: 16px !important; /* Evita zoom automático en iOS */
-        padding: 0.875rem 1rem !important;
-    }
-    
-    select.form-input-field option {
-        font-size: 16px !important;
-        padding: 15px !important;
-    }
-}
-
-/* ===== ANIMACIÓN SUAVE AL ABRIR/CERRAR ===== */
-select.form-input-field {
-    transition: all 0.2s ease;
-}
-
-select.form-input-field:hover {
-    border-color: var(--color-accent-primary);
-    background-color: var(--color-hover);
-}
-
-/* ===== ESTILO PARA SELECT DESHABILITADO ===== */
 select.form-input-field:disabled,
 select.form-input-field[disabled] {
     opacity: 0.6;
@@ -500,7 +469,6 @@ select.form-input-field:disabled option {
     cursor: not-allowed;
 }
 
-/* ===== SOPORTE PARA TEMAS CLARO/OSCURO ===== */
 [data-theme="light"] select.form-input-field option {
     background-color: #ffffff !important;
     color: #333333 !important;
@@ -511,7 +479,6 @@ select.form-input-field:disabled option {
     color: #ffffff !important;
 }
 
-/* ===== RESPALDO PARA CUALQUIER OTRO NAVEGADOR ===== */
 select.form-input-field option:any-link,
 select.form-input-field option:any {
     background-color: var(--color-bg-tertiary) !important;
@@ -1087,6 +1054,8 @@ select.form-input-field option:any {
 }
 
 /* ========== RESPONSIVE OPTIMIZADO ========== */
+
+/* Tablets y pantallas medianas (menos de 1100px) */
 @media (max-width: 1100px) {
     .edit-wrapper {
         max-width: 950px;
@@ -1096,29 +1065,46 @@ select.form-input-field option:any {
         width: 160px;
         height: 160px;
     }
+    
+    .swal2-popup {
+        width: 90% !important;
+    }
 }
 
+/* Tablets (menos de 900px) */
 @media (max-width: 900px) {
     .edit-wrapper {
-        max-width: 800px;
+        max-width: 95%;
+        margin: 0 auto;
     }
     
     .photo-container {
         width: 150px;
         height: 150px;
     }
+    
+    .form-grid {
+        gap: 1rem;
+    }
 }
 
+/* Punto de quiebre principal - Cambio a layout vertical (menos de 850px) */
 @media (max-width: 850px) {
     .edit-wrapper {
         flex-direction: column;
         max-width: 600px;
+        margin: 0 auto;
     }
 
     .edit-left-panel {
         border-right: none;
         border-bottom: 1px solid var(--color-border-light);
         max-width: 100%;
+        padding: 1.5rem;
+    }
+
+    .edit-right-panel {
+        padding: 1.5rem;
     }
 
     .photo-container {
@@ -1128,14 +1114,73 @@ select.form-input-field option:any {
 
     .form-actions {
         grid-template-columns: 1fr;
+        gap: 0.75rem;
     }
     
     .form-grid {
         grid-template-columns: 1fr;
+        gap: 1.25rem;
     }
     
     .full-width {
         grid-column: span 1;
+    }
+    
+    .field-label {
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .form-input-field {
+        height: 48px;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* ===== SOLUCIÓN PARA SELECT EN MÓVIL ===== */
+    select.form-input-field {
+        font-size: 16px !important;
+        padding: 0.75rem 1rem;
+        background-position: right 1rem center;
+        width: 100%;
+        max-width: 100%;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    
+    select.form-input-field option {
+        max-width: 100%;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    
+    select.form-input-field:focus {
+        max-width: 100%;
+    }
+    
+    .form-input-field.readonly-field {
+        padding-right: 12px !important;
+    }
+    
+    .readonly-badge {
+        position: static;
+        margin-top: 8px;
+        display: inline-flex;
+        transform: none;
+        width: auto;
+        justify-content: center;
+        padding: 4px 10px;
+        font-size: 0.7rem;
+        border-radius: 20px;
+    }
+    
+    .input-wrapper {
+        display: flex;
+        flex-direction: column;
     }
     
     .permissions-grid {
@@ -1144,18 +1189,73 @@ select.form-input-field option:any {
     
     .status-selector {
         flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .status-option {
+        flex-direction: row;
+        justify-content: center;
+        padding: 0.6rem;
+    }
+    
+    .status-option i {
+        margin-bottom: 0;
+        margin-right: 0.5rem;
     }
     
     .info-grid {
         grid-template-columns: repeat(2, 1fr);
     }
     
-    /* SweetAlert2 responsive */
+    .permissions-note {
+        padding: 1rem;
+        margin: 1.5rem 0;
+        font-size: 0.85rem;
+    }
+    
+    .btn-change-password {
+        max-width: 100%;
+        padding: 14px 20px;
+        font-size: 0.85rem;
+    }
+    
+    .edit-main-title {
+        font-size: 1.3rem;
+    }
+    
+    .edit-sub-title {
+        font-size: 0.85rem;
+    }
+    
     .swal2-popup {
         width: 90% !important;
+        margin: 0 auto !important;
     }
 }
 
+/* Tablets pequeñas (menos de 768px) */
+@media (max-width: 768px) {
+    .edit-wrapper {
+        max-width: 95%;
+    }
+    
+    .photo-container {
+        width: 130px;
+        height: 130px;
+    }
+    
+    select.form-input-field {
+        font-size: 16px !important;
+        padding: 0.875rem 1rem !important;
+    }
+    
+    select.form-input-field option {
+        font-size: 16px !important;
+        padding: 15px !important;
+    }
+}
+
+/* Móviles (menos de 600px) */
 @media (max-width: 600px) {
     .edit-left-panel,
     .edit-right-panel {
@@ -1168,21 +1268,41 @@ select.form-input-field option:any {
     }
 
     .edit-main-title {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
+    }
+    
+    .edit-sub-title {
+        font-size: 0.8rem;
     }
 
     .modal-content {
         padding: 1.25rem;
+        width: 95%;
     }
 
     .modal-buttons {
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.75rem;
     }
 
     .modal-btn {
         width: 100%;
         min-width: auto;
+        padding: 0.75rem;
+    }
+    
+    .photo-info {
+        font-size: 0.7rem;
+        line-height: 1.4;
+    }
+    
+    .photo-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
     }
     
     .permissions-note {
@@ -1198,7 +1318,6 @@ select.form-input-field option:any {
         grid-template-columns: 1fr;
     }
     
-    /* SweetAlert2 responsive */
     .swal2-title {
         font-size: 1.1rem !important;
     }
@@ -1218,9 +1337,19 @@ select.form-input-field option:any {
     .swal2-icon-content {
         font-size: 2rem !important;
     }
+    
+    .swal2-html-container {
+        font-size: 0.9rem !important;
+    }
 }
 
+/* Móviles medianos (menos de 480px) */
 @media (max-width: 480px) {
+    .edit-left-panel,
+    .edit-right-panel {
+        padding: 1rem;
+    }
+    
     .photo-container {
         width: 110px;
         height: 110px;
@@ -1229,8 +1358,8 @@ select.form-input-field option:any {
     .edit-overlay {
         width: 35px;
         height: 35px;
-        bottom: 8px;
-        right: 8px;
+        bottom: 6px;
+        right: 6px;
     }
     
     .edit-icon {
@@ -1238,20 +1367,84 @@ select.form-input-field option:any {
     }
     
     .edit-main-title {
-        font-size: 1rem;
+        font-size: 1.1rem;
+        letter-spacing: 1px;
+    }
+    
+    .edit-header {
+        margin-bottom: 1rem;
+    }
+    
+    .form-grid {
+        gap: 1rem;
+    }
+    
+    .form-field-group {
+        gap: 0.2rem;
+    }
+    
+    .field-label {
+        font-size: 0.7rem;
+    }
+    
+    .field-label i {
+        font-size: 0.7rem;
+        min-width: 14px;
     }
     
     .form-input-field {
-        height: 40px;
+        height: 44px;
         padding: 0.6rem 0.8rem;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+    }
+    
+    select.form-input-field {
+        font-size: 16px !important;
+        padding: 0.6rem 0.8rem;
+        background-position: right 0.8rem center;
+        background-size: 0.9rem;
     }
     
     .action-btn,
     .back-btn {
-        height: 40px;
-        font-size: 0.75rem;
+        height: 44px;
+        font-size: 0.8rem;
         padding: 0.6rem;
+    }
+    
+    .readonly-badge {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+    }
+    
+    .field-info {
+        font-size: 0.65rem;
+        margin-top: 2px;
+    }
+    
+    .permissions-note {
+        padding: 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    .permissions-note i {
+        font-size: 0.8rem;
+    }
+    
+    .photo-info {
+        font-size: 0.65rem;
+        margin-top: 0.2rem;
+    }
+    
+    .btn-change-password {
+        padding: 12px 16px;
+        font-size: 0.8rem;
+        letter-spacing: 0.6px;
+    }
+    
+    .password-change-info {
+        font-size: 0.7rem;
+        margin-top: 8px;
     }
     
     .permissions-grid {
@@ -1267,9 +1460,9 @@ select.form-input-field option:any {
     .status-option i {
         margin-bottom: 0;
         margin-right: 0.5rem;
+        font-size: 1rem;
     }
     
-    /* SweetAlert2 responsive */
     .swal2-actions {
         flex-direction: column !important;
         width: 100% !important;
@@ -1278,6 +1471,64 @@ select.form-input-field option:any {
     .swal2-styled {
         width: 100% !important;
         margin: 0.25rem 0 !important;
+    }
+    
+    .swal2-popup {
+        padding: 1rem !important;
+    }
+}
+
+/* Móviles muy pequeños (menos de 360px) */
+@media (max-width: 360px) {
+    .edit-left-panel,
+    .edit-right-panel {
+        padding: 0.75rem;
+    }
+    
+    .photo-container {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .edit-overlay {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .edit-main-title {
+        font-size: 1rem;
+    }
+    
+    .form-input-field {
+        height: 40px;
+        font-size: 0.8rem;
+        padding: 0.5rem 0.7rem;
+    }
+    
+    select.form-input-field {
+        font-size: 16px !important;
+    }
+    
+    .action-btn,
+    .back-btn {
+        height: 40px;
+        font-size: 0.75rem;
+    }
+    
+    .field-label {
+        font-size: 0.65rem;
+    }
+    
+    .field-label i {
+        font-size: 0.65rem;
+    }
+    
+    .section-title {
+        font-size: 0.85rem;
+    }
+    
+    .section-title i {
+        font-size: 0.9rem;
     }
 }
 
@@ -1294,5 +1545,18 @@ select.form-input-field option:any {
     .photo-container {
         width: 200px;
         height: 200px;
+    }
+    
+    .form-input-field {
+        font-size: 0.95rem;
+        height: 48px;
+    }
+    
+    .field-label {
+        font-size: 0.8rem;
+    }
+    
+    .edit-main-title {
+        font-size: 1.6rem;
     }
 }

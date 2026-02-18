@@ -715,7 +715,7 @@ async function registrarColaborador(event, elements, userManager, admin) {
     });
     
     try {
-        // ✅ CORREGIDO: Estructura de datos del colaborador
+        // ✅ CORREGIDO: Estructura de datos del colaborador - SIN CAMPOS REDUNDANTES
         const colaboradorData = {
             nombreCompleto: elements.nombreCompleto.value.trim(),
             correoElectronico: elements.correoElectronico.value.trim(),
@@ -729,20 +729,13 @@ async function registrarColaborador(event, elements, userManager, admin) {
             plan: admin.plan || 'gratis',
             
             // ✅ CORREGIDO: Usar el objeto `cargo` para la información del puesto
-            cargo: cargoObjeto, 
+            cargo: cargoObjeto,
             
-            // Mantener los campos planos por compatibilidad (puedes eliminarlos después)
+            // ✅ SOLO EL ID DEL ÁREA, NO EL NOMBRE
             areaAsignadaId: elements.areaSelect ? elements.areaSelect.value : null,
-            areaAsignadaNombre: areaNombre,
-            cargoAsignadoId: elements.cargoEnAreaSelect ? elements.cargoEnAreaSelect.value : null,
-            cargoAsignadoNombre: cargoNombre,
-            cargoAsignadoDescripcion: cargoDescripcion,
             
             // ✅ CORREGIDO: El campo `rol` es para el nivel de acceso
             rol: elements.rol ? elements.rol.value : 'colaborador',
-            
-            // ✅ ELIMINADO: El campo `cargo` que antes usaba 'colaborador' como string
-            // Ya no se usa 'cargo' para el nivel de acceso
             
             // Campos de sistema
             status: true,
@@ -797,8 +790,8 @@ async function mostrarExitoRegistro(colaboradorData) {
                     <p><strong>Nombre:</strong> ${colaboradorData.nombreCompleto}</p>
                     <p><strong>Email:</strong> ${colaboradorData.correoElectronico}</p>
                     <p><strong>Rol en sistema:</strong> ${colaboradorData.rol.toUpperCase()}</p>
-                    <p><strong>Área asignada:</strong> ${colaboradorData.areaAsignadaNombre}</p>
-                    <p><strong>Cargo:</strong> ${colaboradorData.cargoAsignadoNombre}</p>
+                    <p><strong>Área asignada:</strong> ${colaboradorData.areaAsignadaId ? 'Seleccionada' : 'No asignada'}</p>
+                    <p><strong>Cargo:</strong> ${colaboradorData.cargo ? colaboradorData.cargo.nombre : 'No asignado'}</p>
                     <p><strong>Organización:</strong> ${colaboradorData.organizacion}</p>
                     <p><strong>Creado por:</strong> ${colaboradorData.creadoPorNombre}</p>
                 </div>
