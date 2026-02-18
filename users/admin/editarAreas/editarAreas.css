@@ -1027,3 +1027,9 @@ select#organizacion option {
         font-size: 13px !important;
     }
 }
+
+/* =============================================
+   FIN DEL ARCHIVO - NO AGREGAR MÁS ESTILOS
+   ============================================= */
+/* NOTA: Este archivo NO debe contener estilos para #complete-navbar 
+   ya que esos estilos están definidos en navbar-admin-component.js */
