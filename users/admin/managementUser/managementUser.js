@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // ✅ CORREGIDO: Usar el método esAdministrador() en lugar de comparar cargo
         if (!userManager.currentUser || !userManager.currentUser.esAdministrador()) {
             console.error('❌ No hay administrador autenticado');
             showNoAdminMessage();
@@ -20,14 +19,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             nombreCompleto: admin.nombreCompleto,
             organizacion: admin.organizacion,
             organizacionCamelCase: admin.organizacionCamelCase,
-            // ✅ CORREGIDO: Guardar el rol en lugar del cargo para consistencia
             rol: admin.rol,
             correoElectronico: admin.correoElectronico,
             timestamp: new Date().toISOString()
         }));
         
         localStorage.removeItem('selectedCollaborator');
-        updatePageWithAdminInfo(admin);
+        
         await loadCollaborators(admin, userManager);
         setupEvents(admin, userManager);
         
@@ -53,7 +51,6 @@ async function loadCollaborators(admin, userManager) {
                 id: col.id,
                 nombreCompleto: col.nombreCompleto,
                 correoElectronico: col.correoElectronico,
-                // ✅ CORREGIDO: Guardar el rol en lugar del cargo para consistencia
                 rol: col.rol,
                 status: col.status,
                 organizacion: col.organizacion,
@@ -156,9 +153,15 @@ function updateStats(collaborators) {
         statsContainer.id = 'collaboratorsStats';
         statsContainer.className = 'stats-container';
         
-        const sectionHeader = document.querySelector('.section-header');
+        const sectionHeader = document.querySelector('.card-header'); // Cambiado porque ya no existe .section-header
         if (sectionHeader) {
             sectionHeader.parentNode.insertBefore(statsContainer, sectionHeader.nextSibling);
+        } else {
+            // Fallback: insertar después del card-header
+            const tableWrapper = document.querySelector('.table-wrapper');
+            if (tableWrapper) {
+                tableWrapper.parentNode.insertBefore(statsContainer, tableWrapper.nextSibling);
+            }
         }
     }
     
@@ -442,32 +445,6 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
             closeButton: 'swal2-close-custom'
         }
     });
-}
-
-// ========== ACTUALIZAR PÁGINA CON INFO DEL ADMIN ==========
-function updatePageWithAdminInfo(admin) {    
-    const mainTitle = document.querySelector('.section-header h1');
-    if (mainTitle && admin.organizacion) {
-        mainTitle.innerHTML = `
-            <i class="fas fa-users"></i> COLABORADORES DE 
-            <span class="organization-name">${admin.organizacion.toUpperCase()}</span>
-        `;
-    }
-    
-    const subTitle = document.querySelector('.section-header p');
-    if (!subTitle && admin.organizacion) {
-        const sectionTitle = document.querySelector('.section-title');
-        if (sectionTitle) {
-            const newSubTitle = document.createElement('p');
-            newSubTitle.className = 'admin-info-subtitle';
-            newSubTitle.innerHTML = `
-                <i class="fas fa-user-shield"></i>
-                Administrador: <strong>${admin.nombreCompleto || 'Administrador'}</strong>
-                ${admin.correoElectronico ? ` | <span>${admin.correoElectronico}</span>` : ''}
-            `;
-            sectionTitle.parentNode.insertBefore(newSubTitle, sectionTitle.nextSibling);
-        }
-    }
 }
 
 // ========== ESTADO VACÍO ==========

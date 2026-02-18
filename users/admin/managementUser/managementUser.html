@@ -6,7 +6,6 @@
     <title>Perfil Administrador - Gestión de Colaboradores</title>
     
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
     <link rel="stylesheet" href="managementUser.css">
     
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -24,18 +23,26 @@
 <canvas id="particle-canvas"></canvas>
 
 <div class="admin-container">
-    
-   <div class="section-header">
-    <div class="section-title">
-        <i class="fas fa-users"></i> Gestión de Colaboradores
+    <!-- Page Header (fuera del contenedor de la tabla) -->
+    <div class="page-header">
+        <h1>
+            <i class="fas fa-users"></i> Gestión de Colaboradores
+        </h1>
+        <div class="header-description">
+            Administra los colaboradores de tu organización. Puedes agregar, editar, 
+            ver detalles y cambiar el estado de cada uno.
+        </div>
     </div>
 
-    <button class="add-btn" id="addBtn">
-        <i class="fas fa-user-plus"></i> Agregar Colaborador
-    </button>
-</div>
-
+    <!-- Contenedor de la tabla con su propio header -->
     <div class="table-wrapper">
+        <div class="card-header">
+            <h5><i class="fas fa-list"></i> LISTA DE COLABORADORES</h5>
+            <button class="add-btn" id="addBtn">
+                <i class="fas fa-user-plus"></i> Agregar Colaborador
+            </button>
+        </div>
+
         <table class="collaborators-table">
             <thead>
                 <tr>
@@ -47,6 +54,7 @@
                 </tr>
             </thead>
             <tbody id="usersTableBody">
+                <!-- Se llenará dinámicamente -->
             </tbody>
         </table>
     </div>
@@ -57,8 +65,6 @@
 <script src="/components/navbar-admin-component.js"></script>
 <script src="/components/footer-admin-component.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<!-- SÓLO ESTE ARCHIVO JS -->
 <script src="managementUser.js"></script>
 
 </body>
