@@ -7,6 +7,138 @@
 }
 
 /* =============================================
+   HEADER CENTRADO - NUEVA SECCIÓN
+   ============================================= */
+.header-container {
+    background: transparent !important;
+    padding: 0 0 30px 0;
+    margin-bottom: 20px;
+    position: relative;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    text-align: center !important;
+}
+
+.header-title {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto !important;
+}
+
+.header-title h1 {
+    font-family: var(--font-family-primary);
+    color: var(--color-text-primary);
+    font-size: clamp(24px, 4vw, 32px);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0 0 15px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-shadow: 0 0 10px var(--color-accent-primary);
+}
+
+.header-title h1 i {
+    font-size: 28px;
+
+}
+
+.header-title .header-description {
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 auto;
+    position: relative;
+    padding: 0 20px;
+    border-bottom: 2px solid var(--color-border-light);
+
+}
+
+/* Línea decorativa superior */
+.header-title .header-description::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+}
+
+/* Línea decorativa inferior */
+.header-title .header-description::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+}
+
+/* =============================================
+   BOTÓN VOLVER - ESTILO UNIFICADO
+   ============================================= */
+.btn-volver {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+    padding: 12px 25px !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 14px !important;
+    min-width: 200px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    justify-content: center !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-volver:hover {
+    transform: translateY(-2px) !important;
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.2) !important;
+    border-color: var(--color-accent-primary) !important;
+}
+
+.btn-volver i {
+    font-size: 14px !important;
+}
+
+.btn-volver::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 100%;
+    height: 200%;
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    transform: rotate(30deg);
+    transition: all 0.5s ease;
+    opacity: 0;
+}
+
+.btn-volver:hover::after {
+    opacity: 1;
+    transform: rotate(30deg) translate(10%, 10%);
+}
+
+/* =============================================
    ESTILOS GENERALES
    ============================================= */
 body {
@@ -19,10 +151,8 @@ body {
 }
 
 .container-fluid {
-    background: var(--color-bg-secondary);
-    border-radius: var(--border-radius-large);
+    border-radius: 20px;
     padding: 25px;
-    border: 1px solid var(--color-border-light);
     box-shadow: var(--shadow-normal);
     max-width: min(1200px, 95vw);
     margin: 0 auto;
@@ -30,13 +160,11 @@ body {
 }
 
 /* =============================================
-   HEADER PRINCIPAL (TÍTULOS)
+   HEADER PRINCIPAL (TÍTULOS) - MANTENIDO PARA COMPATIBILIDAD
    ============================================= */
 .row.mb-4:first-child {
-    background: rgba(15, 15, 15, 0.9);
     padding: 20px 25px;
-    border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-border-light);
+    border-radius: 16px;
     margin-bottom: 30px !important;
     box-shadow: var(--shadow-normal);
 }
@@ -66,41 +194,20 @@ h1.h3 i {
 }
 
 /* =============================================
-   BOTONES PRINCIPALES (TÍTULOS)
+   BOTONES PRINCIPALES (TÍTULOS) - OCULTAMOS EL ANTERIOR PARA USAR EL NUEVO
    ============================================= */
-#btnVolverLista {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-    padding: 12px 25px !important;
-    border-radius: var(--border-radius-medium) !important;
-    font-weight: 600 !important;
-    font-family: var(--font-family-primary) !important;
-    font-size: 14px !important;
-    min-width: 180px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    transition: all 0.3s ease !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    justify-content: center !important;
-}
-
-#btnVolverLista:hover {
-    transform: translateY(-2px) !important;
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    box-shadow: 0 0 20px rgba(192, 192, 192, 0.2) !important;
-    border-color: var(--color-accent-primary) !important;
+#btnVolverLista.btn.btn-secondary.btn-lg {
+    display: none !important;
+    /* Ocultamos el botón anterior */
 }
 
 /* =============================================
-   TARJETA DEL FORMULARIO
+   TARJETA DEL FORMULARIO - CON HEADER MODIFICADO
    ============================================= */
 .card {
     background: var(--color-bg-secondary) !important;
     border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
+    border-radius: 20px !important;
     box-shadow: var(--shadow-normal) !important;
     margin-bottom: 20px !important;
 }
@@ -109,6 +216,7 @@ h1.h3 i {
     background: rgba(20, 20, 20, 0.95) !important;
     border-bottom: 1px solid var(--color-border-light) !important;
     padding: 18px 25px !important;
+    border-radius: 20px 20px 0 0 !important;
 }
 
 .card-header h5 {
@@ -171,17 +279,19 @@ h6 i {
     content: "" !important;
 }
 
-.form-control, .form-select {
+.form-control,
+.form-select {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-small) !important;
+    border-radius: 10px !important;
     padding: 12px 15px !important;
     transition: all 0.3s ease !important;
     font-family: var(--font-family-secondary) !important;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
     border-color: var(--color-accent-secondary) !important;
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
     background: var(--color-bg-secondary) !important;
@@ -203,7 +313,7 @@ h6 i {
 
 /* Input groups */
 .input-group {
-    border-radius: var(--border-radius-small) !important;
+    border-radius: 10px !important;
     overflow: hidden !important;
 }
 
@@ -225,7 +335,7 @@ h6 i {
 .cargos-container {
     background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border-light);
-    border-radius: var(--border-radius-medium);
+    border-radius: 14px;
     padding: 20px;
     min-height: 150px;
 }
@@ -252,7 +362,7 @@ h6 i {
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
     padding: 10px 20px !important;
-    border-radius: var(--border-radius-medium) !important;
+    border-radius: 10px !important;
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
@@ -276,7 +386,7 @@ h6 i {
    ALERTAS (TEXTO NORMAL)
    ============================================= */
 .alert {
-    border-radius: var(--border-radius-small) !important;
+    border-radius: 10px !important;
     border: 1px solid !important;
     padding: 15px 20px !important;
     font-family: var(--font-family-secondary) !important;
@@ -321,11 +431,13 @@ h6 i {
     margin-top: 20px;
 }
 
-#btnCancelar, #btnGuardarCambios {
+#btnCancelar,
+#btnGuardarCambios,
+#btnDesactivarArea {
     padding: 12px 30px !important;
     font-family: var(--font-family-secondary) !important;
     font-weight: 600 !important;
-    border-radius: var(--border-radius-medium) !important;
+    border-radius: 12px !important;
     transition: all 0.3s ease !important;
     min-width: 180px !important;
     display: flex !important;
@@ -360,13 +472,25 @@ h6 i {
     box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
 }
 
+#btnDesactivarArea {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-danger) !important;
+    color: var(--color-danger) !important;
+}
+
+#btnDesactivarArea:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
+}
+
 /* =============================================
    MODALES
    ============================================= */
 .modal-content {
     background: var(--color-bg-secondary) !important;
     border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
+    border-radius: 20px !important;
     box-shadow: var(--shadow-large) !important;
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary) !important;
@@ -378,6 +502,7 @@ h6 i {
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-primary) !important;
     padding: 20px 25px !important;
+    border-radius: 20px 20px 0 0 !important;
 }
 
 .modal-title {
@@ -431,6 +556,7 @@ h6 i {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -440,14 +566,21 @@ h6 i {
 /* =============================================
    EFECTOS ESPECIALES
    ============================================= */
-#btnVolverLista, #btnCancelar, #btnGuardarCambios,
-#btnAgregarCargo, .modal-footer .btn {
+#btnVolverLista,
+#btnCancelar,
+#btnGuardarCambios,
+#btnDesactivarArea,
+#btnAgregarCargo,
+.modal-footer .btn {
     position: relative;
     overflow: hidden;
 }
 
-#btnVolverLista::after, #btnCancelar::after,
-#btnGuardarCambios::after, #btnAgregarCargo::after,
+#btnVolverLista::after,
+#btnCancelar::after,
+#btnGuardarCambios::after,
+#btnDesactivarArea::after,
+#btnAgregarCargo::after,
 .modal-footer .btn::after {
     content: '';
     position: absolute;
@@ -455,19 +588,20 @@ h6 i {
     left: -50%;
     width: 100%;
     height: 200%;
-    background: linear-gradient(
-        to bottom right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: rotate(30deg);
     transition: all 0.5s ease;
     opacity: 0;
 }
 
-#btnVolverLista:hover::after, #btnCancelar:hover::after,
-#btnGuardarCambios:hover::after, #btnAgregarCargo:hover::after,
+#btnVolverLista:hover::after,
+#btnCancelar:hover::after,
+#btnGuardarCambios:hover::after,
+#btnDesactivarArea:hover::after,
+#btnAgregarCargo:hover::after,
 .modal-footer .btn:hover::after {
     opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
@@ -518,31 +652,38 @@ select#organizacion option {
     .container-fluid {
         padding: 20px !important;
     }
-    
+
     .row.mb-4:first-child {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 20px !important;
         padding: 20px !important;
     }
-    
-    #btnVolverLista {
-        width: 100% !important;
-        max-width: 300px !important;
-    }
-    
+
     .card-body {
         padding: 20px !important;
     }
-    
-    #btnCancelar, #btnGuardarCambios {
+
+    #btnCancelar,
+    #btnGuardarCambios,
+    #btnDesactivarArea {
         width: 100% !important;
         margin-bottom: 10px !important;
     }
-    
+
     .d-flex.justify-content-end.gap-3 {
         flex-direction: column !important;
         gap: 10px !important;
+    }
+
+    .card-header {
+        flex-direction: column !important;
+        gap: 15px !important;
+        align-items: flex-start !important;
+    }
+
+    .btn-volver {
+        width: 100% !important;
     }
 }
 
@@ -550,39 +691,68 @@ select#organizacion option {
     body {
         padding: 10px !important;
     }
-    
+
     .container-fluid {
         padding: 15px !important;
-        border-radius: var(--border-radius-medium) !important;
+        border-radius: 16px !important;
     }
-    
+
     h1.h3 {
         font-size: 20px !important;
         justify-content: center !important;
         text-align: center !important;
     }
-    
+
+    .header-title h1 {
+        font-size: 20px !important;
+        flex-wrap: wrap;
+    }
+
+    .header-title .header-description {
+        padding-left: 0;
+        padding-top: 20px;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .header-title .header-description::before {
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 2px;
+    }
+
+    .header-title .header-description::after {
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 2px;
+    }
+
     .row.mb-4:first-child {
         padding: 15px !important;
     }
-    
+
     .card-header {
         padding: 15px 20px !important;
     }
-    
+
     .card-body {
         padding: 15px !important;
     }
-    
-    .form-control, .form-select {
+
+    .form-control,
+    .form-select {
         padding: 10px 12px !important;
         font-size: 14px !important;
     }
-    
+
     .input-group-text {
         padding: 10px 12px !important;
     }
-    
+
     .modal-dialog {
         margin: 0.5rem !important;
     }
@@ -592,14 +762,25 @@ select#organizacion option {
     .container-fluid {
         padding: 10px !important;
     }
-    
+
+    .header-title h1 {
+        font-size: 18px !important;
+        gap: 8px;
+    }
+
+    .header-title h1 i {
+        font-size: 20px;
+    }
+
     #btnVolverLista {
         padding: 10px 15px !important;
         font-size: 13px !important;
         min-width: auto !important;
     }
-    
-    #btnCancelar, #btnGuardarCambios {
+
+    #btnCancelar,
+    #btnGuardarCambios,
+    #btnDesactivarArea {
         padding: 10px 15px !important;
         font-size: 13px !important;
         min-width: auto !important;
@@ -614,6 +795,7 @@ select#organizacion option {
     border-left: 4px solid var(--color-accent-secondary) !important;
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-secondary) !important;
+    border-radius: 10px !important;
 }
 
 .organizacion-info h6,
@@ -636,7 +818,7 @@ select#organizacion option {
 .organizacion-info code {
     background: var(--color-bg-primary) !important;
     padding: 2px 6px;
-    border-radius: var(--border-radius-small);
+    border-radius: 6px;
 }
 
 /* =============================================
@@ -647,6 +829,7 @@ select#organizacion option {
     border: 1px solid rgba(47, 140, 255, 0.3) !important;
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-secondary) !important;
+    border-radius: 10px !important;
 }
 
 .alert-info.mb-4 i,
@@ -681,7 +864,7 @@ select#organizacion option {
     background: var(--color-bg-secondary) !important;
     color: var(--color-text-primary) !important;
     border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
+    border-radius: 20px !important;
     box-shadow: var(--shadow-large) !important;
     font-family: var(--font-family-secondary) !important;
 }
@@ -703,7 +886,7 @@ select#organizacion option {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-secondary) !important;
     color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-medium) !important;
+    border-radius: 10px !important;
     font-family: var(--font-family-primary) !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -715,7 +898,7 @@ select#organizacion option {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-medium) !important;
+    border-radius: 10px !important;
     font-family: var(--font-family-primary) !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -726,7 +909,7 @@ select#organizacion option {
 .swal2-toast {
     background: var(--color-bg-secondary) !important;
     border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-medium) !important;
+    border-radius: 12px !important;
     box-shadow: var(--shadow-normal) !important;
     font-family: var(--font-family-secondary) !important;
 }
@@ -755,7 +938,7 @@ select#organizacion option {
 }
 
 /* =============================================
-   ESTILOS PARA CARGOS
+   ESTILOS PARA CARGOS (DETALLES)
    ============================================= */
 .cargo-header {
     display: flex !important;
@@ -779,99 +962,68 @@ select#organizacion option {
     color: var(--color-accent-secondary) !important;
     margin-right: 8px !important;
 }
-.btn-eliminar-cargo {
-    color: white !important;  /* ← TEXTO BLANCO */
-    border: 1px solid #ff4d4d !important;  /* ← BORDE ROJO BRILLANTE */
+
+.cargo-item {
+    border-radius: 10px !important;
+    margin-bottom: 15px !important;
+    background: rgba(255, 255, 255, 0.02);
 }
+
+.btn-eliminar-cargo {
+    color: white !important;
+    border: 1px solid #ff4d4d !important;
+    border-radius: 8px !important;
+}
+
 .btn-eliminar-cargo:hover {
-    background: rgba(255, 77, 77, 0.2) !important;  /* Fondo rojo tenue */
+    background: rgba(255, 77, 77, 0.2) !important;
     border-color: #ff4d4d !important;
-    color: #ff4d4d !important;  /* Texto rojo brillante */
+    color: #ff4d4d !important;
     transform: translateY(-2px) !important;
 }
 
 .btn-eliminar-cargo:hover i {
-    color: #ff4d4d !important;  /* Icono rojo */
+    color: #ff4d4d !important;
 }
 
-        /* Estilos personalizados */
-        .organizacion-info {
-            border-left: 4px solid #3498db;
-            background-color: #1d1d1d !important;
-        }
-        
-        .organizacion-info i.fa-building {
-            color: #2c3e50;
-        }
-        
-        /* Para mostrar nombres largos */
-        select#responsable option {
-            white-space: normal !important;
-            word-wrap: break-word;
-            padding: 8px 4px;
-        }
-        
-        .form-select {
-            max-height: 200px;
-            overflow-y: auto;
-        }
+/* =============================================
+   ESTILOS PARA EL BOTÓN VER DETALLES
+   ============================================= */
+#btnVerDetalles {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-info) !important;
+    color: var(--color-info) !important;
+    padding: 12px 30px !important;
+    font-family: var(--font-family-secondary) !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    transition: all 0.3s ease !important;
+    min-width: 180px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+}
 
-        /* Estilos para el botón Ver Detalles */
-        #btnVerDetalles {
-            background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-            border: 1px solid var(--color-info) !important;
-            color: var(--color-info) !important;
-            padding: 12px 30px !important;
-            font-family: var(--font-family-secondary) !important;
-            font-weight: 600 !important;
-            border-radius: var(--border-radius-medium) !important;
-            transition: all 0.3s ease !important;
-            min-width: 180px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 10px !important;
-        }
+#btnVerDetalles:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    border-color: var(--color-info) !important;
+    box-shadow: 0 5px 15px rgba(0, 207, 255, 0.2) !important;
+}
 
-        #btnVerDetalles:hover {
-            background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-            transform: translateY(-2px) !important;
-            border-color: var(--color-info) !important;
-            box-shadow: 0 5px 15px rgba(0, 207, 255, 0.2) !important;
-        }
+/* Ajustes responsive para el botón */
+@media (max-width: 768px) {
+    #btnVerDetalles {
+        width: 100% !important;
+        margin-bottom: 10px !important;
+        min-width: auto !important;
+    }
+}
 
-        /* Ajustes responsive para el botón */
-        @media (max-width: 768px) {
-            #btnVerDetalles {
-                width: 100% !important;
-                margin-bottom: 10px !important;
-                min-width: auto !important;
-            }
-        }
-
-        @media (max-width: 480px) {
-            #btnVerDetalles {
-                padding: 10px 15px !important;
-                font-size: 13px !important;
-            }
-        }
-        .organizacion-info {
-            border-left: 4px solid #3498db;
-            background-color: #1d1d1d !important;
-        }
-        
-        .organizacion-info i.fa-building {
-            color: #2c3e50;
-        }
-        
-        /* Para mostrar nombres largos */
-        select#responsable option {
-            white-space: normal !important;
-            word-wrap: break-word;
-            padding: 8px 4px;
-        }
-        
-        .form-select {
-            max-height: 200px;
-            overflow-y: auto;
-        }
+@media (max-width: 480px) {
+    #btnVerDetalles {
+        padding: 10px 15px !important;
+        font-size: 13px !important;
+    }
+}

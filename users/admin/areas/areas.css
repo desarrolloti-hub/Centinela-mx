@@ -1,120 +1,132 @@
-/* areas.css - Adaptado al tema Centinela (USA VARIABLES GLOBALES) */
 /* =============================================
-   NO REDEFINIR VARIABLES GLOBALES - USAR LAS DE personalization.css
+   areas.css - Sistema Centinela - ESTILO UNIFICADO
    ============================================= */
 
+/* =============================================
+   VARIABLES GLOBALES
+   ============================================= */
 :root {
-    /* COLORES PRINCIPALES */
-    --color-bg-primary: #000000;
-    --color-bg-secondary: #0a0a0a;
-    --color-bg-tertiary: #141414;
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #cccccc;
-    --color-text-light: #ffffff;
-    --color-accent-primary: #c0c0c0;
-    --color-accent-secondary: #2f8cff;
-    --color-border-light: #545454;
-    --color-border-dark: #333333;
-    --color-hover: #1a1a1a;
-    --color-icon-primary: #9caba4;
-    
-    /* COLORES DE ESTADO */
-    --color-success: #00ff95;
-    --color-danger: #ff4d4d;
-    --color-warning: #ffcc00;
-    --color-info: #00cfff;
-    
-    /* SOMBRAS */
-    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
-    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
-    
-    /* BORDES */
-    --border-radius-small: 5px;
-    --border-radius-medium: 10px;
-    --border-radius-large: 15px;
-    --border-radius-circle: 50%;
-    
-    /* TRANSICIONES */
-    --transition-fast: 0.2s ease;
-    --transition-default: 0.3s ease;
-    --transition-slow: 0.5s ease;
-    
-    /* FUENTES */
     --font-family-primary: 'Orbitron', sans-serif;
-    --font-family-secondary: sans-serif;
-}
-
-
-/* =============================================
-   ESTILOS GENERALES
-   ============================================= */
-body {
-    background-color: var(--color-bg-primary);
-    color: var(--color-text-secondary);
-    font-family: var(--font-family-secondary);
-    min-height: 100vh;
-    margin: 0;
-    padding: 20px;
-}
-
-.container-fluid {
-    background: var(--color-bg-secondary);
-    border-radius: var(--border-radius-large);
-    padding: 25px;
-    border: 1px solid var(--color-border-light);
-    box-shadow: var(--shadow-normal);
-    max-width: min(1400px, 95vw);
-    margin: 0 auto;
-    animation: fadeInUp 0.5s ease;
+    --font-family-secondary: 'Rajdhani', sans-serif;
 }
 
 /* =============================================
-   HEADER PRINCIPAL
+   HEADER CENTRADO - CON LÍNEA DECORATIVA
    ============================================= */
-.row.mb-4:first-child {
-    background: rgba(15, 15, 15, 0.9);
-    padding: 20px 25px;
-    border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-border-light);
-    margin-bottom: 30px !important;
-    box-shadow: var(--shadow-normal);
+.header-container {
+    background: transparent !important;
+    padding: 0 0 30px 0;
+    margin-bottom: 20px;
+    position: relative;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    text-align: center !important;
 }
 
-h1.h3 {
+.header-title {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto !important;
+}
+
+.header-title h1 {
     font-family: var(--font-family-primary);
     color: var(--color-text-primary);
-    font-size: clamp(22px, 4vw, 26px);
+    font-size: clamp(24px, 4vw, 32px);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0;
-    margin-bottom: 8px;
+    letter-spacing: 2px;
+    margin: 0 0 15px 0;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
+    text-shadow: 0 0 10px var(--color-accent-primary);
 }
 
-h1.h3 i {
-    color: var(--color-accent-primary);
-    font-size: 24px;
+.header-title h1 i {
+
+    font-size: 28px;
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
 
-.text-muted {
-    color: var(--color-text-secondary) !important;
+.header-title .header-description {
+    color: var(--color-text-secondary);
     font-family: var(--font-family-secondary);
-    margin-top: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 auto;
+    position: relative;
+    padding: 0 20px;
+    max-width: 700px;
+}
+
+/* Línea decorativa superior */
+.header-title .header-description::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+}
+
+/* Línea decorativa inferior */
+.header-title .header-description::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+}
+
+/* Badge de empresa */
+.badge-empresa {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(192, 192, 192, 0.1);
+    border: 1px solid rgba(192, 192, 192, 0.3);
+    color: var(--color-accent-primary);
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-family: var(--font-family-secondary);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    margin-left: 12px;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.badge-empresa i {
     font-size: 14px;
 }
 
+.badge-empresa .empresa-nombre {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    white-space: nowrap;
+}
+
 /* =============================================
-   BOTÓN NUEVA ÁREA
+   BOTÓN NUEVA ÁREA - ESTILO UNIFICADO (REDONDITO)
    ============================================= */
 #btnNuevaArea {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
     padding: 12px 25px !important;
-    border-radius: var(--border-radius-medium) !important;
+    border-radius: 50px !important;
     font-weight: 600 !important;
     font-family: var(--font-family-primary) !important;
     font-size: 14px !important;
@@ -128,26 +140,78 @@ h1.h3 i {
     justify-content: center !important;
     position: relative;
     overflow: hidden;
+    border: none !important;
+    cursor: pointer;
 }
 
 #btnNuevaArea:hover {
     transform: translateY(-2px) !important;
     background: linear-gradient(145deg, #1a1a1a, #100f0f) !important;
     box-shadow: 0 0 20px rgba(192, 192, 192, 0.3) !important;
-    border-color: #050404 !important;
+    border-color: var(--color-accent-primary) !important;
 }
 
 #btnNuevaArea i {
     font-size: 16px !important;
 }
 
+#btnNuevaArea::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 100%;
+    height: 200%;
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    transform: rotate(30deg);
+    transition: all 0.5s ease;
+    opacity: 0;
+}
+
+#btnNuevaArea:hover::after {
+    opacity: 1;
+    transform: rotate(30deg) translate(10%, 10%);
+}
+
 /* =============================================
-   TABLA DE ÁREAS
+   ESTILOS GENERALES
+   ============================================= */
+body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-secondary);
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+
+#particle-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.container-fluid {
+    background: transparent;
+    max-width: min(1400px, 95vw);
+    margin: 0 auto;
+    animation: fadeInUp 0.5s ease;
+}
+
+/* =============================================
+   TARJETA DE TABLA - CON BOTÓN EN HEADER
    ============================================= */
 .card {
     background: var(--color-bg-secondary) !important;
     border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
+    border-radius: 20px !important;
     box-shadow: var(--shadow-normal) !important;
     margin-bottom: 20px !important;
 }
@@ -155,13 +219,14 @@ h1.h3 i {
 .card-header {
     background: rgba(20, 20, 20, 0.95) !important;
     border-bottom: 1px solid var(--color-border-light) !important;
-    padding: 15px 20px !important;
+    padding: 18px 25px !important;
+    border-radius: 20px 20px 0 0 !important;
 }
 
 .card-header h5 {
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-primary) !important;
-    font-size: 15px !important;
+    font-size: 16px !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
     margin: 0 !important;
@@ -174,8 +239,12 @@ h1.h3 i {
     color: var(--color-accent-primary) !important;
 }
 
+.card-body {
+    padding: 20px !important;
+}
+
 /* =============================================
-   TABLA - ESTILOS COMPACTOS
+   TABLA PRINCIPAL
    ============================================= */
 .table-responsive {
     border-radius: var(--border-radius-medium);
@@ -205,9 +274,11 @@ h1.h3 i {
     color: var(--color-text-secondary) !important;
     margin-bottom: 0 !important;
     font-size: 13px !important;
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.table > :not(caption) > * > * {
+.table> :not(caption)>*>* {
     background-color: transparent !important;
 }
 
@@ -224,6 +295,7 @@ h1.h3 i {
     position: sticky !important;
     top: 0 !important;
     z-index: 10 !important;
+    text-align: left;
 }
 
 .table td {
@@ -237,22 +309,20 @@ h1.h3 i {
 
 .table tbody tr {
     background-color: transparent !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.03) !important;
+    background: rgba(47, 140, 255, 0.1) !important;
 }
 
-.table-striped > tbody > tr:nth-of-type(odd) > * {
-    background-color: transparent !important;
-}
-
-.table-hover > tbody > tr:hover > * {
-    background-color: rgba(255, 255, 255, 0.03) !important;
+.table tbody tr.expanded {
+    background: rgba(47, 140, 255, 0.15) !important;
 }
 
 /* =============================================
-   FLECHA DESPLEGABLE - ESTILO CATEGORÍAS
+   FLECHA DESPLEGABLE
    ============================================= */
 .toggle-icon {
     display: inline-flex !important;
@@ -284,19 +354,13 @@ tr.area-row.expanded .toggle-icon i {
     transform: rotate(90deg) !important;
 }
 
-.area-row {
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.area-row:hover {
-    background: rgba(47, 140, 255, 0.1) !important;
-}
-
 /* =============================================
    BADGES Y ESTADOS
    ============================================= */
-.badge-estado, .badge-activo, .badge-inactivo, .badge-eliminado {
+.badge-activo {
+    background: rgba(0, 255, 149, 0.1) !important;
+    color: var(--color-success, #00ff95) !important;
+    border: 1px solid rgba(0, 255, 149, 0.3) !important;
     font-size: 0.7rem !important;
     padding: 3px 8px !important;
     border-radius: 20px !important;
@@ -308,32 +372,32 @@ tr.area-row.expanded .toggle-icon i {
     display: inline-block !important;
 }
 
-.badge-activo {
-    background: rgba(0, 255, 149, 0.1) !important;
-    color: var(--color-success, #00ff95) !important;
-    border: 1px solid rgba(0, 255, 149, 0.3) !important;
-}
-
-.badge-inactivo {
-    background: rgba(255, 204, 0, 0.1) !important;
-    color: var(--color-warning, #ffcc00) !important;
-    border: 1px solid rgba(255, 204, 0, 0.3) !important;
-}
-
-.badge-eliminado {
-    background: rgba(255, 77, 77, 0.1) !important;
-    color: var(--color-danger, #ff4d4d) !important;
-    border: 1px solid rgba(255, 77, 77, 0.3) !important;
-}
-
-.cargo-badge {
+.cargo-count-badge {
+    background: rgba(47, 140, 255, 0.1) !important;
+    color: var(--color-accent-secondary) !important;
+    border: 1px solid rgba(47, 140, 255, 0.3) !important;
+    font-size: 0.65rem !important;
+    padding: 2px 6px !important;
+    border-radius: 20px !important;
+    font-family: var(--font-family-secondary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    min-width: 70px !important;
+    text-align: center !important;
+    display: inline-block !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
 }
 
-.cargo-badge:hover {
-    background: var(--color-accent-secondary) !important;
+.cargo-count-badge:hover {
+    background: rgba(47, 140, 255, 0.2) !important;
+    border-color: var(--color-accent-secondary) !important;
     transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(47, 140, 255, 0.3);
+}
+
+.cargo-count-badge i {
+    color: var(--color-accent-secondary) !important;
 }
 
 /* =============================================
@@ -366,12 +430,6 @@ tr.area-row.expanded .toggle-icon i {
 .action-buttons .btn:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
-}
-
-.action-buttons .btn-info:hover {
-    border-color: #00cfff !important;
-    color: #00cfff !important;
-    box-shadow: 0 5px 15px rgba(0, 207, 255, 0.2) !important;
 }
 
 .action-buttons .btn-primary:hover {
@@ -443,49 +501,56 @@ tr.area-row.expanded .toggle-icon i {
     gap: 12px;
 }
 
-.cargo-item-detalle {
+.swal-cargo-item-simple {
     background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border-light);
-    border-radius: var(--border-radius-small);
-    padding: 12px 15px;
+    border-radius: var(--border-radius-medium);
+    padding: 12px;
     transition: all 0.2s ease;
 }
 
-.cargo-item-detalle:hover {
+.swal-cargo-item-simple:hover {
     border-color: var(--color-accent-secondary);
-    box-shadow: 0 0 15px rgba(47, 140, 255, 0.1);
+    background: rgba(47, 140, 255, 0.05);
 }
 
-.cargo-nombre {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.swal-cargo-nombre-simple {
     color: var(--color-text-primary);
     font-weight: 600;
     font-family: var(--font-family-primary);
-    font-size: 13px;
-    margin-bottom: 6px;
+    font-size: 0.9rem !important;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed var(--color-border-light);
+    word-break: break-word;
 }
 
-.cargo-nombre i {
+.swal-cargo-nombre-simple i {
     color: var(--color-accent-secondary);
-    font-size: 14px;
+    font-size: 1rem !important;
 }
 
-.cargo-descripcion {
+.swal-cargo-descripcion-simple {
     color: var(--color-text-secondary);
-    font-size: 12px;
-    padding-left: 22px;
-    line-height: 1.5;
+    font-size: 0.8rem !important;
+    line-height: 1.4;
+    padding-left: 5px;
+    font-family: var(--font-family-secondary);
+    word-break: break-word;
 }
 
-.cargos-empty-detalle {
+.swal-cargos-empty {
     text-align: center;
-    padding: 20px;
+    padding: 30px;
     color: var(--color-text-secondary);
-    background: rgba(0,0,0,0.2);
-    border-radius: var(--border-radius-small);
-    font-size: 13px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--border-radius-medium);
+    font-size: 0.85rem;
+    border: 1px dashed var(--color-border-light);
+    width: 100%;
 }
 
 /* =============================================
@@ -519,337 +584,6 @@ tr.area-row.expanded .toggle-icon i {
 }
 
 /* =============================================
-   NOTIFICACIONES FLOTANTES (PROPIAS, NO SWEETALERT)
-   ============================================= */
-.notificacion-flotante {
-    top: 20px;
-    right: 20px;
-    z-index: 999;
-    min-width: 300px;
-    max-width: 200px;
-    box-shadow: var(--shadow-normal);
-    border-left: 4px solid;
-    background: var(--color-bg-secondary);
-    color: var(--color-text-secondary);
-    border: 1px solid var(--color-border-light);
-}
-
-.notificacion-flotante .btn-close {
-    filter: invert(1) brightness(2);
-}
-
-/* =============================================
-   COMPONENTES PERSONALIZADOS PARA SWEETALERT
-   (NO SON ESTILOS NATIVOS, SON CONTENIDO HTML)
-   ============================================= */
-/* =============================================
-   COMPONENTES PERSONALIZADOS PARA SWEETALERT
-   (NO SON ESTILOS NATIVOS, SON CONTENIDO HTML)
-   ============================================= */
-.swal-detalles {
-    width: 650px !important;        /* Más ancho para horizontal */
-    max-width: 90vw !important;
-}
-
-.swal-detalles-titulo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--color-text-primary);
-    font-family: var(--font-family-primary);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 18px !important;
-    margin: 0 0 10px 0 !important;
-}
-
-.swal-detalles-titulo i {
-    color: var(--color-accent-primary);
-    font-size: 20px !important;
-}
-
-/* ===== CONTENEDOR PRINCIPAL EN HORIZONTAL ===== */
-.swal-detalles-container {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;  /* DOS COLUMNAS */
-    gap: 12px !important;
-}
-
-/* Estado y organización - OCUPA LAS DOS COLUMNAS */
-.swal-estado-organizacion {
-    grid-column: span 2 !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 8px !important;
-    margin-bottom: 5px !important;
-    padding-bottom: 8px !important;
-    border-bottom: 1px solid var(--color-border-light);
-    flex-wrap: wrap !important;
-}
-
-.swal-estado-badge {
-    background: rgba(0, 255, 149, 0.1);
-    color: var(--color-success, #00ff95);
-    padding: 3px 10px !important;
-    border-radius: 20px;
-    border: 1px solid rgba(0, 255, 149, 0.3);
-    font-size: 11px !important;
-    text-transform: uppercase;
-    font-family: var(--font-family-secondary);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap !important;
-}
-
-.swal-estado-badge i {
-    font-size: 6px !important;
-}
-
-.swal-organizacion {
-    color: var(--color-text-secondary);
-    font-size: 11px !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap !important;
-}
-
-.swal-organizacion i {
-    color: var(--color-accent-secondary);
-}
-
-/* ===== SECCIONES EN HORIZONTAL ===== */
-.swal-seccion {
-    margin-bottom: 0 !important;
-}
-
-/* Primera sección (Descripción) - Columna 1 */
-.swal-seccion:first-of-type {
-    grid-column: 1 !important;
-}
-
-/* Segunda sección (Cargos) - Columna 2 */
-.swal-seccion:last-of-type {
-    grid-column: 2 !important;
-}
-
-.swal-seccion-titulo {
-    color: var(--color-accent-primary);
-    font-family: var(--font-family-primary);
-    font-size: 12px !important;
-    margin: 0 0 4px 0 !important;
-    border-bottom: 1px solid var(--color-border-light);
-    padding-bottom: 3px !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.swal-seccion-titulo i {
-    color: var(--color-accent-secondary);
-}
-
-.swal-descripcion {
-    color: var(--color-text-secondary);
-    margin: 0;
-    padding-left: 5px;
-    font-size: 11px !important;
-    line-height: 1.4;
-    word-break: break-word;
-}
-
-/* Título de cargos y contador */
-.swal-cargos-titulo {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px !important;
-    border-bottom: 1px solid var(--color-border-light);
-    padding-bottom: 3px !important;
-}
-
-.swal-cargos-count {
-    background: var(--color-accent-secondary);
-    color: white;
-    padding: 2px 8px !important;
-    border-radius: 20px;
-    font-size: 10px !important;
-    font-family: var(--font-family-secondary);
-    white-space: nowrap !important;
-}
-
-.swal-cargos-container {
-    padding-right: 2px;
-    max-height: 150px !important;
-    overflow-y: auto !important;
-}
-
-.swal-cargo-item {
-    background: var(--color-bg-tertiary);
-    border: 1px solid var(--color-border-light);
-    border-radius: var(--border-radius-small);
-    padding: 5px 8px !important;
-    margin-bottom: 4px !important;
-}
-
-.swal-cargo-item:hover {
-    border-color: var(--color-accent-secondary);
-    box-shadow: 0 0 15px rgba(47, 140, 255, 0.1);
-}
-
-.swal-cargo-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2px !important;
-}
-
-.swal-cargo-nombre {
-    color: var(--color-text-primary);
-    font-weight: 600;
-    font-family: var(--font-family-primary);
-    font-size: 11px !important;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.swal-cargo-nombre i {
-    color: var(--color-accent-secondary);
-    font-size: 9px !important;
-}
-
-.swal-cargo-badge {
-    background: var(--color-accent-secondary);
-    color: white;
-    padding: 1px 5px !important;
-    border-radius: 20px;
-    font-size: 8px !important;
-    font-family: var(--font-family-secondary);
-}
-
-.swal-cargo-descripcion {
-    color: var(--color-text-secondary);
-    font-size: 10px !important;
-    margin-left: 2px;
-    padding-left: 6px;
-    border-left: 2px solid var(--color-accent-secondary);
-    font-family: var(--font-family-secondary);
-    line-height: 1.3;
-}
-
-/* Información del sistema - OCUPA LAS DOS COLUMNAS */
-.swal-info-sistema {
-    grid-column: span 2 !important;
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-light);
-    border-radius: var(--border-radius-medium);
-    padding: 8px !important;
-    margin-top: 8px !important;
-}
-
-.swal-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;  /* CUATRO COLUMNAS */
-    gap: 6px !important;
-}
-
-.swal-info-grid div {
-    display: flex;
-    flex-direction: column;
-}
-
-.swal-info-grid small {
-    color: var(--color-accent-primary);
-    display: block;
-    margin-bottom: 1px;
-    font-size: 8px !important;
-    text-transform: uppercase;
-    opacity: 0.8;
-}
-
-.swal-info-grid code {
-    color: var(--color-accent-secondary);
-    background: var(--color-bg-tertiary);
-    padding: 1px 3px !important;
-    border-radius: 3px;
-    font-size: 9px !important;
-    border: 1px solid var(--color-border-light);
-    word-break: break-all;
-}
-
-.swal-info-grid span {
-    color: var(--color-text-secondary);
-    font-size: 9px !important;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-}
-
-.swal-info-grid span i {
-    color: var(--color-accent-secondary);
-}
-
-.swal-info-full {
-    grid-column: span 4 !important;
-}
-
-/* Scrollbar */
-.swal-detalles::-webkit-scrollbar {
-    width: 4px;
-}
-
-.swal-detalles::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 4px;
-}
-
-.swal-detalles::-webkit-scrollbar-thumb {
-    background: var(--color-accent-primary);
-    border-radius: 4px;
-}
-
-.swal-detalles::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent-secondary);
-}
-
-/* =============================================
-   BADGE DE CONTADOR DE CARGOS
-   ============================================= */
-.cargo-count-badge {
-    background: rgba(47, 140, 255, 0.1) !important;
-    color: var(--color-accent-secondary) !important;
-    border: 1px solid rgba(47, 140, 255, 0.3) !important;
-    font-size: 0.7rem !important;
-    padding: 3px 8px !important;
-    border-radius: 20px !important;
-    font-family: var(--font-family-secondary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    min-width: 80px !important;
-    text-align: center !important;
-    display: inline-block !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-}
-
-.cargo-count-badge:hover {
-    background: rgba(47, 140, 255, 0.2) !important;
-    border-color: var(--color-accent-secondary) !important;
-    transform: scale(1.05);
-    box-shadow: 0 0 10px rgba(47, 140, 255, 0.3);
-}
-
-.cargo-count-badge i {
-    color: var(--color-accent-secondary) !important;
-}
-
-/* =============================================
    ANIMACIONES
    ============================================= */
 @keyframes fadeInUp {
@@ -857,34 +591,551 @@ tr.area-row.expanded .toggle-icon i {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-#btnNuevaArea::after, .action-buttons .btn::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 100%;
-    height: 200%;
-    background: linear-gradient(
-        to bottom right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    transform: rotate(30deg);
-    transition: all 0.5s ease;
-    opacity: 0;
+/* =============================================
+   ESTILOS PARA SWEETALERT2 - EXACTAMENTE COMO LA IMAGEN
+   ============================================= */
+
+/* Popup principal - más ancho para mostrar dos columnas */
+.swal2-popup.swal-detalles-nuevo {
+    width: 650px !important;
+    max-width: 90vw !important;
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: 20px !important;
+    box-shadow: var(--shadow-large) !important;
+    padding: 20px !important;
 }
 
-#btnNuevaArea:hover::after, 
-.action-buttons .btn:hover::after {
-    opacity: 1;
-    transform: rotate(30deg) translate(10%, 10%);
+/* Contenedor del título con badge de estado */
+.swal-titulo-container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
+    padding-bottom: 15px !important;
+    border-bottom: 1px solid var(--color-border-light) !important;
+}
+
+.swal-titulo-area {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 1.4rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+}
+
+.swal-titulo-area i {
+    color: var(--color-accent-primary) !important;
+    font-size: 28px !important;
+}
+
+/* Badge de estado ACTIVA */
+.swal-estado-badge {
+    background: rgba(0, 255, 149, 0.1) !important;
+    color: var(--color-success, #00ff95) !important;
+    padding: 6px 16px !important;
+    border-radius: 30px !important;
+    border: 1px solid rgba(0, 255, 149, 0.3) !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    font-family: var(--font-family-primary) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    white-space: nowrap !important;
+    font-weight: 600 !important;
+}
+
+/* Contenedor principal con grid de 2 columnas */
+.swal-detalles-container-vertical {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 20px !important;
+    padding: 0 !important;
+}
+
+/* Columnas individuales */
+.swal-columna {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+}
+
+/* Secciones dentro de cada columna */
+.swal-seccion {
+    background: rgba(20, 20, 20, 0.3) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: 12px !important;
+    padding: 15px !important;
+}
+
+/* Títulos de sección */
+.swal-seccion-titulo {
+    color: var(--color-accent-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin: 0 0 10px 0 !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid var(--color-border-light) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.swal-seccion-titulo i {
+    color: var(--color-accent-secondary) !important;
+    font-size: 1rem !important;
+}
+
+/* Descripción del área */
+.swal-descripcion {
+    color: var(--color-text-secondary) !important;
+    font-size: 0.9rem !important;
+    line-height: 1.6 !important;
+    margin: 0 !important;
+    padding: 5px 0 !important;
+}
+
+/* Lista de cargos */
+.swal-cargos-lista {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    padding-right: 5px !important;
+}
+
+.swal-cargos-lista::-webkit-scrollbar {
+    width: 4px !important;
+}
+
+.swal-cargos-lista::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 4px !important;
+}
+
+.swal-cargos-lista::-webkit-scrollbar-thumb {
+    background: var(--color-accent-secondary) !important;
+    border-radius: 4px !important;
+}
+
+/* Item de cargo individual */
+.swal-cargo-item {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+}
+
+.swal-cargo-nombre {
+    color: var(--color-text-primary) !important;
+    font-weight: 600 !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 5px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.swal-cargo-nombre i {
+    color: var(--color-accent-secondary) !important;
+    font-size: 0.9rem !important;
+}
+
+.swal-cargo-descripcion {
+    color: var(--color-text-secondary) !important;
+    font-size: 0.8rem !important;
+    line-height: 1.4 !important;
+    padding-left: 24px !important;
+}
+
+/* Grid para información del sistema (2 columnas) */
+.swal-info-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 15px !important;
+    margin-top: 5px !important;
+}
+
+.swal-info-item {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+}
+
+.swal-info-item small {
+    color: var(--color-accent-primary) !important;
+    font-size: 0.7rem !important;
+    text-transform: uppercase !important;
+    opacity: 0.8 !important;
+    letter-spacing: 0.3px !important;
+}
+
+.swal-info-item span {
+    color: var(--color-text-secondary) !important;
+    font-size: 0.8rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    word-break: break-word !important;
+}
+
+.swal-info-item span i {
+    color: var(--color-accent-secondary) !important;
+    font-size: 0.75rem !important;
+}
+
+/* Botones del SweetAlert */
+.swal2-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    margin: 25px 0 5px 0 !important;
+    padding-top: 15px !important;
+    border-top: 1px solid var(--color-border-light) !important;
+    width: 100% !important;
+}
+
+.swal2-confirm,
+.swal2-cancel {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border-radius: 30px !important;
+    font-family: var(--font-family-primary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 10px 25px !important;
+    min-width: 130px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+}
+
+.swal2-cancel {
+    border: 1px solid var(--color-border-light) !important;
+}
+
+.swal2-confirm:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    border-color: var(--color-accent-secondary) !important;
+    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
+}
+
+.swal2-cancel:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    border-color: var(--color-danger) !important;
+    color: var(--color-danger) !important;
+    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
+}
+
+/* Botón de cerrar (X) */
+.swal2-close {
+    position: absolute !important;
+    top: 15px !important;
+    right: 15px !important;
+    z-index: 9999 !important;
+    color: var(--color-text-secondary) !important;
+    font-size: 28px !important;
+    font-weight: 300 !important;
+    line-height: 1 !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+}
+
+.swal2-close:hover {
+    color: var(--color-danger) !important;
+    transform: rotate(90deg) !important;
+    background: rgba(255, 77, 77, 0.1) !important;
+}
+
+/* Mensaje cuando no hay cargos */
+.swal-cargos-empty {
+    text-align: center !important;
+    padding: 30px !important;
+    color: var(--color-text-secondary) !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-radius: var(--border-radius-medium) !important;
+    font-size: 0.85rem !important;
+    border: 1px dashed var(--color-border-light) !important;
+    width: 100% !important;
+}
+
+/* =============================================
+   RESPONSIVE DESIGN
+   ============================================= */
+@media (max-width: 1023px) {
+    .container-fluid {
+        padding: 20px !important;
+    }
+
+    .card-header {
+        flex-direction: column !important;
+        gap: 15px !important;
+        align-items: flex-start !important;
+    }
+
+    #btnNuevaArea {
+        width: 100% !important;
+    }
+
+    .action-buttons {
+        flex-wrap: wrap !important;
+        gap: 5px !important;
+    }
+
+    .action-buttons .btn {
+        min-width: 32px !important;
+        height: 32px !important;
+        padding: 5px !important;
+    }
+
+    /* SweetAlert responsive */
+    .swal-detalles-container-vertical {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px !important;
+    }
+
+    .container-fluid {
+        padding: 15px !important;
+    }
+
+    .header-title h1 {
+        font-size: 20px !important;
+        flex-wrap: wrap;
+    }
+
+    .header-title .header-description {
+        padding-left: 0;
+        padding-top: 20px;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .header-title .header-description::before {
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 2px;
+    }
+
+    .header-title .header-description::after {
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 2px;
+    }
+
+    .badge-empresa {
+        margin-left: 0;
+        margin-top: 8px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .table thead {
+        display: none !important;
+    }
+
+    .table tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .table tr {
+        display: block !important;
+        background: var(--color-bg-secondary) !important;
+        border: 1px solid var(--color-border-light) !important;
+        border-radius: var(--border-radius-medium) !important;
+        padding: 16px !important;
+    }
+
+    .table td {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        padding: 10px 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        width: 100% !important;
+    }
+
+    .table td::before {
+        content: attr(data-label) !important;
+        font-weight: 600 !important;
+        color: var(--color-accent-primary) !important;
+        text-transform: uppercase !important;
+        font-size: 10px !important;
+        margin-bottom: 6px !important;
+        font-family: var(--font-family-primary) !important;
+    }
+
+    .table td[data-label="Acciones"] {
+        align-items: center !important;
+        padding-top: 12px !important;
+        margin-top: 8px !important;
+        border-top: 1px solid var(--color-border-light) !important;
+    }
+
+    .table td[data-label="Acciones"] .action-buttons {
+        justify-content: center !important;
+        width: 100% !important;
+    }
+
+    /* SweetAlert responsive */
+    .swal2-popup.swal-detalles-nuevo {
+        width: 95vw !important;
+        padding: 15px !important;
+    }
+
+    .swal-titulo-container {
+        flex-direction: column !important;
+        gap: 10px !important;
+        align-items: flex-start !important;
+    }
+
+    .swal-titulo-area {
+        font-size: 1.2rem !important;
+    }
+
+    .swal-info-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    .swal2-close {
+        top: 10px !important;
+        right: 10px !important;
+        font-size: 24px !important;
+        width: 36px !important;
+        height: 36px !important;
+    }
+
+    .swal2-actions {
+        flex-direction: column-reverse !important;
+        gap: 8px !important;
+    }
+
+    .swal2-confirm,
+    .swal2-cancel {
+        width: 100% !important;
+        min-width: auto !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .container-fluid {
+        padding: 10px !important;
+    }
+
+    .header-title h1 {
+        font-size: 18px !important;
+        gap: 8px;
+    }
+
+    .header-title h1 i {
+        font-size: 20px;
+    }
+
+    #btnNuevaArea {
+        padding: 10px 15px !important;
+        font-size: 13px !important;
+        min-width: auto !important;
+    }
+
+    .table tr {
+        padding: 12px !important;
+    }
+
+    .table td {
+        padding: 8px 0 !important;
+    }
+
+    .table td::before {
+        margin-bottom: 4px !important;
+        font-size: 9px !important;
+    }
+
+    .table td[data-label="Acciones"] .btn {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+    }
+
+    .swal2-close {
+        top: 8px !important;
+        right: 8px !important;
+        font-size: 22px !important;
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    .swal-titulo-area {
+        font-size: 1rem !important;
+    }
+
+    .swal-titulo-area i {
+        font-size: 22px !important;
+    }
+
+    .swal-estado-badge {
+        padding: 4px 12px !important;
+        font-size: 0.7rem !important;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+
+    .action-buttons .btn,
+    #btnNuevaArea {
+        min-height: 40px;
+        min-width: 40px;
+    }
+
+    .table-responsive {
+        -webkit-overflow-scrolling: touch;
+    }
 }
 
 /* =============================================
@@ -898,232 +1149,4 @@ tr.area-row.expanded .toggle-icon i {
 
 .error-carga h4 {
     color: var(--color-danger, #ff4d4d) !important;
-}
-
-/* =============================================
-   RESPONSIVE - MOBILE FIRST
-   ============================================= */
-@media (max-width: 1023px) {
-    .container-fluid {
-        padding: 20px !important;
-    }
-    
-    .row.mb-4:first-child {
-        padding: 20px !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 20px !important;
-    }
-    
-    .row.mb-4:first-child > div {
-        width: 90% !important;
-    }
-    
-    #btnNuevaArea {
-        width: 100% !important;
-        max-width: 300px !important;
-        margin-top: 10px !important;
-    }
-    
-    .action-buttons {
-        flex-wrap: wrap !important;
-        gap: 5px !important;
-    }
-    
-    .action-buttons .btn {
-        min-width: 32px !important;
-        height: 32px !important;
-        padding: 5px !important;
-    }
-    
-    .swal-detalles {
-        width: 90vw !important;
-    }
-}
-
-@media (max-width: 768px) {
-    body {
-        padding: 10px !important;
-    }
-    
-    .container-fluid {
-        padding: 15px !important;
-        border-radius: var(--border-radius-medium) !important;
-    }
-    
-    h1.h3 {
-        font-size: 20px !important;
-        justify-content: center !important;
-        text-align: center !important;
-        width: 90% !important;
-    }
-    
-    #btnNuevaArea {
-        width: 100% !important;
-        max-width: none !important;
-        margin: 10px 0 0 0 !important;
-    }
-    
-    /* TABLA MÓVIL - TARJETAS */
-    .table-responsive {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 100% !important;
-        overflow-x: visible !important;
-    }
-    
-    .table {
-        min-width: 90% !important;
-        display: block !important;
-    }
-    
-    .table thead {
-        display: none !important;
-    }
-    
-    .table tbody {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important;
-    }
-    
-    .table tr {
-        display: block !important;
-        background: var(--color-bg-secondary) !important;
-        border: 1px solid var(--color-border-light) !important;
-        border-radius: var(--border-radius-medium) !important;
-        padding: 16px !important;
-        margin: 0 !important;
-        box-shadow: var(--shadow-small) !important;
-    }
-    
-    .table td {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        padding: 10px 0 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-        font-size: 13px !important;
-        width: 90% !important;
-        text-align: left !important;
-    }
-    
-    .table td:last-child {
-        border-bottom: none !important;
-        padding-bottom: 0 !important;
-    }
-    
-    .table td::before {
-        content: attr(data-label) !important;
-        font-weight: 600 !important;
-        color: var(--color-accent-primary) !important;
-        text-transform: uppercase !important;
-        font-size: 10px !important;
-        margin-bottom: 6px !important;
-        font-family: var(--font-family-primary) !important;
-        width: 90% !important;
-        text-align: left !important;
-    }
-    
-    .table td[data-label="Acciones"] {
-        align-items: center !important;
-        padding-top: 12px !important;
-        margin-top: 8px !important;
-        border-top: 1px solid var(--color-border-light) !important;
-    }
-    
-    .table td[data-label="Acciones"]::before {
-        content: "ACCIONES" !important;
-        display: block !important;
-        margin-bottom: 10px !important;
-        text-align: center !important;
-        width: 90% !important;
-    }
-    
-    .table td[data-label="Acciones"] .action-buttons {
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        justify-content: center !important;
-        width: 90% !important;
-        gap: 8px !important;
-    }
-    
-    .table td[data-label="Acciones"] .btn {
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
-    }
-    
-    .d-flex.justify-content-between {
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 12px !important;
-    }
-    
-    .pagination {
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-    }
-    
-    .swal-detalles {
-        width: 95vw !important;
-    }
-    
-    .swal-info-grid {
-        grid-template-columns: 1fr !important;
-    }
-    
-    .swal-info-full {
-        grid-column: 1 !important;
-    }
-}
-
-@media (max-width: 480px) {
-    .container-fluid {
-        padding: 10px !important;
-    }
-    
-    .row.mb-4:first-child {
-        padding: 12px !important;
-    }
-    
-    #btnNuevaArea {
-        padding: 10px 15px !important;
-        font-size: 13px !important;
-    }
-    
-    .table tr {
-        padding: 12px !important;
-    }
-    
-    .table td {
-        padding: 8px 0 !important;
-    }
-    
-    .table td::before {
-        margin-bottom: 4px !important;
-        font-size: 9px !important;
-    }
-    
-    .table td[data-label="Acciones"] .btn {
-        width: 36px !important;
-        height: 36px !important;
-        min-width: 36px !important;
-        min-height: 36px !important;
-    }
-}
-
-@media (hover: none) and (pointer: coarse) {
-    .action-buttons .btn, #btnNuevaArea {
-        min-height: 40px;
-        min-width: 40px;
-    }
-    
-    .table-responsive {
-        -webkit-overflow-scrolling: touch;
-    }
 }
