@@ -1,7 +1,6 @@
 /**
  * EDITAR CATEGORÍAS - Sistema Centinela
- * VERSIÓN CORREGIDA - SweetAlert usa temas de personalization.css
- * (Estilos inline eliminados - Notificaciones centradas)
+ * VERSIÓN CORREGIDA - Sin iconos duplicados en SweetAlert
  */
 
 // =============================================
@@ -41,7 +40,6 @@ async function inicializarCategoriaManager() {
                     </div>
                 </div>
             `,
-            icon: 'error',
             confirmButtonText: 'Recargar'
         }).then(() => {
             window.location.reload();
@@ -88,8 +86,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     inicializarEventos();
 
     cerrarEditorSubcategoria();
-
-    mostrarInfoEmpresa();
 
     // Verificar si viene con parámetro de nueva subcategoría
     const nuevaSubcategoria = urlParams.get('nuevaSubcategoria');
@@ -140,51 +136,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         }, 600);
     }
 });
-
-function mostrarInfoEmpresa() {
-    try {
-        const header = document.querySelector('.dashboard-title') || document.querySelector('h1');
-        if (header && !document.getElementById('badge-empresa-editar')) {
-            const badgeEmpresa = document.createElement('div');
-            badgeEmpresa.id = 'badge-empresa-editar';
-            badgeEmpresa.style.cssText = `
-                display: inline-flex;
-                align-items: center;
-                gap: 12px;
-                background: linear-gradient(135deg, rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.15), rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.05));
-                border: 1px solid rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3);
-                color: var(--color-accent-primary, #c0c0c0);
-                padding: 10px 20px;
-                border-radius: var(--border-radius-large);
-                font-size: 14px;
-                margin-left: 16px;
-                backdrop-filter: blur(5px);
-            `;
-
-            let logoSrc = '';
-            if (empresaActual?.logo) {
-                logoSrc = `<img src="${empresaActual.logo}" alt="Logo" style="width: 24px; height: 24px; border-radius: var(--border-radius-small); object-fit: cover;">`;
-            }
-
-            badgeEmpresa.innerHTML = `
-                ${logoSrc || '<i class="fas fa-building"></i>'}
-                <span>
-                    <span style="opacity: 0.8;">Empresa:</span> 
-                    <strong style="color: var(--color-accent-primary, #c0c0c0);">${empresaActual?.nombre || categoriaActual?.organizacionNombre || 'No especificada'}</strong>
-                </span>
-                <span style="opacity: 0.6; font-size: 12px; border-left: 1px solid rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3); padding-left: 12px;">
-                    <i class="fas fa-database"></i> ${categoriaManager?.nombreColeccion || ''}
-                </span>
-            `;
-
-            if (header.parentElement) {
-                header.parentElement.insertBefore(badgeEmpresa, header.nextSibling);
-            }
-        }
-    } catch (error) {
-        console.error('Error mostrando info de empresa:', error);
-    }
-}
 
 /**
  * CARGA LA CATEGORÍA DESDE FIRESTORE
@@ -239,11 +190,13 @@ async function cargarCategoria(id) {
 function actualizarUICategoria() {
     if (!categoriaActual) return;
 
-    // Actualizar título
-    const tituloElement = document.querySelector('.dashboard-title span');
-    if (tituloElement) {
-        tituloElement.innerHTML = `Editar <span style="color: var(--color-accent-primary, #c0c0c0); font-weight: 700;">${escapeHTML(categoriaActual.nombre)}</span>`;
+    // El título ahora es fijo: "Editar Categoría"
+    const headerTitle = document.getElementById('categoriaNombreHeader');
+    if (headerTitle) {
+        headerTitle.textContent = 'Editar Categoría';
     }
+
+    // NO se aplica sombra personalizada; el CSS ya usa var(--color-accent-primary)
 
     // Actualizar campos del formulario
     document.getElementById('nombreCategoria').value = categoriaActual.nombre || '';
@@ -542,7 +495,7 @@ async function guardarSubcategoria() {
 }
 
 /**
- * ELIMINAR SUBCATEGORÍA - SweetAlert sin estilos inline
+ * ELIMINAR SUBCATEGORÍA - SweetAlert sin icono duplicado
  */
 async function eliminarSubcategoria(subcategoriaId) {
     if (!categoriaManager || !categoriaActual) {
@@ -593,7 +546,6 @@ async function eliminarSubcategoria(subcategoriaId) {
                 </div>
             </div>
         `,
-        icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar'
@@ -627,7 +579,6 @@ async function eliminarSubcategoria(subcategoriaId) {
                         </p>
                     </div>
                 `,
-                icon: 'success',
                 timer: 2500,
                 timerProgressBar: true,
                 showConfirmButton: false
@@ -685,7 +636,6 @@ async function guardarCategoria() {
                     <p style="color: var(--color-text-primary, #ffffff);">La categoría ha sido actualizada correctamente.</p>
                 </div>
             `,
-            icon: 'success',
             timer: 2000,
             timerProgressBar: true,
             showConfirmButton: false
@@ -851,7 +801,7 @@ function inicializarEventos() {
 }
 
 /**
- * MOSTRAR NOTIFICACIÓN CON SWEETALERT2 (CENTRADA)
+ * MOSTRAR NOTIFICACIÓN CON SWEETALERT2 (sin icono duplicado)
  */
 function mostrarNotificacion(mensaje, tipo = 'success') {
     Swal.fire({
@@ -864,10 +814,7 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
         timerProgressBar: true,
         showConfirmButton: false,
         background: 'var(--color-bg-primary, #0a0a0a)',
-        color: 'var(--color-text-primary, #ffffff)',
-        iconColor: tipo === 'success' ? 'var(--color-accent-primary, #c0c0c0)' : 
-                  tipo === 'error' ? 'var(--color-danger, #ef4444)' : 
-                  tipo === 'warning' ? 'var(--color-warning, #f59e0b)' : 'var(--color-accent-primary, #c0c0c0)'
+        color: 'var(--color-text-primary, #ffffff)'
     });
 }
 

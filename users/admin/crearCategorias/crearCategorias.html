@@ -8,13 +8,13 @@
     <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome (solo iconos) -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <!-- ✅ ESTILOS DEL NAVBAR Y FOOTER (personalization.css) - ¡AGREGADO! -->
+    <!-- Estilos del navbar y footer -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     
     <!-- Estilos principales de la vista -->
@@ -27,35 +27,29 @@
 <body>
     <!-- Partículas de fondo -->
     <canvas id="particle-canvas"></canvas>
-    <br>
-    <!-- Contenido principal -->
-    <div class="contenedor-principal">
-        <!-- Header -->
-        <header class="header-principal">
-            <div class="header-contenido">
-                <div>
-                    <h1 class="header-titulo">
-                        <i class="fas fa-plus-circle"></i>
-                        Nueva Categoría
-                    </h1>
-                    <p class="header-subtitulo">
-                        Crea una nueva categoría para organizar tus elementos
-                    </p>
-                </div>
-                <button type="button" class="btn-volver" id="btnVolverLista">
-                    <i class="fas fa-arrow-left"></i>
-                    Volver
-                </button>
-            </div>
-            
-            <!-- Información de organización (dinámica) -->
-            <div id="organizacionInfoContainer"></div>
-        </header>
+    
+    <div class="admin-container">
+        <!-- PAGE HEADER (solo título y descripción, sin botón) -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-plus-circle"></i>
+                Nueva Categoría
+            </h1>
+            <div class="header-description" id="headerDescription"></div>
+        </div>
 
         <!-- Formulario -->
         <div class="form-card">
             <form id="crearCategoriaForm" novalidate>
-                <!-- Organización (campos ocultos) -->
+                <!-- Botón Volver dentro del formulario (arriba a la derecha) -->
+                <div class="form-header-actions">
+                    <button type="button" class="btn-volver-form" id="btnVolverLista">
+                        <i class="fas fa-arrow-left"></i>
+                        Volver
+                    </button>
+                </div>
+
+                <!-- Campos ocultos de organización -->
                 <input type="hidden" id="organizacionCamelCase" name="organizacionCamelCase">
                 <input type="hidden" id="organizacionNombre" name="organizacionNombre">
                 
@@ -75,12 +69,8 @@
                                placeholder="Ej: Hardware, Software, Redes"
                                autofocus
                                required>
-                        <div class="form-text">
-                            Nombre único para identificar la categoría
-                        </div>
-                        <div class="invalid-feedback">
-                            Por favor, ingresa un nombre para la categoría.
-                        </div>
+                        <div class="form-text">Nombre único para identificar la categoría</div>
+                        <div class="invalid-feedback">Por favor, ingresa un nombre para la categoría.</div>
                     </div>
 
                     <!-- Descripción -->
@@ -95,12 +85,8 @@
                                   name="descripcion"
                                   rows="3"
                                   placeholder="Describe el propósito de esta categoría"></textarea>
-                        <div class="form-text">
-                            Proporciona una descripción detallada
-                        </div>
-                        <div class="contador-caracteres">
-                            Caracteres: <span id="contadorCaracteres">0</span>
-                        </div>
+                        <div class="form-text">Proporciona una descripción detallada</div>
+                        <div class="contador-caracteres">Caracteres: <span id="contadorCaracteres">0</span></div>
                     </div>
                 </div>
 
@@ -144,7 +130,6 @@
                         <span class="subcategorias-counter" id="subcategoriasCounter">0</span>
                     </div>
                     
-                    <!-- Contenedor de subcategorías -->
                     <div id="subcategoriasList" class="subcategorias-container">
                         <div class="subcategorias-empty">
                             <i class="fas fa-sitemap"></i>
@@ -155,7 +140,6 @@
                         </div>
                     </div>
                     
-                    <!-- Botón para agregar subcategoría -->
                     <button type="button" class="btn-agregar-subcategoria" id="btnAgregarSubcategoria">
                         <i class="fas fa-plus-circle"></i>
                         Agregar Subcategoría
@@ -163,7 +147,7 @@
                 </div>
 
                 <!-- Información de herencia -->
-                <div class="info-card">
+                <div class="info-card" style="margin-top: 20px;">
                     <div class="info-card-content">
                         <div class="info-icon">
                             <i class="fas fa-share-alt"></i>
@@ -172,15 +156,11 @@
                             <strong>Herencia de color:</strong>
                             Las subcategorías heredan el color de la categoría principal.
                             Puedes desactivar la herencia y asignar un color personalizado.
-                            <span class="d-block mt-2">
-                                <i class="fas fa-database"></i>
-                                Colección: <code id="coleccionDisplay">cargando...</code>
-                            </span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Botones de acción -->
+                <!-- Botones de acción (Guardar y Cancelar) -->
                 <div class="action-buttons">
                     <button type="button" class="btn btn-outline-secondary" id="btnCancel">
                         <i class="fas fa-times"></i>
@@ -200,8 +180,6 @@
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
-    
-    <!-- Script principal -->
     <script type="module" src="crearCategorias.js"></script>
 </body>
 </html>

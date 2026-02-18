@@ -303,7 +303,6 @@ window.eliminarCategoria = async function (categoriaId, event) {
                 title: '¡Categoría eliminada!',
                 html: `
                     <div style="text-align: center;">
-                        <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 16px;"></i>
                         <p style="color: #ffffff; margin-bottom: 8px;">
                             <strong style="color: #10b981;">"${escapeHTML(categoria.nombre)}"</strong> 
                             ha sido eliminada
@@ -333,7 +332,6 @@ window.eliminarCategoria = async function (categoriaId, event) {
                 html: `
                     <div style="text-align: left; padding: 10px;">
                         <p style="color: #ef4444; margin-bottom: 12px;">
-                            <i class="fas fa-exclamation-circle"></i> 
                             No se pudo eliminar la categoría
                         </p>
                         <div style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #ef4444;">
@@ -425,9 +423,6 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event
         title: '¿Eliminar subcategoría?',
         html: `
             <div style="text-align: center; padding: 10px;">
-                <div style="font-size: 48px; color: #ef4444; margin-bottom: 16px;">
-                    <i class="fas fa-folder-open"></i>
-                </div>
                 <p style="color: #ffffff; margin-bottom: 8px;">
                     Eliminarás:
                 </p>

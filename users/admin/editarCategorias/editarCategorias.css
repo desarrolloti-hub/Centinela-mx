@@ -26,159 +26,59 @@ body {
 }
 
 /* =============================================
-   HEADER
+   HEADER (ya está en categorias.css, pero se asegura)
    ============================================= */
-.dashboard-header {
-    background: linear-gradient(135deg, var(--color-bg-secondary, #00000000), var(--color-bg-tertiary, #0000007a));
-    border-radius: var(--border-radius-large, 12px);
-    padding: var(--spacing-md, 24px) var(--spacing-lg, 32px);
-    margin-bottom: var(--spacing-lg, 32px);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    box-shadow: var(--shadow-normal, 0 4px 20px var(--color-shadow, rgba(255,255,255,0.55)));
+.page-header {
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--color-border-light);
+    text-align: center;
 }
 
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.title-section {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.dashboard-title {
-    font-size: 24px;
-    font-weight: 700;
+.page-header h1 {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 2.8rem;
+    color: var(--color-text-primary);
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px var(--color-accent-primary), 0 0 20px var(--color-accent-primary);
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin: 0;
-    color: var(--color-text-primary, #ffffff);
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
-.dashboard-title i {
-    color: var(--color-accent-primary, #c0c0c0);
-    font-size: 24px;
-    filter: drop-shadow(0 0 8px var(--color-glow, #ffffff));
+.page-header h1 i {
+    color: var(--color-text-primary);
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
 
-.breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-}
-
-.breadcrumb-link {
-    color: var(--color-text-dim, #6b7280);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: var(--transition-fast, 0.2s ease);
-}
-
-.breadcrumb-link:hover {
-    color: var(--color-accent-primary, #c0c0c0);
-    text-shadow: var(--text-shadow-effect, 0 0 10px #ffffff);
-}
-
-.header-actions {
-    display: flex;
-    gap: 12px;
-}
-
-.btn-save {
-    background: linear-gradient(135deg, var(--color-accent-primary, #c0c0c0), var(--color-accent-secondary, #ffffff));
-    color: var(--color-text-dark, #000000);
-    border: none;
-    padding: 12px 28px;
-    border-radius: var(--border-radius-xl, 30px);
-    font-weight: 600;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
-    box-shadow: var(--shadow-normal, 0 4px 20px var(--color-shadow, rgba(255,255,255,0.55)));
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-save:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-large, 0 8px 32px var(--color-shadow, rgba(255,255,255,0.55)));
-}
-
-.btn-save::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-        to right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.2) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    transform: rotate(30deg);
-    transition: transform 0.6s;
-    opacity: 0;
-}
-
-.btn-save:hover::after {
-    opacity: 1;
-    transform: rotate(30deg) translate(10%, 10%);
-}
-
-/* BOTÓN CANCELAR CON TEXTO */
-.btn-cancel-text {
-    background: transparent;
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    color: var(--color-text-dim, #6b7280);
-    padding: 12px 24px;
-    border-radius: var(--border-radius-xl, 30px);
-    font-weight: 500;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
-}
-
-.btn-cancel-text i {
-    font-size: 14px;
-}
-
-.btn-cancel-text:hover {
-    background: rgba(var(--color-active, #c0c0c0), 0.05);
-    border-color: var(--color-active, #c0c0c0);
-    color: var(--color-active, #c0c0c0);
+.page-header .header-description {
+    color: var(--color-text-secondary);
+    font-size: 1.2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    line-height: 1.6;
 }
 
 /* =============================================
    FORMULARIO 1: EDITAR CATEGORÍA
    ============================================= */
 .form-card {
-    background: var(--color-bg-secondary, #00000000);
-    border-radius: var(--border-radius-large, 12px);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-large);
+    border: 1px solid var(--color-border-light);
     margin-bottom: var(--spacing-xl, 40px);
     overflow: hidden;
-    box-shadow: var(--shadow-large, 0 8px 32px var(--color-shadow, rgba(255,255,255,0.55)));
+    box-shadow: var(--shadow-large);
 }
 
 .form-card-header {
     padding: var(--spacing-md, 24px) var(--spacing-lg, 32px);
     background: linear-gradient(90deg, rgba(var(--color-accent-primary), 0.1), transparent);
-    border-bottom: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-bottom: 1px solid var(--color-border-light);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -191,7 +91,7 @@ body {
 }
 
 .form-card-title i {
-    color: var(--color-accent-primary, #c0c0c0);
+    color: var(--color-accent-primary);
     font-size: 20px;
 }
 
@@ -199,17 +99,7 @@ body {
     font-size: 18px;
     font-weight: 600;
     margin: 0;
-    color: var(--color-text-primary, #ffffff);
-}
-
-.form-card-badge {
-    background: rgba(var(--color-accent-primary), 0.15);
-    color: var(--color-accent-primary, #c0c0c0);
-    padding: 6px 14px;
-    border-radius: var(--border-radius-xl, 30px);
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid rgba(var(--color-accent-primary), 0.3);
+    color: var(--color-text-primary);
 }
 
 .form-card-body {
@@ -236,50 +126,50 @@ body {
     gap: 8px;
     font-size: 14px;
     font-weight: 500;
-    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+    color: var(--color-text-secondary);
     margin-bottom: 10px;
 }
 
 .form-label i {
-    color: var(--color-accent-primary, #c0c0c0);
+    color: var(--color-accent-primary);
     width: 16px;
 }
 
 .form-control {
     width: 100%;
     padding: 14px 18px;
-    background: var(--color-bg-tertiary, #0000007a);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    border-radius: var(--border-radius-medium, 8px);
-    color: var(--color-text-primary, #ffffff);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-medium);
+    color: var(--color-text-primary);
     font-size: 15px;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
 }
 
 .form-control:focus {
     outline: none;
-    border-color: var(--color-accent-primary, #c0c0c0);
+    border-color: var(--color-accent-primary);
     box-shadow: 0 0 0 4px rgba(var(--color-accent-primary), 0.1);
-    background: var(--color-bg-tertiary, #0000007a);
+    background: var(--color-bg-tertiary);
 }
 
 .form-control::placeholder {
-    color: var(--color-text-dim, #6b7280);
+    color: var(--color-text-dim);
 }
 
 .form-hint {
     font-size: 12px;
-    color: var(--color-text-dim, #6b7280);
+    color: var(--color-text-dim);
     margin-top: 6px;
     margin-left: 4px;
 }
 
 /* Selector de color compacto */
 .color-selector-compact {
-    background: var(--color-bg-tertiary, #0000007a);
-    border-radius: var(--border-radius-medium, 8px);
+    background: var(--color-bg-tertiary);
+    border-radius: var(--border-radius-medium);
     padding: 16px;
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border: 1px solid var(--color-border-light);
 }
 
 .color-row {
@@ -292,10 +182,10 @@ body {
 .color-preview {
     width: 40px;
     height: 40px;
-    border-radius: var(--border-radius-small, 6px);
-    border: 2px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    box-shadow: var(--shadow-small, 0 2px 8px var(--color-shadow, rgba(255,255,255,0.55)));
-    transition: transform var(--transition-fast, 0.2s);
+    border-radius: var(--border-radius-small);
+    border: 2px solid var(--color-border-light);
+    box-shadow: var(--shadow-small);
+    transition: transform var(--transition-fast);
 }
 
 .color-preview:hover {
@@ -305,8 +195,8 @@ body {
 .form-control-color {
     width: 60px;
     height: 44px;
-    border-radius: var(--border-radius-small, 6px);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-radius: var(--border-radius-small);
+    border: 1px solid var(--color-border-light);
     background: transparent;
     cursor: pointer;
     padding: 4px;
@@ -318,17 +208,17 @@ body {
 
 .form-control-color::-webkit-color-swatch {
     border: none;
-    border-radius: var(--border-radius-small, 6px);
+    border-radius: var(--border-radius-small);
 }
 
 .color-hex {
     font-family: 'SF Mono', 'Courier New', monospace;
     font-size: 14px;
-    color: var(--color-text-muted, #9ca3af);
-    background: var(--color-bg-secondary, #00000000);
+    color: var(--color-text-muted);
+    background: var(--color-bg-secondary);
     padding: 10px 16px;
-    border-radius: var(--border-radius-xl, 30px);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-radius: var(--border-radius-xl);
+    border: 1px solid var(--color-border-light);
     letter-spacing: 0.5px;
 }
 
@@ -341,33 +231,33 @@ body {
 .preset-dot {
     width: 36px;
     height: 36px;
-    border-radius: var(--border-radius-circle, 50%);
-    border: 2px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-radius: var(--border-radius-circle);
+    border: 2px solid var(--color-border-light);
     cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
     padding: 0;
 }
 
 .preset-dot:hover {
     transform: scale(1.15);
-    border-color: var(--color-text-light, #ffffff);
-    box-shadow: 0 0 0 2px var(--color-accent-primary, #c0c0c0);
+    border-color: var(--color-text-light);
+    box-shadow: 0 0 0 2px var(--color-accent-primary);
 }
 
 .preset-dot.active {
-    border-color: var(--color-text-light, #ffffff);
-    box-shadow: 0 0 0 3px var(--color-accent-primary, #c0c0c0);
+    border-color: var(--color-text-light);
+    box-shadow: 0 0 0 3px var(--color-accent-primary);
 }
 
 /* =============================================
    SECCIÓN DE SUBCATEGORÍAS
    ============================================= */
 .subcategorias-section {
-    background: var(--color-bg-secondary, #00000000);
-    border-radius: var(--border-radius-large, 12px);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-large);
+    border: 1px solid var(--color-border-light);
     padding: var(--spacing-lg, 32px);
-    box-shadow: var(--shadow-large, 0 8px 32px var(--color-shadow, rgba(255,255,255,0.55)));
+    box-shadow: var(--shadow-large);
 }
 
 .subcategorias-header {
@@ -376,7 +266,7 @@ body {
     align-items: center;
     margin-bottom: var(--spacing-lg, 32px);
     padding-bottom: var(--spacing-md, 24px);
-    border-bottom: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-bottom: 1px solid var(--color-border-light);
 }
 
 .subcategorias-title {
@@ -386,7 +276,7 @@ body {
 }
 
 .subcategorias-title i {
-    color: var(--color-accent-primary, #c0c0c0);
+    color: var(--color-accent-primary);
     font-size: 24px;
 }
 
@@ -394,43 +284,43 @@ body {
     font-size: 20px;
     font-weight: 600;
     margin: 0;
-    color: var(--color-text-primary, #ffffff);
+    color: var(--color-text-primary);
 }
 
 .subcategoria-count {
-    background: var(--color-accent-primary, #c0c0c0);
-    color: var(--color-text-dark, #000000);
+    background: var(--color-accent-primary);
+    color: var(--color-text-dark);
     padding: 4px 12px;
-    border-radius: var(--border-radius-xl, 30px);
+    border-radius: var(--border-radius-xl);
     font-size: 15px;
     font-weight: 700;
     margin-left: 8px;
 }
 
 .subcategoria-count-label {
-    color: var(--color-text-dim, #6b7280);
+    color: var(--color-text-dim);
     font-size: 14px;
 }
 
 .btn-add-subcategoria {
-    background: linear-gradient(135deg, var(--color-accent-primary, #c0c0c0), var(--color-accent-secondary, #ffffff));
-    color: var(--color-text-dark, #000000);
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+    color: var(--color-text-dark);
     border: none;
     padding: 12px 24px;
-    border-radius: var(--border-radius-xl, 30px);
+    border-radius: var(--border-radius-xl);
     font-weight: 600;
     font-size: 14px;
     display: flex;
     align-items: center;
     gap: 10px;
     cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
-    box-shadow: var(--shadow-normal, 0 4px 20px var(--color-shadow, rgba(255,255,255,0.55)));
+    transition: var(--transition-fast);
+    box-shadow: var(--shadow-normal);
 }
 
 .btn-add-subcategoria:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-large, 0 8px 32px var(--color-shadow, rgba(255,255,255,0.55)));
+    box-shadow: var(--shadow-large);
 }
 
 .btn-add-subcategoria i {
@@ -441,13 +331,13 @@ body {
    FORMULARIO 2: EDITAR SUBCATEGORÍA
    ============================================= */
 .subcategoria-editor-card {
-    background: linear-gradient(135deg, var(--color-bg-tertiary, #0000007a), var(--color-bg-secondary, #00000000));
-    border-radius: var(--border-radius-large, 12px);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-bg-secondary));
+    border-radius: var(--border-radius-large);
+    border: 1px solid var(--color-border-light);
     margin-bottom: var(--spacing-lg, 32px);
     overflow: hidden;
-    animation: slideDown var(--transition-default, 0.3s ease-in-out);
-    box-shadow: var(--shadow-large, 0 12px 28px var(--color-shadow, rgba(255,255,255,0.55)));
+    animation: slideDown var(--transition-default);
+    box-shadow: var(--shadow-large);
 }
 
 @keyframes slideDown {
@@ -464,7 +354,7 @@ body {
 .editor-header {
     padding: var(--spacing-md, 24px) var(--spacing-lg, 32px);
     background: linear-gradient(90deg, rgba(var(--color-accent-primary), 0.15), transparent);
-    border-bottom: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-bottom: 1px solid var(--color-border-light);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -477,34 +367,34 @@ body {
 }
 
 .editor-title i {
-    color: var(--color-accent-primary, #c0c0c0);
+    color: var(--color-accent-primary);
     font-size: 18px;
 }
 
 .editor-title span {
     font-size: 16px;
     font-weight: 600;
-    color: var(--color-text-primary, #ffffff);
+    color: var(--color-text-primary);
 }
 
 .editor-close {
     background: transparent;
     border: none;
-    color: var(--color-text-dim, #6b7280);
+    color: var(--color-text-dim);
     width: 36px;
     height: 36px;
-    border-radius: var(--border-radius-circle, 50%);
+    border-radius: var(--border-radius-circle);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
     font-size: 16px;
 }
 
 .editor-close:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: var(--color-text-primary, #ffffff);
+    color: var(--color-text-primary);
 }
 
 .editor-body {
@@ -535,7 +425,7 @@ textarea.form-control {
 .checkbox-card {
     background: rgba(var(--color-accent-primary), 0.05);
     border: 1px solid rgba(var(--color-accent-primary), 0.2);
-    border-radius: var(--border-radius-medium, 8px);
+    border-radius: var(--border-radius-medium);
     padding: 16px;
     margin-top: 4px;
 }
@@ -549,17 +439,17 @@ textarea.form-control {
 .checkbox {
     width: 20px;
     height: 20px;
-    border-radius: var(--border-radius-small, 6px);
-    border: 2px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    background: var(--color-bg-tertiary, #0000007a);
+    border-radius: var(--border-radius-small);
+    border: 2px solid var(--color-border-light);
+    background: var(--color-bg-tertiary);
     cursor: pointer;
     appearance: none;
     position: relative;
 }
 
 .checkbox:checked {
-    background: var(--color-accent-primary, #c0c0c0);
-    border-color: var(--color-accent-primary, #c0c0c0);
+    background: var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
 }
 
 .checkbox:checked::after {
@@ -568,7 +458,7 @@ textarea.form-control {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: var(--color-text-dark, #000000);
+    color: var(--color-text-dark);
     font-size: 12px;
     font-weight: bold;
 }
@@ -576,7 +466,7 @@ textarea.form-control {
 .checkbox-wrapper label {
     font-size: 15px;
     font-weight: 500;
-    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+    color: var(--color-text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -584,13 +474,13 @@ textarea.form-control {
 }
 
 .checkbox-wrapper label i {
-    color: var(--color-accent-primary, #c0c0c0);
+    color: var(--color-accent-primary);
 }
 
 .checkbox-hint {
     display: block;
     font-size: 12px;
-    color: var(--color-text-dim, #6b7280);
+    color: var(--color-text-dim);
     margin-top: 8px;
     margin-left: 32px;
 }
@@ -599,24 +489,24 @@ textarea.form-control {
 .info-box {
     background: rgba(var(--color-accent-primary), 0.08);
     border: 1px solid rgba(var(--color-accent-primary), 0.2);
-    border-radius: var(--border-radius-medium, 8px);
+    border-radius: var(--border-radius-medium);
     padding: 14px 16px;
     display: flex;
     align-items: center;
     gap: 12px;
-    color: var(--color-text-muted, #9ca3af);
+    color: var(--color-text-muted);
     font-size: 13px;
 }
 
 .info-box i {
-    color: var(--color-accent-primary, #c0c0c0);
+    color: var(--color-accent-primary);
     font-size: 16px;
 }
 
 /* Footer del editor */
 .editor-footer {
     padding: var(--spacing-md, 24px) var(--spacing-lg, 32px);
-    border-top: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-top: 1px solid var(--color-border-light);
     background: rgba(0, 0, 0, 0.2);
 }
 
@@ -628,42 +518,42 @@ textarea.form-control {
 
 .btn-cancel-editor {
     background: transparent;
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    color: var(--color-text-dim, #6b7280);
+    border: 1px solid var(--color-border-light);
+    color: var(--color-text-dim);
     padding: 10px 24px;
-    border-radius: var(--border-radius-xl, 30px);
+    border-radius: var(--border-radius-xl);
     font-weight: 500;
     font-size: 14px;
     cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
 }
 
 .btn-cancel-editor:hover {
-    background: var(--color-bg-tertiary, #0000007a);
-    color: var(--color-text-primary, #ffffff);
-    border-color: var(--color-text-dim, #6b7280);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border-color: var(--color-text-dim);
 }
 
 .btn-save-editor {
-    background: linear-gradient(135deg, var(--color-accent-primary, #c0c0c0), var(--color-accent-secondary, #ffffff));
-    color: var(--color-text-dark, #000000);
+    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+    color: var(--color-text-dark);
     border: none;
     padding: 10px 28px;
-    border-radius: var(--border-radius-xl, 30px);
+    border-radius: var(--border-radius-xl);
     font-weight: 600;
     font-size: 14px;
     display: flex;
     align-items: center;
     gap: 10px;
     cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
     position: relative;
     overflow: hidden;
 }
 
 .btn-save-editor:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-normal, 0 4px 20px var(--color-shadow, rgba(255,255,255,0.55)));
+    box-shadow: var(--shadow-normal);
 }
 
 .btn-save-editor::after {
@@ -700,21 +590,21 @@ textarea.form-control {
 }
 
 .subcategoria-item {
-    background: var(--color-bg-tertiary, #0000007a);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    border-radius: var(--border-radius-medium, 8px);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-medium);
     padding: 18px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
 }
 
 .subcategoria-item:hover {
-    border-color: var(--color-accent-primary, #c0c0c0);
+    border-color: var(--color-accent-primary);
     background: rgba(var(--color-accent-primary), 0.05);
     transform: translateX(4px);
-    box-shadow: var(--shadow-small, 0 4px 12px var(--color-shadow, rgba(255,255,255,0.55)));
+    box-shadow: var(--shadow-small);
 }
 
 .subcategoria-info {
@@ -727,7 +617,7 @@ textarea.form-control {
 .subcategoria-color-indicator {
     width: 16px;
     height: 16px;
-    border-radius: var(--border-radius-small, 6px);
+    border-radius: var(--border-radius-small);
     border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -746,15 +636,15 @@ textarea.form-control {
     font-size: 16px;
     font-weight: 600;
     margin: 0;
-    color: var(--color-text-primary, #ffffff);
+    color: var(--color-text-primary);
 }
 
 .subcategoria-badge {
     font-size: 11px;
     padding: 4px 10px;
-    border-radius: var(--border-radius-xl, 30px);
+    border-radius: var(--border-radius-xl);
     background: rgba(var(--color-accent-primary), 0.15);
-    color: var(--color-accent-primary, #c0c0c0);
+    color: var(--color-accent-primary);
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -763,7 +653,7 @@ textarea.form-control {
 
 .subcategoria-descripcion {
     font-size: 13px;
-    color: var(--color-text-dim, #6b7280);
+    color: var(--color-text-dim);
     margin: 4px 0 0 0;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -776,7 +666,7 @@ textarea.form-control {
     display: flex;
     gap: 8px;
     opacity: 0.7;
-    transition: opacity var(--transition-fast, 0.2s);
+    transition: opacity var(--transition-fast);
 }
 
 .subcategoria-item:hover .subcategoria-actions {
@@ -786,27 +676,27 @@ textarea.form-control {
 .btn-sub-action {
     width: 38px;
     height: 38px;
-    border-radius: var(--border-radius-small, 6px);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    background: var(--color-bg-secondary, #00000000);
-    color: var(--color-text-dim, #6b7280);
+    border-radius: var(--border-radius-small);
+    border: 1px solid var(--color-border-light);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-dim);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
 }
 
 .btn-sub-action.edit:hover {
     background: rgba(var(--color-accent-primary), 0.15);
-    border-color: var(--color-accent-primary, #c0c0c0);
-    color: var(--color-accent-primary, #c0c0c0);
+    border-color: var(--color-accent-primary);
+    color: var(--color-accent-primary);
 }
 
 .btn-sub-action.delete:hover {
-    background: rgba(var(--color-active, #c0c0c0), 0.15);
-    border-color: var(--color-active, #c0c0c0);
-    color: var(--color-active, #c0c0c0);
+    background: rgba(var(--color-danger-rgb), 0.15);
+    border-color: var(--color-danger);
+    color: var(--color-danger);
 }
 
 /* Estado vacío */
@@ -816,29 +706,29 @@ textarea.form-control {
     align-items: center;
     justify-content: center;
     padding: 60px 20px;
-    background: var(--color-bg-tertiary, #0000007a);
-    border-radius: var(--border-radius-medium, 8px);
-    border: 1px dashed var(--color-border-light, rgba(255, 255, 255, 0.1));
-    color: var(--color-text-dim, #6b7280);
+    background: var(--color-bg-tertiary);
+    border-radius: var(--border-radius-medium);
+    border: 1px dashed var(--color-border-light);
+    color: var(--color-text-dim);
 }
 
 .empty-state i {
     font-size: 48px;
     margin-bottom: 16px;
     opacity: 0.5;
-    color: var(--color-accent-primary, #c0c0c0);
+    color: var(--color-accent-primary);
 }
 
 .empty-state h3 {
     font-size: 18px;
     font-weight: 600;
     margin-bottom: 8px;
-    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+    color: var(--color-text-secondary);
 }
 
 .empty-state p {
     font-size: 14px;
-    color: var(--color-text-dim, #6b7280);
+    color: var(--color-text-dim);
 }
 
 /* =============================================
@@ -857,7 +747,7 @@ textarea.form-control {
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
     backdrop-filter: blur(6px);
 }
 
@@ -867,13 +757,13 @@ textarea.form-control {
 }
 
 .modal-container {
-    background: var(--color-bg-secondary, #00000000);
-    border-radius: var(--border-radius-large, 12px);
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-large);
     width: 90%;
     max-width: 400px;
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
-    box-shadow: var(--shadow-large, 0 25px 50px var(--color-shadow, rgba(255,255,255,0.55)));
-    animation: modalIn var(--transition-fast, 0.2s) ease;
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-large);
+    animation: modalIn var(--transition-fast) ease;
 }
 
 @keyframes modalIn {
@@ -889,7 +779,7 @@ textarea.form-control {
 
 .modal-header {
     padding: 18px 24px;
-    border-bottom: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-bottom: 1px solid var(--color-border-light);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -901,30 +791,30 @@ textarea.form-control {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--color-text-primary, #ffffff);
+    color: var(--color-text-primary);
 }
 
 .modal-title i {
-    color: var(--color-active, #c0c0c0);
+    color: var(--color-danger);
 }
 
 .modal-close {
     background: transparent;
     border: none;
-    color: var(--color-text-dim, #6b7280);
+    color: var(--color-text-dim);
     width: 36px;
     height: 36px;
-    border-radius: var(--border-radius-medium, 8px);
+    border-radius: var(--border-radius-medium);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
 }
 
 .modal-close:hover {
     background: rgba(255, 255, 255, 0.05);
-    color: var(--color-text-primary, #ffffff);
+    color: var(--color-text-primary);
 }
 
 .modal-body {
@@ -933,13 +823,13 @@ textarea.form-control {
 
 .modal-body p {
     font-size: 15px;
-    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+    color: var(--color-text-secondary);
     line-height: 1.6;
 }
 
 .modal-footer {
     padding: 18px 24px;
-    border-top: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    border-top: 1px solid var(--color-border-light);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -948,34 +838,34 @@ textarea.form-control {
 .btn-modal-cancel,
 .btn-modal-confirm {
     padding: 10px 20px;
-    border-radius: var(--border-radius-xl, 30px);
+    border-radius: var(--border-radius-xl);
     font-weight: 500;
     font-size: 14px;
     cursor: pointer;
-    transition: var(--transition-fast, 0.2s);
+    transition: var(--transition-fast);
     border: none;
 }
 
 .btn-modal-cancel {
-    background: var(--color-bg-tertiary, #0000007a);
-    color: var(--color-text-dim, #6b7280);
-    border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-dim);
+    border: 1px solid var(--color-border-light);
 }
 
 .btn-modal-cancel:hover {
-    background: var(--color-bg-tertiary, #0000007a);
-    color: var(--color-text-primary, #ffffff);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
 }
 
 .btn-modal-confirm {
-    background: var(--color-active, #c0c0c0);
-    color: var(--color-text-dark, #000000);
+    background: var(--color-danger);
+    color: var(--color-text-dark);
 }
 
 .btn-modal-confirm:hover {
-    background: var(--color-accent-primary, #c0c0c0);
+    background: var(--color-danger);
     transform: translateY(-1px);
-    box-shadow: var(--shadow-normal, 0 4px 12px var(--color-shadow, rgba(255,255,255,0.55)));
+    box-shadow: var(--shadow-normal);
 }
 
 .btn-modal-confirm {
@@ -1122,15 +1012,15 @@ textarea.form-control {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--color-bg-secondary, #00000000);
-    border-radius: var(--border-radius-small, 6px);
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-small);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--color-accent-primary, #c0c0c0);
-    border-radius: var(--border-radius-small, 6px);
+    background: var(--color-accent-primary);
+    border-radius: var(--border-radius-small);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-active, #c0c0c0);
+    background: var(--color-active);
 }

@@ -1,7 +1,9 @@
 // crearCategorias.js - VERSIÓN FINAL
 // SIN empresaId/estado, con herencia de color configurable
+// MODIFICADO: integración de info de organización en el header
+// CORREGIDO: eliminado ícono duplicado en SweetAlert de éxito y simplificado el mensaje
 
-// Variable global para debugging (opcional, puedes eliminarla si no la usas)
+// Variable global para debugging
 window.crearCategoriaDebug = {
     estado: 'iniciando',
     controller: null
@@ -52,13 +54,13 @@ class CrearCategoriaController {
             // 6. Inicializar gestión de subcategorías
             this._inicializarGestionSubcategorias();
 
-            // 7. Actualizar UI con información de la organización
+            // 7. Actualizar UI con información de la organización (en el header)
             this._actualizarInfoOrganizacion();
 
             window.crearCategoriaDebug.controller = this;
 
         } catch (error) {
-            console.error('Error inicializando:', error); // Solo este console.error importante
+            console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
             this._redirigirAlLogin();
         }
@@ -71,7 +73,7 @@ class CrearCategoriaController {
             const { CategoriaManager } = await import('/clases/categoria.js');
             this.categoriaManager = new CategoriaManager();
         } catch (error) {
-            console.error('Error cargando CategoriaManager:', error); // Solo este console.error importante
+            console.error('Error cargando CategoriaManager:', error);
             throw error;
         }
     }
@@ -124,7 +126,7 @@ class CrearCategoriaController {
             };
 
         } catch (error) {
-            console.error('Error cargando usuario:', error); // Solo este console.error importante
+            console.error('Error cargando usuario:', error);
             throw error;
         }
     }
@@ -154,36 +156,29 @@ class CrearCategoriaController {
         }
     }
 
+    // NUEVA VERSIÓN: inserta la info dentro del header-description
     _actualizarInfoOrganizacion() {
-        const container = document.getElementById('organizacionInfoContainer');
+        const container = document.getElementById('organizacionInfo');
         if (!container) return;
 
         const coleccion = `categorias_${this.usuarioActual.organizacionCamelCase}`;
 
         container.innerHTML = `
-            <div class="organizacion-info">
-                <i class="fas fa-building organizacion-icono"></i>
-                <div class="organizacion-contenido">
-                    <div class="organizacion-titulo">
-                        Organización: <strong>${this.usuarioActual.organizacion}</strong>
-                    </div>
-                    <div class="organizacion-detalle">
-                        <i class="fas fa-user-shield"></i>
-                        Administrador: ${this.usuarioActual.nombreCompleto}
-                        ${this.usuarioActual.correo ? `(${this.usuarioActual.correo})` : ''}
-                    </div>
-                    <span class="coleccion-badge">
-                        <i class="fas fa-database"></i>
-                        ${coleccion}
-                    </span>
-                </div>
+            <div class="info-item">
+                <i class="fas fa-building"></i>
+                <span><strong>Organización:</strong> ${this.usuarioActual.organizacion}</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-user-shield"></i>
+                <span><strong>Administrador:</strong> ${this.usuarioActual.nombreCompleto} (${this.usuarioActual.correo})</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-database"></i>
+                <span class="coleccion-badge">
+                    <i class="fas fa-tag"></i> ${coleccion}
+                </span>
             </div>
         `;
-
-        const coleccionDisplay = document.getElementById('coleccionDisplay');
-        if (coleccionDisplay) {
-            coleccionDisplay.textContent = coleccion;
-        }
     }
 
     // ========== CONFIGURACIÓN DE EVENTOS ==========
@@ -237,7 +232,7 @@ class CrearCategoriaController {
             }
 
         } catch (error) {
-            console.error('Error configurando eventos:', error); // Solo este console.error importante
+            console.error('Error configurando eventos:', error);
         }
     }
 
@@ -540,40 +535,18 @@ class CrearCategoriaController {
 
             this.categoriaCreadaReciente = nuevaCategoria;
 
-            // Mostrar éxito
-            const subcatCount = nuevaCategoria.getCantidadSubcategorias();
-
+            // Mostrar éxito simplificado (sin detalles)
             await Swal.fire({
-                title: '¡Categoría creada!',
-                html: `
-                    <div style="text-align: center;">
-                        <i class="fas fa-check-circle" style="font-size: 64px; color: #10b981; margin-bottom: 20px;"></i>
-                        <h5 style="color: #fff; margin-bottom: 10px;">${datos.nombre}</h5>
-                        <div style="display: flex; align-items: center; justify-content: center; margin: 15px 0;">
-                            <div style="width: 30px; height: 30px; background: ${datos.color}; border-radius: 8px; margin-right: 10px;"></div>
-                            <span style="font-family: monospace; color: #d1d5db;">${datos.color}</span>
-                        </div>
-                        <p style="color: #d1d5db; margin-bottom: 5px;">
-                            <strong>ID:</strong> <span style="font-family: monospace;">${nuevaCategoria.id}</span>
-                        </p>
-                        <p style="color: #10b981; margin-top: 15px;">
-                            <i class="fas fa-database"></i>
-                            categorias_${datos.organizacionCamelCase}
-                        </p>
-                        <p style="color: #d1d5db; margin-top: 10px;">
-                            <i class="fas fa-sitemap"></i>
-                            ${subcatCount} ${subcatCount === 1 ? 'subcategoría' : 'subcategorías'}
-                        </p>
-                    </div>
-                `,
                 icon: 'success',
+                title: '¡Categoría creada!',
+                text: 'La categoría se ha guardado correctamente.',
                 confirmButtonText: 'Ver categorías'
             }).then(() => {
                 this._volverALista();
             });
 
         } catch (error) {
-            console.error('Error guardando categoría:', error); // Solo este console.error importante
+            console.error('Error guardando categoría:', error);
             this._mostrarError(error.message || 'No se pudo crear la categoría');
         } finally {
             btnSave.innerHTML = originalHTML;
