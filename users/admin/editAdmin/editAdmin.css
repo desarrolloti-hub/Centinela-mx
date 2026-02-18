@@ -27,8 +27,54 @@ body {
     z-index: 1;
 }
 
-/* ========== LAYOUT PRINCIPAL ========== */
+/* ========== CONTENEDOR PRINCIPAL (COMO EN CATEGORÍAS) ========== */
+.admin-container {
+    position: relative;
+    z-index: 100;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px;
+}
+
+/* ========== PAGE HEADER (COMO EN CATEGORÍAS) ========== */
+.page-header {
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--color-border-light);
+    text-align: center;
+}
+
+.page-header h1 {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 2.8rem;
+    color: var(--color-text-primary);
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px var(--color-accent-primary), 0 0 20px var(--color-accent-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.page-header h1 i {
+    color: var(--color-text-primary);
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+}
+
+.page-header .header-description {
+    color: var(--color-text-secondary);
+    font-size: 1.2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    line-height: 1.6;
+}
+
+/* ========== LAYOUT PRINCIPAL (WRAPPER) ========== */
 .edit-main-container {
+    /* Este contenedor ya no es necesario, pero se mantiene por compatibilidad */
     position: relative;
     z-index: 100;
     display: flex;
@@ -42,6 +88,7 @@ body {
     display: flex;
     width: 100%;
     max-width: 1100px;
+    margin: 0 auto; /* AÑADIDO PARA CENTRAR EL CONTENEDOR */
     min-height: auto;
     background: var(--color-bg-tertiary);
     backdrop-filter: blur(8px);
@@ -72,7 +119,7 @@ body {
     flex: 1.5;
 }
 
-/* ========== HEADER ========== */
+/* ========== HEADER DENTRO DEL PANEL DERECHO ========== */
 .edit-header {
     margin-bottom: 1.5rem;
 }
