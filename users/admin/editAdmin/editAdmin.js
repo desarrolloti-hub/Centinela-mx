@@ -5,7 +5,7 @@ let currentPhotoType = '';
 document.addEventListener('DOMContentLoaded', async function () {
 
     try {
-        // Importar el módulo UserManager
+        // Importar los módulos necesarios
         const userModule = await import('/clases/user.js');
         const { UserManager } = userModule;
 
@@ -118,6 +118,8 @@ async function iniciarEditor(userManager) {
         setupModalHandlers(elements, userManager);
         setupSaveHandler(elements, userManager);
         setupPasswordChangeHandler(elements, userManager);
+        // ===== NUEVO: Configurar selectores de área y cargo =====
+        await setupAreaAndCargoHandlers(elements, userManager);
 
         showMessage(elements.mainMessage, 'success',
             `Editando perfil de: ${userManager.currentUser.email}`);
@@ -159,6 +161,10 @@ function getElements() {
         email: document.getElementById('email'),
         organizationName: document.getElementById('organizationName'),
         position: document.getElementById('position'),
+
+        // ===== NUEVO: Selectores de área y cargo =====
+        areaSelect: document.getElementById('areaSelect'),
+        cargoEnAreaSelect: document.getElementById('cargoEnAreaSelect'),
 
         // Botones y mensajes
         saveChangesBtn: document.getElementById('saveChangesBtn'),
@@ -635,6 +641,150 @@ function readFileAsDataURL(file) {
     });
 }
 
+// ========== NUEVAS FUNCIONES PARA ÁREA Y CARGO ==========
+
+/**
+ * Configura los selectores de área y cargo, carga las áreas y selecciona los valores actuales
+ */
+async function setupAreaAndCargoHandlers(elements, userManager) {
+    if (!elements.areaSelect) return;
+
+    const admin = userManager.currentUser;
+    if (!admin) return;
+
+    try {
+        // Importar AreaManager
+        const { AreaManager } = await import('/clases/area.js');
+        const areaManager = new AreaManager();
+
+        // Cargar áreas
+        elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
+        elements.areaSelect.disabled = true;
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
+        elements.cargoEnAreaSelect.disabled = true;
+
+        const areas = await areaManager.getAreasByOrganizacion(admin.organizacionCamelCase);
+
+        // Guardar áreas para uso posterior
+        elements.areaSelect._areasData = areas;
+
+        if (areas.length === 0) {
+            elements.areaSelect.innerHTML = '<option value="">No hay áreas disponibles</option>';
+            elements.areaSelect.disabled = false;
+            return;
+        }
+
+        // Poblar el select de áreas
+        let options = '<option value="">Selecciona un área</option>';
+        areas.forEach(area => {
+            options += `<option value="${area.id}">${area.nombreArea}</option>`;
+        });
+        elements.areaSelect.innerHTML = options;
+        elements.areaSelect.disabled = false;
+
+        // Configurar el evento change para cargar cargos
+        elements.areaSelect.addEventListener('change', () => {
+            cargarCargosPorArea(elements);
+        });
+
+        // Seleccionar el área actual del admin, si existe
+        if (admin.areaAsignadaId) {
+            const areaExiste = areas.some(a => a.id === admin.areaAsignadaId);
+            if (areaExiste) {
+                elements.areaSelect.value = admin.areaAsignadaId;
+                // Disparar evento change para cargar cargos
+                const event = new Event('change', { bubbles: true });
+                elements.areaSelect.dispatchEvent(event);
+
+                // Intentar seleccionar el cargo después de un breve retraso
+                setTimeout(() => {
+                    if (admin.cargo && admin.cargo.id && elements.cargoEnAreaSelect) {
+                        const option = Array.from(elements.cargoEnAreaSelect.options).find(
+                            opt => opt.value === admin.cargo.id
+                        );
+                        if (option) {
+                            elements.cargoEnAreaSelect.value = option.value;
+                        } else if (admin.cargo.nombre) {
+                            // Fallback: buscar por nombre
+                            const optionPorNombre = Array.from(elements.cargoEnAreaSelect.options).find(
+                                opt => opt.text === admin.cargo.nombre
+                            );
+                            if (optionPorNombre) {
+                                elements.cargoEnAreaSelect.value = optionPorNombre.value;
+                            }
+                        }
+                    }
+                }, 300);
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Error cargando áreas:', error);
+        elements.areaSelect.innerHTML = '<option value="">Error al cargar áreas</option>';
+        elements.areaSelect.disabled = false;
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'Error al cargar áreas',
+            text: 'No se pudieron cargar las áreas. Puedes continuar editando pero no podrás cambiar el área.',
+            confirmButtonText: 'ENTENDIDO',
+            confirmButtonColor: 'var(--color-warning, #ffcc00)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
+        });
+    }
+}
+
+/**
+ * Carga los cargos del área seleccionada
+ */
+function cargarCargosPorArea(elements) {
+    if (!elements.areaSelect || !elements.cargoEnAreaSelect) return;
+
+    const areaId = elements.areaSelect.value;
+    const areas = elements.areaSelect._areasData || [];
+
+    // Resetear selector de cargos
+    elements.cargoEnAreaSelect.innerHTML = '';
+    elements.cargoEnAreaSelect.disabled = true;
+
+    if (!areaId) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
+        return;
+    }
+
+    const areaSeleccionada = areas.find(a => a.id === areaId);
+
+    if (!areaSeleccionada) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Área no encontrada</option>';
+        return;
+    }
+
+    const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
+
+    if (cargos.length === 0) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Esta área no tiene cargos</option>';
+    } else {
+        let options = '<option value="">Selecciona un cargo</option>';
+        cargos.forEach((cargo, index) => {
+            const cargoId = cargo.id || `cargo_${index}`;
+            options += `<option value="${cargoId}">${cargo.nombre || 'Cargo sin nombre'}</option>`;
+
+            if (!elements.cargoEnAreaSelect._cargosData) {
+                elements.cargoEnAreaSelect._cargosData = {};
+            }
+            elements.cargoEnAreaSelect._cargosData[cargoId] = cargo;
+        });
+        elements.cargoEnAreaSelect.innerHTML = options;
+    }
+
+    elements.cargoEnAreaSelect.disabled = false;
+}
+
 // ========== HANDLER DE GUARDADO MODIFICADO ==========
 
 function setupSaveHandler(elements, userManager) {
@@ -676,9 +826,29 @@ function setupSaveHandler(elements, userManager) {
         });
 
         try {
+            // ===== PREPARAR DATOS DE ACTUALIZACIÓN =====
             const updateData = {
                 nombreCompleto: nombre
             };
+
+            // ===== AGREGAR ÁREA Y CARGO SI FUERON SELECCIONADOS =====
+            if (elements.areaSelect && elements.areaSelect.value) {
+                updateData.areaAsignadaId = elements.areaSelect.value;
+            }
+
+            if (elements.cargoEnAreaSelect && elements.cargoEnAreaSelect.value) {
+                // Obtener el objeto completo del cargo seleccionado
+                const cargosData = elements.cargoEnAreaSelect._cargosData || {};
+                const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect.value];
+
+                if (cargoSeleccionado) {
+                    updateData.cargo = {
+                        id: cargoSeleccionado.id || elements.cargoEnAreaSelect.value,
+                        nombre: cargoSeleccionado.nombre || 'Cargo sin nombre',
+                        descripcion: cargoSeleccionado.descripcion || ''
+                    };
+                }
+            }
 
             // ✅ CORREGIDO: Usar userType correcto (basado en rol)
             const userType = currentUser.esAdministrador() ? 'administrador' : 'colaborador';
@@ -690,7 +860,8 @@ function setupSaveHandler(elements, userManager) {
                 currentUser.organizacionCamelCase
             );
 
-            currentUser.nombreCompleto = updateData.nombreCompleto;
+            // Actualizar el objeto local del usuario
+            Object.assign(currentUser, updateData);
 
             Swal.close();
             Swal.fire({

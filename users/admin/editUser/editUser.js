@@ -201,13 +201,6 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
         
         window.currentCollaborator = collaborator;
         
-        // LOG PARA VER LOS DATOS
-        console.log('📊 DATOS COMPLETOS DEL COLABORADOR:', collaborator);
-        console.log('📊 areaAsignadaId:', collaborator.areaAsignadaId);
-        console.log('📊 areaAsignadaNombre:', collaborator.areaAsignadaNombre);
-        console.log('📊 cargoAsignadoId:', collaborator.cargoAsignadoId);
-        console.log('📊 cargoAsignadoNombre:', collaborator.cargoAsignadoNombre);
-        
         actualizarInterfaz(elements, collaborator);
         deshabilitarLogoOrganizacion(elements);
         
@@ -395,9 +388,7 @@ async function cargarAreas(userManager, elements) {
         // Usar AreaManager para obtener las áreas
         const areaManager = new AreaManager();
         const organizacionCamelCase = userManager.currentUser.organizacionCamelCase; // Del ADMIN, no del colaborador
-        
-        console.log('🔍 Cargando áreas para organización:', organizacionCamelCase);
-        
+                
         elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
         elements.areaSelect.disabled = true;
         elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
@@ -422,9 +413,7 @@ async function cargarAreas(userManager, elements) {
         elements.areaSelect.disabled = false;
         
         // Cargar área y cargo actuales
-        if (collaborator.areaAsignadaId) {
-            console.log('🔍 Área asignada encontrada:', collaborator.areaAsignadaId, collaborator.areaAsignadaNombre);
-            
+        if (collaborator.areaAsignadaId) {            
             // Verificar que el área existe en la lista
             const areaExiste = areas.some(a => a.id === collaborator.areaAsignadaId);
             
@@ -438,49 +427,34 @@ async function cargarAreas(userManager, elements) {
                 
                 // Función para seleccionar cargo
                 const seleccionarCargo = () => {
-                    if (collaborator.cargoAsignadoId || collaborator.cargoAsignadoNombre) {
-                        console.log('🔍 Intentando seleccionar cargo:', collaborator.cargoAsignadoId, collaborator.cargoAsignadoNombre);
-                        
+                    // Usar el objeto `cargo` en lugar de los campos planos
+                    if (collaborator.cargo && collaborator.cargo.id) {                        
                         const cargoSelect = elements.cargoEnAreaSelect;
+                        // Buscar la opción cuyo valor (ID del cargo) coincida con el ID guardado
+                        const option = Array.from(cargoSelect.options).find(opt => opt.value === collaborator.cargo.id);
                         
-                        // Buscar en los cargos del área
-                        const areaSeleccionada = areas.find(a => a.id === collaborator.areaAsignadaId);
-                        if (areaSeleccionada) {
-                            const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
-                            
-                            // Buscar el cargo por ID
-                            const cargoPorId = cargos.find(c => c.id === collaborator.cargoAsignadoId);
-                            
-                            if (cargoPorId) {
-                                // Buscar por el nombre
-                                const optionPorNombre = Array.from(cargoSelect.options).find(
-                                    opt => opt.text === cargoPorId.nombre
-                                );
-                                
-                                if (optionPorNombre) {
-                                    cargoSelect.value = optionPorNombre.value;
-                                    console.log('✅ Cargo seleccionado por nombre del cargo encontrado:', cargoPorId.nombre);
-                                    return true;
-                                }
-                            }
+                        if (option) {
+                            cargoSelect.value = option.value;
+                            return true;
+                        } else {
+                            console.warn('⚠️ No se encontró el cargo con ID:', collaborator.cargo.id);
                         }
-                        
-                        // Fallback: buscar por nombre directamente
-                        if (collaborator.cargoAsignadoNombre) {
-                            const optionPorNombre = Array.from(cargoSelect.options).find(
-                                opt => opt.text === collaborator.cargoAsignadoNombre
-                            );
-                            
-                            if (optionPorNombre) {
-                                cargoSelect.value = optionPorNombre.value;
-                                console.log('✅ Cargo seleccionado por nombre:', collaborator.cargoAsignadoNombre);
-                                return true;
-                            }
-                        }
-                        
-                        console.warn('⚠️ No se encontró el cargo:', collaborator.cargoAsignadoId, collaborator.cargoAsignadoNombre);
-                        return false;
                     }
+                    
+                    // Fallback: buscar por nombre (por si acaso)
+                    if (collaborator.cargo && collaborator.cargo.nombre) {
+                        const optionPorNombre = Array.from(elements.cargoEnAreaSelect.options).find(
+                            opt => opt.text === collaborator.cargo.nombre
+                        );
+                        
+                        if (optionPorNombre) {
+                            elements.cargoEnAreaSelect.value = optionPorNombre.value;
+                            return true;
+                        }
+                    }
+                    
+                    console.warn('⚠️ No se encontró el cargo:', collaborator.cargo);
+                    return false;
                 };
                 
                 // Intentar seleccionar cargo múltiples veces
@@ -866,21 +840,19 @@ function configurarGuardado(elements, userManager) {
                 });
             }
             
-            // ✅ CORREGIDO: Estructura de datos a actualizar
+            // ✅ CORREGIDO: Estructura de datos a actualizar - SIN CAMPOS PLANOS REDUNDANTES
             const updateData = {
                 nombreCompleto: elements.fullName.value.trim(),
                 status: elements.statusInput.value === 'active',
-                // ✅ CORREGIDO: Guardar el objeto completo del cargo
+                // ✅ Guardar el objeto completo del cargo
                 cargo: cargoObjeto,
-                // Mantener los campos planos por compatibilidad
+                // ✅ Mantener SOLO el ID del área para poder seleccionarla después
                 areaAsignadaId: elements.areaSelect.value,
-                areaAsignadaNombre: areaNombre,
-                cargoAsignadoId: elements.cargoEnAreaSelect.value,
-                cargoAsignadoNombre: cargoNombre,
-                cargoAsignadoDescripcion: cargoDescripcion,
+                // ✅ Mantener los permisos
                 permisosPersonalizados: permisosPersonalizados
             };
             
+            // Llamar a updateUser con los datos limpios
             await userManager.updateUser(
                 collaborator.id,
                 updateData,
@@ -888,7 +860,15 @@ function configurarGuardado(elements, userManager) {
                 collaborator.organizacionCamelCase
             );
             
+            // Actualizar el objeto local del colaborador con los nuevos datos
             Object.assign(collaborator, updateData);
+            // Asegurar que los campos derivados también se actualicen en el objeto local
+            if (cargoObjeto) {
+                collaborator.cargoAsignadoId = cargoObjeto.id;
+                collaborator.cargoAsignadoNombre = cargoObjeto.nombre;
+                collaborator.cargoAsignadoDescripcion = cargoObjeto.descripcion;
+            }
+            collaborator.areaAsignadaNombre = areaNombre;
             
             const now = new Date();
             if (elements.lastUpdateDate) {
