@@ -134,14 +134,14 @@
                         </div>
                     </div>
 
-                    <!-- CARGO / ROL -->
+                    <!-- CARGO / ROL EN EL SISTEMA -->
                     <div class="form-field-group">
                         <label class="field-label" for="rol">
-                            <i class="fas fa-briefcase"></i> CARGO / ROL
+                            <i class="fas fa-briefcase"></i> ROL EN EL SISTEMA
                         </label>
                         <div class="input-wrapper">
                             <select class="form-input-field" id="rol" required>
-                                <option value="">Selecciona un cargo</option>
+                                <option value="">Selecciona un rol</option>
                                 <option value="colaborador">Colaborador</option>
                                 <option value="supervisor">Supervisor</option>
                                 <option value="coordinador">Coordinador</option>
@@ -150,6 +150,30 @@
                                 <option value="desarrollador">Desarrollador</option>
                                 <option value="diseñador">Diseñador</option>
                                 <option value="soporte">Soporte Técnico</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- ÁREA / DEPARTAMENTO (desde Firebase) -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="areaSelect">
+                            <i class="fas fa-building"></i> ÁREA / DEPARTAMENTO
+                        </label>
+                        <div class="input-wrapper">
+                            <select class="form-input-field" id="areaSelect" required>
+                                <option value="">Cargando áreas...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- CARGO EN EL ÁREA (desde Firebase) -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="cargoEnAreaSelect">
+                            <i class="fas fa-user-tie"></i> CARGO EN EL ÁREA
+                        </label>
+                        <div class="input-wrapper">
+                            <select class="form-input-field" id="cargoEnAreaSelect" required>
+                                <option value="">Primero selecciona un área</option>
                             </select>
                         </div>
                     </div>

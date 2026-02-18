@@ -43,6 +43,14 @@ class User {
         this.fotoUsuario = data.fotoUsuario || data.fotoURL || data.foto || '';
         this.fotoOrganizacion = data.fotoOrganizacion || data.logoOrganizacion || data.logo || '';
 
+        // ===== NUEVO: Datos de área y cargo =====
+        this.areaAsignadaId = data.areaAsignadaId || null;
+        this.areaAsignadaNombre = data.areaAsignadaNombre || null;
+        this.cargoAsignadoId = data.cargoAsignadoId || null;
+        this.cargoAsignadoNombre = data.cargoAsignadoNombre || null;
+        this.cargoAsignadoDescripcion = data.cargoAsignadoDescripcion || null;
+        this.rol = data.rol || 'colaborador'; // Rol en el sistema (colaborador, supervisor, etc.)
+
         // Fechas y timestamps
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
@@ -62,6 +70,9 @@ class User {
 
         // Información de creación
         this.creadoPor = data.creadoPor || '';
+        this.creadoPorEmail = data.creadoPorEmail || '';
+        this.creadoPorNombre = data.creadoPorNombre || '';
+        this.actualizadoPor = data.actualizadoPor || '';
     }
 
     // ========== MÉTODOS DE UTILIDAD ==========
@@ -282,7 +293,17 @@ class UserManager {
                     // Asegurar que las fotos se pasen explícitamente
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
-                    email: data.correoElectronico || data.email
+                    email: data.correoElectronico || data.email,
+                    // ===== NUEVO: Pasar datos de área y cargo =====
+                    areaAsignadaId: data.areaAsignadaId,
+                    areaAsignadaNombre: data.areaAsignadaNombre,
+                    cargoAsignadoId: data.cargoAsignadoId,
+                    cargoAsignadoNombre: data.cargoAsignadoNombre,
+                    cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
+                    rol: data.rol,
+                    creadoPorEmail: data.creadoPorEmail,
+                    creadoPorNombre: data.creadoPorNombre,
+                    actualizadoPor: data.actualizadoPor
                 });
 
                 // Agregar a memoria para próximas búsquedas
@@ -322,7 +343,17 @@ class UserManager {
                         fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                         fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                         email: data.correoElectronico || data.email,
-                        emailVerified: auth.currentUser?.emailVerified || false
+                        emailVerified: auth.currentUser?.emailVerified || false,
+                        // ===== NUEVO: Pasar datos de área y cargo =====
+                        areaAsignadaId: data.areaAsignadaId,
+                        areaAsignadaNombre: data.areaAsignadaNombre,
+                        cargoAsignadoId: data.cargoAsignadoId,
+                        cargoAsignadoNombre: data.cargoAsignadoNombre,
+                        cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
+                        rol: data.rol,
+                        creadoPorEmail: data.creadoPorEmail,
+                        creadoPorNombre: data.creadoPorNombre,
+                        actualizadoPor: data.actualizadoPor
                     });
 
                     this.currentUser = user; // ✅ IMPORTANTE: Asignar el usuario actual
@@ -1323,7 +1354,17 @@ class UserManager {
                     cargo: 'administrador',
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
-                    email: data.correoElectronico || data.email
+                    email: data.correoElectronico || data.email,
+                    // ===== NUEVO: Pasar datos de área y cargo =====
+                    areaAsignadaId: data.areaAsignadaId,
+                    areaAsignadaNombre: data.areaAsignadaNombre,
+                    cargoAsignadoId: data.cargoAsignadoId,
+                    cargoAsignadoNombre: data.cargoAsignadoNombre,
+                    cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
+                    rol: data.rol,
+                    creadoPorEmail: data.creadoPorEmail,
+                    creadoPorNombre: data.creadoPorNombre,
+                    actualizadoPor: data.actualizadoPor
                 });
 
                 // Agregar a memoria para próximas búsquedas
@@ -1356,7 +1397,17 @@ class UserManager {
                             cargo: 'colaborador',
                             fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                             fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
-                            email: data.correoElectronico || data.email
+                            email: data.correoElectronico || data.email,
+                            // ===== NUEVO: Pasar datos de área y cargo =====
+                            areaAsignadaId: data.areaAsignadaId,
+                            areaAsignadaNombre: data.areaAsignadaNombre,
+                            cargoAsignadoId: data.cargoAsignadoId,
+                            cargoAsignadoNombre: data.cargoAsignadoNombre,
+                            cargoAsignadoDescripcion: data.cargoAsignadoDescripcion,
+                            rol: data.rol,
+                            creadoPorEmail: data.creadoPorEmail,
+                            creadoPorNombre: data.creadoPorNombre,
+                            actualizadoPor: data.actualizadoPor
                         });
 
                         this.users.push(user);

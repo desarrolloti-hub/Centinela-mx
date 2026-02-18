@@ -1,14 +1,14 @@
-// editUser.js - Editor de colaboradores (Versión limpia)
+// editUser.js - Editor de colaboradores (VERSIÓN CORREGIDA)
+import { UserManager } from '/clases/user.js';
+import { AreaManager } from '/clases/area.js';
+
 document.addEventListener('DOMContentLoaded', async function() {    
     try {
-        // Importar el módulo UserManager
-        const userModule = await import('/clases/user.js');
-        const { UserManager } = userModule;
-        
-        // Instanciar UserManager
         const userManager = new UserManager();
         
-        // Iniciar editor
+        // Esperar a que el usuario actual esté disponible
+        await esperarUsuarioActual(userManager);
+        
         iniciarEditor(userManager);
         
     } catch (error) {
@@ -23,6 +23,16 @@ let currentPhotoType = '';
 let currentPhotoElements = null;
 
 // ==================== FUNCIONES PRINCIPALES ====================
+
+async function esperarUsuarioActual(userManager, maxAttempts = 15, delay = 500) {
+    for (let i = 0; i < maxAttempts; i++) {
+        if (userManager.currentUser) {
+            return userManager.currentUser;
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    throw new Error('No se pudo detectar el usuario actual');
+}
 
 async function iniciarEditor(userManager) {    
     const collaboratorId = obtenerIdDesdeURL();
@@ -40,7 +50,10 @@ async function iniciarEditor(userManager) {
         configurarCambioPassword(elements, userManager);
         configurarEliminacion(elements, userManager);
         configurarSelectorStatus(elements);
-                
+        
+        // Cargar áreas después de tener los datos del colaborador
+        await cargarAreas(userManager, elements);
+        
     } catch (error) {
         console.error('❌ Error inicializando editor:', error);
         mostrarMensaje(elements.mainMessage, 'error', 
@@ -89,7 +102,6 @@ function obtenerElementosDOM() {
         orgCircle: document.getElementById('orgCircle'),
         orgImage: document.getElementById('orgImage'),
         orgPlaceholder: document.getElementById('orgPlaceholder'),
-        // Edit overlay para logo NO se usará
         
         // Modal
         photoModal: document.getElementById('photoModal'),
@@ -103,6 +115,9 @@ function obtenerElementosDOM() {
         fullName: document.getElementById('fullName'),
         email: document.getElementById('email'),
         organizationName: document.getElementById('organizationName'),
+        // SELECTORES
+        areaSelect: document.getElementById('areaSelect'),
+        cargoEnAreaSelect: document.getElementById('cargoEnAreaSelect'),
         statusInput: document.getElementById('status'),
         
         // Permisos
@@ -140,6 +155,7 @@ function mostrarErrorConfiguracion(error) {
                 <p>Verifica que los archivos existan en las rutas correctas:</p>
                 <ul>
                     <li><code>/clases/user.js</code></li>
+                    <li><code>/clases/area.js</code></li>
                 </ul>
             </div>
         `,
@@ -159,7 +175,6 @@ function mostrarErrorConfiguracion(error) {
 
 async function cargarDatosColaborador(userManager, collaboratorId, elements) {    
     try {
-        // Mostrar loader
         Swal.fire({
             title: 'Cargando datos...',
             allowOutsideClick: false,
@@ -171,7 +186,6 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
             }
         });
         
-        // Obtener datos del colaborador
         const collaborator = await userManager.getUserById(collaboratorId);
         
         if (!collaborator) {
@@ -179,22 +193,23 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
             throw new Error('Colaborador no encontrado');
         }
         
-        // Verificar que sea un colaborador
         if (collaborator.cargo !== 'colaborador') {
             Swal.close();
             throw new Error('El usuario no es un colaborador');
         }
         
-        // Guardar referencia global
         window.currentCollaborator = collaborator;
         
-        // Actualizar interfaz
-        actualizarInterfaz(elements, collaborator);
+        // LOG PARA VER LOS DATOS
+        console.log('📊 DATOS COMPLETOS DEL COLABORADOR:', collaborator);
+        console.log('📊 areaAsignadaId:', collaborator.areaAsignadaId);
+        console.log('📊 areaAsignadaNombre:', collaborator.areaAsignadaNombre);
+        console.log('📊 cargoAsignadoId:', collaborator.cargoAsignadoId);
+        console.log('📊 cargoAsignadoNombre:', collaborator.cargoAsignadoNombre);
         
-        // Deshabilitar edición del logo de organización
+        actualizarInterfaz(elements, collaborator);
         deshabilitarLogoOrganizacion(elements);
         
-        // Cerrar loader
         Swal.close();
         
         mostrarMensaje(elements.mainMessage, 'success', 
@@ -225,27 +240,17 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
 }
 
 function deshabilitarLogoOrganizacion(elements) {
-    // Agregar clase para deshabilitar la interacción
     if (elements.orgCircle) {
         elements.orgCircle.classList.add('org-disabled');
         elements.orgCircle.style.cursor = 'default';
-        
-        // Remover cualquier event listener que pudiera existir
-        const newOrgCircle = elements.orgCircle.cloneNode(true);
-        elements.orgCircle.parentNode.replaceChild(newOrgCircle, elements.orgCircle);
-        
-        // Actualizar referencia
-        elements.orgCircle = newOrgCircle;
     }
     
-    // Ocultar el overlay de edición si existe
     if (elements.editOrgOverlay) {
         elements.editOrgOverlay.style.display = 'none';
     }
 }
 
 function actualizarInterfaz(elements, collaborator) {    
-    // Datos personales
     if (elements.fullName && collaborator.nombreCompleto) {
         elements.fullName.value = collaborator.nombreCompleto;
     }
@@ -258,7 +263,6 @@ function actualizarInterfaz(elements, collaborator) {
         elements.organizationName.value = collaborator.organizacion;
     }
     
-    // Status
     let statusValue = 'active';
     if (collaborator.eliminado) {
         statusValue = 'inactive';
@@ -270,7 +274,6 @@ function actualizarInterfaz(elements, collaborator) {
         elements.statusInput.value = statusValue;
     }
     
-    // Actualizar botones de status
     if (elements.statusOptions) {
         elements.statusOptions.forEach(option => {
             option.classList.remove('selected');
@@ -280,7 +283,6 @@ function actualizarInterfaz(elements, collaborator) {
         });
     }
     
-    // Permisos
     if (collaborator.permisosPersonalizados && elements.permissionCheckboxes) {
         elements.permissionCheckboxes.forEach(checkbox => {
             const permiso = checkbox.value;
@@ -288,16 +290,14 @@ function actualizarInterfaz(elements, collaborator) {
         });
     }
     
-    // Foto de perfil - Usar el método getFotoUrl() de la clase User
+    // Foto de perfil
     if (collaborator.fotoUsuario) {
         const profileUrl = collaborator.getFotoUrl();
         if (elements.profileImage) {
             elements.profileImage.src = profileUrl;
             elements.profileImage.style.display = 'block';
             
-            // Agregar manejador de error
             elements.profileImage.onerror = function() {
-                console.warn('⚠️ Error cargando imagen de perfil');
                 this.style.display = 'none';
                 if (elements.profilePlaceholder) {
                     elements.profilePlaceholder.style.display = 'flex';
@@ -309,16 +309,14 @@ function actualizarInterfaz(elements, collaborator) {
         }
     }
     
-    // Logo de organización (solo visualización)
+    // Logo de organización
     if (collaborator.fotoOrganizacion) {
         const orgUrl = collaborator.fotoOrganizacion;
         if (elements.orgImage) {
             elements.orgImage.src = orgUrl;
             elements.orgImage.style.display = 'block';
             
-            // Agregar manejador de error
             elements.orgImage.onerror = function() {
-                console.warn('⚠️ Error cargando logo de organización');
                 this.style.display = 'none';
                 if (elements.orgPlaceholder) {
                     elements.orgPlaceholder.style.display = 'flex';
@@ -330,12 +328,10 @@ function actualizarInterfaz(elements, collaborator) {
         }
     }
     
-    // Información del sistema
     if (elements.authId) {
         elements.authId.textContent = collaborator.idAuth || collaborator.id || 'N/A';
     }
     
-    // Formatear fechas
     const formatDate = (date) => {
         if (!date) return { date: 'N/A', time: '' };
         const d = date.toDate ? date.toDate() : new Date(date);
@@ -345,7 +341,6 @@ function actualizarInterfaz(elements, collaborator) {
         };
     };
     
-    // Actualizar fechas
     const creationDate = formatDate(collaborator.fechaCreacion);
     if (elements.creationDate) elements.creationDate.textContent = creationDate.date;
     if (elements.creationTime) elements.creationTime.textContent = creationDate.time;
@@ -357,7 +352,7 @@ function actualizarInterfaz(elements, collaborator) {
     const loginDate = formatDate(collaborator.ultimoLogin);
     if (elements.lastLoginDate) elements.lastLoginDate.textContent = loginDate.date;
     if (elements.lastLoginTime) elements.lastLoginTime.textContent = loginDate.time;
-    }
+}
 
 function mostrarMensaje(element, type, text) {
     if (!element) return;
@@ -378,7 +373,6 @@ function mostrarMensaje(element, type, text) {
     `;
     element.style.display = 'block';
     
-    // Auto-ocultar mensajes no críticos
     if (type !== 'error') {
         setTimeout(() => {
             element.style.display = 'none';
@@ -386,10 +380,192 @@ function mostrarMensaje(element, type, text) {
     }
 }
 
+// ========== FUNCIONES PARA CARGAR ÁREAS Y CARGOS ==========
+
+async function cargarAreas(userManager, elements) {
+    if (!elements.areaSelect) return;
+    
+    const collaborator = window.currentCollaborator;
+    if (!collaborator) return;
+    
+    try {
+        // Usar AreaManager para obtener las áreas
+        const areaManager = new AreaManager();
+        const organizacionCamelCase = userManager.currentUser.organizacionCamelCase; // Del ADMIN, no del colaborador
+        
+        console.log('🔍 Cargando áreas para organización:', organizacionCamelCase);
+        
+        elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
+        elements.areaSelect.disabled = true;
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
+        elements.cargoEnAreaSelect.disabled = true;
+        
+        const areas = await areaManager.getAreasByOrganizacion(organizacionCamelCase);
+        
+        // Guardar áreas para uso posterior
+        elements.areaSelect._areasData = areas;
+        
+        if (areas.length === 0) {
+            elements.areaSelect.innerHTML = '<option value="">No hay áreas disponibles</option>';
+            elements.areaSelect.disabled = false;
+            return;
+        }
+        
+        let options = '<option value="">Selecciona un área</option>';
+        areas.forEach(area => {
+            options += `<option value="${area.id}">${area.nombreArea}</option>`;
+        });
+        elements.areaSelect.innerHTML = options;
+        elements.areaSelect.disabled = false;
+        
+        // --- CORRECCIÓN PRINCIPAL: Cargar área y cargo actuales ---
+        if (collaborator.areaAsignadaId) {
+            console.log('🔍 Área asignada encontrada:', collaborator.areaAsignadaId, collaborator.areaAsignadaNombre);
+            
+            // Verificar que el área existe en la lista
+            const areaExiste = areas.some(a => a.id === collaborator.areaAsignadaId);
+            
+            if (areaExiste) {
+                // Seleccionar el área
+                elements.areaSelect.value = collaborator.areaAsignadaId;
+                
+                // Disparar evento change para cargar los cargos
+                const event = new Event('change', { bubbles: true });
+                elements.areaSelect.dispatchEvent(event);
+                
+                // --- FUNCIÓN PARA SELECCIONAR CARGO ---
+                const seleccionarCargo = () => {
+                    if (collaborator.cargoAsignadoId || collaborator.cargoAsignadoNombre) {
+                        console.log('🔍 Intentando seleccionar cargo:', collaborator.cargoAsignadoId, collaborator.cargoAsignadoNombre);
+                        
+                        const cargoSelect = elements.cargoEnAreaSelect;
+                        
+                        // --- CORRECCIÓN: Buscar en los cargos del área ---
+                        const areaSeleccionada = areas.find(a => a.id === collaborator.areaAsignadaId);
+                        if (areaSeleccionada) {
+                            const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
+                            
+                            // Buscar el cargo por ID
+                            const cargoPorId = cargos.find(c => c.id === collaborator.cargoAsignadoId);
+                            
+                            if (cargoPorId) {
+                                // Ahora necesitamos encontrar el option que tiene este cargo
+                                // Como los options se generan con IDs temporales, necesitamos buscar por el nombre
+                                const optionPorNombre = Array.from(cargoSelect.options).find(
+                                    opt => opt.text === cargoPorId.nombre
+                                );
+                                
+                                if (optionPorNombre) {
+                                    cargoSelect.value = optionPorNombre.value;
+                                    console.log('✅ Cargo seleccionado por nombre del cargo encontrado:', cargoPorId.nombre);
+                                    return true;
+                                }
+                            }
+                        }
+                        
+                        // Fallback: buscar por nombre directamente
+                        if (collaborator.cargoAsignadoNombre) {
+                            const optionPorNombre = Array.from(cargoSelect.options).find(
+                                opt => opt.text === collaborator.cargoAsignadoNombre
+                            );
+                            
+                            if (optionPorNombre) {
+                                cargoSelect.value = optionPorNombre.value;
+                                console.log('✅ Cargo seleccionado por nombre:', collaborator.cargoAsignadoNombre);
+                                return true;
+                            }
+                        }
+                        
+                        console.warn('⚠️ No se encontró el cargo:', collaborator.cargoAsignadoId, collaborator.cargoAsignadoNombre);
+                        return false;
+                    }
+                };
+                
+                // Intentar seleccionar cargo múltiples veces
+                setTimeout(seleccionarCargo, 300);
+                setTimeout(seleccionarCargo, 600);
+                setTimeout(seleccionarCargo, 1000);
+                
+            } else {
+                console.warn('⚠️ El área asignada no existe en la base de datos:', collaborator.areaAsignadaId);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error cargando áreas:', error);
+        elements.areaSelect.innerHTML = '<option value="">Error al cargar áreas</option>';
+        elements.areaSelect.disabled = false;
+        
+        Swal.fire({
+            icon: 'warning',
+            title: 'Error al cargar áreas',
+            text: 'No se pudieron cargar las áreas. Puedes continuar editando pero no podrás cambiar el área.',
+            confirmButtonText: 'ENTENDIDO',
+            confirmButtonColor: 'var(--color-warning, #ffcc00)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
+        });
+    }
+}
+
+function cargarCargosPorArea(elements) {
+    if (!elements.areaSelect || !elements.cargoEnAreaSelect) return;
+    
+    const areaId = elements.areaSelect.value;
+    const areas = elements.areaSelect._areasData || [];
+    
+    elements.cargoEnAreaSelect.innerHTML = '';
+    elements.cargoEnAreaSelect.disabled = true;
+    
+    if (!areaId) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
+        return;
+    }
+    
+    const areaSeleccionada = areas.find(a => a.id === areaId);
+    
+    if (!areaSeleccionada) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Área no encontrada</option>';
+        return;
+    }
+    
+    const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
+    
+    if (cargos.length === 0) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Esta área no tiene cargos</option>';
+    } else {
+        let options = '<option value="">Selecciona un cargo</option>';
+        cargos.forEach((cargo, index) => {
+            // Usar el ID real del cargo si existe, o generar uno temporal
+            const cargoId = cargo.id || `cargo_${index}`;
+            options += `<option value="${cargoId}">${cargo.nombre || 'Cargo sin nombre'}</option>`;
+            
+            if (!elements.cargoEnAreaSelect._cargosData) {
+                elements.cargoEnAreaSelect._cargosData = {};
+            }
+            elements.cargoEnAreaSelect._cargosData[cargoId] = cargo;
+        });
+        elements.cargoEnAreaSelect.innerHTML = options;
+    }
+    
+    elements.cargoEnAreaSelect.disabled = false;
+}
+
+function configurarSelectoresAreaCargo(elements) {
+    if (!elements.areaSelect || !elements.cargoEnAreaSelect) return;
+    
+    elements.areaSelect.addEventListener('change', () => {
+        cargarCargosPorArea(elements);
+    });
+}
+
 // ========== HANDLERS BÁSICOS ==========
 
 function configurarHandlersBasicos(elements) {
-    // Botón cancelar
     if (elements.cancelBtn) {
         elements.cancelBtn.addEventListener('click', () => {
             Swal.fire({
@@ -415,6 +591,8 @@ function configurarHandlersBasicos(elements) {
             });
         });
     }
+    
+    configurarSelectoresAreaCargo(elements);
 }
 
 function configurarSelectorStatus(elements) {
@@ -422,25 +600,19 @@ function configurarSelectorStatus(elements) {
     
     elements.statusOptions.forEach(option => {
         option.addEventListener('click', function() {
-            // Remover selección de todas las opciones
             elements.statusOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Seleccionar la opción clickeada
             this.classList.add('selected');
-            
-            // Actualizar campo oculto
             const statusValue = this.getAttribute('data-status');
             elements.statusInput.value = statusValue;            
         });
     });
 }
 
-// ========== HANDLERS DE FOTOS (SOLO PERFIL) ==========
+// ========== HANDLERS DE FOTOS ==========
 
 function configurarFotoPerfil(elements) {
     if (!elements.profileCircle) return;
     
-    // Solo configurar para foto de perfil
     elements.profileCircle.addEventListener('click', () => {
         if (elements.profileInput) elements.profileInput.click();
     });
@@ -462,22 +634,18 @@ function configurarFotoPerfil(elements) {
 }
 
 function mostrarModalFoto(file, type, elements) {
-    // Solo permitir para foto de perfil
     if (type !== 'profile') return;
     
-    // Validar archivo
-    const maxSize = 5; // MB
+    const maxSize = 5;
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
     
     if (!validTypes.includes(file.type)) {
-        mostrarMensaje(elements.mainMessage, 'error', 
-            'Formato no válido. Use JPG, PNG o GIF');
+        mostrarMensaje(elements.mainMessage, 'error', 'Formato no válido. Use JPG, PNG o GIF');
         return;
     }
     
     if (file.size > maxSize * 1024 * 1024) {
-        mostrarMensaje(elements.mainMessage, 'error', 
-            `Archivo demasiado grande. Máximo: ${maxSize}MB`);
+        mostrarMensaje(elements.mainMessage, 'error', `Archivo demasiado grande. Máximo: ${maxSize}MB`);
         return;
     }
     
@@ -486,7 +654,6 @@ function mostrarModalFoto(file, type, elements) {
     reader.onload = function(e) {
         if (elements.previewImage) elements.previewImage.src = e.target.result;
         
-        // Actualizar variables globales
         currentPhotoType = type;
         selectedFile = file;
         
@@ -496,8 +663,7 @@ function mostrarModalFoto(file, type, elements) {
         
         if (elements.modalMessage) {
             const fileSize = (file.size / (1024 * 1024)).toFixed(2);
-            elements.modalMessage.textContent = 
-                `Tamaño: ${fileSize} MB • ¿Deseas usar esta imagen?`;
+            elements.modalMessage.textContent = `Tamaño: ${fileSize} MB • ¿Deseas usar esta imagen?`;
         }
         
         if (elements.photoModal) elements.photoModal.style.display = 'flex';
@@ -512,7 +678,6 @@ function configurarModal(elements, userManager) {
     elements.confirmChangeBtn.addEventListener('click', async () => {
         if (!selectedFile || !window.currentCollaborator) return;
         
-        // Solo permitir foto de perfil
         if (currentPhotoType !== 'profile') return;
         
         const reader = new FileReader();
@@ -522,7 +687,6 @@ function configurarModal(elements, userManager) {
             try {
                 const collaborator = window.currentCollaborator;
                 
-                // Actualizar solo foto de perfil usando UserManager
                 const success = await userManager.updateUser(
                     collaborator.id,
                     { fotoUsuario: imageBase64 },
@@ -531,7 +695,6 @@ function configurarModal(elements, userManager) {
                 );
                 
                 if (success) {
-                    // Actualizar interfaz
                     if (elements.profileImage) {
                         elements.profileImage.src = imageBase64;
                         elements.profileImage.style.display = 'block';
@@ -540,7 +703,6 @@ function configurarModal(elements, userManager) {
                         elements.profilePlaceholder.style.display = 'none';
                     }
                     
-                    // Actualizar objeto en memoria
                     collaborator.fotoUsuario = imageBase64;
                     
                     Swal.fire({
@@ -603,16 +765,43 @@ function configurarGuardado(elements, userManager) {
     if (!elements.saveChangesBtn || !window.currentCollaborator) return;
     
     elements.saveChangesBtn.addEventListener('click', async () => {
-        // Validar nombre completo
         if (!elements.fullName || !elements.fullName.value.trim()) {
             mostrarMensaje(elements.mainMessage, 'error', 'El nombre completo es obligatorio');
             if (elements.fullName) elements.fullName.focus();
             return;
         }
         
+        if (!elements.areaSelect || !elements.areaSelect.value) {
+            mostrarMensaje(elements.mainMessage, 'error', 'Debes seleccionar un área');
+            if (elements.areaSelect) elements.areaSelect.focus();
+            return;
+        }
+        
+        if (!elements.cargoEnAreaSelect || !elements.cargoEnAreaSelect.value) {
+            mostrarMensaje(elements.mainMessage, 'error', 'Debes seleccionar un cargo en el área');
+            if (elements.cargoEnAreaSelect) elements.cargoEnAreaSelect.focus();
+            return;
+        }
+        
         const collaborator = window.currentCollaborator;
         
-        // Mostrar confirmación
+        let areaNombre = 'No asignada';
+        let cargoNombre = 'No asignado';
+        let cargoDescripcion = '';
+        
+        const areas = elements.areaSelect._areasData || [];
+        const areaSeleccionada = areas.find(a => a.id === elements.areaSelect.value);
+        if (areaSeleccionada) {
+            areaNombre = areaSeleccionada.nombreArea;
+        }
+        
+        const cargosData = elements.cargoEnAreaSelect._cargosData || {};
+        const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect.value];
+        if (cargoSeleccionado) {
+            cargoNombre = cargoSeleccionado.nombre || 'Cargo sin nombre';
+            cargoDescripcion = cargoSeleccionado.descripcion || '';
+        }
+        
         const result = await Swal.fire({
             title: '¿Guardar cambios?',
             html: `
@@ -625,7 +814,9 @@ function configurarGuardado(elements, userManager) {
                     </p>
                     <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
                         <p><strong>Nombre:</strong> ${elements.fullName.value}</p>
-                        <p><strong>Status:</strong> ${elements.statusInput.value === 'active' ? 'Activo' : 'Inactivo'}</p>
+                        <p><strong>Área asignada:</strong> ${areaNombre}</p>
+                        <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
+                        <p><strong>Status:</strong> ${elements.statusInput.value === 'active' ? 'Activo' : elements.statusInput.value === 'inactive' ? 'Inactivo' : 'Pendiente'}</p>
                     </div>
                 </div>
             `,
@@ -647,7 +838,6 @@ function configurarGuardado(elements, userManager) {
         
         if (!result.isConfirmed) return;
         
-        // Mostrar loader
         Swal.fire({
             title: 'Guardando cambios...',
             allowOutsideClick: false,
@@ -660,7 +850,6 @@ function configurarGuardado(elements, userManager) {
         });
         
         try {
-            // Obtener permisos seleccionados
             const permisosPersonalizados = {};
             if (elements.permissionCheckboxes) {
                 elements.permissionCheckboxes.forEach(checkbox => {
@@ -668,14 +857,17 @@ function configurarGuardado(elements, userManager) {
                 });
             }
             
-            // Preparar datos a actualizar
             const updateData = {
                 nombreCompleto: elements.fullName.value.trim(),
                 status: elements.statusInput.value === 'active',
+                areaAsignadaId: elements.areaSelect.value,
+                areaAsignadaNombre: areaNombre,
+                cargoAsignadoId: elements.cargoEnAreaSelect.value,
+                cargoAsignadoNombre: cargoNombre,
+                cargoAsignadoDescripcion: cargoDescripcion,
                 permisosPersonalizados: permisosPersonalizados
             };
             
-            // Actualizar usando UserManager
             await userManager.updateUser(
                 collaborator.id,
                 updateData,
@@ -683,10 +875,8 @@ function configurarGuardado(elements, userManager) {
                 collaborator.organizacionCamelCase
             );
             
-            // Actualizar el objeto en memoria
             Object.assign(collaborator, updateData);
             
-            // Actualizar timestamp
             const now = new Date();
             if (elements.lastUpdateDate) {
                 elements.lastUpdateDate.textContent = now.toLocaleDateString('es-MX');
@@ -698,7 +888,6 @@ function configurarGuardado(elements, userManager) {
                 });
             }
             
-            // Mostrar éxito
             Swal.close();
             Swal.fire({
                 icon: 'success',
@@ -755,7 +944,6 @@ function configurarCambioPassword(elements, userManager) {
             return;
         }
         
-        // Mostrar confirmación
         const result = await Swal.fire({
             title: '¿ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA?',
             html: `
@@ -799,7 +987,6 @@ function configurarCambioPassword(elements, userManager) {
         
         if (!result.isConfirmed) return;
         
-        // Mostrar loader
         Swal.fire({
             title: 'Enviando enlace...',
             html: 'Por favor espera mientras procesamos tu solicitud.',
@@ -815,21 +1002,18 @@ function configurarCambioPassword(elements, userManager) {
         });
         
         try {
-            // Importar auth de Firebase
             const firebaseModule = await import('/config/firebase-config.js');
             const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js");
             
             const actionCodeSettings = {
-                url: 'https://centinela-mx.web.app/verifyEmail.html',
+                url: window.location.origin + '/verifyEmail.html',
                 handleCodeInApp: false
             };
             
             await sendPasswordResetEmail(firebaseModule.auth, userEmail, actionCodeSettings);
             
-            // Cerrar loader
             Swal.close();
             
-            // Mostrar éxito
             await Swal.fire({
                 icon: 'success',
                 title: '¡ENLACE ENVIADO EXITOSAMENTE!',
@@ -873,12 +1057,10 @@ function configurarCambioPassword(elements, userManager) {
             });
             
         } catch (error) {
-            // Cerrar loader
             Swal.close();
             
             console.error('❌ Error enviando correo:', error);
             
-            // Manejar errores específicos
             let errorMessage = 'Ocurrió un error al enviar el correo';
             
             switch(error.code) {
@@ -929,7 +1111,6 @@ function configurarEliminacion(elements, userManager) {
         const collaborator = window.currentCollaborator;
         const fullName = elements.fullName.value || collaborator.nombreCompleto;
         
-        // Mostrar confirmación de eliminación
         const result = await Swal.fire({
             title: '¿INHABILITAR COLABORADOR?',
             html: `
@@ -979,7 +1160,6 @@ function configurarEliminacion(elements, userManager) {
         });
         
         if (result.isDenied) {
-            // Solo cambiar status a inactivo
             elements.statusInput.value = 'inactive';
             elements.statusOptions.forEach(opt => {
                 opt.classList.remove('selected');
@@ -1007,7 +1187,6 @@ function configurarEliminacion(elements, userManager) {
         
         if (!result.isConfirmed) return;
         
-        // Mostrar loader
         Swal.fire({
             title: 'Inhabilitando colaborador...',
             allowOutsideClick: false,
@@ -1020,7 +1199,6 @@ function configurarEliminacion(elements, userManager) {
         });
         
         try {
-            // Inhabilitar usando UserManager
             await userManager.inhabilitarUsuario(
                 collaborator.id,
                 'colaborador',
@@ -1028,7 +1206,6 @@ function configurarEliminacion(elements, userManager) {
                 'Inhabilitado por administrador'
             );
             
-            // Actualizar interfaz
             elements.statusInput.value = 'inactive';
             elements.statusOptions.forEach(opt => {
                 opt.classList.remove('selected');
@@ -1037,10 +1214,8 @@ function configurarEliminacion(elements, userManager) {
                 }
             });
             
-            // Actualizar objeto en memoria
             collaborator.eliminado = true;
             
-            // Mostrar éxito
             Swal.close();
             Swal.fire({
                 icon: 'success',
@@ -1068,7 +1243,6 @@ function configurarEliminacion(elements, userManager) {
                 }
             });
             
-            // Redirigir después de 3 segundos
             setTimeout(() => {
                 window.location.href = 'gestionColaboradores.html';
             }, 3000);

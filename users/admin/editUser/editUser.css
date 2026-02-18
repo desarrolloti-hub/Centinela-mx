@@ -329,13 +329,193 @@ body {
 .form-input-field[type="select"],
 select.form-input-field {
     appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c0c0c0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
-    background-size: 0.85rem;
-    padding-right: 2.25rem;
+    background-size: 1rem;
+    padding-right: 2.5rem;
     cursor: pointer;
-    font-size: 0.85rem;
+}
+
+/* ===== ESTILOS ROBUSTOS PARA OPTIONS EN DIFERENTES NAVEGADORES ===== */
+
+/* Chrome, Safari, Edge, Opera */
+select.form-input-field option {
+    background-color: var(--color-bg-tertiary) !important;
+    color: var(--color-text-primary) !important;
+    padding: 12px !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.9rem !important;
+}
+
+select.form-input-field option:hover {
+    background-color: var(--color-accent-primary) !important;
+    color: var(--color-text-dark) !important;
+}
+
+select.form-input-field option:checked {
+    background-color: var(--color-accent-secondary) !important;
+    color: var(--color-text-dark) !important;
+    font-weight: 700 !important;
+}
+
+select.form-input-field option:active {
+    background-color: var(--color-accent-primary) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* ===== FIREFOX - requiere estilos especiales ===== */
+@-moz-document url-prefix() {
+    select.form-input-field {
+        background-color: var(--color-bg-tertiary) !important;
+        color: var(--color-text-primary) !important;
+        padding: 0.75rem 1rem !important;
+        text-indent: 0.01px;
+        text-overflow: '';
+    }
+    
+    select.form-input-field option {
+        background-color: var(--color-bg-tertiary) !important;
+        color: var(--color-text-primary) !important;
+        padding: 12px !important;
+    }
+    
+    select.form-input-field option:checked {
+        background-color: var(--color-accent-secondary) !important;
+        color: var(--color-text-dark) !important;
+        box-shadow: 0 0 10px 100px var(--color-accent-secondary) inset !important;
+    }
+    
+    select.form-input-field option:hover {
+        background-color: var(--color-accent-primary) !important;
+        color: var(--color-text-dark) !important;
+    }
+    
+    /* Para Firefox en Windows */
+    select.form-input-field:-moz-focusring {
+        color: transparent !important;
+        text-shadow: 0 0 0 var(--color-text-primary) !important;
+    }
+}
+
+/* ===== PARA EL PANEL DESPLEGABLE EN CHROME ===== */
+select.form-input-field:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.3);
+}
+
+/* Forzar fondo oscuro para el dropdown */
+select.form-input-field > option,
+select.form-input-field optgroup {
+    background-color: var(--color-bg-tertiary) !important;
+    color: var(--color-text-primary) !important;
+}
+
+/* Estilo para el contenedor del dropdown en Chrome */
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+    select.form-input-field {
+        background-color: var(--color-bg-tertiary) !important;
+    }
+    
+    select.form-input-field:focus {
+        background-color: var(--color-bg-tertiary) !important;
+    }
+    
+    select.form-input-field optgroup,
+    select.form-input-field option {
+        background-color: var(--color-bg-tertiary) !important;
+        color: var(--color-text-primary) !important;
+        -webkit-text-fill-color: var(--color-text-primary) !important;
+    }
+}
+
+/* ===== ESTILO PARA EL BORDE CUANDO ESTÁ ABIERTO ===== */
+select.form-input-field:active,
+select.form-input-field:focus-within {
+    border-color: var(--color-accent-primary);
+}
+
+/* ===== MENSAJE DE ERROR CUANDO NO HAY OPCIONES ===== */
+select.form-input-field option:disabled {
+    color: var(--color-text-secondary) !important;
+    opacity: 0.7;
+}
+
+/* ===== SCROLLBAR PERSONALIZADA PARA EL DROPDOWN ===== */
+select.form-input-field::-webkit-scrollbar {
+    width: 8px;
+    background-color: var(--color-bg-secondary);
+}
+
+select.form-input-field::-webkit-scrollbar-thumb {
+    background-color: var(--color-accent-primary);
+    border-radius: 4px;
+}
+
+select.form-input-field::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-accent-secondary);
+}
+
+select.form-input-field::-webkit-scrollbar-track {
+    background-color: var(--color-bg-tertiary);
+}
+
+/* ===== RESPONSIVE PARA SELECTS ===== */
+@media (max-width: 768px) {
+    select.form-input-field {
+        font-size: 16px !important; /* Evita zoom automático en iOS */
+        padding: 0.875rem 1rem !important;
+    }
+    
+    select.form-input-field option {
+        font-size: 16px !important;
+        padding: 15px !important;
+    }
+}
+
+/* ===== ANIMACIÓN SUAVE AL ABRIR/CERRAR ===== */
+select.form-input-field {
+    transition: all 0.2s ease;
+}
+
+select.form-input-field:hover {
+    border-color: var(--color-accent-primary);
+    background-color: var(--color-hover);
+}
+
+/* ===== ESTILO PARA SELECT DESHABILITADO ===== */
+select.form-input-field:disabled,
+select.form-input-field[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-border-light);
+}
+
+select.form-input-field:disabled option {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+/* ===== SOPORTE PARA TEMAS CLARO/OSCURO ===== */
+[data-theme="light"] select.form-input-field option {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+}
+
+[data-theme="dark"] select.form-input-field option {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+/* ===== RESPALDO PARA CUALQUIER OTRO NAVEGADOR ===== */
+select.form-input-field option:any-link,
+select.form-input-field option:any {
+    background-color: var(--color-bg-tertiary) !important;
+    color: var(--color-text-primary) !important;
 }
 
 /* ========== CAMPOS DE SOLO LECTURA ========== */

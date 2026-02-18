@@ -1,7 +1,7 @@
 // ARCHIVO JS PARA CREAR COLABORADOR
-
-// Importar las clases correctamente desde user.js
+// ==================== IMPORTS CORREGIDOS ====================
 import { UserManager } from '/clases/user.js';
+import { AreaManager } from '/clases/area.js';
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', function() {
@@ -32,6 +32,9 @@ async function initCollaboratorForm() {
         
         // Configurar interfaz con datos del admin
         actualizarInterfazConAdmin(elements, currentAdmin);
+        
+        // Cargar áreas desde Firebase usando AreaManager
+        await cargarAreas(elements, currentAdmin);
         
         // Configurar handlers
         configurarHandlers(elements, userManager, currentAdmin);
@@ -66,6 +69,10 @@ function obtenerElementosDOM() {
             nombreCompleto: document.getElementById('nombreCompleto'),
             correoElectronico: document.getElementById('correoElectronico'),
             rol: document.getElementById('rol'),
+            // SELECTORES
+            areaSelect: document.getElementById('areaSelect'),
+            cargoEnAreaSelect: document.getElementById('cargoEnAreaSelect'),
+            
             contrasena: document.getElementById('contrasena'),
             confirmarContrasena: document.getElementById('confirmarContrasena'),
             
@@ -250,6 +257,108 @@ function mostrarMensajeInfoAdmin(element, admin) {
     element.style.display = 'block';
 }
 
+// ========== FUNCIONES PARA CARGAR ÁREAS Y CARGOS ==========
+
+async function cargarAreas(elements, admin) {
+    if (!elements.areaSelect) return;
+    
+    try {
+        // Usar AreaManager para obtener las áreas (igual que en editUser.js)
+        const areaManager = new AreaManager();
+        
+        console.log('🔍 Cargando áreas para organización:', admin.organizacionCamelCase);
+        
+        elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
+        elements.areaSelect.disabled = true;
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
+        elements.cargoEnAreaSelect.disabled = true;
+        
+        const areas = await areaManager.getAreasByOrganizacion(admin.organizacionCamelCase);
+        
+        // Guardar las áreas en el elemento select para usarlas después
+        elements.areaSelect._areasData = areas;
+        
+        if (areas.length === 0) {
+            elements.areaSelect.innerHTML = '<option value="">No hay áreas disponibles</option>';
+            elements.areaSelect.disabled = false;
+            return;
+        }
+        
+        let options = '<option value="">Selecciona un área</option>';
+        areas.forEach(area => {
+            options += `<option value="${area.id}">${area.nombreArea}</option>`;
+        });
+        elements.areaSelect.innerHTML = options;
+        elements.areaSelect.disabled = false;
+        
+    } catch (error) {
+        console.error('❌ Error cargando áreas:', error);
+        elements.areaSelect.innerHTML = '<option value="">Error al cargar áreas</option>';
+        elements.areaSelect.disabled = false;
+        
+        Swal.fire({
+            icon: 'warning',
+            title: 'Error al cargar áreas',
+            text: 'No se pudieron cargar las áreas. Por favor, recarga la página.',
+            confirmButtonText: 'ENTENDIDO',
+            confirmButtonColor: 'var(--color-warning, #ffcc00)',
+            customClass: {
+                popup: 'swal2-popup',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm'
+            }
+        });
+    }
+}
+
+function cargarCargosPorArea(elements) {
+    if (!elements.areaSelect || !elements.cargoEnAreaSelect) return;
+    
+    const areaId = elements.areaSelect.value;
+    const areas = elements.areaSelect._areasData || [];
+    
+    // Resetear selector de cargos
+    elements.cargoEnAreaSelect.innerHTML = '';
+    elements.cargoEnAreaSelect.disabled = true;
+    
+    if (!areaId) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
+        return;
+    }
+    
+    // Buscar el área seleccionada
+    const areaSeleccionada = areas.find(a => a.id === areaId);
+    
+    if (!areaSeleccionada) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Área no encontrada</option>';
+        return;
+    }
+    
+    // Obtener cargos del área
+    const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
+    
+    if (cargos.length === 0) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Esta área no tiene cargos</option>';
+    } else {
+        let options = '<option value="">Selecciona un cargo</option>';
+        cargos.forEach((cargo, index) => {
+            // Usar el ID real del cargo si existe
+            const cargoId = cargo.id || `cargo_${index}_${Date.now()}`;
+            options += `<option value="${cargoId}">${cargo.nombre || 'Cargo sin nombre'}</option>`;
+            
+            // Guardar los datos del cargo en el option para recuperarlos después
+            if (!elements.cargoEnAreaSelect._cargosData) {
+                elements.cargoEnAreaSelect._cargosData = {};
+            }
+            elements.cargoEnAreaSelect._cargosData[cargoId] = cargo;
+        });
+        elements.cargoEnAreaSelect.innerHTML = options;
+    }
+    
+    elements.cargoEnAreaSelect.disabled = false;
+}
+
 // ========== MANEJO DE IMÁGENES ==========
 
 function configurarHandlers(elements, userManager, admin) {
@@ -276,6 +385,11 @@ function configurarHandlers(elements, userManager, admin) {
                 }
             });
         });
+    }
+    
+    // Evento para cuando cambia el área seleccionada
+    if (elements.areaSelect) {
+        elements.areaSelect.addEventListener('change', () => cargarCargosPorArea(elements));
     }
     
     // Validación en tiempo real
@@ -459,9 +573,19 @@ function validarFormulario(elements) {
         errores.push('Las contraseñas no coinciden');
     }
     
-    // Rol
+    // Rol en el sistema
     if (elements.rol && !elements.rol.value) {
-        errores.push('Debes seleccionar un rol');
+        errores.push('Debes seleccionar un rol en el sistema');
+    }
+    
+    // Validar área seleccionada
+    if (elements.areaSelect && !elements.areaSelect.value) {
+        errores.push('Debes seleccionar un área');
+    }
+    
+    // Validar cargo en el área seleccionado
+    if (elements.cargoEnAreaSelect && !elements.cargoEnAreaSelect.value) {
+        errores.push('Debes seleccionar un cargo en el área');
     }
     
     return errores;
@@ -505,6 +629,28 @@ async function registrarColaborador(event, elements, userManager, admin) {
         return;
     }
     
+    // Obtener datos del área y cargo seleccionados
+    let areaNombre = 'No asignada';
+    let cargoNombre = 'No asignado';
+    let cargoDescripcion = '';
+    
+    if (elements.areaSelect && elements.areaSelect.value) {
+        const areas = elements.areaSelect._areasData || [];
+        const areaSeleccionada = areas.find(a => a.id === elements.areaSelect.value);
+        if (areaSeleccionada) {
+            areaNombre = areaSeleccionada.nombreArea;
+        }
+    }
+    
+    if (elements.cargoEnAreaSelect && elements.cargoEnAreaSelect.value) {
+        const cargosData = elements.cargoEnAreaSelect._cargosData || {};
+        const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect.value];
+        if (cargoSeleccionado) {
+            cargoNombre = cargoSeleccionado.nombre || 'Cargo sin nombre';
+            cargoDescripcion = cargoSeleccionado.descripcion || '';
+        }
+    }
+    
     // Mostrar confirmación
     const confirmResult = await Swal.fire({
         title: 'CREAR COLABORADOR',
@@ -516,7 +662,10 @@ async function registrarColaborador(event, elements, userManager, admin) {
                 </div>
                 <p><strong>Nombre:</strong> ${elements.nombreCompleto.value.trim()}</p>
                 <p><strong>Email:</strong> ${elements.correoElectronico.value.trim()}</p>
-                <p><strong>Rol:</strong> ${elements.rol ? elements.rol.options[elements.rol.selectedIndex].text : 'No especificado'}</p>
+                <p><strong>Rol en sistema:</strong> ${elements.rol ? elements.rol.options[elements.rol.selectedIndex].text : 'No especificado'}</p>
+                <p><strong>Área asignada:</strong> ${areaNombre}</p>
+                <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
+                ${cargoDescripcion ? `<p><small>Descripción del cargo: ${cargoDescripcion}</small></p>` : ''}
                 <p><strong>Plan heredado:</strong> ${admin.plan ? admin.plan.toUpperCase() : 'GRATIS'}</p>
                 <p style="color: var(--color-warning, #ff9800); margin-top: 15px;">
                     <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación al colaborador.
@@ -569,6 +718,13 @@ async function registrarColaborador(event, elements, userManager, admin) {
             fotoOrganizacion: admin.fotoOrganizacion,
             theme: admin.theme || 'light',
             plan: admin.plan || 'gratis',
+            
+            // Área y cargo asignados
+            areaAsignadaId: elements.areaSelect ? elements.areaSelect.value : null,
+            areaAsignadaNombre: areaNombre,
+            cargoAsignadoId: elements.cargoEnAreaSelect ? elements.cargoEnAreaSelect.value : null,
+            cargoAsignadoNombre: cargoNombre,
+            cargoAsignadoDescripcion: cargoDescripcion,
             
             // Campos específicos
             rol: elements.rol ? elements.rol.value : 'colaborador',
@@ -626,7 +782,9 @@ async function mostrarExitoRegistro(colaboradorData) {
                 <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
                     <p><strong>Nombre:</strong> ${colaboradorData.nombreCompleto}</p>
                     <p><strong>Email:</strong> ${colaboradorData.correoElectronico}</p>
-                    <p><strong>Rol:</strong> ${colaboradorData.rol.toUpperCase()}</p>
+                    <p><strong>Rol en sistema:</strong> ${colaboradorData.rol.toUpperCase()}</p>
+                    <p><strong>Área asignada:</strong> ${colaboradorData.areaAsignadaNombre}</p>
+                    <p><strong>Cargo:</strong> ${colaboradorData.cargoAsignadoNombre}</p>
                     <p><strong>Organización:</strong> ${colaboradorData.organizacion}</p>
                     <p><strong>Creado por:</strong> ${colaboradorData.creadoPorNombre}</p>
                 </div>
