@@ -313,24 +313,25 @@ class AreasController {
         celda.colSpan = 7;
         celda.className = 'p-0';
         
-        let cargosHTML = '';
-        
-        if (cantidad === 0) {
-            cargosHTML = '<div class="cargos-empty-detalle"><i class="fas fa-info-circle me-2"></i>Esta área no tiene cargos asignados</div>';
-        } else {
-            cargosHTML = cargos.map(cargo => `
-                <div class="cargo-item-detalle">
-                    <div class="cargo-nombre">
-                        <i class="fas fa-user-tie"></i>
-                        ${cargo.nombre || 'Sin nombre'}
-                    </div>
-                    <div class="cargo-descripcion">
-                        ${cargo.descripcion || 'Sin descripción'}
-                    </div>
-                </div>
-            `).join('');
-        }
-        
+     
+
+let cargosHTML = '';
+
+if (cargos.length === 0) {
+    cargosHTML = '<div class="swal-cargos-empty">Esta área no tiene cargos asignados</div>';
+} else {
+    cargosHTML = cargos.map((cargo, index) => `
+        <div class="swal-cargo-item-simple">
+            <div class="swal-cargo-nombre-simple">
+                <i class="fas fa-user-tie"></i>
+                ${cargo.nombre || 'Sin nombre'}
+            </div>
+            <div class="swal-cargo-descripcion-simple">
+                ${cargo.descripcion || 'Sin descripción'}
+            </div>
+        </div>
+    `).join('');
+}
         celda.innerHTML = `
             <div class="cargos-dropdown">
                 <div class="cargos-dropdown-header">
@@ -424,97 +425,78 @@ class AreasController {
     
     // ========== VER DETALLES CON SWEETALERT ==========
     
-    async verDetalles(areaId) {
-        try {
-            const area = this.areas.find(a => a.id === areaId);
-            if (!area) {
-                this.mostrarError('Área no encontrada');
-                return;
-            }
-            
-            const cargos = area.getCargosAsArray();
-            const cantidadCargos = area.getCantidadCargos();
-            
-            let cargosHTML = '';
-            
-            if (cargos.length === 0) {
-                cargosHTML = '<div class="swal-cargos-empty">Esta área no tiene cargos asignados</div>';
-            } else {
-                cargosHTML = cargos.map((cargo, index) => `
-                    <div class="swal-cargo-item">
-                        <div class="swal-cargo-header">
-                            <span class="swal-cargo-nombre">
-                                <i class="fas fa-user-tie"></i>
-                                ${cargo.nombre || 'Sin nombre'}
-                            </span>
-                            <span class="swal-cargo-badge">Cargo #${index + 1}</span>
-                        </div>
-                        <div class="swal-cargo-descripcion">
-                            ${cargo.descripcion || 'Sin descripción'}
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            Swal.fire({
-                title: `<div class="swal-detalles-titulo"><i class="fas fa-building"></i> ${area.nombreArea}</div>`,
-                html: `
-                    <div class="swal-detalles-container">
-                        <div class="swal-estado-organizacion">
-                            <span class="swal-estado-badge"><i class="fas fa-circle"></i> Activa</span>
-                            <span class="swal-organizacion"><i class="fas fa-building"></i> ${area.nombreOrganizacion || this.userManager.currentUser.organizacion}</span>
-                        </div>
-                        
-                        <div class="swal-seccion">
-                            <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> Descripción</h6>
-                            <p class="swal-descripcion">${area.descripcion || 'No hay descripción disponible para esta área.'}</p>
-                        </div>
-                        
-                        <div class="swal-seccion">
-                            <div class="swal-cargos-titulo">
-                                <h6 class="swal-seccion-titulo"><i class="fas fa-briefcase"></i> Cargos</h6>
-                                <span class="swal-cargos-count">${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}</span>
-                            </div>
-                            <div class="swal-cargos-container">${cargosHTML}</div>
-                        </div>
-                        
-                        <div class="swal-info-sistema">
-                            <h6 class="swal-seccion-titulo"><i class="fas fa-info-circle"></i> Información del Sistema</h6>
-                            <div class="swal-info-grid">
-                                <div><small>ID del Área</small><code>${area.id}</code></div>
-                                <div><small>Colección</small><code>areas_${this.userManager.currentUser.organizacionCamelCase}</code></div>
-                                <div><small>Fecha Creación</small><span><i class="fas fa-calendar"></i> ${area.getFechaCreacionFormateada?.() || 'No disponible'}</span></div>
-                                <div><small>Última Actualización</small><span><i class="fas fa-clock"></i> ${area.getFechaActualizacionFormateada?.() || 'No disponible'}</span></div>
-                                <div class="swal-info-full"><small>Creado por</small><span><i class="fas fa-user"></i> ${area.creadoPor || this.userManager.currentUser.nombreCompleto}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                `,
-                icon: 'info',
-                iconColor: 'var(--color-accent-secondary, #2f8cff)',
-                confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
-                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
-                showCancelButton: true,
-                cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
-                cancelButtonColor: 'var(--color-bg-tertiary, #545454)',
-                customClass: {
-                    popup: 'swal2-popup swal-detalles',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm',
-                    cancelButton: 'swal2-cancel'
-                },
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    this.irAEditarArea(area.id);
-                }
-            });
-        } catch (error) {
-            this.mostrarError('Error: ' + error.message);
+// ========== VER DETALLES CON SWEETALERT ==========
+// ========== VER DETALLES CON SWEETALERT ==========
+async verDetalles(areaId) {
+    try {
+        const area = this.areas.find(a => a.id === areaId);
+        if (!area) {
+            this.mostrarError('Área no encontrada');
+            return;
         }
+        
+        const cantidadCargos = area.getCantidadCargos();
+        
+        Swal.fire({
+            title: `<div class="swal-titulo-container">
+                <div class="swal-titulo-area">
+                    <i class="fas fa-building"></i> Área: ${area.nombreArea}
+                </div>
+                <div class="swal-estado-badge">Activa</div>
+            </div>`,
+            html: `
+                <div class="swal-detalles-container-vertical">
+                    <!-- DESCRIPCIÓN -->
+                    <div class="swal-seccion-horizontal">
+                        <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> Descripción del Área</h6>
+                        <p class="swal-descripcion-horizontal">${area.descripcion || 'No hay descripción disponible para esta área.'}</p>
+                    </div>
+                    
+                    <!-- SOLO TEXTO DE CARGOS (SIN NINGÚN ADORNO) -->
+                    <div class="swal-seccion-horizontal">
+                        <h6 class="swal-seccion-titulo"><i class="fas fa-briefcase"></i> Cargos (${cantidadCargos})</h6>
+                        <!-- NADA MÁS AQUÍ -->
+                    </div>
+                    
+                    <!-- INFORMACIÓN DEL SISTEMA -->
+                    <div class="swal-info-sistema-horizontal">
+                        <h6 class="swal-seccion-titulo"><i class="fas fa-info-circle"></i> Información del Sistema</h6>
+                        <div class="swal-info-grid-horizontal">
+                            <div class="swal-info-item">
+                                <small>Fecha Creación</small>
+                                <span><i class="fas fa-calendar"></i> ${area.getFechaCreacionFormateada?.() || 'No disponible'}</span>
+                            </div>
+                            <div class="swal-info-item">
+                                <small>Última Actualización</small>
+                                <span><i class="fas fa-clock"></i> ${area.getFechaActualizacionFormateada?.() || 'No disponible'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            icon: null,
+            confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
+            confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
+            showCancelButton: true,
+            cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
+            cancelButtonColor: 'var(--color-bg-tertiary, #545454)',
+            customClass: {
+                popup: 'swal2-popup swal-detalles-nuevo',
+                title: 'swal2-title swal-titulo-personalizado',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
+            },
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.irAEditarArea(area.id);
+            }
+        });
+    } catch (error) {
+        this.mostrarError('Error: ' + error.message);
     }
-    
+}
     // ========== INTERFAZ ==========
     
     actualizarTabla() {

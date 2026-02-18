@@ -20,7 +20,7 @@
     <!-- ESTILOS DEL NAVBAR Y FOOTER (personalization.css) -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
 
-    <!-- TUS ESTILOS - CON DISEÑO MEJORADO (ESTILO THEME MANAGER) -->
+    <!-- TUS ESTILOS - CON DISEÑO MEJORADO (ahora como áreas) -->
     <link rel="stylesheet" href="categorias.css">
 
     <!-- Favicon -->
@@ -32,7 +32,7 @@
 
     <!-- Contenedor principal con estilo Theme Manager -->
     <div class="admin-container">
-        <!-- Page Header - EXACTAMENTE COMO EL THEME MANAGER (SOBRE EL FONDO) -->
+        <!-- Page Header -->
         <div class="page-header">
             <h1>
                 <i class="fas fa-tags"></i>
@@ -44,7 +44,7 @@
             </div>
         </div>
 
-        <!-- Tabla de Categorías (dentro de su propia tarjeta) -->
+        <!-- Tabla de Categorías -->
         <div class="card">
             <div class="card-header">
                 <h5><i class="fas fa-list"></i> Lista de Categorías</h5>
@@ -57,7 +57,7 @@
                     <table class="table" id="tablaCategorias">
                         <thead>
                             <tr>
-                                <th width="30"><i class="fas fa-chevron-down"></i></th>
+                                <th width="50"></th>
                                 <th>Nombre</th>
                                 <th>Color</th>
                                 <th>Subcategorías</th>
@@ -83,10 +83,14 @@
         </div>
     </div>
 
-    <!-- Modal para Ver Detalles (sin botones de cierre) -->
+    <!-- Modal para Ver Detalles -->
     <div class="modal" id="modalDetalles">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
+                <div class="modal-header">
+                    <h5><i class="fas fa-info-circle"></i> <span id="modalTitulo">Detalles</span></h5>
+                    <button type="button" class="btn-close" onclick="cerrarModal('modalDetalles')">&times;</button>
+                </div>
                 <div class="modal-body" id="detallesContent">
                     <!-- Se llenará dinámicamente -->
                 </div>

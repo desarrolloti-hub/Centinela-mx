@@ -12,26 +12,26 @@
     --color-accent-secondary: #2f8cff;
     --color-border-light: #545454;
     --color-hover: #1a1a1a;
-    
+
     /* COLORES DE ESTADO */
     --color-success: #00ff95;
     --color-danger: #ff4d4d;
     --color-warning: #ffcc00;
     --color-info: #00cfff;
-    
+
     /* SOMBRAS */
     --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
     --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
-    
+
     /* BORDES */
     --border-radius-small: 5px;
     --border-radius-medium: 10px;
     --border-radius-large: 15px;
-    
+
     /* TRANSICIONES */
     --transition-default: 0.3s ease;
-    
+
     /* FUENTES */
     --font-family-primary: 'Orbitron', sans-serif;
     --font-family-secondary: sans-serif;
@@ -50,10 +50,9 @@ body {
 }
 
 .container-fluid {
-    background: var(--color-bg-secondary);
     border-radius: var(--border-radius-large);
     padding: 25px;
-    border: 1px solid var(--color-border-light);
+
     box-shadow: var(--shadow-normal);
     max-width: min(1200px, 95vw);
     margin: 0 auto;
@@ -64,10 +63,10 @@ body {
    HEADER PRINCIPAL
    ============================================= */
 .row.mb-4:first-child {
-    background: rgba(15, 15, 15, 0.9);
+
     padding: 20px 25px;
     border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-border-light);
+
     margin-bottom: 30px !important;
     box-shadow: var(--shadow-normal);
 }
@@ -76,6 +75,7 @@ h1.h3 {
     font-family: var(--font-family-primary);
     color: var(--color-text-primary);
     font-size: clamp(22px, 4vw, 26px);
+    text-align: center;
     text-transform: uppercase;
     letter-spacing: 1px;
     margin: 0;
@@ -101,14 +101,14 @@ h1.h3 i {
    ============================================= */
 #btnVolverLista {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-border-light) !important;
+    border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
     padding: 12px 25px !important;
     border-radius: var(--border-radius-medium) !important;
     font-weight: 600 !important;
     font-family: var(--font-family-primary) !important;
     font-size: 14px !important;
-    min-width: 150px !important;
+    min-width: 200px !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
     transition: all 0.3s ease !important;
@@ -116,6 +116,8 @@ h1.h3 i {
     align-items: center !important;
     gap: 10px !important;
     justify-content: center !important;
+    position: relative;
+    overflow: hidden;
 }
 
 #btnVolverLista:hover {
@@ -201,7 +203,8 @@ h6 i {
     content: "" !important;
 }
 
-.form-control, .form-select {
+.form-control,
+.form-select {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
@@ -211,7 +214,8 @@ h6 i {
     font-family: var(--font-family-secondary) !important;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
     border-color: var(--color-accent-secondary) !important;
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
     background: var(--color-bg-secondary) !important;
@@ -284,7 +288,9 @@ h6 i {
     margin-top: 20px;
 }
 
-#btnCancelar, #btnGuardarBorrador, #btnCrearArea {
+#btnCancelar,
+#btnGuardarBorrador,
+#btnCrearArea {
     padding: 12px 30px !important;
     font-family: var(--font-family-secondary) !important;
     font-weight: 600 !important;
@@ -394,7 +400,8 @@ h6 i {
     color: var(--color-success) !important;
 }
 
-#btnCrearOtra, #btnVerArea {
+#btnCrearOtra,
+#btnVerArea {
     padding: 10px 20px !important;
     font-family: var(--font-family-secondary) !important;
     font-weight: 600 !important;
@@ -526,6 +533,7 @@ h6 i {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -541,38 +549,40 @@ h6 i {
     .container-fluid {
         padding: 20px !important;
     }
-    
+
     .row.mb-4:first-child {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 20px !important;
         padding: 20px !important;
     }
-    
+
     #btnVolverLista {
         width: 100% !important;
         max-width: 300px !important;
     }
-    
+
     .card-body {
         padding: 20px !important;
     }
-    
-    #btnCancelar, #btnGuardarBorrador, #btnCrearArea {
+
+    #btnCancelar,
+    #btnGuardarBorrador,
+    #btnCrearArea {
         width: 100% !important;
         margin-bottom: 10px !important;
     }
-    
+
     .d-flex.justify-content-end.gap-3 {
         flex-direction: column !important;
         gap: 10px !important;
     }
-    
+
     /* Responsive para cargos */
     .cargo-item .row {
         flex-direction: column;
     }
-    
+
     .cargo-item .col-md-6 {
         width: 100%;
         margin-bottom: 10px;
@@ -584,61 +594,62 @@ h6 i {
     body {
         padding: 10px !important;
     }
-    
+
     .container-fluid {
         padding: 15px !important;
         border-radius: var(--border-radius-medium) !important;
     }
-    
+
     h1.h3 {
         font-size: 20px !important;
         justify-content: center !important;
         text-align: center !important;
     }
-    
+
     .row.mb-4:first-child {
         padding: 15px !important;
     }
-    
+
     .card-header {
         padding: 15px 20px !important;
     }
-    
+
     .card-body {
         padding: 15px !important;
     }
-    
+
     h6.border-bottom {
         font-size: 13px !important;
     }
-    
-    .form-control, .form-select {
+
+    .form-control,
+    .form-select {
         padding: 10px 12px !important;
         font-size: 14px !important;
     }
-    
+
     .input-group-text {
         padding: 10px 12px !important;
     }
-    
+
     .modal-dialog {
         margin: 0.5rem !important;
     }
-    
+
     .modal-content {
         padding: 15px !important;
         margin: 0 !important;
     }
-    
+
     /* Responsive para cargos en móvil */
     .cargos-container {
         padding: 15px !important;
     }
-    
+
     .cargo-item {
         padding: 12px !important;
     }
-    
+
     .btn-agregar-cargo {
         width: 100% !important;
         justify-content: center !important;
@@ -650,56 +661,60 @@ h6 i {
     .container-fluid {
         padding: 10px !important;
     }
-    
+
     .row.mb-4:first-child {
         padding: 12px !important;
     }
-    
+
     #btnVolverLista {
         padding: 10px 15px !important;
         font-size: 13px !important;
         min-width: auto !important;
     }
-    
+
     .card-header {
         padding: 12px 15px !important;
     }
-    
+
     .card-header h5 {
         font-size: 14px !important;
     }
-    
-    #btnCancelar, #btnGuardarBorrador, #btnCrearArea {
+
+    #btnCancelar,
+    #btnGuardarBorrador,
+    #btnCrearArea {
         padding: 10px 15px !important;
         font-size: 13px !important;
         min-width: auto !important;
     }
-    
+
     .modal-body {
         padding: 15px !important;
     }
-    
-    #btnCrearOtra, #btnVerArea {
+
+    #btnCrearOtra,
+    #btnVerArea {
         min-width: 140px !important;
         padding: 8px 15px !important;
         font-size: 13px !important;
     }
-    
+
     /* Responsive para cargos en móvil pequeño */
     .cargo-header {
         flex-direction: column;
         gap: 10px;
         align-items: flex-start;
     }
-    
+
     .btn-eliminar-cargo {
         width: 100% !important;
     }
-    
+
     .cargos-empty {
         padding: 20px !important;
     }
 }
+
 /* =============================================
    ESTILOS PARA SWEETALERT2 - TEMA OSCURO CENTINELA
    ============================================= */
@@ -717,7 +732,7 @@ h6 i {
     border-radius: var(--border-radius-large) !important;
     box-shadow: var(--shadow-large) !important;
     font-family: var(--font-family-secondary) !important;
-    
+
     /* 📏 TAMAÑO COMPACTO */
     width: 450px !important;
     padding: 0.8rem !important;
@@ -730,7 +745,7 @@ h6 i {
     font-family: var(--font-family-primary) !important;
     text-transform: uppercase;
     letter-spacing: 0.10px;
-    
+
     /* 📏 TAMAÑO COMPACTO */
     font-size: 16px !important;
     margin: 0.2rem 0 0.5rem !important;
@@ -742,7 +757,7 @@ h6 i {
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary) !important;
     line-height: 1.4;
-    
+
     /* 📏 TAMAÑO COMPACTO */
     font-size: 12px !important;
     margin: 0 !important;
@@ -791,7 +806,8 @@ h6 i {
     gap: 8px !important;
 }
 
-.swal2-confirm, .swal2-cancel {
+.swal2-confirm,
+.swal2-cancel {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-secondary) !important;
     color: var(--color-text-primary) !important;
@@ -800,7 +816,7 @@ h6 i {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
-    
+
     /* 📏 BOTONES COMPACTOS */
     font-size: 11px !important;
     padding: 6px 12px !important;
@@ -862,24 +878,104 @@ h6 i {
     color: var(--color-text-primary) !important;
     transform: rotate(90deg) !important;
 }
-  /* Estilos personalizados */
-        .organizacion-info {
-            border-left: 4px solid #3498db;
-            background-color: #1d1d1d !important;
-        }
-        
-        .organizacion-info i.fa-building {
-            color: #2c3e50;
-        }
-        
-        /* Para mostrar nombres largos */
-        select#responsable option {
-            white-space: normal !important;
-            word-wrap: break-word;
-            padding: 8px 4px;
-        }
-        
-        .form-select {
-            max-height: 200px;
-            overflow-y: auto;
-        }
+
+/* Estilos personalizados */
+.organizacion-info {
+    border-left: 4px solid #3498db;
+    background-color: #1d1d1d !important;
+}
+
+.organizacion-info i.fa-building {
+    color: #2c3e50;
+}
+
+/* Para mostrar nombres largos */
+select#responsable option {
+    white-space: normal !important;
+    word-wrap: break-word;
+    padding: 8px 4px;
+}
+
+.form-select {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* =============================================
+   HEADER CENTRADO - CON LÍNEA DECORATIVA
+   ============================================= */
+.header-container {
+    background: transparent !important;
+    padding: 0 0 30px 0;
+    margin-bottom: 20px;
+    position: relative;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    text-align: center !important;
+}
+
+.header-title {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto !important;
+}
+
+.header-title h1 {
+    font-family: var(--font-family-primary);
+    color: var(--color-text-primary);
+    font-size: clamp(24px, 4vw, 32px);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0 0 15px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-shadow: 0 0 10px var(--color-accent-primary);
+}
+
+.header-title h1 i {
+
+    font-size: 28px;
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+
+}
+
+.header-title .header-description {
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 auto;
+    position: relative;
+    padding: 0 20px;
+    border-bottom: 2px solid var(--color-border-light);
+}
+
+/* Línea decorativa superior */
+.header-title .header-description::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+    border-bottom: 2px solid var(--color-border-light);
+}
+
+/* Línea decorativa inferior */
+.header-title .header-description::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+    border-bottom: 2px solid var(--color-border-light);
+}
