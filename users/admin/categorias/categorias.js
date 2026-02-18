@@ -1,6 +1,7 @@
 /**
  * CATEGORÍAS - Sistema Centinela
  * VERSIÓN FINAL - CON ELIMINACIÓN EN CASCADA (FORZADA) Y MODAL CORREGIDO
+ * CORREGIDO: Uso de 'rol' en lugar de 'cargo'
  */
 
 // =============================================
@@ -35,10 +36,12 @@ function obtenerDatosEmpresa() {
     try {
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         empresaActual = {
-            nombre: userData.organizacion || 'Mi Empresa'
+            // ✅ CORREGIDO: Solo se usa información de organización, no 'cargo'
+            nombre: userData.organizacion || 'Mi Empresa',
+            camelCase: userData.organizacionCamelCase || ''
         };
     } catch (error) {
-        empresaActual = { nombre: 'Mi Empresa' };
+        empresaActual = { nombre: 'Mi Empresa', camelCase: '' };
     }
 }
 
@@ -61,7 +64,7 @@ window.editarSubcategoria = function (catId, subId, event) {
 };
 
 // =============================================
-// VER DETALLES (CORREGIDO: recibe event y actualiza título del modal)
+// VER DETALLES
 // =============================================
 window.verDetalles = async function (categoriaId, event) {
     event?.stopPropagation();
@@ -71,25 +74,23 @@ window.verDetalles = async function (categoriaId, event) {
 
     let subcategoriasArray = [];
 
-    if (categoria.subcategorias) {
-        if (typeof categoria.subcategorias === 'object') {
-            if (categoria.subcategorias.forEach) {
-                // Es un Map
-                categoria.subcategorias.forEach((value, key) => {
-                    if (value && typeof value === 'object') {
-                        if (value instanceof Map) {
-                            const subObj = {};
-                            value.forEach((v, k) => { subObj[k] = v; });
-                            subcategoriasArray.push(subObj);
-                        } else {
-                            subcategoriasArray.push(value);
-                        }
+    if (categoria.subcategorias && typeof categoria.subcategorias === 'object') {
+        if (categoria.subcategorias.forEach) {
+            // Es un Map
+            categoria.subcategorias.forEach((value, key) => {
+                if (value && typeof value === 'object') {
+                    if (value instanceof Map) {
+                        const subObj = {};
+                        value.forEach((v, k) => { subObj[k] = v; });
+                        subcategoriasArray.push(subObj);
+                    } else {
+                        subcategoriasArray.push(value);
                     }
-                });
-            } else {
-                // Es un objeto plano
-                subcategoriasArray = Object.values(categoria.subcategorias);
-            }
+                }
+            });
+        } else {
+            // Es un objeto plano
+            subcategoriasArray = Object.values(categoria.subcategorias);
         }
     }
 
