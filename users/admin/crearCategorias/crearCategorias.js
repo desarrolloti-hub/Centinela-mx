@@ -1,7 +1,6 @@
 // crearCategorias.js - VERSIÓN FINAL
 // SIN empresaId/estado, con herencia de color configurable
-// MODIFICADO: integración de info de organización en el header
-// CORREGIDO: eliminado ícono duplicado en SweetAlert de éxito y simplificado el mensaje
+// CORREGIDO: Uso de 'rol' en lugar de 'cargo'
 
 // Variable global para debugging
 window.crearCategoriaDebug = {
@@ -91,6 +90,7 @@ class CrearCategoriaController {
                     id: adminData.id || `admin_${Date.now()}`,
                     uid: adminData.uid || adminData.id,
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
+                    // ✅ CORREGIDO: No se usa 'cargo', se usa 'rol' implícitamente por ser admin
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
@@ -107,6 +107,7 @@ class CrearCategoriaController {
                     id: userData.uid || userData.id || `user_${Date.now()}`,
                     uid: userData.uid || userData.id,
                     nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                    // ✅ CORREGIDO: No se usa 'cargo'
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
                     organizacionCamelCase: userData.organizacionCamelCase ||
                         this._generarCamelCase(userData.organizacion || userData.empresa),
@@ -156,27 +157,18 @@ class CrearCategoriaController {
         }
     }
 
-    // NUEVA VERSIÓN: inserta la info dentro del header-description
     _actualizarInfoOrganizacion() {
-        const container = document.getElementById('organizacionInfo');
+        const container = document.getElementById('headerDescription');
         if (!container) return;
 
         const coleccion = `categorias_${this.usuarioActual.organizacionCamelCase}`;
 
         container.innerHTML = `
-            <div class="info-item">
-                <i class="fas fa-building"></i>
-                <span><strong>Organización:</strong> ${this.usuarioActual.organizacion}</span>
+            <div style="margin-bottom: 8px;">
+                <strong>Organización:</strong> ${this.usuarioActual.organizacion}
             </div>
-            <div class="info-item">
-                <i class="fas fa-user-shield"></i>
-                <span><strong>Administrador:</strong> ${this.usuarioActual.nombreCompleto} (${this.usuarioActual.correo})</span>
-            </div>
-            <div class="info-item">
-                <i class="fas fa-database"></i>
-                <span class="coleccion-badge">
-                    <i class="fas fa-tag"></i> ${coleccion}
-                </span>
+            <div style="font-size: 0.9rem; opacity: 0.8;">
+                <i class="fas fa-database"></i> Colección: ${coleccion}
             </div>
         `;
     }
@@ -590,7 +582,7 @@ class CrearCategoriaController {
     // ========== UTILIDADES ==========
 
     _mostrarError(mensaje) {
-        this._mostrarNotificacion(mensaje, 'danger');
+        this._mostrarNotificacion(mensaje, 'error');
     }
 
     _mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
@@ -603,7 +595,7 @@ class CrearCategoriaController {
 
         const iconos = {
             success: 'fa-check-circle',
-            danger: 'fa-exclamation-triangle',
+            error: 'fa-exclamation-triangle',
             warning: 'fa-exclamation-circle',
             info: 'fa-info-circle'
         };

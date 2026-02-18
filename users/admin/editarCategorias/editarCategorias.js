@@ -1,6 +1,7 @@
 /**
  * EDITAR CATEGORÍAS - Sistema Centinela
  * VERSIÓN CORREGIDA - Sin iconos duplicados en SweetAlert
+ * CORREGIDO: Uso de 'rol' en lugar de 'cargo'
  */
 
 // =============================================
@@ -195,8 +196,6 @@ function actualizarUICategoria() {
     if (headerTitle) {
         headerTitle.textContent = 'Editar Categoría';
     }
-
-    // NO se aplica sombra personalizada; el CSS ya usa var(--color-accent-primary)
 
     // Actualizar campos del formulario
     document.getElementById('nombreCategoria').value = categoriaActual.nombre || '';
