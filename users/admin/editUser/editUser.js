@@ -201,13 +201,6 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
         
         window.currentCollaborator = collaborator;
         
-        // LOG PARA VER LOS DATOS
-        console.log('📊 DATOS COMPLETOS DEL COLABORADOR:', collaborator);
-        console.log('📊 areaAsignadaId:', collaborator.areaAsignadaId);
-        console.log('📊 areaAsignadaNombre:', collaborator.areaAsignadaNombre);
-        console.log('📊 cargoAsignadoId:', collaborator.cargoAsignadoId);
-        console.log('📊 cargoAsignadoNombre:', collaborator.cargoAsignadoNombre);
-        
         actualizarInterfaz(elements, collaborator);
         deshabilitarLogoOrganizacion(elements);
         
@@ -395,9 +388,7 @@ async function cargarAreas(userManager, elements) {
         // Usar AreaManager para obtener las áreas
         const areaManager = new AreaManager();
         const organizacionCamelCase = userManager.currentUser.organizacionCamelCase; // Del ADMIN, no del colaborador
-        
-        console.log('🔍 Cargando áreas para organización:', organizacionCamelCase);
-        
+                
         elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
         elements.areaSelect.disabled = true;
         elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
@@ -422,9 +413,7 @@ async function cargarAreas(userManager, elements) {
         elements.areaSelect.disabled = false;
         
         // Cargar área y cargo actuales
-        if (collaborator.areaAsignadaId) {
-            console.log('🔍 Área asignada encontrada:', collaborator.areaAsignadaId, collaborator.areaAsignadaNombre);
-            
+        if (collaborator.areaAsignadaId) {            
             // Verificar que el área existe en la lista
             const areaExiste = areas.some(a => a.id === collaborator.areaAsignadaId);
             
@@ -439,16 +428,13 @@ async function cargarAreas(userManager, elements) {
                 // Función para seleccionar cargo
                 const seleccionarCargo = () => {
                     // Usar el objeto `cargo` en lugar de los campos planos
-                    if (collaborator.cargo && collaborator.cargo.id) {
-                        console.log('🔍 Intentando seleccionar cargo del objeto:', collaborator.cargo);
-                        
+                    if (collaborator.cargo && collaborator.cargo.id) {                        
                         const cargoSelect = elements.cargoEnAreaSelect;
                         // Buscar la opción cuyo valor (ID del cargo) coincida con el ID guardado
                         const option = Array.from(cargoSelect.options).find(opt => opt.value === collaborator.cargo.id);
                         
                         if (option) {
                             cargoSelect.value = option.value;
-                            console.log('✅ Cargo seleccionado por ID:', collaborator.cargo.id);
                             return true;
                         } else {
                             console.warn('⚠️ No se encontró el cargo con ID:', collaborator.cargo.id);
@@ -463,7 +449,6 @@ async function cargarAreas(userManager, elements) {
                         
                         if (optionPorNombre) {
                             elements.cargoEnAreaSelect.value = optionPorNombre.value;
-                            console.log('✅ Cargo seleccionado por nombre (fallback):', collaborator.cargo.nombre);
                             return true;
                         }
                     }
