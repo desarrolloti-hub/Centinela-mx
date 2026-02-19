@@ -76,26 +76,7 @@
    VERSIÓN COMPACTA PARA DESKTOP (MEJORADA)
    ============================================= */
 
-/* Popup principal - Versión compacta */
-.swal2-popup {
-    background: linear-gradient(145deg,
-            rgba(0, 0, 0, 0.95) 0%,
-            rgba(20, 20, 20, 0.98) 100%) !important;
-    border: 1px solid var(--color-accent-primary, #c0c0c0) !important;
-    border-radius: var(--border-radius-large, 12px) !important;
-    box-shadow:
-        0 0 20px rgba(192, 192, 192, 0.15),
-        var(--shadow-large, 0 10px 25px rgba(0, 0, 0, 0.15)) !important;
-    color: var(--color-text-primary, #ffffff) !important;
-    font-family: var(--font-family-secondary, 'Orbitron', sans-serif) !important;
-    backdrop-filter: blur(10px) !important;
-    position: relative !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-    max-width: 450px !important;
-    width: auto !important;
-    font-size: 13px !important;
-}
+
 
 /* Efecto de brillo en el borde */
 .swal2-popup::before {
@@ -154,13 +135,13 @@ div:where(.swal2-container).swal2-center>.swal2-popup {
     place-self: center center;
 }
 
-/* ===== MEJORA RESPONSIVE PARA BOTONES ===== */
-.swal2-actions {
-    margin: 5px 0px 16px !important;
-    gap: 10px !important;
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-}
+    /* ===== MEJORA RESPONSIVE PARA BOTONES ===== */
+    .swal2-actions {
+        margin: 5px 0px 16px !important;
+        gap: 10px !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
 
 .swal2-confirm,
 .swal2-cancel {
