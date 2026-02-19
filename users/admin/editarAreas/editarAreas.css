@@ -1,128 +1,154 @@
 /* =============================================
-   VARIABLES GLOBALES
+   EDITAR ÁREAS - COPIA VISUAL DE CREAR ÁREAS
    ============================================= */
+
 :root {
-    --font-family-primary: 'Orbitron', sans-serif;
-    --font-family-secondary: sans-serif;
+    /* COLORES PRINCIPALES (igual que crearAreas) */
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #0a0a0a;
+    --color-bg-tertiary: #141414;
+    --color-bg-elevated: #1e1e1e;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #cccccc;
+    --color-text-tertiary: #999999;
+    --color-accent-primary: #c0c0c0;
+    --color-accent-secondary: #2f8cff;
+    --color-border-light: #545454;
+    --color-border-dark: #333333;
+    --color-hover: #1a1a1a;
     
-    /* ILUMINACIÓN - VALORES POR DEFECTO (TEMA OSCURO) */
-    --glow-intensity: 0.8;
-    --glow-color: var(--color-accent-primary);
+    /* COLORES DE ESTADO */
+    --color-success: #00ff95;
+    --color-danger: #ff4d4d;
+    --color-warning: #ffcc00;
+    --color-info: #00cfff;
+    
+    /* SOMBRAS */
+    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
+    
+    /* BORDES */
+    --border-radius-small: 5px;
+    --border-radius-medium: 10px;
+    --border-radius-large: 15px;
+    
+    /* TRANSICIONES */
+    --transition-default: 0.3s ease;
+    
+    /* FUENTES */
+    --font-family-primary: 'Orbitron', sans-serif;
+    --font-family-secondary: 'Rajdhani', sans-serif;
+    --font-family-mono: 'Courier New', monospace;
 }
 
 /* =============================================
-   HEADER CENTRADO CON ILUMINACIÓN
+   ESTILOS GENERALES (igual que crearAreas)
    ============================================= */
-.header-container {
-    background: transparent !important;
-    padding: 0 0 30px 0;
-    margin-bottom: 20px;
-    position: relative;
-    width: 100%;
-    border: none !important;
-    box-shadow: none !important;
-    text-align: center !important;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-.header-title {
-    position: relative;
-    z-index: 1;
-    max-width: 900px;
-    margin: 0 auto !important;
+body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-secondary);
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    padding-top: 80px !important;
+    line-height: 1.5;
 }
 
-.header-title h1 {
+.container-fluid {
+    border-radius: var(--border-radius-large);
+    padding: 25px;
+    box-shadow: var(--shadow-normal);
+    max-width: min(1200px, 95vw);
+    margin: 0 auto;
+    animation: fadeInUp 0.5s ease;
+}
+
+/* =============================================
+   HEADER PRINCIPAL (copia exacta de crearAreas)
+   ============================================= */
+.row.mb-4:first-child {
+    padding: 20px 25px;
+    border-radius: var(--border-radius-medium);
+    margin-bottom: 30px !important;
+    box-shadow: var(--shadow-normal);
+}
+
+h1.h3 {
     font-family: var(--font-family-primary);
     color: var(--color-text-primary);
-    font-size: clamp(24px, 4vw, 32px);
+    font-size: 2.5rem;
+    text-align: center;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    margin: 0 0 15px 0;
+    letter-spacing: 1px;
+    margin: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
     
-    /* ✨ ILUMINACIÓN DINÁMICA - IGUAL QUE EN CREAR ÁREAS ✨ */
-    text-shadow: 0 0 8px var(--color-accent-primary),
-                 0 0 16px var(--color-accent-primary),
-                 0 0 24px var(--color-accent-primary);
-    animation: titleGlow 4s infinite alternate ease-in-out;
+    /* ILUMINACIÓN MEJORADA */
+    text-shadow: 0 0 10px var(--color-accent-primary), 
+                 0 0 20px var(--color-accent-primary);
+    animation: titleGlow 3s infinite alternate ease-in-out;
 }
 
-.header-title h1 i {
-    font-size: 28px;
-    color: var(--color-accent-primary);
-    
-    /* ✨ ILUMINACIÓN PARA EL ICONO ✨ */
+h1.h3 i {
+    font-size: 24px;
     filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
 
-/* ✨ ANIMACIÓN SUTIL PARA EL TÍTULO ✨ */
 @keyframes titleGlow {
     0% {
         text-shadow: 0 0 5px var(--color-accent-primary),
-                     0 0 10px var(--color-accent-primary),
                      0 0 15px var(--color-accent-primary);
-        opacity: 0.95;
-    }
-    50% {
-        text-shadow: 0 0 10px var(--color-accent-primary),
-                     0 0 20px var(--color-accent-primary),
-                     0 0 30px var(--color-accent-primary);
-        opacity: 1;
+        opacity: 0.9;
     }
     100% {
-        text-shadow: 0 0 5px var(--color-accent-primary),
-                     0 0 10px var(--color-accent-primary),
-                     0 0 15px var(--color-accent-primary);
-        opacity: 0.95;
+        text-shadow: 0 0 15px var(--color-accent-primary),
+                     0 0 30px var(--color-accent-primary),
+                     0 0 45px var(--color-accent-primary);
+        opacity: 1;
     }
 }
 
-.header-title .header-description {
-    color: var(--color-text-secondary);
+.text-muted {
+    color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary);
-    font-size: 14px;
-    line-height: 1.6;
-    margin: 0 auto 30px auto;
+    margin-top: 5px;
+    font-size: 1.2rem;
     position: relative;
-    padding: 0 20px 15px 20px;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
     border-bottom: 2px solid var(--color-border-light);
     
-    /* ✨ ILUMINACIÓN SUTIL PARA LA DESCRIPCIÓN ✨ */
-    text-shadow: 0 0 5px var(--color-accent-primary);
+    /* ILUMINACIÓN SUTIL */
+    text-shadow: 0 0 5px rgba(192, 192, 192, 0.3);
     opacity: 0.9;
 }
 
-/* Línea decorativa superior */
-.header-title .header-description::before {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
-}
-
-/* ✨ EFECTO EXTRA PARA EL ÍCONO DE INFO EN LA DESCRIPCIÓN ✨ */
-.header-title .header-description i {
+.text-muted i {
     color: var(--color-accent-primary);
     filter: drop-shadow(0 0 4px var(--color-accent-primary));
     margin-right: 6px;
 }
 
 /* =============================================
-   BOTÓN VOLVER - ESTILO UNIFICADO
+   BOTÓN VOLVER (igual que crearAreas)
    ============================================= */
 .btn-volver {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
     padding: 12px 25px !important;
-    border-radius: 10px !important;
+    border-radius: var(--border-radius-medium) !important;
     font-weight: 600 !important;
     font-family: var(--font-family-primary) !important;
     font-size: 14px !important;
@@ -145,111 +171,13 @@
     border-color: var(--color-accent-primary) !important;
 }
 
-.btn-volver i {
-    font-size: 14px !important;
-}
-
-.btn-volver::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 100%;
-    height: 200%;
-    background: linear-gradient(to bottom right,
-            rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0.1) 50%,
-            rgba(255, 255, 255, 0) 100%);
-    transform: rotate(30deg);
-    transition: all 0.5s ease;
-    opacity: 0;
-}
-
-.btn-volver:hover::after {
-    opacity: 1;
-    transform: rotate(30deg) translate(10%, 10%);
-}
-
 /* =============================================
-   ESTILOS GENERALES
-   ============================================= */
-body {
-    background-color: var(--color-bg-primary);
-    color: var(--color-text-secondary);
-    font-family: var(--font-family-secondary);
-    min-height: 100vh;
-    margin: 0;
-    padding: 20px;
-}
-
-.container-fluid {
-    border-radius: 20px;
-    padding: 25px;
-    box-shadow: var(--shadow-normal);
-    max-width: min(1200px, 95vw);
-    margin: 0 auto;
-    animation: fadeInUp 0.5s ease;
-}
-
-/* =============================================
-   HEADER PRINCIPAL (TÍTULOS) - MANTENIDO PARA COMPATIBILIDAD
-   ============================================= */
-.row.mb-4:first-child {
-    padding: 20px 25px;
-    border-radius: 16px;
-    margin-bottom: 30px !important;
-    box-shadow: var(--shadow-normal);
-}
-
-h1.h3 {
-    font-family: var(--font-family-primary);
-    color: var(--color-text-primary);
-    font-size: 2.5rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    
-    /* ✨ ILUMINACIÓN PARA COMPATIBILIDAD ✨ */
-    text-shadow: 0 0 8px var(--color-accent-primary),
-                 0 0 16px var(--color-accent-primary),
-                 0 0 24px var(--color-accent-primary);
-}
-
-h1.h3 i {
-    
-    font-size: 24px;
-    filter: drop-shadow(0 0 8px var(--color-accent-primary));
-}
-
-.text-muted {
-    color: var(--color-text-secondary) !important;
-    font-family: var(--font-family-secondary);
-    margin-top: 5px;
-    font-size: 1.2rem;
-    
-      margin-bottom: 30px; /* Reducido para acercar título al formulario */
-    padding-bottom: 15px;
-    border-bottom: 2px solid var(--color-border-light);
-}
-
-/* =============================================
-   BOTONES PRINCIPALES (TÍTULOS) - OCULTAMOS EL ANTERIOR PARA USAR EL NUEVO
-   ============================================= */
-#btnVolverLista.btn.btn-secondary.btn-lg {
-    display: none !important;
-    /* Ocultamos el botón anterior */
-}
-
-/* =============================================
-   TARJETA DEL FORMULARIO - CON HEADER MODIFICADO
+   TARJETAS (igual que crearAreas)
    ============================================= */
 .card {
     background: var(--color-bg-secondary) !important;
     border: 1px solid var(--color-border-light) !important;
-    border-radius: 20px !important;
+    border-radius: var(--border-radius-large) !important;
     box-shadow: var(--shadow-normal) !important;
     margin-bottom: 20px !important;
 }
@@ -258,7 +186,6 @@ h1.h3 i {
     background: rgba(20, 20, 20, 0.95) !important;
     border-bottom: 1px solid var(--color-border-light) !important;
     padding: 18px 25px !important;
-    border-radius: 20px 20px 0 0 !important;
 }
 
 .card-header h5 {
@@ -271,10 +198,14 @@ h1.h3 i {
     display: flex !important;
     align-items: center !important;
     gap: 10px !important;
+    
+    /* ILUMINACIÓN PARA TÍTULOS DE TARJETA */
+    text-shadow: 0 0 5px var(--color-accent-primary);
 }
 
 .card-header h5 i {
     color: var(--color-accent-primary) !important;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
 }
 
 .card-body {
@@ -282,7 +213,7 @@ h1.h3 i {
 }
 
 /* =============================================
-   SECCIONES DEL FORMULARIO (SUBTÍTULOS)
+   SECCIONES DEL FORMULARIO (igual que crearAreas)
    ============================================= */
 h6.border-bottom {
     color: var(--color-text-primary) !important;
@@ -293,14 +224,18 @@ h6.border-bottom {
     border-bottom: 2px solid var(--color-accent-primary) !important;
     padding-bottom: 10px !important;
     margin-bottom: 20px !important;
+    
+    /* ILUMINACIÓN PARA SUBTÍTULOS */
+    text-shadow: 0 0 4px var(--color-accent-primary);
 }
 
 h6 i {
     color: var(--color-accent-primary) !important;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
 }
 
 /* =============================================
-   FORMULARIOS (TODO SANS-SERIF)
+   FORMULARIOS (igual que crearAreas)
    ============================================= */
 .form-label {
     color: var(--color-text-primary) !important;
@@ -308,16 +243,19 @@ h6 i {
     font-weight: 500 !important;
     margin-bottom: 8px !important;
     font-size: 14px !important;
+    
+    /* ILUMINACIÓN SUTIL PARA LABELS */
+    text-shadow: 0 0 2px rgba(192, 192, 192, 0.3);
 }
 
-.form-label[for]:not([for="motivoDesactivacion"])::after {
+.form-label::after {
     content: " *";
     color: var(--color-danger);
     opacity: 0.8;
 }
 
-.form-label[for="responsable"]::after,
-.form-label[for="motivoDesactivacion"]::after {
+.form-label:has(+ :not(:required))::after,
+.form-label[for="responsable"]::after {
     content: "" !important;
 }
 
@@ -326,7 +264,7 @@ h6 i {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
-    border-radius: 10px !important;
+    border-radius: var(--border-radius-small) !important;
     padding: 12px 15px !important;
     transition: all 0.3s ease !important;
     font-family: var(--font-family-secondary) !important;
@@ -336,14 +274,12 @@ h6 i {
 .form-select:focus {
     border-color: var(--color-accent-secondary) !important;
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
-    background: var(--color-bg-secondary) !important;
+    background: var(--color-bg-tertiary) !important;
     outline: none !important;
-    font-family: var(--font-family-secondary) !important;
 }
 
 .form-control::placeholder {
     color: rgba(255, 255, 255, 0.3) !important;
-    font-family: var(--font-family-secondary) !important;
 }
 
 .form-text {
@@ -355,7 +291,7 @@ h6 i {
 
 /* Input groups */
 .input-group {
-    border-radius: 10px !important;
+    border-radius: var(--border-radius-small) !important;
     overflow: hidden !important;
 }
 
@@ -364,7 +300,6 @@ h6 i {
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-secondary) !important;
     padding: 12px 15px !important;
-    font-family: var(--font-family-secondary) !important;
 }
 
 .input-group .form-control {
@@ -372,66 +307,136 @@ h6 i {
 }
 
 /* =============================================
-   ESTILOS PARA CARGOS
+   SECCIÓN DE CARGOS (igual que crearAreas)
    ============================================= */
 .cargos-container {
+    background: rgba(20, 20, 20, 0.5);
+    border-radius: var(--border-radius-medium);
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--color-border-light);
+}
+
+.cargo-item {
     background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border-light);
-    border-radius: 14px;
-    padding: 20px;
-    min-height: 150px;
+    border-radius: var(--border-radius-small);
+    padding: 15px;
+    margin-bottom: 15px;
+    position: relative;
+    transition: all 0.3s ease;
 }
 
-.cargos-empty {
-    text-align: center;
-    padding: 30px 20px;
-    color: var(--color-text-secondary);
-    font-family: var(--font-family-secondary) !important;
+.cargo-item:hover {
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 15px rgba(192, 192, 192, 0.1);
 }
 
-.cargos-empty i {
-    font-size: 48px;
-    color: var(--color-border-light);
+.cargo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.cargos-empty p,
-.cargos-empty small {
-    font-family: var(--font-family-secondary) !important;
+.cargo-titulo {
+    color: var(--color-accent-primary);
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    /* ILUMINACIÓN PARA TÍTULOS DE CARGO */
+    text-shadow: 0 0 4px var(--color-accent-primary);
+}
+
+.cargo-titulo i {
+    color: var(--color-accent-primary);
+    font-size: 14px;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+}
+
+.btn-eliminar-cargo {
+    background: rgba(255, 77, 77, 0.1) !important;
+    border: 1px solid var(--color-danger) !important;
+    color: var(--color-danger) !important;
+    padding: 5px 12px !important;
+    font-size: 12px !important;
+    border-radius: var(--border-radius-small) !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    
+    /* ILUMINACIÓN PARA BOTÓN ELIMINAR */
+    text-shadow: 0 0 3px var(--color-danger);
+}
+
+.btn-eliminar-cargo:hover {
+    background: var(--color-danger) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px var(--color-danger);
 }
 
 .btn-agregar-cargo {
-    background: var(--color-bg-tertiary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-secondary) !important;
+    color: var(--color-accent-secondary) !important;
     padding: 10px 20px !important;
-    border-radius: 10px !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
-    transition: all 0.3s ease !important;
-    font-family: var(--font-family-primary) !important;
 }
 
+
 .btn-agregar-cargo:hover {
-    background: var(--color-hover) !important;
-    border-color: var(--color-accent-primary) !important;
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(47, 140, 255, 0.2);
 }
 
 .cargos-counter {
     color: var(--color-text-secondary);
     font-size: 12px;
     margin-left: 10px;
-    font-family: var(--font-family-secondary) !important;
+}
+
+.cargos-empty {
+    text-align: center;
+    padding: 30px;
+    color: var(--color-text-secondary);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-medium);
+    border: 1px dashed var(--color-border-light);
+}
+
+.cargos-empty i {
+    font-size: 24px;
+    color: var(--color-accent-primary);
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
 
 /* =============================================
-   ALERTAS (TEXTO NORMAL)
+   ALERTAS (igual que crearAreas)
    ============================================= */
 .alert {
-    border-radius: 10px !important;
+    border-radius: var(--border-radius-small) !important;
     border: 1px solid !important;
     padding: 15px 20px !important;
-    font-family: var(--font-family-secondary) !important;
 }
 
 .alert-info {
@@ -442,6 +447,7 @@ h6 i {
 
 .alert-info i {
     color: var(--color-info) !important;
+    filter: drop-shadow(0 0 4px var(--color-info));
 }
 
 .alert-warning {
@@ -452,6 +458,7 @@ h6 i {
 
 .alert-warning i {
     color: var(--color-warning) !important;
+    filter: drop-shadow(0 0 4px var(--color-warning));
 }
 
 .alert-danger {
@@ -462,15 +469,17 @@ h6 i {
 
 .alert-danger i {
     color: var(--color-danger) !important;
+    filter: drop-shadow(0 0 4px var(--color-danger));
 }
 
 /* =============================================
-   BOTONES DEL FORMULARIO (TEXTO NORMAL)
+   BOTONES DEL FORMULARIO (igual que crearAreas)
    ============================================= */
 .d-flex.justify-content-end.gap-3 {
     padding-top: 20px;
     border-top: 1px solid var(--color-border-light);
     margin-top: 20px;
+    justify-content: flex-start !important;
 }
 
 #btnCancelar,
@@ -479,9 +488,9 @@ h6 i {
     padding: 12px 30px !important;
     font-family: var(--font-family-secondary) !important;
     font-weight: 600 !important;
-    border-radius: 12px !important;
+    border-radius: var(--border-radius-medium) !important;
     transition: all 0.3s ease !important;
-    min-width: 180px !important;
+    min-width: 160px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -527,15 +536,23 @@ h6 i {
 }
 
 /* =============================================
-   MODALES
+   CONTADOR DE CARACTERES
+   ============================================= */
+#contadorCaracteres {
+    color: var(--color-accent-primary);
+    font-weight: 600;
+    text-shadow: 0 0 4px var(--color-accent-primary);
+}
+
+/* =============================================
+   MODALES (igual que crearAreas)
    ============================================= */
 .modal-content {
     background: var(--color-bg-secondary) !important;
     border: 1px solid var(--color-border-light) !important;
-    border-radius: 20px !important;
+    border-radius: var(--border-radius-large) !important;
     box-shadow: var(--shadow-large) !important;
     color: var(--color-text-secondary) !important;
-    font-family: var(--font-family-secondary) !important;
 }
 
 .modal-header {
@@ -544,7 +561,6 @@ h6 i {
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-primary) !important;
     padding: 20px 25px !important;
-    border-radius: 20px 20px 0 0 !important;
 }
 
 .modal-title {
@@ -552,11 +568,14 @@ h6 i {
     align-items: center !important;
     gap: 10px !important;
     font-size: 16px !important;
-    font-family: var(--font-family-primary) !important;
+    
+    /* ILUMINACIÓN PARA TÍTULOS DE MODAL */
+    text-shadow: 0 0 5px var(--color-accent-primary);
 }
 
 .modal-title i {
     color: var(--color-accent-primary) !important;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
 }
 
 .btn-close {
@@ -572,22 +591,11 @@ h6 i {
 
 .modal-body {
     padding: 25px !important;
-    font-family: var(--font-family-secondary) !important;
 }
 
 .modal-footer {
     border-top: 1px solid var(--color-border-light) !important;
     padding: 20px 25px !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-/* =============================================
-   CONTADOR DE CARACTERES (TEXTO NORMAL)
-   ============================================= */
-#contadorCaracteres {
-    color: var(--color-accent-primary);
-    font-weight: 600;
-    font-family: var(--font-family-secondary) !important;
 }
 
 /* =============================================
@@ -598,7 +606,6 @@ h6 i {
         opacity: 0;
         transform: translateY(20px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -606,23 +613,23 @@ h6 i {
 }
 
 /* =============================================
-   EFECTOS ESPECIALES
+   EFECTOS ESPECIALES PARA BOTONES
    ============================================= */
-#btnVolverLista,
+.btn-volver,
 #btnCancelar,
 #btnGuardarCambios,
 #btnDesactivarArea,
-#btnAgregarCargo,
+.btn-agregar-cargo,
 .modal-footer .btn {
     position: relative;
     overflow: hidden;
 }
 
-#btnVolverLista::after,
+.btn-volver::after,
 #btnCancelar::after,
 #btnGuardarCambios::after,
 #btnDesactivarArea::after,
-#btnAgregarCargo::after,
+.btn-agregar-cargo::after,
 .modal-footer .btn::after {
     content: '';
     position: absolute;
@@ -639,56 +646,85 @@ h6 i {
     opacity: 0;
 }
 
-#btnVolverLista:hover::after,
+.btn-volver:hover::after,
 #btnCancelar:hover::after,
 #btnGuardarCambios:hover::after,
 #btnDesactivarArea:hover::after,
-#btnAgregarCargo:hover::after,
+.btn-agregar-cargo:hover::after,
 .modal-footer .btn:hover::after {
     opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
 }
 
 /* =============================================
-   ESTILOS PARA VALIDACIÓN
+   ORGANIZACIÓN INFO (mantenido)
    ============================================= */
-.form-control:focus,
-.form-select:focus,
-textarea.form-control:focus,
-input.form-control:focus {
-    border-color: var(--color-accent-secondary) !important;
-    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
-    background: var(--color-bg-secondary) !important;
+.organizacion-info {
+    background: var(--color-bg-tertiary) !important;
+    border-left: 4px solid var(--color-accent-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border-radius: var(--border-radius-small) !important;
 }
 
-.form-control:invalid:not(:focus):not(:placeholder-shown) {
-    border-color: var(--color-danger) !important;
+.organizacion-info h6 {
+    font-family: var(--font-family-primary) !important;
 }
 
-.form-control:valid:not(:focus):not(:placeholder-shown) {
-    border-color: var(--color-success) !important;
+.organizacion-info code {
+    background: var(--color-bg-primary) !important;
+    padding: 2px 6px;
+    border-radius: 6px;
 }
 
 /* =============================================
-   ESTILOS PARA SELECT OPTIONS
+   ILUMINACIÓN POR TEMA
    ============================================= */
-select#responsable option,
-select#organizacion option {
-    white-space: normal !important;
-    word-wrap: break-word;
-    padding: 8px 4px;
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-primary);
-    font-family: var(--font-family-secondary) !important;
+[data-theme="light"] {
+    --glow-intensity: 0.5;
 }
 
-.form-select {
-    max-height: 200px;
-    overflow-y: auto;
+[data-theme="light"] h1.h3 {
+    text-shadow: 0 0 8px rgba(192, 192, 192, 0.6),
+                 0 0 16px rgba(192, 192, 192, 0.4);
+}
+
+[data-theme="light"] .text-muted {
+    text-shadow: 0 0 4px rgba(192, 192, 192, 0.4);
+}
+
+[data-theme="high-contrast"] h1.h3 {
+    text-shadow: 0 0 12px #ffffff,
+                 0 0 24px #ffffff;
+}
+
+[data-theme="high-contrast"] .text-muted {
+    text-shadow: 0 0 6px #ffffff;
 }
 
 /* =============================================
-   RESPONSIVE DESIGN
+   FORZAR ESTILOS CORRECTOS DEL NAVBAR
+   ============================================= */
+#complete-navbar .admin-profile-circle {
+    border-radius: 50% !important;
+    overflow: hidden !important;
+}
+
+#complete-navbar .admin-profile-img {
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+#complete-navbar .navbar-title {
+    text-shadow: 0 0 10px var(--color-accent-primary),
+                 0 0 20px var(--color-accent-primary),
+                 0 0 30px var(--color-accent-primary) !important;
+    color: var(--navbar-logo-text) !important;
+}
+
+/* =============================================
+   RESPONSIVE DESIGN (igual que crearAreas)
    ============================================= */
 @media (max-width: 1023px) {
     .container-fluid {
@@ -700,6 +736,11 @@ select#organizacion option {
         align-items: flex-start !important;
         gap: 20px !important;
         padding: 20px !important;
+    }
+
+    .btn-volver {
+        width: 100% !important;
+        max-width: 300px !important;
     }
 
     .card-body {
@@ -724,19 +765,25 @@ select#organizacion option {
         align-items: flex-start !important;
     }
 
-    .btn-volver {
-        width: 100% !important;
+    .cargo-item .row {
+        flex-direction: column;
+    }
+
+    .cargo-item .col-md-6 {
+        width: 100%;
+        margin-bottom: 10px;
     }
 }
 
 @media (max-width: 768px) {
     body {
         padding: 10px !important;
+        padding-top: 70px !important;
     }
 
     .container-fluid {
         padding: 15px !important;
-        border-radius: 16px !important;
+        border-radius: var(--border-radius-medium) !important;
     }
 
     h1.h3 {
@@ -745,28 +792,10 @@ select#organizacion option {
         text-align: center !important;
     }
 
-    .header-title h1 {
-        font-size: 20px !important;
-        flex-wrap: wrap;
-    }
-
-    .header-title .header-description {
-        padding-left: 0;
-        padding-top: 20px;
-        font-size: 13px;
-        text-align: center;
-    }
-
-    .header-title .header-description::before {
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 50px;
-        height: 2px;
-    }
-
     .row.mb-4:first-child {
         padding: 15px !important;
+        margin-top: 10px !important;
+        padding-top: 10px !important;
     }
 
     .card-header {
@@ -775,6 +804,10 @@ select#organizacion option {
 
     .card-body {
         padding: 15px !important;
+    }
+
+    h6.border-bottom {
+        font-size: 13px !important;
     }
 
     .form-control,
@@ -787,29 +820,45 @@ select#organizacion option {
         padding: 10px 12px !important;
     }
 
-    .modal-dialog {
-        margin: 0.5rem !important;
+    .cargos-container {
+        padding: 15px !important;
+    }
+
+    .cargo-item {
+        padding: 12px !important;
+    }
+
+    .btn-agregar-cargo {
+        width: 100% !important;
+        justify-content: center !important;
     }
 }
 
 @media (max-width: 480px) {
+    body {
+        padding-top: 60px !important;
+    }
+
     .container-fluid {
         padding: 10px !important;
     }
 
-    .header-title h1 {
-        font-size: 18px !important;
-        gap: 8px;
+    .row.mb-4:first-child {
+        padding: 12px !important;
     }
 
-    .header-title h1 i {
-        font-size: 20px;
-    }
-
-    #btnVolverLista {
+    .btn-volver {
         padding: 10px 15px !important;
         font-size: 13px !important;
         min-width: auto !important;
+    }
+
+    .card-header {
+        padding: 12px 15px !important;
+    }
+
+    .card-header h5 {
+        font-size: 14px !important;
     }
 
     #btnCancelar,
@@ -819,356 +868,19 @@ select#organizacion option {
         font-size: 13px !important;
         min-width: auto !important;
     }
-}
 
-/* =============================================
-   ESTILOS PARA ORGANIZACIÓN INFO
-   ============================================= */
-.organizacion-info {
-    background: var(--color-bg-tertiary) !important;
-    border-left: 4px solid var(--color-accent-secondary) !important;
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-secondary) !important;
-    border-radius: 10px !important;
-}
+    .cargo-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
 
-.organizacion-info h6,
-.organizacion-info strong,
-.organizacion-info p,
-.organizacion-info span,
-.organizacion-info code {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-.organizacion-info h6 {
-    font-family: var(--font-family-primary) !important;
-}
-
-.organizacion-info .text-muted {
-    color: var(--color-text-secondary) !important;
-}
-
-.organizacion-info code {
-    background: var(--color-bg-primary) !important;
-    padding: 2px 6px;
-    border-radius: 6px;
-}
-
-/* =============================================
-   MENSAJE DE VALIDACIÓN
-   ============================================= */
-.alert-info.mb-4 {
-    background: rgba(47, 140, 255, 0.1) !important;
-    border: 1px solid rgba(47, 140, 255, 0.3) !important;
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-secondary) !important;
-    border-radius: 10px !important;
-}
-
-.alert-info.mb-4 i,
-.alert-info.mb-4 strong,
-.alert-info.mb-4 span {
-    color: var(--color-text-primary) !important;
-}
-
-/* =============================================
-   CAMPOS DE SOLO LECTURA
-   ============================================= */
-.form-control[readonly],
-#fechaCreacion,
-#ultimaActualizacion,
-#creadoPor,
-#estadoActual {
-    background: var(--color-bg-tertiary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-    cursor: not-allowed !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-#estadoActual {
-    color: var(--color-success) !important;
-}
-
-/* =============================================
-   ESTILOS PARA SWEETALERT2
-   ============================================= */
-.swal2-popup {
-    background: var(--color-bg-secondary) !important;
-    color: var(--color-text-primary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: 20px !important;
-    box-shadow: var(--shadow-large) !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-.swal2-title {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.swal2-html-container {
-    color: var(--color-text-secondary) !important;
-    font-family: var(--font-family-secondary) !important;
-    line-height: 1.5;
-}
-
-.swal2-confirm {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-accent-secondary) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: 10px !important;
-    font-family: var(--font-family-primary) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.swal2-cancel {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: 10px !important;
-    font-family: var(--font-family-primary) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.swal2-toast {
-    background: var(--color-bg-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: 12px !important;
-    box-shadow: var(--shadow-normal) !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-.swal2-toast .swal2-title {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    text-transform: uppercase;
-    font-size: 14px;
-}
-
-.swal2-timer-progress-bar {
-    background: var(--color-accent-secondary) !important;
-}
-
-.swal2-icon {
-    font-family: var(--font-family-secondary) !important;
-}
-
-.swal2-icon-content {
-    font-family: var(--font-family-secondary) !important;
-}
-
-.swal2-actions button {
-    font-family: var(--font-family-primary) !important;
-}
-
-/* =============================================
-   ESTILOS PARA CARGOS (DETALLES)
-   ============================================= */
-.cargo-header {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-bottom: 15px !important;
-    padding-bottom: 10px !important;
-    border-bottom: 1px solid var(--color-border-light) !important;
-}
-
-.cargo-titulo {
-    color: var(--color-accent-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    font-size: 14px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    margin: 0 !important;
-}
-
-.cargo-titulo i {
-    color: var(--color-accent-secondary) !important;
-    margin-right: 8px !important;
-}
-
-.cargo-item {
-    border-radius: 10px !important;
-    margin-bottom: 15px !important;
-    background: rgba(255, 255, 255, 0.02);
-}
-
-.btn-eliminar-cargo {
-    color: white !important;
-    border: 1px solid #ff4d4d !important;
-    border-radius: 8px !important;
-}
-
-.btn-eliminar-cargo:hover {
-    background: rgba(255, 77, 77, 0.2) !important;
-    border-color: #ff4d4d !important;
-    color: #ff4d4d !important;
-    transform: translateY(-2px) !important;
-}
-
-.btn-eliminar-cargo:hover i {
-    color: #ff4d4d !important;
-}
-
-/* =============================================
-   ESTILOS PARA EL BOTÓN VER DETALLES
-   ============================================= */
-#btnVerDetalles {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-info) !important;
-    color: var(--color-info) !important;
-    padding: 12px 30px !important;
-    font-family: var(--font-family-secondary) !important;
-    font-weight: 600 !important;
-    border-radius: 12px !important;
-    transition: all 0.3s ease !important;
-    min-width: 180px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 10px !important;
-}
-
-#btnVerDetalles:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px) !important;
-    border-color: var(--color-info) !important;
-    box-shadow: 0 5px 15px rgba(0, 207, 255, 0.2) !important;
-}
-
-/* Ajustes responsive para el botón */
-@media (max-width: 768px) {
-    #btnVerDetalles {
+    .btn-eliminar-cargo {
         width: 100% !important;
-        margin-bottom: 10px !important;
-        min-width: auto !important;
     }
-}
 
-@media (max-width: 480px) {
-    #btnVerDetalles {
-        padding: 10px 15px !important;
-        font-size: 13px !important;
-    }
-}
-
-/* =============================================
-   ILUMINACIÓN POR TEMA (CLARO/OSCURO)
-   ============================================= */
-
-/* TEMA CLARO - Cuando se active, la iluminación se adapta */
-[data-theme="light"] {
-    --glow-intensity: 0.5;
-}
-
-[data-theme="light"] .header-title h1 {
-    text-shadow: 0 0 5px rgba(192, 192, 192, 0.5),
-                 0 0 10px rgba(192, 192, 192, 0.3),
-                 0 0 15px rgba(192, 192, 192, 0.2);
-}
-
-[data-theme="light"] .header-title .header-description {
-    text-shadow: 0 0 3px rgba(192, 192, 192, 0.3);
-}
-
-[data-theme="light"] h1.h3 {
-    text-shadow: 0 0 5px rgba(192, 192, 192, 0.5),
-                 0 0 10px rgba(192, 192, 192, 0.3),
-                 0 0 15px rgba(192, 192, 192, 0.2);
-}
-
-[data-theme="light"] .text-muted {
-    text-shadow: 0 0 3px rgba(192, 192, 192, 0.3);
-}
-
-/* TEMA DE ALTO CONTRASTE */
-[data-theme="high-contrast"] .header-title h1 {
-    text-shadow: 0 0 10px #ffffff,
-                 0 0 20px #ffffff;
-}
-
-[data-theme="high-contrast"] .header-title .header-description {
-    text-shadow: 0 0 5px #ffffff;
-}
-
-[data-theme="high-contrast"] h1.h3 {
-    text-shadow: 0 0 10px #ffffff,
-                 0 0 20px #ffffff;
-}
-
-[data-theme="high-contrast"] .text-muted {
-    text-shadow: 0 0 5px #ffffff;
-}
-
-/* =============================================
-   FORZAR ESTILOS CORRECTOS DEL NAVBAR
-   ============================================= */
-
-/* Forzar círculo en la imagen del admin */
-#complete-navbar .admin-profile-circle {
-    border-radius: 50% !important;
-    overflow: hidden !important;
-}
-
-#complete-navbar .admin-profile-img {
-    object-fit: cover !important;
-    width: 100% !important;
-    height: 100% !important;
-    display: block !important;
-}
-
-/* Forzar destello en CENTINELA */
-#complete-navbar .navbar-title {
-    text-shadow: 0 0 10px var(--color-accent-primary),
-        0 0 20px var(--color-accent-primary),
-        0 0 30px var(--color-accent-primary) !important;
-    color: var(--navbar-logo-text) !important;
-}
-
-/* =============================================
-   AJUSTE PARA NAVBAR EN RESPONSIVE
-   ============================================= */
-
-/* Ajuste general para que el contenido no quede debajo del navbar */
-body {
-    padding-top: 80px !important; /* Espacio para el navbar fijo */
-}
-
-@media (max-width: 768px) {
-    body {
-        padding-top: 70px !important; /* Un poco menos en móvil */
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-    }
-    
-    /* Asegurar que el header tenga suficiente espacio */
-    .row.mb-4:first-child,
-    .header-container,
-    .d-flex.flex-column.align-items-center.text-center {
-        margin-top: 10px !important;
-        padding-top: 10px !important;
-    }
-    
-    /* Ajustar el contenedor principal */
-    .container-fluid {
-        margin-top: 0 !important;
-        padding-top: 15px !important;
-    }
-}
-
-@media (max-width: 480px) {
-    body {
-        padding-top: 60px !important; /* Aún menos en móvil pequeño */
+    .cargos-empty {
+        padding: 20px !important;
     }
 }
 

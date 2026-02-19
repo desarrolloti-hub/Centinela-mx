@@ -245,7 +245,7 @@ class CrearCategoriaController {
             } else if (longitud > 400) {
                 contador.style.color = 'var(--color-warning)';
             } else {
-                contador.style.color = 'var(--color-success)';
+                contador.style.color = 'var(--color-accent-primary)';
             }
         }
     }
@@ -361,7 +361,7 @@ class CrearCategoriaController {
                     <div class="subcategoria-grid">
                         <div class="subcategoria-campo">
                             <label class="subcategoria-label">
-                                <i class="fas fa-tag"></i>
+                          
                                 Nombre *
                             </label>
                             <input type="text" class="subcategoria-input" 
@@ -372,7 +372,7 @@ class CrearCategoriaController {
                         </div>
                         <div class="subcategoria-campo">
                             <label class="subcategoria-label">
-                                <i class="fas fa-align-left"></i>
+                               
                                 Descripción
                             </label>
                             <input type="text" class="subcategoria-input" 
