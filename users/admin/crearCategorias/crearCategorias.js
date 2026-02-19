@@ -1,6 +1,6 @@
-// crearCategorias.js - VERSIÓN FINAL
+// crearCategorias.js - VERSIÓN CORREGIDA
 // SIN empresaId/estado, con herencia de color configurable
-// CORREGIDO: Uso de 'rol' en lugar de 'cargo'
+// CORREGIDO: IDs de botones y formulario
 
 // Variable global para debugging
 window.crearCategoriaDebug = {
@@ -90,7 +90,6 @@ class CrearCategoriaController {
                     id: adminData.id || `admin_${Date.now()}`,
                     uid: adminData.uid || adminData.id,
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    // ✅ CORREGIDO: No se usa 'cargo', se usa 'rol' implícitamente por ser admin
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
@@ -107,7 +106,6 @@ class CrearCategoriaController {
                     id: userData.uid || userData.id || `user_${Date.now()}`,
                     uid: userData.uid || userData.id,
                     nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
-                    // ✅ CORREGIDO: No se usa 'cargo'
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
                     organizacionCamelCase: userData.organizacionCamelCase ||
                         this._generarCamelCase(userData.organizacion || userData.empresa),
@@ -145,6 +143,7 @@ class CrearCategoriaController {
     // ========== CONFIGURACIÓN DE ORGANIZACIÓN ==========
 
     _configurarOrganizacion() {
+        // Estos inputs pueden no existir en el HTML, verificamos antes de usar
         const orgCamelCaseInput = document.getElementById('organizacionCamelCase');
         const orgNombreInput = document.getElementById('organizacionNombre');
 
@@ -177,20 +176,29 @@ class CrearCategoriaController {
 
     _configurarEventos() {
         try {
-            // Botón Volver
+            // Botón Volver a la lista
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
                 btnVolverLista.addEventListener('click', () => this._volverALista());
             }
 
             // Botón Cancelar
-            const btnCancel = document.getElementById('btnCancel');
-            if (btnCancel) {
-                btnCancel.addEventListener('click', () => this._cancelarCreacion());
+            const btnCancelar = document.getElementById('btnCancelar');
+            if (btnCancelar) {
+                btnCancelar.addEventListener('click', () => this._cancelarCreacion());
+            }
+
+            // Botón Crear Categoría
+            const btnCrearCategoria = document.getElementById('btnCrearCategoria');
+            if (btnCrearCategoria) {
+                btnCrearCategoria.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this._validarYGuardar();
+                });
             }
 
             // Formulario Submit
-            const form = document.getElementById('crearCategoriaForm');
+            const form = document.getElementById('formCategoriaPrincipal');
             if (form) {
                 form.addEventListener('submit', (e) => {
                     e.preventDefault();
@@ -209,8 +217,15 @@ class CrearCategoriaController {
 
                 colorPickerNative.addEventListener('input', (e) => {
                     const color = e.target.value;
-                    document.getElementById('colorDisplay').style.backgroundColor = color;
-                    document.getElementById('colorHex').textContent = color;
+                    const colorDisplay = document.getElementById('colorDisplay');
+                    const colorHex = document.getElementById('colorHex');
+                    
+                    if (colorDisplay) {
+                        colorDisplay.style.backgroundColor = color;
+                    }
+                    if (colorHex) {
+                        colorHex.textContent = color;
+                    }
 
                     // Actualizar previsualización de colores en subcategorías
                     this._renderizarSubcategorias();
@@ -287,7 +302,11 @@ class CrearCategoriaController {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
+            cancelButtonText: 'Cancelar',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: 'var(--color-danger)',
+            cancelButtonColor: 'var(--color-accent-secondary)'
         }).then((result) => {
             if (result.isConfirmed) {
                 this.subcategorias = this.subcategorias.filter(s => s.id !== subcatId);
@@ -326,12 +345,10 @@ class CrearCategoriaController {
 
         if (this.subcategorias.length === 0) {
             container.innerHTML = `
-                <div class="subcategorias-empty">
-                    <i class="fas fa-sitemap"></i>
+                <div class="cargos-empty">
+                    <i class="fas fa-sitemap mb-2"></i>
                     <p>No hay subcategorías agregadas</p>
-                    <small>
-                        Las subcategorías heredarán automáticamente el color de la categoría principal
-                    </small>
+                    <small class="text-muted">Haga clic en "Agregar Subcategoría" para añadir una</small>
                 </div>
             `;
             return;
@@ -344,13 +361,13 @@ class CrearCategoriaController {
             const colorEfectivo = subcat.heredaColor ? colorCategoria : (subcat.colorPersonalizado || '#ff5733');
 
             html += `
-                <div class="subcategoria-item" id="subcategoria_${subcat.id}" style="border-left-color: ${colorEfectivo};">
+                <div class="subcategoria-item" id="subcategoria_${subcat.id}" style="border-left: 4px solid ${colorEfectivo};">
                     <div class="subcategoria-header">
-                        <h6 class="subcategoria-titulo">
-                            <i class="fas fa-sitemap"></i>
+                        <div class="subcategoria-titulo">
+                            <i class="fas fa-folder"></i>
                             Subcategoría #${index + 1}
-                            <span class="color-badge" style="background: ${colorEfectivo};"></span>
-                        </h6>
+                            <span class="color-badge" style="background: ${colorEfectivo}; width: 16px; height: 16px; border-radius: 4px; display: inline-block; margin-left: 8px;"></span>
+                        </div>
                         <button type="button" class="btn-eliminar-subcategoria" 
                                 onclick="window.crearCategoriaDebug.controller._eliminarSubcategoria('${subcat.id}')">
                             <i class="fas fa-trash-alt"></i>
@@ -361,7 +378,7 @@ class CrearCategoriaController {
                     <div class="subcategoria-grid">
                         <div class="subcategoria-campo">
                             <label class="subcategoria-label">
-                          
+                                <i class="fas fa-tag"></i>
                                 Nombre *
                             </label>
                             <input type="text" class="subcategoria-input" 
@@ -372,7 +389,7 @@ class CrearCategoriaController {
                         </div>
                         <div class="subcategoria-campo">
                             <label class="subcategoria-label">
-                               
+                                <i class="fas fa-align-left"></i>
                                 Descripción
                             </label>
                             <input type="text" class="subcategoria-input" 
@@ -409,7 +426,7 @@ class CrearCategoriaController {
                         <div class="color-actual">
                             <span>Color efectivo:</span>
                             <span class="color-muestra" style="background: ${colorEfectivo};"></span>
-                            <span style="font-family: monospace;">${colorEfectivo}</span>
+                            <span>${colorEfectivo}</span>
                         </div>
                     </div>
                 </div>
@@ -423,7 +440,7 @@ class CrearCategoriaController {
         const counter = document.getElementById('subcategoriasCounter');
         if (counter) {
             const cantidad = this.subcategorias.length;
-            counter.textContent = cantidad;
+            counter.textContent = `(${cantidad} subcategoría${cantidad !== 1 ? 's' : ''})`;
         }
     }
 
@@ -462,6 +479,14 @@ class CrearCategoriaController {
         const subcategoriasValidas = this.subcategorias.filter(s => s.nombre && s.nombre.trim() !== '');
         if (this.subcategorias.length > 0 && subcategoriasValidas.length === 0) {
             this._mostrarError('Las subcategorías agregadas deben tener nombre');
+            return;
+        }
+
+        // Validar nombres duplicados en subcategorías
+        const nombres = subcategoriasValidas.map(s => s.nombre.trim().toLowerCase());
+        const duplicados = nombres.filter((nombre, index) => nombres.indexOf(nombre) !== index);
+        if (duplicados.length > 0) {
+            this._mostrarError('No puede haber subcategorías con el mismo nombre');
             return;
         }
 
@@ -504,12 +529,14 @@ class CrearCategoriaController {
     }
 
     async _guardarCategoria(datos) {
-        const btnSave = document.getElementById('btnSave');
-        const originalHTML = btnSave.innerHTML;
+        const btnCrear = document.getElementById('btnCrearCategoria');
+        const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Categoría';
 
         try {
-            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-            btnSave.disabled = true;
+            if (btnCrear) {
+                btnCrear.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
+                btnCrear.disabled = true;
+            }
 
             // Verificar si ya existe
             const existe = await this.categoriaManager.verificarCategoriaExistente(
@@ -527,22 +554,27 @@ class CrearCategoriaController {
 
             this.categoriaCreadaReciente = nuevaCategoria;
 
-            // Mostrar éxito simplificado (sin detalles)
+            // Mostrar éxito
             await Swal.fire({
                 icon: 'success',
                 title: '¡Categoría creada!',
                 text: 'La categoría se ha guardado correctamente.',
-                confirmButtonText: 'Ver categorías'
-            }).then(() => {
-                this._volverALista();
+                confirmButtonText: 'Ver categorías',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                confirmButtonColor: 'var(--color-accent-secondary)'
             });
+
+            this._volverALista();
 
         } catch (error) {
             console.error('Error guardando categoría:', error);
             this._mostrarError(error.message || 'No se pudo crear la categoría');
         } finally {
-            btnSave.innerHTML = originalHTML;
-            btnSave.disabled = false;
+            if (btnCrear) {
+                btnCrear.innerHTML = originalHTML;
+                btnCrear.disabled = false;
+            }
         }
     }
 
@@ -560,7 +592,10 @@ class CrearCategoriaController {
             showCancelButton: true,
             confirmButtonText: 'Sí, cancelar',
             cancelButtonText: 'No, continuar',
-            confirmButtonColor: '#d33'
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: 'var(--color-danger)',
+            cancelButtonColor: 'var(--color-accent-secondary)'
         }).then((result) => {
             if (result.isConfirmed) {
                 this._volverALista();
@@ -573,7 +608,10 @@ class CrearCategoriaController {
             icon: 'error',
             title: 'Sesión no válida',
             text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
+            confirmButtonText: 'Ir al login',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)',
+            confirmButtonColor: 'var(--color-accent-secondary)'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -586,36 +624,18 @@ class CrearCategoriaController {
     }
 
     _mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
-        if (this.notificacionActual) {
-            this.notificacionActual.remove();
-        }
-
-        const notificacion = document.createElement('div');
-        notificacion.className = `notificacion notificacion-${tipo}`;
-
-        const iconos = {
-            success: 'fa-check-circle',
-            error: 'fa-exclamation-triangle',
-            warning: 'fa-exclamation-circle',
-            info: 'fa-info-circle'
-        };
-
-        notificacion.innerHTML = `
-            <i class="fas ${iconos[tipo] || 'fa-info-circle'}"></i>
-            <div style="flex: 1;">${mensaje}</div>
-            <button style="background: none; border: none; color: inherit; cursor: pointer; padding: 0 5px;" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-
-        document.body.appendChild(notificacion);
-        this.notificacionActual = notificacion;
-
-        setTimeout(() => {
-            if (notificacion.parentNode) {
-                notificacion.remove();
-            }
-        }, duracion);
+        Swal.fire({
+            title: tipo === 'success' ? 'Éxito' : 
+                   tipo === 'error' ? 'Error' : 
+                   tipo === 'warning' ? 'Advertencia' : 'Información',
+            text: mensaje,
+            icon: tipo,
+            timer: duracion,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
+        });
     }
 
     _mostrarCargando(mensaje = 'Guardando...') {
