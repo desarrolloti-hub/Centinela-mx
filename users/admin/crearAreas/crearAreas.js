@@ -392,7 +392,7 @@ class CrearAreaController {
                 html: `
                     <div style="text-align: left;">
                         <p>¿Está seguro de crear la siguiente área?</p>
-                        <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <div style=" padding: 15px; border-radius: 8px; margin-top: 10px;">
                             <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">${datosArea.nombreArea}</h6>
                             <p style="margin-bottom: 5px;"><small><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</small></p>
                             <p style="margin-bottom: 5px;"><small><strong>Cargos:</strong> ${cantidadCargos}</small></p>
@@ -497,7 +497,7 @@ class CrearAreaController {
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Nombre del Cargo *</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                             
                                 <input type="text" class="form-control" 
                                        id="cargo_nombre_${cargo.id}"
                                        value="${this.escapeHTML(cargo.nombre)}"
@@ -508,7 +508,7 @@ class CrearAreaController {
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Descripción del Cargo</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                                
                                 <input type="text" class="form-control" 
                                        id="cargo_descripcion_${cargo.id}"
                                        value="${this.escapeHTML(cargo.descripcion)}"
@@ -619,7 +619,7 @@ class CrearAreaController {
                 html: `
                     <div style="text-align: center;">
                         
-                        <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 8px; text-align: left;">
+                        <div padding: 15px; border-radius: 8px; text-align: left;">
                             <p><strong>Nombre del Área:</strong> ${nuevaArea.nombreArea}</p>
                             <p><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</p>
                             <p><strong>Responsable:</strong> ${this.userManager.currentUser.nombreCompleto}</p>

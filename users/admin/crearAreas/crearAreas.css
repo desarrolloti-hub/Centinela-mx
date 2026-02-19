@@ -1,49 +1,56 @@
 /* =============================================
-   VARIABLES ESPECÍFICAS PARA CREAR ÁREAS
+   CREAR ÁREAS - ESTILO VISUAL IGUAL A CREAR CATEGORÍAS
    ============================================= */
+
 :root {
     /* COLORES PRINCIPALES */
     --color-bg-primary: #000000;
     --color-bg-secondary: #0a0a0a;
     --color-bg-tertiary: #141414;
+    --color-bg-elevated: #1e1e1e;
     --color-text-primary: #ffffff;
     --color-text-secondary: #cccccc;
+    --color-text-tertiary: #999999;
     --color-accent-primary: #c0c0c0;
     --color-accent-secondary: #2f8cff;
     --color-border-light: #545454;
+    --color-border-dark: #333333;
     --color-hover: #1a1a1a;
-
+    
     /* COLORES DE ESTADO */
     --color-success: #00ff95;
     --color-danger: #ff4d4d;
     --color-warning: #ffcc00;
     --color-info: #00cfff;
-
+    
     /* SOMBRAS */
     --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
     --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
-
+    
     /* BORDES */
     --border-radius-small: 5px;
     --border-radius-medium: 10px;
     --border-radius-large: 15px;
-
+    
     /* TRANSICIONES */
     --transition-default: 0.3s ease;
-
+    
     /* FUENTES */
     --font-family-primary: 'Orbitron', sans-serif;
-    --font-family-secondary: sans-serif;
-    
-    /* ILUMINACIÓN - VALORES POR DEFECTO (TEMA OSCURO) */
-    --glow-intensity: 0.8;
-    --glow-color: var(--color-accent-primary);
+    --font-family-secondary: 'Rajdhani', sans-serif;
+    --font-family-mono: 'Courier New', monospace;
 }
 
 /* =============================================
    ESTILOS GENERALES
    ============================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
     background-color: var(--color-bg-primary);
     color: var(--color-text-secondary);
@@ -51,7 +58,8 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 20px;
-    
+    padding-top: 80px !important;
+    line-height: 1.5;
 }
 
 .container-fluid {
@@ -64,7 +72,7 @@ body {
 }
 
 /* =============================================
-   HEADER PRINCIPAL CON ILUMINACIÓN DINÁMICA
+   HEADER PRINCIPAL CON ILUMINACIÓN MEJORADA
    ============================================= */
 .row.mb-4:first-child {
     padding: 20px 25px;
@@ -86,41 +94,31 @@ h1.h3 {
     justify-content: center;
     gap: 12px;
     
-    
-    /* ✨ ILUMINACIÓN DINÁMICA QUE CAMBIA CON EL TEMA ✨ */
-    text-shadow: 0 0 8px var(--color-accent-primary),
-                 0 0 16px var(--color-accent-primary),
-                 0 0 24px var(--color-accent-primary);
-    animation: titleGlow 4s infinite alternate ease-in-out;
+    /* ✨ ILUMINACIÓN MEJORADA (COMO EN CATEGORÍAS) ✨ */
+    text-shadow: 0 0 10px var(--color-accent-primary), 
+                 0 0 20px var(--color-accent-primary);
+    animation: titleGlow 3s infinite alternate ease-in-out;
 }
 
 h1.h3 i {
-   
     font-size: 24px;
     
     /* ✨ ILUMINACIÓN PARA EL ICONO ✨ */
     filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
 
-/* ✨ ANIMACIÓN SUTIL PARA EL TÍTULO ✨ */
+/* ✨ ANIMACIÓN MEJORADA PARA EL TÍTULO ✨ */
 @keyframes titleGlow {
     0% {
         text-shadow: 0 0 5px var(--color-accent-primary),
-                     0 0 10px var(--color-accent-primary),
                      0 0 15px var(--color-accent-primary);
-        opacity: 0.95;
-    }
-    50% {
-        text-shadow: 0 0 10px var(--color-accent-primary),
-                     0 0 20px var(--color-accent-primary),
-                     0 0 30px var(--color-accent-primary);
-        opacity: 1;
+        opacity: 0.9;
     }
     100% {
-        text-shadow: 0 0 5px var(--color-accent-primary),
-                     0 0 10px var(--color-accent-primary),
-                     0 0 15px var(--color-accent-primary);
-        opacity: 0.95;
+        text-shadow: 0 0 15px var(--color-accent-primary),
+                     0 0 30px var(--color-accent-primary),
+                     0 0 45px var(--color-accent-primary);
+        opacity: 1;
     }
 }
 
@@ -130,12 +128,12 @@ h1.h3 i {
     margin-top: 5px;
     font-size: 1.2rem;
     position: relative;
-      margin-bottom: 30px; /* Reducido para acercar título al formulario */
+    margin-bottom: 30px;
     padding-bottom: 15px;
     border-bottom: 2px solid var(--color-border-light);
     
     /* ✨ ILUMINACIÓN SUTIL PARA LA DESCRIPCIÓN ✨ */
-    
+    text-shadow: 0 0 5px rgba(192, 192, 192, 0.3);
     opacity: 0.9;
 }
 
@@ -178,7 +176,7 @@ h1.h3 i {
 }
 
 /* =============================================
-   TARJETA DEL FORMULARIO
+   TARJETAS
    ============================================= */
 .card {
     background: var(--color-bg-secondary) !important;
@@ -204,10 +202,14 @@ h1.h3 i {
     display: flex !important;
     align-items: center !important;
     gap: 10px !important;
+    
+    /* ✨ ILUMINACIÓN PARA TÍTULOS DE TARJETA ✨ */
+    text-shadow: 0 0 5px var(--color-accent-primary);
 }
 
 .card-header h5 i {
     color: var(--color-accent-primary) !important;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
 }
 
 .card-body {
@@ -226,10 +228,14 @@ h6.border-bottom {
     border-bottom: 2px solid var(--color-accent-primary) !important;
     padding-bottom: 10px !important;
     margin-bottom: 20px !important;
+    
+    /* ✨ ILUMINACIÓN PARA SUBTÍTULOS ✨ */
+    text-shadow: 0 0 4px var(--color-accent-primary);
 }
 
 h6 i {
     color: var(--color-accent-primary) !important;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
 }
 
 /* =============================================
@@ -241,6 +247,9 @@ h6 i {
     font-weight: 500 !important;
     margin-bottom: 8px !important;
     font-size: 14px !important;
+    
+    /* ✨ ILUMINACIÓN SUTIL PARA LABELS ✨ */
+    text-shadow: 0 0 2px rgba(192, 192, 192, 0.3);
 }
 
 .form-label::after {
@@ -268,7 +277,7 @@ h6 i {
 .form-select:focus {
     border-color: var(--color-accent-secondary) !important;
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
-    background: var(--color-bg-secondary) !important;
+    background: var(--color-bg-tertiary) !important;
     outline: none !important;
 }
 
@@ -317,6 +326,7 @@ h6 i {
 
 .alert-info i {
     color: var(--color-info) !important;
+    filter: drop-shadow(0 0 4px var(--color-info));
 }
 
 .alert-warning {
@@ -327,19 +337,24 @@ h6 i {
 
 .alert-warning i {
     color: var(--color-warning) !important;
+    filter: drop-shadow(0 0 4px var(--color-warning));
 }
 
 /* =============================================
    BOTONES DEL FORMULARIO
    ============================================= */
+/* =============================================
+   BOTONES DE ACCIÓN - ALINEADOS A LA IZQUIERDA
+   ============================================= */
 .d-flex.justify-content-end.gap-3 {
     padding-top: 20px;
     border-top: 1px solid var(--color-border-light);
     margin-top: 20px;
+    /* Cambiamos la alineación a la izquierda */
+    justify-content: flex-start !important;
 }
 
 #btnCancelar,
-#btnGuardarBorrador,
 #btnCrearArea {
     padding: 12px 30px !important;
     font-family: var(--font-family-secondary) !important;
@@ -364,18 +379,6 @@ h6 i {
     transform: translateY(-2px) !important;
     border-color: var(--color-danger) !important;
     color: var(--color-danger) !important;
-}
-
-#btnGuardarBorrador {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-warning) !important;
-    color: var(--color-warning) !important;
-}
-
-#btnGuardarBorrador:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(255, 204, 0, 0.2) !important;
 }
 
 #btnCrearArea {
@@ -415,10 +418,14 @@ h6 i {
     align-items: center !important;
     gap: 10px !important;
     font-size: 16px !important;
+    
+    /* ✨ ILUMINACIÓN PARA TÍTULOS DE MODAL ✨ */
+    text-shadow: 0 0 5px var(--color-accent-primary);
 }
 
 .modal-title i {
     color: var(--color-accent-primary) !important;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
 }
 
 .btn-close {
@@ -448,6 +455,7 @@ h6 i {
 
 #modalExito .fa-check-circle {
     color: var(--color-success) !important;
+    filter: drop-shadow(0 0 8px var(--color-success));
 }
 
 #btnCrearOtra,
@@ -470,6 +478,7 @@ h6 i {
 #contadorCaracteres {
     color: var(--color-accent-primary);
     font-weight: 600;
+    text-shadow: 0 0 4px var(--color-accent-primary);
 }
 
 /* =============================================
@@ -514,6 +523,18 @@ h6 i {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    /* ✨ ILUMINACIÓN PARA TÍTULOS DE CARGO ✨ */
+    text-shadow: 0 0 4px var(--color-accent-primary);
+}
+
+.cargo-titulo i {
+    color: var(--color-accent-primary);
+    font-size: 14px;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
 }
 
 .btn-eliminar-cargo {
@@ -524,12 +545,19 @@ h6 i {
     font-size: 12px !important;
     border-radius: var(--border-radius-small) !important;
     transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    
+    /* ✨ ILUMINACIÓN PARA BOTÓN ELIMINAR ✨ */
+    text-shadow: 0 0 3px var(--color-danger);
 }
 
 .btn-eliminar-cargo:hover {
     background: var(--color-danger) !important;
     color: white !important;
     transform: translateY(-2px);
+    box-shadow: 0 0 15px var(--color-danger);
 }
 
 .btn-agregar-cargo {
@@ -573,6 +601,42 @@ h6 i {
     font-size: 24px;
     color: var(--color-accent-primary);
     margin-bottom: 10px;
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+}
+
+/* =============================================
+   LÍNEA DIVISORIA PARA CARGOS
+   ============================================= */
+.section-divider {
+    display: flex;
+    align-items: center;
+    margin: 30px 0 20px 0;
+    position: relative;
+}
+
+.section-divider-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--color-accent-primary) 20%, 
+        var(--color-accent-primary) 80%, 
+        transparent 100%
+    );
+    box-shadow: 0 0 10px rgba(192, 192, 192, 0.3);
+}
+
+.section-divider-content {
+    padding: 0 15px;
+    color: var(--color-accent-primary);
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    
+    /* ✨ ILUMINACIÓN PARA EL DIVISOR ✨ */
+    text-shadow: 0 0 8px var(--color-accent-primary);
 }
 
 /* =============================================
@@ -637,12 +701,18 @@ h6 i {
         width: 100%;
         margin-bottom: 10px;
     }
+    
+    .section-divider-content {
+        font-size: 12px;
+        padding: 0 10px;
+    }
 }
 
 /* MÓVIL (768px hacia abajo) */
 @media (max-width: 768px) {
     body {
         padding: 10px !important;
+        padding-top: 70px !important;
     }
 
     .container-fluid {
@@ -658,6 +728,8 @@ h6 i {
 
     .row.mb-4:first-child {
         padding: 15px !important;
+        margin-top: 10px !important;
+        padding-top: 10px !important;
     }
 
     .card-header {
@@ -704,10 +776,18 @@ h6 i {
         width: 100% !important;
         justify-content: center !important;
     }
+    
+    .section-divider {
+        margin: 20px 0 15px 0;
+    }
 }
 
 /* MÓVIL PEQUEÑO (480px hacia abajo) */
 @media (max-width: 480px) {
+    body {
+        padding-top: 60px !important;
+    }
+
     .container-fluid {
         padding: 10px !important;
     }
@@ -774,191 +854,25 @@ h6 i {
 /* TEMA CLARO - Cuando se active, la iluminación se adapta */
 [data-theme="light"] {
     --glow-intensity: 0.5;
-    /* En tema claro, la iluminación es más sutil */
 }
 
 [data-theme="light"] h1.h3 {
-    text-shadow: 0 0 5px rgba(192, 192, 192, 0.5),
-                 0 0 10px rgba(192, 192, 192, 0.3),
-                 0 0 15px rgba(192, 192, 192, 0.2);
+    text-shadow: 0 0 8px rgba(192, 192, 192, 0.6),
+                 0 0 16px rgba(192, 192, 192, 0.4);
 }
 
 [data-theme="light"] .text-muted {
-    text-shadow: 0 0 3px rgba(192, 192, 192, 0.3);
+    text-shadow: 0 0 4px rgba(192, 192, 192, 0.4);
 }
 
 /* TEMA DE ALTO CONTRASTE */
 [data-theme="high-contrast"] h1.h3 {
-    text-shadow: 0 0 10px #ffffff,
-                 0 0 20px #ffffff;
+    text-shadow: 0 0 12px #ffffff,
+                 0 0 24px #ffffff;
 }
 
 [data-theme="high-contrast"] .text-muted {
-    text-shadow: 0 0 5px #ffffff;
-}
-
-/* =============================================
-   ESTILOS PARA SWEETALERT2 - TEMA OSCURO CENTINELA
-   ============================================= */
-
-/* Estilos generales para SweetAlert2 */
-/* =============================================
-   ESTILOS PARA SWEETALERT2 - VERSIÓN COMPACTA
-   ============================================= */
-
-/* Cuadro principal - MÁS PEQUEÑO */
-.swal2-popup {
-    background: var(--color-bg-secondary) !important;
-    color: var(--color-text-primary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
-    box-shadow: var(--shadow-large) !important;
-    font-family: var(--font-family-secondary) !important;
-
-    /* 📏 TAMAÑO COMPACTO */
-    width: 450px !important;
-    padding: 0.8rem !important;
-    font-size: 12px !important;
-}
-
-/* Título más pequeño */
-.swal2-title {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.10px;
-
-    /* 📏 TAMAÑO COMPACTO */
-    font-size: 16px !important;
-    margin: 0.2rem 0 0.5rem !important;
-    padding: 0 !important;
-}
-
-/* Contenedor del HTML - COMPACTO */
-.swal2-html-container {
-    color: var(--color-text-secondary) !important;
-    font-family: var(--font-family-secondary) !important;
-    line-height: 1.4;
-
-    /* 📏 TAMAÑO COMPACTO */
-    font-size: 12px !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    text-align: left !important;
-}
-
-/* Para el resumen de cambios (los badges) */
-.swal2-html-container div[style*="display: flex"] {
-    margin: 8px 0 !important;
-    gap: 8px !important;
-}
-
-/* Para los badges (0 nuevos, 1 modificados) */
-.swal2-html-container span[style*="border-radius: 20px"] {
-    padding: 3px 8px !important;
-    font-size: 11px !important;
-}
-
-/* Para los títulos de sección (Cargos Modificados) */
-.swal2-html-container h6 {
-    font-size: 13px !important;
-    margin: 8px 0 4px !important;
-    color: var(--color-accent-primary) !important;
-}
-
-/* Para los items de cargos */
-.swal2-html-container div[style*="background: rgba(255, 204, 0, 0.05)"] {
-    padding: 8px !important;
-    margin-bottom: 6px !important;
-}
-
-/* Para el texto de los cargos */
-.swal2-html-container strong {
-    font-size: 12px !important;
-    margin-bottom: 3px !important;
-}
-
-.swal2-html-container span[style*="color: #999"] {
-    font-size: 11px !important;
-}
-
-/* Para los botones de acción */
-.swal2-actions {
-    margin: 0.8rem 0 0.3rem !important;
-    gap: 8px !important;
-}
-
-.swal2-confirm,
-.swal2-cancel {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-accent-secondary) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-medium) !important;
-    font-family: var(--font-family-primary) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-
-    /* 📏 BOTONES COMPACTOS */
-    font-size: 11px !important;
-    padding: 6px 12px !important;
-    min-width: 100px !important;
-}
-
-.swal2-cancel {
-    border: 1px solid var(--color-border-light) !important;
-}
-
-/* Para el texto de cambios (original tachado y nuevo) */
-.swal2-html-container span[style*="color: #999"] {
-    font-size: 11px !important;
-}
-
-.swal2-html-container span[style*="color: #00ff95"] {
-    font-size: 11px !important;
-}
-
-/* =============================================
-   ESTILOS PARA TOASTS (CIERRE AUTOMÁTICO)
-   ============================================= */
-
-.swal2-toast {
-    background: var(--color-bg-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-medium) !important;
-    box-shadow: var(--shadow-normal) !important;
-    padding: 15px 20px !important;
-}
-
-.swal2-toast .swal2-title {
-    font-family: var(--font-family-secondary) !important;
-    font-size: 14px !important;
-    color: var(--color-text-primary) !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.swal2-toast .swal2-icon {
-    margin: 0 10px 0 0 !important;
-    border-width: 2px !important;
-}
-
-/* Barra de progreso del toast */
-.swal2-timer-progress-bar {
-    background: var(--color-accent-secondary) !important;
-    height: 3px !important;
-}
-
-/* Botón cerrar del toast */
-.swal2-close {
-    color: var(--color-text-secondary) !important;
-    font-size: 24px !important;
-    transition: all 0.3s ease !important;
-}
-
-.swal2-close:hover {
-    color: var(--color-text-primary) !important;
-    transform: rotate(90deg) !important;
+    text-shadow: 0 0 6px #ffffff;
 }
 
 /* Estilos personalizados */
@@ -1007,39 +921,15 @@ select#responsable option {
         0 0 30px var(--color-accent-primary) !important;
     color: var(--navbar-logo-text) !important;
 }
-/* =============================================
-   AJUSTE PARA NAVBAR EN RESPONSIVE
-   ============================================= */
 
 /* Ajuste general para que el contenido no quede debajo del navbar */
-body {
-    padding-top: 80px !important; /* Espacio para el navbar fijo */
+.header-container,
+.d-flex.flex-column.align-items-center.text-center {
+    margin-top: 10px !important;
+    padding-top: 10px !important;
 }
 
-@media (max-width: 768px) {
-    body {
-        padding-top: 70px !important; /* Un poco menos en móvil */
-        padding-left: 10px !important;
-        padding-right: 10px !important;
-    }
-    
-    /* Asegurar que el header tenga suficiente espacio */
-    .row.mb-4:first-child,
-    .header-container,
-    .d-flex.flex-column.align-items-center.text-center {
-        margin-top: 10px !important;
-        padding-top: 10px !important;
-    }
-    
-    /* Ajustar el contenedor principal */
-    .container-fluid {
-        margin-top: 0 !important;
-        padding-top: 15px !important;
-    }
-}
-
-@media (max-width: 480px) {
-    body {
-        padding-top: 60px !important; /* Aún menos en móvil pequeño */
-    }
+.container-fluid {
+    margin-top: 0 !important;
+    padding-top: 15px !important;
 }

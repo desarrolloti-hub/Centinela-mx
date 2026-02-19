@@ -18,8 +18,15 @@
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
         rel="stylesheet">
 
-    <!-- Nuestros estilos -->
+    <!-- Estilos del navbar y footer -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    
+    <!-- Estilos principales de la vista -->
     <link rel="stylesheet" href="crearAreas.css">
+    
+    <!-- Assets -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
 </head>
 
 <body>
@@ -28,7 +35,7 @@
 
     <!-- Contenedor principal -->
     <div class="container-fluid py-4">
-        <!-- Header CORREGIDO - Ahora usa las clases correctas del CSS -->
+        <!-- Header - IGUAL QUE EN CATEGORÍAS -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="d-flex flex-column align-items-center text-center">
@@ -37,90 +44,101 @@
                         Crear Nueva Área
                     </h1>
                     <div class="text-muted" style="max-width: 700px;">
-                        
                         Complete el formulario para registrar un área nueva en el sistema.<br>
-                        Todos los campos marcados son obligatorios.
+                        Todos los campos marcados con * son obligatorios.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Formulario de Creación - CON BOTÓN EN EL HEADER DE LA TARJETA -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Información del Área</h5>
-                        <button id="btnVolverLista" class="btn-volver">
-                            <i class="fas fa-arrow-left"></i>Volver
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <form id="formCrearArea">
-                            <!-- Sección 1: Información Básica -->
+        <!-- ============================================= -->
+        <!-- FORMULARIO PRINCIPAL (TODO EN UN SOLO FORM)   -->
+        <!-- ============================================= -->
+        <form id="formCrearArea">
+            <!-- Tarjeta 1: Información Principal del Área -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Información del Área</h5>
+                            <button type="button" id="btnVolverLista" class="btn-volver">
+                                <i class="fas fa-arrow-left"></i>Volver a la lista
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <!-- Sección: Información Básica -->
                             <div class="row mb-4">
                                 <div class="col-12">
-                                    <h6 class="border-bottom pb-2 mb-3"><i
-                                            class="fas fa-info-circle me-2"></i>Información Básica</h6>
+                                    <h6 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>Información Básica
+                                    </h6>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
-                                    <label for="nombreArea" class="form-label">Nombre del Área *</label>
+                                    <label for="nombreArea" class="form-label">
+                                        <i class="fas fa-building me-1"></i>Nombre del Área <span class="required">*</span>
+                                    </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-building"></i></span>
-                                        <input type="text" class="form-control" id="nombreArea"
+                                        <input type="text" class="form-control" id="nombreArea" name="nombreArea"
                                             placeholder="Ej: Recursos Humanos, Ventas, Tecnología" required>
                                     </div>
                                     <div class="form-text">Ingrese el nombre completo del área o departamento</div>
                                 </div>
-                            </div>
 
-                            <!-- Sección 2: Descripción -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <h6 class="border-bottom pb-2 mb-3">Descripción</h6>
+                                <div class="col-md-6 mb-3">
+                                    <label for="responsable" class="form-label">
+                                        <i class="fas fa-user me-1"></i>Responsable del Área
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                                        <select class="form-select" id="responsable" name="responsable">
+                                            <option value="">Seleccione un responsable...</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-text mt-1">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Persona encargada del área (opcional)
+                                    </div>
                                 </div>
 
                                 <div class="col-12 mb-3">
-                                    <label for="descripcionArea" class="form-label">Descripción del Área *</label>
-                                    <textarea class="form-control" id="descripcionArea" rows="4"
+                                    <label for="descripcionArea" class="form-label">
+                                        <i class="fas fa-align-left me-1"></i>Descripción del Área <span class="required">*</span>
+                                    </label>
+                                    <textarea class="form-control" id="descripcionArea" name="descripcionArea" rows="4"
                                         placeholder="Describa las funciones principales, objetivos y responsabilidades del área..."
                                         required></textarea>
                                     <div class="form-text">Ingrese una descripción detallada del área</div>
                                     <div class="mt-1">
-                                        <small class="text-muted">Caracteres: <span
-                                                id="contadorCaracteres">0</span></small>
-                                    </div>
-                                </div>
-
-                                <!-- RESPONSABLE - Se cargará dinámicamente desde JavaScript -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="responsable" class="form-label">Responsable del Área</label>
-                                    <select class="form-select" id="responsable">
-                                        <option value="">Cargando responsables...</option>
-                                    </select>
-                                    <div class="form-text mt-1">
-                                        <i class="fas fa-user me-1"></i>
-                                        Persona encargada del área
+                                        <small class="text-muted">Caracteres: <span id="contadorCaracteres">0</span></small>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                            <!-- Sección 3: Cargos del Área -->
+            <!-- Tarjeta 2: Gestión de Cargos -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Gestión de Cargos</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Sección de Cargos -->
                             <div class="row mb-4">
                                 <div class="col-12">
-                                    <h6 class="border-bottom pb-2 mb-3">
-                                        <i class="fas fa-briefcase me-2"></i>Cargos del Área
-                                        <span class="cargos-counter" id="cargosCounter">(0 cargos)</span>
-                                    </h6>
+                                    
 
                                     <!-- Contenedor dinámico de cargos -->
                                     <div id="cargosList" class="cargos-container">
                                         <div class="cargos-empty" id="cargosEmpty">
                                             <i class="fas fa-briefcase mb-2"></i>
                                             <p>No hay cargos agregados</p>
-                                            <small class="text-muted">Haga clic en "Agregar Cargo" para añadir
-                                                uno</small>
+                                            <small class="text-muted">Haga clic en "Agregar Cargo" para añadir uno</small>
                                         </div>
                                     </div>
 
@@ -134,27 +152,27 @@
                                 </div>
                             </div>
 
-                            <!-- Mensajes de validación -->
-                            <div class="alert alert-info mb-4">
+                            <!-- Mensaje informativo -->
+                            <div class="alert alert-info mt-3">
                                 <i class="fas fa-info-circle me-2"></i>
-                                Los campos marcados con * son obligatorios. Todos los datos serán verificados antes de
-                                guardar.
+                                Los cargos que agregue aquí estarán disponibles para asignar a los empleados de esta área.
                             </div>
-
-                            <!-- Botones de acción -->
-                            <div class="d-flex justify-content-end gap-3">
+                             <div class="d-flex justify-content-end gap-3">
+                                <button type="submit" class="btn btn-success" id="btnCrearArea">
+                                    <i class="fas fa-check me-2"></i>Crear Área
+                                </button>
                                 <button type="button" class="btn btn-secondary" id="btnCancelar">
                                     <i class="fas fa-times me-2"></i>Cancelar
                                 </button>
-                                <button type="submit" class="btn btn-primary" id="btnCrearArea">
-                                    <i class="fas fa-check me-2"></i>Crear Área
-                                </button>
+                                
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            
+        </form>
     </div>
     <br>
 
