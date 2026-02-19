@@ -153,11 +153,10 @@ function updateStats(collaborators) {
         statsContainer.id = 'collaboratorsStats';
         statsContainer.className = 'stats-container';
         
-        const sectionHeader = document.querySelector('.card-header'); // Cambiado porque ya no existe .section-header
+        const sectionHeader = document.querySelector('.card-header');
         if (sectionHeader) {
             sectionHeader.parentNode.insertBefore(statsContainer, sectionHeader.nextSibling);
         } else {
-            // Fallback: insertar después del card-header
             const tableWrapper = document.querySelector('.table-wrapper');
             if (tableWrapper) {
                 tableWrapper.parentNode.insertBefore(statsContainer, tableWrapper.nextSibling);
@@ -247,30 +246,20 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
         const result = await Swal.fire({
             title: `${actionText} colaborador`,
             html: `
-                <div class="swal-user-info ${isEnabling ? 'enable' : 'disable'}">
-                    <div class="swal-user-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <h3>${collaboratorName}</h3>
+                <div>
+                    <p><strong>${collaboratorName}</strong></p>
                     <p>${collaborator.correoElectronico || 'No email'}</p>
+                    <p>¿Estás seguro de ${statusText} al colaborador?</p>
+                    ${isEnabling ? 
+                        '<p><i class="fas fa-check-circle"></i> El usuario podrá acceder al sistema normalmente</p>' :
+                        '<p><i class="fas fa-exclamation-triangle"></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente</p>'
+                    }
                 </div>
-                <p>¿Estás seguro de ${statusText} al colaborador?</p>
-                ${isEnabling ? 
-                    '<p class="swal-enable-text"><i class="fas fa-check-circle"></i> El usuario podrá acceder al sistema normalmente</p>' :
-                    '<p class="swal-disable-text"><i class="fas fa-exclamation-triangle"></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente</p>'
-                }
             `,
             icon: iconType,
             showCancelButton: true,
             confirmButtonText: `Sí, ${statusText}`,
-            cancelButtonText: 'Cancelar',
-            reverseButtons: true,
-            customClass: {
-                popup: 'swal2-custom-popup',
-                confirmButton: 'swal2-confirm-custom',
-                cancelButton: 'swal2-cancel-custom',
-                icon: 'swal2-icon-custom'
-            }
+            cancelButtonText: 'Cancelar'
         });
         
         if (!result.isConfirmed) return;
@@ -313,8 +302,7 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
             icon: 'success',
             title: '¡Estado cambiado!',
             html: `
-                <div class="swal-success-content">
-                    <i class="fas fa-user-check ${isEnabling ? 'success-icon' : 'warning-icon'}"></i>
+                <div>
                     <p><strong>${collaboratorName}</strong></p>
                     <p>ha sido ${statusText} exitosamente</p>
                 </div>
@@ -384,14 +372,6 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
         }
     }
     
-    const estadoHTML = collaborator.status ? 
-        `<span class="status-detail active">
-            <i class="fas fa-check-circle"></i> Activo
-        </span>` : 
-        `<span class="status-detail inactive">
-            <i class="fas fa-ban"></i> Inactivo
-        </span>`;
-    
     Swal.fire({
         title: `Detalles de: ${collaboratorName}`,
         html: `
@@ -413,22 +393,24 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
                 <div class="swal-details-grid">
                     <div class="swal-detail-card">
                         <p><strong>Email:</strong><br><span>${collaborator.correoElectronico || 'No especificado'}</span></p>
-                        <p><strong>Estado:</strong><br>${estadoHTML}</p>
+                        <p><strong>Estado:</strong><br>
+                            <span class="status-detail ${collaborator.status ? 'active' : 'inactive'}">
+                                <i class="fas ${collaborator.status ? 'fa-check-circle' : 'fa-ban'}"></i> 
+                                ${collaborator.status ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </p>
                         <p><strong>Organización:</strong><br><span>${collaborator.organizacion || 'No especificado'}</span></p>
                     </div>
                     <div class="swal-detail-card">
                         <p><strong>Fecha de creación:</strong><br><span>${fechaCreacion}</span></p>
                         <p><strong>Plan:</strong><br><span>${collaborator.plan || 'No especificado'}</span></p>
-                        <p><strong>Verificado:</strong><br><span class="${collaborator.verificado ? 'verified' : 'not-verified'}">${collaborator.verificado ? 'Sí' : 'No'}</span></p>
+                        <p><strong>Verificado:</strong><br>
+                            <span class="${collaborator.verificado ? 'verified' : 'not-verified'}">
+                                ${collaborator.verificado ? 'Sí' : 'No'}
+                            </span>
+                        </p>
                     </div>
                 </div>
-                
-                ${collaborator.telefono ? `
-                    <div class="swal-additional-info">
-                        <p><strong>Teléfono:</strong> <span>${collaborator.telefono}</span></p>
-                        ${collaborator.departamento ? `<p><strong>Departamento:</strong> <span>${collaborator.departamento}</span></p>` : ''}
-                    </div>
-                ` : ''}
                 
                 ${collaborator.eliminado ? `
                     <div class="swal-warning-alert">
@@ -439,11 +421,7 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
         `,
         width: 700,
         showCloseButton: true,
-        showConfirmButton: false,
-        customClass: {
-            popup: 'swal2-details-popup',
-            closeButton: 'swal2-close-custom'
-        }
+        showConfirmButton: false
     });
 }
 

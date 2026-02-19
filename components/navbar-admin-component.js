@@ -527,7 +527,7 @@ class NavbarComplete {
             }
             
             .admin-dropdown-options.active {
-                max-height: 450px; /* Aumentado para dar espacio a más opciones */
+                max-height: 450px;
                 opacity: 1;
                 overflow: visible;
             }
@@ -633,7 +633,6 @@ class NavbarComplete {
                     overflow: hidden;
                 }
                 
-                /* Mejoras responsive para el dropdown */
                 .admin-dropdown-option {
                     padding: 12px 12px;
                     gap: 10px;
@@ -707,7 +706,6 @@ class NavbarComplete {
                     height: 2.5px;
                 }
                 
-                /* Mejoras responsive para el dropdown en móvil */
                 .admin-dropdown-options {
                     padding: 12px;
                 }
@@ -731,7 +729,6 @@ class NavbarComplete {
                     line-height: 1.4;
                 }
                 
-                /* Ajustes para la sección de administración */
                 .nav-section-title {
                     font-size: 15px;
                 }
@@ -786,7 +783,6 @@ class NavbarComplete {
                     height: 2px;
                 }
                 
-                /* Ajustes extra para pantallas muy pequeñas */
                 .admin-dropdown-option {
                     padding: 12px 10px;
                 }
@@ -1419,9 +1415,8 @@ class NavbarComplete {
                     text: '¿Estás seguro de que deseas salir del sistema?',
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'Sí, cerrar sesión',
-                    cancelButtonText: 'Cancelar'
-                    // SIN reverseButtons - Cancelar a la izquierda por defecto
+                    confirmButtonText: 'CONFIRMAR',
+                    cancelButtonText: 'CANCELAR'
                 }).then((result) => {
                     resolve(result.isConfirmed);
                 });
