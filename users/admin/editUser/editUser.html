@@ -94,13 +94,6 @@
                     <div class="info-grid">
                         <div class="info-item">
                             <div class="info-label">
-                                <i class="fas fa-fingerprint"></i> ID Auth
-                            </div>
-                            <div class="info-value collaborator-id" id="authId">CARGANDO...</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <div class="info-label">
                                 <i class="fas fa-calendar-plus"></i> Fecha de Creación
                             </div>
                             <div class="info-value">
@@ -133,7 +126,7 @@
 
                 <!-- Botón volver -->
                 <footer class="back-btn-container">
-                    <a href="gestionColaboradores.html" class="back-btn">
+                    <a href="/users/admin/managementUser/managementUser.html" class="back-btn">
                         <i class="fas fa-arrow-left"></i> VOLVER A GESTIÓN
                     </a>
                 </footer>
@@ -228,23 +221,9 @@
                                     <i class="fas fa-times-circle"></i>
                                     <span class="status-text">Inactivo</span>
                                 </div>
-                                <div class="status-option" data-status="pending">
-                                    <i class="fas fa-clock"></i>
-                                    <span class="status-text">Pendiente</span>
-                                </div>
                             </div>
                             <input type="hidden" id="status" value="active">
                         </div>
-                    </div>
-
-                    <!-- Sección para cambiar contraseña -->
-                    <div class="password-change-section">
-                        <button type="button" class="btn-change-password" id="changePasswordBtn">
-                            <i class="fas fa-key"></i> ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA
-                        </button>
-                        <p class="password-change-info">
-                            Se enviará un enlace seguro al correo del colaborador para restablecer su contraseña.
-                        </p>
                     </div>
 
                     <!-- Permisos del sistema -->
@@ -289,8 +268,18 @@
                         </div>
                     </section>
 
-                    <!-- Mensajes -->
-                    <div class="message-container" id="mainMessage"></div>
+                    
+
+                    <!-- Sección para cambiar contraseña -->
+                    <div class="password-change-section">
+                        <button type="button" class="btn-change-password" id="changePasswordBtn">
+                            <i class="fas fa-key"></i> ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA
+                        </button>
+                        <p class="password-change-info">
+                            Se enviará un enlace seguro al correo del colaborador para restablecer su contraseña.
+                        </p>
+                    </div>
+
 
                     <!-- Acciones del formulario -->
                     <div class="form-actions">
@@ -299,9 +288,6 @@
                         </button>
                         <button type="button" class="action-btn cancel-btn" id="cancelBtn">
                             <i class="fas fa-times"></i> CANCELAR
-                        </button>
-                        <button type="button" class="action-btn delete-btn" id="deleteBtn">
-                            <i class="fas fa-trash"></i> ELIMINAR
                         </button>
                     </div>
                 </form>

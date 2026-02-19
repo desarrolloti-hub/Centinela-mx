@@ -1,4 +1,4 @@
-// editUser.js - Editor de colaboradores (VERSIÓN CORREGIDA)
+// editUser.js - Editor de colaboradores (VERSIÓN FINAL - TODO CON SWEETALERT2)
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
 
@@ -45,7 +45,6 @@ async function iniciarEditor(userManager) {
         await cargarDatosColaborador(userManager, collaboratorId, elements);
         configurarHandlersBasicos(elements);
         configurarFotoPerfil(elements);
-        configurarModal(elements, userManager);
         configurarGuardado(elements, userManager);
         configurarCambioPassword(elements, userManager);
         configurarEliminacion(elements, userManager);
@@ -72,14 +71,7 @@ function obtenerIdDesdeURL() {
             icon: 'error',
             title: 'Error',
             text: 'No se especificó el colaborador a editar',
-            confirmButtonText: 'Volver',
-            confirmButtonColor: 'var(--color-danger, #ef4444)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            confirmButtonText: 'Volver'
         }).then(() => {
             window.location.href = '/users/admin/managementUser/managementUser.html';
         });
@@ -102,14 +94,6 @@ function obtenerElementosDOM() {
         orgCircle: document.getElementById('orgCircle'),
         orgImage: document.getElementById('orgImage'),
         orgPlaceholder: document.getElementById('orgPlaceholder'),
-        
-        // Modal
-        photoModal: document.getElementById('photoModal'),
-        previewImage: document.getElementById('previewImage'),
-        modalTitle: document.getElementById('modalTitle'),
-        modalMessage: document.getElementById('modalMessage'),
-        confirmChangeBtn: document.getElementById('confirmChangeBtn'),
-        cancelChangeBtn: document.getElementById('cancelChangeBtn'),
         
         // Formulario
         fullName: document.getElementById('fullName'),
@@ -149,7 +133,7 @@ function mostrarErrorConfiguracion(error) {
         icon: 'error',
         title: 'Error de configuración',
         html: `
-            <div style="text-align: left; font-size: 14px;">
+            <div>
                 <p><strong>No se pudo cargar los módulos necesarios</strong></p>
                 <p>Error: ${error.message}</p>
                 <p>Verifica que los archivos existan en las rutas correctas:</p>
@@ -160,13 +144,6 @@ function mostrarErrorConfiguracion(error) {
             </div>
         `,
         confirmButtonText: 'Entendido',
-        confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
-        customClass: {
-            popup: 'swal2-popup',
-            title: 'swal2-title',
-            htmlContainer: 'swal2-html-container',
-            confirmButton: 'swal2-confirm'
-        },
         allowOutsideClick: false
     }).then(() => {
         window.location.href = '/users/admin/managementUser/managementUser.html';
@@ -178,12 +155,7 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
         Swal.fire({
             title: 'Cargando datos...',
             allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container'
-            }
+            didOpen: () => Swal.showLoading()
         });
         
         const collaborator = await userManager.getUserById(collaboratorId);
@@ -193,7 +165,6 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
             throw new Error('Colaborador no encontrado');
         }
         
-        // ✅ CORREGIDO: Verificar que sea colaborador por su rol, no por un campo 'cargo'
         if (!collaborator.esColaborador()) {
             Swal.close();
             throw new Error('El usuario no es un colaborador');
@@ -217,14 +188,7 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
             icon: 'error',
             title: 'Error al cargar',
             text: error.message,
-            confirmButtonText: 'Volver',
-            confirmButtonColor: 'var(--color-danger, #ef4444)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            confirmButtonText: 'Volver'
         }).then(() => {
             window.location.href = '/users/admin/managementUser/managementUser.html';
         });
@@ -237,10 +201,6 @@ function deshabilitarLogoOrganizacion(elements) {
     if (elements.orgCircle) {
         elements.orgCircle.classList.add('org-disabled');
         elements.orgCircle.style.cursor = 'default';
-    }
-    
-    if (elements.editOrgOverlay) {
-        elements.editOrgOverlay.style.display = 'none';
     }
 }
 
@@ -324,10 +284,6 @@ function actualizarInterfaz(elements, collaborator) {
         }
     }
     
-    if (elements.authId) {
-        elements.authId.textContent = collaborator.idAuth || collaborator.id || 'N/A';
-    }
-    
     const formatDate = (date) => {
         if (!date) return { date: 'N/A', time: '' };
         const d = date.toDate ? date.toDate() : new Date(date);
@@ -385,9 +341,8 @@ async function cargarAreas(userManager, elements) {
     if (!collaborator) return;
     
     try {
-        // Usar AreaManager para obtener las áreas
         const areaManager = new AreaManager();
-        const organizacionCamelCase = userManager.currentUser.organizacionCamelCase; // Del ADMIN, no del colaborador
+        const organizacionCamelCase = userManager.currentUser.organizacionCamelCase;
                 
         elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
         elements.areaSelect.disabled = true;
@@ -396,7 +351,6 @@ async function cargarAreas(userManager, elements) {
         
         const areas = await areaManager.getAreasByOrganizacion(organizacionCamelCase);
         
-        // Guardar áreas para uso posterior
         elements.areaSelect._areasData = areas;
         
         if (areas.length === 0) {
@@ -412,36 +366,26 @@ async function cargarAreas(userManager, elements) {
         elements.areaSelect.innerHTML = options;
         elements.areaSelect.disabled = false;
         
-        // Cargar área y cargo actuales
         if (collaborator.areaAsignadaId) {            
-            // Verificar que el área existe en la lista
             const areaExiste = areas.some(a => a.id === collaborator.areaAsignadaId);
             
             if (areaExiste) {
-                // Seleccionar el área
                 elements.areaSelect.value = collaborator.areaAsignadaId;
                 
-                // Disparar evento change para cargar los cargos
                 const event = new Event('change', { bubbles: true });
                 elements.areaSelect.dispatchEvent(event);
                 
-                // Función para seleccionar cargo
                 const seleccionarCargo = () => {
-                    // Usar el objeto `cargo` en lugar de los campos planos
                     if (collaborator.cargo && collaborator.cargo.id) {                        
                         const cargoSelect = elements.cargoEnAreaSelect;
-                        // Buscar la opción cuyo valor (ID del cargo) coincida con el ID guardado
                         const option = Array.from(cargoSelect.options).find(opt => opt.value === collaborator.cargo.id);
                         
                         if (option) {
                             cargoSelect.value = option.value;
                             return true;
-                        } else {
-                            console.warn('⚠️ No se encontró el cargo con ID:', collaborator.cargo.id);
                         }
                     }
                     
-                    // Fallback: buscar por nombre (por si acaso)
                     if (collaborator.cargo && collaborator.cargo.nombre) {
                         const optionPorNombre = Array.from(elements.cargoEnAreaSelect.options).find(
                             opt => opt.text === collaborator.cargo.nombre
@@ -453,17 +397,12 @@ async function cargarAreas(userManager, elements) {
                         }
                     }
                     
-                    console.warn('⚠️ No se encontró el cargo:', collaborator.cargo);
                     return false;
                 };
                 
-                // Intentar seleccionar cargo múltiples veces
                 setTimeout(seleccionarCargo, 300);
                 setTimeout(seleccionarCargo, 600);
                 setTimeout(seleccionarCargo, 1000);
-                
-            } else {
-                console.warn('⚠️ El área asignada no existe en la base de datos:', collaborator.areaAsignadaId);
             }
         }
         
@@ -476,14 +415,7 @@ async function cargarAreas(userManager, elements) {
             icon: 'warning',
             title: 'Error al cargar áreas',
             text: 'No se pudieron cargar las áreas. Puedes continuar editando pero no podrás cambiar el área.',
-            confirmButtonText: 'ENTENDIDO',
-            confirmButtonColor: 'var(--color-warning, #ffcc00)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            confirmButtonText: 'ENTENDIDO'
         });
     }
 }
@@ -516,7 +448,6 @@ function cargarCargosPorArea(elements) {
     } else {
         let options = '<option value="">Selecciona un cargo</option>';
         cargos.forEach((cargo, index) => {
-            // Usar el ID real del cargo si existe, o generar uno temporal
             const cargoId = cargo.id || `cargo_${index}`;
             options += `<option value="${cargoId}">${cargo.nombre || 'Cargo sin nombre'}</option>`;
             
@@ -549,17 +480,8 @@ function configurarHandlersBasicos(elements) {
                 text: 'Se perderán los cambios no guardados',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: 'var(--color-danger, #ef4444)',
-                cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
-                confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar',
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm',
-                    cancelButton: 'swal2-cancel'
-                }
+                confirmButtonText: 'CONFIRMAR',
+                cancelButtonText: 'CANCELAR'
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = '/users/admin/managementUser/managementUser.html';
@@ -584,7 +506,7 @@ function configurarSelectorStatus(elements) {
     });
 }
 
-// ========== HANDLERS DE FOTOS ==========
+// ========== HANDLER DE FOTO CON SWEETALERT2 ==========
 
 function configurarFotoPerfil(elements) {
     if (!elements.profileCircle) return;
@@ -603,15 +525,13 @@ function configurarFotoPerfil(elements) {
     if (elements.profileInput) {
         elements.profileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (file) mostrarModalFoto(file, 'profile', elements);
+            if (file) mostrarModalFotoConSwal(file, elements);
             this.value = '';
         });
     }
 }
 
-function mostrarModalFoto(file, type, elements) {
-    if (type !== 'profile') return;
-    
+function mostrarModalFotoConSwal(file, elements) {
     const maxSize = 5;
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
     
@@ -628,109 +548,76 @@ function mostrarModalFoto(file, type, elements) {
     const reader = new FileReader();
     
     reader.onload = function(e) {
-        if (elements.previewImage) elements.previewImage.src = e.target.result;
+        const imageBase64 = e.target.result;
         
-        currentPhotoType = type;
-        selectedFile = file;
-        
-        if (elements.modalTitle) {
-            elements.modalTitle.textContent = 'CAMBIAR FOTO DE PERFIL';
-        }
-        
-        if (elements.modalMessage) {
-            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
-            elements.modalMessage.textContent = `Tamaño: ${fileSize} MB • ¿Deseas usar esta imagen?`;
-        }
-        
-        if (elements.photoModal) elements.photoModal.style.display = 'flex';
+        Swal.fire({
+            title: 'Cambiar foto de perfil',
+            html: `
+                <div style="text-align: center;">
+                    <img src="${imageBase64}" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent-primary); margin-bottom: 15px;">
+                    <p>Tamaño: ${(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                    <p>¿Deseas usar esta imagen?</p>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'CONFIRMAR',
+            cancelButtonText: 'CANCELAR',
+            reverseButtons: false
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                await guardarFotoPerfil(imageBase64, elements);
+            }
+        });
     };
     
     reader.readAsDataURL(file);
 }
 
-function configurarModal(elements, userManager) {
-    if (!elements.confirmChangeBtn || !elements.cancelChangeBtn) return;
+async function guardarFotoPerfil(imageBase64, elements) {
+    if (!window.currentCollaborator) return;
     
-    elements.confirmChangeBtn.addEventListener('click', async () => {
-        if (!selectedFile || !window.currentCollaborator) return;
-        
-        if (currentPhotoType !== 'profile') return;
-        
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            const imageBase64 = e.target.result;
-            
-            try {
-                const collaborator = window.currentCollaborator;
-                
-                const success = await userManager.updateUser(
-                    collaborator.id,
-                    { fotoUsuario: imageBase64 },
-                    'colaborador',
-                    collaborator.organizacionCamelCase
-                );
-                
-                if (success) {
-                    if (elements.profileImage) {
-                        elements.profileImage.src = imageBase64;
-                        elements.profileImage.style.display = 'block';
-                    }
-                    if (elements.profilePlaceholder) {
-                        elements.profilePlaceholder.style.display = 'none';
-                    }
-                    
-                    collaborator.fotoUsuario = imageBase64;
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: 'Foto actualizada correctamente',
-                        timer: 3000,
-                        showConfirmButton: false,
-                        customClass: {
-                            popup: 'swal2-popup',
-                            title: 'swal2-title',
-                            htmlContainer: 'swal2-html-container',
-                            timerProgressBar: 'swal2-timer-progress-bar'
-                        }
-                    });
-                }
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudo guardar la imagen: ' + error.message,
-                    confirmButtonColor: 'var(--color-danger, #ef4444)',
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm'
-                    }
-                });
-            }
-            
-            if (elements.photoModal) elements.photoModal.style.display = 'none';
-            selectedFile = null;
-            currentPhotoType = '';
-        };
-        
-        reader.readAsDataURL(selectedFile);
+    Swal.fire({
+        title: 'Guardando foto...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
     });
     
-    elements.cancelChangeBtn.addEventListener('click', () => {
-        if (elements.photoModal) elements.photoModal.style.display = 'none';
-        selectedFile = null;
-        currentPhotoType = '';
-    });
-    
-    if (elements.photoModal) {
-        elements.photoModal.addEventListener('click', (e) => {
-            if (e.target === elements.photoModal) {
-                elements.photoModal.style.display = 'none';
-                selectedFile = null;
-                currentPhotoType = '';
+    try {
+        const collaborator = window.currentCollaborator;
+        
+        const success = await userManager.updateUser(
+            collaborator.id,
+            { fotoUsuario: imageBase64 },
+            'colaborador',
+            collaborator.organizacionCamelCase
+        );
+        
+        if (success) {
+            if (elements.profileImage) {
+                elements.profileImage.src = imageBase64;
+                elements.profileImage.style.display = 'block';
             }
+            if (elements.profilePlaceholder) {
+                elements.profilePlaceholder.style.display = 'none';
+            }
+            
+            collaborator.fotoUsuario = imageBase64;
+            
+            Swal.close();
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: 'Foto actualizada correctamente',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        }
+    } catch (error) {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo guardar la imagen: ' + error.message
         });
     }
 }
@@ -764,7 +651,7 @@ function configurarGuardado(elements, userManager) {
         let areaNombre = 'No asignada';
         let cargoNombre = 'No asignado';
         let cargoDescripcion = '';
-        let cargoObjeto = null; // Para guardar el objeto completo del cargo
+        let cargoObjeto = null;
         
         const areas = elements.areaSelect._areasData || [];
         const areaSeleccionada = areas.find(a => a.id === elements.areaSelect.value);
@@ -777,7 +664,6 @@ function configurarGuardado(elements, userManager) {
         if (cargoSeleccionado) {
             cargoNombre = cargoSeleccionado.nombre || 'Cargo sin nombre';
             cargoDescripcion = cargoSeleccionado.descripcion || '';
-            // ✅ CORREGIDO: Guardar el objeto completo del cargo
             cargoObjeto = {
                 id: cargoSeleccionado.id || elements.cargoEnAreaSelect.value,
                 nombre: cargoNombre,
@@ -788,35 +674,17 @@ function configurarGuardado(elements, userManager) {
         const result = await Swal.fire({
             title: '¿Guardar cambios?',
             html: `
-                <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 60px; color: var(--color-success, #4CAF50); margin-bottom: 15px;">
-                        <i class="fas fa-save"></i>
-                    </div>
-                    <p style="color: var(--color-text-secondary); margin-bottom: 15px;">
-                        Se actualizarán los datos del colaborador:
-                    </p>
-                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                        <p><strong>Nombre:</strong> ${elements.fullName.value}</p>
-                        <p><strong>Área asignada:</strong> ${areaNombre}</p>
-                        <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
-                        <p><strong>Status:</strong> ${elements.statusInput.value === 'active' ? 'Activo' : elements.statusInput.value === 'inactive' ? 'Inactivo' : 'Pendiente'}</p>
-                    </div>
+                <div>
+                    <p><strong>Nombre:</strong> ${elements.fullName.value}</p>
+                    <p><strong>Área asignada:</strong> ${areaNombre}</p>
+                    <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
+                    <p><strong>Status:</strong> ${elements.statusInput.value === 'active' ? 'Activo' : elements.statusInput.value === 'inactive' ? 'Inactivo' : 'Pendiente'}</p>
                 </div>
             `,
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'GUARDAR',
-            cancelButtonText: 'CANCELAR',
-            confirmButtonColor: 'var(--color-success, #4CAF50)',
-            cancelButtonColor: 'var(--color-danger, #ef4444)',
-            reverseButtons: true,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            }
+            cancelButtonText: 'CANCELAR'
         });
         
         if (!result.isConfirmed) return;
@@ -824,12 +692,7 @@ function configurarGuardado(elements, userManager) {
         Swal.fire({
             title: 'Guardando cambios...',
             allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container'
-            }
+            didOpen: () => Swal.showLoading()
         });
         
         try {
@@ -840,19 +703,14 @@ function configurarGuardado(elements, userManager) {
                 });
             }
             
-            // ✅ CORREGIDO: Estructura de datos a actualizar - SIN CAMPOS PLANOS REDUNDANTES
             const updateData = {
                 nombreCompleto: elements.fullName.value.trim(),
                 status: elements.statusInput.value === 'active',
-                // ✅ Guardar el objeto completo del cargo
                 cargo: cargoObjeto,
-                // ✅ Mantener SOLO el ID del área para poder seleccionarla después
                 areaAsignadaId: elements.areaSelect.value,
-                // ✅ Mantener los permisos
                 permisosPersonalizados: permisosPersonalizados
             };
             
-            // Llamar a updateUser con los datos limpios
             await userManager.updateUser(
                 collaborator.id,
                 updateData,
@@ -860,9 +718,7 @@ function configurarGuardado(elements, userManager) {
                 collaborator.organizacionCamelCase
             );
             
-            // Actualizar el objeto local del colaborador con los nuevos datos
             Object.assign(collaborator, updateData);
-            // Asegurar que los campos derivados también se actualicen en el objeto local
             if (cargoObjeto) {
                 collaborator.cargoAsignadoId = cargoObjeto.id;
                 collaborator.cargoAsignadoNombre = cargoObjeto.nombre;
@@ -887,13 +743,7 @@ function configurarGuardado(elements, userManager) {
                 title: '¡Éxito!',
                 text: 'Datos actualizados correctamente',
                 timer: 3000,
-                showConfirmButton: false,
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    timerProgressBar: 'swal2-timer-progress-bar'
-                }
+                showConfirmButton: false
             });
             
             mostrarMensaje(elements.mainMessage, 'success', 'Cambios guardados exitosamente');
@@ -905,14 +755,7 @@ function configurarGuardado(elements, userManager) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'No se pudieron guardar los cambios: ' + error.message,
-                confirmButtonColor: 'var(--color-danger, #ef4444)',
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm'
-                }
+                text: 'No se pudieron guardar los cambios: ' + error.message
             });
         }
     });
@@ -938,60 +781,29 @@ function configurarCambioPassword(elements, userManager) {
         }
         
         const result = await Swal.fire({
-            title: '¿ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA?',
+            title: '¿Enviar enlace para cambiar contraseña?',
             html: `
-                <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 60px; color: var(--color-warning, #ff9800); margin-bottom: 15px;">
-                        <i class="fas fa-key"></i>
-                    </div>
-                    <p style="color: var(--color-text-secondary); margin-bottom: 15px;">
-                        Se enviará un enlace de restablecimiento al correo del colaborador.
-                    </p>
-                    <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                        <p><strong>Correo del colaborador:</strong></p>
-                        <p style="color: var(--color-accent-primary); font-weight: bold;">
-                            ${userEmail}
-                        </p>
-                    </div>
-                    <div style="background: rgba(255, 193, 7, 0.1); padding: 10px; border-radius: 6px; margin: 10px 0;">
-                        <p style="color: var(--color-warning, #856404); font-size: 14px; margin: 0;">
-                            <i class="fas fa-info-circle"></i> 
-                            El enlace expirará en 1 hora.
-                        </p>
-                    </div>
+                <div>
+                    <p><strong>Correo del colaborador:</strong> ${userEmail}</p>
+                    <p><i class="fas fa-info-circle"></i> El enlace expirará en 1 hora.</p>
                 </div>
             `,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'ENVIAR ENLACE',
             cancelButtonText: 'CANCELAR',
-            confirmButtonColor: 'var(--color-warning, #d33)',
-            cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
-            reverseButtons: true,
-            allowOutsideClick: false,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            }
+            allowOutsideClick: false
         });
         
         if (!result.isConfirmed) return;
         
         Swal.fire({
             title: 'Enviando enlace...',
-            html: 'Por favor espera mientras procesamos tu solicitud.',
+            text: 'Por favor espera mientras procesamos tu solicitud.',
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
-            didOpen: () => Swal.showLoading(),
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container'
-            }
+            didOpen: () => Swal.showLoading()
         });
         
         try {
@@ -1009,44 +821,17 @@ function configurarCambioPassword(elements, userManager) {
             
             await Swal.fire({
                 icon: 'success',
-                title: '¡ENLACE ENVIADO EXITOSAMENTE!',
+                title: '¡Enlace enviado exitosamente!',
                 html: `
-                    <div style="text-align: center; padding: 20px;">
-                        <div style="font-size: 60px; color: var(--color-success, #28a745); margin-bottom: 20px;">
-                            <i class="fas fa-paper-plane"></i>
-                        </div>
-                        
-                        <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
-                            Correo enviado correctamente
-                        </h3>
-                        
-                        <div style="background: rgba(46, 204, 113, 0.1); padding: 20px; border-radius: 8px; margin: 20px 0;">
-                            <p><strong>📨 Destinatario:</strong> ${userEmail}</p>
-                            <p><strong>⏱️ Válido por:</strong> 1 hora</p>
-                        </div>
-                        
-                        <div style="background: rgba(40, 167, 69, 0.1); border: 1px solid rgba(40, 167, 69, 0.3); border-radius: 8px; padding: 15px; margin: 20px 0;">
-                            <h4 style="color: var(--color-success, #155724); margin-bottom: 10px;">
-                                <i class="fas fa-check"></i> ¿Qué hacer ahora?
-                            </h4>
-                            <p style="color: var(--color-text-secondary); margin: 0;">
-                                El colaborador recibirá un correo con instrucciones para restablecer su contraseña.
-                            </p>
-                        </div>
+                    <div>
+                        <p><strong>Destinatario:</strong> ${userEmail}</p>
+                        <p><strong>Válido por:</strong> 1 hora</p>
+                        <p>El colaborador recibirá instrucciones para restablecer su contraseña.</p>
                     </div>
                 `,
                 confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: 'var(--color-success, #28a745)',
                 allowOutsideClick: false,
-                showCloseButton: true,
-                width: '600px',
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm',
-                    closeButton: 'swal2-close'
-                }
+                showCloseButton: true
             });
             
         } catch (error) {
@@ -1070,21 +855,14 @@ function configurarCambioPassword(elements, userManager) {
                     errorMessage = 'Error de conexión';
                     break;
                 default:
-                    errorMessage = 'Error del sistema: ' + (error.message || 'Desconocido');
+                    errorMessage = 'Error del sistema';
             }
             
             Swal.fire({
                 icon: 'error',
                 title: errorMessage,
                 text: 'Por favor, intenta nuevamente más tarde.',
-                confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: 'var(--color-danger, #ef4444)',
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm'
-                }
+                confirmButtonText: 'ENTENDIDO'
             });
         }
     });
@@ -1105,29 +883,17 @@ function configurarEliminacion(elements, userManager) {
         const fullName = elements.fullName.value || collaborator.nombreCompleto;
         
         const result = await Swal.fire({
-            title: '¿INHABILITAR COLABORADOR?',
+            title: '¿Inhabilitar colaborador?',
             html: `
-                <div style="text-align: center; padding: 10px 0;">
-                    <div style="font-size: 60px; color: var(--color-danger, #e74c3c); margin-bottom: 15px;">
-                        <i class="fas fa-user-slash"></i>
-                    </div>
-                    <h3 style="color: var(--color-text-primary); margin: 10px 0;">${fullName}</h3>
-                    <p style="color: var(--color-text-secondary); margin: 0;">${collaborator.correoElectronico}</p>
-                </div>
-                
-                <p style="text-align: center; font-size: 1.1rem; margin: 20px 0;">
-                    ¿Estás seguro de <strong style="color: var(--color-danger, #e74c3c);">inhabilitar</strong> 
-                    este colaborador?
-                </p>
-                
-                <div style="background: rgba(231, 76, 60, 0.1); padding: 15px; border-radius: 8px; border-left: 3px solid var(--color-danger, #e74c3c);">
-                    <p style="margin: 0 0 5px 0; color: var(--color-danger, #e74c3c); font-size: 0.9rem;">
-                        <i class="fas fa-exclamation-triangle"></i> CONSECUENCIAS
-                    </p>
-                    <ul style="margin: 0; color: var(--color-text-secondary); font-size: 0.9rem; padding-left: 20px;">
-                        <li>No podrá iniciar sesión en el sistema</li>
-                        <li>Su información se mantiene en la base de datos</li>
-                        <li>Puede ser reactivado posteriormente</li>
+                <div>
+                    <p><strong>${fullName}</strong></p>
+                    <p>${collaborator.correoElectronico}</p>
+                    <p>¿Estás seguro de inhabilitar este colaborador?</p>
+                    <p><i class="fas fa-exclamation-triangle"></i> Consecuencias:</p>
+                    <ul>
+                        <li>No podrá iniciar sesión</li>
+                        <li>La información se conserva</li>
+                        <li>Puede reactivarse después</li>
                     </ul>
                 </div>
             `,
@@ -1135,21 +901,8 @@ function configurarEliminacion(elements, userManager) {
             showCancelButton: true,
             confirmButtonText: 'INHABILITAR',
             cancelButtonText: 'CANCELAR',
-            confirmButtonColor: 'var(--color-danger, #e74c3c)',
-            cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
-            reverseButtons: true,
             showDenyButton: true,
-            denyButtonText: 'SOLO DESACTIVAR',
-            denyButtonColor: 'var(--color-active, #95a5a6)',
-            width: '600px',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel',
-                denyButton: 'swal2-deny'
-            }
+            denyButtonText: 'SOLO DESACTIVAR'
         });
         
         if (result.isDenied) {
@@ -1166,13 +919,7 @@ function configurarEliminacion(elements, userManager) {
                 title: 'Status cambiado',
                 text: 'El colaborador ha sido marcado como inactivo. Recuerda guardar los cambios.',
                 timer: 3000,
-                showConfirmButton: false,
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    timerProgressBar: 'swal2-timer-progress-bar'
-                }
+                showConfirmButton: false
             });
             
             return;
@@ -1183,12 +930,7 @@ function configurarEliminacion(elements, userManager) {
         Swal.fire({
             title: 'Inhabilitando colaborador...',
             allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container'
-            }
+            didOpen: () => Swal.showLoading()
         });
         
         try {
@@ -1209,30 +951,13 @@ function configurarEliminacion(elements, userManager) {
             collaborator.status = false;
             
             Swal.close();
+            
             Swal.fire({
                 icon: 'success',
-                title: '✅ COLABORADOR INHABILITADO',
-                html: `
-                    <div style="text-align: center; padding: 20px;">
-                        <div style="font-size: 60px; color: var(--color-active, #95a5a6); margin-bottom: 20px;">
-                            <i class="fas fa-ban"></i>
-                        </div>
-                        <p style="color: var(--color-text-primary); margin: 10px 0; font-weight: 500;">${fullName}</p>
-                        <p style="color: var(--color-text-secondary); margin: 5px 0;">
-                            ha sido inhabilitado del sistema
-                        </p>
-                    </div>
-                `,
+                title: 'Colaborador inhabilitado',
+                text: `${fullName} ha sido inhabilitado del sistema`,
                 confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: 'var(--color-active, #95a5a6)',
-                timer: 3000,
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm',
-                    timerProgressBar: 'swal2-timer-progress-bar'
-                }
+                timer: 3000
             });
             
             setTimeout(() => {
@@ -1247,14 +972,7 @@ function configurarEliminacion(elements, userManager) {
                 icon: 'error',
                 title: 'Error',
                 text: 'No se pudo inhabilitar el colaborador: ' + error.message,
-                confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: 'var(--color-danger, #ef4444)',
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm'
-                }
+                confirmButtonText: 'ENTENDIDO'
             });
         }
     });
