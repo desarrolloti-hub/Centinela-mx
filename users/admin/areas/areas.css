@@ -43,11 +43,9 @@
     justify-content: center;
     gap: 12px;
     text-shadow: 0 0 10px var(--color-accent-primary);
-    
 }
 
 .header-title h1 i {
-
     font-size: 28px;
     filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
@@ -61,7 +59,7 @@
     position: relative;
     padding: 0 20px;
     max-width: 700px;
-    margin-bottom: 30px; /* Reducido para acercar título al formulario */
+    margin-bottom: 30px;
     padding-bottom: 15px;
     border-bottom: 2px solid var(--color-border-light);
 }
@@ -76,7 +74,6 @@
     width: 60px;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
-
 }
 
 /* Línea decorativa inferior */
@@ -89,10 +86,100 @@
     width: 60px;
     height: 2px;
     background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
-  
 }
 
-/* Badge de empresa */
+/* =============================================
+   NUEVO: PAGE HEADER - ESTILO UNIFICADO (COMO EN EDITAR)
+   ============================================= */
+.page-header {
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--color-border-light);
+    text-align: center;
+}
+
+/* Ajuste para que el título dentro del page-header mantenga su estilo */
+.page-header .header-title h1 {
+    font-family: var(--font-family-primary);
+    color: var(--color-text-primary);
+    font-size: 2.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0 0 15px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    text-shadow: 0 0 10px var(--color-accent-primary), 0 0 20px var(--color-accent-primary);
+    flex-wrap: wrap;
+}
+
+.page-header .header-title h1 i {
+    font-size: 28px;
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+}
+
+/* Ajuste para la descripción dentro del page-header */
+.page-header .header-description {
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-secondary);
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin: 0 auto;
+    position: relative;
+    padding: 0 20px;
+    max-width: 700px;
+    /* El borde inferior ya lo pone .page-header, así que quitamos el de .header-description */
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Mantener las líneas decorativas laterales */
+.page-header .header-description::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+}
+
+.page-header .header-description::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
+}
+
+/* Ajuste para el badge de empresa dentro del nuevo header */
+.page-header .badge-empresa {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(192, 192, 192, 0.1);
+    border: 1px solid rgba(192, 192, 192, 0.3);
+    color: var(--color-accent-primary);
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-family: var(--font-family-secondary);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    margin-left: 12px;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+/* Badge de empresa (original) */
 .badge-empresa {
     display: inline-flex;
     align-items: center;
@@ -128,7 +215,7 @@
    BOTÓN NUEVA ÁREA - ESTILO UNIFICADO (REDONDITO)
    ============================================= */
 #btnNuevaArea {
- background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
     padding: 12px 25px !important;
@@ -149,7 +236,7 @@
 }
 
 #btnNuevaArea:hover {
-     transform: translateY(-2px) !important;
+    transform: translateY(-2px) !important;
     background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
     box-shadow: 0 0 20px rgba(192, 192, 192, 0.2) !important;
     border-color: var(--color-accent-primary) !important;
@@ -810,9 +897,7 @@ tr.area-row.expanded .toggle-icon i {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
-    /* <--- AHORA CENTRADO */
     gap: 12px !important;
-
     padding-top: 19px !important;
     border-top: 1px solid var(--color-border-light) !important;
     width: 100% !important;
@@ -1245,29 +1330,28 @@ tr.area-row.expanded .toggle-icon i {
    ============================================= */
 .swal2-popup.swal2-icon-warning .swal2-html-container {
     font-size: 0.9rem !important;
-    /* Cambia este valor */
 }
 
 .text-muted {
-    color: var(--color-text-secondary) !important; /* o el color que quieras */
+    color: var(--color-text-secondary) !important;
 }
+
 /* =============================================
    AJUSTE PARA NAVBAR EN RESPONSIVE
    ============================================= */
 
 /* Ajuste general para que el contenido no quede debajo del navbar */
 body {
-    padding-top: 80px !important; /* Espacio para el navbar fijo */
+    padding-top: 80px !important;
 }
 
 @media (max-width: 768px) {
     body {
-        padding-top: 70px !important; /* Un poco menos en móvil */
+        padding-top: 70px !important;
         padding-left: 10px !important;
         padding-right: 10px !important;
     }
     
-    /* Asegurar que el header tenga suficiente espacio */
     .row.mb-4:first-child,
     .header-container,
     .d-flex.flex-column.align-items-center.text-center {
@@ -1275,7 +1359,6 @@ body {
         padding-top: 10px !important;
     }
     
-    /* Ajustar el contenedor principal */
     .container-fluid {
         margin-top: 0 !important;
         padding-top: 15px !important;
@@ -1284,6 +1367,6 @@ body {
 
 @media (max-width: 480px) {
     body {
-        padding-top: 60px !important; /* Aún menos en móvil pequeño */
+        padding-top: 60px !important;
     }
 }

@@ -81,6 +81,14 @@ body {
     box-shadow: var(--shadow-normal);
 }
 
+/* NUEVA CLASE .page-header AÑADIDA PARA EL BORDE INFERIOR */
+.page-header {
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--color-border-light);
+    text-align: center;
+}
+
 h1.h3 {
     font-family: var(--font-family-primary);
     color: var(--color-text-primary);
@@ -128,9 +136,6 @@ h1.h3 i {
     margin-top: 5px;
     font-size: 1.2rem;
     position: relative;
-    margin-bottom: 30px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid var(--color-border-light);
     
     /* ✨ ILUMINACIÓN SUTIL PARA LA DESCRIPCIÓN ✨ */
     text-shadow: 0 0 5px rgba(192, 192, 192, 0.3);

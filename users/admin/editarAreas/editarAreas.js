@@ -1,4 +1,4 @@
-// editarAreas.js - VERSIÓN LIMPIA
+// editarAreas.js - VERSIÓN CORREGIDA
 window.editarAreaDebug = {
     estado: 'iniciando',
     controller: null
@@ -12,7 +12,14 @@ async function cargarDependencias() {
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
         
-        iniciarAplicacion();
+        // Esperar a que el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(iniciarAplicacion, 100);
+            });
+        } else {
+            setTimeout(iniciarAplicacion, 100);
+        }
         
     } catch (error) {
         console.error('[Error]', error.message);
@@ -29,14 +36,6 @@ function mostrarErrorInterfaz(mensaje) {
 }
 
 function iniciarAplicacion() {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', inicializarController);
-    } else {
-        inicializarController();
-    }
-}
-
-function inicializarController() {
     try {
         const app = new EditarAreaController();
         window.editarAreaDebug.controller = app;
@@ -288,15 +287,6 @@ class EditarAreaController {
             });
         }
         
-        const btnVerDetalles = document.getElementById('btnVerDetalles');
-        if (btnVerDetalles) {
-            btnVerDetalles.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.verDetallesArea();
-            });
-        }
-        
         const formEditarArea = document.getElementById('formEditarArea');
         if (formEditarArea) {
             if (this._submitHandler) {
@@ -331,6 +321,7 @@ class EditarAreaController {
             
             if (!areaId) {
                 this.mostrarError('No se especificó qué área editar');
+                setTimeout(() => this.volverALista(), 2000);
                 return;
             }
             
@@ -343,7 +334,7 @@ class EditarAreaController {
             
             if (area) {
                 this.areaActual = area;
-                await this.cargarDatosEnFormulario();
+                this.cargarDatosEnFormulario();
                 this.datosOriginales = this.obtenerDatosFormulario();
                 this.ocultarCargando();
                 
@@ -356,53 +347,25 @@ class EditarAreaController {
             } else {
                 this.ocultarCargando();
                 this.mostrarError('Área no encontrada');
+                setTimeout(() => this.volverALista(), 2000);
             }
             
         } catch (error) {
             this.ocultarCargando();
             this.mostrarError('Error cargando área');
+            setTimeout(() => this.volverALista(), 2000);
         }
     }
     
-    async cargarDatosEnFormulario() {
+    cargarDatosEnFormulario() {
         if (!this.areaActual) return;
         
         document.getElementById('areaId').value = this.areaActual.id;
         document.getElementById('nombreArea').value = this.areaActual.nombreArea || '';
         document.getElementById('descripcionArea').value = this.areaActual.descripcion || '';
         
-        await this.cargarResponsableActual();
+        this.cargarResponsableActual();
         this.cargarCargosExistentes();
-        
-        const fechaCreacionInput = document.getElementById('fechaCreacion');
-        if (fechaCreacionInput) {
-            fechaCreacionInput.value = this.areaActual.fechaCreacion ? 
-                new Date(this.areaActual.fechaCreacion).toLocaleDateString('es-ES', {
-                    year: 'numeric', month: 'long', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                }) : 'No disponible';
-        }
-        
-        const ultimaActualizacionInput = document.getElementById('ultimaActualizacion');
-        if (ultimaActualizacionInput) {
-            ultimaActualizacionInput.value = this.areaActual.fechaActualizacion ? 
-                new Date(this.areaActual.fechaActualizacion).toLocaleDateString('es-ES', {
-                    year: 'numeric', month: 'long', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                }) : 'No disponible';
-        }
-        
-        const creadoPorInput = document.getElementById('creadoPor');
-        if (creadoPorInput) {
-            creadoPorInput.value = this.areaActual.creadoPor || 'Desconocido';
-        }
-        
-        const estadoInput = document.getElementById('estadoActual');
-        if (estadoInput) {
-            estadoInput.value = 'Activa';
-            estadoInput.className = 'form-control bg-success text-white';
-        }
-        
         this.actualizarContadorCaracteres();
     }
     
@@ -410,32 +373,35 @@ class EditarAreaController {
         const responsableSelect = document.getElementById('responsable');
         if (!responsableSelect) return;
         
-        if (this.areaActual.responsable) {
-            let responsableAsignado = false;
-            
-            for (let i = 0; i < responsableSelect.options.length; i++) {
-                if (responsableSelect.options[i].value === this.areaActual.responsable) {
-                    responsableSelect.selectedIndex = i;
-                    responsableAsignado = true;
-                    break;
+        // Esperar un poco a que se carguen las opciones
+        setTimeout(() => {
+            if (this.areaActual.responsable) {
+                let responsableAsignado = false;
+                
+                for (let i = 0; i < responsableSelect.options.length; i++) {
+                    if (responsableSelect.options[i].value === this.areaActual.responsable) {
+                        responsableSelect.selectedIndex = i;
+                        responsableAsignado = true;
+                        break;
+                    }
+                }
+                
+                if (!responsableAsignado) {
+                    const option = document.createElement('option');
+                    option.value = this.areaActual.responsable;
+                    option.text = this.areaActual.responsableNombre || 'Responsable asignado';
+                    option.selected = true;
+                    responsableSelect.appendChild(option);
+                }
+            } else {
+                for (let i = 0; i < responsableSelect.options.length; i++) {
+                    if (responsableSelect.options[i].value === 'admin_fijo') {
+                        responsableSelect.selectedIndex = i;
+                        break;
+                    }
                 }
             }
-            
-            if (!responsableAsignado) {
-                const option = document.createElement('option');
-                option.value = this.areaActual.responsable;
-                option.text = this.areaActual.responsableNombre || 'Responsable asignado';
-                option.selected = true;
-                responsableSelect.appendChild(option);
-            }
-        } else {
-            for (let i = 0; i < responsableSelect.options.length; i++) {
-                if (responsableSelect.options[i].value === 'admin_fijo') {
-                    responsableSelect.selectedIndex = i;
-                    break;
-                }
-            }
-        }
+        }, 500);
     }
     
     inicializarGestionCargos() {}
@@ -466,15 +432,10 @@ class EditarAreaController {
                     }
                 });
             }
-            
-            if (this.cargos.length > 0) {
-                this.renderizarCargos();
-                this.actualizarContadorCargos();
-                return;
-            }
         }
         
         this.renderizarCargos();
+        this.actualizarContadorCargos();
     }
     
     agregarCargo() {
@@ -505,7 +466,9 @@ class EditarAreaController {
             confirmButtonColor: '#ff4d4d',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
+            cancelButtonText: 'Cancelar',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
         }).then((result) => {
             if (result.isConfirmed) {
                 this.cargos = this.cargos.filter(c => c.id !== cargoId);
@@ -516,7 +479,11 @@ class EditarAreaController {
                     icon: 'success',
                     title: 'Eliminado',
                     text: 'El cargo fue eliminado correctamente',
-                    confirmButtonColor: '#2f8cff'
+                    confirmButtonColor: '#2f8cff',
+                    background: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-primary)',
+                    timer: 1500,
+                    showConfirmButton: false
                 });
             }
         });
@@ -546,7 +513,7 @@ class EditarAreaController {
                             <i class="fas fa-briefcase me-2"></i>
                             Cargo #${index + 1}
                         </h6>
-                        <button type="button" class="btn btn-eliminar-cargo" onclick="window.editarAreaDebug.controller.eliminarCargo('${cargo.id}')">
+                        <button type="button" class="btn-eliminar-cargo" onclick="window.editarAreaDebug.controller.eliminarCargo('${cargo.id}')">
                             <i class="fas fa-trash-alt me-1"></i>
                             Eliminar
                         </button>
@@ -604,118 +571,6 @@ class EditarAreaController {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
-    }
-    
-    async verDetallesArea() {
-        try {
-            if (!this.areaActual) {
-                this.mostrarError('No hay área cargada');
-                return;
-            }
-
-            const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
-            const cantidadCargos = cargosValidos.length;
-            
-            let cargosHTML = '';
-            
-            if (cargosValidos.length === 0) {
-                cargosHTML = `
-                    <div style="text-align: center; padding: 30px; background: var(--color-bg-tertiary); border-radius: var(--border-radius-medium);">
-                        <i class="fas fa-briefcase" style="font-size: 48px; color: var(--color-accent-secondary); margin-bottom: 15px;"></i>
-                        <p style="color: var(--color-text-secondary); margin: 0;">Esta área no tiene cargos asignados</p>
-                    </div>
-                `;
-            } else {
-                cargosHTML = cargosValidos.map((cargo, index) => `
-                    <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); border-radius: var(--border-radius-medium); padding: 18px; margin-bottom: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <span style="background: var(--color-accent-secondary); color: white; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 13px;">${index + 1}</span>
-                                <strong style="color: var(--color-text-primary);">${cargo.nombre}</strong>
-                            </div>
-                        </div>
-                        ${cargo.descripcion ? `
-                            <div style="margin-left: 40px; padding-left: 15px; border-left: 2px solid var(--color-accent-secondary); color: var(--color-text-secondary); font-size: 13px;">
-                                ${cargo.descripcion}
-                            </div>
-                        ` : ''}
-                    </div>
-                `).join('');
-            }
-
-            const fechaCreacion = this.areaActual.fechaCreacion ? 
-                new Date(this.areaActual.fechaCreacion).toLocaleDateString('es-ES', {
-                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                }) : 'No disponible';
-
-            const fechaActualizacion = this.areaActual.fechaActualizacion ? 
-                new Date(this.areaActual.fechaActualizacion).toLocaleDateString('es-ES', {
-                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                }) : 'No disponible';
-
-            const responsableNombre = this.areaActual.responsableNombre || 
-                (document.getElementById('responsable')?.selectedOptions[0]?.text || 'No asignado');
-
-            await Swal.fire({
-                title: this.areaActual.nombreArea,
-                html: `
-                    <div style="text-align: left; max-height: 70vh; overflow-y: auto; padding-right: 5px;">
-                        <div style="background: var(--color-bg-tertiary); padding: 15px 20px; border-radius: var(--border-radius-medium); margin-bottom: 20px;">
-                            <p style="color: var(--color-text-secondary);"><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</p>
-                        </div>
-
-                        <div style="margin-bottom: 25px;">
-                            <h6 style="color: var(--color-accent-primary); margin-bottom: 12px;">Descripción</h6>
-                            <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); border-radius: var(--border-radius-medium); padding: 15px 20px; color: var(--color-text-secondary);">
-                                ${this.areaActual.descripcion || 'No hay descripción disponible'}
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 25px;">
-                            <h6 style="color: var(--color-accent-primary); margin-bottom: 12px;">Responsable</h6>
-                            <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); border-radius: var(--border-radius-medium); padding: 12px 20px;">
-                                <i class="fas fa-user-circle" style="font-size: 32px; color: var(--color-accent-secondary); margin-right: 12px;"></i>
-                                <span>${responsableNombre}</span>
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 25px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h6 style="color: var(--color-accent-primary); margin: 0;">Cargos del Área</h6>
-                                <span style="background: var(--color-accent-secondary); color: white; padding: 4px 14px; border-radius: 20px; font-size: 11px;">
-                                    ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
-                                </span>
-                            </div>
-                            <div style="max-height: 300px; overflow-y: auto;">${cargosHTML}</div>
-                        </div>
-
-                        <div style="background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); border-radius: var(--border-radius-medium); padding: 20px;">
-                            <h6 style="color: var(--color-accent-primary); margin-bottom: 15px;">Información del Sistema</h6>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                                <div><small>Fecha Creación</small><br><span>${fechaCreacion}</span></div>
-                                <div><small>Última Actualización</small><br><span>${fechaActualizacion}</span></div>
-                                <div><small>Creado por</small><br><span>${this.areaActual.creadoPor || 'Desconocido'}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                `,
-                icon: 'info',
-                iconColor: '#2f8cff',
-                confirmButtonText: 'Cerrar',
-                confirmButtonColor: '#2f8cff',
-                showCancelButton: true,
-                cancelButtonText: 'Editar Área',
-                cancelButtonColor: '#545454',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.dismiss === Swal.DismissReason.cancel) {
-                    document.getElementById('nombreArea')?.focus();
-                }
-            });
-
-        } catch (error) {
-            this.mostrarError('Error al cargar los detalles');
-        }
     }
     
     validarFormulario() {
@@ -794,13 +649,15 @@ class EditarAreaController {
             
             const result = await Swal.fire({
                 title: '¿Guardar cambios?',
-                html: '<p>¿Está seguro de guardar los cambios realizados?</p>',
+                text: '¿Está seguro de guardar los cambios realizados?',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#2f8cff',
                 cancelButtonColor: '#545454',
                 confirmButtonText: 'Sí, guardar',
-                cancelButtonText: 'Cancelar'
+                cancelButtonText: 'Cancelar',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
             });
             
             if (result.isConfirmed) {
@@ -859,22 +716,12 @@ class EditarAreaController {
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login',
-            confirmButtonColor: '#2f8cff'
+            confirmButtonColor: '#2f8cff',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
-    }
-    
-    async mostrarAlertaGuardadoExitoso() {
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
-        
-        await Toast.fire({ icon: 'success', title: 'Cambios guardados correctamente' });
     }
     
     async confirmarGuardado(datosActualizados) {
@@ -897,9 +744,17 @@ class EditarAreaController {
             Object.assign(this.areaActual, datosActualizados);
             this.datosOriginales = this.obtenerDatosFormulario();
             
-            await this.mostrarAlertaGuardadoExitoso();
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Guardado!',
+                text: 'Cambios guardados correctamente',
+                timer: 2000,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
             
-            setTimeout(() => this.volverALista(), 3100);
+            setTimeout(() => this.volverALista(), 2100);
             
         } catch (error) {
             this.ocultarCargando();
@@ -921,7 +776,9 @@ class EditarAreaController {
                 confirmButtonColor: '#ff4d4d',
                 cancelButtonColor: '#3085d6',
                 confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar'
+                cancelButtonText: 'No, continuar',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
             }).then((result) => {
                 if (result.isConfirmed) this.volverALista();
             });
@@ -968,21 +825,20 @@ class EditarAreaController {
     }
     
     mostrarError(mensaje) {
-        this.mostrarNotificacion(mensaje, 'danger');
+        this.mostrarNotificacion(mensaje, 'error');
     }
     
-    mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
+    mostrarNotificacion(mensaje, tipo = 'info') {
+        Swal.fire({
+            icon: tipo,
+            title: mensaje,
+            timer: 3000,
             showConfirmButton: false,
-            timer: duracion,
-            timerProgressBar: true
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
         });
-        
-        let icono = tipo === 'danger' ? 'error' : tipo;
-        Toast.fire({ icon: icono, title: mensaje });
     }
 }
 
+// Iniciar la carga de dependencias
 cargarDependencias();

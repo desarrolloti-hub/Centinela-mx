@@ -1,6 +1,6 @@
 /**
  * EDITAR CATEGORÍAS - Sistema Centinela
- * VERSIÓN CORREGIDA - Sin iconos duplicados en SweetAlert
+ * VERSIÓN CORREGIDA - Con adaptaciones para el nuevo HTML
  * CORREGIDO: Uso de 'rol' en lugar de 'cargo'
  */
 
@@ -97,10 +97,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                 const editor = document.getElementById('subcategoriaEditorContainer');
                 if (editor) {
                     editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    editor.style.transition = 'var(--transition-fast)';
+                    editor.style.transition = 'var(--transition-default)';
                     editor.style.boxShadow = '0 0 0 4px var(--color-accent-primary, #c0c0c0)';
                     setTimeout(() => {
-                        editor.style.boxShadow = '0 12px 28px var(--color-shadow)';
+                        editor.style.boxShadow = 'var(--shadow-normal)';
                     }, 1500);
                 }
             }, 200);
@@ -121,10 +121,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                     const editor = document.getElementById('subcategoriaEditorContainer');
                     if (editor) {
                         editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        editor.style.transition = 'var(--transition-fast)';
-                        editor.style.boxShadow = '0 0 0 4px var(--color-active, #c0c0c0)';
+                        editor.style.transition = 'var(--transition-default)';
+                        editor.style.boxShadow = '0 0 0 4px var(--color-accent-primary, #c0c0c0)';
                         setTimeout(() => {
-                            editor.style.boxShadow = '0 12px 28px var(--color-shadow)';
+                            editor.style.boxShadow = 'var(--shadow-normal)';
                         }, 1500);
                     }
                 }, 200);
@@ -191,25 +191,48 @@ async function cargarCategoria(id) {
 function actualizarUICategoria() {
     if (!categoriaActual) return;
 
-    // El título ahora es fijo: "Editar Categoría"
+    // Actualizar título en el header de la tarjeta
     const headerTitle = document.getElementById('categoriaNombreHeader');
     if (headerTitle) {
-        headerTitle.textContent = 'Editar Categoría';
+        headerTitle.textContent = categoriaActual.nombre || 'Categoría';
     }
 
     // Actualizar campos del formulario
     document.getElementById('nombreCategoria').value = categoriaActual.nombre || '';
-    document.getElementById('colorPicker').value = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+    
+    // Descripción - si existe en el modelo, si no, usar campo vacío
+    const descripcionInput = document.getElementById('descripcionCategoria');
+    if (descripcionInput) {
+        descripcionInput.value = categoriaActual.descripcion || '';
+    }
+    
+    // Actualizar color
+    const colorPicker = document.getElementById('colorPicker');
+    if (colorPicker) {
+        colorPicker.value = categoriaActual.color || '#c0c0c0';
+    }
 
     // Actualizar previsualización de color
     const colorPreview = document.getElementById('colorPreview');
     if (colorPreview) {
-        colorPreview.style.backgroundColor = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+        colorPreview.style.backgroundColor = categoriaActual.color || '#c0c0c0';
     }
 
     const colorHex = document.getElementById('colorHex');
     if (colorHex) {
-        colorHex.textContent = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+        colorHex.textContent = categoriaActual.color || '#c0c0c0';
+    }
+    
+    // Actualizar contador de caracteres
+    actualizarContadorCaracteres();
+}
+
+function actualizarContadorCaracteres() {
+    const descripcion = document.getElementById('descripcionCategoria');
+    const contador = document.getElementById('contadorCaracteres');
+    
+    if (descripcion && contador) {
+        contador.textContent = descripcion.value.length;
     }
 }
 
@@ -218,21 +241,14 @@ function cargarSubcategorias() {
     if (!lista) return;
 
     const totalSubElement = document.getElementById('totalSubcategorias');
-    if (totalSubElement) totalSubElement.textContent = subcategorias.length;
+    if (totalSubElement) totalSubElement.textContent = `(${subcategorias.length} ${subcategorias.length === 1 ? 'subcategoría' : 'subcategorías'})`;
 
     if (!subcategorias || subcategorias.length === 0) {
         lista.innerHTML = `
-            <div class="empty-state" style="text-align: center; padding: 48px 20px;">
-                <div style="font-size: 64px; color: rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.2); margin-bottom: 16px;">
-                    <i class="fas fa-folder-open"></i>
-                </div>
-                <h3 style="color: var(--color-accent-primary, #c0c0c0); margin-bottom: 12px;">No hay subcategorías</h3>
-                <p style="color: var(--color-text-secondary); margin-bottom: 24px; max-width: 400px; margin-left: auto; margin-right: auto;">
-                    Esta categoría aún no tiene subcategorías. Crea la primera haciendo clic en el botón superior.
-                </p>
-                <button class="btn-add-subcategoria" onclick="abrirEditorSubcategoria('crear')" style="background: linear-gradient(135deg, var(--color-accent-primary, #c0c0c0), var(--color-active, #c0c0c0)); border: none; padding: 12px 24px; border-radius: 30px; color: var(--color-text-dark, #000000); font-weight: 600; cursor: pointer;">
-                    <i class="fas fa-plus-circle me-2"></i>Agregar Subcategoría
-                </button>
+            <div class="cargos-empty">
+                <i class="fas fa-folder-open mb-2"></i>
+                <p>No hay subcategorías agregadas</p>
+                <small class="text-muted">Haga clic en "Nueva Subcategoría" para añadir una</small>
             </div>
         `;
         return;
@@ -240,84 +256,79 @@ function cargarSubcategorias() {
 
     lista.innerHTML = '';
 
-    subcategorias.forEach(sub => {
-        const item = crearTarjetaSubcategoria(sub);
+    subcategorias.forEach((sub, index) => {
+        const item = crearTarjetaSubcategoria(sub, index);
         lista.appendChild(item);
     });
 }
 
-function crearTarjetaSubcategoria(sub) {
+function crearTarjetaSubcategoria(sub, index) {
     const div = document.createElement('div');
-    div.className = 'subcategoria-item';
+    div.className = 'cargo-item';
     div.dataset.id = sub.id;
-    div.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px;
-        background: rgba(var(--color-bg-light-rgb, 255, 255, 255), 0.02);
-        border: 1px solid var(--color-border-light);
-        border-radius: var(--border-radius-large);
-        margin-bottom: 12px;
-        transition: var(--transition-default);
-    `;
-
-    div.onmouseenter = function () {
-        this.style.background = 'rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.05)';
-        this.style.borderColor = 'rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3)';
-    };
-    div.onmouseleave = function () {
-        this.style.background = 'rgba(var(--color-bg-light-rgb, 255, 255, 255), 0.02)';
-        this.style.borderColor = 'var(--color-border-light)';
-    };
 
     // Determinar color de la subcategoría
     let colorActual = sub.color;
     if (!colorActual || sub.heredaColor) {
-        colorActual = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+        colorActual = categoriaActual.color || '#c0c0c0';
     }
 
-    const badgeColor = sub.heredaColor ? 'var(--color-accent-primary, #c0c0c0)' : 'var(--color-active, #c0c0c0)';
+    const badgeColor = sub.heredaColor ? 'var(--color-accent-primary, #c0c0c0)' : 'var(--color-accent-secondary, #2f8cff)';
     const badgeIcon = sub.heredaColor ? 'fa-paint-brush' : 'fa-palette';
     const badgeText = sub.heredaColor ? 'Hereda color' : 'Color propio';
     const descripcion = sub.descripcion || 'Sin descripción';
 
     div.innerHTML = `
-        <div style="display: flex; align-items: flex-start; gap: 16px; flex: 1;">
-            <div style="width: 40px; height: 40px; background-color: ${colorActual}; border-radius: var(--border-radius-medium); border: 2px solid rgba(255,255,255,0.1);"></div>
-            <div style="flex: 1;">
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--color-text-primary);">${escapeHTML(sub.nombre || 'Sin nombre')}</h4>
-                    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: ${badgeColor}15; color: ${badgeColor}; border-radius: 20px; font-size: 11px; font-weight: 500;">
-                        <i class="fas ${badgeIcon}" style="font-size: 10px;"></i>
-                        ${badgeText}
-                    </span>
-                </div>
-                <p style="margin: 0 0 6px 0; color: var(--color-text-secondary); font-size: 14px;">${escapeHTML(descripcion)}</p>
-                <small style="color: var(--color-text-dim, #6b7280); font-size: 11px;">
-                    <i class="fas fa-fingerprint"></i> ID: ${sub.id?.substring(0, 8) || ''}...
-                    ${sub.fechaActualizacion ? ` | <i class="fas fa-clock"></i> ${new Date(sub.fechaActualizacion).toLocaleDateString()}` : ''}
-                </small>
-            </div>
+        <div class="cargo-header">
+            <h6 class="cargo-titulo">
+                <i class="fas fa-folder-open me-2"></i>
+                Subcategoría #${index + 1}
+                <span style="display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; padding: 2px 8px; background: ${badgeColor}20; color: ${badgeColor}; border-radius: 30px; font-size: 10px;">
+                    <i class="fas ${badgeIcon}" style="font-size: 8px;"></i>
+                    ${badgeText}
+                </span>
+            </h6>
+            <button type="button" class="btn-eliminar-cargo" onclick="eliminarSubcategoria('${sub.id}')">
+                <i class="fas fa-trash-alt me-1"></i>
+                Eliminar
+            </button>
         </div>
-        <div style="display: flex; gap: 8px; margin-left: 20px;">
-            <button class="btn-sub-action edit" onclick="abrirEditorSubcategoria('editar', '${sub.id}')" 
-                    style="background: rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.1); border: 1px solid rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.3); color: var(--color-accent-primary, #c0c0c0); padding: 8px 12px; border-radius: var(--border-radius-medium); cursor: pointer; transition: var(--transition-fast);"
-                    onmouseenter="this.style.background='rgba(var(--color-accent-primary-rgb, 192,192,192),0.2)'; this.style.borderColor='var(--color-accent-primary, #c0c0c0)';"
-                    onmouseleave="this.style.background='rgba(var(--color-accent-primary-rgb, 192,192,192),0.1)'; this.style.borderColor='rgba(var(--color-accent-primary-rgb, 192,192,192),0.3)';">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn-sub-action delete" onclick="eliminarSubcategoria('${sub.id}')"
-                    style="background: rgba(var(--color-danger-rgb, 239, 68, 68), 0.1); border: 1px solid rgba(var(--color-danger-rgb, 239, 68, 68), 0.3); color: var(--color-danger, #ef4444); padding: 8px 12px; border-radius: var(--border-radius-medium); cursor: pointer; transition: var(--transition-fast);"
-                    onmouseenter="this.style.background='rgba(var(--color-danger-rgb, 239,68,68),0.2)'; this.style.borderColor='var(--color-danger, #ef4444)';"
-                    onmouseleave="this.style.background='rgba(var(--color-danger-rgb, 239,68,68),0.1)'; this.style.borderColor='rgba(var(--color-danger-rgb, 239,68,68),0.3)';">
-                <i class="fas fa-trash"></i>
-            </button>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nombre de la Subcategoría *</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                    <input type="text" class="form-control" 
+                           id="sub_nombre_${sub.id}"
+                           value="${escapeHTML(sub.nombre)}"
+                           placeholder="Ej: Frontend, Backend, Marketing Digital"
+                           onchange="actualizarSubcategoriaCampo('${sub.id}', 'nombre', this.value)">
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Descripción</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                    <input type="text" class="form-control" 
+                           id="sub_descripcion_${sub.id}"
+                           value="${escapeHTML(sub.descripcion)}"
+                           placeholder="Breve descripción"
+                           onchange="actualizarSubcategoriaCampo('${sub.id}', 'descripcion', this.value)">
+                </div>
+            </div>
         </div>
     `;
 
     return div;
 }
+
+// Función global para actualizar campos de subcategoría
+window.actualizarSubcategoriaCampo = function(id, campo, valor) {
+    const sub = subcategorias.find(s => s.id === id);
+    if (sub) {
+        sub[campo] = valor;
+    }
+};
 
 /**
  * ABRIR EDITOR DE SUBCATEGORÍA
@@ -343,14 +354,14 @@ function abrirEditorSubcategoria(modo, subcategoriaId = null) {
 
     if (modo === 'crear') {
         titulo.textContent = 'Nueva Subcategoría';
-        icono.className = 'fas fa-plus-circle';
+        icono.className = 'fas fa-plus-circle me-2';
         icono.style.color = 'var(--color-accent-primary, #c0c0c0)';
 
         document.getElementById('heredarColorPadre').checked = true;
         document.getElementById('colorPersonalizadoGroup').style.display = 'none';
 
         // Color base para nueva subcategoría
-        const colorBase = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+        const colorBase = categoriaActual.color || '#c0c0c0';
         document.getElementById('colorSubcategoria').value = colorBase;
         const preview = document.getElementById('subcategoriaColorPreview');
         if (preview) {
@@ -368,8 +379,8 @@ function abrirEditorSubcategoria(modo, subcategoriaId = null) {
 
         subcategoriaEditando = sub;
         titulo.textContent = `Editar: ${sub.nombre || 'Subcategoría'}`;
-        icono.className = 'fas fa-edit';
-        icono.style.color = 'var(--color-active, #c0c0c0)';
+        icono.className = 'fas fa-edit me-2';
+        icono.style.color = 'var(--color-accent-secondary, #2f8cff)';
 
         document.getElementById('nombreSubcategoria').value = sub.nombre || '';
         document.getElementById('descripcionSubcategoria').value = sub.descripcion || '';
@@ -382,7 +393,7 @@ function abrirEditorSubcategoria(modo, subcategoriaId = null) {
             document.getElementById('colorPersonalizadoGroup').style.display = 'none';
         } else {
             document.getElementById('colorPersonalizadoGroup').style.display = 'block';
-            const colorValue = sub.color || categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+            const colorValue = sub.color || categoriaActual.color || '#c0c0c0';
             document.getElementById('colorSubcategoria').value = colorValue;
             const preview = document.getElementById('subcategoriaColorPreview');
             if (preview) {
@@ -438,16 +449,30 @@ async function guardarSubcategoria() {
         const subId = document.getElementById('subcategoriaId').value;
 
         if (modoEdicionSubcategoria === 'crear') {
-            if (categoriaActual.existeSubcategoria(nombre)) {
+            // Verificar si ya existe una subcategoría con ese nombre
+            const existe = Object.values(categoriaActual.subcategorias || {}).some(
+                s => s.nombre && s.nombre.toLowerCase() === nombre.toLowerCase()
+            );
+            
+            if (existe) {
                 throw new Error(`Ya existe una subcategoría con el nombre "${nombre}" en esta categoría`);
             }
 
-            const nuevoSubId = categoriaActual.agregarSubcategoria(nombre, descripcion, heredaColor, color);
+            // Generar nuevo ID
+            const nuevoSubId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
             
-            if (!heredaColor && color) {
-                categoriaActual.subcategorias[nuevoSubId].color = color;
-                categoriaActual.subcategorias[nuevoSubId].heredaColor = false;
+            if (!categoriaActual.subcategorias) {
+                categoriaActual.subcategorias = {};
             }
+            
+            categoriaActual.subcategorias[nuevoSubId] = {
+                nombre: nombre,
+                descripcion: descripcion,
+                heredaColor: heredaColor,
+                color: !heredaColor ? color : null,
+                fechaCreacion: new Date().toISOString(),
+                fechaActualizacion: new Date().toISOString()
+            };
 
             mostrarNotificacion('✅ Subcategoría creada exitosamente', 'success');
 
@@ -457,8 +482,12 @@ async function guardarSubcategoria() {
                 throw new Error('Subcategoría no encontrada');
             }
 
-            const nombreAnterior = subExistente.nombre;
-            if (nombre !== nombreAnterior && categoriaActual.existeSubcategoria(nombre)) {
+            // Verificar duplicado de nombre (excepto la misma)
+            const existeDuplicado = Object.entries(categoriaActual.subcategorias || {}).some(
+                ([id, s]) => id !== subId && s.nombre && s.nombre.toLowerCase() === nombre.toLowerCase()
+            );
+            
+            if (existeDuplicado) {
                 throw new Error(`Ya existe otra subcategoría con el nombre "${nombre}"`);
             }
 
@@ -494,7 +523,7 @@ async function guardarSubcategoria() {
 }
 
 /**
- * ELIMINAR SUBCATEGORÍA - SweetAlert sin icono duplicado
+ * ELIMINAR SUBCATEGORÍA
  */
 async function eliminarSubcategoria(subcategoriaId) {
     if (!categoriaManager || !categoriaActual) {
@@ -508,7 +537,7 @@ async function eliminarSubcategoria(subcategoriaId) {
     // Determinar color para mostrar
     let colorPreview = sub.color;
     if (!colorPreview || sub.heredaColor) {
-        colorPreview = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+        colorPreview = categoriaActual.color || '#c0c0c0';
     }
 
     const result = await Swal.fire({
@@ -519,7 +548,7 @@ async function eliminarSubcategoria(subcategoriaId) {
                     <div style="width: 60px; height: 60px; background-color: ${colorPreview}; border-radius: var(--border-radius-medium, 8px); border: 2px solid var(--color-border-light, rgba(255,255,255,0.1)); box-shadow: var(--shadow-small, 0 2px 8px var(--color-shadow));"></div>
                     <div>
                         <h3 style="margin: 0 0 8px 0; color: var(--color-text-primary, #ffffff); font-size: 20px; font-weight: 600;">${escapeHTML(sub.nombre || 'Sin nombre')}</h3>
-                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.15); color: var(--color-accent-primary, #c0c0c0); border-radius: var(--border-radius-pill, 30px); font-size: 12px;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(var(--color-accent-primary-rgb, 192, 192, 192), 0.15); color: var(--color-accent-primary, #c0c0c0); border-radius: 30px; font-size: 12px;">
                             <i class="fas ${sub.heredaColor ? 'fa-paint-brush' : 'fa-palette'}"></i>
                             ${sub.heredaColor ? 'Hereda color' : 'Color propio'}
                         </span>
@@ -552,7 +581,8 @@ async function eliminarSubcategoria(subcategoriaId) {
 
     if (result.isConfirmed) {
         try {
-            categoriaActual.eliminarSubcategoria(subcategoriaId);
+            // Eliminar subcategoría
+            delete categoriaActual.subcategorias[subcategoriaId];
 
             await categoriaManager.actualizarCategoria(categoriaActual.id, {
                 nombre: categoriaActual.nombre,
@@ -601,6 +631,7 @@ async function guardarCategoria() {
 
     const nombre = document.getElementById('nombreCategoria').value.trim();
     const color = document.getElementById('colorPicker').value;
+    const descripcion = document.getElementById('descripcionCategoria').value.trim();
 
     if (!nombre) {
         mostrarNotificacion('El nombre de la categoría es requerido', 'error');
@@ -617,6 +648,7 @@ async function guardarCategoria() {
 
         categoriaActual.nombre = nombre;
         categoriaActual.color = color;
+        categoriaActual.descripcion = descripcion;
 
         await categoriaManager.actualizarCategoria(categoriaActual.id, {
             nombre: categoriaActual.nombre,
@@ -646,7 +678,8 @@ async function guardarCategoria() {
 
         if (categoriaActual) {
             document.getElementById('nombreCategoria').value = categoriaActual.nombre;
-            document.getElementById('colorPicker').value = categoriaActual.color || 'var(--color-accent-primary, #c0c0c0)';
+            document.getElementById('colorPicker').value = categoriaActual.color || '#c0c0c0';
+            document.getElementById('descripcionCategoria').value = categoriaActual.descripcion || '';
         }
     } finally {
         btn.innerHTML = originalHTML;
@@ -662,8 +695,11 @@ function cancelarEdicion() {
 
     const nombreActual = document.getElementById('nombreCategoria').value.trim();
     const colorActual = document.getElementById('colorPicker').value;
+    const descripcionActual = document.getElementById('descripcionCategoria').value.trim();
+    
     const hayCambiosEnCategoria = nombreActual !== categoriaActual.nombre ||
-        colorActual !== categoriaActual.color;
+        colorActual !== (categoriaActual.color || '#c0c0c0') ||
+        descripcionActual !== (categoriaActual.descripcion || '');
 
     const subcategoriasActuales = [];
     Object.keys(categoriaActual.subcategorias || {}).forEach(key => {
@@ -715,23 +751,6 @@ function inicializarComponentes() {
         });
     }
 
-    // Configurar preset colors para categoría
-    document.querySelectorAll('.preset-dot').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const color = this.dataset.color;
-            const colorPicker = document.getElementById('colorPicker');
-            const preview = document.getElementById('colorPreview');
-            const hex = document.getElementById('colorHex');
-
-            if (colorPicker) colorPicker.value = color;
-            if (preview) preview.style.backgroundColor = color;
-            if (hex) hex.textContent = color;
-
-            document.querySelectorAll('.preset-dot').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-
     // Configurar color picker de subcategoría
     const colorSubcategoria = document.getElementById('colorSubcategoria');
     if (colorSubcategoria) {
@@ -742,12 +761,28 @@ function inicializarComponentes() {
             if (hex) hex.textContent = e.target.value;
         });
     }
+    
+    // Configurar contador de caracteres
+    const descripcion = document.getElementById('descripcionCategoria');
+    if (descripcion) {
+        descripcion.addEventListener('input', actualizarContadorCaracteres);
+    }
 }
 
 function inicializarEventos() {
     const btnGuardar = document.getElementById('btnGuardarCategoria');
     if (btnGuardar) {
         btnGuardar.addEventListener('click', guardarCategoria);
+    }
+    
+    const btnVolverLista = document.getElementById('btnVolverLista');
+    if (btnVolverLista) {
+        btnVolverLista.addEventListener('click', cancelarEdicion);
+    }
+    
+    const btnCancelar = document.getElementById('btnCancelar');
+    if (btnCancelar) {
+        btnCancelar.addEventListener('click', cancelarEdicion);
     }
 
     const btnNuevaSub = document.getElementById('btnNuevaSubcategoria');
@@ -800,7 +835,7 @@ function inicializarEventos() {
 }
 
 /**
- * MOSTRAR NOTIFICACIÓN CON SWEETALERT2 (sin icono duplicado)
+ * MOSTRAR NOTIFICACIÓN CON SWEETALERT2
  */
 function mostrarNotificacion(mensaje, tipo = 'success') {
     Swal.fire({
@@ -832,3 +867,4 @@ window.abrirEditorSubcategoria = abrirEditorSubcategoria;
 window.cerrarEditorSubcategoria = cerrarEditorSubcategoria;
 window.guardarSubcategoria = guardarSubcategoria;
 window.eliminarSubcategoria = eliminarSubcategoria;
+window.actualizarSubcategoriaCampo = actualizarSubcategoriaCampo;
