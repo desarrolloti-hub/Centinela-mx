@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Centinela - Theme Manager</title>
+    <title>Centinela - Personalización</title>
     
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- En themeManager.html -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         
     <!-- ========== SISTEMA DE TEMAS GLOBAL ========== -->
-    <!-- Sistema de colores base - CSS GLOBAL de SweetAlert2 incluido aquí -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     
     <!-- CSS específico del Theme Manager -->
     <link rel="stylesheet" href="themeManager.css">
     
-    <!-- ========== SWEETALERT2 (SOLO JS, EL CSS VIENE DE personalization.css) ========== -->
+    <!-- ========== SWEETALERT2 (SOLO JS) ========== -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -28,8 +27,8 @@
     <div class="admin-container">
         <!-- Encabezado de página -->
         <div class="page-header">
-            <h1><i class="fas fa-palette"></i> Theme Manager</h1>
-            <p>Administra y personaliza los temas visuales del sistema Centinela MX</p>
+            <h1><i class="fas fa-palette"></i> Personalización</h1>
+            <p>Elige y personaliza la apariencia visual de tu panel de control. Selecciona entre 12 temas disponibles y previsualiza los cambios antes de aplicarlos.</p>
         </div>
         
         <!-- Contenido principal -->
@@ -37,8 +36,8 @@
             <!-- Sección izquierda: Controles -->
             <section class="controls-section">
                 <div class="controls-header">
-                    <h2><i class="fas fa-sliders-h"></i> Temas Predefinidos</h2>
-                    <p style="color: var(--color-text-secondary); font-size: 0.95rem; margin-top: 10px;">Selecciona uno de los 12 temas disponibles</p>
+                    <h2><i class="fas fa-sliders-h"></i> Temas Disponibles</h2>
+                    <p style="color: var(--color-text-secondary); font-size: 0.95rem; margin-top: 10px;">Haz clic en cualquier tema para previsualizarlo</p>
                 </div>
                 
                 <!-- Lista de temas -->
@@ -74,52 +73,52 @@
             <!-- Sección derecha: Previsualización -->
             <section class="preview-section">
                 <div class="preview-header">
-                    <h2><i class="fas fa-eye"></i> Previsualización</h2>
-                    <p style="color: var(--color-text-secondary);">Visualiza cómo se ven los colores en tiempo real</p>
+                    <h2><i class="fas fa-eye"></i> Vista Previa</h2>
+                    <p style="color: var(--color-text-secondary);">Así se verán los colores en tu panel</p>
                 </div>
                 
                 <div class="preview-grid">
-                    <!-- Background Colors -->
+                    <!-- Colores de Fondo -->
                     <div class="preview-card">
-                        <h3>Background</h3>
+                        <h3>Fondos</h3>
                         <div class="color-preview-box" style="background: var(--color-bg-primary); color: var(--color-text-primary);">
-                            Primary
+                            Fondo Principal
                         </div>
                         <div class="color-preview-box" style="background: var(--color-bg-secondary); color: var(--color-text-primary);">
-                            Secondary
+                            Fondo Secundario
                         </div>
                     </div>
                     
-                    <!-- Text Colors -->
+                    <!-- Colores de Texto -->
                     <div class="preview-card">
-                        <h3>Text Colors</h3>
+                        <h3>Textos</h3>
                         <div class="color-preview-box" style="background: var(--color-bg-secondary); color: var(--color-text-primary);">
-                            Primary Text
+                            Texto Principal
                         </div>
                         <div class="color-preview-box" style="background: var(--color-bg-secondary); color: var(--color-text-secondary);">
-                            Secondary Text
+                            Texto Secundario
                         </div>
                     </div>
                     
-                    <!-- Accent Colors -->
+                    <!-- Colores de Acento -->
                     <div class="preview-card">
-                        <h3>Accent Colors</h3>
+                        <h3>Colores de Acento</h3>
                         <div class="color-preview-box" style="background: var(--color-accent-primary); color: var(--color-text-dark);">
-                            Primary Accent
+                            Acento Principal
                         </div>
                         <div class="color-preview-box" style="background: var(--color-accent-secondary); color: var(--color-text-dark);">
-                            Secondary Accent
+                            Acento Secundario
                         </div>
                     </div>
                     
-                    <!-- Component Colors -->
+                    <!-- Componentes -->
                     <div class="preview-card">
-                        <h3>Components</h3>
+                        <h3>Componentes</h3>
                         <div class="color-preview-box" style="background: var(--navbar-bg); color: var(--navbar-text);">
-                            Navbar
+                            Barra de Navegación
                         </div>
                         <div class="color-preview-box" style="background: var(--footer-bg-primary); color: var(--footer-text-primary);">
-                            Footer
+                            Pie de Página
                         </div>
                     </div>
                 </div>
