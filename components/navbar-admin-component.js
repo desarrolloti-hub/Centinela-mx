@@ -1015,7 +1015,6 @@ class NavbarComplete {
                     uid: userData.id,
                     correoElectronico: userData.email || localStorage.getItem('userEmail'),
                     nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'),
-                    // ✅ CORREGIDO: Usar rol en lugar de cargo
                     rol: userData.rol || localStorage.getItem('userRole'),
                     organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
                     organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
@@ -1033,7 +1032,6 @@ class NavbarComplete {
                 id: localStorage.getItem('userId'),
                 correoElectronico: localStorage.getItem('userEmail'),
                 nombreCompleto: localStorage.getItem('userNombre'),
-                // ✅ CORREGIDO: Usar rol en lugar de cargo
                 rol: localStorage.getItem('userRole'),
                 organizacion: localStorage.getItem('userOrganizacion'),
                 organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
@@ -1076,7 +1074,6 @@ class NavbarComplete {
                     if (firebaseUser.fotoOrganizacion !== this.currentAdmin.fotoOrganizacion) needsUpdate = true;
                     if (firebaseUser.organizacion !== this.currentAdmin.organizacion) needsUpdate = true;
                     if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
-                    // ✅ CORREGIDO: Verificar también el rol
                     if (firebaseUser.rol !== this.currentAdmin.rol) needsUpdate = true;
                 }
                 
@@ -1084,7 +1081,6 @@ class NavbarComplete {
                     this.currentAdmin = {
                         ...this.currentAdmin,
                         ...firebaseUser,
-                        // Asegurar que rol se pase correctamente
                         rol: firebaseUser.rol
                     };
                     
@@ -1112,7 +1108,6 @@ class NavbarComplete {
                 uid: userData.id,
                 email: userData.correoElectronico,
                 nombreCompleto: userData.nombreCompleto,
-                // ✅ CORREGIDO: Guardar el rol
                 rol: userData.rol,
                 organizacion: userData.organizacion,
                 organizacionCamelCase: userData.organizacionCamelCase,
@@ -1130,7 +1125,6 @@ class NavbarComplete {
             if (userData.fotoOrganizacion) localStorage.setItem('organizacionLogo', userData.fotoOrganizacion);
             if (userData.nombreCompleto) localStorage.setItem('userNombre', userData.nombreCompleto);
             if (userData.correoElectronico) localStorage.setItem('userEmail', userData.correoElectronico);
-            // ✅ CORREGIDO: Guardar rol
             if (userData.rol) localStorage.setItem('userRole', userData.rol);
             if (userData.organizacion) localStorage.setItem('userOrganizacion', userData.organizacion);
             if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
@@ -1426,10 +1420,8 @@ class NavbarComplete {
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Sí, cerrar sesión',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    reverseButtons: true
+                    cancelButtonText: 'Cancelar'
+                    // SIN reverseButtons - Cancelar a la izquierda por defecto
                 }).then((result) => {
                     resolve(result.isConfirmed);
                 });
