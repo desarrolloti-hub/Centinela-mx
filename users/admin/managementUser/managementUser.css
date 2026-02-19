@@ -689,7 +689,6 @@
     gap: 15px;
     margin-bottom: 20px;
     padding: 15px;
-    background: var(--color-bg-tertiary);
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-light);
 }
@@ -698,12 +697,10 @@
     width: 80px;
     height: 80px;
     border-radius: var(--border-radius-circle);
-    background: var(--color-bg-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border: 2px solid var(--color-accent-primary);
 }
 
 .swal-user-avatar-large img {
@@ -714,7 +711,6 @@
 
 .swal-user-avatar-large i {
     font-size: 2rem;
-    color: var(--color-text-secondary);
 }
 
 .swal-user-info-large h3 {
@@ -742,7 +738,6 @@
 }
 
 .swal-detail-card {
-    background: var(--color-bg-tertiary);
     padding: 15px;
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-light);
