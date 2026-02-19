@@ -74,7 +74,7 @@
     /* ... tus variables existentes ... */
     
     /* ====== VARIABLES ESPECÍFICAS PARA COMPONENTES ====== */
-    --sweetalert-bg: rgba(0, 0, 0, 0.85); /* Fondo semitransparente pero no transparente */
+    --sweetalert-bg: rgb(0, 0, 0); /* Fondo semitransparente pero no transparente */
 }
 /* =============================================
    SWEETALERT2 - PERSONALIZACIÓN DE COLORES
