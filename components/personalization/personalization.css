@@ -70,7 +70,12 @@
     --footer-social-hover: var(--color-accent-secondary);
     --footer-border-accent: var(--color-accent-footer);
 }
-
+:root {
+    /* ... tus variables existentes ... */
+    
+    /* ====== VARIABLES ESPECÍFICAS PARA COMPONENTES ====== */
+    --sweetalert-bg: rgba(0, 0, 0, 0.85); /* Fondo semitransparente pero no transparente */
+}
 /* =============================================
    SWEETALERT2 - PERSONALIZACIÓN DE COLORES
    (MANTENIENDO TAMAÑOS Y ESTILOS POR DEFECTO)
@@ -78,12 +83,11 @@
 
 /* POPUP PRINCIPAL - FONDO SÓLIDO CON VARIABLES */
 .swal2-popup {
-    
+    background: var(--sweetalert-bg) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
     box-shadow: var(--shadow-large) !important;
 }
-
 /* Efecto de brillo en el borde */
 .swal2-popup::before {
     background: linear-gradient(45deg,
