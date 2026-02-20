@@ -62,26 +62,29 @@ body {
     line-height: 1.5;
 }
 
-.container-fluid {
-    border-radius: var(--border-radius-large);
-    padding: 25px;
-    box-shadow: var(--shadow-normal);
+/* =============================================
+   CONTENEDOR PRINCIPAL
+   ============================================= */
+.custom-container {
     max-width: min(1200px, 95vw);
     margin: 0 auto;
+    padding: 25px;
+    background: transparent;
+    border-radius: var(--border-radius-large);
     animation: fadeInUp 0.5s ease;
 }
 
 /* =============================================
    HEADER PRINCIPAL (copia exacta de editarAreas)
    ============================================= */
-.row.mb-4:first-child {
+.header-section {
     padding: 20px 25px;
     border-radius: var(--border-radius-medium);
-    margin-bottom: 30px !important;
+    margin-bottom: 30px;
     box-shadow: var(--shadow-normal);
 }
 
-/* NUEVA CLASE .page-header AÑADIDA PARA EL BORDE INFERIOR */
+/* NUEVA CLASE .page-header PARA EL BORDE INFERIOR */
 .page-header {
     margin-bottom: 40px;
     padding-bottom: 20px;
@@ -89,14 +92,18 @@ body {
     text-align: center;
 }
 
-h1.h3 {
+.header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.main-title {
     font-family: var(--font-family-primary);
     color: var(--color-text-primary);
     font-size: 2.5rem;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0;
+    margin-bottom: 15px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -108,7 +115,7 @@ h1.h3 {
     animation: titleGlow 3s infinite alternate ease-in-out;
 }
 
-h1.h3 i {
+.main-title i {
     font-size: 24px;
     filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
@@ -127,19 +134,18 @@ h1.h3 i {
     }
 }
 
-.text-muted {
+.header-description-text {
     color: var(--color-text-secondary) !important;
     font-family: var(--font-family-secondary);
-    margin-top: 5px;
     font-size: 1.2rem;
-    position: relative;
+    max-width: 700px;
     
     /* ILUMINACIÓN SUTIL */
     text-shadow: 0 0 5px rgba(192, 192, 192, 0.3);
     opacity: 0.9;
 }
 
-.text-muted i {
+.header-description-text i {
     color: var(--color-accent-primary);
     filter: drop-shadow(0 0 4px var(--color-accent-primary));
     margin-right: 6px;
@@ -161,12 +167,13 @@ h1.h3 i {
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
     transition: all 0.3s ease !important;
-    display: flex !important;
+    display: inline-flex !important;
     align-items: center !important;
     gap: 10px !important;
     justify-content: center !important;
     position: relative;
     overflow: hidden;
+    cursor: pointer;
 }
 
 .btn-volver:hover {
@@ -185,12 +192,18 @@ h1.h3 i {
     border-radius: var(--border-radius-large) !important;
     box-shadow: var(--shadow-normal) !important;
     margin-bottom: 20px !important;
+    overflow: hidden;
 }
 
 .card-header {
     background: rgba(20, 20, 20, 0.95) !important;
     border-bottom: 1px solid var(--color-border-light) !important;
     padding: 18px 25px !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 .card-header h5 {
@@ -218,9 +231,32 @@ h1.h3 i {
 }
 
 /* =============================================
+   GRID SYSTEM (reemplaza row y col)
+   ============================================= */
+.form-row {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+/* =============================================
    SECCIONES DEL FORMULARIO (igual que editarAreas)
    ============================================= */
-h6.border-bottom {
+.section-title {
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-primary) !important;
     font-size: 14px !important;
@@ -228,13 +264,16 @@ h6.border-bottom {
     letter-spacing: 0.5px !important;
     border-bottom: 2px solid var(--color-accent-primary) !important;
     padding-bottom: 10px !important;
-    margin-bottom: 20px !important;
+    margin: 0 0 20px 0 !important;
     
     /* ILUMINACIÓN PARA SUBTÍTULOS */
     text-shadow: 0 0 4px var(--color-accent-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-h6 i {
+.section-title i {
     color: var(--color-accent-primary) !important;
     filter: drop-shadow(0 0 4px var(--color-accent-primary));
 }
@@ -242,15 +281,26 @@ h6 i {
 /* =============================================
    FORMULARIOS (igual que editarAreas)
    ============================================= */
+.form-field {
+    margin-bottom: 16px;
+}
+
 .form-label {
     color: var(--color-text-primary) !important;
     font-family: var(--font-family-secondary) !important;
     font-weight: 500 !important;
     margin-bottom: 8px !important;
     font-size: 14px !important;
+    display: block;
     
     /* ILUMINACIÓN SUTIL PARA LABELS */
     text-shadow: 0 0 2px rgba(192, 192, 192, 0.3);
+}
+
+.form-label i {
+    margin-right: 6px;
+    color: var(--color-accent-primary);
+    filter: drop-shadow(0 0 3px var(--color-accent-primary));
 }
 
 .form-label::after {
@@ -264,8 +314,7 @@ h6 i {
     content: "" !important;
 }
 
-.form-control,
-.form-select {
+.form-control {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-primary) !important;
@@ -273,10 +322,10 @@ h6 i {
     padding: 12px 15px !important;
     transition: all 0.3s ease !important;
     font-family: var(--font-family-secondary) !important;
+    width: 100%;
 }
 
-.form-control:focus,
-.form-select:focus {
+.form-control:focus {
     border-color: var(--color-accent-secondary) !important;
     box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
     background: var(--color-bg-tertiary) !important;
@@ -287,38 +336,195 @@ h6 i {
     color: rgba(255, 255, 255, 0.3) !important;
 }
 
-.form-text {
+.form-help-text {
     color: var(--color-text-secondary) !important;
     font-size: 12px !important;
     font-family: var(--font-family-secondary) !important;
     margin-top: 5px !important;
 }
 
+.form-help-text i {
+    color: var(--color-accent-primary);
+    filter: drop-shadow(0 0 3px var(--color-accent-primary));
+    margin-right: 4px;
+}
+
 /* Input groups */
 .input-group {
+    display: flex;
     border-radius: var(--border-radius-small) !important;
     overflow: hidden !important;
 }
 
-.input-group-text {
+.input-group-icon {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
+    border-right: none;
     color: var(--color-text-secondary) !important;
     padding: 12px 15px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .input-group .form-control {
     border-left: none !important;
+    border-radius: 0 var(--border-radius-small) var(--border-radius-small) 0;
+    flex: 1;
+}
+
+.input-group .form-control.color-input {
+    width: 60px;
+    padding: 5px;
+    height: 45px;
+}
+
+/* Color picker group */
+.color-picker-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-preview {
+    width: 45px;
+    height: 45px;
+    border-radius: var(--border-radius-small);
+    border: 2px solid var(--color-border-light);
+    box-shadow: var(--shadow-small);
+    flex-shrink: 0;
+}
+
+/* Char counter */
+.char-counter {
+    margin-top: 4px;
+}
+
+.char-counter small {
+    color: var(--color-text-tertiary);
+}
+
+#contadorCaracteres {
+    color: var(--color-accent-primary);
+    font-weight: 600;
+    text-shadow: 0 0 4px var(--color-accent-primary);
 }
 
 /* =============================================
-   SECCIÓN DE SUBCATEGORÍAS (usando las mismas clases que cargos)
+   LÍNEA DIVISORIA (igual que editarAreas)
    ============================================= */
-.cargos-container {
+.section-divider {
+    display: flex;
+    align-items: center;
+    margin: 30px 0 20px 0;
+    position: relative;
+}
+
+.section-divider-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--color-accent-primary) 20%, 
+        var(--color-accent-primary) 80%, 
+        transparent 100%
+    );
+    box-shadow: 0 0 10px rgba(192, 192, 192, 0.3);
+}
+
+.section-divider-content {
+    padding: 0 15px;
+    color: var(--color-accent-primary);
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    
+    /* ILUMINACIÓN PARA EL DIVISOR */
+    text-shadow: 0 0 8px var(--color-accent-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-divider-content i {
+    color: var(--color-accent-primary);
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+}
+
+/* =============================================
+   SUBCATEGORÍAS HEADER
+   ============================================= */
+.subcategorias-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.subcategorias-counter {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+/* =============================================
+   BOTÓN NUEVA SUBCATEGORÍA
+   ============================================= */
+.btn-nueva-subcategoria {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-secondary) !important;
+    color: var(--color-accent-secondary) !important;
+    padding: 8px 16px !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-nueva-subcategoria:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(47, 140, 255, 0.2);
+}
+
+.btn-nueva-subcategoria::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 100%;
+    height: 200%;
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    transform: rotate(30deg);
+    transition: all 0.5s ease;
+    opacity: 0;
+}
+
+.btn-nueva-subcategoria:hover::after {
+    opacity: 1;
+    transform: rotate(30deg) translate(10%, 10%);
+}
+
+/* =============================================
+   SECCIÓN DE SUBCATEGORÍAS
+   ============================================= */
+.subcategorias-list-container {
     background: rgba(20, 20, 20, 0.5);
     border-radius: var(--border-radius-medium);
     padding: 20px;
-    margin-bottom: 20px;
     border: 1px solid var(--color-border-light);
 }
 
@@ -378,6 +584,7 @@ h6 i {
     display: flex !important;
     align-items: center !important;
     gap: 5px !important;
+    cursor: pointer;
     
     /* ILUMINACIÓN PARA BOTÓN ELIMINAR */
     text-shadow: 0 0 3px var(--color-danger);
@@ -390,34 +597,42 @@ h6 i {
     box-shadow: 0 0 15px var(--color-danger);
 }
 
-.btn-agregar-cargo {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-accent-secondary) !important;
-    color: var(--color-accent-secondary) !important;
-    padding: 10px 20px !important;
-    font-family: var(--font-family-primary) !important;
-    font-size: 13px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    border-radius: var(--border-radius-medium) !important;
-    transition: all 0.3s ease !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
+/* =============================================
+   CHECKBOX
+   ============================================= */
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-top: 24px;
 }
 
-.btn-agregar-cargo:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 0 20px rgba(47, 140, 255, 0.2);
+.checkbox-input {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    cursor: pointer;
+    accent-color: var(--color-accent-secondary);
 }
 
-.cargos-counter {
-    color: var(--color-text-secondary);
-    font-size: 12px;
-    margin-left: 10px;
+.checkbox-label {
+    color: var(--color-text-primary);
+    font-family: var(--font-family-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
+.checkbox-label i {
+    color: var(--color-accent-primary);
+    filter: drop-shadow(0 0 3px var(--color-accent-primary));
+}
+
+/* =============================================
+   CARGOS EMPTY
+   ============================================= */
 .cargos-empty {
     text-align: center;
     padding: 30px;
@@ -434,48 +649,24 @@ h6 i {
     filter: drop-shadow(0 0 8px var(--color-accent-primary));
 }
 
-/* =============================================
-   LÍNEA DIVISORIA (igual que editarAreas)
-   ============================================= */
-.section-divider {
-    display: flex;
-    align-items: center;
-    margin: 30px 0 20px 0;
-    position: relative;
+.cargos-empty p {
+    margin-bottom: 5px;
 }
 
-.section-divider-line {
-    flex: 1;
-    height: 2px;
-    background: linear-gradient(90deg, 
-        transparent 0%, 
-        var(--color-accent-primary) 20%, 
-        var(--color-accent-primary) 80%, 
-        transparent 100%
-    );
-    box-shadow: 0 0 10px rgba(192, 192, 192, 0.3);
-}
-
-.section-divider-content {
-    padding: 0 15px;
-    color: var(--color-accent-primary);
-    font-family: var(--font-family-primary);
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    white-space: nowrap;
-    
-    /* ILUMINACIÓN PARA EL DIVISOR */
-    text-shadow: 0 0 8px var(--color-accent-primary);
+.cargos-empty small {
+    color: var(--color-text-tertiary);
 }
 
 /* =============================================
-   ALERTAS (igual que editarAreas)
+   ALERTAS
    ============================================= */
 .alert {
     border-radius: var(--border-radius-small) !important;
     border: 1px solid !important;
     padding: 15px 20px !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .alert-info {
@@ -489,152 +680,97 @@ h6 i {
     filter: drop-shadow(0 0 4px var(--color-info));
 }
 
-.alert-warning {
-    background: rgba(255, 204, 0, 0.1) !important;
-    border-color: rgba(255, 204, 0, 0.3) !important;
-    color: var(--color-warning) !important;
-}
-
-.alert-warning i {
-    color: var(--color-warning) !important;
-    filter: drop-shadow(0 0 4px var(--color-warning));
-}
-
-.alert-danger {
-    background: rgba(255, 77, 77, 0.1) !important;
-    border-color: rgba(255, 77, 77, 0.3) !important;
-    color: var(--color-danger) !important;
-}
-
-.alert-danger i {
-    color: var(--color-danger) !important;
-    filter: drop-shadow(0 0 4px var(--color-danger));
-}
-
 /* =============================================
-   BOTONES DEL FORMULARIO (igual que editarAreas)
+   BOTONES DE ACCIÓN
    ============================================= */
-.d-flex.justify-content-end.gap-3 {
+.action-buttons-container {
+    display: flex;
+    justify-content: flex-start;
+    gap: 15px;
     padding-top: 20px;
     border-top: 1px solid var(--color-border-light);
     margin-top: 20px;
-    justify-content: flex-start !important;
 }
 
-#btnCancelar,
-#btnGuardarCategoria,
-#btnDesactivarCategoria {
+.btn {
     padding: 12px 30px !important;
     font-family: var(--font-family-secondary) !important;
     font-weight: 600 !important;
     border-radius: var(--border-radius-medium) !important;
     transition: all 0.3s ease !important;
     min-width: 160px !important;
-    display: flex !important;
+    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 10px !important;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
 }
 
-#btnCancelar {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
+.btn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 100%;
+    height: 200%;
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    transform: rotate(30deg);
+    transition: all 0.5s ease;
+    opacity: 0;
 }
 
-#btnCancelar:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px) !important;
-    border-color: var(--color-danger) !important;
-    color: var(--color-danger) !important;
+.btn:hover::after {
+    opacity: 1;
+    transform: rotate(30deg) translate(10%, 10%);
 }
 
-#btnGuardarCategoria {
+.btn-success {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
 }
 
-#btnGuardarCategoria:hover {
+.btn-success:hover {
     background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
     border-color: var(--color-accent-secondary) !important;
     transform: translateY(-2px) !important;
     box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
 }
 
-#btnDesactivarCategoria {
+.btn-secondary {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-danger) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    border-color: var(--color-danger) !important;
     color: var(--color-danger) !important;
 }
 
-#btnDesactivarCategoria:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
-}
-
-/* =============================================
-   CONTADOR DE CARACTERES
-   ============================================= */
-#contadorCaracteres {
-    color: var(--color-accent-primary);
-    font-weight: 600;
-    text-shadow: 0 0 4px var(--color-accent-primary);
-}
-
-/* =============================================
-   MODALES (igual que editarAreas)
-   ============================================= */
-.modal-content {
-    background: var(--color-bg-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
-    box-shadow: var(--shadow-large) !important;
-    color: var(--color-text-secondary) !important;
-}
-
-.modal-header {
-    background: rgba(20, 20, 20, 0.95) !important;
-    border-bottom: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    padding: 20px 25px !important;
-}
-
-.modal-title {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    font-size: 16px !important;
-    
-    /* ILUMINACIÓN PARA TÍTULOS DE MODAL */
-    text-shadow: 0 0 5px var(--color-accent-primary);
-}
-
-.modal-title i {
-    color: var(--color-accent-primary) !important;
-    filter: drop-shadow(0 0 4px var(--color-accent-primary));
-}
-
+/* Close button */
 .btn-close {
-    filter: invert(1) brightness(2) !important;
-    opacity: 0.7 !important;
-    transition: all 0.3s ease !important;
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: all 0.3s ease;
 }
 
 .btn-close:hover {
-    opacity: 1 !important;
-    transform: rotate(90deg) !important;
-}
-
-.modal-body {
-    padding: 25px !important;
-}
-
-.modal-footer {
-    border-top: 1px solid var(--color-border-light) !important;
-    padding: 20px 25px !important;
+    color: var(--color-danger);
+    transform: scale(1.2);
 }
 
 /* =============================================
@@ -652,120 +788,185 @@ h6 i {
 }
 
 /* =============================================
-   EFECTOS ESPECIALES PARA BOTONES
+   RESPONSIVE
    ============================================= */
-.btn-volver,
-#btnCancelar,
-#btnGuardarCategoria,
-#btnDesactivarCategoria,
-.btn-agregar-cargo,
-.modal-footer .btn {
-    position: relative;
-    overflow: hidden;
+@media (max-width: 1023px) {
+    .custom-container {
+        padding: 20px !important;
+    }
+
+    .header-section {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 20px !important;
+        padding: 20px !important;
+    }
+
+    .btn-volver {
+        width: 100% !important;
+        max-width: 300px !important;
+    }
+
+    .card-body {
+        padding: 20px !important;
+    }
+
+    .btn {
+        width: 100% !important;
+        margin-bottom: 10px !important;
+    }
+
+    .action-buttons-container {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .card-header {
+        flex-direction: column !important;
+        gap: 15px !important;
+        align-items: flex-start !important;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .subcategorias-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .btn-nueva-subcategoria {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .color-picker-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .cargo-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
 }
 
-.btn-volver::after,
-#btnCancelar::after,
-#btnGuardarCategoria::after,
-#btnDesactivarCategoria::after,
-.btn-agregar-cargo::after,
-.modal-footer .btn::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 100%;
-    height: 200%;
-    background: linear-gradient(to bottom right,
-            rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0.1) 50%,
-            rgba(255, 255, 255, 0) 100%);
-    transform: rotate(30deg);
-    transition: all 0.5s ease;
-    opacity: 0;
+@media (max-width: 768px) {
+    body {
+        padding: 10px !important;
+        padding-top: 70px !important;
+    }
+
+    .custom-container {
+        padding: 15px !important;
+        border-radius: var(--border-radius-medium) !important;
+    }
+
+    .main-title {
+        font-size: 20px !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    .header-section {
+        padding: 15px !important;
+        margin-top: 10px !important;
+    }
+
+    .card-header {
+        padding: 15px 20px !important;
+    }
+
+    .card-body {
+        padding: 15px !important;
+    }
+
+    .section-title {
+        font-size: 13px !important;
+    }
+
+    .form-control {
+        padding: 10px 12px !important;
+        font-size: 14px !important;
+    }
+
+    .input-group-icon {
+        padding: 10px 12px !important;
+    }
+
+    .subcategorias-list-container {
+        padding: 15px !important;
+    }
+
+    .cargo-item {
+        padding: 12px !important;
+    }
+
+    .btn-nueva-subcategoria {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    
+    .section-divider {
+        margin: 20px 0 15px 0;
+    }
+    
+    .section-divider-content {
+        font-size: 12px;
+        padding: 0 10px;
+    }
 }
 
-.btn-volver:hover::after,
-#btnCancelar:hover::after,
-#btnGuardarCategoria:hover::after,
-#btnDesactivarCategoria:hover::after,
-.btn-agregar-cargo:hover::after,
-.modal-footer .btn:hover::after {
-    opacity: 1;
-    transform: rotate(30deg) translate(10%, 10%);
-}
+@media (max-width: 480px) {
+    body {
+        padding-top: 60px !important;
+    }
 
-/* =============================================
-   COLOR PICKER PERSONALIZADO
-   ============================================= */
-input[type="color"] {
-    cursor: pointer;
-    border-radius: var(--border-radius-small) !important;
-    background: var(--color-bg-tertiary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    padding: 5px !important;
-}
+    .custom-container {
+        padding: 10px !important;
+    }
 
-input[type="color"]::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
+    .header-section {
+        padding: 12px !important;
+    }
 
-input[type="color"]::-webkit-color-swatch {
-    border: none;
-    border-radius: calc(var(--border-radius-small) - 2px);
-}
+    .btn-volver {
+        padding: 10px 15px !important;
+        font-size: 13px !important;
+        min-width: auto !important;
+    }
 
-/* =============================================
-   ORGANIZACIÓN INFO (mantenido por compatibilidad)
-   ============================================= */
-.organizacion-info {
-    background: var(--color-bg-tertiary) !important;
-    border-left: 4px solid var(--color-accent-secondary) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-small) !important;
-}
+    .card-header {
+        padding: 12px 15px !important;
+    }
 
-.organizacion-info h6 {
-    font-family: var(--font-family-primary) !important;
-}
+    .card-header h5 {
+        font-size: 14px !important;
+    }
 
-.organizacion-info code {
-    background: var(--color-bg-primary) !important;
-    padding: 2px 6px;
-    border-radius: 6px;
-}
+    .btn {
+        padding: 10px 15px !important;
+        font-size: 13px !important;
+        min-width: auto !important;
+    }
 
-/* =============================================
-   ILUMINACIÓN POR TEMA
-   ============================================= */
-[data-theme="light"] {
-    --glow-intensity: 0.5;
-}
+    .btn-nueva-subcategoria {
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+    }
 
-[data-theme="light"] h1.h3 {
-    text-shadow: 0 0 8px rgba(192, 192, 192, 0.6),
-                 0 0 16px rgba(192, 192, 192, 0.4);
-}
+    .cargos-empty {
+        padding: 20px !important;
+    }
 
-[data-theme="light"] .text-muted {
-    text-shadow: 0 0 4px rgba(192, 192, 192, 0.4);
-}
-
-[data-theme="light"] .section-divider-content {
-    text-shadow: 0 0 6px rgba(192, 192, 192, 0.5);
-}
-
-[data-theme="high-contrast"] h1.h3 {
-    text-shadow: 0 0 12px #ffffff,
-                 0 0 24px #ffffff;
-}
-
-[data-theme="high-contrast"] .text-muted {
-    text-shadow: 0 0 6px #ffffff;
-}
-
-[data-theme="high-contrast"] .section-divider-content {
-    text-shadow: 0 0 10px #ffffff;
+    .btn-eliminar-cargo {
+        width: 100% !important;
+        justify-content: center;
+    }
 }
 
 /* =============================================
@@ -789,229 +990,3 @@ input[type="color"]::-webkit-color-swatch {
                  0 0 30px var(--color-accent-primary) !important;
     color: var(--navbar-logo-text) !important;
 }
-
-/* =============================================
-   RESPONSIVE DESIGN (igual que editarAreas)
-   ============================================= */
-@media (max-width: 1023px) {
-    .container-fluid {
-        padding: 20px !important;
-    }
-
-    .row.mb-4:first-child {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 20px !important;
-        padding: 20px !important;
-    }
-
-    .btn-volver {
-        width: 100% !important;
-        max-width: 300px !important;
-    }
-
-    .card-body {
-        padding: 20px !important;
-    }
-
-    #btnCancelar,
-    #btnGuardarCategoria,
-    #btnDesactivarCategoria {
-        width: 100% !important;
-        margin-bottom: 10px !important;
-    }
-
-    .d-flex.justify-content-end.gap-3 {
-        flex-direction: column !important;
-        gap: 10px !important;
-    }
-
-    .card-header {
-        flex-direction: column !important;
-        gap: 15px !important;
-        align-items: flex-start !important;
-    }
-
-    .cargo-item .row {
-        flex-direction: column;
-    }
-
-    .cargo-item .col-md-6 {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    
-    .section-divider-content {
-        font-size: 12px;
-        padding: 0 10px;
-    }
-}
-
-@media (max-width: 768px) {
-    body {
-        padding: 10px !important;
-        padding-top: 70px !important;
-    }
-
-    .container-fluid {
-        padding: 15px !important;
-        border-radius: var(--border-radius-medium) !important;
-    }
-
-    h1.h3 {
-        font-size: 20px !important;
-        justify-content: center !important;
-        text-align: center !important;
-    }
-
-    .row.mb-4:first-child {
-        padding: 15px !important;
-        margin-top: 10px !important;
-        padding-top: 10px !important;
-    }
-
-    .card-header {
-        padding: 15px 20px !important;
-    }
-
-    .card-body {
-        padding: 15px !important;
-    }
-
-    h6.border-bottom {
-        font-size: 13px !important;
-    }
-
-    .form-control,
-    .form-select {
-        padding: 10px 12px !important;
-        font-size: 14px !important;
-    }
-
-    .input-group-text {
-        padding: 10px 12px !important;
-    }
-
-    .cargos-container {
-        padding: 15px !important;
-    }
-
-    .cargo-item {
-        padding: 12px !important;
-    }
-
-    .btn-agregar-cargo {
-        width: 100% !important;
-        justify-content: center !important;
-    }
-    
-    .section-divider {
-        margin: 20px 0 15px 0;
-    }
-}
-
-@media (max-width: 480px) {
-    body {
-        padding-top: 60px !important;
-    }
-
-    .container-fluid {
-        padding: 10px !important;
-    }
-
-    .row.mb-4:first-child {
-        padding: 12px !important;
-    }
-
-    .btn-volver {
-        padding: 10px 15px !important;
-        font-size: 13px !important;
-        min-width: auto !important;
-    }
-
-    .card-header {
-        padding: 12px 15px !important;
-    }
-
-    .card-header h5 {
-        font-size: 14px !important;
-    }
-
-    #btnCancelar,
-    #btnGuardarCategoria,
-    #btnDesactivarCategoria {
-        padding: 10px 15px !important;
-        font-size: 13px !important;
-        min-width: auto !important;
-    }
-
-    .cargo-header {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-    }
-
-    .btn-eliminar-cargo {
-        width: 100% !important;
-    }
-
-    .cargos-empty {
-        padding: 20px !important;
-    }
-}
-/* =============================================
-   ESTILOS PARA CHECKBOX DEL EDITOR DE SUBCATEGORÍAS
-   ============================================= */
-.form-check-input {
-    background-color: var(--color-bg-tertiary) !important;
-    border-color: var(--color-border-light) !important;
-}
-
-.form-check-input:checked {
-    background-color: var(--color-accent-primary) !important;
-    border-color: var(--color-accent-primary) !important;
-}
-
-.form-check-input:focus {
-    border-color: var(--color-accent-secondary) !important;
-    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
-}
-
-.form-check-label {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-secondary) !important;
-}
-
-/* Efectos hover para los botones del editor */
-#btnGuardarSubcategoria:hover,
-#btnGuardarSubcategoria:focus {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    border-color: var(--color-accent-secondary) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
-}
-
-#btnGuardarSubcategoria::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 100%;
-    height: 200%;
-    background: linear-gradient(to bottom right,
-            rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0.1) 50%,
-            rgba(255, 255, 255, 0) 100%);
-    transform: rotate(30deg);
-    transition: all 0.5s ease;
-    opacity: 0;
-}
-
-#btnGuardarSubcategoria:hover::after {
-    opacity: 1;
-    transform: rotate(30deg) translate(10%, 10%);
-}
-
-/* =============================================
-   FIN DEL ARCHIVO
-   ============================================= */

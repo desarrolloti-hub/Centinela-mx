@@ -43,6 +43,45 @@
 }
 
 /* =============================================
+   SISTEMA DE GRID PERSONALIZADO
+   ============================================= */
+.centinela-container {
+    border-radius: var(--border-radius-large);
+    padding: 25px;
+    box-shadow: var(--shadow-normal);
+    max-width: min(1200px, 95vw);
+    margin: 0 auto;
+    animation: fadeInUp 0.5s ease;
+}
+
+.centinela-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    width: 100%;
+}
+
+.centinela-col-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding: 0;
+}
+
+.col-md-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    padding: 0 12px;
+    box-sizing: border-box;
+}
+
+.col-md-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding: 0 12px;
+    box-sizing: border-box;
+}
+
+/* =============================================
    ESTILOS GENERALES (igual que crearAreas)
    ============================================= */
 * {
@@ -62,19 +101,138 @@ body {
     line-height: 1.5;
 }
 
-.container-fluid {
-    border-radius: var(--border-radius-large);
-    padding: 25px;
-    box-shadow: var(--shadow-normal);
-    max-width: min(1200px, 95vw);
-    margin: 0 auto;
-    animation: fadeInUp 0.5s ease;
+/* =============================================
+   UTILIDADES DE ESPACIADO
+   ============================================= */
+.d-flex {
+    display: flex !important;
+}
+
+.justify-content-between {
+    justify-content: space-between !important;
+}
+
+.justify-content-center {
+    justify-content: center !important;
+}
+
+.justify-content-start {
+    justify-content: flex-start !important;
+}
+
+.align-items-center {
+    align-items: center !important;
+}
+
+.flex-column {
+    flex-direction: column !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.text-muted {
+    color: var(--color-text-secondary) !important;
+}
+
+.mx-auto {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.me-1 { margin-right: 0.25rem !important; }
+.me-2 { margin-right: 0.5rem !important; }
+.me-3 { margin-right: 1rem !important; }
+
+.ms-1 { margin-left: 0.25rem !important; }
+.ms-2 { margin-left: 0.5rem !important; }
+.ms-3 { margin-left: 1rem !important; }
+
+.mt-1 { margin-top: 0.25rem !important; }
+.mt-2 { margin-top: 0.5rem !important; }
+.mt-3 { margin-top: 1rem !important; }
+.mt-4 { margin-top: 1.5rem !important; }
+.mt-5 { margin-top: 3rem !important; }
+
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 0.25rem !important; }
+.mb-2 { margin-bottom: 0.5rem !important; }
+.mb-3 { margin-bottom: 1rem !important; }
+.mb-4 { margin-bottom: 1.5rem !important; }
+
+.p-0 { padding: 0 !important; }
+.p-1 { padding: 0.25rem !important; }
+.p-2 { padding: 0.5rem !important; }
+.p-3 { padding: 1rem !important; }
+.p-4 { padding: 1.5rem !important; }
+
+.py-1 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+.py-2 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+.py-3 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+.py-4 { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+.py-5 { padding-top: 3rem !important; padding-bottom: 3rem !important; }
+
+.px-1 { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
+.px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+.px-3 { padding-left: 1rem !important; padding-right: 1rem !important; }
+.px-4 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+
+.gap-1 { gap: 0.25rem !important; }
+.gap-2 { gap: 0.5rem !important; }
+.gap-3 { gap: 1rem !important; }
+.gap-4 { gap: 1.5rem !important; }
+
+/* =============================================
+   TARJETAS PERSONALIZADAS
+   ============================================= */
+.centinela-card {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-large) !important;
+    box-shadow: var(--shadow-normal) !important;
+    margin-bottom: 20px !important;
+    width: 100%;
+}
+
+.centinela-card-header {
+    background: rgba(20, 20, 20, 0.95) !important;
+    border-bottom: 1px solid var(--color-border-light) !important;
+    padding: 18px 25px !important;
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.centinela-card-header .card-title {
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary) !important;
+    font-size: 16px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    
+    /* ILUMINACIÓN PARA TÍTULOS DE TARJETA */
+    text-shadow: 0 0 5px var(--color-accent-primary);
+}
+
+.centinela-card-header .card-title i {
+    color: var(--color-accent-primary) !important;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+}
+
+.centinela-card-body {
+    padding: 30px !important;
 }
 
 /* =============================================
    HEADER PRINCIPAL (copia exacta de crearAreas)
    ============================================= */
-.row.mb-4:first-child {
+.centinela-row:first-child {
     padding: 20px 25px;
     border-radius: var(--border-radius-medium);
     margin-bottom: 30px !important;
@@ -134,7 +292,6 @@ h1.h3 i {
     font-size: 1.2rem;
     position: relative;
     
-    
     /* ILUMINACIÓN SUTIL */
     text-shadow: 0 0 5px rgba(192, 192, 192, 0.3);
     opacity: 0.9;
@@ -142,7 +299,7 @@ h1.h3 i {
 
 .text-muted i {
     color: var(--color-accent-primary);
-
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
     margin-right: 6px;
 }
 
@@ -168,6 +325,7 @@ h1.h3 i {
     justify-content: center !important;
     position: relative;
     overflow: hidden;
+    cursor: pointer;
 }
 
 .btn-volver:hover {
@@ -178,44 +336,74 @@ h1.h3 i {
 }
 
 /* =============================================
-   TARJETAS (igual que crearAreas)
+   BOTONES DEL FORMULARIO (igual que crearAreas)
    ============================================= */
-.card {
-    background: var(--color-bg-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
-    box-shadow: var(--shadow-normal) !important;
-    margin-bottom: 20px !important;
-}
-
-.card-header {
-    background: rgba(20, 20, 20, 0.95) !important;
-    border-bottom: 1px solid var(--color-border-light) !important;
-    padding: 18px 25px !important;
-}
-
-.card-header h5 {
-    color: var(--color-text-primary) !important;
-    font-family: var(--font-family-primary) !important;
-    font-size: 16px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    margin: 0 !important;
+#btnCancelar,
+.btn-success,
+.btn-secondary,
+#btnGuardarCambios {
+    padding: 12px 30px !important;
+    font-family: var(--font-family-secondary) !important;
+    font-weight: 600 !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
+    min-width: 160px !important;
     display: flex !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 10px !important;
-    
-    /* ILUMINACIÓN PARA TÍTULOS DE TARJETA */
-    text-shadow: 0 0 5px var(--color-accent-primary);
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-size: 14px;
 }
 
-.card-header h5 i {
-    color: var(--color-accent-primary) !important;
-    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+.btn-secondary, #btnCancelar {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
 }
 
-.card-body {
-    padding: 30px !important;
+.btn-secondary:hover, #btnCancelar:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    border-color: var(--color-danger) !important;
+    color: var(--color-danger) !important;
+}
+
+.btn-success, #btnGuardarCambios {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.btn-success:hover, #btnGuardarCambios:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border-color: var(--color-accent-secondary) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
+}
+
+#btnDesactivarArea {
+    padding: 12px 30px !important;
+    font-family: var(--font-family-secondary) !important;
+    font-weight: 600 !important;
+    border-radius: var(--border-radius-medium) !important;
+    transition: all 0.3s ease !important;
+    min-width: 160px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    cursor: pointer;
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-danger) !important;
+    color: var(--color-danger) !important;
+}
+
+#btnDesactivarArea:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
 }
 
 /* =============================================
@@ -249,18 +437,22 @@ h6 i {
     font-weight: 500 !important;
     margin-bottom: 8px !important;
     font-size: 14px !important;
+    display: block;
     
     /* ILUMINACIÓN SUTIL PARA LABELS */
     text-shadow: 0 0 2px rgba(192, 192, 192, 0.3);
 }
 
-.form-label::after {
+.form-label .required,
+.form-label:has(+ [required])::after,
+.form-label[for="nombreArea"]::after,
+.form-label[for="descripcionArea"]::after {
     content: " *";
     color: var(--color-danger);
     opacity: 0.8;
 }
 
-.form-label:has(+ :not(:required))::after,
+.form-label:has(+ :not([required]))::after,
 .form-label[for="responsable"]::after {
     content: "" !important;
 }
@@ -274,6 +466,9 @@ h6 i {
     padding: 12px 15px !important;
     transition: all 0.3s ease !important;
     font-family: var(--font-family-secondary) !important;
+    width: 100%;
+    font-size: 14px;
+    box-sizing: border-box;
 }
 
 .form-control:focus,
@@ -297,8 +492,10 @@ h6 i {
 
 /* Input groups */
 .input-group {
+    display: flex;
     border-radius: var(--border-radius-small) !important;
     overflow: hidden !important;
+    width: 100%;
 }
 
 .input-group-text {
@@ -306,10 +503,14 @@ h6 i {
     border: 1px solid var(--color-border-light) !important;
     color: var(--color-text-secondary) !important;
     padding: 12px 15px !important;
+    display: flex;
+    align-items: center;
+    border-right: none;
 }
 
 .input-group .form-control {
     border-left: none !important;
+    flex: 1;
 }
 
 /* =============================================
@@ -379,6 +580,7 @@ h6 i {
     display: flex !important;
     align-items: center !important;
     gap: 5px !important;
+    cursor: pointer;
     
     /* ILUMINACIÓN PARA BOTÓN ELIMINAR */
     text-shadow: 0 0 3px var(--color-danger);
@@ -405,8 +607,8 @@ h6 i {
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
+    cursor: pointer;
 }
-
 
 .btn-agregar-cargo:hover {
     background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
@@ -437,12 +639,48 @@ h6 i {
 }
 
 /* =============================================
+   LÍNEA DIVISORIA PARA CARGOS
+   ============================================= */
+.section-divider {
+    display: flex;
+    align-items: center;
+    margin: 30px 0 20px 0;
+    position: relative;
+}
+
+.section-divider-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--color-accent-primary) 20%, 
+        var(--color-accent-primary) 80%, 
+        transparent 100%
+    );
+    box-shadow: 0 0 10px rgba(192, 192, 192, 0.3);
+}
+
+.section-divider-content {
+    padding: 0 15px;
+    color: var(--color-accent-primary);
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    
+    /* ILUMINACIÓN PARA EL DIVISOR */
+    text-shadow: 0 0 8px var(--color-accent-primary);
+}
+
+/* =============================================
    ALERTAS (igual que crearAreas)
    ============================================= */
 .alert {
     border-radius: var(--border-radius-small) !important;
     border: 1px solid !important;
     padding: 15px 20px !important;
+    margin-bottom: 1rem;
 }
 
 .alert-info {
@@ -452,7 +690,7 @@ h6 i {
 }
 
 .alert-info i {
-    
+    color: var(--color-info) !important;
     filter: drop-shadow(0 0 4px var(--color-info));
 }
 
@@ -479,69 +717,6 @@ h6 i {
 }
 
 /* =============================================
-   BOTONES DEL FORMULARIO (igual que crearAreas)
-   ============================================= */
-.d-flex.justify-content-end.gap-3 {
-    padding-top: 20px;
-    border-top: 1px solid var(--color-border-light);
-    margin-top: 20px;
-    justify-content: flex-start !important;
-}
-
-#btnCancelar,
-#btnGuardarCambios,
-#btnDesactivarArea {
-    padding: 12px 30px !important;
-    font-family: var(--font-family-secondary) !important;
-    font-weight: 600 !important;
-    border-radius: var(--border-radius-medium) !important;
-    transition: all 0.3s ease !important;
-    min-width: 160px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 10px !important;
-}
-
-#btnCancelar {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-}
-
-#btnCancelar:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px) !important;
-    border-color: var(--color-danger) !important;
-    color: var(--color-danger) !important;
-}
-
-#btnGuardarCambios {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-accent-primary) !important;
-    color: var(--color-text-primary) !important;
-}
-
-#btnGuardarCambios:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    border-color: var(--color-accent-secondary) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
-}
-
-#btnDesactivarArea {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid var(--color-danger) !important;
-    color: var(--color-danger) !important;
-}
-
-#btnDesactivarArea:hover {
-    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(255, 77, 77, 0.2) !important;
-}
-
-/* =============================================
    CONTADOR DE CARACTERES
    ============================================= */
 #contadorCaracteres {
@@ -551,71 +726,25 @@ h6 i {
 }
 
 /* =============================================
-   MODALES (igual que crearAreas)
+   ORGANIZACIÓN INFO (mantenido)
    ============================================= */
-.modal-content {
-    background: var(--color-bg-secondary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    border-radius: var(--border-radius-large) !important;
-    box-shadow: var(--shadow-large) !important;
-    color: var(--color-text-secondary) !important;
-}
-
-.modal-header {
-    background: rgba(20, 20, 20, 0.95) !important;
-    border-bottom: 1px solid var(--color-border-light) !important;
+.organizacion-info {
+    background: var(--color-bg-tertiary) !important;
+    border-left: 4px solid var(--color-accent-secondary) !important;
     color: var(--color-text-primary) !important;
+    border-radius: var(--border-radius-small) !important;
+    padding: 15px;
+    margin: 15px;
+}
+
+.organizacion-info h6 {
     font-family: var(--font-family-primary) !important;
-    padding: 20px 25px !important;
 }
 
-.modal-title {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    font-size: 16px !important;
-    
-    /* ILUMINACIÓN PARA TÍTULOS DE MODAL */
-    text-shadow: 0 0 5px var(--color-accent-primary);
-}
-
-.modal-title i {
-    color: var(--color-accent-primary) !important;
-    filter: drop-shadow(0 0 4px var(--color-accent-primary));
-}
-
-.btn-close {
-    filter: invert(1) brightness(2) !important;
-    opacity: 0.7 !important;
-    transition: all 0.3s ease !important;
-}
-
-.btn-close:hover {
-    opacity: 1 !important;
-    transform: rotate(90deg) !important;
-}
-
-.modal-body {
-    padding: 25px !important;
-}
-
-.modal-footer {
-    border-top: 1px solid var(--color-border-light) !important;
-    padding: 20px 25px !important;
-}
-
-/* =============================================
-   ANIMACIONES
-   ============================================= */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.organizacion-info code {
+    background: var(--color-bg-primary) !important;
+    padding: 2px 6px;
+    border-radius: 6px;
 }
 
 /* =============================================
@@ -625,8 +754,7 @@ h6 i {
 #btnCancelar,
 #btnGuardarCambios,
 #btnDesactivarArea,
-.btn-agregar-cargo,
-.modal-footer .btn {
+.btn-agregar-cargo {
     position: relative;
     overflow: hidden;
 }
@@ -635,8 +763,7 @@ h6 i {
 #btnCancelar::after,
 #btnGuardarCambios::after,
 #btnDesactivarArea::after,
-.btn-agregar-cargo::after,
-.modal-footer .btn::after {
+.btn-agregar-cargo::after {
     content: '';
     position: absolute;
     top: -50%;
@@ -656,30 +783,23 @@ h6 i {
 #btnCancelar:hover::after,
 #btnGuardarCambios:hover::after,
 #btnDesactivarArea:hover::after,
-.btn-agregar-cargo:hover::after,
-.modal-footer .btn:hover::after {
+.btn-agregar-cargo:hover::after {
     opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
 }
 
 /* =============================================
-   ORGANIZACIÓN INFO (mantenido)
+   ANIMACIONES
    ============================================= */
-.organizacion-info {
-    background: var(--color-bg-tertiary) !important;
-    border-left: 4px solid var(--color-accent-secondary) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-small) !important;
-}
-
-.organizacion-info h6 {
-    font-family: var(--font-family-primary) !important;
-}
-
-.organizacion-info code {
-    background: var(--color-bg-primary) !important;
-    padding: 2px 6px;
-    border-radius: 6px;
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* =============================================
@@ -729,15 +849,27 @@ h6 i {
     color: var(--navbar-logo-text) !important;
 }
 
+/* Ajuste general para que el contenido no quede debajo del navbar */
+.header-container,
+.d-flex.flex-column.align-items-center.text-center {
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+}
+
+.centinela-container {
+    margin-top: 0 !important;
+    padding-top: 15px !important;
+}
+
 /* =============================================
    RESPONSIVE DESIGN (igual que crearAreas)
    ============================================= */
 @media (max-width: 1023px) {
-    .container-fluid {
+    .centinela-container {
         padding: 20px !important;
     }
 
-    .row.mb-4:first-child {
+    .centinela-row:first-child {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 20px !important;
@@ -749,7 +881,7 @@ h6 i {
         max-width: 300px !important;
     }
 
-    .card-body {
+    .centinela-card-body {
         padding: 20px !important;
     }
 
@@ -760,12 +892,12 @@ h6 i {
         margin-bottom: 10px !important;
     }
 
-    .d-flex.justify-content-end.gap-3 {
+    .d-flex.justify-content-start.gap-3 {
         flex-direction: column !important;
         gap: 10px !important;
     }
 
-    .card-header {
+    .centinela-card-header {
         flex-direction: column !important;
         gap: 15px !important;
         align-items: flex-start !important;
@@ -779,6 +911,11 @@ h6 i {
         width: 100%;
         margin-bottom: 10px;
     }
+    
+    .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
 }
 
 @media (max-width: 768px) {
@@ -787,7 +924,7 @@ h6 i {
         padding-top: 70px !important;
     }
 
-    .container-fluid {
+    .centinela-container {
         padding: 15px !important;
         border-radius: var(--border-radius-medium) !important;
     }
@@ -798,17 +935,17 @@ h6 i {
         text-align: center !important;
     }
 
-    .row.mb-4:first-child {
+    .centinela-row:first-child {
         padding: 15px !important;
         margin-top: 10px !important;
         padding-top: 10px !important;
     }
 
-    .card-header {
+    .centinela-card-header {
         padding: 15px 20px !important;
     }
 
-    .card-body {
+    .centinela-card-body {
         padding: 15px !important;
     }
 
@@ -845,11 +982,11 @@ h6 i {
         padding-top: 60px !important;
     }
 
-    .container-fluid {
+    .centinela-container {
         padding: 10px !important;
     }
 
-    .row.mb-4:first-child {
+    .centinela-row:first-child {
         padding: 12px !important;
     }
 
@@ -859,11 +996,11 @@ h6 i {
         min-width: auto !important;
     }
 
-    .card-header {
+    .centinela-card-header {
         padding: 12px 15px !important;
     }
 
-    .card-header h5 {
+    .centinela-card-header .card-title {
         font-size: 14px !important;
     }
 

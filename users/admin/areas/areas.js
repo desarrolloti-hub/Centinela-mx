@@ -1,4 +1,4 @@
-// areas.js - VERSIÓN LIMPIA
+// areas.js - VERSIÓN SIN BOOTSTRAP
 window.appDebug = {
     estado: 'iniciando',
     controller: null
@@ -20,11 +20,11 @@ async function cargarDependencias() {
 }
 
 function mostrarErrorInterfaz(mensaje) {
-    const container = document.querySelector('.container-fluid') || document.body;
+    const container = document.querySelector('.centinela-container') || document.body;
     const errorDiv = document.createElement('div');
-    errorDiv.className = 'alert alert-danger m-4 error-carga';
+    errorDiv.className = 'error-carga';
     errorDiv.innerHTML = `
-        <h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error de Carga</h4>
+        <h4><i class="fas fa-exclamation-triangle"></i>Error de Carga</h4>
         <p>${mensaje}</p>
     `;
     container.prepend(errorDiv);
@@ -239,7 +239,7 @@ class AreasController {
         celda.innerHTML = `
             <div class="cargos-dropdown">
                 <div class="cargos-dropdown-header">
-                    <h6><i class="fas fa-briefcase me-2"></i>Cargos del Área</h6>
+                    <h6><i class="fas fa-briefcase"></i>Cargos del Área</h6>
                     <span class="badge">${cantidad} ${cantidad === 1 ? 'cargo' : 'cargos'}</span>
                 </div>
                 <div class="cargos-lista">${cargosHTML}</div>
@@ -259,7 +259,8 @@ class AreasController {
             confirmButtonColor: 'var(--color-danger, #ff4d4d)',
             cancelButtonColor: 'var(--color-accent-secondary, #3085d6)',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
                 this.eliminarArea(areaId);
@@ -304,6 +305,12 @@ class AreasController {
         }
     }
 
+    truncarTexto(texto, maxLongitud = 30) {
+        if (!texto) return '';
+        if (texto.length <= maxLongitud) return texto;
+        return texto.substring(0, maxLongitud) + '...';
+    }
+
     async verDetalles(areaId) {
         try {
             const area = this.areas.find(a => a.id === areaId);
@@ -313,11 +320,19 @@ class AreasController {
             }
             
             const cantidadCargos = area.getCantidadCargos();
+            const nombreAreaTruncado = this.truncarTexto(area.nombreArea, 25);
             
             Swal.fire({
+                customClass: {
+                    popup: 'swal-detalles-nuevo',
+                    confirmButton: 'swal2-confirm',
+                    cancelButton: 'swal2-cancel',
+                    actions: 'swal2-actions'
+                },
                 title: `<div class="swal-titulo-container">
                     <div class="swal-titulo-area">
-                        <i class="fas fa-building"></i> Área: ${area.nombreArea}
+                        <i class="fas fa-building"></i>
+                        <span class="swal-titulo-texto" title="${area.nombreArea}">${nombreAreaTruncado}</span>
                     </div>
                 </div>`,
                 html: `
@@ -347,12 +362,12 @@ class AreasController {
                     </div>
                 `,
                 icon: null,
-                confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
-                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)',
+                showConfirmButton: true,
                 showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
                 cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
-                cancelButtonColor: 'var(--color-bg-tertiary, #545454)',
-                reverseButtons: true
+                reverseButtons: false,
+                buttonsStyling: false
             }).then((result) => {
                 if (result.isConfirmed) {
                     this.irAEditarArea(area.id);
@@ -376,7 +391,7 @@ class AreasController {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center py-5">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <i class="fas fa-inbox fa-3x text-muted"></i>
                         <p class="text-muted">No se encontraron áreas</p>
                     </td>
                 </tr>
@@ -403,26 +418,24 @@ class AreasController {
         const cantidadCargos = area.getCantidadCargos();
 
         fila.innerHTML = `
-            <td class="text-center">
+            <td class="text-center" data-label="">
                 <span class="toggle-icon"><i class="fas fa-chevron-right"></i></span>
             </td>
-            <td>
-                <div class="d-flex align-items-center">
-                    <div>
-                        <strong class="area-nombre">${area.nombreArea}</strong>
-                        <div class="text-muted small">${area.descripcion?.substring(0, 60) || ''}${area.descripcion?.length > 60 ? '...' : ''}</div>
-                    </div>
+            <td data-label="Nombre">
+                <div>
+                    <strong class="area-nombre">${area.nombreArea}</strong>
+                    <div class="text-muted small">${area.descripcion?.substring(0, 60) || ''}${area.descripcion?.length > 60 ? '...' : ''}</div>
                 </div>
             </td>
-            <td>${area.organizacionCamelCase || this.userManager.currentUser.organizacion}</td>
-            <td>
+            <td data-label="Organización">${area.organizacionCamelCase || this.userManager.currentUser.organizacion}</td>
+            <td data-label="Cargos">
                 <span class="cargo-count-badge">
-                    <i class="fas fa-briefcase me-1"></i>${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
+                    <i class="fas fa-briefcase"></i>${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
                 </span>
             </td>
-            <td>${area.getEstadoBadge ? area.getEstadoBadge() : '<span class="badge badge-activo">Activa</span>'}</td>
-            <td><div class="small">${area.getFechaCreacionFormateada?.() || 'No disponible'}</div></td>
-            <td><div class="action-buttons">${this.obtenerBotonesAccion(area)}</div></td>
+            <td data-label="Estado">${area.getEstadoBadge ? area.getEstadoBadge() : '<span class="badge-activo">Activa</span>'}</td>
+            <td data-label="Fecha Creación"><div class="small">${area.getFechaCreacionFormateada?.() || 'No disponible'}</div></td>
+            <td data-label="Acciones"><div class="action-buttons">${this.obtenerBotonesAccion(area)}</div></td>
         `;
 
         fila.addEventListener('click', (e) => this.toggleCargos(area.id, e));
@@ -452,13 +465,13 @@ class AreasController {
 
     obtenerBotonesAccion(area) {
         return `
-            <button class="btn btn-sm btn-primary" data-action="ver" data-id="${area.id}" title="Ver detalles">
+            <button class="btn btn-primary" data-action="ver" data-id="${area.id}" title="Ver detalles">
                 <i class="fas fa-eye"></i>
             </button>
-            <button class="btn btn-sm btn-warning" data-action="editar" data-id="${area.id}" title="Editar Área">
+            <button class="btn btn-warning" data-action="editar" data-id="${area.id}" title="Editar Área">
                 <i class="fas fa-edit"></i>
             </button>
-            <button class="btn btn-sm btn-danger" data-action="eliminar" data-id="${area.id}" title="Eliminar">
+            <button class="btn btn-danger" data-action="eliminar" data-id="${area.id}" title="Eliminar">
                 <i class="fas fa-trash"></i>
             </button>
         `;
@@ -480,28 +493,30 @@ class AreasController {
             infoElement.textContent = `Mostrando ${inicio} - ${fin} de ${totalElementos} áreas`;
         }
 
-        if (paginacionElement && totalPaginas > 1) {
+        if (paginacionElement) {
             paginacionElement.innerHTML = '';
 
-            const liAnterior = document.createElement('li');
-            liAnterior.className = `page-item ${this.paginacionActual === 1 ? 'disabled' : ''}`;
-            liAnterior.innerHTML = '<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>';
-            liAnterior.addEventListener('click', (e) => { e.preventDefault(); if (this.paginacionActual > 1) this.cambiarPagina(this.paginacionActual - 1); });
-            paginacionElement.appendChild(liAnterior);
+            if (totalPaginas > 1) {
+                const liAnterior = document.createElement('li');
+                liAnterior.className = `page-item ${this.paginacionActual === 1 ? 'disabled' : ''}`;
+                liAnterior.innerHTML = '<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>';
+                liAnterior.addEventListener('click', (e) => { e.preventDefault(); if (this.paginacionActual > 1) this.cambiarPagina(this.paginacionActual - 1); });
+                paginacionElement.appendChild(liAnterior);
 
-            for (let i = 1; i <= totalPaginas; i++) {
-                const li = document.createElement('li');
-                li.className = `page-item ${this.paginacionActual === i ? 'active' : ''}`;
-                li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-                li.addEventListener('click', (e) => { e.preventDefault(); this.cambiarPagina(i); });
-                paginacionElement.appendChild(li);
+                for (let i = 1; i <= totalPaginas; i++) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${this.paginacionActual === i ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    li.addEventListener('click', (e) => { e.preventDefault(); this.cambiarPagina(i); });
+                    paginacionElement.appendChild(li);
+                }
+
+                const liSiguiente = document.createElement('li');
+                liSiguiente.className = `page-item ${this.paginacionActual === totalPaginas ? 'disabled' : ''}`;
+                liSiguiente.innerHTML = '<a class="page-link" href="#" aria-label="Siguiente"><span aria-hidden="true">&raquo;</span></a>';
+                liSiguiente.addEventListener('click', (e) => { e.preventDefault(); if (this.paginacionActual < totalPaginas) this.cambiarPagina(this.paginacionActual + 1); });
+                paginacionElement.appendChild(liSiguiente);
             }
-
-            const liSiguiente = document.createElement('li');
-            liSiguiente.className = `page-item ${this.paginacionActual === totalPaginas ? 'disabled' : ''}`;
-            liSiguiente.innerHTML = '<a class="page-link" href="#" aria-label="Siguiente"><span aria-hidden="true">&raquo;</span></a>';
-            liSiguiente.addEventListener('click', (e) => { e.preventDefault(); if (this.paginacionActual < totalPaginas) this.cambiarPagina(this.paginacionActual + 1); });
-            paginacionElement.appendChild(liSiguiente);
         }
     }
 
@@ -517,7 +532,7 @@ class AreasController {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
+                        <div class="spinner-border" role="status">
                             <span class="visually-hidden">Cargando...</span>
                         </div>
                         <p class="mt-3">Cargando áreas...</p>

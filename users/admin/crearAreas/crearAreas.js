@@ -1,4 +1,4 @@
-// crearAreas.js - VERSIÓN LIMPIA (sin cambios necesarios, pero asegurando que los cargos se envían correctamente)
+// crearAreas.js - VERSIÓN CON VALIDACIONES DE CARACTERES Y MENSAJES SIMPLIFICADOS
 
 window.crearAreaDebug = {
     estado: 'iniciando',
@@ -6,6 +6,14 @@ window.crearAreaDebug = {
 };
 
 let Area, AreaManager;
+
+// LÍMITES DE CARACTERES
+const LIMITES = {
+    NOMBRE_AREA: 50,
+    DESCRIPCION_AREA: 500,
+    NOMBRE_CARGO: 50,
+    DESCRIPCION_CARGO: 200
+};
 
 async function cargarDependencias() {
     try {
@@ -22,7 +30,7 @@ async function cargarDependencias() {
 }
 
 function mostrarErrorInterfaz(mensaje) {
-    const container = document.querySelector('.container-fluid') || document.body;
+    const container = document.querySelector('.container-fluid, .centinela-container') || document.body;
     const errorDiv = document.createElement('div');
     errorDiv.className = 'alert alert-danger m-4';
     errorDiv.innerHTML = `<h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${mensaje}</h4>`;
@@ -259,6 +267,45 @@ class CrearAreaController {
         this.configurarOrganizacionAutomatica();
         this.cargarResponsables();
         this.inicializarGestionCargos();
+        
+        // Aplicar límites de caracteres a los campos
+        this.aplicarLimitesCaracteres();
+    }
+    
+    aplicarLimitesCaracteres() {
+        // Campo nombre área
+        const nombreArea = document.getElementById('nombreArea');
+        if (nombreArea) {
+            nombreArea.maxLength = LIMITES.NOMBRE_AREA;
+            nombreArea.addEventListener('input', () => this.validarLongitudCampo(nombreArea, LIMITES.NOMBRE_AREA, 'El nombre del área'));
+        }
+        
+        // Campo descripción área
+        const descripcionArea = document.getElementById('descripcionArea');
+        if (descripcionArea) {
+            descripcionArea.maxLength = LIMITES.DESCRIPCION_AREA;
+            descripcionArea.addEventListener('input', () => this.validarLongitudCampo(descripcionArea, LIMITES.DESCRIPCION_AREA, 'La descripción'));
+        }
+    }
+    
+    validarLongitudCampo(campo, limite, nombreCampo) {
+        const longitud = campo.value.length;
+        if (longitud > limite) {
+            campo.value = campo.value.substring(0, limite);
+            this.mostrarNotificacion(`${nombreCampo} no puede exceder ${limite} caracteres`, 'warning', 3000);
+        }
+    }
+    
+    validarLongitudCargo(nombre, descripcion) {
+        if (nombre.length > LIMITES.NOMBRE_CARGO) {
+            this.mostrarNotificacion(`El nombre del cargo no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`, 'warning', 3000);
+            return false;
+        }
+        if (descripcion.length > LIMITES.DESCRIPCION_CARGO) {
+            this.mostrarNotificación(`La descripción del cargo no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`, 'warning', 3000);
+            return false;
+        }
+        return true;
     }
     
     inicializarEventos() {
@@ -296,7 +343,16 @@ class CrearAreaController {
         
         if (descripcionArea && contador) {
             const longitud = descripcionArea.value.length;
-            contador.textContent = longitud;
+            contador.textContent = `${longitud}/${LIMITES.DESCRIPCION_AREA}`;
+            
+            // Cambiar color si se acerca al límite
+            if (longitud > LIMITES.DESCRIPCION_AREA * 0.9) {
+                contador.style.color = 'var(--color-warning)';
+            } else if (longitud > LIMITES.DESCRIPCION_AREA * 0.95) {
+                contador.style.color = 'var(--color-danger)';
+            } else {
+                contador.style.color = 'var(--color-accent-primary)';
+            }
         }
     }
     
@@ -331,6 +387,11 @@ class CrearAreaController {
             return false;
         }
         
+        if (nombreArea.length > LIMITES.NOMBRE_AREA) {
+            this.mostrarError(`El nombre del área no puede exceder ${LIMITES.NOMBRE_AREA} caracteres`);
+            return false;
+        }
+        
         if (!descripcion) {
             this.mostrarError('La descripción es requerida');
             return false;
@@ -338,6 +399,11 @@ class CrearAreaController {
         
         if (descripcion.length < 20) {
             this.mostrarError('La descripción debe tener al menos 20 caracteres');
+            return false;
+        }
+        
+        if (descripcion.length > LIMITES.DESCRIPCION_AREA) {
+            this.mostrarError(`La descripción no puede exceder ${LIMITES.DESCRIPCION_AREA} caracteres`);
             return false;
         }
         
@@ -364,6 +430,18 @@ class CrearAreaController {
             return false;
         }
         
+        // Validar límites de caracteres de los cargos
+        for (const cargo of this.cargos) {
+            if (cargo.nombre && cargo.nombre.length > LIMITES.NOMBRE_CARGO) {
+                this.mostrarError(`El nombre del cargo no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`);
+                return false;
+            }
+            if (cargo.descripcion && cargo.descripcion.length > LIMITES.DESCRIPCION_CARGO) {
+                this.mostrarError(`La descripción del cargo no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`);
+                return false;
+            }
+        }
+        
         return true;
     }
     
@@ -385,23 +463,12 @@ class CrearAreaController {
             
             this.areaEnProceso = datosArea;
             
-            const cantidadCargos = this.cargos.length;
-            
             const result = await Swal.fire({
                 title: '¿Confirmar creación?',
-                html: `
-                    <div style="text-align: left;">
-                        <p>¿Está seguro de crear la siguiente área?</p>
-                        <div style=" padding: 15px; border-radius: 8px; margin-top: 10px;">
-                            <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">${datosArea.nombreArea}</h6>
-                            <p style="margin-bottom: 5px;"><small><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</small></p>
-                            <p style="margin-bottom: 5px;"><small><strong>Cargos:</strong> ${cantidadCargos}</small></p>
-                        </div>
-                    </div>
-                `,
+                text: '¿Está seguro de crear esta área?',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonText: 'Sí, crear área',
+                confirmButtonText: 'Sí, crear',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#2f8cff',
                 cancelButtonColor: '#545454'
@@ -424,8 +491,6 @@ class CrearAreaController {
     }
     
     agregarCargo() {
-        // 🔥 Los IDs locales son SOLO para el frontend
-        // El AreaManager generará IDs de Firebase al guardar
         const cargoId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
         
         const nuevoCargo = {
@@ -440,7 +505,10 @@ class CrearAreaController {
         
         setTimeout(() => {
             const input = document.getElementById(`cargo_nombre_${cargoId}`);
-            if (input) input.focus();
+            if (input) {
+                input.focus();
+                input.maxLength = LIMITES.NOMBRE_CARGO;
+            }
         }, 100);
     }
     
@@ -488,7 +556,7 @@ class CrearAreaController {
                             <i class="fas fa-briefcase me-2"></i>
                             Cargo #${index + 1}
                         </h6>
-                        <button type="button" class="btn btn-eliminar-cargo" onclick="window.crearAreaDebug.controller.eliminarCargo('${cargo.id}')">
+                        <button type="button" class="btn-eliminar-cargo" onclick="window.crearAreaDebug.controller.eliminarCargo('${cargo.id}')">
                             <i class="fas fa-trash-alt me-1"></i>
                             Eliminar
                         </button>
@@ -497,23 +565,29 @@ class CrearAreaController {
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Nombre del Cargo *</label>
                             <div class="input-group">
-                             
                                 <input type="text" class="form-control" 
                                        id="cargo_nombre_${cargo.id}"
                                        value="${this.escapeHTML(cargo.nombre)}"
                                        placeholder="Ej: Gerente, Analista, Coordinador"
+                                       maxlength="${LIMITES.NOMBRE_CARGO}"
                                        onchange="window.crearAreaDebug.controller.actualizarCargo('${cargo.id}', 'nombre', this.value)">
+                            </div>
+                            <div class="char-limit-info">
+                                <span class="char-counter">${cargo.nombre?.length || 0}/${LIMITES.NOMBRE_CARGO}</span>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Descripción del Cargo</label>
                             <div class="input-group">
-                                
                                 <input type="text" class="form-control" 
                                        id="cargo_descripcion_${cargo.id}"
                                        value="${this.escapeHTML(cargo.descripcion)}"
                                        placeholder="Responsabilidades principales"
+                                       maxlength="${LIMITES.DESCRIPCION_CARGO}"
                                        onchange="window.crearAreaDebug.controller.actualizarCargo('${cargo.id}', 'descripcion', this.value)">
+                            </div>
+                            <div class="char-limit-info">
+                                <span class="char-counter">${cargo.descripcion?.length || 0}/${LIMITES.DESCRIPCION_CARGO}</span>
                             </div>
                         </div>
                     </div>
@@ -522,6 +596,27 @@ class CrearAreaController {
         });
         
         cargosList.innerHTML = html;
+        
+        // Actualizar contadores en tiempo real
+        this.cargos.forEach(cargo => {
+            const nombreInput = document.getElementById(`cargo_nombre_${cargo.id}`);
+            if (nombreInput) {
+                nombreInput.addEventListener('input', (e) => {
+                    this.actualizarCargo(cargo.id, 'nombre', e.target.value);
+                    const counter = e.target.closest('.col-md-6').querySelector('.char-counter');
+                    if (counter) counter.textContent = `${e.target.value.length}/${LIMITES.NOMBRE_CARGO}`;
+                });
+            }
+            
+            const descInput = document.getElementById(`cargo_descripcion_${cargo.id}`);
+            if (descInput) {
+                descInput.addEventListener('input', (e) => {
+                    this.actualizarCargo(cargo.id, 'descripcion', e.target.value);
+                    const counter = e.target.closest('.col-md-6').querySelector('.char-counter');
+                    if (counter) counter.textContent = `${e.target.value.length}/${LIMITES.DESCRIPCION_CARGO}`;
+                });
+            }
+        });
     }
     
     actualizarCargo(cargoId, campo, valor) {
@@ -551,8 +646,6 @@ class CrearAreaController {
     obtenerDatosFormulario() {
         const userOrgCamel = this.userManager.currentUser.organizacionCamelCase;
         
-        // 🔥 SOLO enviamos los nombres y descripciones de los cargos
-        // El AreaManager generará los IDs de Firebase
         const cargosArray = this.cargos
             .filter(c => c.nombre && c.nombre.trim() !== '')
             .map(c => ({
@@ -560,7 +653,6 @@ class CrearAreaController {
                 descripcion: c.descripcion ? c.descripcion.trim() : ''
             }));
         
-        // Convertir a objeto con índices numéricos (temporal)
         const cargosObject = {};
         cargosArray.forEach((cargo, index) => {
             cargosObject[`cargo_${index}`] = cargo;
@@ -612,35 +704,33 @@ class CrearAreaController {
             
             this.areaCreadaReciente = nuevaArea;
             
-            const cantidadCargos = Object.keys(nuevaArea.cargos || {}).length;
-            
+            // MENSAJE SIMPLIFICADO - SOLO ÉXITO
             await Swal.fire({
-                title: '¡Área creada exitosamente!',
-                html: `
-                    <div style="text-align: center;">
-                        
-                        <div padding: 15px; border-radius: 8px; text-align: left;">
-                            <p><strong>Nombre del Área:</strong> ${nuevaArea.nombreArea}</p>
-                            <p><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</p>
-                            <p><strong>Responsable:</strong> ${this.userManager.currentUser.nombreCompleto}</p>
-                            <p><strong>Cargos:</strong> ${cantidadCargos}</p>
-                        </div>
-                    </div>
-                `,
                 icon: 'success',
-                showConfirmButton: true,
+                title: '¡Área creada!',
+                text: 'El área se ha creado correctamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            // Preguntar qué hacer después
+            const result = await Swal.fire({
+                title: '¿Qué desea hacer?',
+                icon: 'question',
                 showDenyButton: true,
-                confirmButtonText: 'Ver lista de áreas',
-                denyButtonText: 'Crear otra área',
+                showCancelButton: true,
+                confirmButtonText: 'Ver lista',
+                denyButtonText: 'Crear otra',
+                cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#2f8cff',
                 denyButtonColor: '#3a9871'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    this.verAreaCreada();
-                } else if (result.isDenied) {
-                    this.crearOtraArea();
-                }
             });
+            
+            if (result.isConfirmed) {
+                this.verAreaCreada();
+            } else if (result.isDenied) {
+                this.crearOtraArea();
+            }
             
         } catch (error) {
             this.ocultarCargando();
@@ -721,7 +811,7 @@ class CrearAreaController {
     }
     
     mostrarError(mensaje) {
-        this.mostrarNotificacion(mensaje, 'danger');
+        this.mostrarNotificacion(mensaje, 'error');
     }
     
     mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
@@ -733,7 +823,7 @@ class CrearAreaController {
             timerProgressBar: true
         });
         
-        let icono = tipo === 'danger' ? 'error' : tipo;
+        let icono = tipo === 'danger' || tipo === 'error' ? 'error' : tipo;
         Toast.fire({ icon: icono, title: mensaje });
     }
 }

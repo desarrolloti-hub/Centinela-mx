@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Área - Sistema Centinela</title>
 
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SweetAlert2 -->
@@ -21,7 +19,7 @@
     <!-- Estilos del navbar y footer -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     
-    <!-- Estilos principales de la vista (asegúrate de tener la versión actualizada de editarAreas.css) -->
+    <!-- Estilos principales de la vista -->
     <link rel="stylesheet" href="editarAreas.css">
     
     <!-- Assets -->
@@ -34,17 +32,16 @@
     <br>
 
     <!-- Contenedor principal -->
-    <div class="container-fluid py-4">
+    <div class="centinela-container">
         <!-- Header con la clase page-header añadida -->
-        <div class="row mb-4 page-header">
-            <div class="col-12">
+        <div class="centinela-row page-header">
+            <div class="centinela-col-12">
                 <div class="d-flex flex-column align-items-center text-center">
                     <h1 class="h3 mb-3">
                         <i class="fas fa-edit me-2"></i>
                         Editar Área
                     </h1>
                     <div class="text-muted" style="max-width: 700px;">
-                        <i class="fas fa-info-circle me-1"></i>
                         Modifique la información del área seleccionada.
                         Todos los campos marcados con * son obligatorios.
                     </div>
@@ -53,11 +50,11 @@
         </div>
 
         <!-- Formulario de Edición -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
+        <div class="centinela-row">
+            <div class="centinela-col-12">
+                <div class="centinela-card">
+                    <div class="centinela-card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title">
                             <i class="fas fa-info-circle me-2"></i>
                             Área: <span id="nombreAreaTitulo" style="color: var(--color-accent-secondary);">Cargando...</span>
                         </h5>
@@ -66,13 +63,13 @@
                             Volver a la Lista
                         </button>
                     </div>
-                    <div class="card-body">
+                    <div class="centinela-card-body">
                         <form id="formEditarArea">
                             <input type="hidden" id="areaId">
 
                             <!-- Sección 1: Información Básica -->
-                            <div class="row mb-4">
-                                <div class="col-12">
+                            <div class="centinela-row mb-4">
+                                <div class="centinela-col-12">
                                     <h6 class="border-bottom pb-2 mb-3">
                                         <i class="fas fa-info-circle me-2"></i>Información Básica
                                     </h6>
@@ -106,14 +103,14 @@
                             </div>
 
                             <!-- Sección 2: Descripción -->
-                            <div class="row mb-4">
-                                <div class="col-12">
+                            <div class="centinela-row mb-4">
+                                <div class="centinela-col-12">
                                     <h6 class="border-bottom pb-2 mb-3">
                                         <i class="fas fa-align-left me-2"></i>Descripción
                                     </h6>
                                 </div>
 
-                                <div class="col-12 mb-3">
+                                <div class="col-md-12 mb-3">
                                     <label for="descripcionArea" class="form-label">
                                         <i class="fas fa-align-left me-1"></i>Descripción del Área
                                     </label>
@@ -144,16 +141,11 @@
                                 </div>
                             </div>
 
-                            <!-- Línea divisoria -->
-                            <div class="section-divider">
-                                <div class="section-divider-line"></div>
-                                
-                                <div class="section-divider-line"></div>
-                            </div>
+                          
 
                             <!-- Sección 3: Cargos del Área -->
-                            <div class="row mb-4">
-                                <div class="col-12">
+                            <div class="centinela-row mb-4">
+                                <div class="centinela-col-12">
                                     <h6 class="border-bottom pb-2 mb-3">
                                         <i class="fas fa-briefcase me-2"></i>Cargos del Área
                                         <span class="cargos-counter" id="cargosCounter">(0 cargos)</span>
@@ -170,7 +162,7 @@
 
                                     <!-- Botón para agregar cargo -->
                                     <div class="d-flex justify-content-start mt-3">
-                                        <button type="button" class="btn btn-agregar-cargo" id="btnAgregarCargo">
+                                        <button type="button" class="btn-agregar-cargo" id="btnAgregarCargo">
                                             <i class="fas fa-plus-circle"></i>
                                             Agregar Cargo
                                         </button>
@@ -179,11 +171,11 @@
                             </div>
 
                             <!-- Botones de acción -->
-                            <div class="d-flex justify-content-end gap-3">
-                                <button type="button" class="btn btn-secondary" id="btnCancelar">
+                            <div class="d-flex justify-content-start gap-3 mt-4">
+                                <button type="button" class="btn-secondary" id="btnCancelar">
                                     <i class="fas fa-times me-2"></i>Cancelar
                                 </button>
-                                <button type="submit" class="btn btn-success" id="btnGuardarCambios">
+                                <button type="submit" class="btn-success" id="btnGuardarCambios">
                                     <i class="fas fa-save me-2"></i>Guardar Cambios
                                 </button>
                             </div>
@@ -196,7 +188,6 @@
     <br>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="/components/themeloader.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>

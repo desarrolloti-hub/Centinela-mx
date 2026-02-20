@@ -1,4 +1,4 @@
-// editarAreas.js - VERSIÓN CORREGIDA
+// editarAreas.js - VERSIÓN CON VALIDACIONES DE CARACTERES Y MENSAJES SIMPLIFICADOS
 window.editarAreaDebug = {
     estado: 'iniciando',
     controller: null
@@ -6,13 +6,20 @@ window.editarAreaDebug = {
 
 let Area, AreaManager;
 
+// LÍMITES DE CARACTERES
+const LIMITES = {
+    NOMBRE_AREA: 50,
+    DESCRIPCION_AREA: 500,
+    NOMBRE_CARGO: 50,
+    DESCRIPCION_CARGO: 200
+};
+
 async function cargarDependencias() {
     try {
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
         
-        // Esperar a que el DOM esté listo
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(iniciarAplicacion, 100);
@@ -28,7 +35,7 @@ async function cargarDependencias() {
 }
 
 function mostrarErrorInterfaz(mensaje) {
-    const container = document.querySelector('.container-fluid') || document.body;
+    const container = document.querySelector('.container-fluid, .centinela-container') || document.body;
     const errorDiv = document.createElement('div');
     errorDiv.className = 'alert alert-danger m-4';
     errorDiv.innerHTML = `<h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${mensaje}</h4>`;
@@ -249,6 +256,40 @@ class EditarAreaController {
         formHeader.parentNode.insertBefore(infoDiv, formHeader.nextSibling);
     }
     
+    aplicarLimitesCaracteres() {
+        const nombreArea = document.getElementById('nombreArea');
+        if (nombreArea) {
+            nombreArea.maxLength = LIMITES.NOMBRE_AREA;
+            nombreArea.addEventListener('input', () => this.validarLongitudCampo(nombreArea, LIMITES.NOMBRE_AREA, 'El nombre del área'));
+        }
+        
+        const descripcionArea = document.getElementById('descripcionArea');
+        if (descripcionArea) {
+            descripcionArea.maxLength = LIMITES.DESCRIPCION_AREA;
+            descripcionArea.addEventListener('input', () => this.validarLongitudCampo(descripcionArea, LIMITES.DESCRIPCION_AREA, 'La descripción'));
+        }
+    }
+    
+    validarLongitudCampo(campo, limite, nombreCampo) {
+        const longitud = campo.value.length;
+        if (longitud > limite) {
+            campo.value = campo.value.substring(0, limite);
+            this.mostrarNotificacion(`${nombreCampo} no puede exceder ${limite} caracteres`, 'warning', 3000);
+        }
+    }
+    
+    validarLongitudCargo(nombre, descripcion) {
+        if (nombre.length > LIMITES.NOMBRE_CARGO) {
+            this.mostrarNotificacion(`El nombre del cargo no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`, 'warning', 3000);
+            return false;
+        }
+        if (descripcion.length > LIMITES.DESCRIPCION_CARGO) {
+            this.mostrarNotificacion(`La descripción del cargo no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`, 'warning', 3000);
+            return false;
+        }
+        return true;
+    }
+    
     init() {
         this.inicializarEventos();
         this.inicializarValidaciones();
@@ -256,6 +297,7 @@ class EditarAreaController {
         this.cargarResponsables();
         this.inicializarGestionCargos();
         this.cargarArea();
+        this.aplicarLimitesCaracteres();
     }
     
     inicializarEventos() {
@@ -310,7 +352,15 @@ class EditarAreaController {
         
         if (descripcionArea && contador) {
             const longitud = descripcionArea.value.length;
-            contador.textContent = longitud;
+            contador.textContent = `${longitud}/${LIMITES.DESCRIPCION_AREA}`;
+            
+            if (longitud > LIMITES.DESCRIPCION_AREA * 0.9) {
+                contador.style.color = 'var(--color-warning)';
+            } else if (longitud > LIMITES.DESCRIPCION_AREA * 0.95) {
+                contador.style.color = 'var(--color-danger)';
+            } else {
+                contador.style.color = 'var(--color-accent-primary)';
+            }
         }
     }
     
@@ -373,7 +423,6 @@ class EditarAreaController {
         const responsableSelect = document.getElementById('responsable');
         if (!responsableSelect) return;
         
-        // Esperar un poco a que se carguen las opciones
         setTimeout(() => {
             if (this.areaActual.responsable) {
                 let responsableAsignado = false;
@@ -527,7 +576,11 @@ class EditarAreaController {
                                        id="cargo_nombre_${cargo.id}"
                                        value="${this.escapeHTML(cargo.nombre)}"
                                        placeholder="Ej: Gerente, Analista, Coordinador"
+                                       maxlength="${LIMITES.NOMBRE_CARGO}"
                                        onchange="window.editarAreaDebug.controller.actualizarCargo('${cargo.id}', 'nombre', this.value)">
+                            </div>
+                            <div class="char-limit-info">
+                                <span class="char-counter">${cargo.nombre?.length || 0}/${LIMITES.NOMBRE_CARGO}</span>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -538,7 +591,11 @@ class EditarAreaController {
                                        id="cargo_descripcion_${cargo.id}"
                                        value="${this.escapeHTML(cargo.descripcion)}"
                                        placeholder="Responsabilidades principales"
+                                       maxlength="${LIMITES.DESCRIPCION_CARGO}"
                                        onchange="window.editarAreaDebug.controller.actualizarCargo('${cargo.id}', 'descripcion', this.value)">
+                            </div>
+                            <div class="char-limit-info">
+                                <span class="char-counter">${cargo.descripcion?.length || 0}/${LIMITES.DESCRIPCION_CARGO}</span>
                             </div>
                         </div>
                     </div>
@@ -547,6 +604,26 @@ class EditarAreaController {
         });
         
         cargosList.innerHTML = html;
+        
+        this.cargos.forEach(cargo => {
+            const nombreInput = document.getElementById(`cargo_nombre_${cargo.id}`);
+            if (nombreInput) {
+                nombreInput.addEventListener('input', (e) => {
+                    this.actualizarCargo(cargo.id, 'nombre', e.target.value);
+                    const counter = e.target.closest('.col-md-6').querySelector('.char-counter');
+                    if (counter) counter.textContent = `${e.target.value.length}/${LIMITES.NOMBRE_CARGO}`;
+                });
+            }
+            
+            const descInput = document.getElementById(`cargo_descripcion_${cargo.id}`);
+            if (descInput) {
+                descInput.addEventListener('input', (e) => {
+                    this.actualizarCargo(cargo.id, 'descripcion', e.target.value);
+                    const counter = e.target.closest('.col-md-6').querySelector('.char-counter');
+                    if (counter) counter.textContent = `${e.target.value.length}/${LIMITES.DESCRIPCION_CARGO}`;
+                });
+            }
+        });
     }
     
     actualizarCargo(cargoId, campo, valor) {
@@ -583,6 +660,11 @@ class EditarAreaController {
             return false;
         }
         
+        if (nombreArea.length > LIMITES.NOMBRE_AREA) {
+            this.mostrarError(`El nombre del área no puede exceder ${LIMITES.NOMBRE_AREA} caracteres`);
+            return false;
+        }
+        
         if (!descripcion) {
             this.mostrarError('La descripción es requerida');
             return false;
@@ -590,6 +672,11 @@ class EditarAreaController {
         
         if (descripcion.length < 20) {
             this.mostrarError('La descripción debe tener al menos 20 caracteres');
+            return false;
+        }
+        
+        if (descripcion.length > LIMITES.DESCRIPCION_AREA) {
+            this.mostrarError(`La descripción no puede exceder ${LIMITES.DESCRIPCION_AREA} caracteres`);
             return false;
         }
         
@@ -614,6 +701,17 @@ class EditarAreaController {
         if (!tieneCargoValido) {
             this.mostrarError('Debe agregar al menos un cargo con nombre');
             return false;
+        }
+        
+        for (const cargo of this.cargos) {
+            if (cargo.nombre && cargo.nombre.length > LIMITES.NOMBRE_CARGO) {
+                this.mostrarError(`El nombre del cargo no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`);
+                return false;
+            }
+            if (cargo.descripcion && cargo.descripcion.length > LIMITES.DESCRIPCION_CARGO) {
+                this.mostrarError(`La descripción del cargo no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`);
+                return false;
+            }
         }
         
         return true;
@@ -744,6 +842,7 @@ class EditarAreaController {
             Object.assign(this.areaActual, datosActualizados);
             this.datosOriginales = this.obtenerDatosFormulario();
             
+            // MENSAJE SIMPLIFICADO - SOLO ÉXITO
             await Swal.fire({
                 icon: 'success',
                 title: '¡Guardado!',
@@ -828,11 +927,11 @@ class EditarAreaController {
         this.mostrarNotificacion(mensaje, 'error');
     }
     
-    mostrarNotificacion(mensaje, tipo = 'info') {
+    mostrarNotificacion(mensaje, tipo = 'info', duracion = 3000) {
         Swal.fire({
             icon: tipo,
             title: mensaje,
-            timer: 3000,
+            timer: duracion,
             showConfirmButton: false,
             background: 'var(--color-bg-secondary)',
             color: 'var(--color-text-primary)'
@@ -840,5 +939,4 @@ class EditarAreaController {
     }
 }
 
-// Iniciar la carga de dependencias
 cargarDependencias();

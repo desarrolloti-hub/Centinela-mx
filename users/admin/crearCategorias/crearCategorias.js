@@ -1,11 +1,18 @@
-// crearCategorias.js - VERSIÓN CORREGIDA
+// crearCategorias.js - VERSIÓN CON VALIDACIONES DE CARACTERES
 // SIN empresaId/estado, con herencia de color configurable
-// CORREGIDO: IDs de botones y formulario
 
 // Variable global para debugging
 window.crearCategoriaDebug = {
     estado: 'iniciando',
     controller: null
+};
+
+// LÍMITES DE CARACTERES (basados en crearAreas.js)
+const LIMITES = {
+    NOMBRE_CATEGORIA: 50,
+    DESCRIPCION_CATEGORIA: 500,
+    NOMBRE_SUBCATEGORIA: 50,
+    DESCRIPCION_SUBCATEGORIA: 200
 };
 
 // =============================================
@@ -53,7 +60,10 @@ class CrearCategoriaController {
             // 6. Inicializar gestión de subcategorías
             this._inicializarGestionSubcategorias();
 
-            // 7. Actualizar UI con información de la organización (en el header)
+            // 7. Aplicar límites de caracteres
+            this._aplicarLimitesCaracteres();
+
+            // 8. Actualizar UI con información de la organización (en el header)
             this._actualizarInfoOrganizacion();
 
             window.crearCategoriaDebug.controller = this;
@@ -172,6 +182,55 @@ class CrearCategoriaController {
         `;
     }
 
+    // ========== APLICAR LÍMITES DE CARACTERES ==========
+
+    _aplicarLimitesCaracteres() {
+        // Campo nombre categoría
+        const nombreCategoria = document.getElementById('nombreCategoria');
+        if (nombreCategoria) {
+            nombreCategoria.maxLength = LIMITES.NOMBRE_CATEGORIA;
+            nombreCategoria.addEventListener('input', () => this._validarLongitudCampo(
+                nombreCategoria, 
+                LIMITES.NOMBRE_CATEGORIA, 
+                'El nombre de la categoría'
+            ));
+        }
+
+        // Campo descripción categoría
+        const descripcionCategoria = document.getElementById('descripcionCategoria');
+        if (descripcionCategoria) {
+            descripcionCategoria.maxLength = LIMITES.DESCRIPCION_CATEGORIA;
+            descripcionCategoria.addEventListener('input', () => {
+                this._validarLongitudCampo(
+                    descripcionCategoria, 
+                    LIMITES.DESCRIPCION_CATEGORIA, 
+                    'La descripción'
+                );
+                this._actualizarContadorCaracteres();
+            });
+        }
+    }
+
+    _validarLongitudCampo(campo, limite, nombreCampo) {
+        const longitud = campo.value.length;
+        if (longitud > limite) {
+            campo.value = campo.value.substring(0, limite);
+            this._mostrarNotificacion(`${nombreCampo} no puede exceder ${limite} caracteres`, 'warning', 3000);
+        }
+    }
+
+    _validarLongitudSubcategoria(nombre, descripcion) {
+        if (nombre && nombre.length > LIMITES.NOMBRE_SUBCATEGORIA) {
+            this._mostrarNotificacion(`El nombre de la subcategoría no puede exceder ${LIMITES.NOMBRE_SUBCATEGORIA} caracteres`, 'warning', 3000);
+            return false;
+        }
+        if (descripcion && descripcion.length > LIMITES.DESCRIPCION_SUBCATEGORIA) {
+            this._mostrarNotificacion(`La descripción de la subcategoría no puede exceder ${LIMITES.DESCRIPCION_SUBCATEGORIA} caracteres`, 'warning', 3000);
+            return false;
+        }
+        return true;
+    }
+
     // ========== CONFIGURACIÓN DE EVENTOS ==========
 
     _configurarEventos() {
@@ -253,12 +312,13 @@ class CrearCategoriaController {
 
         if (descripcion && contador) {
             const longitud = descripcion.value.length;
-            contador.textContent = longitud;
+            contador.textContent = `${longitud}/${LIMITES.DESCRIPCION_CATEGORIA}`;
 
-            if (longitud > 500) {
-                contador.style.color = 'var(--color-danger)';
-            } else if (longitud > 400) {
+            // Cambiar color si se acerca al límite
+            if (longitud > LIMITES.DESCRIPCION_CATEGORIA * 0.9) {
                 contador.style.color = 'var(--color-warning)';
+            } else if (longitud > LIMITES.DESCRIPCION_CATEGORIA * 0.95) {
+                contador.style.color = 'var(--color-danger)';
             } else {
                 contador.style.color = 'var(--color-accent-primary)';
             }
@@ -291,7 +351,10 @@ class CrearCategoriaController {
         // Enfocar en el nombre
         setTimeout(() => {
             const input = document.getElementById(`subcat_nombre_${subcatId}`);
-            if (input) input.focus();
+            if (input) {
+                input.focus();
+                input.maxLength = LIMITES.NOMBRE_SUBCATEGORIA;
+            }
         }, 100);
     }
 
@@ -320,7 +383,30 @@ class CrearCategoriaController {
     _actualizarSubcategoria(subcatId, campo, valor) {
         const subcategoria = this.subcategorias.find(s => s.id === subcatId);
         if (subcategoria) {
+            // Validar límites de caracteres
+            if (campo === 'nombre' && valor.length > LIMITES.NOMBRE_SUBCATEGORIA) {
+                valor = valor.substring(0, LIMITES.NOMBRE_SUBCATEGORIA);
+                this._mostrarNotificacion(`El nombre no puede exceder ${LIMITES.NOMBRE_SUBCATEGORIA} caracteres`, 'warning', 3000);
+            }
+            if (campo === 'descripcion' && valor.length > LIMITES.DESCRIPCION_SUBCATEGORIA) {
+                valor = valor.substring(0, LIMITES.DESCRIPCION_SUBCATEGORIA);
+                this._mostrarNotificacion(`La descripción no puede exceder ${LIMITES.DESCRIPCION_SUBCATEGORIA} caracteres`, 'warning', 3000);
+            }
             subcategoria[campo] = valor;
+            
+            // Actualizar contador si existe
+            this._actualizarContadorSubcategoria(subcatId, campo, valor);
+        }
+    }
+
+    _actualizarContadorSubcategoria(subcatId, campo, valor) {
+        const input = document.getElementById(`subcat_${campo}_${subcatId}`);
+        if (input) {
+            const counter = input.closest('.subcategoria-campo')?.querySelector('.char-counter');
+            if (counter) {
+                const limite = campo === 'nombre' ? LIMITES.NOMBRE_SUBCATEGORIA : LIMITES.DESCRIPCION_SUBCATEGORIA;
+                counter.textContent = `${valor?.length || 0}/${limite}`;
+            }
         }
     }
 
@@ -345,10 +431,10 @@ class CrearCategoriaController {
 
         if (this.subcategorias.length === 0) {
             container.innerHTML = `
-                <div class="cargos-empty">
-                    <i class="fas fa-sitemap mb-2"></i>
+                <div class="empty-state">
+                    <i class="fas fa-sitemap"></i>
                     <p>No hay subcategorías agregadas</p>
-                    <small class="text-muted">Haga clic en "Agregar Subcategoría" para añadir una</small>
+                    <small>Haga clic en "Agregar Subcategoría" para añadir una</small>
                 </div>
             `;
             return;
@@ -385,7 +471,11 @@ class CrearCategoriaController {
                                    id="subcat_nombre_${subcat.id}"
                                    value="${this._escapeHTML(subcat.nombre)}"
                                    placeholder="Ej: Procesadores, Ventas, Redes"
-                                   onchange="window.crearCategoriaDebug.controller._actualizarSubcategoria('${subcat.id}', 'nombre', this.value)">
+                                   maxlength="${LIMITES.NOMBRE_SUBCATEGORIA}"
+                                   oninput="window.crearCategoriaDebug.controller._actualizarSubcategoria('${subcat.id}', 'nombre', this.value)">
+                            <div class="char-limit-info">
+                                <span class="char-counter">${subcat.nombre?.length || 0}/${LIMITES.NOMBRE_SUBCATEGORIA}</span>
+                            </div>
                         </div>
                         <div class="subcategoria-campo">
                             <label class="subcategoria-label">
@@ -396,7 +486,11 @@ class CrearCategoriaController {
                                    id="subcat_descripcion_${subcat.id}"
                                    value="${this._escapeHTML(subcat.descripcion)}"
                                    placeholder="Descripción opcional"
-                                   onchange="window.crearCategoriaDebug.controller._actualizarSubcategoria('${subcat.id}', 'descripcion', this.value)">
+                                   maxlength="${LIMITES.DESCRIPCION_SUBCATEGORIA}"
+                                   oninput="window.crearCategoriaDebug.controller._actualizarSubcategoria('${subcat.id}', 'descripcion', this.value)">
+                            <div class="char-limit-info">
+                                <span class="char-counter">${subcat.descripcion?.length || 0}/${LIMITES.DESCRIPCION_SUBCATEGORIA}</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -473,7 +567,24 @@ class CrearCategoriaController {
             return;
         }
 
+        if (nombre.length > LIMITES.NOMBRE_CATEGORIA) {
+            nombreInput.classList.add('is-invalid');
+            this._mostrarError(`El nombre no puede exceder ${LIMITES.NOMBRE_CATEGORIA} caracteres`);
+            return;
+        }
+
         nombreInput.classList.remove('is-invalid');
+
+        // Validar descripción
+        const descripcionInput = document.getElementById('descripcionCategoria');
+        const descripcion = descripcionInput.value.trim();
+        
+        if (descripcion.length > LIMITES.DESCRIPCION_CATEGORIA) {
+            descripcionInput.classList.add('is-invalid');
+            this._mostrarError(`La descripción no puede exceder ${LIMITES.DESCRIPCION_CATEGORIA} caracteres`);
+            return;
+        }
+        descripcionInput.classList.remove('is-invalid');
 
         // Validar subcategorías
         const subcategoriasValidas = this.subcategorias.filter(s => s.nombre && s.nombre.trim() !== '');
@@ -488,6 +599,13 @@ class CrearCategoriaController {
         if (duplicados.length > 0) {
             this._mostrarError('No puede haber subcategorías con el mismo nombre');
             return;
+        }
+
+        // Validar límites de caracteres en subcategorías
+        for (const subcat of subcategoriasValidas) {
+            if (!this._validarLongitudSubcategoria(subcat.nombre, subcat.descripcion)) {
+                return;
+            }
         }
 
         // Obtener datos

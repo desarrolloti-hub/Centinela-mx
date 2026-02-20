@@ -17,10 +17,10 @@
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <!-- ESTILOS DEL NAVBAR Y FOOTER (personalization.css) -->
+    <!-- ESTILOS DEL NAVBAR Y FOOTER -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
 
-    <!-- TUS ESTILOS - CON DISEÑO MEJORADO (ahora como áreas) -->
+    <!-- TUS ESTILOS -->
     <link rel="stylesheet" href="categorias.css">
 
     <!-- Favicon -->
@@ -30,7 +30,7 @@
 <body>
     <canvas id="particle-canvas"></canvas>
 
-    <!-- Contenedor principal con estilo Theme Manager -->
+    <!-- Contenedor principal -->
     <div class="admin-container">
         <!-- Page Header -->
         <div class="page-header">
@@ -57,11 +57,11 @@
                     <table class="table" id="tablaCategorias">
                         <thead>
                             <tr>
-                                <th width="50"></th>
+                                <th style="width: 50px;"></th>
                                 <th>Nombre</th>
                                 <th>Color</th>
                                 <th>Subcategorías</th>
-                                <th width="180">Acciones</th>
+                                <th style="width: 180px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tablaCategoriasBody">
@@ -78,21 +78,6 @@
                             <!-- Se llenará dinámicamente -->
                         </ul>
                     </nav>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Ver Detalles -->
-    <div class="modal" id="modalDetalles">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5><i class="fas fa-info-circle"></i> <span id="modalTitulo">Detalles</span></h5>
-                    <button type="button" class="btn-close" onclick="cerrarModal('modalDetalles')">&times;</button>
-                </div>
-                <div class="modal-body" id="detallesContent">
-                    <!-- Se llenará dinámicamente -->
                 </div>
             </div>
         </div>
