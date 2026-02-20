@@ -104,13 +104,10 @@ function renderCollaboratorsTable(collaborators, admin) {
                         ${!fotoUrl ? '<i class="fas fa-user"></i>' : ''}
                     </div>
                     <div class="user-details">
-                        <div class="user-name">${firstName}</div>
-                        <small class="user-role">${col.rol || 'Colaborador'}</small>
-                        <br><small class="user-id">ID: ${col.id.substring(0, 8)}...</small>
-                    </div>
+                        <div class="user-name">${col.nombreCompleto}</div>                    </div>
                 </div>
             </td>
-            <td data-label="APELLIDO" class="user-lastname">${lastName}</td>
+            <td data-label="CARGO" class="user-lastname">${col.rol}</td>
             <td data-label="EMAIL" class="user-email">${col.correoElectronico || 'sin@email.com'}</td>
             <td data-label="ESTADO">
                 <span class="status ${statusInfo.class}">
@@ -167,9 +164,6 @@ function updateStats(collaborators) {
     statsContainer.innerHTML = `
         <div class="stats-header">
             <h3><i class="fas fa-chart-bar"></i> ESTADÍSTICAS DE COLABORADORES</h3>
-            <button id="refreshStats" class="refresh-btn">
-                <i class="fas fa-sync-alt"></i> Actualizar
-            </button>
         </div>
         
         <div class="stats-grid">
@@ -386,7 +380,7 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
                     <div class="swal-user-info-large">
                         <h3>${collaborator.nombreCompleto || 'Sin nombre'}</h3>
                         <p>${collaborator.rol || 'Colaborador'}</p>
-                        <small>ID: ${collaborator.id.substring(0, 12)}...</small>
+                        
                     </div>
                 </div>
                 
