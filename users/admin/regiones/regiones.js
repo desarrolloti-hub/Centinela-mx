@@ -254,7 +254,7 @@ async function deleteRegion(regionId, regionName, admin, regionManager) {
                 <p style="font-size: 1.1rem; margin-bottom: 15px;">
                     ¿Estás seguro de que deseas eliminar la región <strong>"${regionName}"</strong>?
                 </p>
-                <div padding: 10px; border-radius: 4px; margin-top: 10px;">
+                <div style=" padding: 10px; border-radius: 4px; margin-top: 10px;">
                     <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
                     <strong>Advertencia:</strong> Esta acción no se puede deshacer.
                 </div>
@@ -273,7 +273,7 @@ async function deleteRegion(regionId, regionName, admin, regionManager) {
 
     // Mostrar loader
     Swal.fire({
-        title: 'Eliminando región...',
+        title: 'Verificando región...',
         text: 'Por favor espera',
         allowOutsideClick: false,
         allowEscapeKey: false,
@@ -282,7 +282,7 @@ async function deleteRegion(regionId, regionName, admin, regionManager) {
     });
 
     try {
-        // Eliminar la región
+        // Intentar eliminar la región (ahora valida internamente si tiene sucursales)
         await regionManager.deleteRegion(regionId, admin.organizacionCamelCase);
         
         Swal.close();
@@ -302,12 +302,32 @@ async function deleteRegion(regionId, regionName, admin, regionManager) {
         console.error('❌ Error eliminando región:', error);
         Swal.close();
         
-        Swal.fire({
-            icon: 'error',
-            title: 'Error al eliminar',
-            text: error.message || 'Ocurrió un error al eliminar la región. Por favor intenta de nuevo.',
-            confirmButtonText: 'ENTENDIDO'
-        });
+        // Verificar si el error es por sucursales asociadas
+        if (error.message.includes('tiene') && error.message.includes('sucursal')) {
+            // Mostrar error detallado con las sucursales que están usando la región
+            Swal.fire({
+                icon: 'error',
+                title: 'No se puede eliminar la región',
+                html: `
+                    <div style="text-align: left;">
+                        <p style="color: 15px;">
+                            <i class="fas fa-exclamation-circle"></i> 
+                            ${error.message}
+                        </p>
+                    </div>
+                `,
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#3085d6'
+            });
+        } else {
+            // Otro tipo de error
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al eliminar',
+                text: error.message || 'Ocurrió un error al eliminar la región. Por favor intenta de nuevo.',
+                confirmButtonText: 'ENTENDIDO'
+            });
+        }
     }
 }
 
