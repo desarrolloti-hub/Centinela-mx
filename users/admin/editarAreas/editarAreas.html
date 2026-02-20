@@ -21,7 +21,7 @@
     <!-- Estilos del navbar y footer -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     
-    <!-- Estilos principales de la vista (actualizado) -->
+    <!-- Estilos principales de la vista (asegúrate de tener la versión actualizada de editarAreas.css) -->
     <link rel="stylesheet" href="editarAreas.css">
     
     <!-- Assets -->
@@ -35,8 +35,8 @@
 
     <!-- Contenedor principal -->
     <div class="container-fluid py-4">
-        <!-- Header - IGUAL QUE EN CREAR ÁREAS -->
-        <div class="row mb-4">
+        <!-- Header con la clase page-header añadida -->
+        <div class="row mb-4 page-header">
             <div class="col-12">
                 <div class="d-flex flex-column align-items-center text-center">
                     <h1 class="h3 mb-3">
@@ -90,7 +90,7 @@
                                     <div class="form-text">Modifique el nombre completo del área o departamento</div>
                                 </div>
 
-                                <!-- ORGANIZACIÓN - Se cargará dinámicamente -->
+                                <!-- ORGANIZACIÓN -->
                                 <div class="col-md-6 mb-3">
                                     <label for="organizacion" class="form-label">
                                         <i class="fas fa-sitemap me-1"></i>Organización
@@ -126,7 +126,7 @@
                                     </div>
                                 </div>
 
-                                <!-- RESPONSABLE - Se cargará dinámicamente -->
+                                <!-- RESPONSABLE -->
                                 <div class="col-md-6 mb-3">
                                     <label for="responsable" class="form-label">
                                         <i class="fas fa-user me-1"></i>Responsable del Área
@@ -143,14 +143,15 @@
                                     </div>
                                 </div>
                             </div>
-                        </form>
-                    </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-body">
-                        <form id="formEditarArea">
-                             <!-- Sección 3: Cargos del Área -->
+                            <!-- Línea divisoria -->
+                            <div class="section-divider">
+                                <div class="section-divider-line"></div>
+                                
+                                <div class="section-divider-line"></div>
+                            </div>
+
+                            <!-- Sección 3: Cargos del Área -->
                             <div class="row mb-4">
                                 <div class="col-12">
                                     <h6 class="border-bottom pb-2 mb-3">
@@ -165,7 +166,6 @@
                                             <p>No hay cargos agregados</p>
                                             <small class="text-muted">Haga clic en "Agregar Cargo" para añadir uno</small>
                                         </div>
-                                        <!-- Los cargos se agregarán aquí dinámicamente -->
                                     </div>
 
                                     <!-- Botón para agregar cargo -->
@@ -178,13 +178,7 @@
                                 </div>
                             </div>
 
-                            <!-- Mensajes de validación -->
-                            <div class="alert alert-info mb-4">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Los campos marcados con * son obligatorios.
-                            </div>
-
-                            <!-- Botones de acción (alineados a la izquierda como en crear) -->
+                            <!-- Botones de acción -->
                             <div class="d-flex justify-content-end gap-3">
                                 <button type="button" class="btn btn-secondary" id="btnCancelar">
                                     <i class="fas fa-times me-2"></i>Cancelar
@@ -195,7 +189,6 @@
                             </div>
                         </form>
                     </div>
-                </div>
                 </div>
             </div>
         </div>

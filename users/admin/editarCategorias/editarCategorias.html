@@ -21,7 +21,7 @@
     <!-- Estilos del navbar y footer -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     
-    <!-- Estilos principales de la vista (actualizado) -->
+    <!-- Estilos principales de la vista -->
     <link rel="stylesheet" href="editarCategorias.css">
     
     <!-- Assets -->
@@ -35,253 +35,230 @@
 
     <!-- Contenedor principal -->
     <div class="container-fluid py-4">
-        <!-- Header - IGUAL QUE EN EDITAR ÁREAS -->
-        <div class="page-header">
-            <h1 id="pageHeaderTitle">
-                <i class="fas fa-tag"></i>
-                <span id="categoriaNombreHeader">Editar Categoría</span>
-            </h1>
-            <div class="header-description" id="pageHeaderDescription">
-                <i class="fas fa-info-circle me-1"></i>
-                Modifica los detalles de la categoría y gestiona sus subcategorías.
-                Todos los campos marcados con * son obligatorios.
+        <!-- Header con la clase page-header (igual que editarAreas) -->
+        <div class="row mb-4 page-header">
+            <div class="col-12">
+                <div class="d-flex flex-column align-items-center text-center">
+                    <h1 class="h3 mb-3">
+                        <i class="fas fa-tag me-2"></i>
+                        Editar Categoría
+                    </h1>
+                    <div class="text-muted" style="max-width: 700px;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Modifique la información de la categoría seleccionada.
+                        Todos los campos marcados con * son obligatorios.
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- ============================================= -->
-        <!-- FORMULARIO 1: EDITAR CATEGORÍA (NOMBRE + COLOR) -->
-        <!-- ============================================= -->
-        <div class="form-card">
-            <div class="form-card-header d-flex justify-content-between align-items-center">
-                <div class="form-card-title">
-                    <i class="fas fa-layer-group"></i>
-                    <h2>Información de la Categoría</h2>
-                </div>
-                <button type="button" class="btn-volver-form" onclick="cancelarEdicion()">
-                    <i class="fas fa-arrow-left"></i>
-                    Volver a la Lista
-                </button>
-            </div>
-
-            <div class="form-card-body">
-                <form id="formEditarCategoria">
-                    <div class="form-row">
-                        <!-- Campo NOMBRE -->
-                        <div class="form-group">
-                            <label for="nombreCategoria" class="form-label">
-                                <i class="fas fa-heading"></i>
-                                Nombre de la Categoría
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-tag"></i></span>
-                                <input type="text" class="form-control" id="nombreCategoria"
-                                    placeholder="Ej: Hardware, Software" required>
-                            </div>
-                            <div class="form-hint">Nombre único para identificar la categoría</div>
-                        </div>
-
-                        <!-- Campo COLOR -->
-                        <div class="form-group">
-                            <label class="form-label">
-                                <i class="fas fa-palette"></i>
-                                Color de la Categoría
-                            </label>
-                            <div class="color-selector-compact">
-                                <div class="color-row">
-                                    <div class="color-preview" id="colorPreview" style="background-color: #c0c0c0;">
-                                    </div>
-                                    <input type="color" class="form-control-color" id="colorPicker" value="#c0c0c0"
-                                        title="Seleccionar color">
-                                    <span class="color-hex" id="colorHex">#C0C0C0</span>
-                                </div>
-                                <div class="preset-row" id="presetColors">
-                                    <button type="button" class="preset-dot" data-color="#c0c0c0" style="background-color: #c0c0c0;" title="Plata (Por defecto)"></button>
-                                    <button type="button" class="preset-dot" data-color="#FF5733" style="background-color: #FF5733;" title="Naranja"></button>
-                                    <button type="button" class="preset-dot" data-color="#33C4FF" style="background-color: #33C4FF;" title="Azul"></button>
-                                    <button type="button" class="preset-dot" data-color="#9D33FF" style="background-color: #9D33FF;" title="Púrpura"></button>
-                                    <button type="button" class="preset-dot" data-color="#FF33A8" style="background-color: #FF33A8;" title="Rosa"></button>
-                                    <button type="button" class="preset-dot" data-color="#10b981" style="background-color: #10b981;" title="Verde"></button>
-                                    <button type="button" class="preset-dot" data-color="#FF9800" style="background-color: #FF9800;" title="Naranja"></button>
-                                    <button type="button" class="preset-dot" data-color="#9C27B0" style="background-color: #9C27B0;" title="Morado"></button>
-                                    <button type="button" class="preset-dot" data-color="#2196F3" style="background-color: #2196F3;" title="Azul"></button>
-                                </div>
-                            </div>
-                            <div class="form-hint">Este color será heredado por las subcategorías</div>
-                        </div>
+        <!-- Formulario de Edición -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tag me-2"></i>
+                            Categoría: <span id="categoriaNombreHeader" style="color: var(--color-accent-secondary);">Cargando...</span>
+                        </h5>
+                        <button type="button" id="btnVolverLista" class="btn-volver">
+                            <i class="fas fa-arrow-left"></i>
+                            Volver a la Lista
+                        </button>
                     </div>
-                </form>
-            </div>
-        </div>
+                    <div class="card-body">
+                        <form id="formEditarCategoria">
+                            <input type="hidden" id="categoriaId">
 
-        <!-- ============================================= -->
-        <!-- SECCIÓN DE SUBCATEGORÍAS (Basado en Cargos de Áreas) -->
-        <!-- ============================================= -->
-        <div class="subcategorias-section">
-            <!-- Header con contador y botón de acción -->
-            <div class="subcategorias-header">
-                <div class="subcategorias-title">
-                    <i class="fas fa-folder-tree"></i>
-                    <h2>Subcategorías</h2>
-                    <span class="subcategoria-count" id="totalSubcategorias">0</span>
-                    <span class="subcategoria-count-label">subcategoría(s)</span>
-                </div>
+                            <!-- Sección 1: Información Básica -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>Información Básica
+                                    </h6>
+                                </div>
 
-                <button class="btn-add-subcategoria" id="btnNuevaSubcategoria">
-                    <i class="fas fa-plus-circle"></i>
-                    Agregar Subcategoría
-                </button>
-            </div>
-
-            <!-- ========================================= -->
-            <!-- FORMULARIO 2: EDITAR SUBCATEGORÍA        -->
-            <!-- (Basado en el cargo-item de áreas)       -->
-            <!-- ========================================= -->
-            <div class="subcategoria-editor-card" id="subcategoriaEditorContainer" style="display: none;">
-                <div class="editor-header">
-                    <div class="editor-title">
-                        <i class="fas fa-edit" id="editorIcon"></i>
-                        <span id="editorTitulo">Nueva Subcategoría</span>
-                    </div>
-                    <button class="editor-close" onclick="cerrarEditorSubcategoria()">
-                        <i class="fas fa-times"></i> Cerrar
-                    </button>
-                </div>
-
-                <div class="editor-body">
-                    <form id="formSubcategoria">
-                        <div class="editor-grid">
-                            <!-- Columna izquierda: Nombre y Descripción -->
-                            <div class="editor-col">
-                                <div class="form-group">
-                                    <label for="nombreSubcategoria" class="form-label">
-                                        <i class="fas fa-tag"></i>
-                                        Nombre de la Subcategoría
+                                <div class="col-md-6 mb-3">
+                                    <label for="nombreCategoria" class="form-label">
+                                        <i class="fas fa-tag me-1"></i>Nombre de la Categoría
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-tag"></i></span>
-                                        <input type="text" class="form-control" id="nombreSubcategoria"
-                                            placeholder="ej: Laptops, Servidores" required>
+                                        <input type="text" class="form-control" id="nombreCategoria"
+                                            placeholder="Ej: Tecnología, Marketing, Ventas" required>
                                     </div>
-                                    <div class="form-hint">Nombre descriptivo para la subcategoría</div>
+                                    <div class="form-text">Modifique el nombre completo de la categoría</div>
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="descripcionSubcategoria" class="form-label">
-                                        <i class="fas fa-align-left"></i>
-                                        Descripción
+                                <!-- COLOR DE LA CATEGORÍA -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="colorPicker" class="form-label">
+                                        <i class="fas fa-palette me-1"></i>Color de la Categoría
                                     </label>
-                                    <textarea class="form-control" id="descripcionSubcategoria" rows="3"
-                                        placeholder="Describe el propósito o características de esta subcategoría..."></textarea>
-                                    <div class="form-hint">Breve descripción (opcional pero recomendado)</div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="input-group" style="width: auto; flex: 1;">
+                                            <span class="input-group-text"><i class="fas fa-eyedropper"></i></span>
+                                            <input type="color" class="form-control form-control-color" id="colorPicker" 
+                                                   value="#c0c0c0" title="Seleccione un color" style="width: 60px; height: 45px; padding: 5px;">
+                                            <span class="input-group-text" id="colorHex" style="font-family: monospace;">#c0c0c0</span>
+                                        </div>
+                                        <div id="colorPreview" style="width: 45px; height: 45px; background-color: #c0c0c0; border-radius: var(--border-radius-small); border: 2px solid var(--color-border-light); box-shadow: var(--shadow-small);"></div>
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Color distintivo para la categoría (opcional)
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Columna derecha: Color y opciones -->
-                            <div class="editor-col">
-                                <div class="form-group">
-                                    <label class="form-label">
-                                        <i class="fas fa-palette"></i>
-                                        Configuración de Color
-                                    </label>
-
-                                    <div class="checkbox-card">
-                                        <div class="checkbox-wrapper">
-                                            <input type="checkbox" class="checkbox" id="heredarColorPadre" checked>
-                                            <label for="heredarColorPadre">
-                                                <i class="fas fa-paint-brush"></i>
-                                                Heredar color de categoría
-                                            </label>
-                                        </div>
-                                        <span class="checkbox-hint">Usa el color de la categoría principal</span>
-                                    </div>
-
-                                    <div id="colorPersonalizadoGroup" style="display: none; margin-top: 16px;">
-                                        <label for="colorSubcategoria" class="form-label">
-                                            Color personalizado
-                                        </label>
-                                        <div class="color-row">
-                                            <div class="color-preview" id="subcategoriaColorPreview"
-                                                style="background-color: #c0c0c0;"></div>
-                                            <input type="color" class="form-control-color" id="colorSubcategoria"
-                                                value="#c0c0c0">
-                                            <span class="color-hex" id="subcategoriaColorHex">#C0C0C0</span>
-                                        </div>
-                                    </div>
+                            <!-- Sección 2: Descripción -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-align-left me-2"></i>Descripción
+                                    </h6>
                                 </div>
 
-                                <div class="form-group">
-                                    <label class="form-label">
-                                        <i class="fas fa-info-circle"></i>
-                                        Información
+                                <div class="col-12 mb-3">
+                                    <label for="descripcionCategoria" class="form-label">
+                                        <i class="fas fa-align-left me-1"></i>Descripción de la Categoría
                                     </label>
-                                    <div class="info-box">
-                                        <i class="fas fa-lightbulb"></i>
-                                        <span>La descripción ayuda a identificar el propósito de la subcategoría</span>
+                                    <textarea class="form-control" id="descripcionCategoria" rows="4"
+                                        placeholder="Describa el propósito y alcance de esta categoría..." required></textarea>
+                                    <div class="form-text">Ingrese una descripción detallada de la categoría</div>
+                                    <div class="mt-1">
+                                        <small class="text-muted">Caracteres: <span id="contadorCaracteres">0</span></small>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <input type="hidden" id="subcategoriaId">
-                    </form>
-                </div>
+                            <!-- Línea divisoria (igual que en editarAreas) -->
+                            <div class="section-divider">
+                                <div class="section-divider-line"></div>
+                                <div class="section-divider-content">
+                                    <i class="fas fa-folder-open me-2"></i>GESTIÓN DE SUBCATEGORÍAS
+                                </div>
+                                <div class="section-divider-line"></div>
+                            </div>
 
-                <div class="editor-footer">
-                    <div class="footer-actions">
-                        <button class="btn-cancel-editor" onclick="cerrarEditorSubcategoria()">
-                            <i class="fas fa-times"></i> Cancelar
-                        </button>
-                        <button class="btn-save-editor" id="btnGuardarSubcategoria">
-                            <i class="fas fa-save"></i> Guardar Subcategoría
-                        </button>
+                            <!-- Sección 3: Subcategorías - MODIFICADA para que el editor aparezca justo después de la lista -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="border-bottom pb-2 mb-0" style="border-bottom: none !important; padding-bottom: 0 !important;">
+                                            <i class="fas fa-folder-open me-2"></i>Subcategorías
+                                            <span class="cargos-counter" id="totalSubcategorias">(0 subcategorías)</span>
+                                        </h6>
+                                        <button type="button" class="btn btn-agregar-cargo" id="btnNuevaSubcategoria" style="min-width: auto; padding: 8px 16px;">
+                                            <i class="fas fa-plus-circle me-2"></i>
+                                            Nueva Subcategoría
+                                        </button>
+                                    </div>
+
+                                    <!-- Contenedor principal que incluye la lista y el editor -->
+                                    <div id="subcategoriasContainer">
+                                        <!-- Lista de subcategorías existentes -->
+                                        <div id="listaSubcategorias" class="cargos-container">
+                                            <!-- Se llenará dinámicamente con JS -->
+                                        </div>
+                                        
+                                        <!-- Editor de Subcategoría - AHORA DENTRO DEL MISMO CONTENEDOR, justo después de la lista -->
+                                        <div id="subcategoriaEditorContainer" style="display: none; margin-top: 20px;">
+                                            <div class="card">
+                                                <div class="card-header d-flex justify-content-between align-items-center">
+                                                    <h5 class="mb-0">
+                                                        <i class="fas fa-folder-open me-2" id="editorIcon"></i>
+                                                        <span id="editorTitulo">Nueva Subcategoría</span>
+                                                    </h5>
+                                                    <button type="button" class="btn-close" onclick="cerrarEditorSubcategoria()" aria-label="Cerrar"></button>
+                                                </div>
+                                                <div class="card-body">
+                                                    <form id="formSubcategoria">
+                                                        <input type="hidden" id="subcategoriaId">
+                                                        
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label for="nombreSubcategoria" class="form-label">
+                                                                    <i class="fas fa-tag me-1"></i>Nombre de la Subcategoría
+                                                                </label>
+                                                                <div class="input-group">
+                                                                    <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                                                                    <input type="text" class="form-control" id="nombreSubcategoria" 
+                                                                           placeholder="Ej: Frontend, Backend, Marketing Digital" required>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="col-md-6 mb-3">
+                                                                <label for="descripcionSubcategoria" class="form-label">
+                                                                    <i class="fas fa-align-left me-1"></i>Descripción
+                                                                </label>
+                                                                <div class="input-group">
+                                                                    <span class="input-group-text"><i class="fas fa-align-left"></i></span>
+                                                                    <input type="text" class="form-control" id="descripcionSubcategoria" 
+                                                                           placeholder="Breve descripción de la subcategoría">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="row">
+                                                            <div class="col-md-6 mb-3">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" id="heredarColorPadre" checked>
+                                                                    <label class="form-check-label" for="heredarColorPadre">
+                                                                        <i class="fas fa-paint-brush me-1"></i>
+                                                                        Heredar color de la categoría padre
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="col-md-6 mb-3" id="colorPersonalizadoGroup" style="display: none;">
+                                                                <label for="colorSubcategoria" class="form-label">
+                                                                    <i class="fas fa-palette me-1"></i>Color personalizado
+                                                                </label>
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <div class="input-group" style="width: auto; flex: 1;">
+                                                                        <span class="input-group-text"><i class="fas fa-eyedropper"></i></span>
+                                                                        <input type="color" class="form-control form-control-color" id="colorSubcategoria" 
+                                                                               value="#c0c0c0" style="width: 60px; height: 45px; padding: 5px;">
+                                                                        <span class="input-group-text" id="subcategoriaColorHex" style="font-family: monospace;">#c0c0c0</span>
+                                                                    </div>
+                                                                    <div id="subcategoriaColorPreview" style="width: 45px; height: 45px; background-color: #c0c0c0; border-radius: var(--border-radius-small); border: 2px solid var(--color-border-light);"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="d-flex justify-content-end gap-2 mt-3">
+                                                            <button type="button" class="btn btn-secondary" onclick="cerrarEditorSubcategoria()">
+                                                                <i class="fas fa-times me-2"></i>Cancelar
+                                                            </button>
+                                                            <button type="button" class="btn btn-success" id="btnGuardarSubcategoria">
+                                                                <i class="fas fa-save me-2"></i>Guardar Subcategoría
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones de acción (igual que en editarAreas) -->
+                            <div class="d-flex justify-content-end gap-3">
+                                <button type="button" class="btn btn-secondary" id="btnCancelar">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-success" id="btnGuardarCategoria">
+                                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                </div>
-            </div>
-
-            <!-- Mensajes de validación (estilo alerta) -->
-            <div class="alert alert-info mb-4">
-                <i class="fas fa-info-circle me-2"></i>
-                Los campos marcados con * son obligatorios. Las subcategorías heredan el color de la categoría por defecto.
-            </div>
-
-            <!-- Lista de subcategorías -->
-            <div id="listaSubcategorias" class="subcategorias-list">
-                <!-- Se cargarán dinámicamente -->
-                <div class="empty-state">
-                    <i class="fas fa-folder-open"></i>
-                    <h3>No hay subcategorías</h3>
-                    <p>Haz clic en "Agregar Subcategoría" para crear una nueva.</p>
                 </div>
             </div>
         </div>
     </div>
     <br>
-
-    <!-- Modal de confirmación (solo para eliminar) -->
-    <div class="modal-overlay" id="modalConfirmacion">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h3 class="modal-title">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>Confirmar Eliminación</span>
-                </h3>
-                <button class="modal-close" onclick="cerrarModal('modalConfirmacion')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p id="modalConfirmacionMensaje">¿Estás seguro de eliminar esta subcategoría?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal-cancel" onclick="cerrarModal('modalConfirmacion')">
-                    No, cancelar
-                </button>
-                <button class="btn-modal-confirm" id="btnConfirmarAccion">
-                    Sí, eliminar
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -289,7 +266,7 @@
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
-    <script src="editarCategorias.js"></script>
+    <script type="module" src="editarCategorias.js"></script>
 </body>
 
 </html>
