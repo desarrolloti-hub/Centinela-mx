@@ -1,4 +1,8 @@
-/* CONTAINER PRINCIPAL */
+/* =============================================
+   managementUser.css - Estilos para gestión de colaboradores
+   ============================================= */
+
+/* ========== CONTAINER PRINCIPAL ========== */
 .admin-container {
     padding: 100px 20px 40px;
     position: relative;
@@ -12,37 +16,41 @@
     animation: fadeInUp 0.5s ease;
 }
 
-/* HEADER */
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* ========== PAGE HEADER - TÍTULO Y DESCRIPCIÓN (AHORA VISIBLE) ========== */
+.page-header {
     margin-bottom: 30px;
-    flex-wrap: wrap;
-    gap: 15px;
-    background: rgba(15, 15, 15, 0.9);
-    padding: 20px 25px;
-    border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-border-light);
-    box-shadow: var(--shadow-normal);
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--color-border-light);
+    text-align: center;
+    background: transparent;
 }
 
-/* TÍTULO PRINCIPAL */
-.section-title {
-    font-size: clamp(22px, 4vw, 26px);
+.page-header h1 {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 2.5rem;
     color: var(--color-text-primary);
-    margin: 0;
-    text-transform: uppercase;
-    font-family: var(--font-family-primary);
-    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px var(--color-accent-primary), 0 0 20px var(--color-accent-primary);
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
-.section-title i {
-    color: var(--color-accent-primary);
-    font-size: 24px;
+.page-header h1 i {
+    color: var(--color-text-primary);
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+}
+
+.page-header .header-description {
+    color: var(--color-text-secondary);
+    font-size: 1.1rem;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    line-height: 1.6;
 }
 
 .organization-name {
@@ -69,7 +77,40 @@
     font-size: 0.85rem;
 }
 
-/* BOTÓN AGREGAR */
+/* ========== SECTION HEADER (para el botón y título secundario) ========== */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 15px;
+    background: rgba(15, 15, 15, 0.9);
+    padding: 20px 25px;
+    border-radius: var(--border-radius-medium);
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-normal);
+}
+
+/* TÍTULO SECUNDARIO */
+.section-title {
+    font-size: clamp(22px, 4vw, 26px);
+    color: var(--color-text-primary);
+    margin: 0;
+    text-transform: uppercase;
+    font-family: var(--font-family-primary);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.section-title i {
+    color: var(--color-accent-primary);
+    font-size: 24px;
+}
+
+/* ========== BOTÓN AGREGAR ========== */
 .add-btn {
     background: var(--color-accent-primary);
     color: var(--color-text-dark);
@@ -103,6 +144,7 @@
     position: absolute;
     top: -50%;
     left: -50%;
+    width: 200%;
     height: 200%;
     background: linear-gradient(
         to bottom right,
@@ -112,13 +154,15 @@
     );
     transform: rotate(30deg);
     transition: all 0.5s ease;
+    opacity: 0;
 }
 
 .add-btn:hover::after {
+    opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
 }
 
-/* ESTADÍSTICAS */
+/* ========== ESTADÍSTICAS ========== */
 .stats-container {
     margin: 20px 0;
     padding: 20px;
@@ -219,7 +263,7 @@
     color: var(--color-text-secondary);
 }
 
-/* TABLA */
+/* ========== TABLA ========== */
 .table-wrapper {
     background: var(--color-bg-secondary);
     border-radius: var(--border-radius-large);
@@ -290,7 +334,7 @@
     background: rgba(231, 76, 60, 0.05);
 }
 
-/* INFORMACIÓN DE USUARIO */
+/* ========== INFORMACIÓN DE USUARIO ========== */
 .user-info {
     display: flex;
     align-items: center;
@@ -348,7 +392,7 @@
     color: var(--color-text-primary);
 }
 
-/* ESTADOS */
+/* ========== ESTADOS ========== */
 .status {
     display: inline-block;
     background: rgba(46, 204, 113, 0.1);
@@ -370,7 +414,7 @@
     border-color: rgba(231, 76, 60, 0.3);
 }
 
-/* BOTONES DE ACCIÓN */
+/* ========== BOTONES DE ACCIÓN ========== */
 .actions-cell {
     display: flex;
     gap: 8px;
@@ -403,6 +447,7 @@
     position: absolute;
     top: -50%;
     left: -50%;
+    width: 200%;
     height: 200%;
     background: linear-gradient(
         to bottom right,
@@ -412,9 +457,11 @@
     );
     transform: rotate(30deg);
     transition: all 0.5s ease;
+    opacity: 0;
 }
 
 .row-btn:hover::after {
+    opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
 }
 
@@ -442,7 +489,7 @@
     font-size: 16px;
 }
 
-/* ESTADOS DE CARGA Y ERROR */
+/* ========== ESTADOS DE CARGA Y ERROR ========== */
 .loading-state, .empty-state, .error-state {
     text-align: center;
     padding: 40px 20px;
@@ -560,7 +607,6 @@
 
 /* =============================================
    COMPONENTES PERSONALIZADOS PARA SWEETALERT
-   (NO SON ESTILOS NATIVOS, SON CONTENIDO HTML)
    ============================================= */
 
 .swal-user-info {
@@ -643,7 +689,6 @@
     gap: 15px;
     margin-bottom: 20px;
     padding: 15px;
-    background: var(--color-bg-tertiary);
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-light);
 }
@@ -652,12 +697,10 @@
     width: 80px;
     height: 80px;
     border-radius: var(--border-radius-circle);
-    background: var(--color-bg-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border: 2px solid var(--color-accent-primary);
 }
 
 .swal-user-avatar-large img {
@@ -668,7 +711,6 @@
 
 .swal-user-avatar-large i {
     font-size: 2rem;
-    color: var(--color-text-secondary);
 }
 
 .swal-user-info-large h3 {
@@ -696,7 +738,6 @@
 }
 
 .swal-detail-card {
-    background: var(--color-bg-tertiary);
     padding: 15px;
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-light);
@@ -773,13 +814,17 @@
 }
 
 /* =============================================
-   RESPONSIVE DESIGN - MOBILE FIRST
+   RESPONSIVE DESIGN
    ============================================= */
 
 /* TABLET (768px - 1023px) */
 @media (max-width: 1023px) {
     .admin-container {
         padding: 90px 15px 30px;
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
     }
     
     .section-header {
@@ -818,6 +863,17 @@
         padding: 80px 10px 20px;
     }
     
+    .page-header h1 {
+        font-size: 1.8rem;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .page-header .header-description {
+        font-size: 0.95rem;
+        padding: 0 10px;
+    }
+    
     .section-title {
         font-size: 20px;
         text-align: center;
@@ -849,6 +905,8 @@
     .collaborators-table {
         min-width: 100%;
         display: block;
+        border-collapse: separate;
+        border-spacing: 0;
     }
     
     .collaborators-table thead {
@@ -865,26 +923,28 @@
         display: block;
         background: var(--color-bg-secondary);
         border: 1px solid var(--color-border-light);
-        border-radius: var(--border-radius-medium);
+        border-radius: var(--border-radius-large);
         padding: 20px;
         margin: 0;
         box-shadow: var(--shadow-small);
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .collaborators-table td {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 12px 0;
+        align-items: center;
+        padding: 12px 15px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         font-size: 14px;
         width: 100%;
         text-align: left;
+        box-sizing: border-box;
+        min-height: 50px;
     }
     
     .collaborators-table td:last-child {
         border-bottom: none;
-        padding-bottom: 0;
     }
     
     .collaborators-table td::before {
@@ -893,32 +953,52 @@
         color: var(--color-accent-primary);
         text-transform: uppercase;
         font-size: 11px;
-        margin-bottom: 8px;
+        min-width: 100px;
+        width: 100px;
         font-family: var(--font-family-primary);
-        width: 100%;
-        text-align: left;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+    }
+    
+    /* Estilos específicos para cada tipo de celda */
+    .collaborators-table td[data-label="NOMBRE"] .user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+    }
+    
+    .collaborators-table td[data-label="NOMBRE"] .user-avatar {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .collaborators-table td[data-label="NOMBRE"] .user-details {
+        flex: 1;
+    }
+    
+    .collaborators-table td[data-label="ESTADO"] .status {
+        margin: 0;
+        min-width: 80px;
     }
     
     /* CELDA DE ACCIONES EN MÓVIL */
     .collaborators-table td[data-label="ACCIONES"] {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        padding-top: 15px;
-        margin-top: 10px;
+        justify-content: space-between;
+        padding: 15px 15px 10px 15px;
         border-top: 1px solid var(--color-border-light);
-        text-align: center;
+        margin-top: 5px;
     }
     
     .collaborators-table td[data-label="ACCIONES"]::before {
         content: "ACCIONES";
-        display: block;
-        margin-bottom: 12px;
-        text-align: center;
-        width: 100%;
-        font-size: 12px;
+        min-width: 100px;
+        width: 100px;
         color: var(--color-accent-primary);
         font-weight: 600;
+        font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -926,25 +1006,22 @@
     .actions-cell {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        justify-content: center !important;
-        align-items: center !important;
-        width: 100% !important;
         gap: 10px !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        flex: 1 !important;
     }
     
     .row-btn {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        min-height: 44px;
-        margin: 0;
-        flex-shrink: 0;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
     }
     
-    /* SWEETALERT EN MÓVIL - SOLO RESPONSIVE */
+    /* SWEETALERT EN MÓVIL */
     .swal2-popup {
         width: 90% !important;
         margin: 10px !important;
@@ -966,6 +1043,10 @@
         padding: 70px 8px 15px;
     }
     
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+    
     .section-header {
         padding: 15px;
     }
@@ -980,43 +1061,68 @@
     }
     
     .collaborators-table td {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 10px 0;
-        text-align: left;
+        padding: 10px 12px;
     }
     
     .collaborators-table td::before {
-        margin-bottom: 5px;
+        min-width: 80px;
+        width: 80px;
         font-size: 10px;
-        text-align: left;
-        width: 100%;
-    }
-    
-    .collaborators-table td[data-label="ACCIONES"] {
-        align-items: center;
-        text-align: center;
     }
     
     .collaborators-table td[data-label="ACCIONES"]::before {
-        font-size: 11px;
-        margin-bottom: 10px;
+        min-width: 80px;
+        width: 80px;
     }
     
     .actions-cell {
-        gap: 8px !important;
+        gap: 6px !important;
     }
     
     .row-btn {
-        width: 40px !important;
-        height: 40px !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+    }
+    
+    .row-btn i {
+        font-size: 14px !important;
     }
     
     .status {
-        align-self: flex-start;
-        margin-top: 5px;
+        min-width: 70px;
+        font-size: 0.8rem;
+        padding: 3px 6px;
+    }
+}
+
+/* MÓVIL EXTRA PEQUEÑO (360px hacia abajo) */
+@media (max-width: 360px) {
+    .collaborators-table td::before {
+        min-width: 70px;
+        width: 70px;
+        font-size: 9px;
+    }
+    
+    .collaborators-table td[data-label="ACCIONES"]::before {
+        min-width: 70px;
+        width: 70px;
+    }
+    
+    .actions-cell {
+        gap: 4px !important;
+    }
+    
+    .row-btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        min-height: 34px !important;
+    }
+    
+    .row-btn i {
+        font-size: 12px !important;
     }
 }
 

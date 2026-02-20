@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD Categorías - Sistema Centinela</title>
+    <title>Gestión de Categorías - Sistema Centinela</title>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,13 +14,13 @@
 
     <!-- Fuentes del sistema Centinela -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <!-- ESTILOS DEL NAVBAR Y FOOTER (personalization.css) -->
+    <!-- ESTILOS DEL NAVBAR Y FOOTER -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
 
-    <!-- TUS ESTILOS - SIN BOOTSTRAP -->
+    <!-- TUS ESTILOS -->
     <link rel="stylesheet" href="categorias.css">
 
     <!-- Favicon -->
@@ -30,35 +30,38 @@
 <body>
     <canvas id="particle-canvas"></canvas>
 
-    <!-- Contenedor principal con estilo oscuro -->
-    <div class="container-fluid">
-        <!-- Header -->
-        <div class="header-container">
-            <div class="header-title">
-                <h1><i class="fas fa-tags"></i>Gestión de Categorías</h1>
-                <p>Administra las categorías de tu organización</p>
+    <!-- Contenedor principal -->
+    <div class="admin-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-tags"></i>
+                Gestión de Categorías
+            </h1>
+            <div class="header-description">
+                Administra las categorías y subcategorías de tu organización. 
+                Organiza, clasifica y personaliza los elementos del sistema.
             </div>
-            <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria">
-                <i class="fas fa-plus"></i>Nueva Categoría
-            </a>
         </div>
 
         <!-- Tabla de Categorías -->
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-list"></i>Lista de Categorías</h5>
-                <!-- BOTÓN ELIMINADO: toggleEliminadas -->
+                <h5><i class="fas fa-list"></i> Lista de Categorías</h5>
+                <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria-header">
+                    <i class="fas fa-plus"></i> Nueva Categoría
+                </a>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table" id="tablaCategorias">
                         <thead>
                             <tr>
-                                <th width="30"><i class="fas fa-chevron-down"></i></th>
+                                <th style="width: 50px;"></th>
                                 <th>Nombre</th>
                                 <th>Color</th>
                                 <th>Subcategorías</th>
-                                <th width="180">Acciones</th>
+                                <th style="width: 180px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tablaCategoriasBody">
@@ -75,25 +78,6 @@
                             <!-- Se llenará dinámicamente -->
                         </ul>
                     </nav>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Ver Detalles -->
-    <div class="modal" id="modalDetalles">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-info-circle"></i>Detalles de la Categoría</h5>
-                    <button type="button" class="btn-close" onclick="cerrarModal('modalDetalles')">&times;</button>
-                </div>
-                <div class="modal-body" id="detallesContent">
-                    <!-- Se llenará dinámicamente -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                        onclick="cerrarModal('modalDetalles')">Cerrar</button>
                 </div>
             </div>
         </div>

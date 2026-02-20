@@ -1,204 +1,180 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nueva Categoría | Centinela</title>
-    
-    <!-- Fuentes -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome (solo iconos) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+    <title>Crear Nueva Área - Sistema Centinela</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Fuentes del sistema Centinela -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Estilos del navbar y footer -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
     
-    <!-- Estilos principales -->
+    <!-- Estilos principales de la vista -->
     <link rel="stylesheet" href="crearCategorias.css">
     
     <!-- Assets -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
 </head>
+
 <body>
-    <!-- Partículas de fondo -->
     <canvas id="particle-canvas"></canvas>
     <br>
-    <!-- Contenido principal -->
-    <div class="contenedor-principal">
+
+    <!-- Contenedor principal -->
+    <div class="custom-container">
         <!-- Header -->
-        <header class="header-principal">
-            <div class="header-contenido">
-                <div>
-                    <h1 class="header-titulo">
-                        <i class="fas fa-plus-circle"></i>
-                        Nueva Categoría
-                    </h1>
-                    <p class="header-subtitulo">
-                        Crea una nueva categoría para organizar tus elementos
-                    </p>
+        <div class="header-section">
+            <div class="header-content">
+                <h1 class="main-title">
+                    <i class="fas fa-plus-circle"></i>
+                    Crear Nueva Categoría
+                </h1>
+                <div class="header-description-text">
+                    "Registra una nueva categoría. Las subcategorías tomarán su color automáticamente."
                 </div>
-                <button type="button" class="btn-volver" id="btnVolverLista">
-                    <i class="fas fa-arrow-left"></i>
-                    Volver
-                </button>
             </div>
-            
-            <!-- Información de organización (dinámica) -->
-            <div id="organizacionInfoContainer"></div>
-        </header>
+        </div>
 
-        <!-- Formulario -->
-        <div class="form-card">
-            <form id="crearCategoriaForm" novalidate>
-                <!-- Organización (campos ocultos) -->
-                <input type="hidden" id="organizacionCamelCase" name="organizacionCamelCase">
-                <input type="hidden" id="organizacionNombre" name="organizacionNombre">
-                
-                <!-- Grid de 2 columnas -->
-                <div class="categoria-form-grid">
-                    <!-- Nombre de la Categoría -->
-                    <div class="form-group nombre-field">
-                        <label class="form-label">
-                            <i class="fas fa-tag"></i>
-                            Nombre de la Categoría
-                            <span class="required">*</span>
-                        </label>
-                        <input type="text" 
-                               class="form-control" 
-                               id="nombreCategoria" 
-                               name="nombre"
-                               placeholder="Ej: Hardware, Software, Redes"
-                               autofocus
-                               required>
-                        <div class="form-text">
-                            Nombre único para identificar la categoría
-                        </div>
-                        <div class="invalid-feedback">
-                            Por favor, ingresa un nombre para la categoría.
-                        </div>
+        <!-- ============================================= -->
+        <!-- FORMULARIO 1: INFORMACIÓN PRINCIPAL DE LA CATEGORÍA -->
+        <!-- ============================================= -->
+        <div class="form-row">
+            <div class="full-width">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-edit"></i>Información de la Categoría</h5>
+                        <button id="btnVolverLista" class="btn-volver">
+                            <i class="fas fa-arrow-left"></i>Volver a la lista 
+                        </button>
                     </div>
+                    <div class="card-body">
+                        <form id="formCategoriaPrincipal">
+                            <!-- Grid de 2 columnas -->
+                            <div class="form-grid">
+                                <div class="full-width">
+                                    <h6 class="section-title"><i class="fas fa-info-circle"></i>Información Básica</h6>
+                                </div>
 
-                    <!-- Descripción -->
-                    <div class="form-group descripcion-field">
-                        <label class="form-label">
-                            <i class="fas fa-align-left"></i>
-                            Descripción
-                            <span class="optional">(opcional)</span>
-                        </label>
-                        <textarea class="form-control" 
-                                  id="descripcionCategoria" 
-                                  name="descripcion"
-                                  rows="3"
-                                  placeholder="Describe el propósito de esta categoría"></textarea>
-                        <div class="form-text">
-                            Proporciona una descripción detallada
-                        </div>
-                        <div class="contador-caracteres">
-                            Caracteres: <span id="contadorCaracteres">0</span>
-                        </div>
+                                <div class="form-field">
+                                    <label for="nombreCategoria" class="form-label">Nombre de la Categoría *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-tag"></i></span>
+                                        <input type="text" class="form-control" id="nombreCategoria"
+                                            placeholder="Ej: Hardware, Software, Redes" required>
+                                    </div>
+                                    <div class="form-help-text">Nombre único para identificar la categoría</div>
+                                </div>
+
+                                <!-- Descripción -->
+                                <div class="full-width">
+                                    <label for="descripcionCategoria" class="form-label">Descripción de la Categoría</label>
+                                    <textarea class="form-control" id="descripcionCategoria" rows="4"
+                                        placeholder="Describa el propósito y uso de esta categoría..."></textarea>
+                                    <div class="form-help-text">Proporcione una descripción detallada (opcional)</div>
+                                    <div class="char-counter">
+                                        <small class="text-muted">Caracteres: <span id="contadorCaracteres">0</span></small>
+                                    </div>
+                                </div>
+
+                                <!-- Campo de Color -->
+                                <div class="full-width">
+                                    <label class="form-label">Color de Identificación</label>
+                                    <div class="color-selector-simple">
+                                        <div class="color-preview-card" id="colorPreviewCard">
+                                            <div class="color-circle" id="colorDisplay" style="background-color: #2f8cff;"></div>
+                                            <div class="color-info">
+                                                <span class="color-hex" id="colorHex">#2f8cff</span>
+                                                <span class="color-label">
+                                                    <i class="fas fa-chevron-down"></i>
+                                                    Haz clic para cambiar color
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <input type="color" id="colorPickerNative" value="#2f8cff" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" aria-hidden="true">
+                                    <div class="form-help-text">
+                                        <i class="fas fa-palette"></i>
+                                        Este color identificará visualmente la categoría
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Color de Identificación -->
-                <div class="form-group color-field">
-                    <label class="form-label">
-                        <i class="fas fa-palette"></i>
-                        Color de Identificación
-                    </label>
-                    
-                    <div class="color-selector-simple">
-                        <div class="color-preview-card" id="colorPreviewCard">
-                            <div class="color-circle" id="colorDisplay" style="background-color: #2f8cff;"></div>
-                            <div class="color-info">
-                                <span class="color-hex" id="colorHex">#2f8cff</span>
-                                <span class="color-label">
-                                    <i class="fas fa-chevron-down"></i>
-                                    Haz clic para cambiar color
-                                </span>
+        <!-- ============================================= -->
+        <!-- SECCIÓN 2: SUBCATEGORÍAS + BOTONES -->
+        <!-- ============================================= -->
+        <div class="form-row" style="margin-top: 20px;">
+            <div class="full-width">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-sitemap"></i>Gestión de Subcategorías</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Sección de Subcategorías -->
+                        <div class="form-row">
+                            <div class="full-width">
+                                <!-- Contenedor dinámico de subcategorías -->
+                                <div id="subcategoriasList" class="subcategorias-container">
+                                    <div class="empty-state" id="subcategoriasEmpty">
+                                        <i class="fas fa-sitemap"></i>
+                                        <p>No hay subcategorías agregadas</p>
+                                        <small>Haga clic en "Agregar Subcategoría" para añadir una</small>
+                                    </div>
+                                </div>
+
+                                <!-- Botón para agregar subcategoría -->
+                                <div class="button-container" style="margin-top: 15px;">
+                                    <button type="button" class="btn-agregar-subcategoria" id="btnAgregarSubcategoria">
+                                        <i class="fas fa-plus-circle"></i>
+                                        Agregar Subcategoría
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <input type="color" 
-                           id="colorPickerNative" 
-                           value="#2f8cff" 
-                           style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;"
-                           aria-hidden="true">
-                    
-                    <div class="form-text">
-                        <i class="fas fa-info-circle"></i>
-                        Este color identificará visualmente la categoría
-                    </div>
-                </div>
 
-                <!-- Sección de Subcategorías -->
-                <div class="subcategorias-seccion">
-                    <div class="subcategorias-titulo">
-                        <i class="fas fa-sitemap"></i>
-                        Subcategorías
-                        <span class="subcategorias-counter" id="subcategoriasCounter">0</span>
-                    </div>
-                    
-                    <!-- Contenedor de subcategorías -->
-                    <div id="subcategoriasList" class="subcategorias-container">
-                        <div class="subcategorias-empty">
-                            <i class="fas fa-sitemap"></i>
-                            <p>No hay subcategorías agregadas</p>
-                            <small>
-                                Las subcategorías heredarán automáticamente el color de la categoría principal
-                            </small>
-                        </div>
-                    </div>
-                    
-                    <!-- Botón para agregar subcategoría -->
-                    <button type="button" class="btn-agregar-subcategoria" id="btnAgregarSubcategoria">
-                        <i class="fas fa-plus-circle"></i>
-                        Agregar Subcategoría
-                    </button>
-                </div>
-
-                <!-- Información de herencia -->
-                <div class="info-card">
-                    <div class="info-card-content">
-                        <div class="info-icon">
+                        <!-- Mensaje informativo de herencia -->
+                        <div class="alert alert-info" style="margin-top: 20px;">
                             <i class="fas fa-share-alt"></i>
+                            Las subcategorías heredan automáticamente el color de la categoría principal. Puedes desactivar la herencia y asignar un color personalizado.
                         </div>
-                        <div class="info-text">
-                            <strong>Herencia de color:</strong>
-                            Las subcategorías heredan el color de la categoría principal.
-                            Puedes desactivar la herencia y asignar un color personalizado.
-                            <span class="d-block mt-2">
-                                <i class="fas fa-database"></i>
-                                Colección: <code id="coleccionDisplay">cargando...</code>
-                            </span>
+
+                        <!-- BOTONES DE ACCIÓN -->
+                        <div class="action-buttons-container">
+                            <button type="button" class="btn btn-success" id="btnCrearCategoria">
+                                <i class="fas fa-check"></i>Crear Categoría
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="btnCancelar">
+                                <i class="fas fa-times"></i>Cancelar
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Botones de acción -->
-                <div class="action-buttons">
-                    <button type="button" class="btn btn-outline-secondary" id="btnCancel">
-                        <i class="fas fa-times"></i>
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="btnSave">
-                        <i class="fas fa-save"></i>
-                        Crear Categoría
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
+    <br>
 
     <!-- Scripts -->
     <script type="module" src="/components/themeloader.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
-    
-    <!-- Script principal -->
     <script type="module" src="crearCategorias.js"></script>
 </body>
+
 </html>

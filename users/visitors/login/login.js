@@ -8,7 +8,7 @@ import { UserManager } from '/clases/user.js';
 // FUNCIÓN AUXILIAR: Convertir texto a camelCase
 function toCamelCase(text) {
     if (!text || typeof text !== 'string') return '';
-    
+
     return text
         .toLowerCase()
         .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
@@ -39,7 +39,7 @@ function configurarSweetAlertEstilos() {
         hover: getCSSVariable('--color-hover') || 'rgba(245, 215, 66, 0)',
         active: getCSSVariable('--color-active') || '#c0c0c0'
     };
-    
+
     return {
         colors: colors,
         fontFamily: getCSSVariable('--font-family-primary') || "'Orbitron', sans-serif",
@@ -49,12 +49,9 @@ function configurarSweetAlertEstilos() {
 }
 
 // INICIALIZACIÓN PRINCIPAL - Se ejecuta cuando el DOM está completamente cargado
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Login page loaded - Sistema de sesión con SweetAlerts personalizados');
-    
+document.addEventListener('DOMContentLoaded', function () {
     const estilos = configurarSweetAlertEstilos();
-    console.log('Estilos CSS cargados:', estilos.colors);
-    
+
     const loginForm = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
@@ -63,79 +60,61 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginSubmitBtn = document.getElementById('loginSubmitBtn');
     const forgotPasswordLink = document.getElementById('forgotPassword');
     const registerBtn = document.getElementById('registerBtn');
-    
+
     if (!loginForm || !emailInput || !passwordInput) {
         console.error('Elementos del formulario no encontrados');
-        mostrarSweetAlertErrorCritico('Error de Configuración', 
+        mostrarSweetAlertErrorCritico('Error de Configuración',
             'El formulario de login no está configurado correctamente.', estilos);
         return;
     }
-    
-    console.log('Elementos del formulario encontrados');
-    
+
     let userManager;
     try {
         userManager = new UserManager();
-        console.log('UserManager inicializado:', userManager);
     } catch (error) {
         console.error('Error al crear UserManager:', error);
-        mostrarSweetAlertErrorCritico('Sistema No Disponible', 
+        mostrarSweetAlertErrorCritico('Sistema No Disponible',
             'Error al inicializar el sistema de autenticación.', estilos);
         return;
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert para error crítico
     function mostrarSweetAlertErrorCritico(titulo, mensaje, estilos) {
         Swal.fire({
-            title: `<span style="color: ${estilos.colors.accentSecondary}; font-size: 1.5em; font-family: ${estilos.fontFamily};">${titulo}</span>`,
+            title: titulo,
             html: `
-                <div style="text-align: left; padding: 15px 0; color: ${estilos.colors.secondary};">
+                <div>
                     <p>${mensaje}</p>
-                    <div style="background: ${estilos.colors.bgTertiary}; padding: 12px; border-radius: ${estilos.borderRadius}; margin-top: 15px; border-left: 4px solid ${estilos.colors.accentSecondary};">
-                        <p style="margin: 0; font-size: 0.9em; color: ${estilos.colors.accentPrimary};">
-                            <i class="fas fa-exclamation-triangle" style="color: ${estilos.colors.accentSecondary}; margin-right: 8px;"></i> 
-                            <strong>Recomendación:</strong>
-                        </p>
-                        <ul style="margin: 5px 0 0 25px; font-size: 0.85em; color: ${estilos.colors.secondary};">
-                            <li>Recarga la página</li>
-                            <li>Verifica tu conexión a internet</li>
-                            <li>Contacta al administrador si el problema persiste</li>
-                        </ul>
-                    </div>
+                    <p><strong>Recomendación:</strong></p>
+                    <ul>
+                        <li>Recarga la página</li>
+                        <li>Verifica tu conexión a internet</li>
+                        <li>Contacta al administrador si el problema persiste</li>
+                    </ul>
                 </div>
             `,
-            confirmButtonColor: estilos.colors.accentSecondary,
             confirmButtonText: 'Recargar Página',
-            background: estilos.colors.bgPrimary,
-            backdrop: `rgba(0, 0, 0, 0.8)`,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            },
             allowOutsideClick: false
         }).then(() => {
             location.reload();
         });
     }
-    
+
     function clearMessage() {
         if (loginMessage) {
             loginMessage.innerHTML = '';
             loginMessage.style.display = 'none';
         }
     }
-    
+
     function validateEmail(email) {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
     }
-    
+
     function toggleButtonState(enabled = true, text = null) {
         if (!loginSubmitBtn) return;
-        
+
         if (enabled) {
             loginSubmitBtn.disabled = false;
             loginSubmitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> INICIAR SESIÓN';
@@ -148,18 +127,18 @@ document.addEventListener('DOMContentLoaded', function() {
             loginSubmitBtn.style.cursor = 'not-allowed';
         }
     }
-    
+
     // ===============================================================
     // 🔥 FUNCIÓN MEJORADA: Guarda usuario en localStorage con imágenes
     // ===============================================================
     function saveUserToLocalStorage(user) {
         try {
             const organizacionCamelCase = toCamelCase(user.organizacion);
-            
+
             // ✅ EXTRAER FOTOS DE TODAS LAS POSIBLES UBICACIONES
             let fotoUsuario = null;
             let fotoOrganizacion = null;
-            
+
             // Buscar foto de usuario en TODAS las propiedades posibles
             if (user.fotoUsuario) fotoUsuario = user.fotoUsuario;
             else if (user.fotoURL) fotoUsuario = user.fotoURL;
@@ -167,39 +146,28 @@ document.addEventListener('DOMContentLoaded', function() {
             else if (user.photoURL) fotoUsuario = user.photoURL;
             else if (user.avatar) fotoUsuario = user.avatar;
             else if (user.imagenPerfil) fotoUsuario = user.imagenPerfil;
-            
+
             // Buscar foto de organización en TODAS las propiedades posibles
             if (user.fotoOrganizacion) fotoOrganizacion = user.fotoOrganizacion;
             else if (user.logoOrganizacion) fotoOrganizacion = user.logoOrganizacion;
             else if (user.logo) fotoOrganizacion = user.logo;
             else if (user.organizacionLogo) fotoOrganizacion = user.organizacionLogo;
             else if (user.logoUrl) fotoOrganizacion = user.logoUrl;
-            
-            // LOG DETALLADO DE QUÉ ENCONTRAMOS
-            console.log('📸 BÚSQUEDA DE IMÁGENES EN USER:', {
-                nombre: user.nombreCompleto,
-                fotoUsuario_encontrada: !!fotoUsuario,
-                fotoUsuario_length: fotoUsuario ? fotoUsuario.length : 0,
-                fotoUsuario_inicio: fotoUsuario ? fotoUsuario.substring(0, 50) + '...' : null,
-                fotoOrganizacion_encontrada: !!fotoOrganizacion,
-                fotoOrganizacion_length: fotoOrganizacion ? fotoOrganizacion.length : 0,
-                fotoOrganizacion_inicio: fotoOrganizacion ? fotoOrganizacion.substring(0, 50) + '...' : null
-            });
-            
+
             const userData = {
                 id: user.id,
                 email: user.email || user.correoElectronico,
                 nombreCompleto: user.nombreCompleto,
-                cargo: user.cargo,
+                rol: user.rol, 
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
                 status: user.status,
                 verificado: user.verificado,
-                
+
                 // ✅ GUARDAR IMÁGENES EXPLÍCITAMENTE
                 fotoUsuario: fotoUsuario || '',
                 fotoOrganizacion: fotoOrganizacion || '',
-                
+
                 ultimoAcceso: new Date().toISOString(),
                 sessionStart: new Date().toISOString(),
                 fechaLogin: new Date().toLocaleDateString('es-ES', {
@@ -210,60 +178,44 @@ document.addEventListener('DOMContentLoaded', function() {
                     minute: '2-digit'
                 })
             };
-            
+
             localStorage.setItem('userData', JSON.stringify(userData));
             localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userRole', user.cargo);
+            localStorage.setItem('userRole', user.rol);
             localStorage.setItem('userId', user.id);
             localStorage.setItem('userOrganizacion', user.organizacion);
             localStorage.setItem('userOrganizacionCamelCase', organizacionCamelCase);
             localStorage.setItem('userNombre', user.nombreCompleto);
             localStorage.setItem('userEmail', user.email || user.correoElectronico || '');
-            
-            // ✅ GUARDAR IMÁGENES EN KEYS INDIVIDUALES
+
             if (fotoUsuario) {
                 localStorage.setItem('userFoto', fotoUsuario);
-                console.log('📸 Foto de usuario guardada en localStorage (userFoto) - Length:', fotoUsuario.length);
             } else {
                 localStorage.removeItem('userFoto');
             }
-            
+
             if (fotoOrganizacion) {
                 localStorage.setItem('organizacionLogo', fotoOrganizacion);
-                console.log('🏢 Logo de organización guardado en localStorage (organizacionLogo) - Length:', fotoOrganizacion.length);
             } else {
                 localStorage.removeItem('organizacionLogo');
             }
-            
-            // VERIFICAR QUE SE GUARDARON CORRECTAMENTE
-            const savedUserData = JSON.parse(localStorage.getItem('userData') || '{}');
-            console.log('✅ VERIFICACIÓN DE localStorage:', {
-                userData_fotoUsuario: !!savedUserData.fotoUsuario,
-                userData_fotoUsuario_length: savedUserData.fotoUsuario ? savedUserData.fotoUsuario.length : 0,
-                userData_fotoOrganizacion: !!savedUserData.fotoOrganizacion,
-                userData_fotoOrganizacion_length: savedUserData.fotoOrganizacion ? savedUserData.fotoOrganizacion.length : 0,
-                userFoto_key: !!localStorage.getItem('userFoto'),
-                userFoto_length: localStorage.getItem('userFoto') ? localStorage.getItem('userFoto').length : 0,
-                organizacionLogo_key: !!localStorage.getItem('organizacionLogo'),
-                organizacionLogo_length: localStorage.getItem('organizacionLogo') ? localStorage.getItem('organizacionLogo').length : 0
-            });
-            
+
             return true;
         } catch (error) {
             console.error('❌ Error al guardar en localStorage:', error);
             return false;
         }
     }
-    
+
     function saveUserToSessionStorage(user) {
         try {
             const organizacionCamelCase = toCamelCase(user.organizacion);
-            
+
             const sessionData = {
                 id: user.id,
                 email: user.email,
                 nombreCompleto: user.nombreCompleto,
-                cargo: user.cargo,
+                rol: user.rol,
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
                 sessionId: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
@@ -273,687 +225,456 @@ document.addEventListener('DOMContentLoaded', function() {
                 userAgent: navigator.userAgent,
                 screenResolution: `${window.screen.width}x${window.screen.height}`
             };
-            
+
             sessionStorage.setItem('currentSession', JSON.stringify(sessionData));
             sessionStorage.setItem('isAuthenticated', 'true');
             sessionStorage.setItem('sessionStart', new Date().toISOString());
             sessionStorage.setItem('sessionOrganizacion', user.organizacion);
             sessionStorage.setItem('sessionOrganizacionCamelCase', organizacionCamelCase);
             sessionStorage.setItem('sessionUser', user.nombreCompleto);
-            sessionStorage.setItem('sessionRole', user.cargo);
-            
-            console.log('Sesión guardada en sessionStorage:', {
-                sessionId: sessionData.sessionId,
-                user: user.nombreCompleto,
-                organizacion: user.organizacion,
-                organizacionCamelCase: organizacionCamelCase,
-                timestamp: sessionData.sessionStartFormatted
-            });
-            
+            sessionStorage.setItem('sessionRole', user.rol);
+
             return true;
         } catch (error) {
             console.error('Error al guardar en sessionStorage:', error);
             return false;
         }
     }
-    
+
     function checkExistingSession() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             const hasSession = sessionStorage.getItem('isAuthenticated') === 'true';
-            
+
             if (isLoggedIn && hasSession) {
                 const userData = JSON.parse(localStorage.getItem('userData') || '{}');
                 const sessionData = JSON.parse(sessionStorage.getItem('currentSession') || '{}');
-                
+
                 console.log('Sesión existente encontrada:', {
                     usuario: userData.nombreCompleto,
                     organizacion: userData.organizacion,
-                    organizacionCamelCase: userData.organizacionCamelCase,
+                    rol: userData.rol,
                     tieneFotoUsuario: !!userData.fotoUsuario,
-                    tieneFotoOrganizacion: !!userData.fotoOrganizacion,
-                    sessionId: sessionData.sessionId,
-                    tiempoSesion: sessionData.sessionStart
+                    tieneFotoOrganizacion: !!userData.fotoOrganizacion
                 });
             }
-            
+
             return false;
         } catch (error) {
             console.error('Error al verificar sesión:', error);
             return false;
         }
     }
-    
+
     function logOrganizationInfo(organizacion, organizacionCamelCase) {
-        console.log('INFORMACIÓN DE ORGANIZACIÓN:');
-        console.log('   Nombre original:', organizacion);
-        console.log('   CamelCase:', organizacionCamelCase);
+        console.log('INFORMACIÓN DE ORGANIZACIÓN:', organizacion, organizacionCamelCase);
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 de éxito en login
     function mostrarSweetAlertExito(user) {
         const organizacionCamelCase = toCamelCase(user.organizacion);
-        
+
         Swal.fire({
-            title: `<span style="color: ${estilos.colors.accentSecondary}; font-size: 1.8em; font-family: ${estilos.fontFamily};">¡Bienvenido!</span>`,
+            title: '¡Bienvenido!',
             html: `
-                <div style="text-align: center; font-family: ${estilos.fontFamily};">
-                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); border-radius: ${estilos.borderRadius}; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                        <i class="fas fa-check" style="font-size: 2.5em; color: ${estilos.colors.textDark};"></i>
-                    </div>
-                    <h3 style="color: ${estilos.colors.primary}; margin-bottom: 10px; font-weight: bold;">${user.nombreCompleto}</h3>
-                    <p style="color: ${estilos.colors.secondary}; margin-bottom: 20px;">Sesión iniciada correctamente</p>
+                <div style="text-align: center;">
+                    <h3>${user.nombreCompleto}</h3>
+                    <p>Sesión iniciada correctamente</p>
                     
-                    <div style="background: ${estilos.colors.bgTertiary}; padding: 15px; border-radius: ${estilos.borderRadius}; text-align: left; margin: 15px 0; border: 1px solid ${estilos.colors.borderLight};">
-                        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                            <i class="fas fa-building" style="color: ${estilos.colors.accentPrimary}; width: 20px;"></i>
-                            <span style="margin-left: 10px; color: ${estilos.colors.primary};"><strong>Organización:</strong> ${user.organizacion}</span>
-                        </div>
-                        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                            <i class="fas fa-briefcase" style="color: ${estilos.colors.accentSecondary}; width: 20px;"></i>
-                            <span style="margin-left: 10px; color: ${estilos.colors.primary};"><strong>Cargo:</strong> ${user.cargo}</span>
-                        </div>
-                        <div style="display: flex; align-items: center;">
-                            <i class="fas fa-user-shield" style="color: ${estilos.colors.accentPrimary}; width: 20px;"></i>
-                            <span style="margin-left: 10px; color: ${estilos.colors.primary};"><strong>Estado:</strong> ${user.verificado ? 'Verificado' : 'Pendiente'}</span>
-                        </div>
+                    <div>
+                        <p><strong>Organización:</strong> ${user.organizacion}</p>
+                        <p><strong>Rol:</strong> ${user.rol === 'administrador' ? 'ADMINISTRADOR' : 'COLABORADOR'}</p>
+                        <p><strong>Estado:</strong> ${user.verificado ? 'Verificado' : 'Pendiente'}</p>
                     </div>
                     
-                    <div style="margin-top: 20px; padding: 10px; background: linear-gradient(90deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); border-radius: 5px; color: ${estilos.colors.textDark}; font-weight: bold;">
-                        <i class="fas fa-sync-alt fa-spin"></i>
-                        <span style="margin-left: 10px;">Redirigiendo al sistema...</span>
-                    </div>
+                    <p>Redirigiendo al sistema...</p>
                 </div>
             `,
             showConfirmButton: false,
             timer: 2500,
-            timerProgressBar: true,
-            background: estilos.colors.bgPrimary,
-            backdrop: `rgba(0, 0, 0, 0.8)`,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                timerProgressBar: 'swal2-timer-progress-bar'
-            }
+            timerProgressBar: true
         });
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 para correo inválido
     function mostrarSweetAlertCorreoInvalido() {
         Swal.fire({
-            title: `<span style="color: ${estilos.colors.accentPrimary}; font-size: 1.5em; font-family: ${estilos.fontFamily};">Correo Inválido</span>`,
+            title: 'Correo Inválido',
             html: `
-                <div style="text-align: left; padding: 15px 0; color: ${estilos.colors.secondary};">
+                <div>
                     <p>El formato del correo electrónico no es válido.</p>
-                    
-                    <div style="background: ${estilos.colors.bgTertiary}; padding: 12px; border-radius: ${estilos.borderRadius}; margin: 15px 0; border-left: 4px solid ${estilos.colors.accentPrimary};">
-                        <p style="margin: 0 0 10px 0; color: ${estilos.colors.accentSecondary}; font-weight: bold;">
-                            <i class="fas fa-lightbulb" style="color: ${estilos.colors.accentPrimary}; margin-right: 8px;"></i> Formato correcto:
-                        </p>
-                        <div style="background: ${estilos.colors.bgPrimary}; padding: 10px; border-radius: 4px; border: 1px solid ${estilos.colors.accentPrimary};">
-                            <code style="color: ${estilos.colors.accentSecondary}; font-size: 0.9em;">usuario@dominio.com</code>
-                        </div>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-                        <div style="background: ${estilos.colors.bgTertiary}; padding: 8px; border-radius: 4px; border: 1px solid ${estilos.colors.accentSecondary};">
-                            <p style="margin: 0; color: ${estilos.colors.accentSecondary}; font-size: 0.85em;">
-                                <i class="fas fa-check-circle" style="color: ${estilos.colors.accentSecondary}; margin-right: 5px;"></i> Válido
-                            </p>
-                            <p style="margin: 5px 0 0 0; font-size: 0.8em; color: ${estilos.colors.secondary};">usuario@empresa.com</p>
-                        </div>
-                        <div style="background: ${estilos.colors.bgTertiary}; padding: 8px; border-radius: 4px; border: 1px solid ${estilos.colors.accentPrimary};">
-                            <p style="margin: 0; color: ${estilos.colors.accentPrimary}; font-size: 0.85em;">
-                                <i class="fas fa-times-circle" style="color: ${estilos.colors.accentPrimary}; margin-right: 5px;"></i> Inválido
-                            </p>
-                            <p style="margin: 5px 0 0 0; font-size: 0.8em; color: ${estilos.colors.secondary};">usuario@dominio</p>
-                        </div>
-                    </div>
+                    <p><strong>Formato correcto:</strong> usuario@dominio.com</p>
+                    <p><i class="fas fa-check-circle"></i> Válido: usuario@empresa.com</p>
+                    <p><i class="fas fa-times-circle"></i> Inválido: usuario@dominio</p>
                 </div>
             `,
-            confirmButtonColor: estilos.colors.accentPrimary,
-            confirmButtonText: 'Corregir',
-            background: estilos.colors.bgPrimary,
-            backdrop: `rgba(0, 0, 0, 0.8)`,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            },
-            focusConfirm: false
+            confirmButtonText: 'Corregir'
         }).then(() => {
             emailInput.focus();
             emailInput.select();
         });
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 para contraseña incorrecta
     function mostrarSweetAlertContraseñaIncorrecta() {
         Swal.fire({
-            title: `<span style="color: ${estilos.colors.accentSecondary}; font-size: 1.5em; font-family: ${estilos.fontFamily};">Contraseña Incorrecta</span>`,
+            title: 'Contraseña Incorrecta',
             html: `
-                <div style="text-align: left; padding: 15px 0; color: ${estilos.colors.secondary};">
+                <div>
                     <p>La contraseña ingresada no es correcta.</p>
-                    
-                    <div style="background: ${estilos.colors.bgTertiary}; padding: 12px; border-radius: ${estilos.borderRadius}; margin: 15px 0; border-left: 4px solid ${estilos.colors.accentSecondary};">
-                        <p style="margin: 0 0 10px 0; color: ${estilos.colors.accentSecondary}; font-weight: bold;">
-                            <i class="fas fa-key" style="color: ${estilos.colors.accentSecondary}; margin-right: 8px;"></i> ¿Olvidaste tu contraseña?
-                        </p>
-                        <button onclick="mostrarRecuperacionContraseña()" 
-                                style="width: 100%; padding: 10px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; font-weight: bold; transition: ${estilos.transition};"
-                                onmouseover="this.style.opacity='0.9';"
-                                onmouseout="this.style.opacity='1';">
-                            <i class="fas fa-unlock-alt" style="margin-right: 8px;"></i> Recuperar Contraseña
-                        </button>
-                    </div>
-                    
-                    <div style="background: ${estilos.colors.bgTertiary}; padding: 10px; border-radius: 5px; border: 1px solid ${estilos.colors.accentPrimary};">
-                        <p style="margin: 0 0 8px 0; color: ${estilos.colors.accentPrimary}; font-weight: bold;">
-                            <i class="fas fa-lightbulb" style="color: ${estilos.colors.accentPrimary}; margin-right: 8px;"></i> Recomendaciones:
-                        </p>
-                        <ul style="margin: 0; padding-left: 20px; color: ${estilos.colors.secondary};">
-                            <li>Revisa las mayúsculas/minúsculas</li>
-                            <li>Verifica que no haya espacios al inicio/final</li>
-                            <li>Usa el botón <i class="fas fa-eye" style="color: ${estilos.colors.accentSecondary}; margin: 0 4px;"></i> para visualizar</li>
-                            <li>Intenta con una contraseña anterior</li>
-                        </ul>
-                    </div>
+                    <p><strong>¿Olvidaste tu contraseña?</strong></p>
+                    <p>Usa el botón "Recuperar" para restablecerla.</p>
                 </div>
             `,
             showConfirmButton: true,
             showCancelButton: true,
-            confirmButtonText: 'Reintentar',
-            cancelButtonText: 'Recuperar',
-            confirmButtonColor: estilos.colors.accentPrimary,
-            cancelButtonColor: estilos.colors.accentSecondary,
-            background: estilos.colors.bgPrimary,
-            backdrop: `rgba(0, 0, 0, 0.8)`,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            },
-            preConfirm: () => {
-                passwordInput.focus();
-                passwordInput.select();
-            }
+            confirmButtonText: 'REINTENTAR',
+            cancelButtonText: 'RECUPERAR'
         }).then((result) => {
             if (result.dismiss === Swal.DismissReason.cancel) {
                 mostrarRecuperacionContraseña();
+            } else if (result.isConfirmed) {
+                passwordInput.focus();
+                passwordInput.select();
             }
         });
     }
-    
+
     // FUNCIÓN: Mostrar SweetAlert2 para usuario no encontrado
     function mostrarSweetAlertUsuarioNoEncontrado(email) {
         Swal.fire({
-            title: `<span style="color: ${estilos.colors.accentSecondary}; font-size: 1.5em; font-family: ${estilos.fontFamily};">Usuario No Encontrado</span>`,
+            title: 'Usuario No Encontrado',
             html: `
-                <div style="text-align: left; padding: 15px 0; color: ${estilos.colors.secondary};">
+                <div>
                     <p>No existe una cuenta registrada con:</p>
-                    <div style="background: ${estilos.colors.bgTertiary}; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; border: 1px solid ${estilos.colors.borderLight};">
-                        <code style="color: ${estilos.colors.accentSecondary}; font-weight: bold;">${email}</code>
-                    </div>
+                    <p><strong>${email}</strong></p>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0;">
-                        <button onclick="irARegistro()" 
-                                style="padding: 12px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: ${estilos.borderRadius}; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; transition: ${estilos.transition};"
-                                onmouseover="this.style.opacity='0.9';"
-                                onmouseout="this.style.opacity='1';">
-                            <i class="fas fa-user-plus" style="font-size: 1.5em; margin-bottom: 5px;"></i>
-                            <span>Registrarse</span>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="swal2-confirm swal2-styled" onclick="window.irARegistro()">
+                            <i class="fas fa-user-plus"></i> Registrarse
                         </button>
-                        <button onclick="mostrarRecuperacionContraseña()" 
-                                style="padding: 12px; background: linear-gradient(135deg, ${estilos.colors.accentSecondary}, ${estilos.colors.accentPrimary}); color: ${estilos.colors.textDark}; border: none; border-radius: ${estilos.borderRadius}; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; transition: ${estilos.transition};"
-                                onmouseover="this.style.opacity='0.9';"
-                                onmouseout="this.style.opacity='1';">
-                            <i class="fas fa-key" style="font-size: 1.5em; margin-bottom: 5px;"></i>
-                            <span>Recuperar</span>
+                        <button class="swal2-cancel swal2-styled" onclick="window.mostrarRecuperacionContraseña()">
+                            <i class="fas fa-key"></i> Recuperar
                         </button>
                     </div>
                     
-                    <div style="background: ${estilos.colors.bgTertiary}; padding: 10px; border-radius: 5px; border: 1px solid ${estilos.colors.borderLight}; margin-top: 15px;">
-                        <p style="margin: 0; color: ${estilos.colors.accentPrimary}; font-size: 0.9em;">
-                            <i class="fas fa-info-circle" style="color: ${estilos.colors.accentPrimary}; margin-right: 8px;"></i> 
-                            <strong>Posibles causas:</strong>
-                        </p>
-                        <ul style="margin: 5px 0 0 15px; color: ${estilos.colors.secondary}; font-size: 0.85em;">
-                            <li>El correo fue escrito incorrectamente</li>
-                            <li>La cuenta fue eliminada o desactivada</li>
-                            <li>Debes registrarte primero en el sistema</li>
-                        </ul>
-                    </div>
+                    <p><strong>Posibles causas:</strong></p>
+                    <ul>
+                        <li>El correo fue escrito incorrectamente</li>
+                        <li>La cuenta fue eliminada o desactivada</li>
+                        <li>Debes registrarte primero en el sistema</li>
+                    </ul>
                 </div>
             `,
             showConfirmButton: false,
-            background: estilos.colors.bgPrimary,
-            backdrop: `rgba(0, 0, 0, 0.8)`,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container'
-            },
             showCloseButton: true
         });
     }
-    
-    // FUNCIÓN: Mostrar SweetAlert2 para recuperación de contraseña
-    function mostrarRecuperacionContraseña() {
-        Swal.fire({
-            title: `<span style="color: ${estilos.colors.accentSecondary}; font-size: 1.5em; font-family: ${estilos.fontFamily};">Recuperar Contraseña</span>`,
+
+    // ===== FUNCIÓN DE RECUPERACIÓN DE CONTRASEÑA CON SWEETALERT2 =====
+    async function mostrarRecuperacionContraseña() {
+        const { value: email } = await Swal.fire({
+            title: 'Recuperar Contraseña',
             html: `
-                <div style="text-align: left; padding: 15px 0; color: ${estilos.colors.secondary}; font-family: ${estilos.fontFamily};">
+                <div>
                     <p>Ingresa tu correo electrónico para recibir un enlace de recuperación:</p>
+                    <input type="email" id="swal-input-email" class="swal2-input" placeholder="tu@correo.com" value="${emailInput.value || ''}">
                     
-                    <div style="margin: 20px 0;">
-                        <input type="email" id="recovery-email" 
-                               placeholder="tu@correo.com" 
-                               style="width: 100%; padding: 12px; border: 2px solid ${estilos.colors.accentSecondary}; border-radius: ${estilos.borderRadius}; font-size: 1em; background: ${estilos.colors.bgTertiary}; color: ${estilos.colors.primary};">
-                    </div>
-                    
-                    <div style="background: ${estilos.colors.bgTertiary}; padding: 12px; border-radius: ${estilos.borderRadius}; margin: 15px 0; border-left: 4px solid ${estilos.colors.accentSecondary};">
-                        <p style="margin: 0; color: ${estilos.colors.accentSecondary}; font-size: 0.9em;">
-                            <i class="fas fa-envelope" style="color: ${estilos.colors.accentSecondary}; margin-right: 8px;"></i> 
-                            <strong>Proceso de recuperación:</strong>
-                        </p>
-                        <ol style="margin: 5px 0 0 20px; color: ${estilos.colors.secondary}; font-size: 0.85em;">
+                    <div style="text-align: left; margin-top: 15px; padding: 10px; background: var(--color-bg-tertiary); border-radius: 5px;">
+                        <p><strong>Proceso de recuperación:</strong></p>
+                        <ol>
                             <li>Recibirás un correo con un enlace seguro</li>
+                            <li>Revisa tu bandeja de entrada y SPAM</li>
                             <li>Haz clic en el enlace para restablecer</li>
                             <li>Crea una nueva contraseña segura</li>
                             <li>Inicia sesión con tus nuevas credenciales</li>
                         </ol>
                     </div>
-                    
-                    <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button onclick="enviarRecuperacion()" 
-                                style="flex: 2; padding: 12px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: ${estilos.borderRadius}; cursor: pointer; font-weight: bold; transition: ${estilos.transition};"
-                                onmouseover="this.style.opacity='0.9';"
-                                onmouseout="this.style.opacity='1';">
-                            <i class="fas fa-paper-plane" style="margin-right: 8px;"></i> Enviar Enlace
-                        </button>
-                        <button onclick="Swal.close()" 
-                                style="flex: 1; padding: 12px; background: ${estilos.colors.bgTertiary}; color: ${estilos.colors.primary}; border: 1px solid ${estilos.colors.borderLight}; border-radius: ${estilos.borderRadius}; cursor: pointer; transition: ${estilos.transition};"
-                                onmouseover="this.style.background='${estilos.colors.accentPrimary}'; this.style.color='${estilos.colors.textDark}';"
-                                onmouseout="this.style.background='${estilos.colors.bgTertiary}'; this.style.color='${estilos.colors.primary}';">
-                            Cancelar
-                        </button>
-                    </div>
                 </div>
             `,
-            showConfirmButton: false,
-            background: estilos.colors.bgPrimary,
-            backdrop: `rgba(0, 0, 0, 0.8)`,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container'
-            },
+            showCancelButton: true,
+            confirmButtonText: 'CONFIRMAR',
+            cancelButtonText: 'CANCELAR',
+            focusConfirm: false,
+            allowOutsideClick: false,
             didOpen: () => {
-                const recoveryEmail = document.getElementById('recovery-email');
-                if (recoveryEmail) {
-                    recoveryEmail.value = emailInput.value || '';
-                    recoveryEmail.focus();
-                    recoveryEmail.select();
+                const input = document.getElementById('swal-input-email');
+                if (input) {
+                    input.focus();
+                    input.select();
                 }
+            },
+            preConfirm: () => {
+                const input = document.getElementById('swal-input-email');
+                const email = input ? input.value.trim() : '';
+                
+                if (!email) {
+                    Swal.showValidationMessage('Por favor ingresa tu correo electrónico');
+                    return false;
+                }
+                
+                if (!validateEmail(email)) {
+                    Swal.showValidationMessage('El formato del correo no es válido');
+                    return false;
+                }
+                
+                return email;
             }
         });
-    }
-    
-    window.irARegistro = function() {
-        window.location.href = '/users/visitors/registro/registro.html';
-    };
-    
-    window.mostrarRecuperacionContraseña = function() {
-        mostrarRecuperacionContraseña();
-    };
-    
-    window.enviarRecuperacion = function() {
-        const recoveryEmail = document.getElementById('recovery-email');
-        if (recoveryEmail && recoveryEmail.value) {
-            if (validateEmail(recoveryEmail.value)) {
-                Swal.fire({
-                    title: 'Enlace enviado',
-                    text: `Se ha enviado un enlace de recuperación a ${recoveryEmail.value}`,
-                    confirmButtonColor: estilos.colors.accentSecondary,
-                    background: estilos.colors.bgPrimary,
-                    color: estilos.colors.primary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    }
+
+        if (!email) return;
+
+        // Mostrar loader
+        Swal.fire({
+            title: 'Enviando correo...',
+            html: 'Por favor espera mientras procesamos tu solicitud.',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const resultado = await userManager.enviarCorreoRecuperacion(email);
+
+            Swal.close();
+
+            if (resultado.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡Correo enviado!',
+                    html: `
+                        <div>
+                            <p>${resultado.message}</p>
+                            <p><strong>Destinatario:</strong> ${email}</p>
+                            <p>Revisa tu bandeja de entrada y la carpeta de SPAM.</p>
+                        </div>
+                    `,
+                    confirmButtonText: 'ENTENDIDO',
+                    timer: 5000
                 });
             } else {
                 Swal.fire({
-                    title: 'Correo inválido',
-                    text: 'Por favor ingresa un correo válido',
-                    confirmButtonColor: estilos.colors.accentPrimary,
-                    background: estilos.colors.bgPrimary,
-                    color: estilos.colors.primary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    }
+                    icon: 'error',
+                    title: 'Error',
+                    html: `
+                        <div>
+                            <p>${resultado.message}</p>
+                            <p>Por favor, intenta nuevamente más tarde.</p>
+                        </div>
+                    `,
+                    confirmButtonText: 'ENTENDIDO'
                 });
             }
+        } catch (error) {
+            console.error('Error inesperado:', error);
+            Swal.close();
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: `
+                    <div>
+                        <p>Error inesperado. Intenta nuevamente.</p>
+                        <p>${error.message || ''}</p>
+                    </div>
+                `,
+                confirmButtonText: 'ENTENDIDO'
+            });
         }
+    }
+
+    // Exponer funciones globalmente
+    window.irARegistro = function () {
+        window.location.href = '/users/visitors/registro/registro.html';
     };
-    
+
+    window.mostrarRecuperacionContraseña = function () {
+        mostrarRecuperacionContraseña();
+    };
+
     if (passwordToggle && passwordInput) {
-        passwordToggle.addEventListener('click', function() {
+        passwordToggle.addEventListener('click', function () {
             const icon = this.querySelector('i');
-            
+
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 icon.classList.replace('fa-eye', 'fa-eye-slash');
                 this.setAttribute('aria-label', 'Ocultar contraseña');
-                this.style.color = estilos.colors.accentSecondary;
             } else {
                 passwordInput.type = 'password';
                 icon.classList.replace('fa-eye-slash', 'fa-eye');
                 this.setAttribute('aria-label', 'Mostrar contraseña');
-                this.style.color = estilos.colors.accentPrimary;
             }
-            
+
             passwordInput.focus();
         });
-        
-        console.log('Botón mostrar/ocultar contraseña configurado');
     }
-    
-    loginForm.addEventListener('submit', async function(event) {
+
+    loginForm.addEventListener('submit', async function (event) {
         event.preventDefault();
-        console.log('Formulario de login enviado');
-        
+
         clearMessage();
-        
+
         const email = emailInput.value.trim();
         const password = passwordInput.value;
-        
-        console.log('Datos ingresados:', { email: email, passwordLength: password.length });
-        
+
         if (!email || !password) {
             Swal.fire({
                 title: 'Campos incompletos',
                 text: 'Por favor completa todos los campos',
-                confirmButtonColor: estilos.colors.accentPrimary,
-                background: estilos.colors.bgPrimary,
-                color: estilos.colors.primary,
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm',
-                    cancelButton: 'swal2-cancel'
-                }
+                confirmButtonText: 'ENTENDIDO'
             });
             emailInput.focus();
             return;
         }
-        
+
         if (!validateEmail(email)) {
             mostrarSweetAlertCorreoInvalido();
             return;
         }
-        
+
         if (password.length < 6) {
             Swal.fire({
                 title: 'Contraseña muy corta',
                 html: `
-                    <div style="text-align: left; color: ${estilos.colors.secondary};">
+                    <div>
                         <p>La contraseña debe tener al menos 6 caracteres.</p>
-                        <div style="background: ${estilos.colors.bgTertiary}; padding: 10px; border-radius: 5px; margin-top: 10px; border-left: 4px solid ${estilos.colors.accentPrimary};">
-                            <p style="margin: 0; color: ${estilos.colors.accentPrimary}; font-size: 0.9em;">
-                                <i class="fas fa-shield-alt" style="color: ${estilos.colors.accentPrimary}; margin-right: 8px;"></i> 
-                                <strong>Recomendaciones de seguridad:</strong>
-                            </p>
-                            <ul style="margin: 5px 0 0 20px; font-size: 0.85em; color: ${estilos.colors.secondary};">
-                                <li>Usa al menos 8 caracteres</li>
-                                <li>Combina letras, números y símbolos</li>
-                                <li>Evita información personal</li>
-                            </ul>
-                        </div>
+                        <p><strong>Recomendaciones de seguridad:</strong></p>
+                        <ul>
+                            <li>Usa al menos 8 caracteres</li>
+                            <li>Combina letras, números y símbolos</li>
+                            <li>Evita información personal</li>
+                        </ul>
                     </div>
                 `,
-                confirmButtonColor: estilos.colors.accentPrimary,
-                background: estilos.colors.bgPrimary,
-                customClass: {
-                    popup: 'swal2-popup',
-                    title: 'swal2-title',
-                    htmlContainer: 'swal2-html-container',
-                    confirmButton: 'swal2-confirm',
-                    cancelButton: 'swal2-cancel'
-                }
+                confirmButtonText: 'ENTENDIDO'
             });
             passwordInput.focus();
             passwordInput.select();
             return;
         }
-        
+
         toggleButtonState(false, '<i class="fas fa-spinner fa-spin"></i> VERIFICANDO...');
-        
+
         try {
-            console.log('Intentando iniciar sesión con:', email);
-            
             const user = await userManager.iniciarSesion(email, password);
-            
+
             console.log('✅ Login exitoso:', {
                 id: user.id,
                 nombre: user.nombreCompleto,
-                cargo: user.cargo,
+                rol: user.rol,
                 organizacion: user.organizacion,
-                status: user.status,
-                verificado: user.verificado,
                 tieneFotoUsuario: !!(user.fotoUsuario || user.fotoURL),
                 tieneFotoOrganizacion: !!user.fotoOrganizacion
             });
-            
+
             const organizacionCamelCase = toCamelCase(user.organizacion);
             logOrganizationInfo(user.organizacion, organizacionCamelCase);
-            
+
             const savedToLocal = saveUserToLocalStorage(user);
             const savedToSession = saveUserToSessionStorage(user);
-            
-            if (savedToLocal && savedToSession) {
-                console.log('✅ Datos de usuario guardados correctamente con imágenes');
-            } else {
-                console.log('⚠️ Algunos datos no se guardaron completamente');
-            }
-            
+
             toggleButtonState(false, '<i class="fas fa-check"></i> SESIÓN INICIADA');
-            
+
             mostrarSweetAlertExito(user);
-            
+
             setTimeout(() => {
-                console.log('Redirigiendo usuario...');
-                
-                if (user.cargo === 'administrador') {
-                    console.log('Redirigiendo a dashboard de administrador');
+                if (user.esAdministrador()) {
                     window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
-                } else if (user.cargo === 'colaborador') {
-                    console.log('Redirigiendo a dashboard de colaborador');
+                } else if (user.esColaborador()) {
                     window.location.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
+                } else if (user.esMaster()) {
+                    window.location.href = '/users/master/dashMaster/dashMaster.html';
                 } else {
-                    console.log('Tipo de usuario desconocido, redirigiendo a inicio');
                     window.location.href = '/index.html';
                 }
             }, 2500);
-            
+
         } catch (error) {
             console.error('❌ Error en login:', error);
-            
+
             toggleButtonState(true);
-            
-            if (error.message.includes('auth/invalid-credential') || 
+
+            if (error.message.includes('auth/invalid-credential') ||
                 error.message.includes('auth/wrong-password')) {
                 mostrarSweetAlertContraseñaIncorrecta();
-                
+
             } else if (error.message.includes('auth/user-not-found') ||
-                      error.message.includes('no encontrado')) {
+                error.message.includes('no encontrado')) {
                 mostrarSweetAlertUsuarioNoEncontrado(email);
-                
+
             } else if (error.message.includes('auth/too-many-requests')) {
                 Swal.fire({
                     title: 'Demasiados intentos',
                     html: `
-                        <div style="text-align: left; color: ${estilos.colors.secondary};">
+                        <div>
                             <p>Has excedido el número máximo de intentos permitidos.</p>
-                            <div style="background: ${estilos.colors.bgTertiary}; padding: 12px; border-radius: ${estilos.borderRadius}; margin-top: 15px; border-left: 4px solid ${estilos.colors.accentPrimary};">
-                                <p style="margin: 0; color: ${estilos.colors.accentPrimary}; font-size: 0.9em;">
-                                    <i class="fas fa-clock" style="color: ${estilos.colors.accentPrimary}; margin-right: 8px;"></i> 
-                                    <strong>Debes esperar 15 minutos antes de intentar nuevamente.</strong>
-                                </p>
-                            </div>
-                            <div style="margin-top: 15px;">
-                                <button onclick="mostrarRecuperacionContraseña()" 
-                                        style="width: 100%; padding: 10px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: ${estilos.transition};"
-                                        onmouseover="this.style.opacity='0.9';"
-                                        onmouseout="this.style.opacity='1';">
-                                    <i class="fas fa-unlock-alt" style="margin-right: 8px;"></i> Recuperar Contraseña Ahora
-                                </button>
-                            </div>
+                            <p><strong>Debes esperar 15 minutos antes de intentar nuevamente.</strong></p>
+                            <button class="swal2-confirm swal2-styled" onclick="window.mostrarRecuperacionContraseña()">
+                                <i class="fas fa-unlock-alt"></i> Recuperar Contraseña Ahora
+                            </button>
                         </div>
                     `,
-                    confirmButtonColor: estilos.colors.accentPrimary,
-                    background: estilos.colors.bgPrimary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    },
+                    showConfirmButton: false,
                     showCancelButton: true,
                     cancelButtonText: 'Entendido'
                 });
-                
+
             } else if (error.message.includes('auth/network-request-failed')) {
                 Swal.fire({
                     title: 'Error de conexión',
                     text: 'Verifica tu conexión a internet e intenta nuevamente',
-                    confirmButtonColor: estilos.colors.accentPrimary,
-                    background: estilos.colors.bgPrimary,
-                    color: estilos.colors.primary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    }
+                    confirmButtonText: 'ENTENDIDO'
                 });
                 emailInput.focus();
-                
+
             } else if (error.message.includes('desactivada') || error.message.includes('inhabilitada')) {
                 Swal.fire({
                     title: 'Cuenta desactivada',
                     text: 'Tu cuenta está desactivada. Contacta al administrador del sistema.',
-                    confirmButtonColor: estilos.colors.accentPrimary,
-                    background: estilos.colors.bgPrimary,
-                    color: estilos.colors.primary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    }
+                    confirmButtonText: 'ENTENDIDO'
                 });
-                
+
             } else if (error.message.includes('no está verificado')) {
                 Swal.fire({
                     title: 'Email no verificado',
                     html: `
-                        <div style="text-align: left; color: ${estilos.colors.secondary};">
+                        <div>
                             <p>Debes verificar tu correo electrónico antes de iniciar sesión.</p>
-                            <div style="background: ${estilos.colors.bgTertiary}; padding: 12px; border-radius: ${estilos.borderRadius}; margin-top: 15px; border-left: 4px solid ${estilos.colors.accentSecondary};">
-                                <p style="margin: 0; color: ${estilos.colors.accentSecondary}; font-size: 0.9em;">
-                                    <i class="fas fa-envelope-open-text" style="color: ${estilos.colors.accentSecondary}; margin-right: 8px;"></i> 
-                                    <strong>Revisa tu bandeja de entrada (y spam) para el enlace de verificación.</strong>
-                                </p>
-                            </div>
-                            <div style="margin-top: 15px;">
-                                <button onclick="reenviarVerificacion()" 
-                                        style="width: 100%; padding: 10px; background: linear-gradient(135deg, ${estilos.colors.accentPrimary}, ${estilos.colors.accentSecondary}); color: ${estilos.colors.textDark}; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: ${estilos.transition};"
-                                        onmouseover="this.style.opacity='0.9';"
-                                        onmouseout="this.style.opacity='1';">
-                                    <i class="fas fa-redo" style="margin-right: 8px;"></i> Reenviar Email de Verificación
-                                </button>
-                            </div>
+                            <p><strong>Revisa tu bandeja de entrada (y spam) para el enlace de verificación.</strong></p>
                         </div>
                     `,
-                    confirmButtonColor: estilos.colors.accentSecondary,
-                    background: estilos.colors.bgPrimary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    }
+                    confirmButtonText: 'ENTENDIDO'
                 });
-                
+
             } else {
                 Swal.fire({
                     title: 'Error en el login',
                     text: error.message || 'Ha ocurrido un error inesperado. Intenta nuevamente.',
-                    confirmButtonColor: estilos.colors.accentSecondary,
-                    background: estilos.colors.bgPrimary,
-                    color: estilos.colors.primary,
-                    customClass: {
-                        popup: 'swal2-popup',
-                        title: 'swal2-title',
-                        htmlContainer: 'swal2-html-container',
-                        confirmButton: 'swal2-confirm',
-                        cancelButton: 'swal2-cancel'
-                    }
+                    confirmButtonText: 'ENTENDIDO'
                 });
                 emailInput.focus();
             }
         }
     });
-    
-    document.addEventListener('keydown', function(e) {
+
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && document.activeElement === passwordInput) {
-            console.log('Enter presionado en campo contraseña');
             loginForm.dispatchEvent(new Event('submit'));
         }
     });
-    
+
     if (forgotPasswordLink) {
-        forgotPasswordLink.addEventListener('click', function(e) {
+        forgotPasswordLink.addEventListener('click', function (e) {
             e.preventDefault();
-            console.log('Clic en recuperar contraseña');
-            mostrarRecuperacionContraseña();
+            window.mostrarRecuperacionContraseña();
         });
     }
-    
-    if (registerBtn) {
-        registerBtn.addEventListener('click', function(e) {
-            console.log('Clic en botón registrarse');
-        });
-    }
-    
+
     checkExistingSession();
-    
+
     setTimeout(() => {
         if (emailInput) {
             emailInput.focus();
-            console.log('Campo email enfocado automáticamente');
         }
     }, 300);
-    
-    console.log('Sistema de login con SweetAlerts personalizados inicializado correctamente');
 });
-
-console.log('login.js cargado - Con SweetAlerts usando variables CSS personalizadas');

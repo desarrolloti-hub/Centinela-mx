@@ -1,7 +1,13 @@
-// ARCHIVO JS PARA REGISTRO DE ADMINISTRADOR
+// ARCHIVO JS PARA REGISTRO DE ADMINISTRADOR - VERSIÓN CORREGIDA (SWEETALERT2 PARA FOTOS)
 
 // Importar las clases correctamente desde user.js
 import { UserManager } from '/clases/user.js';
+
+// ==================== VARIABLES GLOBALES ====================
+let profileImageBase64 = null;
+let orgImageBase64 = null;
+let selectedFile = null;
+let currentPhotoType = '';
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', function() {
@@ -66,15 +72,7 @@ function obtenerElementosDOM() {
             registerForm: document.getElementById('registerForm'),
             
             // Toggle de contraseñas
-            togglePasswordBtns: document.querySelectorAll('.toggle-password'),
-            
-            // Modal
-            photoModal: document.getElementById('photoModal'),
-            previewImage: document.getElementById('previewImage'),
-            modalTitle: document.getElementById('modalTitle'),
-            modalMessage: document.getElementById('modalMessage'),
-            confirmChangeBtn: document.getElementById('confirmChangeBtn'),
-            cancelChangeBtn: document.getElementById('cancelChangeBtn')
+            togglePasswordBtns: document.querySelectorAll('.toggle-password')
         };
     } catch (error) {
         console.error('❌ Error obteniendo elementos DOM:', error);
@@ -106,23 +104,66 @@ function mostrarMensajeInicial(element) {
     element.style.display = 'block';
 }
 
-// ========== MANEJO DE IMÁGENES ==========
+// ========== MANEJO DE IMÁGENES CON SWEETALERT2 ==========
 
 function configurarHandlers(elements, userManager) {
+    // Variable para controlar que no se procese el mismo archivo múltiples veces
+    let procesandoFoto = false;
+
     // Foto de perfil
     if (elements.editProfileOverlay && elements.profileInput) {
-        elements.editProfileOverlay.addEventListener('click', () => elements.profileInput.click());
-        elements.profileCircle.addEventListener('click', () => elements.profileInput.click());
+        elements.editProfileOverlay.addEventListener('click', () => {
+            elements.profileInput.value = ''; // Limpiar antes de abrir
+            elements.profileInput.click();
+        });
         
-        elements.profileInput.addEventListener('change', (e) => manejarSeleccionFoto(e, elements, 'profile'));
+        elements.profileCircle.addEventListener('click', () => {
+            elements.profileInput.value = ''; // Limpiar antes de abrir
+            elements.profileInput.click();
+        });
+        
+        elements.profileInput.addEventListener('change', (e) => {
+            if (procesandoFoto) return;
+            
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            procesandoFoto = true;
+            
+            manejarSeleccionFoto(file, 'profile', elements)
+                .finally(() => {
+                    procesandoFoto = false;
+                    elements.profileInput.value = ''; // Limpiar después de procesar
+                });
+        });
     }
     
     // Logo de organización
     if (elements.editOrgOverlay && elements.orgInput) {
-        elements.editOrgOverlay.addEventListener('click', () => elements.orgInput.click());
-        elements.orgCircle.addEventListener('click', () => elements.orgInput.click());
+        elements.editOrgOverlay.addEventListener('click', () => {
+            elements.orgInput.value = ''; // Limpiar antes de abrir
+            elements.orgInput.click();
+        });
         
-        elements.orgInput.addEventListener('change', (e) => manejarSeleccionFoto(e, elements, 'organization'));
+        elements.orgCircle.addEventListener('click', () => {
+            elements.orgInput.value = ''; // Limpiar antes de abrir
+            elements.orgInput.click();
+        });
+        
+        elements.orgInput.addEventListener('change', (e) => {
+            if (procesandoFoto) return;
+            
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            procesandoFoto = true;
+            
+            manejarSeleccionFoto(file, 'organization', elements)
+                .finally(() => {
+                    procesandoFoto = false;
+                    elements.orgInput.value = ''; // Limpiar después de procesar
+                });
+        });
     }
     
     // Mostrar/ocultar contraseña
@@ -154,67 +195,70 @@ function configurarHandlers(elements, userManager) {
     if (elements.cancelBtn) {
         elements.cancelBtn.addEventListener('click', () => cancelarRegistro());
     }
-    
-    // Modal de confirmación de foto
-    if (elements.confirmChangeBtn && elements.cancelChangeBtn && elements.photoModal) {
-        elements.confirmChangeBtn.addEventListener('click', () => confirmarCambioFoto(elements));
-        elements.cancelChangeBtn.addEventListener('click', () => cancelarCambioFoto(elements));
-        
-        elements.photoModal.addEventListener('click', (e) => {
-            if (e.target === elements.photoModal) {
-                cancelarCambioFoto(elements);
-            }
-        });
-    }
 }
 
-// Variables para manejo de imágenes
-let selectedFile = null;
-let currentPhotoType = '';
-let profileImageBase64 = null;
-let orgImageBase64 = null;
-
-function manejarSeleccionFoto(event, elements, type) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
+async function manejarSeleccionFoto(file, type, elements) {
     // Validar archivo
     const maxSizeMB = type === 'profile' ? 5 : 10;
     if (!validarArchivo(file, maxSizeMB)) {
-        event.target.value = '';
         return;
     }
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        // Mostrar preview en modal
-        if (elements.previewImage) {
-            elements.previewImage.src = e.target.result;
-        }
+    return new Promise((resolve) => {
+        const reader = new FileReader();
         
-        // Configurar modal según tipo
-        if (elements.modalTitle) {
-            elements.modalTitle.textContent = type === 'profile' 
-                ? 'CAMBIAR FOTO DE PERFIL' 
-                : 'CAMBIAR LOGO DE ORGANIZACIÓN';
-        }
+        reader.onload = function(e) {
+            const imageBase64 = e.target.result;
+            const fileSizeKB = Math.round(file.size / 1024);
+            
+            Swal.fire({
+                title: type === 'profile' ? 'Confirmar foto de perfil' : 'Confirmar logo de organización',
+                html: `
+                    <div style="text-align: center;">
+                        <img src="${imageBase64}" 
+                             style="width: 150px; height: 150px; border-radius: 50% ; object-fit: cover; border: 3px solid var(--color-accent-primary); margin: 10px auto 15px auto; display: block;">
+                        <p><strong>Tamaño:</strong> ${fileSizeKB} KB</p>
+                        <p>¿Deseas usar esta imagen?</p>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'CONFIRMAR',
+                cancelButtonText: 'CANCELAR',
+                allowOutsideClick: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (type === 'profile') {
+                        // Actualizar foto de perfil
+                        if (elements.profilePlaceholder && elements.profileImage) {
+                            elements.profilePlaceholder.style.display = 'none';
+                            elements.profileImage.src = imageBase64;
+                            elements.profileImage.style.display = 'block';
+                            profileImageBase64 = imageBase64;
+                        }
+                    } else {
+                        // Actualizar logo de organización
+                        if (elements.orgPlaceholder && elements.orgImage) {
+                            elements.orgPlaceholder.style.display = 'none';
+                            elements.orgImage.src = imageBase64;
+                            elements.orgImage.style.display = 'block';
+                            orgImageBase64 = imageBase64;
+                        }
+                    }
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Imagen guardada!',
+                        text: type === 'profile' ? 'Tu foto de perfil se ha guardado correctamente' : 'El logo de organización se ha guardado correctamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+                resolve();
+            });
+        };
         
-        if (elements.modalMessage) {
-            elements.modalMessage.textContent = type === 'profile'
-                ? '¿Deseas usar esta imagen como tu foto de perfil?'
-                : '¿Deseas usar esta imagen como logo de tu organización?';
-        }
-        
-        // Mostrar modal
-        if (elements.photoModal) {
-            elements.photoModal.style.display = 'flex';
-        }
-        
-        selectedFile = file;
-        currentPhotoType = type;
-    };
-    
-    reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+    });
 }
 
 function validarArchivo(file, maxSizeMB) {
@@ -242,69 +286,6 @@ function validarArchivo(file, maxSizeMB) {
     }
     
     return true;
-}
-
-function confirmarCambioFoto(elements) {
-    if (!selectedFile || !currentPhotoType) return;
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        if (currentPhotoType === 'profile') {
-            // Actualizar foto de perfil
-            if (elements.profilePlaceholder && elements.profileImage) {
-                elements.profilePlaceholder.style.display = 'none';
-                elements.profileImage.src = e.target.result;
-                elements.profileImage.style.display = 'block';
-                profileImageBase64 = e.target.result;
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Foto guardada!',
-                    text: 'Tu foto de perfil se ha guardado correctamente',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            }
-        } else {
-            // Actualizar logo de organización
-            if (elements.orgPlaceholder && elements.orgImage) {
-                elements.orgPlaceholder.style.display = 'none';
-                elements.orgImage.src = e.target.result;
-                elements.orgImage.style.display = 'block';
-                orgImageBase64 = e.target.result;
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Logo guardada!',
-                    text: 'El logo de organización se ha guardado correctamente',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            }
-        }
-        
-        // Limpiar y cerrar
-        limpiarModal(elements);
-    };
-    
-    reader.readAsDataURL(selectedFile);
-}
-
-function cancelarCambioFoto(elements) {
-    limpiarModal(elements);
-}
-
-function limpiarModal(elements) {
-    if (elements.photoModal) {
-        elements.photoModal.style.display = 'none';
-    }
-    
-    // Limpiar inputs de archivo
-    if (elements.profileInput) elements.profileInput.value = '';
-    if (elements.orgInput) elements.orgInput.value = '';
-    
-    selectedFile = null;
-    currentPhotoType = '';
 }
 
 // ========== VALIDACIÓN ==========
@@ -464,8 +445,7 @@ async function verificarOrganizacionExistente(nombreOrganizacion, userManager) {
                         </p>
                     </div>
                 `,
-                confirmButtonText: 'CONTINUAR',
-                confirmButtonColor: '#3085d6'
+                confirmButtonText: 'CONTINUAR'
             });
             
             // Permitir el registro - Firebase Auth detectará duplicados durante el proceso
@@ -536,8 +516,7 @@ async function registrarAdministrador(event, elements, userManager) {
                         </div>
                     </div>
                 `,
-                confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: '#d33'
+                confirmButtonText: 'ENTENDIDO'
             });
             
             // Resaltar campo de organización
@@ -556,29 +535,22 @@ async function registrarAdministrador(event, elements, userManager) {
         
         // Mostrar confirmación final
         const confirmResult = await Swal.fire({
-            title: 'CREAR CUENTA DE ADMINISTRADOR',
+            title: 'Crear cuenta de administrador',
             html: `
                 <div style="text-align: left; padding: 10px 0;">
-                    <div style="background: var(--color-bg-secondary); padding: 10px; border-radius: 5px; margin-bottom: 15px;">
-                        <p><strong>Organización:</strong> ${nombreOrganizacion}</p>
-                        <p><strong>Nombre:</strong> ${elements.fullName.value.trim()}</p>
-                        <p><strong>Email:</strong> ${elements.email.value.trim()}</p>
-                        <p><strong>Tipo de cuenta:</strong> SUPER ADMINISTRADOR</p>
-                    </div>
+                    <p><strong>Organización:</strong> ${nombreOrganizacion}</p>
+                    <p><strong>Nombre:</strong> ${elements.fullName.value.trim()}</p>
+                    <p><strong>Email:</strong> ${elements.email.value.trim()}</p>
+                    <p><strong>Rol:</strong> ADMINISTRADOR PRINCIPAL</p>
                     <p style="color: #ff9800; margin-top: 15px;">
-                        <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación a tu email.
+                        <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación.
                     </p>
-                    <div style="background: #43474a; padding: 10px; border-radius: 5px; margin-top: 15px;">
-                        <p style="font-size: 0.9rem;"><strong>Importante:</strong> Serás el administrador principal de esta organización y podrás crear colaboradores.</p>
-                    </div>
                 </div>
             `,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'CONFIRMAR REGISTRO',
+            confirmButtonText: 'CONFIRMAR',
             cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#3085d6',
             allowOutsideClick: false
         });
         
@@ -594,9 +566,8 @@ async function registrarAdministrador(event, elements, userManager) {
         // Mostrar loader de creación
         Swal.fire({
             title: 'Creando cuenta de administrador...',
-            html: 'Esto puede tomar unos segundos. Por favor espera...',
+            text: 'Esto puede tomar unos segundos. Por favor espera...',
             allowOutsideClick: false,
-            allowEscapeKey: false,
             showConfirmButton: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -613,7 +584,9 @@ async function registrarAdministrador(event, elements, userManager) {
             correoElectronico: elements.email.value.trim(),
             fotoUsuario: profileImageBase64,
             fotoOrganizacion: orgImageBase64,
-            cargo: 'administrador',
+            // ✅ CORREGIDO: Asignar rol 'administrador' y cargo null
+            rol: 'administrador',
+            cargo: null,
             status: true,
             theme: 'Predeterminado',
             plan: 'gratis',
@@ -624,6 +597,9 @@ async function registrarAdministrador(event, elements, userManager) {
             organizacion: adminData.organizacion,
             nombre: adminData.nombreCompleto,
             email: adminData.correoElectronico,
+            // ✅ CORREGIDO: Mostrar rol y cargo
+            rol: adminData.rol,
+            cargo: adminData.cargo,
             camelCase: adminData.organizacionCamelCase
         });
         
@@ -657,38 +633,18 @@ async function registrarAdministrador(event, elements, userManager) {
 async function mostrarExitoRegistro(adminData) {
     const result = await Swal.fire({
         icon: 'success',
-        title: '¡REGISTRO EXITOSO!',
+        title: '¡Registro exitoso!',
         html: `
-            <div style="text-align: center; padding: 20px;">
-                <div style="font-size: 60px; color: #28a745; margin-bottom: 20px;">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
-                    ¡Cuenta creada exitosamente!
-                </h3>
-                <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                    <p><strong>Organización:</strong> ${adminData.organizacion}</p>
-                    <p><strong>Administrador:</strong> ${adminData.nombreCompleto}</p>
-                    <p><strong>Email:</strong> ${adminData.correoElectronico}</p>
-                    <p><strong>Rol:</strong> SUPER ADMINISTRADOR</p>
-                    <p><strong>Plan:</strong> ${adminData.plan.toUpperCase()}</p>
-                </div>
-                <div style="background: #fde8e8; padding: 15px; border-radius: 8px; margin-top: 20px;">
-                    <h4 style="color: #0a2540; margin-bottom: 10px;">
-                        <i class="fas fa-envelope"></i> Verificación de Email
-                    </h4>
-                    <p style="color: #666; margin-bottom: 10px;">
-                        Se ha enviado un correo de verificación a <strong>${adminData.correoElectronico}</strong>
-                    </p>
-                    <p style="color: #666; font-size: 0.9rem;">
-                        <i class="fas fa-info-circle"></i> Debes verificar tu email antes de iniciar sesión
-                    </p>
-                </div>
-                </div>
+            <div style="text-align: center;">
+                <p><strong>Organización:</strong> ${adminData.organizacion}</p>
+                <p><strong>Administrador:</strong> ${adminData.nombreCompleto}</p>
+                <p><strong>Email:</strong> ${adminData.correoElectronico}</p>
+                <p><strong>Rol:</strong> ADMINISTRADOR PRINCIPAL</p>
+                <p style="margin-top: 15px;"><i class="fas fa-envelope"></i> Se ha enviado un correo de verificación</p>
+                <p>Debes verificar tu email antes de iniciar sesión.</p>
             </div>
         `,
         confirmButtonText: 'IR AL INICIO DE SESIÓN',
-        confirmButtonColor: '#28a745',
         allowOutsideClick: false
     }).then(() => {
         // Redirigir al login
@@ -735,7 +691,7 @@ function manejarErrorRegistro(error) {
                         errorMessage = error.message;
                         errorTitle = 'Error de organización';
                     } else if (error.message.includes('Firestore')) {
-                        errorMessage = 'Error en la base de datos: ' + error.message;
+                        errorMessage = 'Error en la base de datos';
                         errorTitle = 'Error de base de datos';
                     }
                 }
@@ -767,7 +723,6 @@ function manejarErrorRegistro(error) {
             </div>
         `,
         confirmButtonText: 'ENTENDIDO',
-        confirmButtonColor: '#d33',
         allowOutsideClick: true
     });
 }
@@ -780,10 +735,8 @@ function cancelarRegistro() {
         text: "Se perderán todos los datos ingresados",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sí, cancelar',
-        cancelButtonText: 'No, continuar',
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6'
+        confirmButtonText: 'CONFIRMAR',
+        cancelButtonText: 'CANCELAR'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = '/users/visitors/login/login.html';

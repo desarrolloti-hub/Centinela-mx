@@ -1,63 +1,39 @@
-// crearAreas.js - MÓDULO PARA CREACIÓN DE ÁREAS (SOLO SWEETALERT2)
-console.log('🚀 crear-areas.js iniciando...');
+// crearAreas.js - VERSIÓN CON VALIDACIONES DE CARACTERES Y MENSAJES SIMPLIFICADOS
 
-// Variable global para debugging
 window.crearAreaDebug = {
     estado: 'iniciando',
     controller: null
 };
 
-// Cargar dependencias
-let Area, AreaManager, db, query, serverTimestamp, collection, doc, getDocs, setDoc, where;
+let Area, AreaManager;
+
+// LÍMITES DE CARACTERES
+const LIMITES = {
+    NOMBRE_AREA: 50,
+    DESCRIPCION_AREA: 500,
+    NOMBRE_CARGO: 50,
+    DESCRIPCION_CARGO: 200
+};
 
 async function cargarDependencias() {
     try {
-        console.log('1️⃣ Cargando dependencias...');
-        
-        const firebaseModule = await import('/config/firebase-config.js');
-        db = firebaseModule.db;
-        console.log('✅ Firebase cargado');
-        
-        const firestoreModule = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        ({ 
-            query,
-            serverTimestamp,
-            collection,
-            doc,
-            getDocs,
-            setDoc,
-            where
-        } = firestoreModule);
-        console.log('✅ Firestore functions cargadas');
-        
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
-        console.log('✅ Clases cargadas');
         
         iniciarAplicacion();
         
     } catch (error) {
-        console.error('❌ Error cargando dependencias:', error);
-        mostrarErrorInterfaz(`
-            <h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error de Carga</h4>
-            <p><strong>Error:</strong> ${error.message}</p>
-            <div class="alert alert-warning mt-3">
-                Verifica que los archivos existan:
-                <ul class="mb-0 mt-2">
-                    <li><code>/config/firebase-config.js</code></li>
-                    <li><code>/clases/area.js</code></li>
-                </ul>
-            </div>
-        `);
+        console.error('[Error]', error.message);
+        mostrarErrorInterfaz(error.message);
     }
 }
 
-function mostrarErrorInterfaz(mensajeHTML) {
-    const container = document.querySelector('.container-fluid') || document.body;
+function mostrarErrorInterfaz(mensaje) {
+    const container = document.querySelector('.container-fluid, .centinela-container') || document.body;
     const errorDiv = document.createElement('div');
     errorDiv.className = 'alert alert-danger m-4';
-    errorDiv.innerHTML = mensajeHTML;
+    errorDiv.innerHTML = `<h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${mensaje}</h4>`;
     container.prepend(errorDiv);
 }
 
@@ -71,65 +47,43 @@ function iniciarAplicacion() {
 
 function inicializarController() {
     try {
-        console.log('🎯 Inicializando CrearAreaController...');
-        
         const app = new CrearAreaController();
         window.crearAreaDebug.controller = app;
-        
         app.init();
-        
-        console.log('✅ Controlador de creación listo');
-        
     } catch (error) {
-        console.error('❌ Error inicializando:', error);
-        mostrarErrorInterfaz(`
-            <h4 class="text-danger">Error de Inicialización</h4>
-            <p>${error.message}</p>
-        `);
+        console.error('[Error]', error.message);
+        mostrarErrorInterfaz(error.message);
     }
 }
 
-// ==================== CLASE CREARAREACONTROLLER ====================
 class CrearAreaController {
     constructor() {
-        console.log('🛠️ Creando CrearAreaController...');
-        
         this.areaManager = new AreaManager();
         this.userManager = this.cargarUsuarioDesdeStorage();
         
         if (!this.userManager || !this.userManager.currentUser) {
-            console.error('❌ No se pudo cargar información del usuario');
             this.redirigirAlLogin();
             throw new Error('Usuario no autenticado');
         }
         
-        console.log('✅ Usuario cargado:', this.userManager.currentUser);
         this.areaEnProceso = null;
         this.areaCreadaReciente = null;
         this.loadingOverlay = null;
-        this.notificacionActual = null;
-        
-        // Array para almacenar los cargos
         this.cargos = [];
     }
     
-    // MÉTODO MEJORADO PARA CARGAR USUARIO
     cargarUsuarioDesdeStorage() {
-        console.log('📂 Cargando datos del usuario desde almacenamiento...');
-        
         try {
             let userData = null;
             
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-                console.log('🔑 Datos de admin encontrados:', adminData);
-                
                 userData = {
                     id: adminData.id || `admin_${Date.now()}`,
                     nombre: adminData.nombreCompleto || 'Administrador',
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    cargo: 'administrador',
+                    rol: 'administrador',
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase || this.convertirACamelCase(adminData.organizacion),
                     correo: adminData.correoElectronico || '',
@@ -146,14 +100,12 @@ class CrearAreaController {
                 const storedUserData = localStorage.getItem('userData');
                 if (storedUserData) {
                     userData = JSON.parse(storedUserData);
-                    console.log('👤 Datos de usuario encontrados:', userData);
                     userData.nombreCompleto = userData.nombreCompleto || userData.nombre || 'Usuario';
                     userData.esResponsable = false;
                 }
             }
             
             if (!userData) {
-                console.error('❌ No se encontraron datos de usuario');
                 return null;
             }
             
@@ -162,37 +114,19 @@ class CrearAreaController {
             if (!userData.organizacionCamelCase) {
                 userData.organizacionCamelCase = this.convertirACamelCase(userData.organizacion);
             }
-            if (!userData.cargo) userData.cargo = 'usuario';
+            if (!userData.rol) userData.rol = 'colaborador';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
             
-            console.log('✅ Usuario procesado:', {
-                id: userData.id,
-                nombre: userData.nombreCompleto,
-                cargo: userData.cargo,
-                organizacion: userData.organizacion,
-                organizacionCamelCase: userData.organizacionCamelCase,
-                esResponsable: userData.esResponsable || false
-            });
-            
-            return {
-                currentUser: userData
-            };
+            return { currentUser: userData };
             
         } catch (error) {
-            console.error('❌ Error cargando usuario:', error);
             return null;
         }
     }
     
-    // MÉTODO PARA CARGAR RESPONSABLES
     async cargarResponsables() {
-        console.log('👥 Cargando lista de responsables...');
-        
         const responsableSelect = document.getElementById('responsable');
-        if (!responsableSelect) {
-            console.error('❌ Select de responsable no encontrado');
-            return;
-        }
+        if (!responsableSelect) return;
         
         try {
             responsableSelect.innerHTML = '<option value="">Seleccionar responsable...</option>';
@@ -203,14 +137,11 @@ class CrearAreaController {
                 adminOption.text = `${this.userManager.currentUser.nombreCompleto} (Administrador)`;
                 adminOption.selected = true;
                 adminOption.style.fontWeight = 'bold';
-                adminOption.style.color = '#2c3e50';
                 responsableSelect.appendChild(adminOption);
-                
-                console.log('✅ Admin agregado como responsable:', this.userManager.currentUser.nombreCompleto);
             }
             
             const colaboradores = await this.cargarColaboradoresDesdeSistema();
-            if (colaboradores && colaboradores.length > 0) {
+            if (colaboradores?.length > 0) {
                 const separator = document.createElement('option');
                 separator.disabled = true;
                 separator.text = '────────── COLABORADORES ──────────';
@@ -231,13 +162,6 @@ class CrearAreaController {
                     option.text = nombreMostrar;
                     responsableSelect.appendChild(option);
                 });
-                
-                console.log(`✅ ${colaboradores.length} colaboradores cargados`);
-            } else {
-                const sinColabOption = document.createElement('option');
-                sinColabOption.disabled = true;
-                sinColabOption.text = '────────── SIN COLABORADORES ──────────';
-                responsableSelect.appendChild(sinColabOption);
             }
             
             const otroSeparator = document.createElement('option');
@@ -251,15 +175,11 @@ class CrearAreaController {
             responsableSelect.appendChild(nuevoOption);
             
         } catch (error) {
-            console.error('❌ Error cargando responsables:', error);
-            this.mostrarNotificacion('Se cargarán solo los responsables disponibles', 'warning');
+            this.mostrarNotificacion('Error cargando responsables', 'warning');
         }
     }
     
-    // MÉTODO PARA CARGAR COLABORADORES DESDE EL SISTEMA
     async cargarColaboradoresDesdeSistema() {
-        console.log('📋 Buscando colaboradores en el sistema...');
-        
         try {
             const orgKey = this.userManager.currentUser.organizacionCamelCase;
             const colaboradoresStorage = localStorage.getItem(`colaboradores_${orgKey}`);
@@ -267,18 +187,15 @@ class CrearAreaController {
             if (colaboradoresStorage) {
                 const colaboradores = JSON.parse(colaboradoresStorage);
                 if (colaboradores.length > 0) {
-                    console.log('✅ Colaboradores encontrados en localStorage:', colaboradores.length);
                     return colaboradores;
                 }
             }
             
             if (this.areaManager && typeof this.areaManager.obtenerColaboradoresPorOrganizacion === 'function') {
-                console.log('🔍 Buscando colaboradores en Firebase...');
                 const colaboradoresFB = await this.areaManager.obtenerColaboradoresPorOrganizacion(orgKey);
                 
-                if (colaboradoresFB && colaboradoresFB.length > 0) {
+                if (colaboradoresFB?.length > 0) {
                     localStorage.setItem(`colaboradores_${orgKey}`, JSON.stringify(colaboradoresFB));
-                    console.log('✅ Colaboradores cargados desde Firebase:', colaboradoresFB.length);
                     return colaboradoresFB;
                 }
             }
@@ -286,42 +203,24 @@ class CrearAreaController {
             const usuariosStorage = localStorage.getItem('usuariosOrganizacion');
             if (usuariosStorage) {
                 const usuarios = JSON.parse(usuariosStorage);
-                const colaboradoresOrg = usuarios.filter(user => 
+                return usuarios.filter(user => 
                     user.organizacionCamelCase === orgKey && 
                     user.id !== this.userManager.currentUser.id
                 );
-                
-                if (colaboradoresOrg.length > 0) {
-                    console.log('✅ Colaboradores encontrados en usuarios organizacionales:', colaboradoresOrg.length);
-                    return colaboradoresOrg;
-                }
             }
             
-            console.log('ℹ️ No se encontraron colaboradores adicionales');
             return [];
             
         } catch (error) {
-            console.error('❌ Error cargando colaboradores del sistema:', error);
             return [];
         }
     }
     
-    // MÉTODO PARA CONFIGURAR ORGANIZACIÓN AUTOMÁTICA
     configurarOrganizacionAutomatica() {
-        console.log('🏢 Configurando organización automática...');
-        
         const organizacionSelect = document.getElementById('organizacion');
-        if (!organizacionSelect || !this.userManager.currentUser) {
-            console.error('❌ No se puede configurar organización');
-            return;
-        }
+        if (!organizacionSelect || !this.userManager.currentUser) return;
         
         const organizacionUsuario = this.userManager.currentUser.organizacion;
-        
-        console.log('📝 Datos para organización:', {
-            organizacion: organizacionUsuario,
-            orgCamelCase: this.userManager.currentUser.organizacionCamelCase
-        });
         
         organizacionSelect.innerHTML = '';
         
@@ -335,12 +234,9 @@ class CrearAreaController {
         organizacionSelect.style.backgroundColor = '#f8f9fa';
         organizacionSelect.style.cursor = 'not-allowed';
         
-        console.log('✅ Organización configurada automáticamente:', organizacionUsuario);
-        
         this.mostrarInfoOrganizacion();
     }
     
-    // MOSTRAR INFORMACIÓN DE LA ORGANIZACIÓN EN LA INTERFAZ
     mostrarInfoOrganizacion() {
         if (document.querySelector('.organizacion-info')) return;
         
@@ -357,11 +253,6 @@ class CrearAreaController {
                     <p class="mb-0 text-muted small">
                         <i class="fas fa-user-shield me-1"></i>
                         Administrador: ${this.userManager.currentUser.nombreCompleto}
-                        ${this.userManager.currentUser.correo ? `(${this.userManager.currentUser.correo})` : ''}
-                    </p>
-                    <p class="mb-0 text-muted small">
-                        <i class="fas fa-key me-1"></i>
-                        ID Colección: <code>areas_${this.userManager.currentUser.organizacionCamelCase}</code>
                     </p>
                 </div>
             </div>
@@ -371,80 +262,80 @@ class CrearAreaController {
     }
     
     init() {
-        console.log('🎬 Iniciando aplicación de creación...');
-        console.log('👤 Usuario actual:', this.userManager.currentUser);
-        
-        this.verificarElementosDOM();
         this.inicializarEventos();
         this.inicializarValidaciones();
-        
         this.configurarOrganizacionAutomatica();
         this.cargarResponsables();
         this.inicializarGestionCargos();
         
-        console.log('✅ Aplicación de creación iniciada');
+        // Aplicar límites de caracteres a los campos
+        this.aplicarLimitesCaracteres();
     }
     
-    verificarElementosDOM() {
-        console.log('🔍 Verificando elementos del formulario...');
+    aplicarLimitesCaracteres() {
+        // Campo nombre área
+        const nombreArea = document.getElementById('nombreArea');
+        if (nombreArea) {
+            nombreArea.maxLength = LIMITES.NOMBRE_AREA;
+            nombreArea.addEventListener('input', () => this.validarLongitudCampo(nombreArea, LIMITES.NOMBRE_AREA, 'El nombre del área'));
+        }
         
-        const ids = [
-            'btnVolverLista', 'formCrearArea', 'nombreArea',
-            'organizacion', 'descripcionArea', 'contadorCaracteres', 
-            'responsable', 'btnCancelar', 'btnCrearArea',
-            'btnAgregarCargo', 'cargosList', 'cargosCounter'
-        ];
-        
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-            console.log(`${el ? '✅' : '❌'} ${id}`);
-        });
+        // Campo descripción área
+        const descripcionArea = document.getElementById('descripcionArea');
+        if (descripcionArea) {
+            descripcionArea.maxLength = LIMITES.DESCRIPCION_AREA;
+            descripcionArea.addEventListener('input', () => this.validarLongitudCampo(descripcionArea, LIMITES.DESCRIPCION_AREA, 'La descripción'));
+        }
+    }
+    
+    validarLongitudCampo(campo, limite, nombreCampo) {
+        const longitud = campo.value.length;
+        if (longitud > limite) {
+            campo.value = campo.value.substring(0, limite);
+            this.mostrarNotificacion(`${nombreCampo} no puede exceder ${limite} caracteres`, 'warning', 3000);
+        }
+    }
+    
+    validarLongitudCargo(nombre, descripcion) {
+        if (nombre.length > LIMITES.NOMBRE_CARGO) {
+            this.mostrarNotificacion(`El nombre del cargo no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`, 'warning', 3000);
+            return false;
+        }
+        if (descripcion.length > LIMITES.DESCRIPCION_CARGO) {
+            this.mostrarNotificación(`La descripción del cargo no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`, 'warning', 3000);
+            return false;
+        }
+        return true;
     }
     
     inicializarEventos() {
-        console.log('🎮 Configurando eventos...');
+        const btnVolverLista = document.getElementById('btnVolverLista');
+        if (btnVolverLista) {
+            btnVolverLista.addEventListener('click', () => this.volverALista());
+        }
         
-        try {
-            const btnVolverLista = document.getElementById('btnVolverLista');
-            if (btnVolverLista) {
-                btnVolverLista.addEventListener('click', () => this.volverALista());
-                console.log('✅ Evento btnVolverLista');
-            }
-            
-            const descripcionArea = document.getElementById('descripcionArea');
-            if (descripcionArea) {
-                descripcionArea.addEventListener('input', () => this.actualizarContadorCaracteres());
-                console.log('✅ Evento descripcionArea');
-            }
-            
-            const btnCancelar = document.getElementById('btnCancelar');
-            if (btnCancelar) {
-                btnCancelar.addEventListener('click', () => this.cancelarCreacion());
-                console.log('✅ Evento btnCancelar');
-            }
-            
-            const formCrearArea = document.getElementById('formCrearArea');
-            if (formCrearArea) {
-                formCrearArea.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.validarYPrepararCreacion();
-                });
-                console.log('✅ Evento formCrearArea');
-            }
-            
-            console.log('✅ Todos los eventos configurados');
-            
-        } catch (error) {
-            console.error('❌ Error configurando eventos:', error);
+        const descripcionArea = document.getElementById('descripcionArea');
+        if (descripcionArea) {
+            descripcionArea.addEventListener('input', () => this.actualizarContadorCaracteres());
+        }
+        
+        const btnCancelar = document.getElementById('btnCancelar');
+        if (btnCancelar) {
+            btnCancelar.addEventListener('click', () => this.cancelarCreacion());
+        }
+        
+        const formCrearArea = document.getElementById('formCrearArea');
+        if (formCrearArea) {
+            formCrearArea.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.validarYPrepararCreacion();
+            });
         }
     }
     
     inicializarValidaciones() {
-        console.log('📋 Inicializando validaciones...');
         this.actualizarContadorCaracteres();
     }
-    
-    // ========== MÉTODOS DE INTERFAZ ==========
     
     actualizarContadorCaracteres() {
         const descripcionArea = document.getElementById('descripcionArea');
@@ -452,21 +343,24 @@ class CrearAreaController {
         
         if (descripcionArea && contador) {
             const longitud = descripcionArea.value.length;
-            contador.textContent = longitud;
-            contador.className = longitud > 450 ? 'text-warning' : 'text-success';
+            contador.textContent = `${longitud}/${LIMITES.DESCRIPCION_AREA}`;
+            
+            // Cambiar color si se acerca al límite
+            if (longitud > LIMITES.DESCRIPCION_AREA * 0.9) {
+                contador.style.color = 'var(--color-warning)';
+            } else if (longitud > LIMITES.DESCRIPCION_AREA * 0.95) {
+                contador.style.color = 'var(--color-danger)';
+            } else {
+                contador.style.color = 'var(--color-accent-primary)';
+            }
         }
     }
     
-    // ========== MÉTODOS DE NAVEGACIÓN ==========
-    
     volverALista() {
-        console.log('⬅️ Volviendo a lista de áreas...');
         window.location.href = '/users/admin/areas/areas.html';
     }
     
     cancelarCreacion() {
-        console.log('❌ Cancelando creación...');
-        
         Swal.fire({
             title: '¿Cancelar registro?',
             text: "Se perderán todos los datos ingresados",
@@ -483,17 +377,18 @@ class CrearAreaController {
         });
     }
     
-    // ========== MÉTODOS DE VALIDACIÓN ==========
-    
     validarFormulario() {
-        console.log('✅ Validando formulario...');
-        
         const nombreArea = document.getElementById('nombreArea')?.value.trim();
         const descripcion = document.getElementById('descripcionArea')?.value.trim();
         const responsableSelect = document.getElementById('responsable');
         
         if (!nombreArea) {
             this.mostrarError('El nombre del área es requerido');
+            return false;
+        }
+        
+        if (nombreArea.length > LIMITES.NOMBRE_AREA) {
+            this.mostrarError(`El nombre del área no puede exceder ${LIMITES.NOMBRE_AREA} caracteres`);
             return false;
         }
         
@@ -504,6 +399,11 @@ class CrearAreaController {
         
         if (descripcion.length < 20) {
             this.mostrarError('La descripción debe tener al menos 20 caracteres');
+            return false;
+        }
+        
+        if (descripcion.length > LIMITES.DESCRIPCION_AREA) {
+            this.mostrarError(`La descripción no puede exceder ${LIMITES.DESCRIPCION_AREA} caracteres`);
             return false;
         }
         
@@ -526,30 +426,34 @@ class CrearAreaController {
         
         const tieneCargoValido = this.cargos.some(c => c.nombre && c.nombre.trim() !== '');
         if (!tieneCargoValido) {
-            this.mostrarError('Debe agregar al menos un cargo con nombre para el área');
+            this.mostrarError('Debe agregar al menos un cargo con nombre');
             return false;
         }
         
-        console.log('✅ Validación manual exitosa');
+        // Validar límites de caracteres de los cargos
+        for (const cargo of this.cargos) {
+            if (cargo.nombre && cargo.nombre.length > LIMITES.NOMBRE_CARGO) {
+                this.mostrarError(`El nombre del cargo no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`);
+                return false;
+            }
+            if (cargo.descripcion && cargo.descripcion.length > LIMITES.DESCRIPCION_CARGO) {
+                this.mostrarError(`La descripción del cargo no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`);
+                return false;
+            }
+        }
+        
         return true;
     }
     
     async validarYPrepararCreacion() {
         try {
-            console.log('🔄 Validando y preparando creación...');
-            
-            if (!this.validarFormulario()) {
-                return;
-            }
+            if (!this.validarFormulario()) return;
             
             const datosArea = this.obtenerDatosFormulario();
             
-            console.log('📋 Datos a crear:', datosArea);
-            console.log('👤 Usuario que crea:', this.userManager.currentUser);
-            
-            const existe = await this.verificarAreaExistenteEnColeccion(
+            const existe = await this.areaManager.verificarAreaExistente(
                 datosArea.nombreArea,
-                datosArea.organizacionCamelCase
+                this.userManager.currentUser.organizacionCamelCase
             );
             
             if (existe) {
@@ -559,26 +463,12 @@ class CrearAreaController {
             
             this.areaEnProceso = datosArea;
             
-            // MODAL DE CONFIRMACIÓN CON SWEETALERT2
-            const cantidadCargos = Object.keys(datosArea.cargos || {}).length;
-            
             const result = await Swal.fire({
                 title: '¿Confirmar creación?',
-                html: `
-                    <div style="text-align: left;">
-                        <p>¿Está seguro de crear la siguiente área?</p>
-                        <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 8px; margin-top: 10px;">
-                            <h6 style="color: var(--color-accent-primary); margin-bottom: 10px;">${datosArea.nombreArea}</h6>
-                            <p style="margin-bottom: 5px;"><small><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</small></p>
-                            <p style="margin-bottom: 5px;"><small><strong>Colección:</strong> areas_${datosArea.organizacionCamelCase}</small></p>
-                            <p style="margin-bottom: 5px;"><small><strong>Cargos:</strong> ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}</small></p>
-                            <p style="margin-bottom: 0;"><small><strong>Descripción:</strong> ${datosArea.descripcion.substring(0, 100)}${datosArea.descripcion.length > 100 ? '...' : ''}</small></p>
-                        </div>
-                    </div>
-                `,
+                text: '¿Está seguro de crear esta área?',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonText: 'Sí, crear área',
+                confirmButtonText: 'Sí, crear',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#2f8cff',
                 cancelButtonColor: '#545454'
@@ -589,58 +479,19 @@ class CrearAreaController {
             }
             
         } catch (error) {
-            console.error('❌ Error en validación:', error);
-            this.mostrarError('Error validando datos: ' + error.message);
+            this.mostrarError('Error validando datos');
         }
     }
-    
-    // VERIFICAR ÁREA EXISTENTE EN COLECCIÓN ESPECÍFICA
-    async verificarAreaExistenteEnColeccion(nombreArea, organizacionCamelCase) {
-        try {
-            console.log(`🔍 Verificando si ya existe el área "${nombreArea}" en colección areas_${organizacionCamelCase}...`);
-            
-            const collectionName = `areas_${organizacionCamelCase}`;
-            
-            const q = query(
-                collection(db, collectionName),
-                where("nombreArea", "==", nombreArea)
-            );
-            
-            const querySnapshot = await getDocs(q);
-            const existe = !querySnapshot.empty;
-            
-            console.log(`✅ Verificación completada. ¿Existe?: ${existe}`);
-            
-            if (existe) {
-                console.log('⚠️ Ya existe un área con ese nombre:', nombreArea);
-            }
-            
-            return existe;
-            
-        } catch (error) {
-            console.error('❌ Error verificando área existente:', error);
-            return false;
-        }
-    }
-    
-    // ========== MÉTODOS PARA GESTIÓN DE CARGOS ==========
     
     inicializarGestionCargos() {
-        console.log('💼 Inicializando gestión de cargos...');
-        
         const btnAgregarCargo = document.getElementById('btnAgregarCargo');
         if (btnAgregarCargo) {
             btnAgregarCargo.addEventListener('click', () => this.agregarCargo());
-            console.log('✅ Evento btnAgregarCargo');
         }
-        
-        this.agregarCargo();
     }
     
     agregarCargo() {
-        console.log('➕ Agregando nuevo cargo...');
-        
-        const cargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+        const cargoId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
         
         const nuevoCargo = {
             id: cargoId,
@@ -654,13 +505,14 @@ class CrearAreaController {
         
         setTimeout(() => {
             const input = document.getElementById(`cargo_nombre_${cargoId}`);
-            if (input) input.focus();
+            if (input) {
+                input.focus();
+                input.maxLength = LIMITES.NOMBRE_CARGO;
+            }
         }, 100);
     }
     
     eliminarCargo(cargoId) {
-        console.log('🗑️ Eliminando cargo:', cargoId);
-        
         Swal.fire({
             title: '¿Eliminar cargo?',
             text: "Esta acción no se puede deshacer",
@@ -681,8 +533,6 @@ class CrearAreaController {
     }
     
     renderizarCargos() {
-        console.log('🖼️ Renderizando cargos...');
-        
         const cargosList = document.getElementById('cargosList');
         if (!cargosList) return;
         
@@ -706,7 +556,7 @@ class CrearAreaController {
                             <i class="fas fa-briefcase me-2"></i>
                             Cargo #${index + 1}
                         </h6>
-                        <button type="button" class="btn btn-eliminar-cargo" onclick="window.crearAreaDebug.controller.eliminarCargo('${cargo.id}')">
+                        <button type="button" class="btn-eliminar-cargo" onclick="window.crearAreaDebug.controller.eliminarCargo('${cargo.id}')">
                             <i class="fas fa-trash-alt me-1"></i>
                             Eliminar
                         </button>
@@ -715,23 +565,29 @@ class CrearAreaController {
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Nombre del Cargo *</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
                                 <input type="text" class="form-control" 
                                        id="cargo_nombre_${cargo.id}"
                                        value="${this.escapeHTML(cargo.nombre)}"
                                        placeholder="Ej: Gerente, Analista, Coordinador"
+                                       maxlength="${LIMITES.NOMBRE_CARGO}"
                                        onchange="window.crearAreaDebug.controller.actualizarCargo('${cargo.id}', 'nombre', this.value)">
+                            </div>
+                            <div class="char-limit-info">
+                                <span class="char-counter">${cargo.nombre?.length || 0}/${LIMITES.NOMBRE_CARGO}</span>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Descripción del Cargo</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
                                 <input type="text" class="form-control" 
                                        id="cargo_descripcion_${cargo.id}"
                                        value="${this.escapeHTML(cargo.descripcion)}"
                                        placeholder="Responsabilidades principales"
+                                       maxlength="${LIMITES.DESCRIPCION_CARGO}"
                                        onchange="window.crearAreaDebug.controller.actualizarCargo('${cargo.id}', 'descripcion', this.value)">
+                            </div>
+                            <div class="char-limit-info">
+                                <span class="char-counter">${cargo.descripcion?.length || 0}/${LIMITES.DESCRIPCION_CARGO}</span>
                             </div>
                         </div>
                     </div>
@@ -740,13 +596,33 @@ class CrearAreaController {
         });
         
         cargosList.innerHTML = html;
+        
+        // Actualizar contadores en tiempo real
+        this.cargos.forEach(cargo => {
+            const nombreInput = document.getElementById(`cargo_nombre_${cargo.id}`);
+            if (nombreInput) {
+                nombreInput.addEventListener('input', (e) => {
+                    this.actualizarCargo(cargo.id, 'nombre', e.target.value);
+                    const counter = e.target.closest('.col-md-6').querySelector('.char-counter');
+                    if (counter) counter.textContent = `${e.target.value.length}/${LIMITES.NOMBRE_CARGO}`;
+                });
+            }
+            
+            const descInput = document.getElementById(`cargo_descripcion_${cargo.id}`);
+            if (descInput) {
+                descInput.addEventListener('input', (e) => {
+                    this.actualizarCargo(cargo.id, 'descripcion', e.target.value);
+                    const counter = e.target.closest('.col-md-6').querySelector('.char-counter');
+                    if (counter) counter.textContent = `${e.target.value.length}/${LIMITES.DESCRIPCION_CARGO}`;
+                });
+            }
+        });
     }
     
     actualizarCargo(cargoId, campo, valor) {
         const cargo = this.cargos.find(c => c.id === cargoId);
         if (cargo) {
             cargo[campo] = valor;
-            console.log(`✅ Cargo ${cargoId} actualizado: ${campo} = ${valor}`);
         }
     }
     
@@ -759,7 +635,7 @@ class CrearAreaController {
     
     escapeHTML(text) {
         if (!text) return '';
-        return text
+        return String(text)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
@@ -767,34 +643,28 @@ class CrearAreaController {
             .replace(/'/g, "&#039;");
     }
     
-    // OBTENER DATOS DEL FORMULARIO - CON CARGOS
     obtenerDatosFormulario() {
-        console.log('📋 Obteniendo datos del formulario...');
-        
         const userOrgCamel = this.userManager.currentUser.organizacionCamelCase;
         
-        const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
+        const cargosArray = this.cargos
+            .filter(c => c.nombre && c.nombre.trim() !== '')
+            .map(c => ({
+                nombre: c.nombre.trim(),
+                descripcion: c.descripcion ? c.descripcion.trim() : ''
+            }));
         
         const cargosObject = {};
-        cargosValidos.forEach(cargo => {
-            const cargoId = `cargo_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
-            cargosObject[cargoId] = {
-                nombre: cargo.nombre.trim(),
-                descripcion: cargo.descripcion ? cargo.descripcion.trim() : ''
-            };
+        cargosArray.forEach((cargo, index) => {
+            cargosObject[`cargo_${index}`] = cargo;
         });
-        
-        console.log('💼 Cargos válidos:', cargosValidos.length);
         
         return {
             nombreArea: document.getElementById('nombreArea').value.trim(),
             descripcion: document.getElementById('descripcionArea').value.trim(),
             cargos: cargosObject,
             organizacionCamelCase: userOrgCamel,
-            creadoPor: this.userManager.currentUser.id,
-            actualizadoPor: this.userManager.currentUser.id,
-            fechaCreacion: new Date().toISOString(),
-            fechaActualizacion: new Date().toISOString()
+            responsable: 'admin_fijo',
+            responsableNombre: this.userManager.currentUser.nombreCompleto
         };
     }
     
@@ -820,169 +690,70 @@ class CrearAreaController {
         });
     }
     
-    // ========== MÉTODOS DE CREACIÓN ==========
-    
     async confirmarCreacion() {
         try {
-            console.log('✅ Confirmando creación de área...');
-            
             if (!this.areaEnProceso) {
                 throw new Error('No hay datos de área para crear');
             }
             
             this.mostrarCargando('Creando área...');
             
-            console.log('📤 Enviando datos a crearArea:', this.areaEnProceso);
-            
-            const nuevaArea = await this.crearAreaEnColeccionEspecifica(this.areaEnProceso);
+            const nuevaArea = await this.areaManager.crearArea(this.areaEnProceso, this.userManager);
             
             this.ocultarCargando();
-            
-            console.log('✅ Área creada exitosamente:', nuevaArea);
             
             this.areaCreadaReciente = nuevaArea;
             
-            // MODAL DE ÉXITO CON SWEETALERT2
-            const cantidadCargos = Object.keys(nuevaArea.cargos || {}).length;
-            const fecha = new Date().toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
+            // MENSAJE SIMPLIFICADO - SOLO ÉXITO
             await Swal.fire({
-                title: '¡Área creada exitosamente!',
-                html: `
-                    <div style="text-align: center;">
-                        <i class="fas fa-check-circle" style="font-size: 64px; color: var(--color-success); margin-bottom: 20px;"></i>
-                        <h4 style="color: var(--color-success); margin-bottom: 20px;">¡Área creada correctamente!</h4>
-                        <div style="background: var(--color-bg-tertiary); padding: 15px; border-radius: 8px; text-align: left;">
-                            <p><strong>Nombre del Área:</strong> ${nuevaArea.nombreArea}</p>
-                            <p><strong>Organización:</strong> ${this.userManager.currentUser.organizacion}</p>
-                            <p><strong>Responsable:</strong> ${this.userManager.currentUser.nombreCompleto}</p>
-                            <p><strong>Fecha de Creación:</strong> ${fecha}</p>
-                            <p><strong>Código de Área:</strong> ${nuevaArea.id} (${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'})</p>
-                        </div>
-                        <div style="background: rgba(47, 140, 255, 0.1); padding: 10px; border-radius: 8px; margin-top: 15px; text-align: left;">
-                            <i class="fas fa-info-circle" style="color: var(--color-accent-secondary);"></i>
-                            El área ha sido registrada en el sistema. ¿Qué desea hacer?
-                        </div>
-                    </div>
-                `,
                 icon: 'success',
-                showConfirmButton: true,
+                title: '¡Área creada!',
+                text: 'El área se ha creado correctamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            // Preguntar qué hacer después
+            const result = await Swal.fire({
+                title: '¿Qué desea hacer?',
+                icon: 'question',
                 showDenyButton: true,
-                confirmButtonText: 'Ver lista de áreas',
-                denyButtonText: 'Crear otra área',
+                showCancelButton: true,
+                confirmButtonText: 'Ver lista',
+                denyButtonText: 'Crear otra',
+                cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#2f8cff',
-                denyButtonColor: '#00ff95'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    this.verAreaCreada();
-                } else if (result.isDenied) {
-                    this.crearOtraArea();
-                }
+                denyButtonColor: '#3a9871'
             });
             
+            if (result.isConfirmed) {
+                this.verAreaCreada();
+            } else if (result.isDenied) {
+                this.crearOtraArea();
+            }
+            
         } catch (error) {
-            console.error('❌ Error creando área:', error);
             this.ocultarCargando();
-            this.mostrarError('Error creando área: ' + error.message);
+            this.mostrarError('Error creando área');
         }
     }
-    
-    // CREAR ÁREA EN COLECCIÓN ESPECÍFICA - CON CARGOS
-    async crearAreaEnColeccionEspecifica(datosArea) {
-        try {
-            console.log('🚀 Creando área en colección específica...');
-            
-            const organizacionCamelCase = datosArea.organizacionCamelCase;
-            const collectionName = `areas_${organizacionCamelCase}`;
-            
-            console.log(`📂 Colección destino: ${collectionName}`);
-            
-            const areaId = this.generarAreaId(datosArea.nombreArea, organizacionCamelCase);
-            
-            console.log(`🆔 ID generado: ${areaId}`);
-            
-            const areaFirestoreData = {
-                nombreArea: datosArea.nombreArea,
-                descripcion: datosArea.descripcion || '',
-                cargos: datosArea.cargos || {},
-                organizacionCamelCase: organizacionCamelCase,
-                creadoPor: datosArea.creadoPor || '',
-                actualizadoPor: datosArea.actualizadoPor || '',
-                fechaCreacion: serverTimestamp(),
-                fechaActualizacion: serverTimestamp()
-            };
-            
-            console.log('📝 Datos para Firestore:', areaFirestoreData);
-            
-            const areaRef = doc(db, collectionName, areaId);
-            await setDoc(areaRef, areaFirestoreData);
-            
-            console.log(`✅ Área guardada en: ${collectionName}/${areaId}`);
-            
-            const nuevaArea = new Area(areaId, {
-                ...areaFirestoreData,
-                fechaCreacion: new Date(),
-                fechaActualizacion: new Date()
-            });
-            
-            return nuevaArea;
-            
-        } catch (error) {
-            console.error('❌ Error en crearAreaEnColeccionEspecifica:', error);
-            throw error;
-        }
-    }
-    
-    // GENERAR ID ÚNICO PARA EL ÁREA
-    generarAreaId(nombreArea, organizacionCamelCase) {
-        const nombreNormalizado = nombreArea
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]/g, '_')
-            .substring(0, 30);
-        
-        const timestamp = Date.now();
-        const random = Math.floor(Math.random() * 10000);
-        
-        return `${organizacionCamelCase}_area_${nombreNormalizado}_${timestamp}_${random}`;
-    }
-    
-    // ========== ACCIONES POST-CREACIÓN ==========
     
     crearOtraArea() {
-        console.log('🔄 Preparando para crear otra área...');
-        
         this.limpiarFormulario();
         
         setTimeout(() => {
             const nombreArea = document.getElementById('nombreArea');
-            if (nombreArea) {
-                nombreArea.focus();
-            }
+            if (nombreArea) nombreArea.focus();
         }, 100);
     }
     
     verAreaCreada() {
-        console.log('👁️ Redirigiendo para ver área creada...');
         window.location.href = '/users/admin/areas/areas.html';
     }
     
-    // ========== MÉTODOS AUXILIARES ==========
-    
     limpiarFormulario() {
-        console.log('🧹 Limpiando formulario...');
-        
         const form = document.getElementById('formCrearArea');
-        if (form) {
-            form.reset();
-        }
+        if (form) form.reset();
         
         this.cargos = [];
         this.agregarCargo();
@@ -999,18 +770,11 @@ class CrearAreaController {
         
         this.actualizarContadorCaracteres();
         this.actualizarContadorCargos();
-        
         this.areaEnProceso = null;
-        
-        console.log('✅ Formulario limpio');
     }
     
-    // ========== MÉTODOS DE INTERFAZ ==========
-    
     mostrarCargando(mensaje = 'Cargando...') {
-        if (this.loadingOverlay) {
-            this.ocultarCargando();
-        }
+        if (this.loadingOverlay) this.ocultarCargando();
         
         const overlay = document.createElement('div');
         overlay.className = 'loading-overlay';
@@ -1040,18 +804,14 @@ class CrearAreaController {
     }
     
     ocultarCargando() {
-        if (this.loadingOverlay && this.loadingOverlay.parentNode) {
+        if (this.loadingOverlay?.parentNode) {
             this.loadingOverlay.remove();
             this.loadingOverlay = null;
         }
     }
     
-    mostrarExito(mensaje) {
-        this.mostrarNotificacion(mensaje, 'success');
-    }
-    
     mostrarError(mensaje) {
-        this.mostrarNotificacion(mensaje, 'danger');
+        this.mostrarNotificacion(mensaje, 'error');
     }
     
     mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
@@ -1063,16 +823,9 @@ class CrearAreaController {
             timerProgressBar: true
         });
         
-        let icono = tipo;
-        if (tipo === 'danger') icono = 'error';
-        
-        Toast.fire({
-            icon: icono,
-            title: mensaje
-        });
+        let icono = tipo === 'danger' || tipo === 'error' ? 'error' : tipo;
+        Toast.fire({ icon: icono, title: mensaje });
     }
 }
 
-// ========== INICIAR APLICACIÓN ==========
-console.log('🎬 Iniciando carga de crear-areas.js...');
 cargarDependencias();

@@ -4,117 +4,62 @@
 
 :root {
     /* ====== COLORES BASE ====== */
-
-    /* Colores de fondo principales */
     --color-bg-primary: #000000;
-    /* Fondo principal (navbar, footer) */
     --color-bg-secondary: #00000000;
-    /* Fondo secundario (contenido footer) */
     --color-bg-tertiary: #0000007a;
-    /* Fondo terciario (inferior footer) */
     --color-bg-light: #ffffff;
-    /* Fondo claro (tarjetas, elementos) */
 
     /* ====== COLORES DE TEXTO ====== */
-
-    /* Textos principales */
     --color-text-primary: #ffffff;
-    /* Texto principal (títulos, enlaces) */
     --color-text-secondary: rgba(255, 255, 255, 0.8);
-    /* Texto secundario */
     --color-text-light: #ffffff;
-    /* Texto claro para fondos oscuros */
     --color-text-dark: #000000;
-    /* Texto oscuro para fondos claros */
 
     /* ====== COLORES DE ACENTO Y EFECTOS ====== */
-
-    /* Acentos y resaltados */
     --color-accent-primary: #c0c0c0;
-    /* Acento principal (bordes, hover) */
     --color-accent-secondary: #ffffff;
-    /* Acento secundario (botones, íconos) */
     --color-accent-footer: #ffffff;
-    /* Acento específico para footer */
-
-    /* Efectos visuales */
     --color-shadow: rgba(255, 255, 255, 0.55);
-    /* Color de sombras */
     --color-glow: #ffffff;
-    /* Color para efectos de brillo/resplandor */
 
     /* ====== VARIABLES DE EFECTO ESPECÍFICAS ====== */
-
-    /* Text shadow para efectos de brillo (usado en navbar) */
-    --text-shadow-effect:
-        0 0 10px var(--color-glow),
-        0 0 20px var(--color-glow),
-        0 0 30px var(--color-glow),
-        0 0 40px var(--color-glow);
-
-    /* Sombras para elementos */
+    --text-shadow-effect: 0 0 10px var(--color-glow), 0 0 20px var(--color-glow), 0 0 30px var(--color-glow), 0 0 40px var(--color-glow);
     --shadow-normal: 0 5px 15px var(--color-shadow);
     --shadow-large: 0 10px 25px rgba(0, 0, 0, 0.15);
-    
-    /* Agregar estas sombras para completar */
     --shadow-small: 0 2px 8px var(--color-shadow);
 
     /* ====== VARIABLES DE ESTADO ====== */
-
-    /* Estados de interacción */
     --color-hover: rgba(245, 215, 66, 0);
-    /* Color de fondo en hover */
     --color-active: #c0c0c0;
-    /* Color para elementos activos */
 
     /* ====== VARIABLES DE BORDES ====== */
-
-    /* Colores de bordes */
     --color-border-light: rgba(255, 255, 255, 0.1);
-    /* Bordes claros */
     --color-border-dark: #3d8ad6;
-    /* Bordes oscuros */
 
     /* ====== VARIABLES DE ÍCONOS ====== */
-
-    /* Colores para iconografía */
     --color-icon-primary: var(--color-accent-secondary);
-    /* Íconos principales */
     --color-icon-secondary: rgba(255, 255, 255, 0.7);
-    /* Íconos secundarios */
 
     /* ====== PROPIEDADES DE DISEÑO ====== */
-
-    /* Transiciones y animaciones */
     --transition-default: all 0.3s ease-in-out;
-    --transition-fast: all 0.15s ease;      /* Agregar */
-    --transition-slow: all 0.5s ease;       /* Agregar */
-
-    /* Bordes redondeados */
+    --transition-fast: all 0.15s ease;
+    --transition-slow: all 0.5s ease;
     --border-radius-small: 6px;
     --border-radius-medium: 8px;
     --border-radius-large: 12px;
     --border-radius-circle: 50%;
 
     /* ====== TIPOGRAFÍA ====== */
-
-    /* Familias de fuentes */
     --font-family-primary: 'Orbitron', sans-serif;
-    /* Fuente principal */
-    --font-family-secondary: 'Poppins', sans-serif;
-    /* Fuente secundaria */
+    --font-family-secondary: sans-serif;
 
     /* ====== VARIABLES ESPECÍFICAS POR COMPONENTE ====== */
-
-    /* NAVBAR - Variables específicas */
     --navbar-bg: var(--color-bg-secondary);
     --navbar-text: var(--color-text-primary);
     --navbar-logo-text: var(--color-text-primary);
     --navbar-link-hover: var(--text-shadow-effect);
     --navbar-scrolled-bg: var(--color-bg-primary);
     --navbar-scrolled-shadow: var(--shadow-normal);
-
-    /* FOOTER - Variables específicas */
     --footer-bg-primary: var(--color-bg-secondary);
     --footer-bg-secondary: var(--color-bg-tertiary);
     --footer-text-primary: var(--color-text-primary);
@@ -125,338 +70,146 @@
     --footer-social-hover: var(--color-accent-secondary);
     --footer-border-accent: var(--color-accent-footer);
 }
-
+:root {
+    /* ... tus variables existentes ... */
+    
+    /* ====== VARIABLES ESPECÍFICAS PARA COMPONENTES ====== */
+    --sweetalert-bg: rgb(0, 0, 0); /* Fondo semitransparente pero no transparente */
+}
 /* =============================================
-   SWEETALERT2 - TEMA CENTINELA PREMIUM
+   SWEETALERT2 - PERSONALIZACIÓN DE COLORES
+   (MANTENIENDO TAMAÑOS Y ESTILOS POR DEFECTO)
    ============================================= */
 
-/* Popup principal - Versión mejorada */
+/* POPUP PRINCIPAL - FONDO SÓLIDO CON VARIABLES */
 .swal2-popup {
-    background: linear-gradient(145deg, 
-        rgba(0, 0, 0, 0.95) 0%, 
-        rgba(20, 20, 20, 0.98) 100%
-    ) !important;
-    border: 2px solid var(--color-accent-primary, #c0c0c0) !important;
-    border-radius: var(--border-radius-large, 12px) !important;
-    box-shadow: 
-        0 0 30px rgba(192, 192, 192, 0.2),
-        var(--shadow-large, 0 10px 25px rgba(0, 0, 0, 0.15)) !important;
-    color: var(--color-text-primary, #ffffff) !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
-    backdrop-filter: blur(10px) !important;
-    position: relative !important;
-    overflow: hidden !important;
+    background: var(--sweetalert-bg) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+    box-shadow: var(--shadow-large) !important;
 }
-
 /* Efecto de brillo en el borde */
 .swal2-popup::before {
-    content: '' !important;
-    position: absolute !important;
-    top: -2px !important;
-    left: -2px !important;
-    right: -2px !important;
-    bottom: -2px !important;
-    background: linear-gradient(45deg, 
-        var(--color-accent-primary, #c0c0c0), 
-        var(--color-glow, #ffffff),
-        var(--color-accent-primary, #c0c0c0)
-    ) !important;
-    border-radius: calc(var(--border-radius-large, 12px) + 2px) !important;
-    z-index: -2 !important;
-    animation: borderGlow 3s linear infinite !important;
-    opacity: 0.5 !important;
+    background: linear-gradient(45deg,
+            var(--color-accent-primary),
+            var(--color-glow),
+            var(--color-accent-primary)) !important;
+    opacity: 0.3 !important;
 }
 
-.swal2-popup::after {
-    content: '' !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    background: linear-gradient(145deg, 
-        rgba(0, 0, 0, 0.95) 0%, 
-        rgba(20, 20, 20, 0.98) 100%
-    ) !important;
-    border-radius: var(--border-radius-large, 12px) !important;
-    z-index: -1 !important;
-}
-
-/* Título - Versión elegante */
+/* Título */
 .swal2-title {
-    color: var(--color-text-primary, #ffffff) !important;
-    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
-    border-bottom: 1px solid rgba(192, 192, 192, 0.3) !important;
-    padding: 28px 32px 20px !important;
-    background: linear-gradient(90deg, 
-        transparent, 
-        rgba(192, 192, 192, 0.1), 
-        transparent
-    ) !important;
-    font-size: 1.75rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 2px !important;
-    text-shadow: 0 0 10px rgba(192, 192, 192, 0.3) !important;
-    margin-bottom: 0 !important;
+    color: var(--color-text-primary) !important;
+    border-bottom: 1px solid rgba(192, 192, 192, 0.2) !important;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(192, 192, 192, 0.05),
+            transparent) !important;
+    text-shadow: 0 0 8px rgba(192, 192, 192, 0.3) !important;
 }
 
-/* Contenedor HTML - Mejor espaciado */
+/* Contenedor HTML */
 .swal2-html-container {
-    color: var(--color-text-secondary, rgba(255, 255, 255, 0.9)) !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
-    padding: 28px 32px !important;
-    text-align: left !important;
-    font-size: 1.1rem !important;
-    line-height: 1.6 !important;
-    background: rgba(255, 255, 255, 0.02) !important;
-    margin: 10px 20px !important;
-    border-radius: var(--border-radius-medium, 8px) !important;
+    color: var(--color-text-secondary) !important;
+    background: rgba(255, 255, 255, 0.01) !important;
 }
 
-/* Botones - Diseño premium */
-.swal2-actions {
-    margin: 20px 32px 32px !important;
-    gap: 15px !important;
-}
+/* =============================================
+   BOTONES - CONFIRMAR (ACEPTAR) CON COLOR-BG-PRIMARY
+   ============================================= */
 
+/* Botón confirmar - PINTADO CON COLOR-BG-PRIMARY */
 .swal2-confirm {
-    background: linear-gradient(145deg, 
-        var(--color-accent-primary, #c0c0c0), 
-        #a0a0a0
-    ) !important;
-    color: var(--color-text-dark, #000000) !important;
-    border: none !important;
-    border-radius: 30px !important;
-    padding: 14px 32px !important;
-    font-weight: 600 !important;
-    transition: var(--transition-default, all 0.3s ease-in-out) !important;
-    box-shadow: 
-        0 5px 15px rgba(192, 192, 192, 0.3),
-        var(--shadow-normal, 0 5px 15px var(--color-shadow)) !important;
-    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    position: relative !important;
-    overflow: hidden !important;
+    background: var(--color-bg-primary) !important;
+    color: var(--color-text-light) !important;
+    box-shadow: var(--shadow-small) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    transition: var(--transition-default) !important;
 }
 
-.swal2-confirm::before {
-    content: '' !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: -100% !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: linear-gradient(90deg, 
-        transparent, 
-        rgba(255, 255, 255, 0.3), 
-        transparent
-    ) !important;
-    transition: left 0.5s ease !important;
-}
-
+/* Hover del botón confirmar - MISMO COLOR pero más brillante */
 .swal2-confirm:hover {
-    background: linear-gradient(145deg, 
-        #a0a0a0, 
-        var(--color-accent-primary, #c0c0c0)
-    ) !important;
-    transform: translateY(-3px) !important;
-    box-shadow: 
-        0 8px 25px rgba(192, 192, 192, 0.4),
-        var(--shadow-normal, 0 5px 15px var(--color-shadow)) !important;
+    background: var(--color-bg-primary) !important;
+    filter: brightness(1.3) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px var(--color-bg-primary) !important;
+    border-color: var(--color-glow) !important;
 }
 
-.swal2-confirm:hover::before {
-    left: 100% !important;
+/* Botón confirmar para acciones destructivas (ej: eliminar) */
+.swal2-confirm.swal2-styled[style*="background-color: rgb(221, 51, 51)"] {
+    background: #dc3545 !important;
+    border-color: #dc3545 !important;
 }
 
-/* Botón cancelar - Versión mejorada */
+.swal2-confirm.swal2-styled[style*="background-color: rgb(221, 51, 51)"]:hover {
+    background: #dc3545 !important;
+    filter: brightness(1.2) !important;
+    box-shadow: 0 5px 15px #dc3545 !important;
+}
+
+/* Botón cancelar - SIEMPRE NEUTRO (sin pintar) */
 .swal2-cancel {
-    background: rgba(255, 255, 255, 0.05) !important;
-    color: var(--color-text-secondary, rgba(255, 255, 255, 0.9)) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 30px !important;
-    padding: 14px 32px !important;
-    font-weight: 500 !important;
-    transition: var(--transition-default, all 0.3s ease-in-out) !important;
-    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    color: var(--color-text-secondary) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     backdrop-filter: blur(5px) !important;
+    transition: var(--transition-default) !important;
 }
 
 .swal2-cancel:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: var(--color-accent-primary, #c0c0c0) !important;
-    color: var(--color-accent-primary, #c0c0c0) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
     transform: translateY(-2px) !important;
 }
 
-/* Botón de confirmación peligroso */
-.swal2-confirm.swal2-styled[style*="background-color: rgb(239, 68, 68)"] {
-    background: linear-gradient(145deg, #ef4444, #dc2626) !important;
-    color: var(--color-text-light, #ffffff) !important;
-    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3) !important;
-}
-
-.swal2-confirm.swal2-styled[style*="background-color: rgb(239, 68, 68)"]:hover {
-    background: linear-gradient(145deg, #dc2626, #ef4444) !important;
-    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4) !important;
-}
-
-/* INPUTS - Diseño cyberpunk */
+/* Inputs */
 .swal2-input,
 .swal2-textarea,
 .swal2-select {
     background: rgba(0, 0, 0, 0.7) !important;
-    color: var(--color-text-primary, #ffffff) !important;
-    border: 1px solid rgba(192, 192, 192, 0.3) !important;
-    border-radius: var(--border-radius-medium, 8px) !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
-    padding: 14px !important;
-    font-size: 1rem !important;
-    transition: var(--transition-default, all 0.3s ease-in-out) !important;
-    backdrop-filter: blur(5px) !important;
-}
-
-.swal2-input:focus,
-.swal2-textarea:focus {
-    border-color: var(--color-accent-primary, #c0c0c0) !important;
-    box-shadow: 
-        0 0 0 3px rgba(192, 192, 192, 0.1),
-        0 0 20px rgba(192, 192, 192, 0.2) !important;
-    outline: none !important;
-    background: rgba(0, 0, 0, 0.9) !important;
-}
-
-/* Íconos - Versión premium */
-.swal2-icon {
-    border-width: 3px !important;
-    width: 80px !important;
-    height: 80px !important;
-    margin: 25px auto 10px !important;
-    box-shadow: 0 0 30px rgba(192, 192, 192, 0.2) !important;
-}
-
-.swal2-icon-content {
-    font-size: 3rem !important;
-}
-
-.swal2-icon.swal2-warning {
-    border-color: #ef4444 !important;
-    color: #ef4444 !important;
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.3) !important;
-}
-
-.swal2-icon.swal2-success {
-    border-color: var(--color-accent-primary, #c0c0c0) !important;
-    color: var(--color-accent-primary, #c0c0c0) !important;
-}
-
-.swal2-success-ring {
-    border-color: var(--color-accent-primary, #c0c0c0) !important;
-}
-
-.swal2-icon.swal2-error {
-    border-color: #ef4444 !important;
-    color: #ef4444 !important;
-}
-
-/* Botón cerrar - Animación mejorada */
-.swal2-close {
-    color: var(--color-text-secondary, rgba(255, 255, 255, 0.8)) !important;
-    font-size: 32px !important;
-    transition: var(--transition-default, all 0.3s ease-in-out) !important;
-    position: absolute !important;
-    top: 15px !important;
-    right: 15px !important;
-    width: 40px !important;
-    height: 40px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 50% !important;
-    background: rgba(0, 0, 0, 0.5) !important;
-    backdrop-filter: blur(5px) !important;
-}
-
-.swal2-close:hover {
-    color: var(--color-accent-primary, #c0c0c0) !important;
-    transform: rotate(90deg) scale(1.1) !important;
-    background: rgba(192, 192, 192, 0.1) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid rgba(192, 192, 192, 0.2) !important;
 }
 
 /* Barra de progreso */
 .swal2-timer-progress-bar {
-    background: linear-gradient(90deg, 
-        var(--color-accent-primary, #c0c0c0), 
-        var(--color-glow, #ffffff),
-        var(--color-accent-primary, #c0c0c0)
-    ) !important;
-    height: 4px !important;
+    background: linear-gradient(90deg,
+            var(--color-accent-primary),
+            var(--color-glow),
+            var(--color-accent-primary)) !important;
 }
 
-/* Animaciones mejoradas */
-@keyframes swal2-show {
-    0% {
-        opacity: 0;
-        transform: scale(0.9) translateY(-30px);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes swal2-hide {
-    0% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(0.9) translateY(-30px);
-    }
-}
-
-/* Nueva animación para el borde */
-@keyframes borderGlow {
-    0%, 100% {
-        opacity: 0.5;
-    }
-    50% {
-        opacity: 0.8;
-    }
-}
-
-/* Footer del popup */
+/* Footer */
 .swal2-footer {
-    border-top: 1px solid rgba(192, 192, 192, 0.2) !important;
-    color: var(--color-text-secondary, rgba(255, 255, 255, 0.7)) !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
-    padding: 15px 24px !important;
+    border-top: 1px solid rgba(192, 192, 192, 0.15) !important;
+    color: var(--color-text-secondary) !important;
     background: rgba(0, 0, 0, 0.3) !important;
-}
-
-/* Validation message */
-.swal2-validation-message {
-    background: rgba(239, 68, 68, 0.15) !important;
-    color: #ef4444 !important;
-    border-left: 4px solid #ef4444 !important;
-    font-family: var(--font-family-secondary, 'Poppins', sans-serif) !important;
-    padding: 12px 20px !important;
-    margin: 0 20px 20px !important;
-    border-radius: var(--border-radius-medium, 8px) !important;
-    backdrop-filter: blur(5px) !important;
 }
 
 /* Loader */
 .swal2-loader {
-    border-width: 4px !important;
-    border-style: solid !important;
-    border-color: var(--color-accent-primary, #c0c0c0) transparent 
-                  var(--color-accent-primary, #c0c0c0) transparent !important;
-    width: 50px !important;
-    height: 50px !important;
+    border-color: var(--color-accent-primary) transparent var(--color-accent-primary) transparent !important;
+}
+
+/* Botón cerrar */
+.swal2-close {
+    color: var(--color-text-secondary) !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Mensaje de validación */
+.swal2-validation-message {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #ef4444 !important;
+    border-left: 3px solid #ef4444 !important;
+}
+
+/* =============================================
+   MEDIA QUERIES - SOLO PARA RESPONSIVE
+   ============================================= */
+@media (max-width: 768px) {
+    .swal2-popup {
+        max-width: 90vw !important;
+        margin: 0 15px !important;
+    }
 }

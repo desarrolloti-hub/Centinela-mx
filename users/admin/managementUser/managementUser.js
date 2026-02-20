@@ -1,38 +1,31 @@
 // ========== INICIALIZACIÓN ==========
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 DOM cargado, iniciando gestor de colaboradores...');
-    
+document.addEventListener('DOMContentLoaded', async function() {    
     try {
         const { UserManager } = await import('/clases/user.js');
         const userManager = new UserManager();
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        if (!userManager.currentUser || userManager.currentUser.cargo !== 'administrador') {
+        if (!userManager.currentUser || !userManager.currentUser.esAdministrador()) {
             console.error('❌ No hay administrador autenticado');
             showNoAdminMessage();
             return;
         }
         
         const admin = userManager.currentUser;
-        console.log('✅ Administrador encontrado:', {
-            nombre: admin.nombreCompleto,
-            organizacion: admin.organizacion,
-            organizacionCamelCase: admin.organizacionCamelCase,
-            id: admin.id
-        });
         
         localStorage.setItem('adminInfo', JSON.stringify({
             id: admin.id,
             nombreCompleto: admin.nombreCompleto,
             organizacion: admin.organizacion,
             organizacionCamelCase: admin.organizacionCamelCase,
+            rol: admin.rol,
             correoElectronico: admin.correoElectronico,
             timestamp: new Date().toISOString()
         }));
         
         localStorage.removeItem('selectedCollaborator');
-        updatePageWithAdminInfo(admin);
+        
         await loadCollaborators(admin, userManager);
         setupEvents(admin, userManager);
         
@@ -44,7 +37,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 // ========== CARGAR COLABORADORES ==========
 async function loadCollaborators(admin, userManager) {
-    console.log(`🔄 Cargando colaboradores para: ${admin.organizacion}`);
     
     try {
         showLoadingState();
@@ -53,8 +45,6 @@ async function loadCollaborators(admin, userManager) {
             admin.organizacionCamelCase,
             true
         );
-        
-        console.log(`✅ ${colaboradores.length} colaboradores encontrados (incluyendo inhabilitados)`);
         
         localStorage.setItem('colaboradoresList', JSON.stringify(
             colaboradores.map(col => ({
@@ -114,13 +104,10 @@ function renderCollaboratorsTable(collaborators, admin) {
                         ${!fotoUrl ? '<i class="fas fa-user"></i>' : ''}
                     </div>
                     <div class="user-details">
-                        <div class="user-name">${firstName}</div>
-                        <small class="user-role">${col.rol || 'Colaborador'}</small>
-                        <br><small class="user-id">ID: ${col.id.substring(0, 8)}...</small>
-                    </div>
+                        <div class="user-name">${col.nombreCompleto}</div>                    </div>
                 </div>
             </td>
-            <td data-label="APELLIDO" class="user-lastname">${lastName}</td>
+            <td data-label="CARGO" class="user-lastname">${col.rol}</td>
             <td data-label="EMAIL" class="user-email">${col.correoElectronico || 'sin@email.com'}</td>
             <td data-label="ESTADO">
                 <span class="status ${statusInfo.class}">
@@ -163,18 +150,20 @@ function updateStats(collaborators) {
         statsContainer.id = 'collaboratorsStats';
         statsContainer.className = 'stats-container';
         
-        const sectionHeader = document.querySelector('.section-header');
+        const sectionHeader = document.querySelector('.card-header');
         if (sectionHeader) {
             sectionHeader.parentNode.insertBefore(statsContainer, sectionHeader.nextSibling);
+        } else {
+            const tableWrapper = document.querySelector('.table-wrapper');
+            if (tableWrapper) {
+                tableWrapper.parentNode.insertBefore(statsContainer, tableWrapper.nextSibling);
+            }
         }
     }
     
     statsContainer.innerHTML = `
         <div class="stats-header">
             <h3><i class="fas fa-chart-bar"></i> ESTADÍSTICAS DE COLABORADORES</h3>
-            <button id="refreshStats" class="refresh-btn">
-                <i class="fas fa-sync-alt"></i> Actualizar
-            </button>
         </div>
         
         <div class="stats-grid">
@@ -198,7 +187,6 @@ function updateStats(collaborators) {
     `;
     
     document.getElementById('refreshStats')?.addEventListener('click', async () => {
-        console.log('🔄 Recargando colaboradores...');
         location.reload();
     });
 }
@@ -252,30 +240,20 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
         const result = await Swal.fire({
             title: `${actionText} colaborador`,
             html: `
-                <div class="swal-user-info ${isEnabling ? 'enable' : 'disable'}">
-                    <div class="swal-user-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <h3>${collaboratorName}</h3>
+                <div>
+                    <p><strong>${collaboratorName}</strong></p>
                     <p>${collaborator.correoElectronico || 'No email'}</p>
+                    <p>¿Estás seguro de ${statusText} al colaborador?</p>
+                    ${isEnabling ? 
+                        '<p><i class="fas fa-check-circle"></i> El usuario podrá acceder al sistema normalmente</p>' :
+                        '<p><i class="fas fa-exclamation-triangle"></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente</p>'
+                    }
                 </div>
-                <p>¿Estás seguro de ${statusText} al colaborador?</p>
-                ${isEnabling ? 
-                    '<p class="swal-enable-text"><i class="fas fa-check-circle"></i> El usuario podrá acceder al sistema normalmente</p>' :
-                    '<p class="swal-disable-text"><i class="fas fa-exclamation-triangle"></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente</p>'
-                }
             `,
             icon: iconType,
             showCancelButton: true,
             confirmButtonText: `Sí, ${statusText}`,
-            cancelButtonText: 'Cancelar',
-            reverseButtons: true,
-            customClass: {
-                popup: 'swal2-custom-popup',
-                confirmButton: 'swal2-confirm-custom',
-                cancelButton: 'swal2-cancel-custom',
-                icon: 'swal2-icon-custom'
-            }
+            cancelButtonText: 'Cancelar'
         });
         
         if (!result.isConfirmed) return;
@@ -318,8 +296,7 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
             icon: 'success',
             title: '¡Estado cambiado!',
             html: `
-                <div class="swal-success-content">
-                    <i class="fas fa-user-check ${isEnabling ? 'success-icon' : 'warning-icon'}"></i>
+                <div>
                     <p><strong>${collaboratorName}</strong></p>
                     <p>ha sido ${statusText} exitosamente</p>
                 </div>
@@ -342,9 +319,7 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
 }
 
 // ========== EDITAR COLABORADOR ==========
-async function editUser(collaboratorId, collaboratorName, admin) {
-    console.log(`✏️ Editando colaborador: ${collaboratorId} - ${collaboratorName}`);
-    
+async function editUser(collaboratorId, collaboratorName, admin) {    
     const selectedCollaborator = {
         id: collaboratorId,
         nombreCompleto: collaboratorName,
@@ -355,7 +330,6 @@ async function editUser(collaboratorId, collaboratorName, admin) {
     };
     
     localStorage.setItem('selectedCollaborator', JSON.stringify(selectedCollaborator));
-    console.log('💾 Colaborador guardado en localStorage:', selectedCollaborator);
     
     window.location.href = `/users/admin/editUser/editUser.html?id=${collaboratorId}&org=${admin.organizacionCamelCase}`;
 }
@@ -392,14 +366,6 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
         }
     }
     
-    const estadoHTML = collaborator.status ? 
-        `<span class="status-detail active">
-            <i class="fas fa-check-circle"></i> Activo
-        </span>` : 
-        `<span class="status-detail inactive">
-            <i class="fas fa-ban"></i> Inactivo
-        </span>`;
-    
     Swal.fire({
         title: `Detalles de: ${collaboratorName}`,
         html: `
@@ -414,29 +380,31 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
                     <div class="swal-user-info-large">
                         <h3>${collaborator.nombreCompleto || 'Sin nombre'}</h3>
                         <p>${collaborator.rol || 'Colaborador'}</p>
-                        <small>ID: ${collaborator.id.substring(0, 12)}...</small>
+                        
                     </div>
                 </div>
                 
                 <div class="swal-details-grid">
                     <div class="swal-detail-card">
                         <p><strong>Email:</strong><br><span>${collaborator.correoElectronico || 'No especificado'}</span></p>
-                        <p><strong>Estado:</strong><br>${estadoHTML}</p>
+                        <p><strong>Estado:</strong><br>
+                            <span class="status-detail ${collaborator.status ? 'active' : 'inactive'}">
+                                <i class="fas ${collaborator.status ? 'fa-check-circle' : 'fa-ban'}"></i> 
+                                ${collaborator.status ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </p>
                         <p><strong>Organización:</strong><br><span>${collaborator.organizacion || 'No especificado'}</span></p>
                     </div>
                     <div class="swal-detail-card">
                         <p><strong>Fecha de creación:</strong><br><span>${fechaCreacion}</span></p>
                         <p><strong>Plan:</strong><br><span>${collaborator.plan || 'No especificado'}</span></p>
-                        <p><strong>Verificado:</strong><br><span class="${collaborator.verificado ? 'verified' : 'not-verified'}">${collaborator.verificado ? 'Sí' : 'No'}</span></p>
+                        <p><strong>Verificado:</strong><br>
+                            <span class="${collaborator.verificado ? 'verified' : 'not-verified'}">
+                                ${collaborator.verificado ? 'Sí' : 'No'}
+                            </span>
+                        </p>
                     </div>
                 </div>
-                
-                ${collaborator.telefono ? `
-                    <div class="swal-additional-info">
-                        <p><strong>Teléfono:</strong> <span>${collaborator.telefono}</span></p>
-                        ${collaborator.departamento ? `<p><strong>Departamento:</strong> <span>${collaborator.departamento}</span></p>` : ''}
-                    </div>
-                ` : ''}
                 
                 ${collaborator.eliminado ? `
                     <div class="swal-warning-alert">
@@ -447,40 +415,8 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
         `,
         width: 700,
         showCloseButton: true,
-        showConfirmButton: false,
-        customClass: {
-            popup: 'swal2-details-popup',
-            closeButton: 'swal2-close-custom'
-        }
+        showConfirmButton: false
     });
-}
-
-// ========== ACTUALIZAR PÁGINA CON INFO DEL ADMIN ==========
-function updatePageWithAdminInfo(admin) {
-    console.log('🎨 Actualizando página con datos del admin...');
-    
-    const mainTitle = document.querySelector('.section-header h1');
-    if (mainTitle && admin.organizacion) {
-        mainTitle.innerHTML = `
-            <i class="fas fa-users"></i> COLABORADORES DE 
-            <span class="organization-name">${admin.organizacion.toUpperCase()}</span>
-        `;
-    }
-    
-    const subTitle = document.querySelector('.section-header p');
-    if (!subTitle && admin.organizacion) {
-        const sectionTitle = document.querySelector('.section-title');
-        if (sectionTitle) {
-            const newSubTitle = document.createElement('p');
-            newSubTitle.className = 'admin-info-subtitle';
-            newSubTitle.innerHTML = `
-                <i class="fas fa-user-shield"></i>
-                Administrador: <strong>${admin.nombreCompleto || 'Administrador'}</strong>
-                ${admin.correoElectronico ? ` | <span>${admin.correoElectronico}</span>` : ''}
-            `;
-            sectionTitle.parentNode.insertBefore(newSubTitle, sectionTitle.nextSibling);
-        }
-    }
 }
 
 // ========== ESTADO VACÍO ==========
@@ -588,5 +524,3 @@ function showError(message) {
         </tr>
     `;
 }
-
-console.log('✅ Script de gestión de colaboradores cargado');

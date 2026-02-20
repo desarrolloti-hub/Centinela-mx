@@ -1,136 +1,132 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crear Nueva Área - Sistema Centinela</title>
-    
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+
     <!-- Fuentes del sistema Centinela -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Estilos del navbar y footer -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
     
-    <!-- Nuestros estilos -->
+    <!-- Estilos principales de la vista -->
     <link rel="stylesheet" href="crearAreas.css">
-    <style>
-        /* Estilos personalizados */
-        .organizacion-info {
-            border-left: 4px solid #3498db;
-            background-color: #1d1d1d !important;
-        }
-        
-        .organizacion-info i.fa-building {
-            color: #2c3e50;
-        }
-        
-        /* Para mostrar nombres largos */
-        select#responsable option {
-            white-space: normal !important;
-            word-wrap: break-word;
-            padding: 8px 4px;
-        }
-        
-        .form-select {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-    </style>
+    
+    <!-- Assets -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
 </head>
+
 <body>
     <canvas id="particle-canvas"></canvas>
-    
+    <br>
+
     <!-- Contenedor principal -->
-    <div class="container-fluid py-4">
+    <div class="centinela-container">
         <!-- Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="h3"><i class="fas fa-plus-circle me-2"></i>Crear Nueva Área</h1>
-                        <p class="text-muted">Complete el formulario para registrar un área nueva</p>
+        <div class="centinela-row page-header">
+            <div class="centinela-col-12">
+                <div class="d-flex flex-column align-items-center text-center">
+                    <h1 class="h3 mb-3">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Crear Nueva Área
+                    </h1>
+                    <div class="text-muted" style="max-width: 700px;">
+                        Complete el formulario para registrar un área nueva en el sistema.<br>
+                        Todos los campos marcados con * son obligatorios.
                     </div>
-                    <button id="btnVolverLista" class="btn btn-secondary btn-lg">
-                        <i class="fas fa-arrow-left me-2"></i>Volver
-                    </button>
                 </div>
             </div>
         </div>
-        
-        <!-- Formulario de Creación -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Información del Área</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="formCrearArea">
-                            <!-- Sección 1: Información Básica -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-info-circle me-2"></i>Información Básica</h6>
+
+        <!-- FORMULARIO PRINCIPAL -->
+        <form id="formCrearArea">
+            <!-- Tarjeta 1: Información Principal del Área -->
+            <div class="centinela-row">
+                <div class="centinela-col-12">
+                    <div class="centinela-card">
+                        <div class="centinela-card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title"><i class="fas fa-edit me-2"></i>Información del Área</h5>
+                            <button type="button" id="btnVolverLista" class="btn-volver">
+                                <i class="fas fa-arrow-left"></i>Volver a la lista
+                            </button>
+                        </div>
+                        <div class="centinela-card-body">
+                            <!-- Sección: Información Básica -->
+                            <div class="centinela-row mb-4">
+                                <div class="centinela-col-12">
+                                    <h6 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>Información Básica
+                                    </h6>
                                 </div>
-                                
+
                                 <div class="col-md-6 mb-3">
-                                    <label for="nombreArea" class="form-label">Nombre del Área *</label>
+                                    <label for="nombreArea" class="form-label">
+                                        <i class="fas fa-building me-1"></i>Nombre del Área <span class="required">*</span>
+                                    </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-building"></i></span>
-                                        <input type="text" class="form-control" id="nombreArea" placeholder="Ej: Recursos Humanos, Ventas, Tecnología" required>
+                                        <input type="text" class="form-control" id="nombreArea" name="nombreArea"
+                                            placeholder="Ej: Recursos Humanos, Ventas, Tecnología" required>
                                     </div>
                                     <div class="form-text">Ingrese el nombre completo del área o departamento</div>
                                 </div>
-                                
-                                <!-- ORGANIZACIÓN - Se cargará dinámicamente desde JavaScript -->
+
                                 <div class="col-md-6 mb-3">
-                                    <label for="organizacion" class="form-label">Organización *</label>
-                                    <select class="form-select" id="organizacion" required>
-                                        <option value="">Cargando organización...</option>
-                                    </select>
-                                    <div class="form-text">Organización a la que pertenece el área</div>
+                                    <label for="responsable" class="form-label">
+                                        <i class="fas fa-user me-1"></i>Responsable del Área
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
+                                        <select class="form-select" id="responsable" name="responsable">
+                                            <option value="">Seleccione un responsable...</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-text mt-1">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Persona encargada del área (opcional)
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <!-- Sección 2: Descripción -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <h6 class="border-bottom pb-2 mb-3">Descripción</h6>
-                                </div>
-                                
-                                <div class="col-12 mb-3">
-                                    <label for="descripcionArea" class="form-label">Descripción del Área *</label>
-                                    <textarea class="form-control" id="descripcionArea" rows="4" placeholder="Describa las funciones principales, objetivos y responsabilidades del área..." required></textarea>
+
+                                <div class="col-md-12 mb-3">
+                                    <label for="descripcionArea" class="form-label">
+                                        <i class="fas fa-align-left me-1"></i>Descripción del Área <span class="required">*</span>
+                                    </label>
+                                    <textarea class="form-control" id="descripcionArea" name="descripcionArea" rows="4"
+                                        placeholder="Describa las funciones principales, objetivos y responsabilidades del área..."
+                                        required></textarea>
                                     <div class="form-text">Ingrese una descripción detallada del área</div>
                                     <div class="mt-1">
                                         <small class="text-muted">Caracteres: <span id="contadorCaracteres">0</span></small>
                                     </div>
                                 </div>
-                                
-                                <!-- RESPONSABLE - Se cargará dinámicamente desde JavaScript -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="responsable" class="form-label">Responsable del Área</label>
-                                    <select class="form-select" id="responsable">
-                                        <option value="">Cargando responsables...</option>
-                                    </select>
-                                    <div class="form-text mt-1">
-                                        <i class="fas fa-user me-1"></i>
-                                        Persona encargada del área
-                                    </div>
-                                </div>
                             </div>
-                            
-                            <!-- Sección 3: Cargos del Área -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <h6 class="border-bottom pb-2 mb-3">
-                                        <i class="fas fa-briefcase me-2"></i>Cargos del Área
-                                        <span class="cargos-counter" id="cargosCounter">(0 cargos)</span>
-                                    </h6>
-                                    
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjeta 2: Gestión de Cargos -->
+            <div class="centinela-row mt-4">
+                <div class="centinela-col-12">
+                    <div class="centinela-card">
+                        <div class="centinela-card-header">
+                            <h5 class="card-title"><i class="fas fa-briefcase me-2"></i>Gestión de Cargos</h5>
+                        </div>
+                        <div class="centinela-card-body">
+                            <!-- Sección de Cargos -->
+                            <div class="centinela-row mb-4">
+                                <div class="centinela-col-12">
                                     <!-- Contenedor dinámico de cargos -->
                                     <div id="cargosList" class="cargos-container">
                                         <div class="cargos-empty" id="cargosEmpty">
@@ -139,45 +135,45 @@
                                             <small class="text-muted">Haga clic en "Agregar Cargo" para añadir uno</small>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Botón para agregar cargo -->
                                     <div class="d-flex justify-content-start mt-3">
-                                        <button type="button" class="btn btn-agregar-cargo" id="btnAgregarCargo">
+                                        <button type="button" class="btn-agregar-cargo" id="btnAgregarCargo">
                                             <i class="fas fa-plus-circle"></i>
                                             Agregar Cargo
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Mensajes de validación -->
-                            <div class="alert alert-info mb-4">
+
+                            <!-- Mensaje informativo -->
+                            <div class="alert alert-info mt-3">
                                 <i class="fas fa-info-circle me-2"></i>
-                                Los campos marcados con * son obligatorios. Todos los datos serán verificados antes de guardar.
+                                Los cargos que agregue aquí estarán disponibles para asignar a los empleados de esta área.
                             </div>
                             
-                            <!-- Botones de acción - SIN GUARDAR BORRADOR -->
-                            <div class="d-flex justify-content-end gap-3">
-                                <button type="button" class="btn btn-secondary" id="btnCancelar">
-                                    <i class="fas fa-times me-2"></i>Cancelar
-                                </button>
-                                <button type="submit" class="btn btn-primary" id="btnCrearArea">
+                            <div class="d-flex justify-content-start gap-3 mt-4">
+                                <button type="submit" class="btn-success" id="btnCrearArea">
                                     <i class="fas fa-check me-2"></i>Crear Área
                                 </button>
+                                <button type="button" class="btn-secondary" id="btnCancelar">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
+    <br>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="/components/themeloader.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
     <script type="module" src="crearAreas.js"></script>
 </body>
+
 </html>

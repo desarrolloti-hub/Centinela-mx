@@ -10,7 +10,6 @@ class NavbarComplete {
     // Inicializa el navbar evitando duplicados
     init() {
         if (window.NavbarCompleteLoaded) {
-            console.log('🔄 Navbar ya cargado');
             return;
         }
 
@@ -30,11 +29,16 @@ class NavbarComplete {
             this.removeOriginalNavbar();
             this.createNavbar();
             this.setupFunctionalities();
-            await this.loadAdminData(); // Cargar datos del administrador
-            this.updateNavbarWithAdminData(); // Actualizar navbar con datos
-            console.log('✅ Navbar completo inicializado con datos del admin');
+            
+            // PRIMERO: Cargar desde localStorage (inmediato)
+            this.loadAdminDataFromLocalStorage();
+            this.updateNavbarWithAdminData();
+            
+            // SEGUNDO: Cargar desde Firebase para actualizar (si hay cambios)
+            await this.loadAdminDataFromFirebase();
+            
         } catch (error) {
-            console.error('❌ Error:', error);
+            console.error('❌ Error en inicialización:', error);
         }
     }
 
@@ -75,12 +79,12 @@ class NavbarComplete {
                 box-shadow: var(--navbar-scrolled-shadow);
             }
             
-            /* Sección superior: Logo | Título | Botón hamburguesa - MODIFICADO */
+            /* Sección superior: Logo | Título | Botón hamburguesa */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 5px 20px; /* Más padding horizontal */
+                padding: 5px 20px;
                 min-height: 50px;
                 margin: 0;
                 position: relative;
@@ -88,24 +92,24 @@ class NavbarComplete {
                 box-sizing: border-box;
             }
             
-            /* Contenedor izquierdo para el logo - PEGADO A LA IZQUIERDA */
+            /* Contenedor izquierdo para el logo */
             .navbar-left-container {
                 display: flex;
                 align-items: center;
                 justify-content: flex-start;
-                gap: 10px; /* Espacio entre logos */
-                flex: 0 0 auto; /* No crece, no se encoge */
-                margin-right: auto; /* Empuja todo lo demás a la derecha */
+                gap: 10px;
+                flex: 0 0 auto;
+                margin-right: auto;
             }
             
-            /* Logo del sistema - CÍRCULO PERFECTO */
+            /* Logo del sistema */
             .navbar-logo-link {
                 display: flex;
                 align-items: center;
                 text-decoration: none;
                 z-index: 1003;
                 height: 70px;
-                flex: 0 0 auto; /* Tamaño fijo */
+                flex: 0 0 auto;
             }
 
             /* Contenedor para logo circular */
@@ -120,7 +124,7 @@ class NavbarComplete {
                 align-items: center;
                 justify-content: center;
                 transition: all 0.3s ease;
-                flex-shrink: 0; /* No se encoge */
+                flex-shrink: 0;
             }
 
             /* Todos los logos en círculo perfecto */
@@ -151,7 +155,7 @@ class NavbarComplete {
                 );
                 margin: 0 5px;
                 border-radius: 1px;
-                flex-shrink: 0; /* No se encoge */
+                flex-shrink: 0;
             }
             
             /* Logo de organización cuando es texto */
@@ -168,10 +172,10 @@ class NavbarComplete {
                 font-size: 14px;
                 text-align: center;
                 border: 3px solid var(--color-accent-primary);
-                flex-shrink: 0; /* No se encoge */
+                flex-shrink: 0;
             }
             
-            /* Título "CENTINELA" centrado - AHORA ABSOLUTO */
+            /* Título "CENTINELA" centrado */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -190,16 +194,16 @@ class NavbarComplete {
                 width: max-content;
             }
             
-            /* Contenedor derecho para el botón hamburguesa - PEGADO A LA DERECHA */
+            /* Contenedor derecho para el botón hamburguesa */
             .navbar-right-container {
                 display: flex;
                 align-items: center;
                 justify-content: flex-end;
-                flex: 0 0 auto; /* Tamaño fijo */
-                margin-left: auto; /* Empuja todo lo demás a la izquierda */
+                flex: 0 0 auto;
+                margin-left: auto;
             }
             
-            /* Botón hamburguesa - PEGADO A LA DERECHA */
+            /* Botón hamburguesa */
             .navbar-hamburger-btn {
                 display: flex;
                 flex-direction: column;
@@ -214,7 +218,7 @@ class NavbarComplete {
                 position: relative;
                 z-index: 1002;
                 transition: var(--transition-default);
-                flex-shrink: 0; /* No se encoge */
+                flex-shrink: 0;
             }
             
             /* Líneas del botón hamburguesa */
@@ -390,7 +394,7 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* Sección de navegación */
+            /* Sección de navegación - MODIFICADA: ahora solo Áreas y Categorías */
             .nav-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -441,29 +445,7 @@ class NavbarComplete {
                 font-family: 'Orbitron', sans-serif;
             }
             
-            .nav-item-percentage {
-                font-size: 14px;
-                font-weight: 600;
-                color: var(--color-accent-primary);
-                font-family: 'Orbitron', sans-serif;
-            }
-            
-            .nav-item-priority {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-top: 5px;
-            }
-            
-            .priority-item {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                font-size: 13px;
-                font-family: 'Orbitron', sans-serif;
-            }
-            
-            /* Sección de espacios vacíos (sin texto) */
+            /* Sección de espacios vacíos */
             .menu-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -545,7 +527,7 @@ class NavbarComplete {
             }
             
             .admin-dropdown-options.active {
-                max-height: 350px;
+                max-height: 450px;
                 opacity: 1;
                 overflow: visible;
             }
@@ -564,6 +546,7 @@ class NavbarComplete {
                 color: var(--color-text-primary);
                 font-weight: 500;
                 font-family: 'Orbitron', sans-serif;
+                word-break: break-word;
             }
             
             .admin-dropdown-option:hover {
@@ -577,6 +560,13 @@ class NavbarComplete {
                 text-align: center;
                 font-size: 16px;
                 color: var(--color-accent-primary);
+                flex-shrink: 0;
+            }
+            
+            .admin-dropdown-option span {
+                flex: 1;
+                white-space: normal;
+                word-break: break-word;
             }
             
             /* Opción especial para cerrar sesión */
@@ -595,7 +585,7 @@ class NavbarComplete {
                 color: white;
             }
             
-            /* Overlay para cerrar el menú (en móvil) */
+            /* Overlay para cerrar el menú */
             .navbar-mobile-overlay {
                 position: fixed;
                 top: 0;
@@ -637,11 +627,23 @@ class NavbarComplete {
                 
                 .navbar-title {
                     font-size: 22px;
-                    /* En móviles, el título puede ajustarse */
                 }
 
                 body.menu-open {
                     overflow: hidden;
+                }
+                
+                .admin-dropdown-option {
+                    padding: 12px 12px;
+                    gap: 10px;
+                }
+                
+                .admin-dropdown-option i {
+                    font-size: 14px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 14px;
                 }
             }
             
@@ -673,7 +675,6 @@ class NavbarComplete {
                 
                 .navbar-title {
                     font-size: 18px;
-                    /* En móviles pequeños, el título puede ocultarse si hay poco espacio */
                     white-space: normal;
                     max-width: 150px;
                     overflow: hidden;
@@ -704,9 +705,48 @@ class NavbarComplete {
                     width: 22px;
                     height: 2.5px;
                 }
+                
+                .admin-dropdown-options {
+                    padding: 12px;
+                }
+                
+                .admin-dropdown-options.active {
+                    max-height: 500px;
+                }
+                
+                .admin-dropdown-option {
+                    padding: 14px 12px;
+                    gap: 12px;
+                }
+                
+                .admin-dropdown-option i {
+                    font-size: 16px;
+                    width: 24px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 15px;
+                    line-height: 1.4;
+                }
+                
+                .nav-section-title {
+                    font-size: 15px;
+                }
+                
+                .nav-item {
+                    padding: 12px 15px;
+                }
+                
+                .nav-item i {
+                    font-size: 16px;
+                }
+                
+                .nav-item-text {
+                    font-size: 14px;
+                }
             }
             
-            /* Para pantallas muy pequeñas (menos de 480px) */
+            /* Para pantallas muy pequeñas */
             @media (max-width: 480px) {
                 .navbar-top-section {
                     padding: 5px 10px;
@@ -741,6 +781,14 @@ class NavbarComplete {
                 .hamburger-line {
                     width: 20px;
                     height: 2px;
+                }
+                
+                .admin-dropdown-option {
+                    padding: 12px 10px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 14px;
                 }
             }
             
@@ -781,7 +829,7 @@ class NavbarComplete {
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
-                    <!-- Logo del sistema Centinela - CÍRCULO - PEGADO A LA IZQUIERDA -->
+                    <!-- Logo del sistema Centinela -->
                     <a href="/users/admin/dashAdmin/dashAdmin.html" class="navbar-logo-link">
                         <div class="logo-circle-container">
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
@@ -791,8 +839,8 @@ class NavbarComplete {
                     <!-- BARRA SEPARADORA ENTRE LOGOS -->
                     <div class="logo-separator"></div>
                     
-                    <!-- Logo de la organización - CÍRCULO -->
-                    <a href="/users/admin/dashboard/dashboard.html" class="navbar-logo-link" id="orgLogoLink">
+                    <!-- Logo de la organización -->
+                    <a href="/users/admin/dashAdmin/dashAdmin.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
                             <img src="/assets/images/logo.png" alt="Logo Organización" 
                                  class="navbar-logo-img" id="orgLogoImg">
@@ -801,11 +849,11 @@ class NavbarComplete {
                     </a>
                 </div>
                 
-                <!-- Título CENTRADO ABSOLUTAMENTE -->
+                <!-- Título centrado -->
                 <h1 class="navbar-title">CENTINELA</h1>
                 
                 <div class="navbar-right-container">
-                    <!-- Botón hamburguesa - PEGADO A LA DERECHA -->
+                    <!-- Botón hamburguesa -->
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
                         <span class="hamburger-line"></span>
                         <span class="hamburger-line"></span>
@@ -814,7 +862,7 @@ class NavbarComplete {
                 </div>
             </div>
             
-            <!-- Overlay para cerrar menú en móvil -->
+            <!-- Overlay para cerrar menú -->
             <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
             
             <!-- Menú lateral -->
@@ -847,7 +895,7 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- SECCIÓN DE ADMINISTRACIÓN: ÁREAS Y PERSONALIZACIÓN -->
+                <!-- SECCIÓN DE ADMINISTRACIÓN: ÁREAS Y CATEGORÍAS (sin Personalización) -->
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <i class="fa-solid fa-gear"></i>
@@ -861,24 +909,16 @@ class NavbarComplete {
                             <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
                         </a>
 
-                        <div class="nav-items-container">
                         <!-- Botón para CATEGORIAS -->
                         <a href="/users/admin/categorias/categorias.html" class="nav-item" id="categoriasBtn">
                             <i class="fa-solid fa-tags"></i>
                             <span class="nav-item-text">Categorías</span>
                             <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
                         </a>
-                        
-                        <!-- Botón para PERSONALIZACIÓN DE COLORES -->
-                        <a href="/users/admin/themeManager/themeManager.html" class="nav-item" id="themeManagerBtn">
-                            <i class="fa-solid fa-palette"></i>
-                            <span class="nav-item-text">Personalización de colores</span>
-                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
-                        </a>
                     </div>
                 </div>
                 
-                <!-- Sección de espacios vacíos (reducidos a 6 espacios) -->
+                <!-- Sección de espacios vacíos -->
                 <div class="menu-section">
                     <div class="empty-menu-item"></div>
                 </div>
@@ -898,6 +938,11 @@ class NavbarComplete {
                         <a href="/users/admin/managementUser/managementUser.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Gestionar Usuarios</span>
+                        </a>
+                        <!-- Botón de Personalización de colores movido AQUÍ, antes de cerrar sesión -->
+                        <a href="/users/admin/themeManager/themeManager.html" class="admin-dropdown-option" id="themeManagerBtn">
+                            <i class="fa-solid fa-palette"></i>
+                            <span>Personalización de colores</span>
                         </a>
                         <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
                             <i class="fa-solid fa-right-from-bracket"></i>
@@ -926,50 +971,179 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // Carga los datos del administrador actual
-    async loadAdminData() {
+    // CARGA DESDE LOCALSTORAGE (inmediata)
+    loadAdminDataFromLocalStorage() {
+        try {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            if (!isLoggedIn) {
+                return false;
+            }
+            
+            const userDataString = localStorage.getItem('userData');
+            
+            if (userDataString) {
+                const userData = JSON.parse(userDataString);
+                
+                let fotoUsuario = null;
+                let fotoOrganizacion = null;
+                
+                if (userData.fotoUsuario && userData.fotoUsuario.length > 10) {
+                    fotoUsuario = userData.fotoUsuario;
+                } else {
+                    const userFotoKey = localStorage.getItem('userFoto');
+                    if (userFotoKey && userFotoKey.length > 10) {
+                        fotoUsuario = userFotoKey;
+                    }
+                }
+                
+                if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) {
+                    fotoOrganizacion = userData.fotoOrganizacion;
+                } else {
+                    const orgLogoKey = localStorage.getItem('organizacionLogo');
+                    if (orgLogoKey && orgLogoKey.length > 10) {
+                        fotoOrganizacion = orgLogoKey;
+                    }
+                }
+                
+                this.currentAdmin = {
+                    id: userData.id || localStorage.getItem('userId'),
+                    uid: userData.id,
+                    correoElectronico: userData.email || localStorage.getItem('userEmail'),
+                    nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'),
+                    rol: userData.rol || localStorage.getItem('userRole'),
+                    organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
+                    organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
+                    fotoUsuario: fotoUsuario,
+                    fotoOrganizacion: fotoOrganizacion,
+                    status: userData.status || 'activo',
+                    verificado: userData.verificado || true,
+                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
+                };
+                
+                return true;
+            }
+            
+            this.currentAdmin = {
+                id: localStorage.getItem('userId'),
+                correoElectronico: localStorage.getItem('userEmail'),
+                nombreCompleto: localStorage.getItem('userNombre'),
+                rol: localStorage.getItem('userRole'),
+                organizacion: localStorage.getItem('userOrganizacion'),
+                organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
+                fotoUsuario: localStorage.getItem('userFoto') || null,
+                fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
+            };
+            
+            if (this.currentAdmin.nombreCompleto && this.currentAdmin.rol) {
+                return true;
+            }
+            
+            return false;
+            
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // CARGA DESDE FIREBASE (actualización)
+    async loadAdminDataFromFirebase() {
         try {
             // Importar UserManager dinámicamente
             const { UserManager } = await import('/clases/user.js');
             this.userManager = new UserManager();
 
-            // Esperar a que UserManager cargue el usuario
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Esperar un poco a que UserManager cargue
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             if (this.userManager.currentUser) {
-                this.currentAdmin = this.userManager.currentUser;
-                console.log('👤 Admin cargado en navbar:', {
-                    nombre: this.currentAdmin.nombreCompleto,
-                    email: this.currentAdmin.correoElectronico,
-                    organizacion: this.currentAdmin.organizacion,
-                    fotoUsuario: this.currentAdmin.fotoUsuario ? 'Sí' : 'No',
-                    fotoOrganizacion: this.currentAdmin.fotoOrganizacion ? 'Sí' : 'No'
-                });
-            } else {
-                // Intentar cargar desde localStorage
-                try {
-                    const storedUser = JSON.parse(localStorage.getItem('centinela-currentUser'));
-                    if (storedUser && storedUser.cargo === 'administrador') {
-                        this.currentAdmin = storedUser;
-                        console.log('👤 Admin cargado desde localStorage en navbar');
-                    }
-                } catch (e) {
-                    console.warn('No se pudo cargar admin desde localStorage');
+                const firebaseUser = this.userManager.currentUser;
+                
+                // Verificar si hubo cambios comparando con localStorage
+                let needsUpdate = false;
+                
+                if (!this.currentAdmin) {
+                    needsUpdate = true;
+                } else {
+                    if (firebaseUser.nombreCompleto !== this.currentAdmin.nombreCompleto) needsUpdate = true;
+                    if (firebaseUser.fotoUsuario !== this.currentAdmin.fotoUsuario) needsUpdate = true;
+                    if (firebaseUser.fotoOrganizacion !== this.currentAdmin.fotoOrganizacion) needsUpdate = true;
+                    if (firebaseUser.organizacion !== this.currentAdmin.organizacion) needsUpdate = true;
+                    if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
+                    if (firebaseUser.rol !== this.currentAdmin.rol) needsUpdate = true;
+                }
+                
+                if (needsUpdate) {
+                    this.currentAdmin = {
+                        ...this.currentAdmin,
+                        ...firebaseUser,
+                        rol: firebaseUser.rol
+                    };
+                    
+                    // Actualizar el navbar con los nuevos datos
+                    this.updateNavbarWithAdminData();
+                    
+                    // Actualizar localStorage para futuras cargas
+                    this.updateLocalStorageFromFirebase(firebaseUser);
                 }
             }
+            
         } catch (error) {
-            console.error('❌ Error al cargar datos del admin en navbar:', error);
+            // Silencioso - no interrumpir la experiencia del usuario
+        }
+    }
+
+    // Actualiza localStorage con datos de Firebase
+    updateLocalStorageFromFirebase(userData) {
+        try {
+            // Actualizar userData
+            const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const updatedUserData = {
+                ...currentUserData,
+                id: userData.id,
+                uid: userData.id,
+                email: userData.correoElectronico,
+                nombreCompleto: userData.nombreCompleto,
+                rol: userData.rol,
+                organizacion: userData.organizacion,
+                organizacionCamelCase: userData.organizacionCamelCase,
+                fotoUsuario: userData.fotoUsuario,
+                fotoOrganizacion: userData.fotoOrganizacion,
+                status: userData.status,
+                verificado: userData.verificado,
+                ultimoAcceso: userData.ultimoAcceso
+            };
+            
+            localStorage.setItem('userData', JSON.stringify(updatedUserData));
+            
+            // Actualizar claves individuales
+            if (userData.fotoUsuario) localStorage.setItem('userFoto', userData.fotoUsuario);
+            if (userData.fotoOrganizacion) localStorage.setItem('organizacionLogo', userData.fotoOrganizacion);
+            if (userData.nombreCompleto) localStorage.setItem('userNombre', userData.nombreCompleto);
+            if (userData.correoElectronico) localStorage.setItem('userEmail', userData.correoElectronico);
+            if (userData.rol) localStorage.setItem('userRole', userData.rol);
+            if (userData.organizacion) localStorage.setItem('userOrganizacion', userData.organizacion);
+            if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
+            
+        } catch (error) {
+            // Silencioso
         }
     }
 
     // Actualiza el navbar con los datos del administrador
     updateNavbarWithAdminData() {
         if (!this.currentAdmin) {
-            console.log('⚠️ No hay datos de admin para mostrar en navbar');
+            // Mostrar valores por defecto si no hay datos
+            const adminName = document.getElementById('adminName');
+            const adminEmail = document.getElementById('adminEmail');
+            const adminOrganization = document.getElementById('adminOrganization');
+            
+            if (adminName) adminName.textContent = 'No autenticado';
+            if (adminEmail) adminEmail.textContent = 'Inicia sesión para continuar';
+            if (adminOrganization) adminOrganization.textContent = '';
+            
             return;
         }
-
-        console.log('🔄 Actualizando navbar con datos del admin...');
 
         // 1. Actualizar segundo logo (logo de la organización)
         this.updateOrganizationLogo();
@@ -977,10 +1151,7 @@ class NavbarComplete {
         // 2. Actualizar información en el menú desplegable
         this.updateAdminMenuInfo();
 
-        // 3. Actualizar título del navbar si es necesario
-        this.updateNavbarTitle();
-
-        // 4. Configurar eventos para los botones nuevos
+        // 3. Configurar eventos para los botones nuevos
         this.setupAdminButtons();
     }
 
@@ -990,16 +1161,22 @@ class NavbarComplete {
         const areasBtn = document.getElementById('areasBtn');
         if (areasBtn) {
             areasBtn.addEventListener('click', (e) => {
-                console.log('📍 Navegando a Áreas...');
                 // La navegación se maneja automáticamente por el href
             });
         }
 
-        // Botón de Personalización de colores
+        // Botón de Categorías
+        const categoriasBtn = document.getElementById('categoriasBtn');
+        if (categoriasBtn) {
+            categoriasBtn.addEventListener('click', (e) => {
+                // La navegación se maneja automáticamente por el href
+            });
+        }
+
+        // Botón de Personalización de colores (ahora en el dropdown)
         const themeManagerBtn = document.getElementById('themeManagerBtn');
         if (themeManagerBtn) {
             themeManagerBtn.addEventListener('click', (e) => {
-                console.log('🎨 Navegando a Personalización de colores...');
                 // La navegación se maneja automáticamente por el href
             });
         }
@@ -1015,35 +1192,18 @@ class NavbarComplete {
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
 
         // Si tiene logo de organización
-        if (this.currentAdmin.fotoOrganizacion) {
+        if (this.currentAdmin?.fotoOrganizacion && this.currentAdmin.fotoOrganizacion.length > 10) {
             organizationLogoImg.src = this.currentAdmin.fotoOrganizacion;
-            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion}`;
+            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion || 'Organización'}`;
             organizationLogoImg.style.display = 'block';
             orgTextLogo.style.display = 'none';
 
             // Añadir tooltip y atributos
-            organizationLogoImg.title = this.currentAdmin.organizacion;
-            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion);
-
-            console.log('🏢 Logo de organización actualizado:', this.currentAdmin.organizacion);
+            organizationLogoImg.title = this.currentAdmin.organizacion || 'Organización';
+            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion || '');
         } else {
             // Mostrar texto en lugar de imagen
-            organizationLogoImg.style.display = 'none';
-            orgTextLogo.style.display = 'flex';
-
-            // Crear texto con las iniciales de la organización
-            const orgName = this.currentAdmin.organizacion || 'Organización';
-            const initials = orgName
-                .split(' ')
-                .map(word => word.charAt(0))
-                .join('')
-                .toUpperCase()
-                .substring(0, 3);
-
-            orgTextLogo.textContent = initials;
-            orgTextLogo.title = orgName;
-
-            console.log('🏢 Texto de organización mostrado:', initials);
+            this.showOrgTextLogo();
         }
 
         // Actualizar el enlace del logo para redirigir al dashboard
@@ -1054,24 +1214,46 @@ class NavbarComplete {
         orgLogoContainer.style.overflow = 'hidden';
     }
 
+    // Muestra iniciales cuando no hay logo
+    showOrgTextLogo() {
+        const organizationLogoImg = document.getElementById('orgLogoImg');
+        const orgTextLogo = document.getElementById('orgTextLogo');
+        
+        if (!organizationLogoImg || !orgTextLogo) return;
+        
+        organizationLogoImg.style.display = 'none';
+        orgTextLogo.style.display = 'flex';
+        
+        const orgName = this.currentAdmin?.organizacion || 'Organización';
+        const initials = orgName
+            .split(' ')
+            .map(word => word.charAt(0))
+            .join('')
+            .toUpperCase()
+            .substring(0, 3);
+        
+        orgTextLogo.textContent = initials;
+        orgTextLogo.title = orgName;
+    }
+
     // Actualiza la información del administrador en el menú
     updateAdminMenuInfo() {
         // Nombre del administrador
         const adminName = document.getElementById('adminName');
         if (adminName) {
-            adminName.textContent = this.currentAdmin.nombreCompleto || 'Administrador';
+            adminName.textContent = this.currentAdmin?.nombreCompleto || 'Administrador';
         }
 
         // Email del administrador
         const adminEmail = document.getElementById('adminEmail');
         if (adminEmail) {
-            adminEmail.textContent = this.currentAdmin.correoElectronico || 'No especificado';
+            adminEmail.textContent = this.currentAdmin?.correoElectronico || 'No especificado';
         }
 
         // Organización del administrador
         const adminOrganization = document.getElementById('adminOrganization');
         if (adminOrganization) {
-            adminOrganization.textContent = this.currentAdmin.organizacion || 'Sin organización';
+            adminOrganization.textContent = this.currentAdmin?.organizacion || 'Sin organización';
         }
 
         // Foto de perfil del administrador
@@ -1079,27 +1261,36 @@ class NavbarComplete {
         const profilePlaceholder = document.getElementById('profilePlaceholder');
 
         if (adminProfileImg && profilePlaceholder) {
-            if (this.currentAdmin.fotoUsuario) {
+            if (this.currentAdmin?.fotoUsuario && this.currentAdmin.fotoUsuario.length > 10) {
                 adminProfileImg.src = this.currentAdmin.fotoUsuario;
                 adminProfileImg.style.display = 'block';
                 profilePlaceholder.style.display = 'none';
-                console.log('👤 Foto de admin cargada');
+                adminProfileImg.alt = `Foto de ${this.currentAdmin.nombreCompleto || 'Administrador'}`;
             } else {
-                adminProfileImg.style.display = 'none';
-                profilePlaceholder.style.display = 'flex';
-                console.log('👤 Placeholder de foto mostrado');
+                this.showProfilePlaceholder();
             }
         }
-
-        console.log('✅ Información del admin actualizada en el menú');
     }
 
-    // Actualiza el título del navbar si es necesario
-    updateNavbarTitle() {
-        const navbarTitle = document.querySelector('.navbar-title');
-        if (navbarTitle && this.currentAdmin.organizacion) {
-            // Opcional: Cambiar el título para incluir el nombre de la organización
-            // navbarTitle.textContent = `CENTINELA - ${this.currentAdmin.organizacion}`;
+    // Muestra placeholder cuando no hay foto
+    showProfilePlaceholder() {
+        const adminProfileImg = document.getElementById('adminProfileImg');
+        const profilePlaceholder = document.getElementById('profilePlaceholder');
+        
+        if (!adminProfileImg || !profilePlaceholder) return;
+        
+        adminProfileImg.style.display = 'none';
+        profilePlaceholder.style.display = 'flex';
+        
+        const placeholderText = profilePlaceholder.querySelector('span');
+        if (placeholderText && this.currentAdmin?.nombreCompleto) {
+            const initials = this.currentAdmin.nombreCompleto
+                .split(' ')
+                .map(word => word.charAt(0))
+                .join('')
+                .toUpperCase()
+                .substring(0, 2);
+            placeholderText.textContent = initials;
         }
     }
 
@@ -1110,7 +1301,7 @@ class NavbarComplete {
         this.loadFontAwesome();
         this.setupAdminDropdown();
         this.loadOrbitronFont();
-        this.setupLogout(); // Añadido para cerrar sesión
+        this.setupLogout();
     }
 
     // Configura el menú hamburguesa
@@ -1224,11 +1415,8 @@ class NavbarComplete {
                     text: '¿Estás seguro de que deseas salir del sistema?',
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'Sí, cerrar sesión',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    reverseButtons: true
+                    confirmButtonText: 'CONFIRMAR',
+                    cancelButtonText: 'CANCELAR'
                 }).then((result) => {
                     resolve(result.isConfirmed);
                 });
@@ -1242,13 +1430,10 @@ class NavbarComplete {
 
     // Realiza el cierre de sesión COMPLETO
     async performLogout() {
-        console.log('🚪 Cerrando sesión COMPLETAMENTE...');
-
         try {
             // 1. Cerrar sesión en Firebase si UserManager está disponible
             if (this.userManager && typeof this.userManager.logout === 'function') {
                 await this.userManager.logout();
-                console.log('🔥 Sesión de Firebase cerrada a través de UserManager');
             } else {
                 // Intentar cerrar sesión directamente si firebase está disponible
                 await this.signOutFirebaseDirectly();
@@ -1257,8 +1442,6 @@ class NavbarComplete {
             // 2. Limpiar TODOS los datos de almacenamiento local
             this.clearAllStorage();
 
-            console.log('🧹 TODOS los datos de sesión eliminados');
-
             // 3. Mostrar mensaje de éxito
             await this.showLogoutSuccessMessage();
 
@@ -1266,8 +1449,6 @@ class NavbarComplete {
             this.redirectToLogin();
 
         } catch (error) {
-            console.error('❌ Error al cerrar sesión:', error);
-
             // Aún así limpiar almacenamiento y redirigir
             this.clearAllStorage();
             this.redirectToLogin();
@@ -1280,7 +1461,6 @@ class NavbarComplete {
             // Método 1: Si firebase está disponible globalmente
             if (typeof firebase !== 'undefined' && firebase.auth) {
                 await firebase.auth().signOut();
-                console.log('🔥 Sesión de Firebase cerrada directamente');
                 return;
             }
 
@@ -1292,12 +1472,10 @@ class NavbarComplete {
             if (firebaseApps && firebaseApps.length > 0) {
                 const auth = getAuth(firebaseApps[0]);
                 await signOut(auth);
-                console.log('🔥 Sesión de Firebase cerrada con app existente');
             }
 
         } catch (error) {
-            console.warn('⚠️ No se pudo cerrar sesión en Firebase directamente:', error);
-            // Continuar de todos modos
+            // Silencioso - continuar de todos modos
         }
     }
 
@@ -1306,11 +1484,9 @@ class NavbarComplete {
         try {
             // Limpiar localStorage completamente
             localStorage.clear();
-            console.log('🗑️ localStorage limpiado');
 
             // Limpiar sessionStorage
             sessionStorage.clear();
-            console.log('🗑️ sessionStorage limpiado');
 
             // Limpiar cookies relacionadas con sesión
             this.clearSessionCookies();
@@ -1319,7 +1495,7 @@ class NavbarComplete {
             this.clearIndexedDB();
 
         } catch (error) {
-            console.warn('⚠️ Error al limpiar almacenamiento:', error);
+            // Silencioso
         }
     }
 
@@ -1337,9 +1513,8 @@ class NavbarComplete {
                     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
                 }
             }
-            console.log('🍪 Cookies de sesión limpiadas');
         } catch (error) {
-            console.warn('⚠️ Error al limpiar cookies:', error);
+            // Silencioso
         }
     }
 
@@ -1352,13 +1527,12 @@ class NavbarComplete {
             for (const dbName of databases) {
                 try {
                     await indexedDB.deleteDatabase(dbName);
-                    console.log(`🗃️ indexedDB ${dbName} eliminada`);
                 } catch (e) {
                     // La base de datos podría no existir, continuar
                 }
             }
         } catch (error) {
-            console.warn('⚠️ Error al limpiar indexedDB:', error);
+            // Silencioso
         }
     }
 

@@ -30,11 +30,11 @@ class User {
     constructor(id, data) {
         // ID único del usuario (UID de Firebase Auth)
         this.id = id;
-        
+
         // Datos de la organización
         this.organizacion = data.organizacion || '';
         this.organizacionCamelCase = data.organizacionCamelCase || '';
-        
+
         // Datos personales del usuario
         this.nombreCompleto = data.nombreCompleto || '';
         this.correoElectronico = data.correoElectronico || '';
@@ -42,47 +42,49 @@ class User {
         this.idAuth = data.idAuth || '';
         this.fotoUsuario = data.fotoUsuario || data.fotoURL || data.foto || '';
         this.fotoOrganizacion = data.fotoOrganizacion || data.logoOrganizacion || data.logo || '';
+
+        // ===== ✅ CORREGIDO: Separación clara de ROL y CARGO =====
+        // `rol` define el nivel de acceso en el sistema ('master', 'administrador', 'colaborador')
+        this.rol = data.rol || 'colaborador';
         
+        // `cargo` es la información del puesto (hereda de AreaManager). Puede ser un objeto o null.
+        this.cargo = data.cargo || null; 
+
+        // ✅ SOLO EL ID DEL ÁREA SE MANTIENE
+        this.areaAsignadaId = data.areaAsignadaId || null;
+
         // Fechas y timestamps
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
         this.ultimoLogin = data.ultimoLogin ? this._convertirFecha(data.ultimoLogin) : null;
-        
+
         // Configuraciones y preferencias
         this.theme = data.theme || this._obtenerThemeDelLocalStorage() || 'predeterminado';
-        this.cargo = data.cargo || 'colaborador'; // 'administrador' o 'colaborador'
-        
+
         // Permisos y plan
         this.permisosPersonalizados = data.permisosPersonalizados || {};
-        this.plan = data.plan || 'gratis'; // 'gratis', 'basico', 'premium', 'empresa'
-        
+        this.plan = data.plan || 'gratis';
+
         // Estado de verificación de email
         this.verificado = data.verificado || false;
-        this.emailVerified = data.emailVerified || false; // Estado de verificación de email en Auth
-        
+        this.emailVerified = data.emailVerified || false;
+
         // Información de creación
         this.creadoPor = data.creadoPor || '';
-        
-        console.log(`User ${id} creado:`, {
-            cargo: this.cargo,
-            nombreCompleto: this.nombreCompleto,
-            organizacion: this.organizacion,
-            status: this.status,
-            theme: this.theme,
-            plan: this.plan,
-            verificado: this.verificado
-        });
+        this.creadoPorEmail = data.creadoPorEmail || '';
+        this.creadoPorNombre = data.creadoPorNombre || '';
+        this.actualizadoPor = data.actualizadoPor || '';
     }
 
     // ========== MÉTODOS DE UTILIDAD ==========
-    
+
     _convertirFecha(fecha) {
         if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
         if (fecha instanceof Date) return fecha;
         if (typeof fecha === 'string' || typeof fecha === 'number') return new Date(fecha);
         return new Date();
     }
-    
+
     /**
      * Obtiene el tema guardado en localStorage como respaldo
      * @returns {string} El ID del tema o 'default' si no existe
@@ -95,7 +97,7 @@ class User {
                 return themeData.themeId || 'default';
             }
         } catch (e) {
-            console.warn('No se pudo leer tema de localStorage');
+            // Silencioso - no mostrar warning
         }
         return 'default';
     }
@@ -110,17 +112,17 @@ class User {
         if (!this.fotoUsuario || this.fotoUsuario.trim() === '') {
             return 'https://via.placeholder.com/150/0a2540/ffffff?text=No+Photo';
         }
-        
+
         // Si ya es una data URL (data:image/...), retornarla directamente
         if (this.fotoUsuario.startsWith('data:image')) {
             return this.fotoUsuario;
         }
-        
+
         // Si es una URL externa (http://...), retornarla
         if (this.fotoUsuario.startsWith('http')) {
             return this.fotoUsuario;
         }
-        
+
         // Si es base64 sin prefijo, construir data URL
         if (this.fotoUsuario.length > 100 && !this.fotoUsuario.includes('://')) {
             let mimeType = 'image/png';
@@ -130,16 +132,51 @@ class User {
             } else if (this.fotoUsuario.startsWith('R0lGOD')) {
                 mimeType = 'image/gif';
             }
-            
+
             return `data:${mimeType};base64,${this.fotoUsuario}`;
         }
-        
+
         // Fallback a placeholder si el formato no es reconocido
         return 'https://via.placeholder.com/150/0a2540/ffffff?text=Invalid+Photo';
     }
 
+    // ========== ✅ CORREGIDO: MÉTODOS DE VERIFICACIÓN DE ROL ==========
+
+    esMaster() {
+        return this.rol === 'master';
+    }
+
+    esAdministrador() {
+        return this.rol === 'administrador';
+    }
+
+    esColaborador() {
+        return this.rol === 'colaborador';
+    }
+
+    // ========== ✅ CORREGIDO: MÉTODO DE PERMISOS ==========
+    /**
+     * Verifica si el usuario tiene un permiso específico.
+     * @param {string} permiso - Nombre del permiso (ej. 'users.create', 'reports.view').
+     * @returns {boolean} True si tiene el permiso.
+     */
+    tienePermiso(permiso) {
+        // Master y Administrador tienen todos los permisos
+        if (this.esMaster() || this.esAdministrador()) {
+            return true;
+        }
+
+        // Colaborador: sus permisos se definen en el objeto 'permisosPersonalizados'
+        if (this.esColaborador()) {
+            return this.permisosPersonalizados[permiso] === true;
+        }
+
+        // Si por alguna razón el rol no es reconocido, no tiene permiso.
+        return false;
+    }
+
     // ========== MÉTODOS DE ESTADO ==========
-    
+
     /**
      * Verifica si el usuario está activo
      * @returns {boolean} True si está activo
@@ -193,7 +230,7 @@ class User {
     }
 
     // ========== MÉTODOS DE PLAN ==========
-    
+
     /**
      * Obtiene el límite de usuarios según el plan
      * @returns {number} Número máximo de usuarios permitidos
@@ -216,7 +253,7 @@ class User {
     puedeCrearMasUsuarios(totalUsuarios) {
         // Plan empresa no tiene límites
         if (this.plan === 'empresa') return true;
-        
+
         // Para otros planes, verificar límite
         return totalUsuarios < this.tieneLimiteUsuarios();
     }
@@ -230,8 +267,8 @@ class User {
  * @param {HTMLImageElement} imgElement - Elemento de imagen que falló
  * @param {string} userId - ID del usuario
  */
-window.handleUserImageError = function(imgElement, userId) {
-    console.error(`Image failed to load for user ${userId}`);
+window.handleUserImageError = function (imgElement, userId) {
+    console.error(`❌ Error cargando imagen para usuario ${userId}`);
     // Reemplazar con placeholder
     imgElement.src = 'https://via.placeholder.com/150/0a2540/ffffff?text=No+Photo';
 };
@@ -241,8 +278,8 @@ window.handleUserImageError = function(imgElement, userId) {
  * @param {HTMLImageElement} imgElement - Elemento de imagen cargado
  * @param {string} userId - ID del usuario
  */
-window.handleUserImageLoad = function(imgElement, userId) {
-    console.log(`Image loaded successfully for user ${userId}`);
+window.handleUserImageLoad = function (imgElement, userId) {
+    // Silencioso - no mostrar log
 };
 
 // ==================== CLASE USERMANAGER ====================
@@ -251,12 +288,10 @@ class UserManager {
     constructor() {
         // Array para almacenar usuarios en memoria
         this.users = [];
-        
+
         // Usuario actualmente autenticado
         this.currentUser = null;
-        
-        console.log('UserManager inicializado');
-        
+
         // Escuchar cambios en el estado de autenticación
         // Esto se ejecuta automáticamente cuando un usuario inicia/cierra sesión
         auth.onAuthStateChanged(async (user) => {
@@ -271,7 +306,7 @@ class UserManager {
     }
 
     // ========== MÉTODOS DE CARGA Y BÚSQUEDA ==========
-    
+
     /**
      * Carga el usuario actualmente autenticado
      * @param {string} userId - UID del usuario de Firebase Auth
@@ -279,25 +314,30 @@ class UserManager {
      */
     async loadCurrentUser(userId) {
         try {
-            console.log('Cargando usuario actual:', userId);
-            
             // ===== PRIMERO: Buscar en administradores =====
             const adminRef = doc(db, "administradores", userId);
             const adminSnap = await getDoc(adminRef);
-            
+
             if (adminSnap.exists()) {
-                console.log('✅ Encontrado en administradores');
                 const data = adminSnap.data();
 
                 // ✅ CORREGIDO: Usar userId en lugar de id
                 const user = new User(userId, {
                     ...data,
                     idAuth: userId,
-                    cargo: 'administrador',
+                    // ✅ CORREGIDO: Asignar el rol correctamente. Para admin, el rol es 'administrador'
+                    rol: data.rol || 'administrador', 
+                    // ✅ CORREGIDO: Para admin, el cargo (puesto) se asigna desde los datos
+                    cargo: data.cargo || null, 
                     // Asegurar que las fotos se pasen explícitamente
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
-                    email: data.correoElectronico || data.email
+                    email: data.correoElectronico || data.email,
+                    // ✅ Solo el ID del área
+                    areaAsignadaId: data.areaAsignadaId,
+                    creadoPorEmail: data.creadoPorEmail,
+                    creadoPorNombre: data.creadoPorNombre,
+                    actualizadoPor: data.actualizadoPor
                 });
 
                 // Agregar a memoria para próximas búsquedas
@@ -305,11 +345,11 @@ class UserManager {
                 this.currentUser = user; // ✅ IMPORTANTE: Asignar el usuario actual
                 return user;
             }
-            
+
             // ===== SEGUNDO: Buscar en colaboradores =====
             // Obtener todas las organizaciones registradas
             const todasLasOrganizaciones = await this.getTodasLasOrganizaciones();
-            
+
             // Buscar en cada colección de colaboradores de cada organización
             for (const organizacion of todasLasOrganizaciones) {
                 const coleccionColaboradores = `colaboradores_${organizacion.camelCase}`;
@@ -318,39 +358,45 @@ class UserManager {
                     where("idAuth", "==", userId)
                 );
                 const colabSnapshot = await getDocs(colabQuery);
-                
+
                 if (!colabSnapshot.empty) {
                     const docSnap = colabSnapshot.docs[0];
                     const data = docSnap.data();
-                    
+
                     // Si el colaborador está inactivo, cerrar sesión
                     if (!data.status) {
                         await signOut(auth);
                         throw new Error('Tu cuenta está inactiva. Contacta al administrador de tu organización.');
                     }
-                    
+
                     // Crear instancia de usuario colaborador
                     const user = new User(userId, {
                         ...data,
                         idAuth: userId,
-                        cargo: 'colaborador',
+                        // ✅ CORREGIDO: El rol para un colaborador es 'colaborador'
+                        rol: data.rol || 'colaborador',
+                        // ✅ CORREGIDO: El cargo (puesto) se asigna desde los datos
+                        cargo: data.cargo || null,
                         fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                         fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                         email: data.correoElectronico || data.email,
-                        emailVerified: auth.currentUser?.emailVerified || false
+                        emailVerified: auth.currentUser?.emailVerified || false,
+                        // ✅ Solo el ID del área
+                        areaAsignadaId: data.areaAsignadaId,
+                        creadoPorEmail: data.creadoPorEmail,
+                        creadoPorNombre: data.creadoPorNombre,
+                        actualizadoPor: data.actualizadoPor
                     });
-                    
+
                     this.currentUser = user; // ✅ IMPORTANTE: Asignar el usuario actual
                     this.users.push(user);
-                    console.log('Usuario actual es colaborador de:', data.organizacion);
                     return user;
                 }
             }
-            
+
             // Si no se encuentra en ninguna colección
-            console.log('Usuario no encontrado en ninguna colección');
             return null;
-            
+
         } catch (error) {
             console.error("Error cargando usuario actual:", error);
             throw error;
@@ -366,7 +412,7 @@ class UserManager {
             // Obtener todos los documentos de la colección administradores
             const adminsSnapshot = await getDocs(collection(db, "administradores"));
             const organizaciones = [];
-            
+
             // Procesar cada administrador para extraer datos de su organización
             adminsSnapshot.forEach(doc => {
                 const data = doc.data();
@@ -377,7 +423,7 @@ class UserManager {
                     status: data.status || true // Estado de actividad
                 });
             });
-            
+
             return organizaciones;
         } catch (error) {
             console.error("Error obteniendo organizaciones:", error);
@@ -386,7 +432,7 @@ class UserManager {
     }
 
     // ========== MÉTODOS DE CREACIÓN DE USUARIOS ==========
-    
+
     /**
      * Crea un nuevo administrador en el sistema
      * @param {Object} adminData - Datos del administrador
@@ -395,46 +441,45 @@ class UserManager {
      */
     async createAdministrador(adminData, password) {
         try {
-            console.log('Creando nuevo administrador:', adminData.correoElectronico);
-            
             // ===== PASO 1: Verificar si el correo ya existe =====
             const emailExistsAdmin = await this.verificarCorreoExistente(adminData.correoElectronico, 'administrador');
             if (emailExistsAdmin) {
                 throw new Error('El correo electrónico ya está registrado como administrador');
             }
-            
+
             // ===== PASO 2: Crear usuario en Firebase Authentication =====
             const userCredential = await createUserWithEmailAndPassword(
-                auth, 
-                adminData.correoElectronico, 
+                auth,
+                adminData.correoElectronico,
                 password
             );
             const uid = userCredential.user.uid;
-            console.log(`Usuario Auth creado con UID: ${uid}`);
-            
+
             // ===== PASO 3: Enviar correo de verificación de Firebase =====
             try {
                 await sendEmailVerification(userCredential.user, {
                     url: window.location.origin + '/verifyEmail.html',
                     handleCodeInApp: true
                 });
-                console.log('✅ Correo de verificación enviado');
             } catch (emailError) {
                 console.warn('⚠️ Error enviando verificación de email:', emailError);
             }
-            
+
             // ===== PASO 4: Actualizar display name en Auth =====
             await updateProfile(userCredential.user, {
                 displayName: adminData.nombreCompleto
             });
-            
+
             // ===== PASO 5: Crear documento en colección administradores =====
             const adminRef = doc(db, "administradores", uid);
-            
+
             const adminFirestoreData = {
                 ...adminData,
                 idAuth: uid,
-                cargo: 'administrador',
+                // ✅ CORREGIDO: El rol es 'administrador'
+                rol: 'administrador',
+                // ✅ CORREGIDO: El cargo (puesto) para un admin es null (o el que venga en adminData)
+                cargo: adminData.cargo || null, 
                 plan: adminData.plan || 'gratis',
                 verificado: false, // Hasta que verifique el email
                 emailVerified: false,
@@ -444,10 +489,9 @@ class UserManager {
                 fechaActualizacion: serverTimestamp(),
                 ultimoLogin: null
             };
-            
-            console.log('Guardando administrador en Firestore:', adminFirestoreData);
+
             await setDoc(adminRef, adminFirestoreData);
-            
+
             // ===== PASO 6: Agregar a lista local en memoria =====
             const newAdmin = new User(uid, {
                 ...adminFirestoreData,
@@ -455,32 +499,31 @@ class UserManager {
                 fechaActualizacion: new Date()
             });
             this.users.unshift(newAdmin); // Agregar al principio del array
-            
+
             // ===== PASO 7: Cerrar sesión para forzar verificación =====
             // Esto obliga al usuario a verificar su email antes de poder iniciar sesión
             await signOut(auth);
-            
-            return { 
-                id: uid, 
+
+            return {
+                id: uid,
                 user: newAdmin,
                 credential: userCredential,
                 emailVerificationSent: true
             };
-            
+
         } catch (error) {
             console.error("❌ Error creando administrador:", error);
-            
+
             // ===== REVERTIR CAMBIOS EN CASO DE ERROR =====
             // Si hubo error después de crear el usuario en Auth, eliminarlo
             if (auth.currentUser) {
                 try {
                     await auth.currentUser.delete();
-                    console.log('Usuario Auth eliminado por error en registro');
                 } catch (deleteError) {
-                    console.error('Error eliminando usuario Auth:', deleteError);
+                    // Silencioso
                 }
             }
-            
+
             throw error;
         }
     }
@@ -496,51 +539,48 @@ class UserManager {
         // GUARDAR SESIÓN ACTUAL DEL ADMINISTRADOR ANTES DE CREAR COLABORADOR
         const adminEmail = auth.currentUser?.email;
         const adminPassword = password; // IMPORTANTE: Necesitas obtener la contraseña del admin de alguna forma
-        
+
         try {
-            console.log('Creando nuevo colaborador para administrador:', idAdministrador);
-            
             // ===== PASO 1: Verificar que el administrador exista =====
             const adminRef = doc(db, "administradores", idAdministrador);
             const adminSnap = await getDoc(adminRef);
-            
+
             if (!adminSnap.exists()) {
                 throw new Error('Administrador no encontrado');
             }
-            
+
             const adminData = adminSnap.data();
-            
+
             // ===== PASO 2: Verificar que el administrador esté activo =====
             if (!adminData.status) {
                 throw new Error('El administrador está inactivo');
             }
-            
+
             // ===== PASO 3: Verificar límites del plan =====
             const totalUsuariosActivos = await this.contarUsuariosActivosPorOrganizacion(adminData.organizacionCamelCase);
             const adminUser = new User(idAdministrador, adminData);
-            
+
             if (!adminUser.puedeCrearMasUsuarios(totalUsuariosActivos + 1)) {
                 throw new Error(`Límite de usuarios alcanzado para el plan ${adminUser.plan}. Máximo: ${adminUser.tieneLimiteUsuarios()} usuarios activos.`);
             }
-            
+
             // ===== PASO 4: Verificar que el correo no exista en la organización =====
             const emailExistsOrg = await this.verificarCorreoEnOrganizacion(
-                colaboradorData.correoElectronico, 
+                colaboradorData.correoElectronico,
                 adminData.organizacionCamelCase
             );
             if (emailExistsOrg) {
                 throw new Error('El correo electrónico ya está registrado en esta organización');
             }
-            
+
             // ===== PASO 5: Crear usuario en Firebase Authentication =====
             const userCredential = await createUserWithEmailAndPassword(
-                auth, 
-                colaboradorData.correoElectronico, 
+                auth,
+                colaboradorData.correoElectronico,
                 password
             );
             const uid = userCredential.user.uid;
-            console.log(`Colaborador Auth creado con UID: ${uid}`);
-            
+
             // ===== PASO 6: Enviar correo de verificación =====
             try {
                 await sendEmailVerification(userCredential.user, {
@@ -550,22 +590,25 @@ class UserManager {
             } catch (emailError) {
                 console.warn('Error enviando verificación:', emailError);
             }
-            
+
             // ===== PASO 7: Actualizar display name en Auth =====
             await updateProfile(userCredential.user, {
                 displayName: colaboradorData.nombreCompleto
             });
-            
+
             // ===== PASO 8: Determinar nombre de colección específica =====
             const coleccionColaboradores = `colaboradores_${adminData.organizacionCamelCase}`;
-            
+
             // ===== PASO 9: Crear documento en la colección específica =====
             const colabRef = doc(db, coleccionColaboradores, uid);
-            
+
             const colabFirestoreData = {
                 ...colaboradorData,
                 idAuth: uid,
-                cargo: 'colaborador',
+                // ✅ CORREGIDO: El rol para un nuevo colaborador es 'colaborador'
+                rol: 'colaborador',
+                // ✅ CORREGIDO: El cargo (puesto) se asigna desde los datos del formulario
+                cargo: colaboradorData.cargo || null,
                 organizacion: adminData.organizacion,
                 organizacionCamelCase: adminData.organizacionCamelCase,
                 fotoOrganizacion: adminData.fotoOrganizacion || adminData.logoOrganizacion || null,
@@ -587,10 +630,9 @@ class UserManager {
                 fechaActualizacion: serverTimestamp(),
                 ultimoLogin: null
             };
-            
-            console.log(`Guardando colaborador en colección ${coleccionColaboradores}:`, colabFirestoreData);
+
             await setDoc(colabRef, colabFirestoreData);
-            
+
             // ===== PASO 10: Agregar a lista local =====
             const newColab = new User(uid, {
                 ...colabFirestoreData,
@@ -598,58 +640,53 @@ class UserManager {
                 fechaActualizacion: new Date()
             });
             this.users.unshift(newColab);
-            
+
             // ===== PASO 11: IMPORTANTE - RESTAURAR SESIÓN DEL ADMINISTRADOR =====
             // 1. Cerrar sesión del nuevo colaborador
             await signOut(auth);
-            
+
             // 2. Verificar si hay credenciales para restaurar al admin
             if (adminEmail && adminPassword) {
                 try {
                     // Intentar restaurar sesión del admin
-                    console.log('🔄 Restaurando sesión del administrador:', adminEmail);
                     const adminCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-                    
+
                     // Recargar usuario actual (admin)
                     await this.loadCurrentUser(adminCredential.user.uid);
-                    console.log('✅ Sesión del administrador restaurada correctamente');
-                    
+
                 } catch (restoreError) {
                     console.warn('⚠️ No se pudo restaurar sesión del administrador:', restoreError.message);
                     // Continuar sin restaurar - el usuario tendrá que iniciar sesión manualmente
                 }
-            } else {
-                console.log('ℹ️ No hay credenciales del administrador para restaurar sesión');
             }
-            
-            return { 
-                id: uid, 
+
+            return {
+                id: uid,
                 user: newColab,
                 credential: userCredential,
                 coleccion: coleccionColaboradores,
                 emailVerificationSent: true,
                 adminSessionRestored: true
             };
-            
+
         } catch (error) {
             console.error("Error creando colaborador:", error);
-            
+
             // Revertir usuario en Auth si hubo error
             if (auth.currentUser && auth.currentUser.uid !== idAdministrador) {
                 try {
                     await deleteUser(auth.currentUser);
-                    console.log('Usuario Auth (colaborador) eliminado por error en registro');
                 } catch (deleteError) {
-                    console.error('Error eliminando usuario Auth:', deleteError);
+                    // Silencioso
                 }
             }
-            
+
             throw error;
         }
     }
 
     // ========== MÉTODOS DE VERIFICACIÓN DE EMAIL ==========
-    
+
     /**
      * Reenvía el correo de verificación al usuario actual
      * @returns {Promise<Object>} Resultado del reenvío
@@ -659,19 +696,17 @@ class UserManager {
             if (!auth.currentUser) {
                 throw new Error('Usuario no autenticado');
             }
-            
-            console.log('Reenviando verificación para:', auth.currentUser.email);
-            
+
             await sendEmailVerification(auth.currentUser, {
                 url: window.location.origin + '/verifyEmail.html',
                 handleCodeInApp: true
             });
-            
+
             return {
                 success: true,
                 message: 'Correo de verificación reenviado'
             };
-            
+
         } catch (error) {
             console.error('Error reenviando verificación:', error);
             throw error;
@@ -685,18 +720,16 @@ class UserManager {
      */
     async verificarEmail(actionCode) {
         try {
-            console.log('Verificando email con código de Firebase');
-            
             // Aplicar el código de verificación en Firebase Auth
             await applyActionCode(auth, actionCode);
-            
+
             // Si hay usuario autenticado, actualizar sus datos
             if (auth.currentUser) {
                 await this.loadCurrentUser(auth.currentUser.uid);
-                
+
                 if (this.currentUser) {
                     // Actualizar en Firestore según el tipo de usuario
-                    if (this.currentUser.cargo === 'administrador') {
+                    if (this.currentUser.esAdministrador()) {
                         await updateDoc(doc(db, "administradores", this.currentUser.id), {
                             verificado: true,
                             emailVerified: true,
@@ -713,20 +746,82 @@ class UserManager {
                     }
                 }
             }
-            
+
             return {
                 success: true,
                 message: 'Email verificado exitosamente'
             };
-            
+
         } catch (error) {
             console.error('Error verificando email:', error);
             throw error;
         }
     }
 
+    // ========== 🔥 NUEVO MÉTODO: ENVIAR CORREO DE RECUPERACIÓN ==========
+    /**
+     * Envía un correo de recuperación de contraseña
+     * @param {string} email - Correo electrónico del usuario
+     * @returns {Promise<Object>} Resultado del envío
+     */
+    async enviarCorreoRecuperacion(email) {
+        try {
+            console.log('📧 Enviando correo de recuperación a:', email);
+            
+            const actionCodeSettings = {
+                url: window.location.origin + '/verifyEmail.html',
+                handleCodeInApp: true
+            };
+            
+            await sendPasswordResetEmail(auth, email, actionCodeSettings);
+            
+            console.log('✅ Correo de recuperación enviado exitosamente');
+            
+            return {
+                success: true,
+                message: 'Correo enviado correctamente. Revisa tu bandeja de entrada y SPAM.'
+            };
+            
+        } catch (error) {
+            console.error('❌ Error enviando correo de recuperación:', error);
+            
+            // Manejar errores específicos
+            if (error.code === 'auth/user-not-found') {
+                return { 
+                    success: false, 
+                    message: 'No existe una cuenta con este correo electrónico.',
+                    code: 'user-not-found'
+                };
+            } else if (error.code === 'auth/invalid-email') {
+                return { 
+                    success: false, 
+                    message: 'El formato del correo no es válido.',
+                    code: 'invalid-email'
+                };
+            } else if (error.code === 'auth/too-many-requests') {
+                return { 
+                    success: false, 
+                    message: 'Demasiados intentos. Intenta más tarde.',
+                    code: 'too-many-requests'
+                };
+            } else if (error.code === 'auth/network-request-failed') {
+                return { 
+                    success: false, 
+                    message: 'Error de conexión. Verifica tu internet.',
+                    code: 'network-error'
+                };
+            } else {
+                return { 
+                    success: false, 
+                    message: 'Error al enviar el correo: ' + (error.message || 'Intenta nuevamente.'),
+                    code: 'unknown'
+                };
+            }
+        }
+    }
+
     // ========== MÉTODOS DE GESTIÓN DE ESTADO ==========
-    
+
     /**
      * Inactiva un usuario (cambia su estado a inactivo)
      * @param {string} id - ID del usuario
@@ -736,13 +831,11 @@ class UserManager {
      */
     async inactivarUsuario(id, userType, organizacionCamelCase = null) {
         try {
-            console.log(`Inactivando usuario ${id} de tipo ${userType}`);
-            
             let docRef;
-            
+
             if (userType === 'administrador') {
                 docRef = doc(db, "administradores", id);
-                
+
                 // Si es administrador, también inactivar a todos sus colaboradores
                 if (organizacionCamelCase) {
                     const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
@@ -750,10 +843,10 @@ class UserManager {
                         collection(db, coleccionColaboradores),
                         where("status", "==", true)
                     );
-                    
+
                     const colabSnapshot = await getDocs(colabQuery);
                     const updatePromises = [];
-                    
+
                     colabSnapshot.forEach(docSnap => {
                         updatePromises.push(
                             updateDoc(doc(db, coleccionColaboradores, docSnap.id), {
@@ -763,41 +856,39 @@ class UserManager {
                             })
                         );
                     });
-                    
+
                     await Promise.all(updatePromises);
-                    console.log(`Se inactivaron ${updatePromises.length} colaboradores`);
                 }
             } else {
                 // Para colaboradores
                 if (!organizacionCamelCase && this.currentUser) {
                     organizacionCamelCase = this.currentUser.organizacionCamelCase;
                 }
-                
+
                 if (!organizacionCamelCase) {
                     throw new Error('No se especificó la organización del colaborador');
                 }
-                
+
                 const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
                 docRef = doc(db, coleccionColaboradores, id);
             }
-            
+
             // Marcar usuario como inactivo en Firestore
             await updateDoc(docRef, {
                 status: false,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: this.currentUser?.id || 'sistema'
             });
-            
+
             // Actualizar en memoria local
             const index = this.users.findIndex(user => user.id === id);
             if (index !== -1) {
                 this.users[index].status = false;
                 this.users[index].fechaActualizacion = new Date();
             }
-            
-            console.log(`Usuario ${id} inactivado exitosamente`);
+
             return true;
-            
+
         } catch (error) {
             console.error("Error inactivando usuario:", error);
             throw error;
@@ -813,42 +904,39 @@ class UserManager {
      */
     async reactivarUsuario(id, userType, organizacionCamelCase = null) {
         try {
-            console.log(`Reactivando usuario ${id} de tipo ${userType}`);
-            
             let docRef;
-            
+
             if (userType === 'administrador') {
                 docRef = doc(db, "administradores", id);
             } else {
                 if (!organizacionCamelCase && this.currentUser) {
                     organizacionCamelCase = this.currentUser.organizacionCamelCase;
                 }
-                
+
                 if (!organizacionCamelCase) {
                     throw new Error('No se especificó la organización del colaborador');
                 }
-                
+
                 const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
                 docRef = doc(db, coleccionColaboradores, id);
             }
-            
+
             // Reactivar el usuario en Firestore
             await updateDoc(docRef, {
                 status: true,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: this.currentUser?.id || 'sistema'
             });
-            
+
             // Actualizar en memoria local
             const index = this.users.findIndex(user => user.id === id);
             if (index !== -1) {
                 this.users[index].status = true;
                 this.users[index].fechaActualizacion = new Date();
             }
-            
-            console.log(`Usuario ${id} reactivado exitosamente`);
+
             return true;
-            
+
         } catch (error) {
             console.error("Error reactivando usuario:", error);
             throw error;
@@ -856,7 +944,7 @@ class UserManager {
     }
 
     // ========== MÉTODOS DE VERIFICACIÓN ==========
-    
+
     /**
      * Verifica si un correo existe en una organización específica
      * @param {string} correo - Correo a verificar
@@ -872,11 +960,11 @@ class UserManager {
                 where("organizacionCamelCase", "==", organizacionCamelCase)
             );
             const adminSnapshot = await getDocs(adminQuery);
-            
+
             if (!adminSnapshot.empty) {
                 return true;
             }
-            
+
             // Buscar en colaboradores de la organización
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
             const colabQuery = query(
@@ -884,9 +972,9 @@ class UserManager {
                 where("correoElectronico", "==", correo)
             );
             const colabSnapshot = await getDocs(colabQuery);
-            
+
             return !colabSnapshot.empty;
-            
+
         } catch (error) {
             console.error("Error verificando correo en organización:", error);
             return false;
@@ -908,17 +996,17 @@ class UserManager {
                     where("correoElectronico", "==", correo)
                 );
                 const adminsSnapshot = await getDocs(qAdmins);
-                
+
                 if (!adminsSnapshot.empty) {
                     return true;
                 }
             }
-            
+
             // Buscar en colaboradores si corresponde
             if (tipo === 'colaborador' || tipo === 'todos') {
                 // Buscar en todas las colecciones de colaboradores de todas las organizaciones
                 const todasLasOrganizaciones = await this.getTodasLasOrganizaciones();
-                
+
                 for (const organizacion of todasLasOrganizaciones) {
                     const coleccionColaboradores = `colaboradores_${organizacion.camelCase}`;
                     const qColaboradores = query(
@@ -926,15 +1014,15 @@ class UserManager {
                         where("correoElectronico", "==", correo)
                     );
                     const colaboradoresSnapshot = await getDocs(qColaboradores);
-                    
+
                     if (!colaboradoresSnapshot.empty) {
                         return true;
                     }
                 }
             }
-            
+
             return false;
-            
+
         } catch (error) {
             console.error("Error verificando correo existente:", error);
             return false;
@@ -942,7 +1030,7 @@ class UserManager {
     }
 
     // ========== MÉTODOS DE CONTEO ==========
-    
+
     /**
      * Cuenta solo los usuarios activos de una organización
      * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
@@ -951,7 +1039,7 @@ class UserManager {
     async contarUsuariosActivosPorOrganizacion(organizacionCamelCase) {
         try {
             let total = 0;
-            
+
             // Contar administradores activos
             const adminQuery = query(
                 collection(db, "administradores"),
@@ -960,7 +1048,7 @@ class UserManager {
             );
             const adminSnapshot = await getDocs(adminQuery);
             total += adminSnapshot.size;
-            
+
             // Contar colaboradores activos
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
             const colabQuery = query(
@@ -969,10 +1057,9 @@ class UserManager {
             );
             const colabSnapshot = await getDocs(colabQuery);
             total += colabSnapshot.size;
-            
-            console.log(`Total usuarios activos para ${organizacionCamelCase}: ${total}`);
+
             return total;
-            
+
         } catch (error) {
             console.error("Error contando usuarios activos por organización:", error);
             return 0;
@@ -987,7 +1074,7 @@ class UserManager {
     async contarTodosUsuariosPorOrganizacion(organizacionCamelCase) {
         try {
             let total = 0;
-            
+
             // Contar TODOS los administradores
             const adminQuery = query(
                 collection(db, "administradores"),
@@ -995,16 +1082,15 @@ class UserManager {
             );
             const adminSnapshot = await getDocs(adminQuery);
             total += adminSnapshot.size;
-            
+
             // Contar TODOS los colaboradores
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
             const colabQuery = query(collection(db, coleccionColaboradores));
             const colabSnapshot = await getDocs(colabQuery);
             total += colabSnapshot.size;
-            
-            console.log(`Total usuarios (incluyendo inactivos) para ${organizacionCamelCase}: ${total}`);
+
             return total;
-            
+
         } catch (error) {
             console.error("Error contando todos los usuarios por organización:", error);
             return 0;
@@ -1012,7 +1098,7 @@ class UserManager {
     }
 
     // ========== MÉTODOS DE ACTUALIZACIÓN ==========
-    
+
     /**
      * Actualiza los datos de un usuario
      * @param {string} id - ID del usuario
@@ -1023,10 +1109,8 @@ class UserManager {
      */
     async updateUser(id, data, userType, organizacionCamelCase = null) {
         try {
-            console.log(`Actualizando usuario ${id} de tipo ${userType}:`, data);
-            
             let docRef;
-            
+
             if (userType === 'administrador') {
                 docRef = doc(db, "administradores", id);
             } else {
@@ -1035,19 +1119,18 @@ class UserManager {
                 if (!coleccion) {
                     throw new Error('No se especificó la organización del colaborador');
                 }
-                
+
                 docRef = doc(db, `colaboradores_${coleccion}`, id);
             }
-            
+
             const updateData = {
                 ...data,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: this.currentUser?.id || 'sistema'
             };
-            
-            console.log('Actualizando usuario:', updateData);
+
             await updateDoc(docRef, updateData);
-            
+
             // Actualizar en memoria local
             const index = this.users.findIndex(user => user.id === id);
             if (index !== -1) {
@@ -1057,9 +1140,9 @@ class UserManager {
                 this.users[index].fechaActualizacion = new Date();
                 this.users[index].actualizadoPor = this.currentUser?.id || 'sistema';
             }
-            
+
             return true;
-            
+
         } catch (error) {
             console.error("Error actualizando usuario:", error);
             throw error;
@@ -1067,7 +1150,7 @@ class UserManager {
     }
 
     // ========== MÉTODOS DE AUTENTICACIÓN ==========
-    
+
     /**
      * Inicia sesión con email y contraseña
      * @param {string} email - Correo electrónico
@@ -1076,30 +1159,28 @@ class UserManager {
      */
     async iniciarSesion(email, password) {
         try {
-            console.log('Iniciando sesión para:', email);
-            
             // ===== PASO 1: Autenticar en Firebase Auth =====
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const uid = userCredential.user.uid;
-            
+
             // ===== PASO 2: Obtener datos del usuario desde Firestore =====
             const user = await this.getUserById(uid);
-            
+
             if (!user) {
                 await signOut(auth);
                 throw new Error('Usuario no encontrado en la base de datos');
             }
-            
+
             // ===== PASO 3: Verificar que NO esté inactivo =====
             if (!user.status) {
                 await signOut(auth);
                 throw new Error('Tu cuenta está inactiva. Contacta al administrador.');
             }
-            
+
             // ===== PASO 4: Verificar email =====
             if (!userCredential.user.emailVerified) {
                 console.warn('Usuario no verificado intentando iniciar sesión');
-                
+
                 // Reenviar verificación
                 try {
                     await sendEmailVerification(userCredential.user, {
@@ -1109,12 +1190,12 @@ class UserManager {
                 } catch (emailError) {
                     console.warn('Error reenviando verificación:', emailError);
                 }
-                
+
                 throw new Error('Tu email no está verificado. Se ha reenviado el correo de verificación.');
             }
-            
+
             // ===== PASO 5: Actualizar último login en Firestore =====
-            if (user.cargo === 'administrador') {
+            if (user.esAdministrador()) {
                 await updateDoc(doc(db, "administradores", uid), {
                     ultimoLogin: serverTimestamp(),
                     fechaActualizacion: serverTimestamp(),
@@ -1130,10 +1211,10 @@ class UserManager {
                     verificado: true
                 });
             }
-            
+
             // ===== PASO 6: Cargar usuario actual en memoria =====
             await this.loadCurrentUser(uid);
-            
+
             // ===== PASO 7: Guardar preferencias en localStorage =====
             try {
                 localStorage.setItem('theme', user.theme);
@@ -1142,10 +1223,9 @@ class UserManager {
             } catch (e) {
                 console.warn('No se pudo guardar datos en localStorage');
             }
-            
-            console.log('✅ Sesión iniciada exitosamente:', user.nombreCompleto);
+
             return this.currentUser; // ✅ IMPORTANTE: Devolver this.currentUser en lugar de user
-            
+
         } catch (error) {
             console.error("Error iniciando sesión:", error);
             throw error;
@@ -1153,7 +1233,7 @@ class UserManager {
     }
 
     // ========== MÉTODOS DE OBTENCIÓN DE DATOS ==========
-    
+
     /**
      * Obtiene todos los colaboradores de una organización
      * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
@@ -1162,11 +1242,9 @@ class UserManager {
      */
     async getColaboradoresByOrganizacion(organizacionCamelCase, incluirInactivos = false) {
         try {
-            console.log(`Obteniendo colaboradores para organización: ${organizacionCamelCase}`);
-            
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
             let colabQuery;
-            
+
             // Configurar query según si incluye inactivos o no
             if (incluirInactivos) {
                 colabQuery = query(collection(db, coleccionColaboradores));
@@ -1176,10 +1254,10 @@ class UserManager {
                     where("status", "==", true)
                 );
             }
-            
+
             const colabSnapshot = await getDocs(colabQuery);
             const colaboradores = [];
-            
+
             // Convertir cada documento a instancia de User
             colabSnapshot.forEach(doc => {
                 const data = doc.data();
@@ -1188,10 +1266,9 @@ class UserManager {
                     cargo: 'colaborador'
                 }));
             });
-            
-            console.log(`Encontrados ${colaboradores.length} colaboradores`);
+
             return colaboradores;
-            
+
         } catch (error) {
             console.error("Error obteniendo colaboradores:", error);
             return [];
@@ -1206,7 +1283,7 @@ class UserManager {
     async getAdministradores(incluirInactivos = false) {
         try {
             let adminsQuery;
-            
+
             // Configurar query según si incluye inactivos o no
             if (incluirInactivos) {
                 adminsQuery = query(collection(db, "administradores"));
@@ -1216,10 +1293,10 @@ class UserManager {
                     where("status", "==", true)
                 );
             }
-            
+
             const adminsSnapshot = await getDocs(adminsQuery);
             const administradores = [];
-            
+
             adminsSnapshot.forEach(doc => {
                 const data = doc.data();
                 administradores.push(new User(doc.id, {
@@ -1227,9 +1304,9 @@ class UserManager {
                     cargo: 'administrador'
                 }));
             });
-            
+
             return administradores;
-            
+
         } catch (error) {
             console.error("Error obteniendo administradores:", error);
             return [];
@@ -1244,7 +1321,7 @@ class UserManager {
     async getUsuariosInactivosPorOrganizacion(organizacionCamelCase) {
         try {
             const usuariosInactivos = [];
-            
+
             // Buscar administradores inactivos
             const adminQuery = query(
                 collection(db, "administradores"),
@@ -1252,7 +1329,7 @@ class UserManager {
                 where("status", "==", false)
             );
             const adminSnapshot = await getDocs(adminQuery);
-            
+
             adminSnapshot.forEach(doc => {
                 const data = doc.data();
                 usuariosInactivos.push(new User(doc.id, {
@@ -1260,7 +1337,7 @@ class UserManager {
                     cargo: 'administrador'
                 }));
             });
-            
+
             // Buscar colaboradores inactivos
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
             const colabQuery = query(
@@ -1268,7 +1345,7 @@ class UserManager {
                 where("status", "==", false)
             );
             const colabSnapshot = await getDocs(colabQuery);
-            
+
             colabSnapshot.forEach(doc => {
                 const data = doc.data();
                 usuariosInactivos.push(new User(doc.id, {
@@ -1276,10 +1353,9 @@ class UserManager {
                     cargo: 'colaborador'
                 }));
             });
-            
-            console.log(`Encontrados ${usuariosInactivos.length} usuarios inactivos`);
+
             return usuariosInactivos;
-            
+
         } catch (error) {
             console.error("Error obteniendo usuarios inactivos:", error);
             return [];
@@ -1287,55 +1363,56 @@ class UserManager {
     }
 
     // ========== 🔥 MÉTODO CORREGIDO - OBTENER USUARIO POR ID CON FOTOS ==========
-    
+
     /**
      * Busca un usuario por ID en la memoria local o Firestore
      * @param {string} id - ID del usuario
      * @returns {Promise<User|null>} Instancia del usuario o null
      */
     async getUserById(id) {
-        console.log('🔍 getUserById buscando:', id);
-        
         // 1. Buscar primero en memoria
         const userInMemory = this.users.find(user => user.id === id);
         if (userInMemory) {
-            console.log('✅ Usuario encontrado en memoria');
             return userInMemory;
         }
-        
-        console.log('❌ No encontrado en memoria, buscando en Firestore...');
-        
+
         // 2. Si no está en memoria, buscar en Firestore
         try {
             // Buscar en administradores primero
             const adminRef = doc(db, "administradores", id);
             const adminSnap = await getDoc(adminRef);
-            
+
             if (adminSnap.exists()) {
-                console.log('✅ Encontrado en administradores');
                 const data = adminSnap.data();
-                
+
                 // ✅ CORREGIDO: Usar el parámetro 'id' correctamente
                 const user = new User(id, {
                     ...data,
                     idAuth: id,
-                    cargo: 'administrador',
+                    // ✅ CORREGIDO: Usar el rol de la BD o 'administrador' por defecto
+                    rol: data.rol || 'administrador',
+                    cargo: data.cargo || null,
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
-                    email: data.correoElectronico || data.email
+                    email: data.correoElectronico || data.email,
+                    // ✅ Solo el ID del área
+                    areaAsignadaId: data.areaAsignadaId,
+                    creadoPorEmail: data.creadoPorEmail,
+                    creadoPorNombre: data.creadoPorNombre,
+                    actualizadoPor: data.actualizadoPor
                 });
-                
+
                 // Agregar a memoria para próximas búsquedas
                 this.users.push(user);
                 return user;
             }
-            
+
             // Buscar en colaboradores
             const organizaciones = await this.getTodasLasOrganizaciones();
-            
+
             for (const org of organizaciones) {
                 const coleccion = `colaboradores_${org.camelCase}`;
-                
+
                 // Verificar si la colección existe
                 try {
                     const q = query(
@@ -1343,9 +1420,8 @@ class UserManager {
                         where("idAuth", "==", id)
                     );
                     const snapshot = await getDocs(q);
-                    
+
                     if (!snapshot.empty) {
-                        console.log(`✅ Encontrado en ${coleccion}`);
                         const docSnap = snapshot.docs[0];
                         const data = docSnap.data();
 
@@ -1353,10 +1429,17 @@ class UserManager {
                         const user = new User(id, {
                             ...data,
                             idAuth: id,
-                            cargo: 'colaborador',
+                            // ✅ CORREGIDO: Usar el rol de la BD o 'colaborador' por defecto
+                            rol: data.rol || 'colaborador',
+                            cargo: data.cargo || null,
                             fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                             fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
-                            email: data.correoElectronico || data.email
+                            email: data.correoElectronico || data.email,
+                            // ✅ Solo el ID del área
+                            areaAsignadaId: data.areaAsignadaId,
+                            creadoPorEmail: data.creadoPorEmail,
+                            creadoPorNombre: data.creadoPorNombre,
+                            actualizadoPor: data.actualizadoPor
                         });
 
                         this.users.push(user);
@@ -1368,10 +1451,9 @@ class UserManager {
                     continue;
                 }
             }
-            
-            console.log('❌ No encontrado en ninguna colección');
+
             return null;
-            
+
         } catch (error) {
             console.error('Error en getUserById:', error);
             return null;
@@ -1383,7 +1465,7 @@ class UserManager {
      * @returns {boolean} True si es administrador
      */
     esAdministrador() {
-        return this.currentUser && this.currentUser.cargo === 'administrador';
+        return this.currentUser && this.currentUser.esAdministrador();
     }
 
     /**
@@ -1392,15 +1474,7 @@ class UserManager {
      * @returns {boolean} True si tiene el permiso
      */
     tienePermiso(permiso) {
-        if (!this.currentUser) return false;
-        
-        // Los administradores tienen todos los permisos
-        if (this.currentUser.cargo === 'administrador') {
-            return true;
-        }
-        
-        // Los colaboradores tienen permisos personalizados
-        return this.currentUser.permisosPersonalizados[permiso] === true;
+        return this.currentUser && this.currentUser.tienePermiso(permiso);
     }
 }
 

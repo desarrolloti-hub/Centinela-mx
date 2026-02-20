@@ -1,7 +1,7 @@
-// ARCHIVO JS PARA CREAR COLABORADOR
-
-// Importar las clases correctamente desde user.js
+// ARCHIVO JS PARA CREAR COLABORADOR - VERSIÓN CORREGIDA (SIN DOBLE SELECCIÓN)
+// ==================== IMPORTS CORREGIDOS ====================
 import { UserManager } from '/clases/user.js';
+import { AreaManager } from '/clases/area.js';
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', function() {
@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function initCollaboratorForm() {
-    console.log('🚀 Iniciando formulario de registro de colaborador...');
     
     // Obtener elementos del DOM
     const elements = obtenerElementosDOM();
@@ -22,8 +21,7 @@ async function initCollaboratorForm() {
     
     // Instanciar UserManager
     const userManager = new UserManager();
-    console.log('✅ UserManager inicializado');
-    
+
     try {
         // Esperar a que el usuario actual esté disponible
         await esperarUsuarioActual(userManager);
@@ -35,11 +33,12 @@ async function initCollaboratorForm() {
         // Configurar interfaz con datos del admin
         actualizarInterfazConAdmin(elements, currentAdmin);
         
+        // Cargar áreas desde Firebase usando AreaManager
+        await cargarAreas(elements, currentAdmin);
+        
         // Configurar handlers
         configurarHandlers(elements, userManager, currentAdmin);
-        
-        console.log('✅ Formulario de colaborador inicializado correctamente');
-        
+                
     } catch (error) {
         console.error('❌ Error inicializando formulario:', error);
         mostrarErrorSistema(error.message);
@@ -70,6 +69,9 @@ function obtenerElementosDOM() {
             nombreCompleto: document.getElementById('nombreCompleto'),
             correoElectronico: document.getElementById('correoElectronico'),
             rol: document.getElementById('rol'),
+            areaSelect: document.getElementById('areaSelect'),
+            cargoEnAreaSelect: document.getElementById('cargoEnAreaSelect'),
+            
             contrasena: document.getElementById('contrasena'),
             confirmarContrasena: document.getElementById('confirmarContrasena'),
             
@@ -92,13 +94,7 @@ function obtenerElementosDOM() {
         Swal.fire({
             icon: 'error',
             title: 'Error de configuración',
-            text: 'No se pudieron cargar los elementos del formulario.',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            text: 'No se pudieron cargar los elementos del formulario.'
         });
         return null;
     }
@@ -108,10 +104,8 @@ function obtenerElementosDOM() {
 async function esperarUsuarioActual(userManager, maxAttempts = 15, delay = 500) {
     for (let i = 0; i < maxAttempts; i++) {
         if (userManager.currentUser) {
-            console.log('✅ Usuario actual detectado después de', i + 1, 'intentos');
             return userManager.currentUser;
         }
-        console.log(`⏳ Esperando usuario... intento ${i + 1}/${maxAttempts}`);
         await new Promise(resolve => setTimeout(resolve, delay));
     }
     throw new Error('No se pudo detectar el usuario actual después de ' + maxAttempts + ' intentos');
@@ -123,12 +117,7 @@ async function cargarAdministradorActual(userManager, elements) {
         Swal.fire({
             title: 'Cargando información...',
             allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container'
-            }
+            didOpen: () => Swal.showLoading()
         });
         
         // Obtener administrador actual desde UserManager
@@ -138,22 +127,13 @@ async function cargarAdministradorActual(userManager, elements) {
             throw new Error('No hay sesión activa de administrador');
         }
         
-        if (admin.cargo !== 'administrador') {
+        if (!admin.esAdministrador()) {
             throw new Error('Solo los administradores pueden crear colaboradores');
         }
         
-        // Verificar que tenga organización
         if (!admin.organizacion || !admin.organizacionCamelCase) {
             throw new Error('El administrador no tiene organización configurada');
         }
-        
-        console.log('👤 Administrador cargado:', {
-            nombre: admin.nombreCompleto,
-            email: admin.correoElectronico,
-            organizacion: admin.organizacion,
-            organizacionCamelCase: admin.organizacionCamelCase,
-            tieneLogo: !!admin.fotoOrganizacion
-        });
         
         Swal.close();
         return admin;
@@ -166,14 +146,7 @@ async function cargarAdministradorActual(userManager, elements) {
             icon: 'error',
             title: 'Error de sesión',
             text: error.message,
-            confirmButtonText: 'Ir al login',
-            confirmButtonColor: 'var(--color-accent-primary, #c0c0c0)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            confirmButtonText: 'Ir al login'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -187,17 +160,6 @@ function actualizarInterfazConAdmin(elements, admin) {
     if (elements.organization) {
         elements.organization.value = admin.organizacion;
         elements.organization.classList.add('readonly-field');
-        
-        // Añadir indicador visual
-        const label = elements.organization.closest('.form-field-group')?.querySelector('.field-label');
-        if (label) {
-            const indicator = document.createElement('span');
-            indicator.className = 'admin-indicator';
-            indicator.textContent = ' (heredado)';
-            indicator.style.color = 'var(--color-accent-primary)';
-            indicator.style.fontSize = '0.75rem';
-            label.appendChild(indicator);
-        }
     }
     
     // Actualizar nombre del administrador en el subtítulo
@@ -264,7 +226,96 @@ function mostrarMensajeInfoAdmin(element, admin) {
     element.style.display = 'block';
 }
 
-// ========== MANEJO DE IMÁGENES ==========
+// ========== FUNCIONES PARA CARGAR ÁREAS Y CARGOS ==========
+
+async function cargarAreas(elements, admin) {
+    if (!elements.areaSelect) return;
+    
+    try {
+        const areaManager = new AreaManager();
+        
+        console.log('🔍 Cargando áreas para organización:', admin.organizacionCamelCase);
+        
+        elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
+        elements.areaSelect.disabled = true;
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
+        elements.cargoEnAreaSelect.disabled = true;
+        
+        const areas = await areaManager.getAreasByOrganizacion(admin.organizacionCamelCase);
+        
+        // Guardar las áreas en el elemento select para usarlas después
+        elements.areaSelect._areasData = areas;
+        
+        if (areas.length === 0) {
+            elements.areaSelect.innerHTML = '<option value="">No hay áreas disponibles</option>';
+            elements.areaSelect.disabled = false;
+            return;
+        }
+        
+        let options = '<option value="">Selecciona un área</option>';
+        areas.forEach(area => {
+            options += `<option value="${area.id}">${area.nombreArea}</option>`;
+        });
+        elements.areaSelect.innerHTML = options;
+        elements.areaSelect.disabled = false;
+        
+    } catch (error) {
+        console.error('❌ Error cargando áreas:', error);
+        elements.areaSelect.innerHTML = '<option value="">Error al cargar áreas</option>';
+        elements.areaSelect.disabled = false;
+        
+        Swal.fire({
+            icon: 'warning',
+            title: 'Error al cargar áreas',
+            text: 'No se pudieron cargar las áreas. Por favor, recarga la página.',
+            confirmButtonText: 'ENTENDIDO'
+        });
+    }
+}
+
+function cargarCargosPorArea(elements) {
+    if (!elements.areaSelect || !elements.cargoEnAreaSelect) return;
+    
+    const areaId = elements.areaSelect.value;
+    const areas = elements.areaSelect._areasData || [];
+    
+    elements.cargoEnAreaSelect.innerHTML = '';
+    elements.cargoEnAreaSelect.disabled = true;
+    
+    if (!areaId) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
+        return;
+    }
+    
+    const areaSeleccionada = areas.find(a => a.id === areaId);
+    
+    if (!areaSeleccionada) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Área no encontrada</option>';
+        return;
+    }
+    
+    const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
+    
+    if (cargos.length === 0) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Esta área no tiene cargos</option>';
+    } else {
+        let options = '<option value="">Selecciona un cargo</option>';
+        cargos.forEach((cargo, index) => {
+            const cargoId = cargo.id || `cargo_${index}_${Date.now()}`;
+            options += `<option value="${cargoId}">${cargo.nombre || 'Cargo sin nombre'}</option>`;
+            
+            if (!elements.cargoEnAreaSelect._cargosData) {
+                elements.cargoEnAreaSelect._cargosData = {};
+            }
+            elements.cargoEnAreaSelect._cargosData[cargoId] = cargo;
+        });
+        elements.cargoEnAreaSelect.innerHTML = options;
+    }
+    
+    elements.cargoEnAreaSelect.disabled = false;
+}
+
+// ========== MANEJO DE IMÁGENES CON SWEETALERT2 ==========
 
 function configurarHandlers(elements, userManager, admin) {
     // Foto de perfil
@@ -272,7 +323,19 @@ function configurarHandlers(elements, userManager, admin) {
         elements.editProfileOverlay.addEventListener('click', () => elements.profileInput.click());
         elements.profileCircle.addEventListener('click', () => elements.profileInput.click());
         
-        elements.profileInput.addEventListener('change', (e) => manejarSeleccionFoto(e, elements));
+        // IMPORTANTE: No limpiar el input aquí, solo cuando se abre
+        elements.profileInput.addEventListener('click', function(e) {
+            // Detener propagación para evitar eventos múltiples
+            e.stopPropagation();
+            // Limpiar solo cuando se abre el selector
+            this.value = '';
+        });
+        
+        // Usar { once: false } pero asegurar que no se acumulen eventos
+        elements.profileInput.removeEventListener('change', manejarCambioFoto);
+        elements.profileInput.addEventListener('change', function(e) {
+            manejarCambioFoto(e, elements);
+        });
     }
     
     // Mostrar/ocultar contraseña
@@ -292,6 +355,11 @@ function configurarHandlers(elements, userManager, admin) {
         });
     }
     
+    // Evento para cuando cambia el área seleccionada
+    if (elements.areaSelect) {
+        elements.areaSelect.addEventListener('change', () => cargarCargosPorArea(elements));
+    }
+    
     // Validación en tiempo real
     configurarValidacionTiempoReal(elements);
     
@@ -306,46 +374,62 @@ function configurarHandlers(elements, userManager, admin) {
     }
 }
 
-function manejarSeleccionFoto(event, elements) {
+// Variable para controlar que no se procese el mismo archivo múltiples veces
+let procesandoFoto = false;
+
+function manejarCambioFoto(event, elements) {
+    // Prevenir procesamiento múltiple
+    if (procesandoFoto) return;
+    
     const file = event.target.files[0];
     if (!file) return;
+    
+    procesandoFoto = true;
     
     // Validar archivo
     if (!validarArchivo(file, 5)) {
         elements.profileInput.value = '';
+        procesandoFoto = false;
         return;
     }
     
     const reader = new FileReader();
+    
     reader.onload = function(e) {
+        const imageBase64 = e.target.result;
+        
         Swal.fire({
-            title: 'CONFIRMAR FOTO DE PERFIL',
+            title: 'Confirmar foto de perfil',
             html: `
                 <div style="text-align: center;">
-                    <img src="${e.target.result}" 
-                         style="width: 150px; height: 150px; border-radius: 50%; border: 4px solid var(--color-accent-primary); margin-bottom: 20px; object-fit: cover;">
+                    <img src="${imageBase64}" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent-primary); margin-bottom: 15px;">
                     <p>¿Deseas usar esta imagen como foto de perfil del colaborador?</p>
                 </div>
             `,
-            icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'SI, USAR ESTA FOTO',
-            cancelButtonText: 'NO, CANCELAR',
-            confirmButtonColor: 'var(--color-success, #28a745)',
-            cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            }
+            confirmButtonText: 'CONFIRMAR',
+            cancelButtonText: 'CANCELAR'
         }).then((result) => {
             if (result.isConfirmed) {
-                actualizarFotoPerfil(e.target.result, elements);
-            } else {
-                elements.profileInput.value = '';
+                actualizarFotoPerfil(imageBase64, elements);
             }
+            // SIEMPRE limpiar el input y resetear la bandera
+            elements.profileInput.value = '';
+            procesandoFoto = false;
+        }).catch(() => {
+            // En caso de error, también limpiar
+            elements.profileInput.value = '';
+            procesandoFoto = false;
+        });
+    };
+    
+    reader.onerror = function() {
+        elements.profileInput.value = '';
+        procesandoFoto = false;
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo leer el archivo'
         });
     };
     
@@ -361,14 +445,7 @@ function validarArchivo(file, maxSizeMB) {
             icon: 'error',
             title: 'Formato no válido',
             text: 'Solo se permiten archivos JPG, PNG, GIF o WebP',
-            confirmButtonText: 'ENTENDIDO',
-            confirmButtonColor: 'var(--color-danger, #ef4444)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            confirmButtonText: 'ENTENDIDO'
         });
         return false;
     }
@@ -378,14 +455,7 @@ function validarArchivo(file, maxSizeMB) {
             icon: 'error',
             title: 'Archivo demasiado grande',
             text: `El archivo excede el tamaño máximo permitido (${maxSizeMB}MB)`,
-            confirmButtonText: 'ENTENDIDO',
-            confirmButtonColor: 'var(--color-danger, #ef4444)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            confirmButtonText: 'ENTENDIDO'
         });
         return false;
     }
@@ -404,13 +474,7 @@ function actualizarFotoPerfil(imageSrc, elements) {
             title: '¡Foto cargada!',
             text: 'La foto de perfil se ha cargado correctamente',
             timer: 2000,
-            showConfirmButton: false,
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                timerProgressBar: 'swal2-timer-progress-bar'
-            }
+            showConfirmButton: false
         });
     }
 }
@@ -473,9 +537,19 @@ function validarFormulario(elements) {
         errores.push('Las contraseñas no coinciden');
     }
     
-    // Rol
+    // Validar rol en el sistema
     if (elements.rol && !elements.rol.value) {
-        errores.push('Debes seleccionar un rol');
+        errores.push('Debes seleccionar un rol en el sistema');
+    }
+    
+    // Validar área seleccionada
+    if (elements.areaSelect && !elements.areaSelect.value) {
+        errores.push('Debes seleccionar un área');
+    }
+    
+    // Validar cargo en el área seleccionado
+    if (elements.cargoEnAreaSelect && !elements.cargoEnAreaSelect.value) {
+        errores.push('Debes seleccionar un cargo en el área');
     }
     
     return errores;
@@ -507,31 +581,49 @@ async function registrarColaborador(event, elements, userManager, admin) {
             icon: 'error',
             title: 'Error de validación',
             html: errores.map(msg => `• ${msg}`).join('<br>'),
-            confirmButtonText: 'CORREGIR',
-            confirmButtonColor: 'var(--color-danger, #ef4444)',
-            customClass: {
-                popup: 'swal2-popup',
-                title: 'swal2-title',
-                htmlContainer: 'swal2-html-container',
-                confirmButton: 'swal2-confirm'
-            }
+            confirmButtonText: 'CORREGIR'
         });
         return;
     }
     
+    // Obtener datos del área y cargo seleccionados
+    let areaNombre = 'No asignada';
+    let cargoNombre = 'No asignado';
+    let cargoDescripcion = '';
+    let cargoObjeto = null;
+    
+    if (elements.areaSelect && elements.areaSelect.value) {
+        const areas = elements.areaSelect._areasData || [];
+        const areaSeleccionada = areas.find(a => a.id === elements.areaSelect.value);
+        if (areaSeleccionada) {
+            areaNombre = areaSeleccionada.nombreArea;
+        }
+    }
+    
+    if (elements.cargoEnAreaSelect && elements.cargoEnAreaSelect.value) {
+        const cargosData = elements.cargoEnAreaSelect._cargosData || {};
+        const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect.value];
+        if (cargoSeleccionado) {
+            cargoNombre = cargoSeleccionado.nombre || 'Cargo sin nombre';
+            cargoDescripcion = cargoSeleccionado.descripcion || '';
+            cargoObjeto = {
+                id: cargoSeleccionado.id || elements.cargoEnAreaSelect.value,
+                nombre: cargoNombre,
+                descripcion: cargoDescripcion
+            };
+        }
+    }
+    
     // Mostrar confirmación
     const confirmResult = await Swal.fire({
-        title: 'CREAR COLABORADOR',
+        title: 'Crear colaborador',
         html: `
             <div style="text-align: left; padding: 10px 0;">
-                <div style="background: var(--color-bg-secondary); padding: 10px; border-radius: 5px; margin-bottom: 15px;">
-                    <p><strong>Administrador creador:</strong> ${admin.nombreCompleto}</p>
-                    <p><strong>Organización:</strong> ${admin.organizacion}</p>
-                </div>
                 <p><strong>Nombre:</strong> ${elements.nombreCompleto.value.trim()}</p>
                 <p><strong>Email:</strong> ${elements.correoElectronico.value.trim()}</p>
-                <p><strong>Rol:</strong> ${elements.rol ? elements.rol.options[elements.rol.selectedIndex].text : 'No especificado'}</p>
-                <p><strong>Plan heredado:</strong> ${admin.plan ? admin.plan.toUpperCase() : 'GRATIS'}</p>
+                <p><strong>Rol en sistema:</strong> ${elements.rol ? elements.rol.options[elements.rol.selectedIndex].text : 'No especificado'}</p>
+                <p><strong>Área asignada:</strong> ${areaNombre}</p>
+                <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
                 <p style="color: var(--color-warning, #ff9800); margin-top: 15px;">
                     <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación al colaborador.
                 </p>
@@ -539,18 +631,9 @@ async function registrarColaborador(event, elements, userManager, admin) {
         `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'CONFIRMAR REGISTRO',
+        confirmButtonText: 'CONFIRMAR',
         cancelButtonText: 'CANCELAR',
-        confirmButtonColor: 'var(--color-success, #28a745)',
-        cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
-        allowOutsideClick: false,
-        customClass: {
-            popup: 'swal2-popup',
-            title: 'swal2-title',
-            htmlContainer: 'swal2-html-container',
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel'
-        }
+        allowOutsideClick: false
     });
     
     if (!confirmResult.isConfirmed) return;
@@ -558,20 +641,14 @@ async function registrarColaborador(event, elements, userManager, admin) {
     // Mostrar loader
     Swal.fire({
         title: 'Creando colaborador...',
-        html: 'Esto puede tomar unos segundos. Por favor espera...',
+        text: 'Esto puede tomar unos segundos. Por favor espera...',
         allowOutsideClick: false,
         allowEscapeKey: false,
         showConfirmButton: false,
-        didOpen: () => Swal.showLoading(),
-        customClass: {
-            popup: 'swal2-popup',
-            title: 'swal2-title',
-            htmlContainer: 'swal2-html-container'
-        }
+        didOpen: () => Swal.showLoading()
     });
     
     try {
-        // Preparar datos del colaborador
         const colaboradorData = {
             nombreCompleto: elements.nombreCompleto.value.trim(),
             correoElectronico: elements.correoElectronico.value.trim(),
@@ -584,11 +661,16 @@ async function registrarColaborador(event, elements, userManager, admin) {
             theme: admin.theme || 'light',
             plan: admin.plan || 'gratis',
             
-            // Campos específicos
+            // Usar el objeto cargo para la información del puesto
+            cargo: cargoObjeto,
+            
+            // Solo el ID del área, no el nombre
+            areaAsignadaId: elements.areaSelect ? elements.areaSelect.value : null,
+            
+            // El campo rol es para el nivel de acceso
             rol: elements.rol ? elements.rol.value : 'colaborador',
             
             // Campos de sistema
-            cargo: 'colaborador',
             status: true,
             
             // Campos de trazabilidad
@@ -607,22 +689,13 @@ async function registrarColaborador(event, elements, userManager, admin) {
             }
         };
         
-        console.log('📝 Datos del colaborador a crear:', {
-            nombre: colaboradorData.nombreCompleto,
-            email: colaboradorData.correoElectronico,
-            organizacion: colaboradorData.organizacion,
-            coleccion: `colaboradores_${colaboradorData.organizacionCamelCase}`
-        });
-        
         // Crear colaborador usando UserManager
         const resultado = await userManager.createColaborador(
             colaboradorData,
             elements.contrasena.value,
             admin.id
         );
-        
-        console.log('✅ Colaborador creado exitosamente:', resultado);
-        
+                
         // Mostrar éxito
         Swal.close();
         await mostrarExitoRegistro(colaboradorData);
@@ -637,48 +710,19 @@ async function registrarColaborador(event, elements, userManager, admin) {
 async function mostrarExitoRegistro(colaboradorData) {
     const result = await Swal.fire({
         icon: 'success',
-        title: '¡COLABORADOR CREADO!',
+        title: '¡Colaborador creado!',
         html: `
-            <div style="text-align: center; padding: 20px;">
-                <div style="font-size: 60px; color: var(--color-success, #28a745); margin-bottom: 20px;">
-                    <i class="fas fa-user-check"></i>
-                </div>
-                <h3 style="color: var(--color-text-primary); margin-bottom: 15px;">
-                    ¡Colaborador creado exitosamente!
-                </h3>
-                <div style="background: var(--color-bg-secondary); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                    <p><strong>Nombre:</strong> ${colaboradorData.nombreCompleto}</p>
-                    <p><strong>Email:</strong> ${colaboradorData.correoElectronico}</p>
-                    <p><strong>Rol:</strong> ${colaboradorData.rol.toUpperCase()}</p>
-                    <p><strong>Organización:</strong> ${colaboradorData.organizacion}</p>
-                    <p><strong>Creado por:</strong> ${colaboradorData.creadoPorNombre}</p>
-                </div>
-                <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-top: 20px;">
-                    <h4 style="color: #0a2540; margin-bottom: 10px;">
-                        <i class="fas fa-envelope"></i> Verificación de Email
-                    </h4>
-                    <p style="color: #666; margin-bottom: 10px;">
-                        Se ha enviado un correo de verificación a <strong>${colaboradorData.correoElectronico}</strong>
-                    </p>
-                    <p style="color: #666; font-size: 0.9rem;">
-                        <i class="fas fa-info-circle"></i> El colaborador debe verificar su email antes de iniciar sesión
-                    </p>
-                </div>
+            <div style="text-align: center;">
+                <p><strong>Nombre:</strong> ${colaboradorData.nombreCompleto}</p>
+                <p><strong>Email:</strong> ${colaboradorData.correoElectronico}</p>
+                <p><strong>Organización:</strong> ${colaboradorData.organizacion}</p>
+                <p style="margin-top: 15px;"><i class="fas fa-envelope"></i> Se ha enviado un correo de verificación</p>
             </div>
         `,
         showCancelButton: true,
-        confirmButtonText: 'CREAR OTRO COLABORADOR',
-        cancelButtonText: 'IR AL PANEL DE CONTROL',
-        confirmButtonColor: 'var(--color-success, #28a745)',
-        cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
-        allowOutsideClick: false,
-        customClass: {
-            popup: 'swal2-popup',
-            title: 'swal2-title',
-            htmlContainer: 'swal2-html-container',
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel'
-        }
+        confirmButtonText: 'CREAR OTRO',
+        cancelButtonText: 'IR AL PANEL',
+        allowOutsideClick: false
     });
     
     if (result.isConfirmed) {
@@ -717,29 +761,20 @@ function manejarErrorRegistro(error) {
                 errorTitle = 'Error de conexión';
                 break;
             default:
-                if (error.message.includes('Firestore')) {
-                    errorMessage = 'Error en la base de datos: ' + error.message;
+                if (error.message && error.message.includes('Firestore')) {
+                    errorMessage = 'Error en la base de datos';
                     errorTitle = 'Error de base de datos';
                 }
         }
     } else if (error.message) {
-        if (error.message.includes('El correo electrónico ya está registrado')) {
-            errorMessage = error.message;
-            errorTitle = 'Email duplicado';
-        } else if (error.message.includes('Límite de colaboradores alcanzado')) {
-            errorMessage = error.message;
-            errorTitle = 'Límite alcanzado';
-        } else if (error.message.includes('No tienes permisos')) {
-            errorMessage = error.message;
-            errorTitle = 'Permisos insuficientes';
-        }
+        errorMessage = error.message;
     }
     
     Swal.fire({
         icon: 'error',
         title: errorTitle,
         html: `
-            <div style="text-align: left;">
+            <div>
                 <p>${errorMessage}</p>
                 <p style="color: var(--color-warning, #ff9800); margin-top: 15px; font-size: 0.9rem;">
                     <i class="fas fa-exclamation-triangle"></i> Si el problema persiste, contacta al soporte técnico.
@@ -747,14 +782,7 @@ function manejarErrorRegistro(error) {
             </div>
         `,
         confirmButtonText: 'ENTENDIDO',
-        confirmButtonColor: 'var(--color-danger, #ef4444)',
-        allowOutsideClick: true,
-        customClass: {
-            popup: 'swal2-popup',
-            title: 'swal2-title',
-            htmlContainer: 'swal2-html-container',
-            confirmButton: 'swal2-confirm'
-        }
+        allowOutsideClick: true
     });
 }
 
@@ -766,17 +794,8 @@ function cancelarRegistro() {
         text: "Se perderán todos los datos ingresados",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sí, cancelar',
-        cancelButtonText: 'No, continuar',
-        confirmButtonColor: 'var(--color-danger, #ef4444)',
-        cancelButtonColor: 'var(--color-accent-primary, #3085d6)',
-        customClass: {
-            popup: 'swal2-popup',
-            title: 'swal2-title',
-            htmlContainer: 'swal2-html-container',
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel'
-        }
+        confirmButtonText: 'CONFIRMAR',
+        cancelButtonText: 'CANCELAR'
     }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = '/users/admin/managementUser/managementUser.html';
@@ -789,14 +808,7 @@ function mostrarErrorSistema(mensaje) {
         icon: 'error',
         title: 'Error del sistema',
         text: mensaje || 'Ha ocurrido un error inesperado',
-        confirmButtonText: 'ENTENDIDO',
-        confirmButtonColor: 'var(--color-danger, #ef4444)',
-        customClass: {
-            popup: 'swal2-popup',
-            title: 'swal2-title',
-            htmlContainer: 'swal2-html-container',
-            confirmButton: 'swal2-confirm'
-        }
+        confirmButtonText: 'ENTENDIDO'
     });
 }
 

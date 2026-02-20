@@ -5,22 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Colaborador | Centinela</title>
     
-    <!-- Fuentes y iconos -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Estilos externos -->
+    <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     
-    <!-- Estilos principales -->
-    <link rel="stylesheet" href="editUser.css">
-    
-    <!-- Assets -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Icono en barra de titulo -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <!-- Archivo para PWA -->
     <link rel="manifest" href="/manifest.json">
-    
+    <!-- Estilos modulo -->
+    <link rel="stylesheet" href="editUser.css">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+    <!-- SEO Básico -->
+    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="author" content="Centinela-MX">
+    <link rel="canonical" href="https://centinela-mx.web.app/" />
+
+    <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://centinela-mx.web.app">
+    <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
+    <meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+    <meta property="og:image:width" content="500">
+    <meta property="og:image:height" content="500">
+    <meta property="og:image:alt" content="Vista previa oficial de Centinela-MX">
+    <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+    <meta property="og:image:width" content="500">
+    <meta property="og:image:height" content="500">
+    <meta property="og:image:alt" content="Logo oficial de Centinela-MX">
+    <meta property="og:site_name" content="Centinela-MX">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://centinela-mx.web.app">
+    <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
+    <meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+    <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+    <meta name="twitter:creator" content="">
+
+    <!-- Schema.org / JSON-LD -->
+    <script type="application/ld+json">
+    {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Centinela-MX",
+    "operatingSystem": "Web",
+    "applicationCategory": "SecurityApplication",
+    "description": "Centinela-MX es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
+    "url": "https://centinela-mx.web.app",
+    "image": "https://centinela-mx.web.app/assets/images/logo.png",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Centinela-MX",
+        "logo": {
+        "@type": "ImageObject",
+        "url": "https://centinela-mx.web.app/assets/images/logo.png"
+        }
+    },
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "MXN"
+    }
+    }
+    </script>
 </head>
 
 <body>
@@ -94,13 +148,6 @@
                     <div class="info-grid">
                         <div class="info-item">
                             <div class="info-label">
-                                <i class="fas fa-fingerprint"></i> ID Auth
-                            </div>
-                            <div class="info-value collaborator-id" id="authId">CARGANDO...</div>
-                        </div>
-                        
-                        <div class="info-item">
-                            <div class="info-label">
                                 <i class="fas fa-calendar-plus"></i> Fecha de Creación
                             </div>
                             <div class="info-value">
@@ -133,7 +180,7 @@
 
                 <!-- Botón volver -->
                 <footer class="back-btn-container">
-                    <a href="gestionColaboradores.html" class="back-btn">
+                    <a href="/users/admin/managementUser/managementUser.html" class="back-btn">
                         <i class="fas fa-arrow-left"></i> VOLVER A GESTIÓN
                     </a>
                 </footer>
@@ -190,6 +237,30 @@
                             <p class="field-info">Contacta al administrador principal</p>
                         </div>
 
+                        <!-- NUEVO: ÁREA (EDITABLE) -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="areaSelect">
+                                <i class="fas fa-building"></i> ÁREA / DEPARTAMENTO
+                            </label>
+                            <div class="input-wrapper">
+                                <select class="form-input-field" id="areaSelect" required>
+                                    <option value="">Cargando áreas...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- NUEVO: CARGO EN EL ÁREA (EDITABLE) -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="cargoEnAreaSelect">
+                                <i class="fas fa-user-tie"></i> CARGO EN EL ÁREA
+                            </label>
+                            <div class="input-wrapper">
+                                <select class="form-input-field" id="cargoEnAreaSelect" required>
+                                    <option value="">Primero selecciona un área</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <!-- Status (EDITABLE) -->
                         <div class="form-field-group full-width">
                             <label class="field-label">
@@ -204,23 +275,9 @@
                                     <i class="fas fa-times-circle"></i>
                                     <span class="status-text">Inactivo</span>
                                 </div>
-                                <div class="status-option" data-status="pending">
-                                    <i class="fas fa-clock"></i>
-                                    <span class="status-text">Pendiente</span>
-                                </div>
                             </div>
                             <input type="hidden" id="status" value="active">
                         </div>
-                    </div>
-
-                    <!-- Sección para cambiar contraseña -->
-                    <div class="password-change-section">
-                        <button type="button" class="btn-change-password" id="changePasswordBtn">
-                            <i class="fas fa-key"></i> ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA
-                        </button>
-                        <p class="password-change-info">
-                            Se enviará un enlace seguro al correo del colaborador para restablecer su contraseña.
-                        </p>
                     </div>
 
                     <!-- Permisos del sistema -->
@@ -265,8 +322,18 @@
                         </div>
                     </section>
 
-                    <!-- Mensajes -->
-                    <div class="message-container" id="mainMessage"></div>
+                    
+
+                    <!-- Sección para cambiar contraseña -->
+                    <div class="password-change-section">
+                        <button type="button" class="btn-change-password" id="changePasswordBtn">
+                            <i class="fas fa-key"></i> ENVIAR ENLACE PARA CAMBIAR CONTRASEÑA
+                        </button>
+                        <p class="password-change-info">
+                            Se enviará un enlace seguro al correo del colaborador para restablecer su contraseña.
+                        </p>
+                    </div>
+
 
                     <!-- Acciones del formulario -->
                     <div class="form-actions">
@@ -275,9 +342,6 @@
                         </button>
                         <button type="button" class="action-btn cancel-btn" id="cancelBtn">
                             <i class="fas fa-times"></i> CANCELAR
-                        </button>
-                        <button type="button" class="action-btn delete-btn" id="deleteBtn">
-                            <i class="fas fa-trash"></i> ELIMINAR
                         </button>
                     </div>
                 </form>

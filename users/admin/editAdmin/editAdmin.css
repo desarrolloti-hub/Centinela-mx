@@ -27,7 +27,52 @@ body {
     z-index: 1;
 }
 
-/* ========== LAYOUT PRINCIPAL ========== */
+/* ========== CONTENEDOR PRINCIPAL (COMO EN CATEGORÍAS) ========== */
+.admin-container {
+    position: relative;
+    z-index: 100;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px;
+}
+
+/* ========== PAGE HEADER (COMO EN CATEGORÍAS) ========== */
+.page-header {
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--color-border-light);
+    text-align: center;
+}
+
+.page-header h1 {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 2.8rem;
+    color: var(--color-text-primary);
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px var(--color-accent-primary), 0 0 20px var(--color-accent-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.page-header h1 i {
+    color: var(--color-text-primary);
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+}
+
+.page-header .header-description {
+    color: var(--color-text-secondary);
+    font-size: 1.2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    line-height: 1.6;
+}
+
+/* ========== LAYOUT PRINCIPAL (WRAPPER) ========== */
 .edit-main-container {
     position: relative;
     z-index: 100;
@@ -42,6 +87,7 @@ body {
     display: flex;
     width: 100%;
     max-width: 1100px;
+    margin: 0 auto;
     min-height: auto;
     background: var(--color-bg-tertiary);
     backdrop-filter: blur(8px);
@@ -72,7 +118,7 @@ body {
     flex: 1.5;
 }
 
-/* ========== HEADER ========== */
+/* ========== HEADER DENTRO DEL PANEL DERECHO ========== */
 .edit-header {
     margin-bottom: 1.5rem;
 }
@@ -143,7 +189,6 @@ body {
     box-shadow: var(--shadow-normal);
 }
 
-/* ========== ESTILOS CORREGIDOS PARA IMAGEN Y PLACEHOLDER ========== */
 .profile-image {
     width: 100%;
     height: 100%;
@@ -183,14 +228,12 @@ body {
 
 /* ========== REGLAS CSS CORREGIDAS PARA PLACEHOLDER ========== */
 
-/* Cuando la imagen tiene SRC (no vacío), el placeholder DEBE estar oculto */
 .profile-image[src]:not([src=""]) ~ .placeholder-text {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
 }
 
-/* Cuando la imagen NO tiene SRC o está vacío, mostrar placeholder */
 .profile-image:not([src]),
 .profile-image[src=""] {
     display: none;
@@ -223,13 +266,11 @@ body {
     visibility: hidden;
 }
 
-/* Mostrar overlay en hover */
 .profile-circle:hover .edit-overlay {
     opacity: 1;
     visibility: visible;
 }
 
-/* Mostrar overlay cuando NO hay imagen */
 .profile-image:not([src]) ~ .edit-overlay,
 .profile-image[src=""] ~ .edit-overlay {
     opacity: 1;
@@ -265,7 +306,6 @@ body {
     height: 100%;
 }
 
-/* GRID PARA CAMPOS DEL FORMULARIO */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -279,7 +319,6 @@ body {
     gap: 0.25rem;
 }
 
-/* Campos que ocupan toda la fila */
 .full-width {
     grid-column: span 2;
 }
@@ -328,6 +367,164 @@ body {
 .form-input-field::placeholder {
     color: var(--color-text-secondary);
     opacity: 0.6;
+}
+
+/* ========== ESTILOS PARA SELECT ========== */
+select.form-input-field {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c0c0c0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+/* ===== ESTILOS ROBUSTOS PARA OPTIONS ===== */
+select.form-input-field option {
+    background-color: var(--color-bg-tertiary) !important;
+    color: var(--color-text-primary) !important;
+    padding: 12px !important;
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 0.9rem !important;
+}
+
+select.form-input-field option:hover {
+    background-color: var(--color-accent-primary) !important;
+    color: var(--color-text-dark) !important;
+}
+
+select.form-input-field option:checked {
+    background-color: var(--color-accent-secondary) !important;
+    color: var(--color-text-dark) !important;
+    font-weight: 700 !important;
+}
+
+select.form-input-field option:active {
+    background-color: var(--color-accent-primary) !important;
+    color: var(--color-text-dark) !important;
+}
+
+/* ===== FIREFOX ===== */
+@-moz-document url-prefix() {
+    select.form-input-field {
+        background-color: var(--color-bg-tertiary) !important;
+        color: var(--color-text-primary) !important;
+        padding: 0.75rem 1rem !important;
+        text-indent: 0.01px;
+        text-overflow: '';
+    }
+    
+    select.form-input-field option {
+        background-color: var(--color-bg-tertiary) !important;
+        color: var(--color-text-primary) !important;
+        padding: 12px !important;
+    }
+    
+    select.form-input-field option:checked {
+        background-color: var(--color-accent-secondary) !important;
+        color: var(--color-text-dark) !important;
+        box-shadow: 0 0 10px 100px var(--color-accent-secondary) inset !important;
+    }
+    
+    select.form-input-field option:hover {
+        background-color: var(--color-accent-primary) !important;
+        color: var(--color-text-dark) !important;
+    }
+    
+    select.form-input-field:-moz-focusring {
+        color: transparent !important;
+        text-shadow: 0 0 0 var(--color-text-primary) !important;
+    }
+}
+
+/* ===== PARA EL PANEL DESPLEGABLE EN CHROME ===== */
+select.form-input-field:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.3);
+}
+
+select.form-input-field > option,
+select.form-input-field optgroup {
+    background-color: var(--color-bg-tertiary) !important;
+    color: var(--color-text-primary) !important;
+}
+
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+    select.form-input-field {
+        background-color: var(--color-bg-tertiary) !important;
+    }
+    
+    select.form-input-field:focus {
+        background-color: var(--color-bg-tertiary) !important;
+    }
+    
+    select.form-input-field optgroup,
+    select.form-input-field option {
+        background-color: var(--color-bg-tertiary) !important;
+        color: var(--color-text-primary) !important;
+        -webkit-text-fill-color: var(--color-text-primary) !important;
+    }
+}
+
+select.form-input-field:active,
+select.form-input-field:focus-within {
+    border-color: var(--color-accent-primary);
+}
+
+select.form-input-field option:disabled {
+    color: var(--color-text-secondary) !important;
+    opacity: 0.7;
+}
+
+select.form-input-field::-webkit-scrollbar {
+    width: 8px;
+    background-color: var(--color-bg-secondary);
+}
+
+select.form-input-field::-webkit-scrollbar-thumb {
+    background-color: var(--color-accent-primary);
+    border-radius: 4px;
+}
+
+select.form-input-field::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-accent-secondary);
+}
+
+select.form-input-field::-webkit-scrollbar-track {
+    background-color: var(--color-bg-tertiary);
+}
+
+select.form-input-field:disabled,
+select.form-input-field[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-border-light);
+}
+
+select.form-input-field:disabled option {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+[data-theme="light"] select.form-input-field option {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+}
+
+[data-theme="dark"] select.form-input-field option {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+select.form-input-field option:any-link,
+select.form-input-field option:any {
+    background-color: var(--color-bg-tertiary) !important;
+    color: var(--color-text-primary) !important;
 }
 
 /* ========== CAMPOS DE SOLO LECTURA ========== */
@@ -432,7 +629,7 @@ body {
     color: #ef6c00;
 }
 
-/* ========== ACCIONES DEL FORMULARIO (SOLO GUARDAR Y CANCELAR) ========== */
+/* ========== ACCIONES DEL FORMULARIO ========== */
 .form-actions {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -525,128 +722,8 @@ body {
     font-size: 0.8rem;
 }
 
-/* ========== MODAL - CORREGIDO PARA IMÁGENES CIRCULARES ========== */
-.photo-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.85);
-    z-index: 2000;
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(5px);
-}
 
-.modal-content {
-    background: var(--color-bg-tertiary);
-    padding: 1.5rem;
-    border-radius: var(--border-radius-medium);
-    width: 90%;
-    max-width: 400px;
-    box-shadow: var(--shadow-large);
-    border: 1px solid var(--color-border-light);
-    animation: modalAppear 0.3s ease;
-}
-
-@keyframes modalAppear {
-    from {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-.modal-title {
-    text-align: center;
-    color: var(--color-text-primary);
-    font-family: var(--font-family-primary);
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    text-shadow: var(--text-shadow-effect);
-}
-
-.modal-preview {
-    text-align: center;
-    margin-bottom: 1rem;
-}
-
-/* CORREGIDO: La imagen de vista previa debe ser CIRCULAR */
-.preview-image {
-    width: 150px;
-    height: 150px;
-    border-radius: var(--border-radius-circle);
-    object-fit: cover;
-    border: 3px solid var(--color-accent-primary);
-    margin-bottom: 1rem;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.modal-message {
-    text-align: center;
-    color: var(--color-text-secondary);
-    font-size: 0.875rem;
-    margin-bottom: 1.5rem;
-    line-height: 1.4;
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-}
-
-.modal-btn {
-    padding: 0.6rem 1.25rem;
-    border: none;
-    border-radius: var(--border-radius-small);
-    cursor: pointer;
-    font-weight: 600;
-    transition: var(--transition-default);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 0.8rem;
-    min-width: 120px;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    box-shadow: var(--shadow-small);
-}
-
-.modal-btn-confirm {
-    background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
-    color: var(--color-text-dark);
-}
-
-.modal-btn-confirm:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-normal);
-    background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-primary));
-}
-
-.modal-btn-cancel {
-    background: linear-gradient(135deg, var(--color-bg-tertiary), var(--color-text-secondary));
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-light);
-}
-
-.modal-btn-cancel:hover {
-    background: linear-gradient(135deg, var(--color-text-secondary), var(--color-bg-tertiary));
-    border-color: var(--color-accent-primary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-normal);
-}
-
-/* ========== ESTILOS ADICIONALES PARA CAMBIO DE CONTRASEÑA ========== */
+/* ========== CAMBIO DE CONTRASEÑA ========== */
 .password-section-simple {
     background: var(--color-bg-primary);
     padding: 1.2rem;
@@ -714,6 +791,8 @@ body {
 }
 
 /* ========== RESPONSIVE OPTIMIZADO ========== */
+
+/* Tablets y pantallas medianas (menos de 1100px) */
 @media (max-width: 1100px) {
     .edit-wrapper {
         max-width: 950px;
@@ -729,15 +808,20 @@ body {
         height: 140px;
     }
     
-    /* SweetAlert2 responsive */
     .swal2-popup {
         width: 90% !important;
     }
 }
 
+/* Tablets (menos de 900px) */
 @media (max-width: 900px) {
     .edit-wrapper {
-        max-width: 800px;
+        max-width: 95%;
+        margin: 0 auto;
+    }
+    
+    .form-grid {
+        gap: 1rem;
     }
     
     .photo-container {
@@ -751,16 +835,23 @@ body {
     }
 }
 
+/* Punto de quiebre principal - Cambio a layout vertical (menos de 850px) */
 @media (max-width: 850px) {
     .edit-wrapper {
         flex-direction: column;
         max-width: 600px;
+        margin: 0 auto;
     }
 
     .edit-left-panel {
         border-right: none;
         border-bottom: 1px solid var(--color-border-light);
         max-width: 100%;
+        padding: 1.5rem;
+    }
+
+    .edit-right-panel {
+        padding: 1.5rem;
     }
 
     .photo-container {
@@ -775,14 +866,52 @@ body {
 
     .form-actions {
         grid-template-columns: 1fr;
+        gap: 0.75rem;
     }
     
     .form-grid {
         grid-template-columns: 1fr;
+        gap: 1.25rem;
     }
     
     .full-width {
         grid-column: span 1;
+    }
+    
+    .field-label {
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .form-input-field {
+        height: 48px;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* ===== SOLUCIÓN PARA SELECT EN MÓVIL ===== */
+    select.form-input-field {
+        font-size: 16px !important;
+        padding: 0.75rem 1rem;
+        background-position: right 1rem center;
+        width: 100%;
+        max-width: 100%;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    
+    select.form-input-field option {
+        max-width: 100%;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    
+    select.form-input-field:focus {
+        max-width: 100%;
     }
     
     .form-input-field.readonly-field {
@@ -791,18 +920,51 @@ body {
     
     .readonly-badge {
         position: static;
-        margin-top: 6px;
+        margin-top: 8px;
         display: inline-flex;
         transform: none;
         width: auto;
         justify-content: center;
-        padding: 2px 6px;
+        padding: 4px 10px;
+        font-size: 0.7rem;
+        border-radius: 20px;
+    }
+    
+    .input-wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .permissions-note {
+        padding: 1rem;
+        margin: 1.5rem 0;
+        font-size: 0.85rem;
+    }
+    
+    .btn-change-password {
+        max-width: 100%;
+        padding: 14px 20px;
+        font-size: 0.85rem;
+    }
+    
+    .edit-main-title {
+        font-size: 1.3rem;
+    }
+    
+    .edit-sub-title {
+        font-size: 0.85rem;
+    }
+    
+    .swal2-popup {
+        width: 90% !important;
+        margin: 0 auto !important;
     }
 }
 
+/* Tablets pequeñas (menos de 768px) */
 @media (max-width: 768px) {
     .edit-wrapper {
-        max-width: 650px;
+        max-width: 95%;
     }
     
     .photo-container {
@@ -814,20 +976,26 @@ body {
         width: 110px;
         height: 110px;
     }
+    
+    select.form-input-field {
+        font-size: 16px !important;
+        padding: 0.875rem 1rem !important;
+    }
+    
+    select.form-input-field option {
+        font-size: 16px !important;
+        padding: 15px !important;
+    }
 }
 
+/* Tablets pequeñas y móviles grandes (menos de 650px) */
 @media (max-width: 650px) {
     .edit-wrapper {
-        max-width: 550px;
+        max-width: 95%;
     }
 }
 
-@media (max-width: 550px) {
-    .edit-wrapper {
-        max-width: 480px;
-    }
-}
-
+/* Móviles (menos de 600px) */
 @media (max-width: 600px) {
     .edit-left-panel,
     .edit-right-panel {
@@ -835,39 +1003,60 @@ body {
     }
 
     .photo-container {
-        width: 120px;
-        height: 120px;
+        width: 130px;
+        height: 130px;
     }
     
     .preview-image {
-        width: 100px;
-        height: 100px;
+        width: 110px;
+        height: 110px;
+    }
+    
+    .edit-overlay {
+        width: 38px;
+        height: 38px;
+        bottom: 8px;
+        right: 8px;
     }
 
     .edit-main-title {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
+    }
+    
+    .edit-sub-title {
+        font-size: 0.8rem;
     }
 
     .modal-content {
         padding: 1.25rem;
+        width: 95%;
     }
 
     .modal-buttons {
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.75rem;
     }
 
     .modal-btn {
         width: 100%;
         min-width: auto;
+        padding: 0.75rem;
     }
     
-    .permissions-note {
-        padding: 0.6rem;
-        font-size: 0.75rem;
+    .photo-info {
+        font-size: 0.7rem;
+        line-height: 1.4;
     }
     
-    /* SweetAlert2 responsive */
+    .photo-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+    
     .swal2-title {
         font-size: 1.1rem !important;
     }
@@ -887,24 +1076,41 @@ body {
     .swal2-icon-content {
         font-size: 2rem !important;
     }
+    
+    .swal2-html-container {
+        font-size: 0.9rem !important;
+    }
 }
 
+/* Móviles medianos (menos de 550px) */
+@media (max-width: 550px) {
+    .edit-wrapper {
+        max-width: 95%;
+    }
+}
+
+/* Móviles (menos de 480px) */
 @media (max-width: 480px) {
+    .edit-left-panel,
+    .edit-right-panel {
+        padding: 1rem;
+    }
+    
     .photo-container {
-        width: 110px;
-        height: 110px;
+        width: 120px;
+        height: 120px;
     }
     
     .preview-image {
-        width: 90px;
-        height: 90px;
+        width: 100px;
+        height: 100px;
     }
     
     .edit-overlay {
         width: 35px;
         height: 35px;
-        bottom: 8px;
-        right: 8px;
+        bottom: 6px;
+        right: 6px;
     }
     
     .edit-icon {
@@ -912,46 +1118,105 @@ body {
     }
     
     .edit-main-title {
-        font-size: 1rem;
+        font-size: 1.1rem;
+        letter-spacing: 1px;
+    }
+    
+    .edit-header {
+        margin-bottom: 1rem;
+    }
+    
+    .form-grid {
+        gap: 1rem;
+    }
+    
+    .form-field-group {
+        gap: 0.2rem;
+    }
+    
+    .field-label {
+        font-size: 0.7rem;
+    }
+    
+    .field-label i {
+        font-size: 0.7rem;
+        min-width: 14px;
     }
     
     .form-input-field {
-        height: 40px;
+        height: 44px;
         padding: 0.6rem 0.8rem;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+    }
+    
+    select.form-input-field {
+        font-size: 16px !important;
+        padding: 0.6rem 0.8rem;
+        background-position: right 0.8rem center;
+        background-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .action-btn,
     .back-btn {
-        height: 40px;
-        font-size: 0.75rem;
+        height: 44px;
+        font-size: 0.8rem;
         padding: 0.6rem;
     }
     
     .readonly-badge {
         font-size: 0.65rem;
-        padding: 2px 5px;
+        padding: 3px 8px;
     }
     
     .field-info {
         font-size: 0.65rem;
+        margin-top: 2px;
     }
     
     .permissions-note {
-        padding: 0.5rem;
-        font-size: 0.7rem;
+        padding: 0.75rem;
+        margin: 1rem 0;
+        font-size: 0.75rem;
+    }
+    
+    .permissions-note i {
+        font-size: 0.8rem;
     }
     
     .photo-info {
         font-size: 0.65rem;
+        margin-top: 0.2rem;
     }
     
     .btn-change-password {
-        padding: 10px 20px;
-        font-size: 0.75rem;
+        padding: 12px 16px;
+        font-size: 0.8rem;
+        letter-spacing: 0.6px;
     }
     
-    /* SweetAlert2 responsive */
+    .password-change-info {
+        font-size: 0.7rem;
+        margin-top: 8px;
+    }
+    
+    .page-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+    }
+    
+    .page-header h1 {
+        font-size: 1.8rem;
+        gap: 10px;
+    }
+    
+    .page-header .header-description {
+        font-size: 0.9rem;
+        padding: 0 10px;
+    }
+    
     .swal2-actions {
         flex-direction: column !important;
         width: 100% !important;
@@ -960,6 +1225,77 @@ body {
     .swal2-styled {
         width: 100% !important;
         margin: 0.25rem 0 !important;
+    }
+    
+    .swal2-popup {
+        padding: 1rem !important;
+    }
+}
+
+/* Móviles muy pequeños (menos de 360px) */
+@media (max-width: 360px) {
+    .edit-left-panel,
+    .edit-right-panel {
+        padding: 0.75rem;
+    }
+    
+    .photo-container {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .preview-image {
+        width: 90px;
+        height: 90px;
+    }
+    
+    .edit-overlay {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .edit-main-title {
+        font-size: 1rem;
+    }
+    
+    .form-input-field {
+        height: 40px;
+        font-size: 0.8rem;
+        padding: 0.5rem 0.7rem;
+    }
+    
+    select.form-input-field {
+        font-size: 16px !important;
+    }
+    
+    .action-btn,
+    .back-btn {
+        height: 40px;
+        font-size: 0.75rem;
+    }
+    
+    .field-label {
+        font-size: 0.65rem;
+    }
+    
+    .field-label i {
+        font-size: 0.65rem;
+    }
+    
+    .section-title {
+        font-size: 0.85rem;
+    }
+    
+    .section-title i {
+        font-size: 0.9rem;
+    }
+    
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .page-header .header-description {
+        font-size: 0.8rem;
     }
 }
 
@@ -981,5 +1317,18 @@ body {
     .preview-image {
         width: 180px;
         height: 180px;
+    }
+    
+    .form-input-field {
+        font-size: 0.95rem;
+        height: 48px;
+    }
+    
+    .field-label {
+        font-size: 0.8rem;
+    }
+    
+    .edit-main-title {
+        font-size: 1.6rem;
     }
 }
