@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Sucursales | Centinela-MX</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Icono en barra de titulo -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <!-- Archivo para PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- Estilos modulo -->
+    <link rel="stylesheet" href="">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+    <!-- SEO Básico -->
+    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="author" content="Centinela-MX">
+    <link rel="canonical" href="https://centinela-mx.web.app/" />
+
+    <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://centinela-mx.web.app">
+    <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
+    <meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+    <meta property="og:image:width" content="500">
+    <meta property="og:image:height" content="500">
+    <meta property="og:image:alt" content="Vista previa oficial de Centinela-MX">
+    <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+    <meta property="og:image:width" content="500">
+    <meta property="og:image:height" content="500">
+    <meta property="og:image:alt" content="Logo oficial de Centinela-MX">
+    <meta property="og:site_name" content="Centinela-MX">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://centinela-mx.web.app">
+    <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
+    <meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+    <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+    <meta name="twitter:creator" content="">
+
+    <!-- Schema.org / JSON-LD -->
+    <script type="application/ld+json">
+    {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Centinela-MX",
+    "operatingSystem": "Web",
+    "applicationCategory": "SecurityApplication",
+    "description": "Centinela-MX es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
+    "url": "https://centinela-mx.web.app",
+    "image": "https://centinela-mx.web.app/assets/images/logo.png",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Centinela-MX",
+        "logo": {
+        "@type": "ImageObject",
+        "url": "https://centinela-mx.web.app/assets/images/logo.png"
+        }
+    },
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "MXN"
+    }
+    }
+    </script>
+</head>
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="admin-container" style="background-color: aliceblue;">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-store-alt"></i> CREAR NUEVA SUCURSAL
+            </h1>
+            <div class="header-description">
+                Complete el formulario para registrar una nueva sucursal en su organización.
+            </div>
+        </div>
+
+        <!-- Formulario de creación -->
+        <div class="form-container">
+            <form id="sucursalForm">
+                <!-- Datos básicos de la sucursal -->
+                <div>
+                    <h3>INFORMACIÓN BÁSICA</h3>
+                    
+                    <div>
+                        <label for="nombreSucursal">Nombre de la sucursal <span>*</span></label>
+                        <input type="text" id="nombreSucursal" placeholder="Ej: Sucursal Centro, Matriz Principal, etc.">
+                    </div>
+
+                    <div>
+                        <label for="tipoSucursal">Tipo de sucursal <span>*</span></label>
+                        <input type="text" id="tipoSucursal" placeholder="Ej: Matriz, Sucursal, Oficina, Bodega, etc.">
+                    </div>
+                </div>
+
+                <!-- Ubicación -->
+                <div>
+                    <h3>UBICACIÓN</h3>
+                    
+                    <div>
+                        <label for="regionSucursal">Región <span>*</span></label>
+                        <select id="regionSucursal">
+                            <option value="">-- Cargando regiones... --</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="zonaSucursal">Zona</label>
+                        <input type="text" id="zonaSucursal" placeholder="Ej: Norte, Sur, Centro, etc.">
+                    </div>
+
+                    <div>
+                        <label for="estadoSucursal">Estado <span>*</span></label>
+                        <select id="estadoSucursal">
+                            <option value="">-- Seleccione un estado --</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="ciudadSucursal">Ciudad <span>*</span></label>
+                        <input type="text" id="ciudadSucursal" placeholder="Ej: Monterrey, Guadalajara, CDMX">
+                    </div>
+
+                    <div>
+                        <label for="direccionSucursal">Dirección <span>*</span></label>
+                        <input type="text" id="direccionSucursal" placeholder="Calle, número, colonia, código postal">
+                    </div>
+                </div>
+
+                <!-- Contacto -->
+                <div>
+                    <h3>CONTACTO</h3>
+                    
+                    <div>
+                        <label for="contactoSucursal">Teléfono de contacto</label>
+                        <input type="tel" id="contactoSucursal" placeholder="Ej: 8112345678">
+                        <small>Opcional - 10 dígitos, solo números</small>
+                    </div>
+                </div>
+
+                <!-- Coordenadas -->
+                <div>
+                    <h3>COORDENADAS</h3>
+                    
+                    <div>
+                        <label for="latitudSucursal">Latitud <span>*</span></label>
+                        <input type="text" id="latitudSucursal" placeholder="Ej: 25.686614">
+                    </div>
+
+                    <div>
+                        <label for="longitudSucursal">Longitud <span>*</span></label>
+                        <input type="text" id="longitudSucursal" placeholder="Ej: -100.316112">
+                    </div>
+                    <small>Formato decimal (grados). Ejemplo: 25.686614, -100.316112</small>
+                </div>
+
+                <!-- Botones de acción -->
+                <div>
+                    <button type="button" id="crearSucursalBtn">CREAR SUCURSAL</button>
+                    <button type="button" id="cancelarBtn">CANCELAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/components/navbar-admin-component.js"></script>
+    <script src="/components/footer-admin-component.js"></script>
+    <script type="module" src="/components/themeloader.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script type="module" src="crearSucursales.js"></script>
+</body>
+</html>

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Colaborador | Centinela-MX</title>
-    
+    <title>Crear Regiones | Centinela-MX</title>
+
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
     
@@ -15,10 +15,9 @@
     <!-- Archivo para PWA -->
     <link rel="manifest" href="/manifest.json">
     <!-- Estilos modulo -->
-    <link rel="stylesheet" href="dashboardColaborador.css">
+    <link rel="stylesheet" href="">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 
     <!-- SEO Básico -->
     <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
@@ -77,12 +76,50 @@
     </script>
 </head>
 <body>
+    <!-- Canvas para partículas (opcional) -->
     <canvas id="particle-canvas"></canvas>
 
-    <!-- COMPONENTES -->
+    <!-- Contenedor principal -->
+    <div style="padding: 20px; max-width: 600px; margin: 0 auto; background-color: azure;">
+        
+        <!-- Títulos -->
+        <h1 id="formMainTitle">CREAR REGIÓN</h1>        
+        <!-- Formulario -->
+        <form id="registerForm">
+            <!-- Organización (solo lectura) -->
+            <div>
+                <label for="organization">Organización:</label>
+                <input type="text" id="organization" readonly>
+            </div>
+            
+            <!-- Nombre de la región -->
+            <div>
+                <label for="nombreRegion">Nombre de la región:</label>
+                <input type="text" id="nombreRegion" placeholder="Ej: Zona Norte, Región Sur, Área Metropolitana">
+            </div>
+            
+            <!-- Color de la región -->
+            <div>
+                <label for="colorRegion">Color de identificación:</label>
+                <input type="color" id="colorRegion" value="#0A2540">
+            </div>
+            
+            <!-- Botones -->
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="button" id="registerBtn">CREAR REGIÓN</button>
+                <button type="button" id="cancelBtn">CANCELAR</button>
+            </div>
+        </form>
+        
+        <!-- Footer -->
+        <footer-admin-component></footer-admin-component>
+    </div>
+
+    <!-- Scripts -->
     <script type="module" src="/components/themeloader.js"></script>
+    <script src="/components/navbar-admin-component.js"></script>
+    <script src="/components/footer-admin-component.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <script src="/components/navbar-colaborador-componente.js"></script>
-    <script src="/components/footer-colaborador-componente.js"></script>
+    <script type="module" src="crearRegiones.js"></script>
 </body>
 </html>
