@@ -1,4 +1,5 @@
-// areas.js - VERSIÓN SIN BOOTSTRAP
+// areas.js - VERSIÓN CORREGIDA (usa estilos globales de personalization.css)
+
 window.appDebug = {
     estado: 'iniciando',
     controller: null
@@ -24,7 +25,7 @@ function mostrarErrorInterfaz(mensaje) {
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-carga';
     errorDiv.innerHTML = `
-        <h4><i class="fas fa-exclamation-triangle"></i>Error de Carga</h4>
+        <h4><i class="fas fa-exclamation-triangle"></i> Error de Carga</h4>
         <p>${mensaje}</p>
     `;
     container.prepend(errorDiv);
@@ -53,8 +54,6 @@ class AreasController {
     constructor() {
         this.areaManager = new AreaManager();
         this.areas = [];
-        this.paginacionActual = 1;
-        this.elementosPorPagina = 10;
         this.filaExpandida = null;
 
         this.userManager = this.cargarUsuarioDesdeStorage();
@@ -130,8 +129,7 @@ class AreasController {
             icon: 'error',
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login',
-            confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)'
+            confirmButtonText: 'Ir al login'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -143,8 +141,19 @@ class AreasController {
             return;
         }
 
+        this.actualizarBadgeEmpresa();
         this.inicializarEventos();
         this.cargarAreas();
+    }
+
+    actualizarBadgeEmpresa() {
+        const badgeEmpresa = document.getElementById('badge-empresa');
+        const empresaNombre = badgeEmpresa?.querySelector('.empresa-nombre');
+        
+        if (badgeEmpresa && empresaNombre && this.userManager?.currentUser?.organizacion) {
+            empresaNombre.textContent = this.userManager.currentUser.organizacion;
+            badgeEmpresa.style.display = 'inline-flex';
+        }
     }
 
     inicializarEventos() {
@@ -160,6 +169,16 @@ class AreasController {
 
     irAEditarArea(areaId) {
         window.location.href = `/users/admin/editarAreas/editarAreas.html?id=${areaId}`;
+    }
+
+    irAEditarCargo(areaId, cargoId, event) {
+        event?.stopPropagation();
+        window.location.href = `/users/admin/editarAreas/editarAreas.html?id=${areaId}&editarCargo=${cargoId}`;
+    }
+
+    irACrearCargo(areaId, event) {
+        event?.stopPropagation();
+        window.location.href = `/users/admin/editarAreas/editarAreas.html?id=${areaId}&nuevoCargo=true`;
     }
 
     async cargarAreas() {
@@ -212,42 +231,239 @@ class AreasController {
 
         const filaCargos = document.createElement('tr');
         filaCargos.id = `cargos-${areaId}`;
-        filaCargos.className = 'cargos-dropdown-row';
+        filaCargos.className = 'cargos-row';
+        filaCargos.style.display = 'table-row';
 
         const celda = document.createElement('td');
         celda.colSpan = 7;
-        celda.className = 'p-0';
+        celda.style.padding = '0';
+        celda.style.borderTop = 'none';
 
-        let cargosHTML = '';
+        // Botón de agregar con el MISMO ESTILO que btn-nueva-area
+        const botonAgregarHTML = `
+            <button class="btn-nueva-area" style="min-width: auto; padding: 8px 16px !important;" onclick="window.appDebug.controller.irACrearCargo('${area.id}', event)">
+                <i class="fas fa-plus"></i> Agregar Cargo
+            </button>
+        `;
 
         if (cargos.length === 0) {
-            cargosHTML = '<div class="swal-cargos-empty">Esta área no tiene cargos asignados</div>';
+            celda.innerHTML = `
+                <div class="cargos-container" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)); padding: 20px; border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);">
+                    <div class="cargos-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                        <h6 style="color: var(--color-text-primary); font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);">
+                            <i class="fas fa-list-ul" style="color: var(--color-text-primary); filter: drop-shadow(0 0 5px var(--color-accent-primary));"></i>
+                            Cargos de <span style="color:#2f8cff;">"${this.escapeHTML(area.nombreArea)}"</span>
+                        </h6>
+                        ${botonAgregarHTML}
+                    </div>
+                    <div style="text-align:center; padding:30px; background:rgba(0,0,0,0.2); border-radius:8px;">
+                        <i class="fas fa-briefcase" style="font-size:32px; color:#6b7280;"></i>
+                        <p style="color:#6b7280; margin: 10px 0;">No hay cargos asignados</p>
+                        ${botonAgregarHTML}
+                    </div>
+                </div>
+            `;
         } else {
-            cargosHTML = cargos.map((cargo, index) => `
-                <div class="swal-cargo-item-simple">
-                    <div class="swal-cargo-nombre-simple">
-                        <i class="fas fa-user-tie"></i>
-                        ${cargo.nombre || 'Sin nombre'}
-                    </div>
-                    <div class="swal-cargo-descripcion-simple">
-                        ${cargo.descripcion || 'Sin descripción'}
-                    </div>
-                </div>
-            `).join('');
-        }
+            let cargosHTML = '';
+            cargos.forEach((cargo, index) => {
+                const descripcionTruncada = cargo.descripcion && cargo.descripcion.length > 40 
+                    ? cargo.descripcion.substring(0, 37) + '...' 
+                    : cargo.descripcion || '';
+                    
+                const nombreTruncado = cargo.nombre && cargo.nombre.length > 18 
+                    ? cargo.nombre.substring(0, 15) + '...' 
+                    : cargo.nombre || 'Sin nombre';
 
-        celda.innerHTML = `
-            <div class="cargos-dropdown">
-                <div class="cargos-dropdown-header">
-                    <h6><i class="fas fa-briefcase"></i>Cargos del Área</h6>
-                    <span class="badge">${cantidad} ${cantidad === 1 ? 'cargo' : 'cargos'}</span>
+                cargosHTML += `
+                    <tr>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">${index + 1}</td>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
+                            <div style="display: flex; align-items: center; flex-wrap: nowrap; gap: 8px;">
+                                <span style="max-width:120px; color: white;" title="${this.escapeHTML(cargo.nombre || '')}">${this.escapeHTML(nombreTruncado)}</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
+                            <span style="max-width:200px; word-break: break-word; white-space: normal; line-height: 1.4; color: var(--color-text-dim);" title="${this.escapeHTML(cargo.descripcion || '')}">${this.escapeHTML(descripcionTruncada) || '-'}</span>
+                        </td>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
+                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                <button class="btn" onclick="window.appDebug.controller.verDetallesCargo('${area.id}', '${cargo.id}', event)" title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-warning" onclick="window.appDebug.controller.irAEditarCargo('${area.id}', '${cargo.id}', event)" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger" onclick="window.appDebug.controller.eliminarCargo('${area.id}', '${cargo.id}', event)" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            celda.innerHTML = `
+                <div class="cargos-container" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)); padding: 20px; border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);">
+                    <div class="cargos-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                        <h6 style="color: var(--color-text-primary); font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);">
+                            <i class="fas fa-list-ul" style="color: var(--color-text-primary); filter: drop-shadow(0 0 5px var(--color-accent-primary));"></i>
+                            Cargos de <span style="color:#2f8cff;">"${this.escapeHTML(area.nombreArea)}"</span>
+                        </h6>
+                        ${botonAgregarHTML}
+                    </div>
+                    <div style="background: rgba(0, 0, 0, 0.2); border-radius: var(--border-radius-medium); overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; min-width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">#</th>
+                                    <th style="width: 25%; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Nombre</th>
+                                    <th style="width: 35%; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Descripción</th>
+                                    <th style="width: 110px; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${cargosHTML}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="cargos-lista">${cargosHTML}</div>
-            </div>
-        `;
+            `;
+        }
 
         filaCargos.appendChild(celda);
         filaReferencia.parentNode.insertBefore(filaCargos, filaReferencia.nextSibling);
+    }
+
+    verDetallesCargo(areaId, cargoId, event) {
+        event?.stopPropagation();
+        
+        const area = this.areas.find(a => a.id === areaId);
+        if (!area) return;
+
+        const cargos = area.getCargosAsArray();
+        const cargo = cargos.find(c => c.id === cargoId);
+        
+        if (!cargo) return;
+
+        Swal.fire({
+            title: cargo.nombre || 'Cargo',
+            html: `
+                <div style="text-align: left;">
+                    <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                        <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                            <i class="fas fa-sitemap" style="margin-right: 8px;"></i>ÁREA
+                        </h4>
+                        <p style="color: var(--color-text-secondary); margin: 0;">${this.escapeHTML(area.nombreArea)}</p>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                        <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                            <i class="fas fa-align-left" style="margin-right: 8px;"></i>DESCRIPCIÓN
+                        </h4>
+                        <p style="color: var(--color-text-secondary); margin: 0;">${this.escapeHTML(cargo.descripcion) || 'No hay descripción disponible.'}</p>
+                    </div>
+                </div>
+            `,
+            icon: null,
+            showConfirmButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'CERRAR',
+            cancelButtonText: 'CANCELAR',
+            reverseButtons: false
+        });
+    }
+
+    async eliminarCargo(areaId, cargoId, event) {
+        event?.stopPropagation();
+
+        const area = this.areas.find(a => a.id === areaId);
+        if (!area) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Área no encontrada'
+            });
+            return;
+        }
+
+        const cargos = area.getCargosAsArray();
+        const cargo = cargos.find(c => c.id === cargoId);
+        
+        if (!cargo) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Cargo no encontrado'
+            });
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: '¿Eliminar cargo?',
+            html: `
+                <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
+                    <strong style="color: #ff4d4d;">"${this.escapeHTML(cargo.nombre || 'Sin nombre')}"</strong>
+                </p>
+                <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
+                    Esta acción no se puede deshacer.
+                </p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ELIMINAR',
+            cancelButtonText: 'CANCELAR',
+            reverseButtons: false,
+            focusCancel: true
+        });
+
+        if (result.isConfirmed) {
+            try {
+                if (area.eliminarCargo) {
+                    area.eliminarCargo(cargoId);
+                }
+
+                await this.areaManager.actualizarArea(areaId, {
+                    nombreArea: area.nombreArea,
+                    descripcion: area.descripcion,
+                    estado: area.estado,
+                    cargos: area.cargos
+                });
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Eliminado',
+                    text: `"${cargo.nombre}" ha sido eliminado.`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+                const areaActualizada = await this.areaManager.obtenerAreaPorId(areaId);
+                const index = this.areas.findIndex(a => a.id === areaId);
+                if (index !== -1) this.areas[index] = areaActualizada;
+
+                const filaCargos = document.getElementById(`cargos-${areaId}`);
+                if (filaCargos) {
+                    filaCargos.remove();
+                    this.filaExpandida = null;
+                }
+
+                const filaArea = document.getElementById(`fila-${areaId}`);
+                if (filaArea) {
+                    const cantidadCargos = areaActualizada.getCantidadCargos();
+                    const badge = filaArea.querySelector('.cargo-count-badge');
+                    if (badge) {
+                        badge.innerHTML = `<i class="fas fa-briefcase"></i> ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}`;
+                    }
+                }
+
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message
+                });
+            }
+        }
     }
 
     solicitarEliminacion(areaId) {
@@ -256,11 +472,10 @@ class AreasController {
             text: "Esta acción no se puede deshacer",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: 'var(--color-danger, #ff4d4d)',
-            cancelButtonColor: 'var(--color-accent-secondary, #3085d6)',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            reverseButtons: true
+            confirmButtonText: 'ELIMINAR',
+            cancelButtonText: 'CANCELAR',
+            reverseButtons: false,
+            focusCancel: true
         }).then((result) => {
             if (result.isConfirmed) {
                 this.eliminarArea(areaId);
@@ -277,7 +492,8 @@ class AreasController {
                 icon: 'success',
                 title: 'Eliminado',
                 text: 'El área fue eliminada correctamente',
-                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)'
+                timer: 2000,
+                showConfirmButton: false
             });
 
             await this.cargarAreas();
@@ -285,8 +501,7 @@ class AreasController {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'No se pudo eliminar el área',
-                confirmButtonColor: 'var(--color-accent-secondary, #2f8cff)'
+                text: 'No se pudo eliminar el área'
             });
         }
     }
@@ -311,6 +526,13 @@ class AreasController {
         return texto.substring(0, maxLongitud) + '...';
     }
 
+    escapeHTML(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     async verDetalles(areaId) {
         try {
             const area = this.areas.find(a => a.id === areaId);
@@ -321,41 +543,37 @@ class AreasController {
             
             const cantidadCargos = area.getCantidadCargos();
             const nombreAreaTruncado = this.truncarTexto(area.nombreArea, 25);
-            
+
             Swal.fire({
-                customClass: {
-                    popup: 'swal-detalles-nuevo',
-                    confirmButton: 'swal2-confirm',
-                    cancelButton: 'swal2-cancel',
-                    actions: 'swal2-actions'
-                },
-                title: `<div class="swal-titulo-container">
-                    <div class="swal-titulo-area">
-                        <i class="fas fa-building"></i>
-                        <span class="swal-titulo-texto" title="${area.nombreArea}">${nombreAreaTruncado}</span>
-                    </div>
-                </div>`,
+                title: nombreAreaTruncado,
                 html: `
-                    <div class="swal-detalles-container">
-                        <div class="swal-seccion">
-                            <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> Descripción del Área</h6>
-                            <p class="swal-descripcion">${area.descripcion || 'No hay descripción disponible para esta área.'}</p>
+                    <div style="text-align: left;">
+                        <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                            <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                                <i class="fas fa-align-left" style="margin-right: 8px;"></i>DESCRIPCIÓN
+                            </h4>
+                            <p style="color: var(--color-text-secondary); margin: 0;">${this.escapeHTML(area.descripcion) || 'No hay descripción disponible para esta área.'}</p>
                         </div>
                         
-                        <div class="swal-seccion">
-                            <h6 class="swal-seccion-titulo"><i class="fas fa-briefcase"></i> Cargos (${cantidadCargos})</h6>
+                        <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                            <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                                <i class="fas fa-briefcase" style="margin-right: 8px;"></i>CARGOS (${cantidadCargos})
+                            </h4>
+                            <p style="color: var(--color-text-secondary);">${cantidadCargos === 0 ? 'No hay cargos asignados' : `Esta área tiene ${cantidadCargos} cargo${cantidadCargos !== 1 ? 's' : ''}`}</p>
                         </div>
                         
-                        <div class="swal-seccion">
-                            <h6 class="swal-seccion-titulo"><i class="fas fa-info-circle"></i> Información del Sistema</h6>
-                            <div class="swal-info-grid">
-                                <div class="swal-info-item">
-                                    <small>Fecha Creación</small>
-                                    <span><i class="fas fa-calendar"></i> ${area.getFechaCreacionFormateada?.() || 'No disponible'}</span>
+                        <div>
+                            <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                                <i class="fas fa-info-circle" style="margin-right: 8px;"></i>INFORMACIÓN DEL SISTEMA
+                            </h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">FECHA CREACIÓN</small>
+                                    <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar" style="margin-right: 5px;"></i> ${area.getFechaCreacionFormateada?.() || 'No disponible'}</span>
                                 </div>
-                                <div class="swal-info-item">
-                                    <small>Última Actualización</small>
-                                    <span><i class="fas fa-clock"></i> ${area.getFechaActualizacionFormateada?.() || 'No disponible'}</span>
+                                <div>
+                                    <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">ÚLTIMA ACTUALIZACIÓN</small>
+                                    <span style="color: var(--color-text-secondary);"><i class="fas fa-clock" style="margin-right: 5px;"></i> ${area.getFechaActualizacionFormateada?.() || 'No disponible'}</span>
                                 </div>
                             </div>
                         </div>
@@ -364,10 +582,9 @@ class AreasController {
                 icon: null,
                 showConfirmButton: true,
                 showCancelButton: true,
-                confirmButtonText: '<i class="fas fa-edit"></i> Editar Área',
-                cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
-                reverseButtons: false,
-                buttonsStyling: false
+                confirmButtonText: 'EDITAR ÁREA',
+                cancelButtonText: 'CERRAR',
+                reverseButtons: false
             }).then((result) => {
                 if (result.isConfirmed) {
                     this.irAEditarArea(area.id);
@@ -383,11 +600,13 @@ class AreasController {
         if (!tbody) return;
 
         this.filaExpandida = null;
-        const areasPaginadas = this.paginarAreas(this.areas, this.paginacionActual);
+        
+        // SIN PAGINACIÓN - mostrar todas las áreas
+        const todasLasAreas = this.areas;
 
         tbody.innerHTML = '';
 
-        if (areasPaginadas.length === 0) {
+        if (todasLasAreas.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center py-5">
@@ -399,11 +618,15 @@ class AreasController {
             return;
         }
 
-        areasPaginadas.forEach((area) => {
+        todasLasAreas.forEach((area) => {
             tbody.appendChild(this.crearFilaArea(area));
         });
 
-        this.actualizarPaginacion(this.areas.length);
+        // Ocultar la paginación completamente
+        const paginacionContainer = document.querySelector('.pagination-container');
+        if (paginacionContainer) {
+            paginacionContainer.style.display = 'none';
+        }
     }
 
     crearFilaArea(area) {
@@ -418,112 +641,71 @@ class AreasController {
         const cantidadCargos = area.getCantidadCargos();
 
         fila.innerHTML = `
-            <td class="text-center" data-label="">
-                <span class="toggle-icon"><i class="fas fa-chevron-right"></i></span>
+            <td class="text-center" style="width:50px;" data-label="">
+                <span class="toggle-icon" style="background: transparent; border: none;"><i class="fas fa-chevron-right" style="color: white;"></i></span>
             </td>
             <td data-label="Nombre">
-                <div>
-                    <strong class="area-nombre">${area.nombreArea}</strong>
-                    <div class="text-muted small">${area.descripcion?.substring(0, 60) || ''}${area.descripcion?.length > 60 ? '...' : ''}</div>
+                <div style="display: flex; align-items: center;">
+                    <div style="width:4px; height:24px; background:#2f8cff; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
+                    <div>
+                        <strong class="area-nombre" style="color:white;" title="${this.escapeHTML(area.nombreArea)}">${this.escapeHTML(area.nombreArea)}</strong>
+                        ${area.descripcion ? `<div style="color: var(--color-text-dim); font-size:0.75rem; margin-top:2px;">${this.escapeHTML(area.descripcion.substring(0, 60))}${area.descripcion.length > 60 ? '...' : ''}</div>` : ''}
+                    </div>
                 </div>
             </td>
-            <td data-label="Organización">${area.organizacionCamelCase || this.userManager.currentUser.organizacion}</td>
+            <td data-label="Organización">${this.escapeHTML(area.organizacionCamelCase || this.userManager.currentUser.organizacion)}</td>
             <td data-label="Cargos">
                 <span class="cargo-count-badge">
-                    <i class="fas fa-briefcase"></i>${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
+                    <i class="fas fa-briefcase"></i> ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
                 </span>
             </td>
             <td data-label="Estado">${area.getEstadoBadge ? area.getEstadoBadge() : '<span class="badge-activo">Activa</span>'}</td>
-            <td data-label="Fecha Creación"><div class="small">${area.getFechaCreacionFormateada?.() || 'No disponible'}</div></td>
-            <td data-label="Acciones"><div class="action-buttons">${this.obtenerBotonesAccion(area)}</div></td>
+            <td data-label="Fecha Creación"><div style="color: var(--color-text-dim);">${area.getFechaCreacionFormateada?.() || 'No disponible'}</div></td>
+            <td data-label="Acciones">
+                <div class="action-buttons">
+                    <button class="btn" data-action="ver" data-id="${area.id}" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-warning" data-action="editar" data-id="${area.id}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger" data-action="eliminar" data-id="${area.id}" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
         `;
 
         fila.addEventListener('click', (e) => this.toggleCargos(area.id, e));
 
         const toggleIcon = fila.querySelector('.toggle-icon');
-        if (toggleIcon) toggleIcon.addEventListener('click', (e) => { e.stopPropagation(); this.toggleCargos(area.id, e); });
+        if (toggleIcon) {
+            toggleIcon.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                this.toggleCargos(area.id, e); 
+            });
+        }
 
         const badgeCargos = fila.querySelector('.cargo-count-badge');
-        if (badgeCargos) badgeCargos.addEventListener('click', (e) => { e.stopPropagation(); this.toggleCargos(area.id, e); });
-
-        const areaNombre = fila.querySelector('.area-nombre');
-        if (areaNombre) areaNombre.addEventListener('click', (e) => { e.stopPropagation(); this.toggleCargos(area.id, e); });
+        if (badgeCargos) {
+            badgeCargos.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                this.toggleCargos(area.id, e); 
+            });
+        }
 
         setTimeout(() => {
             fila.querySelectorAll('[data-action]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const action = e.target.closest('[data-action]').dataset.action;
-                    const id = e.target.closest('[data-action]').dataset.id;
+                    const action = btn.dataset.action;
+                    const id = btn.dataset.id;
                     this.ejecutarAccion(action, id);
                 });
             });
         }, 50);
 
         return fila;
-    }
-
-    obtenerBotonesAccion(area) {
-        return `
-            <button class="btn btn-primary" data-action="ver" data-id="${area.id}" title="Ver detalles">
-                <i class="fas fa-eye"></i>
-            </button>
-            <button class="btn btn-warning" data-action="editar" data-id="${area.id}" title="Editar Área">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-danger" data-action="eliminar" data-id="${area.id}" title="Eliminar">
-                <i class="fas fa-trash"></i>
-            </button>
-        `;
-    }
-
-    paginarAreas(listaAreas, pagina) {
-        const inicio = (pagina - 1) * this.elementosPorPagina;
-        return listaAreas.slice(inicio, inicio + this.elementosPorPagina);
-    }
-
-    actualizarPaginacion(totalElementos) {
-        const totalPaginas = Math.ceil(totalElementos / this.elementosPorPagina);
-        const paginacionElement = document.getElementById('pagination');
-        const infoElement = document.getElementById('paginationInfo');
-
-        if (infoElement) {
-            const inicio = (this.paginacionActual - 1) * this.elementosPorPagina + 1;
-            const fin = Math.min(this.paginacionActual * this.elementosPorPagina, totalElementos);
-            infoElement.textContent = `Mostrando ${inicio} - ${fin} de ${totalElementos} áreas`;
-        }
-
-        if (paginacionElement) {
-            paginacionElement.innerHTML = '';
-
-            if (totalPaginas > 1) {
-                const liAnterior = document.createElement('li');
-                liAnterior.className = `page-item ${this.paginacionActual === 1 ? 'disabled' : ''}`;
-                liAnterior.innerHTML = '<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>';
-                liAnterior.addEventListener('click', (e) => { e.preventDefault(); if (this.paginacionActual > 1) this.cambiarPagina(this.paginacionActual - 1); });
-                paginacionElement.appendChild(liAnterior);
-
-                for (let i = 1; i <= totalPaginas; i++) {
-                    const li = document.createElement('li');
-                    li.className = `page-item ${this.paginacionActual === i ? 'active' : ''}`;
-                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-                    li.addEventListener('click', (e) => { e.preventDefault(); this.cambiarPagina(i); });
-                    paginacionElement.appendChild(li);
-                }
-
-                const liSiguiente = document.createElement('li');
-                liSiguiente.className = `page-item ${this.paginacionActual === totalPaginas ? 'disabled' : ''}`;
-                liSiguiente.innerHTML = '<a class="page-link" href="#" aria-label="Siguiente"><span aria-hidden="true">&raquo;</span></a>';
-                liSiguiente.addEventListener('click', (e) => { e.preventDefault(); if (this.paginacionActual < totalPaginas) this.cambiarPagina(this.paginacionActual + 1); });
-                paginacionElement.appendChild(liSiguiente);
-            }
-        }
-    }
-
-    cambiarPagina(pagina) {
-        this.paginacionActual = pagina;
-        this.filaExpandida = null;
-        this.actualizarTabla();
     }
 
     mostrarCargando() {
@@ -545,7 +727,7 @@ class AreasController {
     ocultarCargando() { }
 
     mostrarError(mensaje) {
-        this.mostrarNotificacion(mensaje, 'danger');
+        this.mostrarNotificacion(mensaje, 'error');
     }
 
     mostrarNotificacion(mensaje, tipo) {
@@ -557,9 +739,11 @@ class AreasController {
             timerProgressBar: true
         });
         
-        let icono = tipo === 'danger' ? 'error' : tipo;
-        Toast.fire({ icon: icono, title: mensaje });
+        Toast.fire({ icon: tipo, title: mensaje });
     }
 }
+
+// Exponer el controller para acceso desde los botones de cargo
+window.appDebug.controller = null;
 
 cargarDependencias();

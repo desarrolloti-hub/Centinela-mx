@@ -1,7 +1,6 @@
 /**
  * CATEGORÍAS - Sistema Centinela
- * SweetAlert de detalles IDÉNTICO al de áreas (con descripción izquierda, info derecha)
- * BOTONES: Editar a la izquierda, Cerrar a la derecha
+ * SweetAlert de detalles - VERSIÓN CORREGIDA (usa estilos globales de personalization.css)
  */
 
 // =============================================
@@ -14,7 +13,7 @@ let categoriasCache = [];
 
 // =============================================
 // INICIALIZACIÓN
-// =============================================
+//==============================================
 async function inicializarCategoriaManager() {
     try {
         obtenerDatosEmpresa();
@@ -61,18 +60,13 @@ window.editarSubcategoria = function (catId, subId, event) {
 };
 
 // =============================================
-// VER DETALLES - SweetAlert IDÉNTICO AL DE ÁREAS
+// VER DETALLES - SweetAlert SIN CLASES PERSONALIZADAS
 // =============================================
 window.verDetalles = async function (categoriaId, event) {
     event?.stopPropagation();
 
     const categoria = categoriasCache.find(c => c.id === categoriaId);
     if (!categoria) return;
-
-    // Limitar longitud del nombre para evitar desbordamiento
-    const nombreCategoriaTruncado = categoria.nombre && categoria.nombre.length > 25 
-        ? categoria.nombre.substring(0, 22) + '...' 
-        : categoria.nombre;
 
     // Obtener subcategorías como array
     let subcategoriasArray = [];
@@ -99,73 +93,59 @@ window.verDetalles = async function (categoriaId, event) {
     let subcategoriasHTML = '';
 
     if (cantidadSub === 0) {
-        subcategoriasHTML = '<div class="modal-empty-message">Esta categoría no tiene subcategorías asignadas</div>';
+        subcategoriasHTML = '<p style="color: var(--color-text-secondary); text-align: center; padding: 20px;">Esta categoría no tiene subcategorías asignadas</p>';
     } else {
         subcategoriasHTML = subcategoriasArray.map(sub => {
             const subNombre = sub.nombre || 'Sin nombre';
             const subDesc = sub.descripcion || 'Sin descripción';
             
             return `
-                <div class="subcategoria-item-modal">
-                    <strong>
-                        <i class="fas fa-folder"></i>
+                <div style="margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                    <strong style="color: var(--color-text-primary); display: block; margin-bottom: 5px;">
+                        <i class="fas fa-folder" style="color: var(--color-accent-secondary); margin-right: 8px;"></i>
                         ${escapeHTML(subNombre)}
                     </strong>
-                    <p>${escapeHTML(subDesc)}</p>
+                    <p style="color: var(--color-text-secondary); margin: 0; padding-left: 24px; font-size: 0.9rem;">${escapeHTML(subDesc)}</p>
                 </div>
             `;
         }).join('');
     }
 
     Swal.fire({
-        customClass: {
-            popup: 'swal2-popup',
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel',
-            closeButton: 'swal2-close',
-            actions: 'swal2-actions'
-        },
-        title: `<div class="swal-titulo-container">
-            <div class="swal-titulo-categoria">
-                <i class="fas fa-tags"></i>
-                <span class="swal-titulo-texto" title="${escapeHTML(categoria.nombre)}">${escapeHTML(nombreCategoriaTruncado)}</span>
-            </div>
-        </div>`,
+        title: categoria.nombre,
         html: `
-            <div class="swal-detalles-container">
-                <!-- SECCIÓN DESCRIPCIÓN -->
-                <div class="swal-seccion">
-                    <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> DESCRIPCIÓN DE LA CATEGORÍA</h6>
-                    <p class="swal-descripcion">${escapeHTML(categoria.descripcion) || 'No hay descripción disponible para esta categoría.'}</p>
+            <div style="text-align: left;">
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-align-left" style="margin-right: 8px;"></i>DESCRIPCIÓN
+                    </h4>
+                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(categoria.descripcion) || 'No hay descripción disponible para esta categoría.'}</p>
                 </div>
 
-                <!-- SECCIÓN COLOR -->
-                <div class="swal-seccion">
-                    <h6 class="swal-seccion-titulo"><i class="fas fa-palette"></i> COLOR DE LA CATEGORÍA</h6>
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-palette" style="margin-right: 8px;"></i>COLOR
+                    </h4>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="display:inline-block; width:30px; height:30px; background:${categoria.color || '#2f8cff'}; border-radius:4px; border:2px solid rgba(255,255,255,0.1);"></span>
                         <span style="color: var(--color-text-secondary);">${categoria.color || '#2f8cff'}</span>
                     </div>
                 </div>
 
-                <!-- SECCIÓN SUBCATEGORÍAS -->
-                <div class="swal-seccion">
-                    <h6 class="swal-seccion-titulo"><i class="fas fa-folder-open"></i> SUBCATEGORÍAS (${cantidadSub})</h6>
-                    <div class="subcategorias-lista-modal">
-                        ${subcategoriasHTML}
-                    </div>
+                <div>
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-folder-open" style="margin-right: 8px;"></i>SUBCATEGORÍAS (${cantidadSub})
+                    </h4>
+                    ${subcategoriasHTML}
                 </div>
             </div>
         `,
         icon: null,
         showConfirmButton: true,
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-edit"></i> EDITAR CATEGORÍA',
-        cancelButtonText: '<i class="fas fa-times"></i> CERRAR',
-        reverseButtons: false, // EDITAR a la izquierda, CERRAR a la derecha
-        buttonsStyling: false, // Para que tome los estilos personalizados del CSS
-        focusConfirm: false,
-        focusCancel: true
+        confirmButtonText: 'EDITAR CATEGORÍA',
+        cancelButtonText: 'CERRAR',
+        reverseButtons: false
     }).then((result) => {
         if (result.isConfirmed) {
             window.editarCategoria(categoria.id, event);
@@ -200,77 +180,59 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId, ev
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Subcategoría no encontrada',
-            customClass: {
-                popup: 'swal2-popup',
-                confirmButton: 'swal2-confirm',
-                cancelButton: 'swal2-cancel'
-            },
-            buttonsStyling: false
+            text: 'Subcategoría no encontrada'
         });
         return;
     }
 
     const colorSub = subcategoria.color || categoria.color || '#2f8cff';
     const hereda = subcategoria.heredaColor || false;
-    
-    const nombreCorto = subcategoria.nombre && subcategoria.nombre.length > 25 
-        ? subcategoria.nombre.substring(0, 22) + '...' 
-        : subcategoria.nombre || 'Subcategoría';
 
     Swal.fire({
-        customClass: {
-            popup: 'swal2-popup',
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel',
-            closeButton: 'swal2-close',
-            actions: 'swal2-actions'
-        },
-        title: `<div class="swal-titulo-container">
-            <div class="swal-titulo-categoria">
-                <i class="fas fa-folder"></i>
-                <span class="swal-titulo-texto" title="${escapeHTML(subcategoria.nombre || '')}">${escapeHTML(nombreCorto)}</span>
-            </div>
-        </div>`,
+        title: subcategoria.nombre || 'Subcategoría',
         html: `
-            <div class="swal-detalles-container">
-                <!-- CATEGORÍA PADRE -->
-                <div class="swal-seccion">
-                    <h6 class="swal-seccion-titulo"><i class="fas fa-sitemap"></i> CATEGORÍA PADRE</h6>
-                    <p class="swal-descripcion">${escapeHTML(categoria.nombre)}</p>
+            <div style="text-align: left;">
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-sitemap" style="margin-right: 8px;"></i>CATEGORÍA PADRE
+                    </h4>
+                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(categoria.nombre)}</p>
                 </div>
 
-                <!-- DESCRIPCIÓN -->
-                <div class="swal-seccion">
-                    <h6 class="swal-seccion-titulo"><i class="fas fa-align-left"></i> DESCRIPCIÓN DE LA SUBCATEGORÍA</h6>
-                    <p class="swal-descripcion">${escapeHTML(subcategoria.descripcion) || 'No hay descripción disponible.'}</p>
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-align-left" style="margin-right: 8px;"></i>DESCRIPCIÓN
+                    </h4>
+                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(subcategoria.descripcion) || 'No hay descripción disponible.'}</p>
                 </div>
 
-                <!-- COLOR -->
-                <div class="swal-seccion">
-                    <h6 class="swal-seccion-titulo"><i class="fas fa-palette"></i> COLOR</h6>
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-palette" style="margin-right: 8px;"></i>COLOR
+                    </h4>
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <span style="display:inline-block; width:30px; height:30px; background:${colorSub}; border-radius:4px; border:2px solid rgba(255,255,255,0.1);"></span>
                         <span style="color: var(--color-text-secondary);">${colorSub}</span>
-                        ${hereda ? '<span class="badge badge-hereda" style="background:rgba(16,185,129,0.1); color:#10b981; padding:2px 8px; border-radius:12px; font-size:0.7rem;">HEREDA</span>' : ''}
+                        ${hereda ? '<span style="background:rgba(16,185,129,0.1); color:#10b981; padding:2px 8px; border-radius:12px; font-size:0.7rem;">HEREDA</span>' : ''}
                     </div>
                 </div>
 
-                <!-- INFORMACIÓN DEL SISTEMA -->
-                <div class="swal-seccion">
-                    <h6 class="swal-seccion-titulo"><i class="fas fa-info-circle"></i> INFORMACIÓN DEL SISTEMA</h6>
-                    <div class="swal-info-grid">
-                        <div class="swal-info-item">
-                            <small>ID SUBCATEGORÍA</small>
-                            <span><i class="fas fa-fingerprint"></i> ${subcategoriaId.substring(0, 8)}...</span>
+                <div>
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-info-circle" style="margin-right: 8px;"></i>INFORMACIÓN DEL SISTEMA
+                    </h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">ID</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-fingerprint" style="margin-right: 5px;"></i> ${subcategoriaId.substring(0, 8)}...</span>
                         </div>
-                        <div class="swal-info-item">
-                            <small>HEREDA COLOR</small>
-                            <span><i class="fas ${hereda ? 'fa-check-circle' : 'fa-times-circle'}"></i> ${hereda ? 'SÍ' : 'NO'}</span>
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">HEREDA</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas ${hereda ? 'fa-check-circle' : 'fa-times-circle'}" style="margin-right: 5px;"></i> ${hereda ? 'SÍ' : 'NO'}</span>
                         </div>
-                        <div class="swal-info-item">
-                            <small>FECHA CREACIÓN</small>
-                            <span><i class="fas fa-calendar"></i> ${subcategoria.fechaCreacion ? new Date(subcategoria.fechaCreacion).toLocaleString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No disponible'}</span>
+                        <div style="grid-column: span 2;">
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">FECHA CREACIÓN</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar" style="margin-right: 5px;"></i> ${subcategoria.fechaCreacion ? new Date(subcategoria.fechaCreacion).toLocaleString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No disponible'}</span>
                         </div>
                     </div>
                 </div>
@@ -279,12 +241,9 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId, ev
         icon: null,
         showConfirmButton: true,
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-edit"></i> EDITAR SUBCATEGORÍA',
-        cancelButtonText: '<i class="fas fa-times"></i> CERRAR',
-        reverseButtons: false,
-        buttonsStyling: false,
-        focusConfirm: false,
-        focusCancel: true
+        confirmButtonText: 'EDITAR SUBCATEGORÍA',
+        cancelButtonText: 'CERRAR',
+        reverseButtons: false
     }).then((result) => {
         if (result.isConfirmed) {
             window.editarSubcategoria(categoriaId, subcategoriaId, event);
@@ -335,13 +294,7 @@ window.eliminarCategoria = async function (categoriaId, event) {
         confirmButtonText: 'ELIMINAR',
         cancelButtonText: 'CANCELAR',
         reverseButtons: false,
-        focusCancel: true,
-        customClass: {
-            popup: 'swal2-popup',
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel'
-        },
-        buttonsStyling: false
+        focusCancel: true
     });
 
     if (result.isConfirmed) {
@@ -350,11 +303,7 @@ window.eliminarCategoria = async function (categoriaId, event) {
                 title: 'Eliminando...',
                 html: '<i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #ef4444;"></i>',
                 allowOutsideClick: false,
-                showConfirmButton: false,
-                customClass: {
-                    popup: 'swal2-popup'
-                },
-                buttonsStyling: false
+                showConfirmButton: false
             });
 
             await categoriaManager.eliminarCategoria(categoriaId);
@@ -366,11 +315,7 @@ window.eliminarCategoria = async function (categoriaId, event) {
                 title: '¡Eliminada!',
                 text: `"${categoria.nombre}" ha sido eliminada.`,
                 timer: 2000,
-                showConfirmButton: false,
-                customClass: {
-                    popup: 'swal2-popup'
-                },
-                buttonsStyling: false
+                showConfirmButton: false
             });
 
             await cargarCategorias();
@@ -380,12 +325,7 @@ window.eliminarCategoria = async function (categoriaId, event) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: error.message || 'Error al eliminar',
-                customClass: {
-                    popup: 'swal2-popup',
-                    confirmButton: 'swal2-confirm'
-                },
-                buttonsStyling: false
+                text: error.message || 'Error al eliminar'
             });
         }
     }
@@ -402,12 +342,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Categoría no encontrada',
-            customClass: {
-                popup: 'swal2-popup',
-                confirmButton: 'swal2-confirm'
-            },
-            buttonsStyling: false
+            text: 'Categoría no encontrada'
         });
         return;
     }
@@ -430,12 +365,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Subcategoría no encontrada',
-            customClass: {
-                popup: 'swal2-popup',
-                confirmButton: 'swal2-confirm'
-            },
-            buttonsStyling: false
+            text: 'Subcategoría no encontrada'
         });
         return;
     }
@@ -457,13 +387,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event
         confirmButtonText: 'ELIMINAR',
         cancelButtonText: 'CANCELAR',
         reverseButtons: false,
-        focusCancel: true,
-        customClass: {
-            popup: 'swal2-popup',
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel'
-        },
-        buttonsStyling: false
+        focusCancel: true
     });
 
     if (result.isConfirmed) {
@@ -488,11 +412,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event
                 title: '¡Eliminada!',
                 text: `"${subcategoriaNombre}" ha sido eliminada.`,
                 timer: 1500,
-                showConfirmButton: false,
-                customClass: {
-                    popup: 'swal2-popup'
-                },
-                buttonsStyling: false
+                showConfirmButton: false
             });
 
             const categoriaActualizada = await categoriaManager.obtenerCategoriaPorId(categoriaId);
@@ -519,12 +439,7 @@ window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: error.message,
-                customClass: {
-                    popup: 'swal2-popup',
-                    confirmButton: 'swal2-confirm'
-                },
-                buttonsStyling: false
+                text: error.message
             });
         }
     }
@@ -571,12 +486,7 @@ async function cargarCategorias() {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error al cargar categorías',
-            customClass: {
-                popup: 'swal2-popup',
-                confirmButton: 'swal2-confirm'
-            },
-            buttonsStyling: false
+            text: 'Error al cargar categorías'
         });
     }
 }
@@ -612,17 +522,17 @@ async function crearFilaCategoria(categoria, tbody) {
             <span class="toggle-icon"><i class="fas fa-chevron-right"></i></span>
         </td>
         <td data-label="Nombre">
-            <div class="d-flex align-items-center">
+            <div style="display: flex; align-items: center;">
                 <div style="width:4px; height:24px; background:${color}; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
                 <div>
-                    <strong class="categoria-nombre" style="color:white;" title="${escapeHTML(categoria.nombre || '')}">${escapeHTML(nombreTruncado)}</strong>
+                    <strong style="color:white;" title="${escapeHTML(categoria.nombre || '')}">${escapeHTML(nombreTruncado)}</strong>
                 </div>
             </div>
         </td>
         <td data-label="Color" style="text-align:center;">
-            <div class="color-display">
-                <span class="color-indicator" style="background-color: ${color};"></span>
-                <span>${color}</span>
+            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
+                <span style="width: 24px; height: 24px; border-radius: 6px; display: inline-block; background-color: ${color}; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></span>
+                <span style="color: var(--color-text-dim); font-size: 0.8rem;">${color}</span>
             </div>
         </td>
         <td data-label="Subcategorías">
@@ -632,8 +542,8 @@ async function crearFilaCategoria(categoria, tbody) {
             </span>
         </td>
         <td data-label="Acciones">
-            <div class="action-buttons">
-                <button type="button" class="btn btn-primary" data-action="ver" data-id="${categoria.id}" title="Ver detalles">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button type="button" class="btn" data-action="ver" data-id="${categoria.id}" title="Ver detalles">
                     <i class="fas fa-eye"></i>
                 </button>
                 <button type="button" class="btn btn-warning" data-action="editar" data-id="${categoria.id}" title="Editar">
@@ -655,10 +565,10 @@ async function crearFilaCategoria(categoria, tbody) {
 
     subRow.innerHTML = `
         <td colspan="5" style="padding:0; border-top:none;">
-            <div class="subcategorias-container">
-                <div class="subcategorias-header">
-                    <h6>
-                        <i class="fas fa-list-ul"></i>
+            <div style="background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.5)); padding: 20px; border-radius: 0 0 20px 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                    <h6 style="color: white; font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-list-ul" style="color: white; filter: drop-shadow(0 0 5px #c0c0c0);"></i>
                         Subcategorías de <span style="color:#2f8cff;">"${escapeHTML(categoria.nombre)}"</span>
                     </h6>
                     <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoria.id}', event)">
@@ -699,14 +609,6 @@ async function crearFilaCategoria(categoria, tbody) {
         const toggleIcon = tr.querySelector('.toggle-icon');
         if (toggleIcon) {
             toggleIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleSubcategorias(categoria.id);
-            });
-        }
-        
-        const categoriaNombre = tr.querySelector('.categoria-nombre');
-        if (categoriaNombre) {
-            categoriaNombre.addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleSubcategorias(categoria.id);
             });
@@ -764,15 +666,15 @@ async function cargarSubcategorias(categoriaId) {
     subcategoriasArray.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 
     let html = `
-        <div class="subcategorias-tabla-wrapper">
-            <table class="subcategorias-tabla">
+        <div style="background: rgba(0,0,0,0.2); border-radius: 12px; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 100%;">
                 <thead>
                     <tr>
-                        <th style="width: 40px;">#</th>
-                        <th style="width: 25%;">Nombre</th>
-                        <th style="width: 35%;">Descripción</th>
-                        <th style="width: 15%;">Color</th>
-                        <th style="width: 110px;">Acciones</th>
+                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">#</th>
+                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Nombre</th>
+                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Descripción</th>
+                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Color</th>
+                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -792,33 +694,33 @@ async function cargarSubcategorias(categoriaId) {
 
         html += `
             <tr>
-                <td data-label="#">${index + 1}</td>
-                <td data-label="Nombre">
-                    <div class="subcategoria-nombre-contenedor" style="flex-wrap: nowrap;">
-                        <span class="color-indicator" style="background-color: ${colorSub}; width:12px; height:12px; flex-shrink:0;"></span>
-                        <span class="subcategoria-nombre-texto" style="max-width:120px;" title="${escapeHTML(sub.nombre || '')}">${escapeHTML(nombreTruncado)}</span>
-                        ${hereda ? '<span class="subcategoria-badge badge-hereda" style="flex-shrink:0;">HEREDA</span>' : ''}
-                        ${!hereda && sub.color ? '<span class="subcategoria-badge badge-propio" style="flex-shrink:0;">PROPIO</span>' : ''}
+                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">${index + 1}</td>
+                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
+                    <div style="display: flex; align-items: center; flex-wrap: nowrap; gap: 8px;">
+                        <span style="display:inline-block; width:12px; height:12px; background-color: ${colorSub}; border-radius: 6px; flex-shrink:0;"></span>
+                        <span style="max-width:120px; color: white;" title="${escapeHTML(sub.nombre || '')}">${escapeHTML(nombreTruncado)}</span>
+                        ${hereda ? '<span style="background:rgba(16,185,129,0.1); color:#10b981; padding:2px 6px; border-radius:12px; font-size:0.7rem; white-space:nowrap; flex-shrink:0;">HEREDA</span>' : ''}
+                        ${!hereda && sub.color ? '<span style="background:rgba(249,115,22,0.1); color:#f97316; padding:2px 6px; border-radius:12px; font-size:0.7rem; white-space:nowrap; flex-shrink:0;">PROPIO</span>' : ''}
                     </div>
                 </td>
-                <td data-label="Descripción">
-                    <span class="subcategoria-descripcion" style="max-width:200px;" title="${escapeHTML(sub.descripcion || '')}">${escapeHTML(descripcionTruncada) || '-'}</span>
+                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
+                    <span style="max-width:200px; word-break: break-word; white-space: normal; line-height: 1.4;" title="${escapeHTML(sub.descripcion || '')}">${escapeHTML(descripcionTruncada) || '-'}</span>
                 </td>
-                <td data-label="Color">
-                    <div class="subcategoria-color-contenedor">
-                        <span class="subcategoria-color-muestra" style="background-color: ${colorSub};"></span>
-                        <span class="subcategoria-color-texto">${colorSub}</span>
+                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="display:inline-block; width:16px; height:16px; background-color: ${colorSub}; border-radius: 6px;"></span>
+                        <span style="color: var(--color-text-dim); font-size: 0.7rem; white-space: nowrap;">${colorSub}</span>
                     </div>
                 </td>
-                <td data-label="Acciones">
-                    <div class="subcategoria-acciones">
+                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                         <button class="btn" onclick="window.verDetallesSubcategoria('${categoriaId}', '${sub.id}', event)" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                         </button>
                         <button class="btn" onclick="window.editarSubcategoria('${categoriaId}', '${sub.id}', event)" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-outline-danger" onclick="window.eliminarSubcategoria('${categoriaId}', '${sub.id}', event)" title="Eliminar">
+                        <button class="btn btn-danger" onclick="window.eliminarSubcategoria('${categoriaId}', '${sub.id}', event)" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
