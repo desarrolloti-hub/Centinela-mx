@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Nueva Área - Sistema Centinela</title>
+    <title>Crear Nueva Categoría - Sistema Centinela</title>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -41,6 +41,7 @@
                     Crear Nueva Categoría
                 </h1>
                 <div class="header-description-text">
+                    <i class="fas fa-tags"></i>
                     "Registra una nueva categoría. Las subcategorías tomarán su color automáticamente."
                 </div>
             </div>
@@ -82,8 +83,8 @@
                                     <textarea class="form-control" id="descripcionCategoria" rows="4"
                                         placeholder="Describa el propósito y uso de esta categoría..."></textarea>
                                     <div class="form-help-text">Proporcione una descripción detallada (opcional)</div>
-                                    <div class="char-counter">
-                                        <small class="text-muted">Caracteres: <span id="contadorCaracteres">0</span></small>
+                                    <div class="char-limit-info">
+                                        <span class="char-counter" id="contadorCaracteres">0/500</span>
                                     </div>
                                 </div>
 

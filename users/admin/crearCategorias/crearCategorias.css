@@ -1,49 +1,10 @@
 /* =============================================
-   CREAR CATEGORÍA - COPIA VISUAL DE CREAR AREAS
+   CREAR CATEGORÍA - SIN VARIABLES PROPIAS
+   (USA LAS VARIABLES GLOBALES DE personalization.css)
    ============================================= */
 
-:root {
-    /* COLORES PRINCIPALES (igual que crearAreas) */
-    --color-bg-primary: #000000;
-    --color-bg-secondary: #0a0a0a;
-    --color-bg-tertiary: #141414;
-    --color-bg-elevated: #1e1e1e;
-    --color-text-primary: #ffffff;
-    --color-text-secondary: #cccccc;
-    --color-text-tertiary: #999999;
-    --color-accent-primary: #c0c0c0;
-    --color-accent-secondary: #2f8cff;
-    --color-border-light: #545454;
-    --color-border-dark: #333333;
-    --color-hover: #1a1a1a;
-    
-    /* COLORES DE ESTADO */
-    --color-success: #00ff95;
-    --color-danger: #ff4d4d;
-    --color-warning: #ffcc00;
-    --color-info: #00cfff;
-    
-    /* SOMBRAS */
-    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.5);
-    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7);
-    
-    /* BORDES */
-    --border-radius-small: 5px;
-    --border-radius-medium: 10px;
-    --border-radius-large: 15px;
-    
-    /* TRANSICIONES */
-    --transition-default: 0.3s ease;
-    
-    /* FUENTES */
-    --font-family-primary: 'Orbitron', sans-serif;
-    --font-family-secondary: 'Rajdhani', sans-serif;
-    --font-family-mono: 'Courier New', monospace;
-}
-
 /* =============================================
-   ESTILOS GENERALES (igual que crearAreas)
+   ESTILOS GENERALES
    ============================================= */
 * {
     margin: 0;
@@ -58,11 +19,12 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 20px;
+    padding-top: 80px; /* Espacio para el navbar fijo */
     line-height: 1.5;
 }
 
 /* =============================================
-   CONTENEDOR PRINCIPAL (reemplaza container-fluid)
+   CONTENEDOR PRINCIPAL
    ============================================= */
 .custom-container {
     max-width: min(1200px, 95vw);
@@ -74,13 +36,12 @@ body {
 }
 
 /* =============================================
-   HEADER PRINCIPAL (copia exacta de crearAreas)
+   HEADER PRINCIPAL
    ============================================= */
 .header-section {
     padding: 20px 25px;
     border-radius: var(--border-radius-medium);
     margin-bottom: 30px;
-    box-shadow: var(--shadow-normal);
 }
 
 .header-content {
@@ -170,7 +131,7 @@ body {
 }
 
 /* =============================================
-   TARJETAS (igual que crearAreas)
+   TARJETAS
    ============================================= */
 .card {
     background: var(--color-bg-secondary) !important;
@@ -215,7 +176,7 @@ body {
 }
 
 /* =============================================
-   SECCIONES (igual que crearAreas)
+   SECCIONES
    ============================================= */
 .section-title {
     color: var(--color-text-primary) !important;
@@ -238,7 +199,7 @@ body {
 }
 
 /* =============================================
-   GRID SYSTEM (reemplaza row y col)
+   GRID SYSTEM
    ============================================= */
 .form-row {
     width: 100%;
@@ -257,7 +218,7 @@ body {
 }
 
 /* =============================================
-   FORMULARIOS (igual que crearAreas)
+   FORMULARIOS
    ============================================= */
 .form-field {
     margin-bottom: 16px;
@@ -338,7 +299,7 @@ body {
     flex: 1;
 }
 
-/* Char counter - NUEVOS ESTILOS PARA CONTADORES */
+/* Char counter */
 .char-limit-info {
     display: flex;
     justify-content: space-between;
@@ -351,18 +312,6 @@ body {
     color: var(--color-accent-primary);
     font-weight: 600;
     text-shadow: 0 0 4px var(--color-accent-primary);
-}
-
-.char-limit {
-    color: var(--color-text-tertiary);
-}
-
-.char-limit.warning {
-    color: var(--color-warning);
-}
-
-.char-limit.danger {
-    color: var(--color-danger);
 }
 
 /* =============================================
@@ -388,7 +337,7 @@ body {
 
 .color-preview-card:hover {
     border-color: var(--color-accent-primary);
-    background: var(--color-bg-elevated);
+    background: var(--color-bg-tertiary);
 }
 
 .color-circle {
@@ -410,7 +359,7 @@ body {
 }
 
 .color-hex {
-    font-family: var(--font-family-mono);
+    font-family: 'Courier New', monospace;
     font-size: 16px;
     font-weight: 700;
     color: var(--color-text-primary);
@@ -532,12 +481,12 @@ body {
 .alert-info {
     background: rgba(0, 207, 255, 0.1) !important;
     border-color: rgba(0, 207, 255, 0.3) !important;
-    color: var(--color-info) !important;
+    color: #00cfff !important;
 }
 
 .alert-info i {
-    color: var(--color-info) !important;
-    filter: drop-shadow(0 0 4px var(--color-info));
+    color: #00cfff !important;
+    filter: drop-shadow(0 0 4px #00cfff);
 }
 
 /* =============================================
@@ -832,7 +781,7 @@ body {
 
 .color-actual span:last-child {
     color: var(--color-text-primary);
-    font-family: var(--font-family-mono);
+    font-family: 'Courier New', monospace;
     font-size: 12px;
     text-shadow: 0 0 4px var(--color-accent-primary);
 }
@@ -852,9 +801,13 @@ body {
 }
 
 /* =============================================
-   RESPONSIVE
+   RESPONSIVE - CORREGIDO PARA NAVBAR
    ============================================= */
 @media (max-width: 1023px) {
+    body {
+        padding-top: 70px; /* Reducido ligeramente para tablets */
+    }
+    
     .custom-container {
         padding: 20px !important;
     }
@@ -909,6 +862,7 @@ body {
 @media (max-width: 768px) {
     body {
         padding: 10px !important;
+        padding-top: 70px !important; /* Mantener espacio para navbar */
     }
 
     .custom-container {
@@ -924,6 +878,7 @@ body {
 
     .header-section {
         padding: 15px !important;
+        margin-top: 0; /* Asegurar que no haya margen extra */
     }
 
     .card-header {
@@ -965,6 +920,11 @@ body {
 }
 
 @media (max-width: 480px) {
+    body {
+        padding: 8px !important;
+        padding-top: 65px !important; /* Espacio suficiente para navbar en móviles */
+    }
+
     .custom-container {
         padding: 10px !important;
     }
@@ -1006,5 +966,24 @@ body {
     .btn-eliminar-subcategoria {
         width: 100%;
         justify-content: center;
+    }
+}
+
+/* Ajuste para pantallas muy pequeñas */
+@media (max-width: 360px) {
+    body {
+        padding-top: 60px !important;
+    }
+    
+    .main-title {
+        font-size: 18px !important;
+    }
+    
+    .main-title i {
+        font-size: 20px !important;
+    }
+    
+    .header-description-text {
+        font-size: 0.9rem !important;
     }
 }

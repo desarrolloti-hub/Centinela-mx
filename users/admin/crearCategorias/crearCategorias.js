@@ -365,11 +365,7 @@ class CrearCategoriaController {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: 'var(--color-danger)',
-            cancelButtonColor: 'var(--color-accent-secondary)'
+            cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
                 this.subcategorias = this.subcategorias.filter(s => s.id !== subcatId);
@@ -677,10 +673,7 @@ class CrearCategoriaController {
                 icon: 'success',
                 title: '¡Categoría creada!',
                 text: 'La categoría se ha guardado correctamente.',
-                confirmButtonText: 'Ver categorías',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: 'var(--color-accent-secondary)'
+                confirmButtonText: 'Ver categorías'
             });
 
             this._volverALista();
@@ -709,11 +702,7 @@ class CrearCategoriaController {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Sí, cancelar',
-            cancelButtonText: 'No, continuar',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: 'var(--color-danger)',
-            cancelButtonColor: 'var(--color-accent-secondary)'
+            cancelButtonText: 'No, continuar'
         }).then((result) => {
             if (result.isConfirmed) {
                 this._volverALista();
@@ -726,10 +715,7 @@ class CrearCategoriaController {
             icon: 'error',
             title: 'Sesión no válida',
             text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            confirmButtonColor: 'var(--color-accent-secondary)'
+            confirmButtonText: 'Ir al login'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -750,9 +736,7 @@ class CrearCategoriaController {
             icon: tipo,
             timer: duracion,
             timerProgressBar: true,
-            showConfirmButton: false,
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)'
+            showConfirmButton: false
         });
     }
 
