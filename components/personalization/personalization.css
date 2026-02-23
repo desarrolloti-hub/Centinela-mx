@@ -70,15 +70,15 @@
     --footer-social-hover: var(--color-accent-secondary);
     --footer-border-accent: var(--color-accent-footer);
 }
+
 :root {
-    /* ... tus variables existentes ... */
-    
     /* ====== VARIABLES ESPECÍFICAS PARA COMPONENTES ====== */
     --sweetalert-bg: rgb(0, 0, 0); /* Fondo semitransparente pero no transparente */
 }
+
 /* =============================================
-   SWEETALERT2 - PERSONALIZACIÓN DE COLORES
-   (MANTENIENDO TAMAÑOS Y ESTILOS POR DEFECTO)
+   SWEETALERT2 - PERSONALIZACIÓN DE COLORES Y TIPOGRAFÍA
+   (TÍTULOS: ORBITRON | RESTO: SANS-SERIF)
    ============================================= */
 
 /* POPUP PRINCIPAL - FONDO SÓLIDO CON VARIABLES */
@@ -87,7 +87,9 @@
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
     box-shadow: var(--shadow-large) !important;
+    font-family: var(--font-family-secondary) !important; /* sans-serif por defecto */
 }
+
 /* Efecto de brillo en el borde */
 .swal2-popup::before {
     background: linear-gradient(45deg,
@@ -97,7 +99,7 @@
     opacity: 0.3 !important;
 }
 
-/* Título */
+/* Título - Orbitron */
 .swal2-title {
     color: var(--color-text-primary) !important;
     border-bottom: 1px solid rgba(192, 192, 192, 0.2) !important;
@@ -106,12 +108,16 @@
             rgba(192, 192, 192, 0.05),
             transparent) !important;
     text-shadow: 0 0 8px rgba(192, 192, 192, 0.3) !important;
+    font-family: var(--font-family-primary) !important; /* Orbitron */
+    font-weight: 600 !important; /* Asegura buena legibilidad */
+    letter-spacing: 1px !important; /* Opcional: mejora el estilo futurista */
 }
 
-/* Contenedor HTML */
+/* Contenedor HTML - sans-serif */
 .swal2-html-container {
     color: var(--color-text-secondary) !important;
     background: rgba(255, 255, 255, 0.01) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* =============================================
@@ -125,6 +131,7 @@
     box-shadow: var(--shadow-small) !important;
     border: 1px solid var(--color-accent-primary) !important;
     transition: var(--transition-default) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* Hover del botón confirmar - MISMO COLOR pero más brillante */
@@ -140,6 +147,7 @@
 .swal2-confirm.swal2-styled[style*="background-color: rgb(221, 51, 51)"] {
     background: #dc3545 !important;
     border-color: #dc3545 !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .swal2-confirm.swal2-styled[style*="background-color: rgb(221, 51, 51)"]:hover {
@@ -155,6 +163,7 @@
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     backdrop-filter: blur(5px) !important;
     transition: var(--transition-default) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 .swal2-cancel:hover {
@@ -169,6 +178,7 @@
     background: rgba(0, 0, 0, 0.7) !important;
     color: var(--color-text-primary) !important;
     border: 1px solid rgba(192, 192, 192, 0.2) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* Barra de progreso */
@@ -184,6 +194,7 @@
     border-top: 1px solid rgba(192, 192, 192, 0.15) !important;
     color: var(--color-text-secondary) !important;
     background: rgba(0, 0, 0, 0.3) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* Loader */
@@ -195,6 +206,7 @@
 .swal2-close {
     color: var(--color-text-secondary) !important;
     background: rgba(0, 0, 0, 0.5) !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* Mensaje de validación */
@@ -202,6 +214,7 @@
     background: rgba(239, 68, 68, 0.1) !important;
     color: #ef4444 !important;
     border-left: 3px solid #ef4444 !important;
+    font-family: var(--font-family-secondary) !important;
 }
 
 /* =============================================

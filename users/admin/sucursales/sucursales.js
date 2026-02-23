@@ -115,16 +115,22 @@ function renderBranchesTable(sucursales, admin) {
         if (suc.contacto) {
             const telefono = suc.contacto.replace(/\D/g, '');
             if (telefono.length === 10) {
-                telefonoFormateado = `${telefono.slice(0,3)} ${telefono.slice(3,6)} ${telefono.slice(6)}`;
+                telefonoFormateado = `${telefono.slice(0,3)}-${telefono.slice(3,6)}-${telefono.slice(6)}`;
             }
         }
         
         // Obtener tipo
         const tipoDisplay = suc.tipo ? suc.tipo.replace(/_/g, ' ').toUpperCase() : 'No especificado';
         
+        // Primera letra del nombre para el icono
+        const primeraLetra = suc.nombre ? suc.nombre.charAt(0).toUpperCase() : 'S';
+        
         row.innerHTML = `
             <td data-label="NOMBRE">
                 <div class="branch-info">
+                    <div class="branch-icon">
+                        <i class="fas fa-store"></i>
+                    </div>
                     <strong>${suc.nombre}</strong>
                 </div>
             </td>
@@ -135,36 +141,45 @@ function renderBranchesTable(sucursales, admin) {
             </td>
             <td data-label="UBICACIÓN">
                 <div class="ubicacion-info">
+                    <i class="fas fa-map-marker-alt" style="margin-right: 4px; color: #2f8cff;"></i>
                     ${ubicacionCompleta}
                 </div>
             </td>
             <td data-label="CONTACTO">
                 <div class="contacto-info">
+                    <i class="fas fa-phone-alt"></i>
                     ${telefonoFormateado}
                 </div>
             </td>
-            <td data-label="FECHA CREACIÓN">${fechaCreacion}</td>
-            <td data-label="ACCIONES" class="actions-cell">
-                <button class="row-btn view" title="Ver detalles" 
-                    data-branch-id="${suc.id}"
-                    data-branch-name="${suc.nombre}">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="row-btn edit" title="Editar" 
-                    data-branch-id="${suc.id}"
-                    data-branch-name="${suc.nombre}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="row-btn delete" title="Eliminar" 
-                    data-branch-id="${suc.id}"
-                    data-branch-name="${suc.nombre}">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+            <td data-label="FECHA CREACIÓN">
+                <span style="color: var(--color-text-dim);">
+                    <i class="fas fa-calendar" style="margin-right: 4px; color: #10b981;"></i>
+                    ${fechaCreacion}
+                </span>
+            </td>
+            <td data-label="ACCIONES">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-view" data-action="view" data-branch-id="${suc.id}" data-branch-name="${suc.nombre}" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button type="button" class="btn btn-edit" data-action="edit" data-branch-id="${suc.id}" data-branch-name="${suc.nombre}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-delete" data-action="delete" data-branch-id="${suc.id}" data-branch-name="${suc.nombre}" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
             </td>
         `;
         
         tbody.appendChild(row);
     });
+    
+    // Actualizar información de paginación
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        paginationInfo.textContent = `Mostrando ${sucursales.length} sucursal${sucursales.length !== 1 ? 'es' : ''}`;
+    }
 }
 
 // ========== CONFIGURAR EVENTOS ==========
@@ -176,24 +191,24 @@ function setupEvents(admin, sucursalManager) {
         });
     }
     
-    const table = document.querySelector('.branches-table');
+    const table = document.querySelector('.table');
     if (table) {
         table.addEventListener('click', async (e) => {
-            const button = e.target.closest('button');
-            const row = e.target.closest('tr');
+            const button = e.target.closest('.btn');
             
-            if (!button || !row) return;
+            if (!button) return;
             
+            const action = button.getAttribute('data-action');
             const branchId = button.getAttribute('data-branch-id');
             const branchName = button.getAttribute('data-branch-name');
             
-            if (button.classList.contains('edit')) {
+            if (action === 'edit') {
                 await editBranch(branchId, branchName, admin);
             } 
-            else if (button.classList.contains('view')) {
+            else if (action === 'view') {
                 await viewBranchDetails(branchId, branchName, admin, sucursalManager);
             }
-            else if (button.classList.contains('delete')) {
+            else if (action === 'delete') {
                 await deleteBranch(branchId, branchName, admin, sucursalManager);
             }
         });
@@ -242,11 +257,23 @@ function showBranchDetails(sucursal, branchName) {
     // Usar los métodos de la clase Sucursal para formatear
     const fechaCreacion = sucursal.getFechaCreacionFormateada ? 
         sucursal.getFechaCreacionFormateada() : 
-        new Date(sucursal.fechaCreacion).toLocaleDateString('es-MX');
+        new Date(sucursal.fechaCreacion).toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     
     const fechaActualizacion = sucursal.getFechaActualizacionFormateada ? 
         sucursal.getFechaActualizacionFormateada() : 
-        (sucursal.fechaActualizacion ? new Date(sucursal.fechaActualizacion).toLocaleDateString('es-MX') : 'No disponible');
+        (sucursal.fechaActualizacion ? new Date(sucursal.fechaActualizacion).toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : 'No disponible');
     
     const contactoFormateado = sucursal.getContactoFormateado ? 
         sucursal.getContactoFormateado() : 
@@ -262,44 +289,75 @@ function showBranchDetails(sucursal, branchName) {
     
     const tipoDisplay = sucursal.tipo ? sucursal.tipo.replace(/_/g, ' ').toUpperCase() : 'No especificado';
     
+    // Obtener coordenadas
+    const coordenadas = sucursal.coordenadas || { lat: 'No disponible', lng: 'No disponible' };
+    
     Swal.fire({
-        title: `Detalles de: ${branchName}`,
+        title: sucursal.nombre,
         html: `
             <div class="swal-details-container">
-                <div class="swal-icon-container">
-                </div>
-                
                 <div class="swal-details-grid">
                     <div class="swal-detail-card">
-                        <p><strong>Nombre:</strong><br><span>${sucursal.nombre}</span></p>
-                        <p><strong>Tipo:</strong><br>
-                            <span class="tipo-badge">
+                        <p><strong>Tipo</strong><br>
+                            <span class="tipo-badge" style="margin-top: 5px;">
                                 ${tipoDisplay}
                             </span>
                         </p>
-                        <p><strong>Región:</strong><br><span>${regionInfo.nombre}</span></p>
-                        <p><strong>Contacto:</strong><br>
-                            <span class="contacto-info">
+                        <p><strong>Región</strong><br><span>${regionInfo.nombre}</span></p>
+                        <p><strong>Contacto</strong><br>
+                            <span style="display: flex; align-items: center; gap: 5px; margin-top: 5px;">
+                                <i class="fas fa-phone-alt" style="color: #10b981;"></i>
                                 ${contactoFormateado}
                             </span>
                         </p>
                     </div>
                     <div class="swal-detail-card">
-                        <p><strong>Ubicación completa:</strong><br>
-                            <span class="ubicacion-info">
+                        <p><strong>Ubicación completa</strong><br>
+                            <span style="display: flex; align-items: flex-start; gap: 5px; margin-top: 5px;">
+                                <i class="fas fa-map-marker-alt" style="color: #2f8cff; margin-top: 3px;"></i>
                                 ${ubicacionCompleta}
                             </span>
                         </p>
-                        <p><strong>Fecha de creación:</strong><br><span>${fechaCreacion}</span></p>
-                        <p><strong>Última actualización:</strong><br><span>${fechaActualizacion}</span></p>
-                        <p><strong>Creado por:</strong><br><span>${sucursal.creadoPorNombre || 'Sistema'}</span></p>
+                        <p><strong>Coordenadas</strong><br>
+                            <span style="display: flex; align-items: center; gap: 5px; margin-top: 5px;">
+                                <i class="fas fa-globe-americas" style="color: #f97316;"></i>
+                                ${coordenadas.lat}, ${coordenadas.lng}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--color-border-light);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">FECHA CREACIÓN</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar-plus" style="margin-right: 5px; color: #10b981;"></i> ${fechaCreacion}</span>
+                        </div>
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">ÚLTIMA ACTUALIZACIÓN</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-clock" style="margin-right: 5px; color: #f97316;"></i> ${fechaActualizacion}</span>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">CREADO POR</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-user-cog" style="margin-right: 5px; color: #2f8cff;"></i> ${sucursal.creadoPorNombre || 'Sistema'}</span>
+                        </div>
                     </div>
                 </div>
             </div>
         `,
         width: 800,
-        showCloseButton: true,
-        showConfirmButton: false
+        showConfirmButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'EDITAR SUCURSAL',
+        cancelButtonText: 'CERRAR',
+        reverseButtons: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            editBranch(sucursal.id, sucursal.nombre, { 
+                organizacion: sucursal.organizacion,
+                organizacionCamelCase: sucursal.organizacionCamelCase,
+                nombreCompleto: 'Administrador'
+            });
+        }
     });
 }
 
@@ -310,8 +368,8 @@ async function deleteBranch(branchId, branchName, admin, sucursalManager) {
         title: '¿Eliminar sucursal?',
         html: `
             <div class="delete-confirmation">
-                <p>
-                    ¿Estás seguro de que deseas eliminar la sucursal <strong>"${branchName}"</strong>?
+                <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
+                    <strong style="color: #ff4d4d;">"${branchName}"</strong>
                 </p>
                 <div class="warning-message">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -321,11 +379,12 @@ async function deleteBranch(branchId, branchName, admin, sucursalManager) {
         `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'SÍ, ELIMINAR',
+        confirmButtonText: 'ELIMINAR',
         cancelButtonText: 'CANCELAR',
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
-        allowOutsideClick: false
+        reverseButtons: false,
+        focusCancel: true
     });
 
     if (!confirmResult.isConfirmed) return;
@@ -333,11 +392,9 @@ async function deleteBranch(branchId, branchName, admin, sucursalManager) {
     // Mostrar loader
     Swal.fire({
         title: 'Eliminando sucursal...',
-        text: 'Por favor espera',
+        html: '<i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #ff4d4d;"></i>',
         allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        didOpen: () => Swal.showLoading()
+        showConfirmButton: false
     });
 
     try {
@@ -349,8 +406,9 @@ async function deleteBranch(branchId, branchName, admin, sucursalManager) {
         await Swal.fire({
             icon: 'success',
             title: '¡Sucursal eliminada!',
-            html: `La sucursal <strong>"${branchName}"</strong> ha sido eliminada correctamente.`,
-            confirmButtonText: 'ACEPTAR'
+            html: `La sucursal <strong style="color: #ff4d4d;">"${branchName}"</strong> ha sido eliminada correctamente.`,
+            timer: 2000,
+            showConfirmButton: false
         });
         
         // Recargar la lista de sucursales

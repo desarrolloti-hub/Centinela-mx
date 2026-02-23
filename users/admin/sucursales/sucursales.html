@@ -15,10 +15,9 @@
     <!-- Archivo para PWA -->
     <link rel="manifest" href="/manifest.json">
     <!-- Estilos modulo -->
-    <link rel="stylesheet" href="">
+    <link rel="stylesheet" href="sucursales.css">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 
     <!-- SEO Básico -->
     <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
@@ -79,7 +78,7 @@
 <body>
     <canvas id="particle-canvas"></canvas>
 
-    <div class="admin-container" style="background-color: gray;">
+    <div class="admin-container">
         <!-- Page Header -->
         <div class="page-header">
             <h1>
@@ -90,27 +89,43 @@
             </div>
         </div>
 
-        <!-- Contenedor de la tabla -->
-        <div class="table-wrapper">
-            <table class="branches-table">
-                <button class="add-btn" id="addBtn">
-                    <i class="fas fa-plus-circle"></i> Agregar Sucursal
+        <!-- Card contenedor de la tabla (estilo categorías) -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-store"></i> Lista de Sucursales</h5>
+                <button class="btn-agregar-sucursal" id="addBtn">
+                    <i class="fas fa-plus"></i> Agregar Sucursal
                 </button>
-                <br>
-                <thead>
-                    <tr>
-                        <th>NOMBRE</th>
-                        <th>TIPO</th>
-                        <th>UBICACIÓN</th>
-                        <th>CONTACTO</th>
-                        <th>FECHA CREACIÓN</th>
-                        <th>ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody id="branchesTableBody">
-                    <!-- Se llenará dinámicamente -->
-                </tbody>
-            </table>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="tablaSucursales">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Ubicación</th>
+                                <th>Contacto</th>
+                                <th>Fecha Creación</th>
+                                <th style="width: 140px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="branchesTableBody">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación (opcional) -->
+                <div class="pagination-container">
+                    <div class="pagination-info" id="paginationInfo"></div>
+                    <nav>
+                        <ul class="pagination" id="pagination">
+                            <!-- Se llenará dinámicamente si se implementa paginación -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -118,7 +133,6 @@
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
     <script src="/components/footer-admin-component.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module" src="sucursales.js"></script>
 </body>
 </html>
