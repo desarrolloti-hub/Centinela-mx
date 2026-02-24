@@ -17,16 +17,6 @@ body {
     overflow-x: hidden;
 }
 
-/* ========== PARTÍCULAS ========== */
-#particle-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-}
-
 /* ========== CONTENEDOR PRINCIPAL (COMO EN CATEGORÍAS) ========== */
 .admin-container {
     position: relative;
@@ -40,7 +30,6 @@ body {
 .page-header {
     margin-bottom: 40px;
     padding-bottom: 20px;
-    border-bottom: 2px solid var(--color-border-light);
     text-align: center;
 }
 

@@ -17,6 +17,42 @@ body {
     overflow-x: hidden;
 }
 
+/* ========== PAGE HEADER - TÍTULO Y DESCRIPCIÓN (AHORA VISIBLE) ========== */
+.page-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    text-align: center;
+    background: transparent;
+}
+
+.page-header h1 {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 2.5rem;
+    color: var(--color-text-primary);
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px var(--color-accent-primary), 0 0 20px var(--color-accent-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.page-header h1 i {
+    color: var(--color-text-primary);
+    filter: drop-shadow(0 0 8px var(--color-accent-primary));
+}
+
+.page-header .header-description {
+    color: var(--color-text-secondary);
+    font-size: 1.1rem;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    line-height: 1.6;
+}
+
 /* ========== LAYOUT PRINCIPAL ========== */
 .edit-main-container {
     position: relative;
@@ -1060,6 +1096,10 @@ select.form-input-field option:any {
     .edit-wrapper {
         max-width: 950px;
     }
+
+    .page-header h1 {
+        font-size: 2rem;
+    }
     
     .photo-container {
         width: 160px;
@@ -1242,6 +1282,17 @@ select.form-input-field option:any {
     .photo-container {
         width: 130px;
         height: 130px;
+    }
+
+    .page-header h1 {
+        font-size: 1.8rem;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .page-header .header-description {
+        font-size: 0.95rem;
+        padding: 0 10px;
     }
     
     select.form-input-field {

@@ -226,3 +226,24 @@
         margin: 0 15px !important;
     }
 }
+
+/* =============================================
+   SCROLLBAR PERSONALIZADO
+   ============================================= */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-accent-primary);
+    border-radius: var(--border-radius-small);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent-secondary);
+}

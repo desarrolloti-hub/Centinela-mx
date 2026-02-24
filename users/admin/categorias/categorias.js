@@ -529,7 +529,7 @@ async function crearFilaCategoria(categoria, tbody) {
                 </div>
             </div>
         </td>
-        <td data-label="Color" style="text-align:center;">
+        <td data-label="Color">
             <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
                 <span style="width: 24px; height: 24px; border-radius: 6px; display: inline-block; background-color: ${color}; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></span>
                 <span style="color: var(--color-text-dim); font-size: 0.8rem;">${color}</span>

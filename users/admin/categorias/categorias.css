@@ -216,6 +216,11 @@
     text-align: left;
 }
 
+/* Alineación específica para el encabezado de Color */
+.table th:nth-child(3) {
+    text-align: left;
+}
+
 .table td {
     padding: 12px 10px !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
@@ -223,6 +228,11 @@
     font-family: var(--font-family-secondary, 'Rajdhani', sans-serif) !important;
     font-size: 13px !important;
     vertical-align: middle !important;
+}
+
+/* Alineación específica para las celdas de Color */
+.table td:nth-child(3) {
+    text-align: left;
 }
 
 /* Hover de filas - EXACTAMENTE COMO EN ÁREAS: solo cambio de fondo, sin sombra ni brillo */
@@ -957,25 +967,4 @@ tr.categoria-row.expanded .expand-icon i {
     .page-header h1 {
         font-size: 1.3rem;
     }
-}
-
-/* =============================================
-   SCROLLBAR PERSONALIZADO
-   ============================================= */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--color-bg-secondary);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--color-accent-primary);
-    border-radius: var(--border-radius-small);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent-secondary);
 }
