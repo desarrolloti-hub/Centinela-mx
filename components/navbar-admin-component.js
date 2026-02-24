@@ -2,6 +2,7 @@ class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
         this.isAdminDropdownOpen = false;
+        this.isAdministracionDropdownOpen = false; // Nuevo estado para el dropdown de Administración
         this.currentAdmin = null;
         this.userManager = null;
         this.init();
@@ -394,7 +395,106 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* Sección de navegación - MODIFICADA: ahora solo Áreas y Categorías */
+            /* Estilos para el botón desplegable de Administración */
+            .administracion-dropdown-btn {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 14px 16px;
+                background-color: var(--color-bg-primary);
+                border: 2px solid var(--color-border-medium);
+                border-radius: var(--border-radius-medium);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text-primary);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+                font-family: 'Orbitron', sans-serif;
+                margin-bottom: 15px;
+            }
+            
+            .administracion-dropdown-btn:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateY(-2px);
+                box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+            }
+            
+            .administracion-dropdown-btn:active {
+                transform: translateY(0);
+            }
+            
+            .administracion-dropdown-btn i {
+                transition: transform 0.3s ease;
+                font-size: 14px;
+            }
+            
+            .administracion-dropdown-btn.active i {
+                transform: rotate(180deg);
+            }
+            
+            /* Contenedor de opciones de Administración expandido */
+            .administracion-dropdown-options {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 20px;
+                padding: 15px;
+                background-color: var(--color-bg-tertiary);
+                border-radius: var(--border-radius-medium);
+                border: 1px solid var(--color-border-light);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .administracion-dropdown-options.active {
+                max-height: 350px;
+                opacity: 1;
+                overflow: visible;
+            }
+            
+            .administracion-dropdown-option {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 15px;
+                background-color: var(--color-bg-primary);
+                border: 1px solid var(--color-border-light);
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                color: var(--color-text-primary);
+                font-weight: 500;
+                font-family: 'Orbitron', sans-serif;
+                word-break: break-word;
+            }
+            
+            .administracion-dropdown-option:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateX(5px);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            }
+            
+            .administracion-dropdown-option i {
+                width: 20px;
+                text-align: center;
+                font-size: 16px;
+                color: var(--color-accent-primary);
+                flex-shrink: 0;
+            }
+            
+            .administracion-dropdown-option span {
+                flex: 1;
+                white-space: normal;
+                word-break: break-word;
+            }
+            
+            /* Sección de navegación */
             .nav-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -408,40 +508,6 @@ class NavbarComplete {
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                font-family: 'Orbitron', sans-serif;
-            }
-            
-            .nav-items-container {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-            }
-            
-            .nav-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 10px 15px;
-                border-radius: var(--border-radius-small);
-                transition: var(--transition-default);
-                cursor: pointer;
-                text-decoration: none;
-                color: var(--color-text-primary);
-            }
-            
-            .nav-item:hover {
-                background-color: var(--color-bg-secondary);
-            }
-            
-            .nav-item i {
-                width: 20px;
-                text-align: center;
-                font-size: 16px;
-            }
-            
-            .nav-item-text {
-                font-size: 15px;
-                flex-grow: 1;
                 font-family: 'Orbitron', sans-serif;
             }
             
@@ -645,6 +711,10 @@ class NavbarComplete {
                 .admin-dropdown-option span {
                     font-size: 14px;
                 }
+
+                .administracion-dropdown-options.active {
+                    max-height: 400px;
+                }
             }
             
             /* Responsive para móvil */
@@ -695,6 +765,11 @@ class NavbarComplete {
                     padding: 12px 14px;
                     font-size: 15px;
                 }
+
+                .administracion-dropdown-btn {
+                    padding: 12px 14px;
+                    font-size: 15px;
+                }
                 
                 .navbar-hamburger-btn {
                     width: 36px;
@@ -713,6 +788,14 @@ class NavbarComplete {
                 .admin-dropdown-options.active {
                     max-height: 500px;
                 }
+
+                .administracion-dropdown-options {
+                    padding: 12px;
+                }
+                
+                .administracion-dropdown-options.active {
+                    max-height: 450px;
+                }
                 
                 .admin-dropdown-option {
                     padding: 14px 12px;
@@ -728,21 +811,14 @@ class NavbarComplete {
                     font-size: 15px;
                     line-height: 1.4;
                 }
+
+                .administracion-dropdown-option {
+                    padding: 14px 12px;
+                    gap: 12px;
+                }
                 
                 .nav-section-title {
                     font-size: 15px;
-                }
-                
-                .nav-item {
-                    padding: 12px 15px;
-                }
-                
-                .nav-item i {
-                    font-size: 16px;
-                }
-                
-                .nav-item-text {
-                    font-size: 14px;
                 }
             }
             
@@ -789,6 +865,10 @@ class NavbarComplete {
                 
                 .admin-dropdown-option span {
                     font-size: 14px;
+                }
+
+                .administracion-dropdown-option {
+                    padding: 12px 10px;
                 }
             }
             
@@ -895,25 +975,43 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- SECCIÓN DE ADMINISTRACIÓN: ÁREAS Y CATEGORÍAS (sin Personalización) -->
+                <!-- SECCIÓN DE ADMINISTRACIÓN CON BOTÓN DESPLEGABLE -->
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <i class="fa-solid fa-gear"></i>
                         <span>Administración</span>
                     </div>
-                    <div class="nav-items-container">
+                    
+                    <!-- Botón desplegable de Administración -->
+                    <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
+                        <span>Gestionar</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    
+                    <!-- Contenedor de opciones expandido con los 4 botones -->
+                    <div class="administracion-dropdown-options" id="administracionDropdownOptions">
                         <!-- Botón para ÁREAS -->
-                        <a href="/users/admin/areas/areas.html" class="nav-item" id="areasBtn">
+                        <a href="/users/admin/areas/areas.html" class="administracion-dropdown-option" id="areasBtn">
                             <i class="fa-solid fa-map"></i>
-                            <span class="nav-item-text">Áreas</span>
-                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+                            <span>Áreas</span>
                         </a>
 
                         <!-- Botón para CATEGORIAS -->
-                        <a href="/users/admin/categorias/categorias.html" class="nav-item" id="categoriasBtn">
+                        <a href="/users/admin/categorias/categorias.html" class="administracion-dropdown-option" id="categoriasBtn">
                             <i class="fa-solid fa-tags"></i>
-                            <span class="nav-item-text">Categorías</span>
-                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+                            <span>Categorías</span>
+                        </a>
+
+                        <!-- Botón para SUCURSALES (NUEVO) -->
+                        <a href="/users/admin/sucursales/sucursales.html" class="administracion-dropdown-option" id="sucursalesBtn">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Sucursales</span>
+                        </a>
+
+                        <!-- Botón para REGIONES (NUEVO) -->
+                        <a href="/users/admin/regiones/regiones.html" class="administracion-dropdown-option" id="regionesBtn">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>Regiones</span>
                         </a>
                     </div>
                 </div>
@@ -1157,29 +1255,8 @@ class NavbarComplete {
 
     // Configura los eventos para los botones de administración
     setupAdminButtons() {
-        // Botón de Áreas
-        const areasBtn = document.getElementById('areasBtn');
-        if (areasBtn) {
-            areasBtn.addEventListener('click', (e) => {
-                // La navegación se maneja automáticamente por el href
-            });
-        }
-
-        // Botón de Categorías
-        const categoriasBtn = document.getElementById('categoriasBtn');
-        if (categoriasBtn) {
-            categoriasBtn.addEventListener('click', (e) => {
-                // La navegación se maneja automáticamente por el href
-            });
-        }
-
-        // Botón de Personalización de colores (ahora en el dropdown)
-        const themeManagerBtn = document.getElementById('themeManagerBtn');
-        if (themeManagerBtn) {
-            themeManagerBtn.addEventListener('click', (e) => {
-                // La navegación se maneja automáticamente por el href
-            });
-        }
+        // Los botones ahora son enlaces con href, no necesitan eventos adicionales
+        // pero mantenemos el método por si se necesita agregar funcionalidad extra
     }
 
     // Actualiza el segundo logo con el logo de la organización
@@ -1300,6 +1377,7 @@ class NavbarComplete {
         this.setupScroll();
         this.loadFontAwesome();
         this.setupAdminDropdown();
+        this.setupAdministracionDropdown(); // Nuevo método para el dropdown de Administración
         this.loadOrbitronFont();
         this.setupLogout();
     }
@@ -1320,9 +1398,14 @@ class NavbarComplete {
             overlay.classList.toggle('active', this.isMenuOpen);
             document.body.classList.toggle('menu-open', this.isMenuOpen);
 
-            // Cerrar dropdown si está abierto
-            if (!this.isMenuOpen && this.isAdminDropdownOpen) {
-                this.toggleAdminDropdown(false);
+            // Cerrar dropdowns si está abierto
+            if (!this.isMenuOpen) {
+                if (this.isAdminDropdownOpen) {
+                    this.toggleAdminDropdown(false);
+                }
+                if (this.isAdministracionDropdownOpen) {
+                    this.toggleAdministracionDropdown(false);
+                }
             }
         };
 
@@ -1336,6 +1419,9 @@ class NavbarComplete {
 
                 if (this.isAdminDropdownOpen) {
                     this.toggleAdminDropdown(false);
+                }
+                if (this.isAdministracionDropdownOpen) {
+                    this.toggleAdministracionDropdown(false);
                 }
             }
         };
@@ -1352,7 +1438,53 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de administración
+    // Configura el dropdown de Administración (nuevo)
+    setupAdministracionDropdown() {
+        const dropdownBtn = document.getElementById('administracionDropdownBtn');
+        const dropdownOptions = document.getElementById('administracionDropdownOptions');
+
+        if (!dropdownBtn || !dropdownOptions) return;
+
+        const toggleDropdown = () => {
+            this.isAdministracionDropdownOpen = !this.isAdministracionDropdownOpen;
+            this.toggleAdministracionDropdown(this.isAdministracionDropdownOpen);
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isAdministracionDropdownOpen) {
+                this.toggleAdministracionDropdown(false);
+            }
+        });
+
+        // Cerrar dropdown al presionar Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isAdministracionDropdownOpen) {
+                this.toggleAdministracionDropdown(false);
+            }
+        });
+
+        // Evitar que los clics en las opciones cierren el menú principal
+        const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', (e) => {
+                // No detener propagación para permitir la navegación
+                // Pero cerrar el dropdown después de la navegación
+                setTimeout(() => {
+                    this.toggleAdministracionDropdown(false);
+                }, 100);
+            });
+        });
+    }
+
+    // Configura el dropdown de administración (opciones generales)
     setupAdminDropdown() {
         const dropdownBtn = document.getElementById('adminDropdownBtn');
         const dropdownOptions = document.getElementById('adminDropdownOptions');
@@ -1573,7 +1705,7 @@ class NavbarComplete {
         }, 1000);
     }
 
-    // Alterna la visibilidad del dropdown
+    // Alterna la visibilidad del dropdown de administración general
     toggleAdminDropdown(show) {
         const dropdownBtn = document.getElementById('adminDropdownBtn');
         const dropdownOptions = document.getElementById('adminDropdownOptions');
@@ -1582,6 +1714,18 @@ class NavbarComplete {
             dropdownBtn.classList.toggle('active', show);
             dropdownOptions.classList.toggle('active', show);
             this.isAdminDropdownOpen = show;
+        }
+    }
+
+    // Alterna la visibilidad del dropdown de Administración (nuevo)
+    toggleAdministracionDropdown(show) {
+        const dropdownBtn = document.getElementById('administracionDropdownBtn');
+        const dropdownOptions = document.getElementById('administracionDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isAdministracionDropdownOpen = show;
         }
     }
 

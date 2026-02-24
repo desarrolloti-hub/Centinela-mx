@@ -749,3 +749,268 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--color-accent-secondary);
 }
+
+/* =============================================
+   MAPA - NUEVA SECCIÓN (AGREGADA SIN MODIFICAR TUS ESTILOS)
+   ============================================= */
+.map-container {
+    margin-top: 30px;
+    width: 100%;
+    border-radius: var(--border-radius-large);
+    overflow: hidden;
+    border: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-normal);
+}
+
+.map-wrapper {
+    position: relative;
+    width: 100%;
+    height: 450px;
+    background: var(--color-bg-tertiary);
+}
+
+#sucursalMap {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.map-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.map-button {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+    padding: 10px 15px !important;
+    border-radius: var(--border-radius-medium) !important;
+    font-size: 13px !important;
+    font-family: var(--font-family-primary) !important;
+    cursor: pointer;
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease !important;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.map-button:hover {
+    background: var(--color-accent-primary) !important;
+    color: var(--color-bg-primary) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(192, 192, 192, 0.3);
+}
+
+.map-button i {
+    font-size: 14px;
+}
+
+.map-coordinates-panel {
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border-light);
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.coordinates-display {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.coord-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px 15px;
+    border-radius: var(--border-radius-small);
+    border: 1px solid var(--color-border-light);
+}
+
+.coord-item i {
+    color: var(--color-accent-primary);
+    font-size: 14px;
+}
+
+.coord-item span {
+    color: var(--color-text-primary);
+    font-family: var(--font-family-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.coord-item .coord-value {
+    color: var(--color-accent-secondary);
+    font-family: var(--font-family-primary);
+    margin-left: 5px;
+}
+
+.map-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.map-status i {
+    color: var(--color-success);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Leaflet custom styles */
+.leaflet-container {
+    background: var(--color-bg-tertiary) !important;
+}
+
+.leaflet-control-attribution {
+    background: rgba(0, 0, 0, 0.7) !important;
+    color: var(--color-text-secondary) !important;
+    font-size: 10px !important;
+    padding: 2px 5px !important;
+    border-radius: var(--border-radius-small) !important;
+}
+
+.leaflet-control-attribution a {
+    color: var(--color-accent-primary) !important;
+}
+
+.leaflet-control-zoom {
+    border: none !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+.leaflet-control-zoom a {
+    background: var(--color-bg-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border-light) !important;
+}
+
+.leaflet-control-zoom a:hover {
+    background: var(--color-accent-primary) !important;
+    color: var(--color-bg-primary) !important;
+}
+
+.leaflet-popup-content-wrapper {
+    background: var(--color-bg-secondary) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    border-radius: var(--border-radius-medium) !important;
+}
+
+.leaflet-popup-tip {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+}
+
+.leaflet-popup-close-button {
+    color: var(--color-text-secondary) !important;
+}
+
+.leaflet-popup-close-button:hover {
+    color: var(--color-danger) !important;
+}
+
+/* Marcador personalizado */
+.custom-marker {
+    background: transparent;
+    border: none;
+}
+
+.custom-marker i {
+    font-size: 30px;
+    color: var(--color-accent-primary);
+    filter: drop-shadow(0 0 10px var(--color-accent-primary));
+    animation: markerPulse 2s infinite;
+}
+
+@keyframes markerPulse {
+    0% {
+        filter: drop-shadow(0 0 5px var(--color-accent-primary));
+        transform: scale(1);
+    }
+    50% {
+        filter: drop-shadow(0 0 15px var(--color-accent-primary));
+        transform: scale(1.1);
+    }
+    100% {
+        filter: drop-shadow(0 0 5px var(--color-accent-primary));
+        transform: scale(1);
+    }
+}
+
+/* Responsive para el mapa */
+@media (max-width: 768px) {
+    .map-wrapper {
+        height: 350px;
+    }
+    
+    .map-overlay {
+        top: 10px;
+        right: 10px;
+    }
+    
+    .map-button {
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+    }
+    
+    .coordinates-display {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .coord-item {
+        width: 100%;
+    }
+    
+    .map-coordinates-panel {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .map-wrapper {
+        height: 300px;
+    }
+    
+    .map-overlay {
+        position: static;
+        flex-direction: row;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+    
+    .map-button {
+        flex: 1;
+        justify-content: center;
+    }
+}
