@@ -115,22 +115,16 @@ function renderBranchesTable(sucursales, admin) {
         if (suc.contacto) {
             const telefono = suc.contacto.replace(/\D/g, '');
             if (telefono.length === 10) {
-                telefonoFormateado = `${telefono.slice(0,3)}-${telefono.slice(3,6)}-${telefono.slice(6)}`;
+                telefonoFormateado = `${telefono.slice(0,3)} ${telefono.slice(3,6)} ${telefono.slice(6)}`;
             }
         }
         
         // Obtener tipo
         const tipoDisplay = suc.tipo ? suc.tipo.replace(/_/g, ' ').toUpperCase() : 'No especificado';
         
-        // Primera letra del nombre para el icono
-        const primeraLetra = suc.nombre ? suc.nombre.charAt(0).toUpperCase() : 'S';
-        
         row.innerHTML = `
             <td data-label="NOMBRE">
                 <div class="branch-info">
-                    <div class="branch-icon">
-                        <i class="fas fa-store"></i>
-                    </div>
                     <strong>${suc.nombre}</strong>
                 </div>
             </td>
@@ -141,19 +135,16 @@ function renderBranchesTable(sucursales, admin) {
             </td>
             <td data-label="UBICACIÓN">
                 <div class="ubicacion-info">
-                    <i class="fas fa-map-marker-alt" style="margin-right: 4px; color: #2f8cff;"></i>
                     ${ubicacionCompleta}
                 </div>
             </td>
             <td data-label="CONTACTO">
                 <div class="contacto-info">
-                    <i class="fas fa-phone-alt"></i>
                     ${telefonoFormateado}
                 </div>
             </td>
             <td data-label="FECHA CREACIÓN">
                 <span style="color: var(--color-text-dim);">
-                    <i class="fas fa-calendar" style="margin-right: 4px; color: #10b981;"></i>
                     ${fechaCreacion}
                 </span>
             </td>
@@ -252,32 +243,12 @@ async function viewBranchDetails(branchId, branchName, admin, sucursalManager) {
     }
 }
 
-// ========== MOSTRAR DETALLES EN MODAL ==========
+// ========== MOSTRAR DETALLES EN MODAL - VERSIÓN SIMPLIFICADA (SIN FECHAS NI CREADO POR) ==========
 function showBranchDetails(sucursal, branchName) {
     // Usar los métodos de la clase Sucursal para formatear
-    const fechaCreacion = sucursal.getFechaCreacionFormateada ? 
-        sucursal.getFechaCreacionFormateada() : 
-        new Date(sucursal.fechaCreacion).toLocaleDateString('es-MX', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    
-    const fechaActualizacion = sucursal.getFechaActualizacionFormateada ? 
-        sucursal.getFechaActualizacionFormateada() : 
-        (sucursal.fechaActualizacion ? new Date(sucursal.fechaActualizacion).toLocaleDateString('es-MX', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        }) : 'No disponible');
-    
     const contactoFormateado = sucursal.getContactoFormateado ? 
         sucursal.getContactoFormateado() : 
-        sucursal.contacto;
+        sucursal.contacto || 'No especificado';
     
     const ubicacionCompleta = sucursal.getUbicacionCompleta ? 
         sucursal.getUbicacionCompleta() : 
@@ -295,59 +266,25 @@ function showBranchDetails(sucursal, branchName) {
     Swal.fire({
         title: sucursal.nombre,
         html: `
-            <div class="swal-details-container">
-                <div class="swal-details-grid">
-                    <div class="swal-detail-card">
-                        <p><strong>Tipo</strong><br>
-                            <span class="tipo-badge" style="margin-top: 5px;">
-                                ${tipoDisplay}
-                            </span>
-                        </p>
-                        <p><strong>Región</strong><br><span>${regionInfo.nombre}</span></p>
-                        <p><strong>Contacto</strong><br>
-                            <span style="display: flex; align-items: center; gap: 5px; margin-top: 5px;">
-                                <i class="fas fa-phone-alt" style="color: #10b981;"></i>
-                                ${contactoFormateado}
-                            </span>
-                        </p>
-                    </div>
-                    <div class="swal-detail-card">
-                        <p><strong>Ubicación completa</strong><br>
-                            <span style="display: flex; align-items: flex-start; gap: 5px; margin-top: 5px;">
-                                <i class="fas fa-map-marker-alt" style="color: #2f8cff; margin-top: 3px;"></i>
-                                ${ubicacionCompleta}
-                            </span>
-                        </p>
-                        <p><strong>Coordenadas</strong><br>
-                            <span style="display: flex; align-items: center; gap: 5px; margin-top: 5px;">
-                                <i class="fas fa-globe-americas" style="color: #f97316;"></i>
-                                ${coordenadas.lat}, ${coordenadas.lng}
-                            </span>
-                        </p>
-                    </div>
+            <div style="text-align: left;">
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">INFORMACIÓN GENERAL</h4>
+                    <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Tipo:</strong> <span style="color: var(--color-text-primary);">${tipoDisplay}</span></p>
+                    <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Región:</strong> <span style="color: var(--color-text-primary);">${regionInfo.nombre}</span></p>
+                    <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Contacto:</strong> <span style="color: var(--color-text-primary);">${contactoFormateado}</span></p>
                 </div>
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--color-border-light);">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">FECHA CREACIÓN</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar-plus" style="margin-right: 5px; color: #10b981;"></i> ${fechaCreacion}</span>
-                        </div>
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">ÚLTIMA ACTUALIZACIÓN</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-clock" style="margin-right: 5px; color: #f97316;"></i> ${fechaActualizacion}</span>
-                        </div>
-                        <div style="grid-column: span 2;">
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">CREADO POR</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-user-cog" style="margin-right: 5px; color: #2f8cff;"></i> ${sucursal.creadoPorNombre || 'Sistema'}</span>
-                        </div>
-                    </div>
+
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">UBICACIÓN</h4>
+                    <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Dirección:</strong> <span style="color: var(--color-text-primary);">${ubicacionCompleta}</span></p>
+                    <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Coordenadas:</strong> <span style="color: var(--color-text-primary);">${coordenadas.lat}, ${coordenadas.lng}</span></p>
                 </div>
             </div>
         `,
-        width: 800,
+        width: 600,
         showConfirmButton: true,
         showCancelButton: true,
-        confirmButtonText: 'EDITAR SUCURSAL',
+        confirmButtonText: 'EDITAR',
         cancelButtonText: 'CERRAR',
         reverseButtons: false
     }).then((result) => {
