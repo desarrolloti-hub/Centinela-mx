@@ -8,6 +8,8 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -171,7 +173,7 @@
                                         <label for="latitudSucursal" class="form-label">Latitud <span>*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-icon"><i class="fas fa-arrow-up"></i></span>
-                                            <input type="text" class="form-control" id="latitudSucursal"
+                                            <input type="number" step="any" class="form-control" id="latitudSucursal"
                                                 placeholder="Ej: 25.686614" required>
                                         </div>
                                     </div>
@@ -180,7 +182,7 @@
                                         <label for="longitudSucursal" class="form-label">Longitud <span>*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-icon"><i class="fas fa-arrow-left"></i></span>
-                                            <input type="text" class="form-control" id="longitudSucursal"
+                                            <input type="number" step="any" class="form-control" id="longitudSucursal"
                                                 placeholder="Ej: -100.316112" required>
                                         </div>
                                     </div>
@@ -194,19 +196,75 @@
                             <!-- Campos ocultos -->
                             <input type="hidden" id="sucursalId">
                             <input type="hidden" id="organizacionCamelCase">
-
-                            <!-- ============================================= -->
-                            <!-- BOTONES DE ACCIÓN -->
-                            <!-- ============================================= -->
-                            <div class="action-buttons-container">
-                                <button type="button" class="btn btn-success" id="btnActualizarSucursal">
-                                    <i class="fas fa-save"></i>Actualizar Sucursal
-                                </button>
-                                <button type="button" class="btn btn-secondary" id="btnCancelar">
-                                    <i class="fas fa-times"></i>Cancelar
-                                </button>
-                            </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- MAPA CON BOTONES DENTRO DEL CONTENEDOR -->
+        <!-- ============================================= -->
+        <div class="map-container">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-map-marked-alt"></i>Ubicación en el Mapa</h5>
+                    <div class="map-status">
+                        <i class="fas fa-circle"></i>
+                        <span>Haz clic en el mapa para ajustar la ubicación</span>
+                    </div>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <div class="map-wrapper">
+                        <div id="sucursalMap"></div>
+                        
+                        <!-- Overlay con botones de control -->
+                        <div class="map-overlay">
+                            <button class="map-button" id="btnCentrarMapa" title="Centrar en ubicación actual">
+                                <i class="fas fa-crosshairs"></i>
+                                <span>Centrar</span>
+                            </button>
+                            <button class="map-button" id="btnBuscarDireccion" title="Buscar dirección en el mapa">
+                                <i class="fas fa-search-location"></i>
+                                <span>Buscar</span>
+                            </button>
+                            <button class="map-button" id="btnObtenerUbicacion" title="Usar mi ubicación actual">
+                                <i class="fas fa-location-arrow"></i>
+                                <span>Mi ubicación</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Panel de coordenadas en tiempo real -->
+                    <div class="map-coordinates-panel">
+                        <div class="coordinates-display">
+                            <div class="coord-item">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>Latitud:</span>
+                                <span class="coord-value" id="mapLatitud">25.686614</span>
+                            </div>
+                            <div class="coord-item">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>Longitud:</span>
+                                <span class="coord-value" id="mapLongitud">-100.316112</span>
+                            </div>
+                        </div>
+                        <div class="map-status">
+                            <i class="fas fa-mouse-pointer"></i>
+                            <span>Arrastra el marcador para ajustar</span>
+                        </div>
+                    </div>
+                    
+                    <!-- ============================================= -->
+                    <!-- BOTONES DE ACCIÓN DENTRO DEL MAPA (ABAJO) -->
+                    <!-- ============================================= -->
+                    <div class="map-footer-buttons">
+                        <button type="button" class="btn btn-success" id="btnActualizarSucursal">
+                            <i class="fas fa-save"></i>Actualizar Sucursal
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="btnCancelar">
+                            <i class="fas fa-times"></i>Cancelar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -214,6 +272,9 @@
     </div>
     <br>
 
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <!-- Scripts -->
     <script type="module" src="/components/themeloader.js"></script>
     <script type="module" src="/components/particulas.js"></script>
