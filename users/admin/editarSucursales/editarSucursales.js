@@ -1,5 +1,4 @@
-// editarSucursales.js - VERSIÓN MEJORADA CON ESTILO MODERNO
-// Basado en la estructura de crearCategorias.js
+// editarSucursales.js - VERSIÓN ACTUALIZADA CON CAMPOS DIRECTOS
 
 // Variable global para debugging
 window.editarSucursalDebug = {
@@ -229,34 +228,34 @@ class EditarSucursalController {
         this._setValue('nombreSucursal', sucursal.nombre || '');
         this._setValue('tipoSucursal', sucursal.tipo || '');
         
-        // Ubicación
-        this._setValue('zonaSucursal', sucursal.ubicacion?.zona || '');
-        this._setValue('ciudadSucursal', sucursal.ubicacion?.ciudad || '');
-        this._setValue('direccionSucursal', sucursal.ubicacion?.direccion || '');
+        // Ubicación (campos directos)
+        this._setValue('zonaSucursal', sucursal.zona || '');
+        this._setValue('ciudadSucursal', sucursal.ciudad || '');
+        this._setValue('direccionSucursal', sucursal.direccion || '');
         
         // Contacto
         this._setValue('contactoSucursal', sucursal.contacto || '');
         
-        // Coordenadas
-        this._setValue('latitudSucursal', sucursal.coordenadas?.latitud || '');
-        this._setValue('longitudSucursal', sucursal.coordenadas?.longitud || '');
+        // Coordenadas (campos directos)
+        this._setValue('latitudSucursal', sucursal.latitud || '');
+        this._setValue('longitudSucursal', sucursal.longitud || '');
         
         // Seleccionar región (con timeout para esperar que carguen las opciones)
-        if (sucursal.ubicacion?.regionId) {
+        if (sucursal.regionId) {
             setTimeout(() => {
                 const regionSelect = document.getElementById('regionSucursal');
                 if (regionSelect) {
-                    regionSelect.value = sucursal.ubicacion.regionId;
+                    regionSelect.value = sucursal.regionId;
                 }
             }, 500);
         }
         
         // Seleccionar estado
-        if (sucursal.ubicacion?.estado) {
+        if (sucursal.estado) {
             setTimeout(() => {
                 const estadoSelect = document.getElementById('estadoSucursal');
                 if (estadoSelect) {
-                    estadoSelect.value = sucursal.ubicacion.estado;
+                    estadoSelect.value = sucursal.estado;
                 }
             }, 100);
         }
@@ -329,7 +328,8 @@ class EditarSucursalController {
             direccionSucursal: document.getElementById('direccionSucursal'),
             latitudSucursal: document.getElementById('latitudSucursal'),
             longitudSucursal: document.getElementById('longitudSucursal'),
-            contactoSucursal: document.getElementById('contactoSucursal')
+            contactoSucursal: document.getElementById('contactoSucursal'),
+            zonaSucursal: document.getElementById('zonaSucursal')
         };
 
         // Validar campos requeridos
@@ -391,12 +391,15 @@ class EditarSucursalController {
             elements.longitudSucursal.classList.remove('is-invalid');
         }
 
-        // Validar teléfono si se proporciona
-        if (elements.contactoSucursal.value.trim()) {
+        // Validar teléfono
+        if (!elements.contactoSucursal.value.trim()) {
+            elements.contactoSucursal.classList.add('is-invalid');
+            errores.push('El teléfono de contacto es obligatorio');
+        } else {
             const telefono = elements.contactoSucursal.value.replace(/\D/g, '');
             if (telefono.length < 10) {
                 elements.contactoSucursal.classList.add('is-invalid');
-                errores.push('El teléfono debe tener al menos 10 dígitos');
+                errores.push('El teléfono debe tener 10 dígitos');
             } else {
                 elements.contactoSucursal.classList.remove('is-invalid');
             }
@@ -429,10 +432,12 @@ class EditarSucursalController {
 
         const nombre = document.getElementById('nombreSucursal').value.trim();
         const tipo = document.getElementById('tipoSucursal').value.trim();
+        const regionId = regionSelect.value;
         const estado = document.getElementById('estadoSucursal').value;
         const ciudad = document.getElementById('ciudadSucursal').value.trim();
         const direccion = document.getElementById('direccionSucursal').value.trim();
-        const contacto = document.getElementById('contactoSucursal').value.trim() || 'No especificado';
+        const zona = document.getElementById('zonaSucursal').value.trim();
+        const contacto = document.getElementById('contactoSucursal').value.trim();
         const latitud = document.getElementById('latitudSucursal').value.trim();
         const longitud = document.getElementById('longitudSucursal').value.trim();
 
@@ -446,6 +451,7 @@ class EditarSucursalController {
                     <p><strong style="color: var(--color-text-primary);">Estado:</strong> ${estado}</p>
                     <p><strong style="color: var(--color-text-primary);">Ciudad:</strong> ${ciudad}</p>
                     <p><strong style="color: var(--color-text-primary);">Dirección:</strong> ${direccion}</p>
+                    <p><strong style="color: var(--color-text-primary);">Zona:</strong> ${zona || 'No especificada'}</p>
                     <p><strong style="color: var(--color-text-primary);">Contacto:</strong> ${contacto}</p>
                     <p><strong style="color: var(--color-text-primary);">Coordenadas:</strong> ${latitud}, ${longitud}</p>
                 </div>
@@ -473,28 +479,18 @@ class EditarSucursalController {
                 btnActualizar.disabled = true;
             }
 
-            // Obtener datos del formulario
-            const regionSelect = document.getElementById('regionSucursal');
-            const regionOption = regionSelect.options[regionSelect.selectedIndex];
-            const regionNombre = regionOption.getAttribute('data-region-nombre') || regionOption.textContent;
-
+            // Obtener datos del formulario (campos directos)
             const sucursalData = {
                 nombre: document.getElementById('nombreSucursal').value.trim(),
                 tipo: document.getElementById('tipoSucursal').value.trim(),
-                ubicacion: {
-                    region: regionNombre,
-                    regionId: document.getElementById('regionSucursal').value,
-                    regionNombre: regionNombre,
-                    zona: document.getElementById('zonaSucursal').value.trim(),
-                    estado: document.getElementById('estadoSucursal').value,
-                    ciudad: document.getElementById('ciudadSucursal').value.trim(),
-                    direccion: document.getElementById('direccionSucursal').value.trim()
-                },
+                regionId: document.getElementById('regionSucursal').value,
+                estado: document.getElementById('estadoSucursal').value,
+                ciudad: document.getElementById('ciudadSucursal').value.trim(),
+                direccion: document.getElementById('direccionSucursal').value.trim(),
+                zona: document.getElementById('zonaSucursal').value.trim(),
                 contacto: document.getElementById('contactoSucursal').value.trim(),
-                coordenadas: {
-                    latitud: document.getElementById('latitudSucursal').value.trim(),
-                    longitud: document.getElementById('longitudSucursal').value.trim()
-                }
+                latitud: document.getElementById('latitudSucursal').value.trim(),
+                longitud: document.getElementById('longitudSucursal').value.trim()
             };
 
             // Actualizar sucursal
@@ -521,9 +517,9 @@ class EditarSucursalController {
 
     async _mostrarExitoActualizacion(sucursal) {
         const contactoMostrar = sucursal.contacto || 'No especificado';
-        const ubicacionCompleta = sucursal.ubicacion ? 
-            `${sucursal.ubicacion.direccion}, ${sucursal.ubicacion.ciudad}, ${sucursal.ubicacion.estado}` : 
-            'No disponible';
+        const ubicacionCompleta = sucursal.getUbicacionCompleta ? 
+            sucursal.getUbicacionCompleta() : 
+            `${sucursal.direccion}, ${sucursal.ciudad}, ${sucursal.estado}`;
 
         await Swal.fire({
             icon: 'success',

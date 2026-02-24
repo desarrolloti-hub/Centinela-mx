@@ -7,7 +7,7 @@ window.crearSucursalDebug = {
     controller: null
 };
 
-// LÍMITES DE CARACTERES (basados en crearCategorías.js)
+// LÍMITES DE CARACTERES
 const LIMITES = {
     NOMBRE_SUCURSAL: 100,
     TIPO_SUCURSAL: 50,
@@ -361,9 +361,12 @@ class CrearSucursalController {
             longitudInput?.classList.remove('is-invalid');
         }
 
-        // Validar teléfono (opcional)
+        // Validar teléfono
         const contacto = contactoInput?.value.trim();
-        if (contacto) {
+        if (!contacto) {
+            contactoInput?.classList.add('is-invalid');
+            errores.push('El teléfono de contacto es obligatorio');
+        } else {
             const telefonoLimpio = contacto.replace(/\D/g, '');
             if (telefonoLimpio.length < 10) {
                 contactoInput?.classList.add('is-invalid');
@@ -392,12 +395,13 @@ class CrearSucursalController {
         this._confirmarGuardado({
             nombre,
             tipo,
+            regionId,
             regionNombre,
             estado,
             ciudad,
             direccion,
             zona: zonaInput?.value.trim() || '',
-            contacto: contacto || '',
+            contacto,
             latitud,
             longitud
         });
@@ -440,28 +444,17 @@ class CrearSucursalController {
                 btnCrear.disabled = true;
             }
 
-            // Preparar datos
-            const regionOption = document.getElementById('regionSucursal').options[document.getElementById('regionSucursal').selectedIndex];
-            const regionNombre = regionOption.getAttribute('data-region-nombre') || regionOption.textContent;
-            const regionId = document.getElementById('regionSucursal').value;
-
             const sucursalData = {
                 nombre: datos.nombre,
                 tipo: datos.tipo,
-                ubicacion: {
-                    region: regionNombre,
-                    regionId: regionId,
-                    regionNombre: regionNombre,
-                    zona: datos.zona,
-                    estado: datos.estado,
-                    ciudad: datos.ciudad,
-                    direccion: datos.direccion
-                },
                 contacto: datos.contacto,
-                coordenadas: {
-                    latitud: datos.latitud,
-                    longitud: datos.longitud
-                }
+                direccion: datos.direccion,
+                ciudad: datos.ciudad,
+                estado: datos.estado,
+                zona: datos.zona,
+                regionId: datos.regionId,
+                latitud: datos.latitud,
+                longitud: datos.longitud
             };
 
             // Crear sucursal

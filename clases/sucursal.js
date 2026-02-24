@@ -14,44 +14,52 @@ import {
 
 import { db } from '/config/firebase-config.js';
 
+// Referencia global al RegionManager (se inicializará cuando sea necesario)
+let regionManagerInstance = null;
+
+async function getRegionManager() {
+    if (!regionManagerInstance) {
+        const { RegionManager } = await import('/clases/region.js');
+        regionManagerInstance = new RegionManager();
+    }
+    return regionManagerInstance;
+}
+
 class Sucursal {
     constructor(id, data) {
         this.id = id;
         
-        // Datos básicos
+        // ===== CAMPOS PRINCIPALES (DIRECTOS) =====
         this.nombre = data.nombre || '';
         this.tipo = data.tipo || '';
-        
-        // Ubicación (MAP)
-        this.ubicacion = {
-            region: data.ubicacion?.region || '',
-            regionId: data.ubicacion?.regionId || '',
-            regionNombre: data.ubicacion?.regionNombre || '',
-            zona: data.ubicacion?.zona || '',
-            estado: data.ubicacion?.estado || '',
-            ciudad: data.ubicacion?.ciudad || '',
-            direccion: data.ubicacion?.direccion || ''
-        };
-        
-        // Contacto
         this.contacto = data.contacto || '';
         
-        // Coordenadas (MAP)
-        this.coordenadas = {
-            latitud: data.coordenadas?.latitud || '',
-            longitud: data.coordenadas?.longitud || ''
-        };
+        // ===== UBICACIÓN (CAMPOS DIRECTOS) =====
+        this.direccion = data.direccion || '';
+        this.ciudad = data.ciudad || '';
+        this.estado = data.estado || '';
+        this.zona = data.zona || '';
         
-        // Metadatos
+        // ===== REGIÓN (SOLO ID) =====
+        this.regionId = data.regionId || '';
+        
+        // ===== COORDENADAS (CAMPOS DIRECTOS) =====
+        this.latitud = data.latitud || '';
+        this.longitud = data.longitud || '';
+        
+        // ===== METADATOS =====
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.creadoPorEmail = data.creadoPorEmail || '';
         this.creadoPorNombre = data.creadoPorNombre || '';
         this.actualizadoPor = data.actualizadoPor || '';
         
-        // Fechas
-        this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
-        this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
+        // ===== FECHAS =====
+        this.fechaCreacion = this._convertirFecha(data.fechaCreacion) || new Date();
+        this.fechaActualizacion = this._convertirFecha(data.fechaActualizacion) || new Date();
+        
+        // Cache para datos de región (no se guarda en Firestore)
+        this._regionCache = null;
     }
 
     _convertirFecha(fecha) {
@@ -84,45 +92,68 @@ class Sucursal {
         }
     }
 
-    getNombreCompleto() {
-        return this.nombre;
+    // ===== MÉTODOS DE REGIÓN =====
+    
+    async getRegion(forceRefresh = false) {
+        if (!this.regionId) return null;
+        
+        if (!this._regionCache || forceRefresh) {
+            try {
+                const regionManager = await getRegionManager();
+                const region = await regionManager.getRegionById(
+                    this.regionId, 
+                    this.organizacionCamelCase
+                );
+                this._regionCache = region;
+            } catch (error) {
+                console.error('Error obteniendo región:', error);
+                return null;
+            }
+        }
+        
+        return this._regionCache;
     }
 
-    getTipo() {
-        return this.tipo;
+    async getRegionNombre() {
+        const region = await this.getRegion();
+        return region?.nombre || 'No especificada';
     }
 
-    getUbicacionCompleta() {
-        const partes = [];
-        if (this.ubicacion.direccion) partes.push(this.ubicacion.direccion);
-        if (this.ubicacion.ciudad) partes.push(this.ubicacion.ciudad);
-        if (this.ubicacion.estado) partes.push(this.ubicacion.estado);
-        if (this.ubicacion.zona) partes.push(`Zona: ${this.ubicacion.zona}`);
-        if (this.ubicacion.regionNombre) partes.push(`Región: ${this.ubicacion.regionNombre}`);
-        return partes.join(', ');
-    }
-
-    getRegionInfo() {
+    async getRegionInfo() {
+        const region = await this.getRegion();
         return {
-            id: this.ubicacion.regionId,
-            nombre: this.ubicacion.regionNombre
+            id: this.regionId,
+            nombre: region?.nombre || 'No especificada',
+            color: region?.color || '#808080',
+            responsable: region?.responsable || 'No asignado'
         };
     }
 
+    // ===== MÉTODOS DE UBICACIÓN =====
+
+    getUbicacionCompleta() {
+        const partes = [];
+        if (this.direccion) partes.push(this.direccion);
+        if (this.ciudad) partes.push(this.ciudad);
+        if (this.estado) partes.push(this.estado);
+        if (this.zona) partes.push(`Zona: ${this.zona}`);
+        return partes.join(', ') || 'Ubicación no disponible';
+    }
+
+    // ===== MÉTODOS DE COORDENADAS =====
+
     getCoordenadas() {
         return {
-            lat: this.coordenadas.latitud,
-            lng: this.coordenadas.longitud
+            lat: this.latitud,
+            lng: this.longitud
         };
     }
 
     tieneCoordenadas() {
-        return this.coordenadas.latitud && this.coordenadas.longitud;
+        return this.latitud && this.longitud;
     }
 
-    getContacto() {
-        return this.contacto;
-    }
+    // ===== MÉTODOS DE CONTACTO =====
 
     getContactoFormateado() {
         if (!this.contacto) return 'No disponible';
@@ -133,6 +164,8 @@ class Sucursal {
         return this.contacto;
     }
 
+    // ===== MÉTODOS DE FECHAS =====
+
     getFechaCreacionFormateada() {
         return this._formatearFecha(this.fechaCreacion);
     }
@@ -140,6 +173,8 @@ class Sucursal {
     getFechaActualizacionFormateada() {
         return this._formatearFecha(this.fechaActualizacion);
     }
+
+    // ===== MÉTODOS DE CREADOR =====
 
     getCreadoPorInfo() {
         return {
@@ -149,48 +184,73 @@ class Sucursal {
         };
     }
 
+    // ===== MÉTODOS PARA FIRESTORE =====
+
     toFirestore() {
         return {
+            // Campos principales
             nombre: this.nombre,
             tipo: this.tipo,
-            ubicacion: {
-                region: this.ubicacion.region,
-                regionId: this.ubicacion.regionId,
-                regionNombre: this.ubicacion.regionNombre,
-                zona: this.ubicacion.zona,
-                estado: this.ubicacion.estado,
-                ciudad: this.ubicacion.ciudad,
-                direccion: this.ubicacion.direccion
-            },
             contacto: this.contacto,
-            coordenadas: {
-                latitud: this.coordenadas.latitud,
-                longitud: this.coordenadas.longitud
-            },
+            
+            // Ubicación (campos directos)
+            direccion: this.direccion,
+            ciudad: this.ciudad,
+            estado: this.estado,
+            zona: this.zona,
+            
+            // Región (solo ID)
+            regionId: this.regionId,
+            
+            // Coordenadas (campos directos)
+            latitud: this.latitud,
+            longitud: this.longitud,
+            
+            // Metadatos
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorEmail: this.creadoPorEmail,
             creadoPorNombre: this.creadoPorNombre,
             actualizadoPor: this.actualizadoPor,
+            
+            // Fechas
             fechaCreacion: this.fechaCreacion,
             fechaActualizacion: this.fechaActualizacion
         };
     }
 
-    toUI() {
+    async toUI() {
+        const regionInfo = await this.getRegionInfo();
+        
         return {
             id: this.id,
             nombre: this.nombre,
             tipo: this.tipo,
-            ubicacion: this.ubicacion,
-            ubicacionCompleta: this.getUbicacionCompleta(),
             contacto: this.contacto,
             contactoFormateado: this.getContactoFormateado(),
+            
+            // Ubicación
+            direccion: this.direccion,
+            ciudad: this.ciudad,
+            estado: this.estado,
+            zona: this.zona,
+            ubicacionCompleta: this.getUbicacionCompleta(),
+            
+            // Región
+            regionId: this.regionId,
+            region: regionInfo,
+            
+            // Coordenadas
+            latitud: this.latitud,
+            longitud: this.longitud,
             coordenadas: this.getCoordenadas(),
             tieneCoordenadas: this.tieneCoordenadas(),
-            regionInfo: this.getRegionInfo(),
+            
+            // Fechas
             fechaCreacion: this.getFechaCreacionFormateada(),
             fechaActualizacion: this.getFechaActualizacionFormateada(),
+            
+            // Metadatos
             creadoPor: this.creadoPorNombre || this.creadoPorEmail,
             organizacionCamelCase: this.organizacionCamelCase
         };
@@ -207,6 +267,7 @@ class Sucursal {
 class SucursalManager {
     constructor() {
         this.sucursales = [];
+        this.cache = new Map(); // Cache por ID
     }
 
     _getCollectionName(organizacionCamelCase) {
@@ -224,19 +285,19 @@ class SucursalManager {
             errores.push('El tipo de sucursal es obligatorio');
         }
 
-        if (!sucursalData.ubicacion?.regionId) {
+        if (!sucursalData.regionId) {
             errores.push('Debe seleccionar una región');
         }
 
-        if (!sucursalData.ubicacion?.estado) {
+        if (!sucursalData.estado) {
             errores.push('Debe seleccionar un estado');
         }
 
-        if (!sucursalData.ubicacion?.ciudad?.trim()) {
+        if (!sucursalData.ciudad?.trim()) {
             errores.push('La ciudad es obligatoria');
         }
 
-        if (!sucursalData.ubicacion?.direccion?.trim()) {
+        if (!sucursalData.direccion?.trim()) {
             errores.push('La dirección es obligatoria');
         }
 
@@ -276,27 +337,32 @@ class SucursalManager {
             const sucursalesCollection = collection(db, collectionName);
 
             const sucursalFirestoreData = {
+                // Campos principales
                 nombre: sucursalData.nombre.trim(),
                 tipo: sucursalData.tipo,
-                ubicacion: {
-                    region: sucursalData.ubicacion.region || '',
-                    regionId: sucursalData.ubicacion.regionId || '',
-                    regionNombre: sucursalData.ubicacion.regionNombre || '',
-                    zona: sucursalData.ubicacion.zona || '',
-                    estado: sucursalData.ubicacion.estado,
-                    ciudad: sucursalData.ubicacion.ciudad.trim(),
-                    direccion: sucursalData.ubicacion.direccion.trim()
-                },
                 contacto: sucursalData.contacto.trim(),
-                coordenadas: {
-                    latitud: sucursalData.coordenadas?.latitud || '',
-                    longitud: sucursalData.coordenadas?.longitud || ''
-                },
+                
+                // Ubicación (campos directos)
+                direccion: sucursalData.direccion.trim(),
+                ciudad: sucursalData.ciudad.trim(),
+                estado: sucursalData.estado,
+                zona: sucursalData.zona || '',
+                
+                // Región (solo ID)
+                regionId: sucursalData.regionId,
+                
+                // Coordenadas (campos directos)
+                latitud: sucursalData.latitud || '',
+                longitud: sucursalData.longitud || '',
+                
+                // Metadatos
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorEmail: usuarioActual.correoElectronico || usuarioActual.email || '',
                 creadoPorNombre: usuarioActual.nombreCompleto || usuarioActual.nombre || '',
                 actualizadoPor: usuarioActual.id,
+                
+                // Fechas (Firestore las asignará)
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp()
             };
@@ -310,6 +376,7 @@ class SucursalManager {
             });
 
             this.sucursales.unshift(nuevaSucursal);
+            this.cache.set(docRef.id, nuevaSucursal);
 
             return nuevaSucursal;
 
@@ -339,6 +406,7 @@ class SucursalManager {
                     const data = doc.data();
                     const sucursal = new Sucursal(doc.id, data);
                     sucursales.push(sucursal);
+                    this.cache.set(doc.id, sucursal);
                 } catch (error) {
                     console.error('Error procesando sucursal:', error);
                 }
@@ -354,10 +422,12 @@ class SucursalManager {
     }
 
     async getSucursalById(sucursalId, organizacionCamelCase) {
-        if (!organizacionCamelCase) return null;
+        // Verificar cache primero
+        if (this.cache.has(sucursalId)) {
+            return this.cache.get(sucursalId);
+        }
 
-        const sucursalEnMemoria = this.sucursales.find(s => s.id === sucursalId);
-        if (sucursalEnMemoria) return sucursalEnMemoria;
+        if (!organizacionCamelCase) return null;
 
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
@@ -368,6 +438,10 @@ class SucursalManager {
                 const data = sucursalSnap.data();
                 const sucursal = new Sucursal(sucursalId, data);
                 
+                // Actualizar cache
+                this.cache.set(sucursalId, sucursal);
+                
+                // Actualizar array de sucursales si existe
                 const index = this.sucursales.findIndex(s => s.id === sucursalId);
                 if (index === -1) {
                     this.sucursales.push(sucursal);
@@ -412,39 +486,43 @@ class SucursalManager {
                 }
             }
 
+            // Construir objeto de actualización con campos directos
             const datosActualizados = {
-                nombre: nuevosDatos.nombre || datosActuales.nombre,
-                tipo: nuevosDatos.tipo || datosActuales.tipo,
-                ubicacion: {
-                    region: nuevosDatos.ubicacion?.region || datosActuales.ubicacion?.region || '',
-                    regionId: nuevosDatos.ubicacion?.regionId || datosActuales.ubicacion?.regionId || '',
-                    regionNombre: nuevosDatos.ubicacion?.regionNombre || datosActuales.ubicacion?.regionNombre || '',
-                    zona: nuevosDatos.ubicacion?.zona || datosActuales.ubicacion?.zona || '',
-                    estado: nuevosDatos.ubicacion?.estado || datosActuales.ubicacion?.estado || '',
-                    ciudad: nuevosDatos.ubicacion?.ciudad || datosActuales.ubicacion?.ciudad || '',
-                    direccion: nuevosDatos.ubicacion?.direccion || datosActuales.ubicacion?.direccion || ''
-                },
-                contacto: nuevosDatos.contacto || datosActuales.contacto,
-                coordenadas: {
-                    latitud: nuevosDatos.coordenadas?.latitud || datosActuales.coordenadas?.latitud || '',
-                    longitud: nuevosDatos.coordenadas?.longitud || datosActuales.coordenadas?.longitud || ''
-                },
+                // Solo incluir campos que vienen en nuevosDatos
+                ...(nuevosDatos.nombre && { nombre: nuevosDatos.nombre }),
+                ...(nuevosDatos.tipo && { tipo: nuevosDatos.tipo }),
+                ...(nuevosDatos.contacto && { contacto: nuevosDatos.contacto }),
+                
+                // Ubicación
+                ...(nuevosDatos.direccion && { direccion: nuevosDatos.direccion }),
+                ...(nuevosDatos.ciudad && { ciudad: nuevosDatos.ciudad }),
+                ...(nuevosDatos.estado && { estado: nuevosDatos.estado }),
+                ...(nuevosDatos.zona !== undefined && { zona: nuevosDatos.zona }),
+                
+                // Región
+                ...(nuevosDatos.regionId && { regionId: nuevosDatos.regionId }),
+                
+                // Coordenadas
+                ...(nuevosDatos.latitud !== undefined && { latitud: nuevosDatos.latitud }),
+                ...(nuevosDatos.longitud !== undefined && { longitud: nuevosDatos.longitud }),
+                
+                // Metadatos de actualización
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId
             };
 
             await updateDoc(sucursalRef, datosActualizados);
 
+            // Actualizar cache
+            this.cache.delete(sucursalId);
+            
+            // Actualizar array de sucursales
             const index = this.sucursales.findIndex(s => s.id === sucursalId);
             if (index !== -1) {
                 const sucursalActual = this.sucursales[index];
-                Object.keys(datosActualizados).forEach(key => {
-                    if (key !== 'id' && key !== 'fechaActualizacion') {
-                        sucursalActual[key] = datosActualizados[key];
-                    }
-                });
+                Object.assign(sucursalActual, datosActualizados);
                 sucursalActual.fechaActualizacion = new Date();
-                sucursalActual.actualizadoPor = usuarioId;
+                this.cache.set(sucursalId, sucursalActual);
             }
 
             return await this.getSucursalById(sucursalId, organizacionCamelCase);
@@ -466,6 +544,10 @@ class SucursalManager {
 
             await deleteDoc(sucursalRef);
 
+            // Limpiar cache
+            this.cache.delete(sucursalId);
+            
+            // Eliminar del array
             const index = this.sucursales.findIndex(s => s.id === sucursalId);
             if (index !== -1) {
                 this.sucursales.splice(index, 1);
@@ -517,7 +599,7 @@ class SucursalManager {
             
             const q = query(
                 sucursalesCollection,
-                where("ubicacion.regionId", "==", regionId)
+                where("regionId", "==", regionId)
             );
             
             const snapshot = await getDocs(q);
@@ -548,8 +630,8 @@ class SucursalManager {
             const terminoLower = termino.toLowerCase();
             return sucursales.filter(sucursal => 
                 sucursal.nombre.toLowerCase().includes(terminoLower) ||
-                sucursal.ubicacion.ciudad.toLowerCase().includes(terminoLower) ||
-                sucursal.ubicacion.direccion.toLowerCase().includes(terminoLower)
+                sucursal.ciudad.toLowerCase().includes(terminoLower) ||
+                sucursal.direccion.toLowerCase().includes(terminoLower)
             );
 
         } catch (error) {
