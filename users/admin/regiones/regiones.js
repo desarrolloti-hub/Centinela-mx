@@ -68,7 +68,7 @@ async function loadRegions(admin, regionManager) {
 
 // ========== RENDERIZAR TABLA DE REGIONES ==========
 function renderRegionsTable(regiones, admin) {
-    const tbody = document.querySelector('.regions-table tbody');
+    const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = '';
@@ -98,36 +98,36 @@ function renderRegionsTable(regiones, admin) {
                 });
             }
         }
-        
+
+        // Usar las clases de CSS y la estructura de datos-label para móvil
         row.innerHTML = `
-            <td data-label="NOMBRE">
-                <div class="region-info">
-                    <span class="color-preview" style="background: ${reg.color}; width: 20px; height: 20px; display: inline-block; border-radius: 4px; margin-right: 10px;"></span>
-                    <strong>${reg.nombre}</strong>
+            <td data-label="Nombre">
+                <div style="display: flex; align-items: center;">
+                    <div style="width:4px; height:24px; background:${reg.color}; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
+                    <div>
+                        <strong style="color:white;" title="${escapeHTML(reg.nombre || '')}">${escapeHTML(reg.nombre)}</strong>
+                    </div>
                 </div>
             </td>
-            <td data-label="COLOR">
-                <span class="color-badge" style="background: ${reg.color}; color: white; padding: 4px 8px; border-radius: 4px; font-family: monospace;">
-                    ${reg.color}
-                </span>
+            <td data-label="Color">
+                <div class="color-display">
+                    <span class="color-indicator" style="background-color: ${reg.color};"></span>
+                    <span>${reg.color}</span>
+                </div>
             </td>
-            <td data-label="FECHA CREACIÓN">${fechaCreacion}</td>
-            <td data-label="ACCIONES" class="actions-cell">
-                <button class="row-btn view" title="Ver detalles" 
-                    data-region-id="${reg.id}"
-                    data-region-name="${reg.nombre}">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="row-btn edit" title="Editar" 
-                    data-region-id="${reg.id}"
-                    data-region-name="${reg.nombre}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="row-btn delete" title="Eliminar" 
-                    data-region-id="${reg.id}"
-                    data-region-name="${reg.nombre}">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+            <td data-label="Fecha Creación">${fechaCreacion}</td>
+            <td data-label="Acciones">
+                <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button type="button" class="btn" data-action="view" data-region-id="${reg.id}" data-region-name="${reg.nombre}" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button type="button" class="btn btn-warning" data-action="edit" data-region-id="${reg.id}" data-region-name="${reg.nombre}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-danger" data-action="delete" data-region-id="${reg.id}" data-region-name="${reg.nombre}" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
             </td>
         `;
         
@@ -137,31 +137,32 @@ function renderRegionsTable(regiones, admin) {
 
 // ========== CONFIGURAR EVENTOS ==========
 function setupEvents(admin, regionManager) {
+    // El botón "Agregar Región" ahora es un enlace <a> en el header, pero mantenemos el evento por si acaso
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            window.location.href = '/users/admin/crearRegiones/crearRegiones.html';
+        addBtn.addEventListener('click', (e) => {
+            // No prevenir el default para que el enlace funcione.
+            // window.location.href = '/users/admin/crearRegiones/crearRegiones.html';
         });
     }
     
-    const table = document.querySelector('.regions-table');
-    if (table) {
-        table.addEventListener('click', async (e) => {
+    const tableBody = document.getElementById('regionsTableBody');
+    if (tableBody) {
+        tableBody.addEventListener('click', async (e) => {
             const button = e.target.closest('button');
-            const row = e.target.closest('tr');
             
-            if (!button || !row) return;
+            if (!button) return;
             
             const regionId = button.getAttribute('data-region-id');
             const regionName = button.getAttribute('data-region-name');
             
-            if (button.classList.contains('edit')) {
+            if (button.classList.contains('btn-warning') || button.dataset.action === 'edit') {
                 await editRegion(regionId, regionName, admin);
             } 
-            else if (button.classList.contains('view')) {
+            else if (button.classList.contains('btn') && !button.classList.contains('btn-warning') && !button.classList.contains('btn-danger') || button.dataset.action === 'view') {
                 await viewRegionDetails(regionId, regionName, admin, regionManager);
             }
-            else if (button.classList.contains('delete')) {
+            else if (button.classList.contains('btn-danger') || button.dataset.action === 'delete') {
                 await deleteRegion(regionId, regionName, admin, regionManager);
             }
         });
@@ -193,6 +194,11 @@ async function viewRegionDetails(regionId, regionName, admin, regionManager) {
             throw new Error('Región no encontrada');
         }
         
+        // Asegurarse de que la región tenga organizacionCamelCase
+        if (!region.organizacionCamelCase) {
+            region.organizacionCamelCase = admin.organizacionCamelCase;
+        }
+        
         showRegionDetails(region, regionName);
         
     } catch (error) {
@@ -207,190 +213,201 @@ async function viewRegionDetails(regionId, regionName, admin, regionManager) {
 
 // ========== MOSTRAR DETALLES EN MODAL ==========
 function showRegionDetails(region, regionName) {
-    // Usar los métodos de la clase Region para formatear las fechas
-    const fechaCreacion = region.getFechaCreacionFormateada();
-    const fechaActualizacion = region.getFechaActualizacionFormateada();
+    const fechaCreacion = region.getFechaCreacionFormateada ? region.getFechaCreacionFormateada() : (region.fechaCreacion || 'No disponible');
+    const fechaActualizacion = region.getFechaActualizacionFormateada ? region.getFechaActualizacionFormateada() : (region.fechaActualizacion || 'No disponible');
     
     Swal.fire({
-        title: `Detalles de: ${regionName}`,
-        html: `
-            <div class="swal-details-container">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="display: inline-block; width: 60px; height: 60px; background: ${region.color}; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>
-                </div>
-                
-                <div class="swal-details-grid">
-                    <div class="swal-detail-card">
-                        <p><strong>Nombre:</strong><br><span>${region.nombre}</span></p>
-                        <p><strong>Color:</strong><br>
-                            <span style="display: inline-block; padding: 4px 8px; background: ${region.color}; color: white; border-radius: 4px; font-family: monospace;">
-                                ${region.color}
-                            </span>
-                        </p>
-                        <p><strong>Organización:</strong><br><span>${region.organizacion || 'No especificada'}</span></p>
+        title: regionName,
+        html:/*html*/ `
+            <div style="text-align: left;">
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-info-circle" style="margin-right: 8px;"></i>INFORMACIÓN GENERAL
+                    </h4>
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                        <span style="display:inline-block; width:40px; height:40px; background:${region.color}; border-radius:6px; border:2px solid rgba(255,255,255,0.1);"></span>
+                        <span style="color: var(--color-text-secondary);"><strong>Color:</strong> ${region.color}</span>
+                        <span style="color: var(--color-text-secondary);"><strong>Organización:</strong> ${region.organizacion || 'No especificada'}</span>
                     </div>
-                    <div class="swal-detail-card">
-                        <p><strong>Fecha de creación:</strong><br><span>${fechaCreacion}</span></p>
-                        <p><strong>Última actualización:</strong><br><span>${fechaActualizacion}</span></p>
-                        <p><strong>Creado por:</strong><br><span>${region.creadoPorNombre || 'Sistema'}</span></p>
-                        <p><strong>Email creador:</strong><br><span>${region.creadoPorEmail || 'No disponible'}</span></p>
+                </div>
+
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-calendar-alt" style="margin-right: 8px;"></i>FECHAS
+                    </h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Creación</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar-plus" style="margin-right: 5px;"></i> ${fechaCreacion}</span>
+                        </div>
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Actualización</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar-check" style="margin-right: 5px;"></i> ${fechaActualizacion}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-user-shield" style="margin-right: 8px;"></i>AUDITORÍA
+                    </h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Creado por</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-user" style="margin-right: 5px;"></i> ${region.creadoPorNombre || 'Sistema'}</span>
+                        </div>
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Email</small>
+                            <span style="color: var(--color-text-secondary);">${region.creadoPorEmail || 'No disponible'}</span>
+                        </div>
                     </div>
                 </div>
             </div>
         `,
         width: 700,
         showCloseButton: true,
-        showConfirmButton: false
+        showConfirmButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'EDITAR REGIÓN',
+        cancelButtonText: 'CERRAR',
+        confirmButtonColor: 'var(--color-accent-primary)',
+        cancelButtonColor: 'var(--color-border-light)',
+        reverseButtons: false, // false = Cancelar a la izquierda, Editar a la derecha
+        focusCancel: true,
+        preConfirm: () => {
+            window.location.href = `/users/admin/editarRegiones/editarRegiones.html?id=${region.id}&org=${region.organizacionCamelCase || ''}`;
+        }
     });
 }
 
 // ========== ELIMINAR REGIÓN ==========
 async function deleteRegion(regionId, regionName, admin, regionManager) {
-    // Mostrar confirmación antes de eliminar
     const confirmResult = await Swal.fire({
         title: '¿Eliminar región?',
         html: `
-            <div style="text-align: center;">
-                <p style="font-size: 1.1rem; margin-bottom: 15px;">
-                    ¿Estás seguro de que deseas eliminar la región <strong>"${regionName}"</strong>?
-                </p>
-                <div style=" padding: 10px; border-radius: 4px; margin-top: 10px;">
-                    <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
-                    <strong>Advertencia:</strong> Esta acción no se puede deshacer.
-                </div>
-            </div>
+            <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
+                <strong style="color: #ff4d4d;">"${escapeHTML(regionName)}"</strong>
+            </p>
+            <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
+                Esta acción no se puede deshacer.
+            </p>
         `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'SÍ, ELIMINAR',
+        confirmButtonText: 'ELIMINAR',
         cancelButtonText: 'CANCELAR',
+        reverseButtons: false,
+        focusCancel: true,
         confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        allowOutsideClick: false
+        cancelButtonColor: '#3085d6'
     });
 
     if (!confirmResult.isConfirmed) return;
 
-    // Mostrar loader
     Swal.fire({
         title: 'Verificando región...',
-        text: 'Por favor espera',
+        html: '<i class="fas fa-spinner fa-spin" style="font-size: 48px;"></i>',
         allowOutsideClick: false,
         allowEscapeKey: false,
-        showConfirmButton: false,
-        didOpen: () => Swal.showLoading()
+        showConfirmButton: false
     });
 
     try {
-        // Intentar eliminar la región (ahora valida internamente si tiene sucursales)
         await regionManager.deleteRegion(regionId, admin.organizacionCamelCase);
         
         Swal.close();
         
-        // Mostrar mensaje de éxito
         await Swal.fire({
             icon: 'success',
             title: '¡Región eliminada!',
-            html: `La región <strong>"${regionName}"</strong> ha sido eliminada correctamente.`,
-            confirmButtonText: 'ACEPTAR'
+            text: `"${regionName}" ha sido eliminada.`,
+            timer: 2000,
+            showConfirmButton: false
         });
         
-        // Recargar la lista de regiones
         await loadRegions(admin, regionManager);
         
     } catch (error) {
         console.error('❌ Error eliminando región:', error);
         Swal.close();
         
-        // Verificar si el error es por sucursales asociadas
         if (error.message.includes('tiene') && error.message.includes('sucursal')) {
-            // Mostrar error detallado con las sucursales que están usando la región
             Swal.fire({
                 icon: 'error',
                 title: 'No se puede eliminar la región',
                 html: `
                     <div style="text-align: left;">
-                        <p style="color: 15px;">
-                            <i class="fas fa-exclamation-circle"></i> 
+                        <p style="color: var(--color-text-secondary);">
+                            <i class="fas fa-exclamation-circle" style="color: #ef4444; margin-right: 8px;"></i> 
                             ${error.message}
                         </p>
                     </div>
                 `,
-                confirmButtonText: 'ENTENDIDO',
-                confirmButtonColor: '#3085d6'
+                confirmButtonText: 'ENTENDIDO'
             });
         } else {
-            // Otro tipo de error
             Swal.fire({
                 icon: 'error',
                 title: 'Error al eliminar',
-                text: error.message || 'Ocurrió un error al eliminar la región. Por favor intenta de nuevo.',
-                confirmButtonText: 'ENTENDIDO'
+                text: error.message || 'Ocurrió un error al eliminar la región.'
             });
         }
     }
 }
 
-// ========== ESTADO VACÍO ==========
-function showEmptyState(admin) {
-    const tbody = document.querySelector('.regions-table tbody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="4" class="empty-state">
-                <div class="empty-state-content">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <h3>No hay regiones en ${admin.organizacion || 'tu organización'}</h3>
-                    <p>Comienza agregando tu primera región</p>
-                    <button class="add-first-btn" id="addFirstRegion">
-                        <i class="fas fa-plus-circle"></i> CREAR PRIMERA REGIÓN
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `;
-    
-    document.getElementById('addFirstRegion')?.addEventListener('click', () => {
-        window.location.href = '/users/admin/crearRegiones/crearRegiones.html';
-    });
-}
-
-// ========== ESTADO DE CARGA ==========
+// ========== ESTADOS DE CARGA Y ERROR ==========
 function showLoadingState() {
-    const tbody = document.querySelector('.regions-table tbody');
+    const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
         <tr>
-            <td colspan="4" class="loading-state">
-                <div class="loading-content">
-                    <div class="loading-spinner"></div>
-                    <h3>Cargando regiones...</h3>
-                    <p>Obteniendo datos de Firebase</p>
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
+                <div style="text-align:center;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--color-accent-primary); margin-bottom:16px;"></i>
+                    <h5 style="color:white;">Cargando regiones...</h5>
+                    <p style="color:var(--color-text-dim);">Obteniendo datos de Firebase</p>
                 </div>
             </td>
         </tr>
     `;
 }
 
-// ========== MANEJO DE ERRORES ==========
-function showNoAdminMessage() {
-    const tbody = document.querySelector('.regions-table tbody');
+function showEmptyState(admin) {
+    const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
         <tr>
-            <td colspan="4" class="error-state">
-                <div class="error-content">
-                    <i class="fas fa-user-slash"></i>
-                    <h3>No se detectó sesión activa de administrador</h3>
-                    <p>Para gestionar regiones, debes iniciar sesión como administrador.</p>
-                    <div class="error-buttons">
-                        <button onclick="window.location.reload()" class="reload-btn">
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
+                <div style="text-align:center;">
+                    <i class="fas fa-map-marked-alt" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
+                    <h5 style="color:white;">No hay regiones en ${admin.organizacion || 'tu organización'}</h5>
+                    <a href="/users/admin/crearRegiones/crearRegiones.html" class="btn-nueva-region-header" style="display:inline-flex; margin-top:16px;">
+                        <i class="fas fa-plus-circle"></i> Crear Primera Región
+                    </a>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+function showNoAdminMessage() {
+    const tbody = document.getElementById('regionsTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
+                <div style="text-align:center;">
+                    <i class="fas fa-user-slash" style="font-size:48px; color:#ef4444; margin-bottom:16px;"></i>
+                    <h5 style="color:white;">No se detectó sesión activa de administrador</h5>
+                    <p style="color:var(--color-text-dim);">Para gestionar regiones, debes iniciar sesión como administrador.</p>
+                    <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+                        <button onclick="window.location.reload()" class="btn" style="padding:8px 16px !important; min-width:auto !important;">
                             <i class="fas fa-sync-alt"></i> Recargar
                         </button>
-                        <button onclick="window.location.href='/users/visitors/login/login.html'" class="login-btn">
+                        <button onclick="window.location.href='/users/visitors/login/login.html'" class="btn btn-warning" style="padding:8px 16px !important; min-width:auto !important;">
                             <i class="fas fa-sign-in-alt"></i> Iniciar sesión
                         </button>
                     </div>
@@ -401,19 +418,18 @@ function showNoAdminMessage() {
 }
 
 function showFirebaseError(error) {
-    const tbody = document.querySelector('.regions-table tbody');
+    const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
         <tr>
-            <td colspan="4" class="error-state">
-                <div class="error-content firebase-error">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>Error al cargar regiones</h3>
-                    <p class="error-message">${error.message || 'Error de conexión con Firebase'}</p>
-                    <p>Verifica tu conexión a internet y recarga la página.</p>
-                    <button onclick="window.location.reload()" class="reload-btn">
-                        <i class="fas fa-sync-alt"></i> Recargar página
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
+                <div style="text-align:center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:48px; color:#f97316; margin-bottom:16px;"></i>
+                    <h5 style="color:white;">Error al cargar regiones</h5>
+                    <p style="color:var(--color-text-dim); max-width:400px; margin:0 auto;">${error.message || 'Error de conexión con Firebase'}</p>
+                    <button onclick="window.location.reload()" class="btn" style="margin-top:16px; padding:8px 16px !important; min-width:auto !important;">
+                        <i class="fas fa-sync-alt"></i> Recargar
                     </button>
                 </div>
             </td>
@@ -422,20 +438,28 @@ function showFirebaseError(error) {
 }
 
 function showError(message) {
-    const tbody = document.querySelector('.regions-table tbody');
+    const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
         <tr>
-            <td colspan="4" class="error-state">
-                <div class="error-content">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <h3>${message}</h3>
-                    <button onclick="window.location.reload()" class="reload-btn">
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
+                <div style="text-align:center;">
+                    <i class="fas fa-exclamation-circle" style="font-size:48px; color:#ef4444; margin-bottom:16px;"></i>
+                    <h5 style="color:white;">${message}</h5>
+                    <button onclick="window.location.reload()" class="btn" style="margin-top:16px; padding:8px 16px !important; min-width:auto !important;">
                         <i class="fas fa-sync-alt"></i> Reintentar
                     </button>
                 </div>
             </td>
         </tr>
     `;
+}
+
+// ========== UTILIDADES ==========
+function escapeHTML(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

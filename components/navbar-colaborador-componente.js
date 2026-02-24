@@ -52,7 +52,7 @@ class NavbarComplete {
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
-        const styles = `
+        const styles = /*css*/`
             /* Navbar fijo en la parte superior */
             #complete-navbar {
                 position: fixed;

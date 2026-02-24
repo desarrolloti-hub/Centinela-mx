@@ -1,354 +1,373 @@
-// ARCHIVO JS PARA CREAR REGIÓN
-// ==================== IMPORTS ====================
-import { RegionManager } from '/clases/region.js';
+// crearRegiones.js - VERSIÓN MEJORADA (BASADA EN CREAR CATEGORÍAS)
 
-// ==================== INICIALIZACIÓN ====================
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof Swal === 'undefined') {
-        console.error('❌ SweetAlert2 no está cargado.');
-        return;
+// LÍMITES DE CARACTERES
+const LIMITES = {
+    NOMBRE_REGION: 50
+};
+
+// =============================================
+// CLASE PRINCIPAL - CrearRegionController
+// =============================================
+class CrearRegionController {
+    constructor() {
+        this.regionManager = null;
+        this.usuarioActual = null;
+        this.loadingOverlay = null;
+
+        // Inicializar
+        this._init();
     }
-    
-    initRegionForm();
-});
 
-async function initRegionForm() {
-    
-    // Obtener elementos del DOM
-    const elements = obtenerElementosDOM();
-    if (!elements) return;
-    
-    // Instanciar RegionManager
-    const regionManager = new RegionManager();
+    // ========== INICIALIZACIÓN ==========
+    async _init() {
+        try {
+            // 1. Cargar usuario
+            this._cargarUsuario();
 
-    try {
-        // Esperar a que auth esté listo y obtener el usuario actual
-        const currentAdmin = await obtenerUsuarioActual();
-        if (!currentAdmin) return;
-        
-        // Verificar que sea administrador
-        if (!currentAdmin.esAdministrador()) {
-            throw new Error('Solo los administradores pueden crear regiones');
-        }
-        
-        // Configurar interfaz con datos del admin
-        actualizarInterfazConAdmin(elements, currentAdmin);
-        
-        // Configurar handlers
-        configurarHandlers(elements, regionManager, currentAdmin);
-                
-    } catch (error) {
-        console.error('❌ Error inicializando formulario:', error);
-        mostrarErrorSistema(error.message);
-    }
-}
-
-// ========== FUNCIONES DE UTILIDAD ==========
-
-function obtenerElementosDOM() {
-    try {
-        return {
-            // Campos del formulario
-            organization: document.getElementById('organization'),
-            nombreRegion: document.getElementById('nombreRegion'),
-            colorRegion: document.getElementById('colorRegion'),
-            
-            // Botones
-            registerBtn: document.getElementById('registerBtn'),
-            cancelBtn: document.getElementById('cancelBtn'),
-            mainMessage: document.getElementById('mainMessage'),
-            
-            // Títulos
-            adminNameSubtitle: document.getElementById('adminNameSubtitle'),
-            formMainTitle: document.getElementById('formMainTitle'),
-            formSubTitle: document.getElementById('formSubTitle')
-        };
-    } catch (error) {
-        console.error('❌ Error obteniendo elementos DOM:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de configuración',
-            text: 'No se pudieron cargar los elementos del formulario.'
-        });
-        return null;
-    }
-}
-
-// Función para obtener el usuario actual desde el objeto global auth
-async function obtenerUsuarioActual(maxAttempts = 15, delay = 500) {
-    try {
-        // Mostrar loader
-        Swal.fire({
-            title: 'Cargando información...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-        
-        // Esperar a que auth.currentUser esté disponible
-        for (let i = 0; i < maxAttempts; i++) {
-            if (window.userManager && window.userManager.currentUser) {
-                const admin = window.userManager.currentUser;
-                Swal.close();
-                return admin;
+            if (!this.usuarioActual) {
+                throw new Error('No se pudo cargar información del usuario');
             }
-            await new Promise(resolve => setTimeout(resolve, delay));
+
+            // 2. Cargar RegionManager
+            await this._cargarRegionManager();
+
+            // 3. Configurar eventos
+            this._configurarEventos();
+
+            // 4. Configurar organización automática
+            this._configurarOrganizacion();
+
+            // 5. Inicializar validaciones
+            this._inicializarValidaciones();
+
+            // 6. Actualizar UI con información de la organización
+            this._actualizarInfoOrganizacion();
+
+        } catch (error) {
+            console.error('Error inicializando:', error);
+            this._mostrarError('Error al inicializar: ' + error.message);
+            this._redirigirAlLogin();
         }
-        
-        throw new Error('No se pudo detectar el usuario actual');
-        
-    } catch (error) {
-        Swal.close();
-        console.error('❌ Error obteniendo usuario actual:', error);
-        
+    }
+
+    // ========== CARGA DE DEPENDENCIAS ==========
+    async _cargarRegionManager() {
+        try {
+            const { RegionManager } = await import('/clases/region.js');
+            this.regionManager = new RegionManager();
+        } catch (error) {
+            console.error('Error cargando RegionManager:', error);
+            throw error;
+        }
+    }
+
+    // ========== CARGA DE USUARIO ==========
+    _cargarUsuario() {
+        try {
+            // Intentar adminInfo (para administradores)
+            const adminInfo = localStorage.getItem('adminInfo');
+            if (adminInfo) {
+                const adminData = JSON.parse(adminInfo);
+                this.usuarioActual = {
+                    id: adminData.id || `admin_${Date.now()}`,
+                    uid: adminData.uid || adminData.id,
+                    nombreCompleto: adminData.nombreCompleto || 'Administrador',
+                    organizacion: adminData.organizacion || 'Sin organización',
+                    organizacionCamelCase: adminData.organizacionCamelCase ||
+                        this._generarCamelCase(adminData.organizacion),
+                    correo: adminData.correoElectronico || ''
+                };
+                return;
+            }
+
+            // Intentar userData
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (userData && Object.keys(userData).length > 0) {
+                this.usuarioActual = {
+                    id: userData.uid || userData.id || `user_${Date.now()}`,
+                    uid: userData.uid || userData.id,
+                    nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                    organizacion: userData.organizacion || userData.empresa || 'Sin organización',
+                    organizacionCamelCase: userData.organizacionCamelCase ||
+                        this._generarCamelCase(userData.organizacion || userData.empresa),
+                    correo: userData.correo || userData.email || ''
+                };
+                return;
+            }
+
+            // Datos por defecto (para desarrollo)
+            this.usuarioActual = {
+                id: `admin_${Date.now()}`,
+                uid: `admin_${Date.now()}`,
+                nombreCompleto: 'Administrador',
+                organizacion: 'pollos Ray',
+                organizacionCamelCase: 'pollosRay',
+                correo: 'admin@centinela.com'
+            };
+
+        } catch (error) {
+            console.error('Error cargando usuario:', error);
+            throw error;
+        }
+    }
+
+    _generarCamelCase(texto) {
+        if (!texto || typeof texto !== 'string') return 'sinOrganizacion';
+        return texto
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+            .replace(/[^a-zA-Z0-9]/g, '');
+    }
+
+    // ========== CONFIGURACIÓN DE ORGANIZACIÓN ==========
+    _configurarOrganizacion() {
+        const orgInput = document.getElementById('organization');
+        if (orgInput) {
+            orgInput.value = this.usuarioActual.organizacion;
+        }
+    }
+
+    _actualizarInfoOrganizacion() {
+        // Podrías mostrar información adicional si lo deseas
+    }
+
+    // ========== CONFIGURACIÓN DE EVENTOS ==========
+    _configurarEventos() {
+        try {
+            // Botón Volver a la lista
+            const btnVolverLista = document.getElementById('btnVolverLista');
+            if (btnVolverLista) {
+                btnVolverLista.addEventListener('click', () => this._volverALista());
+            }
+
+            // Botón Cancelar
+            const btnCancelar = document.getElementById('cancelBtn');
+            if (btnCancelar) {
+                btnCancelar.addEventListener('click', () => this._cancelarCreacion());
+            }
+
+            // Botón Crear Región
+            const btnCrearRegion = document.getElementById('registerBtn');
+            if (btnCrearRegion) {
+                btnCrearRegion.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this._validarYGuardar();
+                });
+            }
+
+            // Formulario Submit
+            const form = document.getElementById('formRegionPrincipal');
+            if (form) {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this._validarYGuardar();
+                });
+            }
+
+            // Color Preview (igual que categorías)
+            const colorPreviewCard = document.getElementById('colorPreviewCard');
+            const colorPickerNative = document.getElementById('colorRegion');
+
+            if (colorPreviewCard && colorPickerNative) {
+                colorPreviewCard.addEventListener('click', () => {
+                    colorPickerNative.click();
+                });
+
+                colorPickerNative.addEventListener('input', (e) => {
+                    const color = e.target.value;
+                    const colorDisplay = document.getElementById('colorDisplay');
+                    const colorHex = document.getElementById('colorHex');
+                    
+                    if (colorDisplay) {
+                        colorDisplay.style.backgroundColor = color;
+                    }
+                    if (colorHex) {
+                        colorHex.textContent = color;
+                    }
+                });
+            }
+
+            // Contador de caracteres para el nombre
+            const nombreInput = document.getElementById('nombreRegion');
+            if (nombreInput) {
+                nombreInput.addEventListener('input', () => this._actualizarContadorCaracteres());
+                nombreInput.maxLength = LIMITES.NOMBRE_REGION;
+            }
+
+        } catch (error) {
+            console.error('Error configurando eventos:', error);
+        }
+    }
+
+    _inicializarValidaciones() {
+        this._actualizarContadorCaracteres();
+    }
+
+    _actualizarContadorCaracteres() {
+        const nombreInput = document.getElementById('nombreRegion');
+        const contador = document.getElementById('contadorCaracteres');
+
+        if (nombreInput && contador) {
+            const longitud = nombreInput.value.length;
+            contador.textContent = `${longitud}/${LIMITES.NOMBRE_REGION}`;
+
+            // Cambiar color si se acerca al límite
+            if (longitud > LIMITES.NOMBRE_REGION * 0.9) {
+                contador.style.color = 'var(--color-warning)';
+            } else if (longitud > LIMITES.NOMBRE_REGION * 0.95) {
+                contador.style.color = 'var(--color-danger)';
+            } else {
+                contador.style.color = 'var(--color-accent-primary)';
+            }
+        }
+    }
+
+    // ========== VALIDACIÓN Y GUARDADO ==========
+    _validarYGuardar() {
+        // Validar nombre
+        const nombreInput = document.getElementById('nombreRegion');
+        const nombre = nombreInput.value.trim();
+
+        if (!nombre) {
+            nombreInput.classList.add('is-invalid');
+            this._mostrarError('El nombre de la región es obligatorio');
+            return;
+        }
+
+        if (nombre.length < 3) {
+            nombreInput.classList.add('is-invalid');
+            this._mostrarError('El nombre debe tener al menos 3 caracteres');
+            return;
+        }
+
+        if (nombre.length > LIMITES.NOMBRE_REGION) {
+            nombreInput.classList.add('is-invalid');
+            this._mostrarError(`El nombre no puede exceder ${LIMITES.NOMBRE_REGION} caracteres`);
+            return;
+        }
+
+        nombreInput.classList.remove('is-invalid');
+
+        // Obtener datos
+        const datos = this._obtenerDatosFormulario();
+
+        // Guardar
+        this._guardarRegion(datos);
+    }
+
+    _obtenerDatosFormulario() {
+        const nombre = document.getElementById('nombreRegion').value.trim();
+        const color = document.getElementById('colorRegion')?.value || '#2f8cff';
+
+        return {
+            nombre: nombre,
+            color: color,
+            organizacion: this.usuarioActual.organizacion,
+            organizacionCamelCase: this.usuarioActual.organizacionCamelCase
+        };
+    }
+
+    async _guardarRegion(datos) {
+        const btnCrear = document.getElementById('registerBtn');
+        const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check"></i>Crear Región';
+
+        try {
+            if (btnCrear) {
+                btnCrear.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+                btnCrear.disabled = true;
+            }
+
+
+            // Crear región
+            const resultado = await this.regionManager.createRegion(
+                datos,
+                this.usuarioActual.organizacionCamelCase,
+                {
+                    id: this.usuarioActual.id,
+                    email: this.usuarioActual.correo,
+                    nombre: this.usuarioActual.nombreCompleto
+                }
+            );
+
+            Swal.close();
+
+            // Mostrar éxito
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Región creada!',
+                html: `
+                    <div style="text-align: left;">
+                        <p><strong>Nombre:</strong> ${datos.nombre}</p>
+                        <p><strong>Color:</strong> 
+                            <span style="display:inline-block; width:20px; height:20px; background:${datos.color}; border-radius:4px; margin-right:8px; vertical-align:middle;"></span>
+                            ${datos.color}
+                        </p>
+                    </div>
+                `,
+                confirmButtonText: 'Ver regiones'
+            });
+
+            this._volverALista();
+
+        } catch (error) {
+            console.error('Error guardando región:', error);
+            Swal.close();
+            this._mostrarError(error.message || 'No se pudo crear la región');
+        } finally {
+            if (btnCrear) {
+                btnCrear.innerHTML = originalHTML;
+                btnCrear.disabled = false;
+            }
+        }
+    }
+
+    // ========== NAVEGACIÓN ==========
+    _volverALista() {
+        window.location.href = '/users/admin/regiones/regiones.html';
+    }
+
+    _cancelarCreacion() {
+        Swal.fire({
+            title: '¿Cancelar?',
+            text: 'Los cambios no guardados se perderán',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, cancelar',
+            cancelButtonText: 'No, continuar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this._volverALista();
+            }
+        });
+    }
+
+    _redirigirAlLogin() {
         Swal.fire({
             icon: 'error',
-            title: 'Error de sesión',
-            text: error.message,
+            title: 'Sesión no válida',
+            text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
-        
-        return null;
     }
-}
 
-function actualizarInterfazConAdmin(elements, admin) {
-    // Actualizar campo de organización (solo lectura)
-    if (elements.organization) {
-        elements.organization.value = admin.organizacion;
-        elements.organization.setAttribute('readonly', true);
-    }
-    
-    // Actualizar nombre del administrador en el subtítulo
-    if (elements.adminNameSubtitle) {
-        elements.adminNameSubtitle.textContent = `Administrador: ${admin.nombreCompleto} | ${admin.organizacion}`;
-    }
-    
-    // Actualizar títulos con información del admin
-    if (elements.formMainTitle) {
-        elements.formMainTitle.textContent = `CREAR REGIÓN PARA ${admin.organizacion.toUpperCase()}`;
-    }
-    
-    // Mostrar mensaje informativo
-    mostrarMensajeInfoAdmin(elements.mainMessage, admin);
-}
-
-function mostrarMensajeInfoAdmin(element, admin) {
-    if (!element) return;
-    
-    element.innerHTML = `
-        <div style="background: #e8f4fd; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                <i class="fas fa-user-shield" style="color: #0A2540;"></i>
-                <strong style="color: #0A2540;">Creando región como administrador</strong>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
-                <div><strong>Administrador:</strong> ${admin.nombreCompleto}</div>
-                <div><strong>Organización:</strong> ${admin.organizacion}</div>
-            </div>
-        </div>
-    `;
-}
-
-// ========== CONFIGURAR HANDLERS ==========
-
-function configurarHandlers(elements, regionManager, admin) {
-    // Vista previa del color
-    if (elements.colorRegion) {
-        elements.colorRegion.addEventListener('input', function() {
-            const colorDisplay = document.getElementById('colorDisplay');
-            if (colorDisplay) {
-                colorDisplay.style.backgroundColor = this.value;
-            }
-        });
-    }
-    
-    // Botón de registro
-    if (elements.registerBtn) {
-        elements.registerBtn.addEventListener('click', (e) => registrarRegion(e, elements, regionManager, admin));
-    }
-    
-    // Botón cancelar
-    if (elements.cancelBtn) {
-        elements.cancelBtn.addEventListener('click', () => cancelarRegistro());
-    }
-}
-
-// ========== VALIDACIÓN ==========
-
-function validarFormulario(elements) {
-    const errores = [];
-    
-    // Nombre de la región
-    if (!elements.nombreRegion || !elements.nombreRegion.value.trim()) {
-        errores.push('El nombre de la región es obligatorio');
-    } else if (elements.nombreRegion.value.trim().length < 3) {
-        errores.push('El nombre de la región debe tener al menos 3 caracteres');
-    } else if (elements.nombreRegion.value.trim().length > 50) {
-        errores.push('El nombre de la región no puede exceder los 50 caracteres');
-    }
-    
-    return errores;
-}
-
-// ========== REGISTRO DE REGIÓN ==========
-
-async function registrarRegion(event, elements, regionManager, admin) {
-    event.preventDefault();
-    
-    // Validar formulario
-    const errores = validarFormulario(elements);
-    if (errores.length > 0) {
+    // ========== UTILIDADES ==========
+    _mostrarError(mensaje) {
         Swal.fire({
             icon: 'error',
-            title: 'Error de validación',
-            html: errores.map(msg => `• ${msg}`).join('<br>'),
-            confirmButtonText: 'CORREGIR'
+            title: 'Error',
+            text: mensaje,
+            confirmButtonText: 'Entendido'
         });
-        return;
-    }
-    
-    const nombreRegion = elements.nombreRegion.value.trim();
-    const colorRegion = elements.colorRegion ? elements.colorRegion.value : '#0A2540';
-    
-    // Mostrar confirmación
-    const confirmResult = await Swal.fire({
-        title: 'Crear región',
-        html: `
-            <div style="text-align: left; padding: 10px 0;">
-                <p><strong>Nombre:</strong> ${nombreRegion}</p>
-                <p><strong>Color:</strong> 
-                    <span style="display: inline-block; width: 20px; height: 20px; background: ${colorRegion}; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span>
-                    ${colorRegion}
-                </p>
-                <p><strong>Organización:</strong> ${admin.organizacion}</p>
-            </div>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'CONFIRMAR',
-        cancelButtonText: 'CANCELAR',
-        allowOutsideClick: false
-    });
-    
-    if (!confirmResult.isConfirmed) return;
-    
-    // Mostrar loader
-    Swal.fire({
-        title: 'Creando región...',
-        text: 'Por favor espera...',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        didOpen: () => Swal.showLoading()
-    });
-    
-    try {
-        const regionData = {
-            nombre: nombreRegion,
-            color: colorRegion,
-            organizacion: admin.organizacion
-        };
-        
-        // Crear región usando RegionManager (Firebase generará el ID)
-        const resultado = await regionManager.createRegion(
-            regionData,
-            admin.organizacionCamelCase,
-            {
-                id: admin.id,
-                email: admin.correoElectronico,
-                nombre: admin.nombreCompleto
-            }
-        );
-        
-        // Mostrar éxito
-        Swal.close();
-        await mostrarExitoRegistro(regionData, resultado.id);
-        
-    } catch (error) {
-        console.error('❌ Error creando región:', error);
-        Swal.close();
-        manejarErrorRegistro(error);
     }
 }
 
-async function mostrarExitoRegistro(regionData, regionId) {
-    const result = await Swal.fire({
-        icon: 'success',
-        title: '¡Región creada!',
-        html: `
-            <div style="text-align: center;">
-                <p><strong>Nombre:</strong> ${regionData.nombre}</p>
-                <p><strong>Color:</strong> 
-                    <span style="display: inline-block; width: 20px; height: 20px; background: ${regionData.color}; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span>
-                    ${regionData.color}
-                </p>
-                <p><strong>Organización:</strong> ${regionData.organizacion}</p>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'CREAR OTRA',
-        cancelButtonText: 'IR A REGIONES',
-        allowOutsideClick: false
-    });
-    
-    if (result.isConfirmed) {
-        // Limpiar formulario para nueva región
-        document.getElementById('nombreRegion').value = '';
-        if (document.getElementById('colorRegion')) {
-            document.getElementById('colorRegion').value = '#0A2540';
-        }
-        // Resetear vista previa del color si existe
-        const colorDisplay = document.getElementById('colorDisplay');
-        if (colorDisplay) {
-            colorDisplay.style.backgroundColor = '#0A2540';
-        }
-    } else {
-        window.location.href = '/users/admin/regiones/regiones.html';
-    }
-}
-
-function manejarErrorRegistro(error) {
-    let errorMessage = 'Ocurrió un error al crear la región';
-    
-    if (error.message) {
-        errorMessage = error.message;
-    }
-    
-    Swal.fire({
-        icon: 'error',
-        title: 'Error al crear región',
-        text: errorMessage,
-        confirmButtonText: 'ENTENDIDO'
-    });
-}
-
-// ========== FUNCIONES AUXILIARES ==========
-
-function cancelarRegistro() {
-    Swal.fire({
-        title: '¿Cancelar registro?',
-        text: "Se perderán los datos ingresados",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'CONFIRMAR',
-        cancelButtonText: 'CANCELAR'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = '/users/admin/regiones/regiones.html';
-        }
-    });
-}
-
-function mostrarErrorSistema(mensaje) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Error del sistema',
-        text: mensaje || 'Ha ocurrido un error inesperado',
-        confirmButtonText: 'ENTENDIDO'
-    });
-}
-
-// ========== EXPORT ==========
-export { initRegionForm };
+// =============================================
+// INICIALIZACIÓN
+// =============================================
+document.addEventListener('DOMContentLoaded', () => {
+    new CrearRegionController();
+});
