@@ -7,6 +7,8 @@
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <!-- NUEVO: Estilos específicos para regiones, basados en categorias.css -->
+    <link rel="stylesheet" href="regiones.css">
     
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -14,13 +16,10 @@
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <!-- Archivo para PWA -->
     <link rel="manifest" href="/manifest.json">
-    <!-- Estilos modulo -->
-    <link rel="stylesheet" href="">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
-    <!-- SEO Básico -->
+    <!-- SEO Básico (sin cambios) -->
     <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
     <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
     <meta name="author" content="Centinela-MX">
@@ -79,39 +78,56 @@
 <body>
     <canvas id="particle-canvas"></canvas>
 
-    <div class="admin-container" style="background-color: gray;">
-        <!-- Page Header -->
+    <!-- Contenedor principal con la clase correcta -->
+    <div class="admin-container">
+        <!-- Page Header - IDÉNTICO A CATEGORÍAS -->
         <div class="page-header">
             <h1>
-                <i class="fas fa-map-marked-alt"></i> Gestión de Regiones
+                <i class="fas fa-map-marked-alt"></i>
+                Gestión de Regiones
             </h1>
             <div class="header-description">
                 Administra las regiones de tu organización. Puedes agregar, editar y ver detalles de cada región.
             </div>
         </div>
 
-        <!-- Contenedor de la tabla -->
-        <div class="table-wrapper">
-            <table class="regions-table">
-                <button class="add-btn" id="addBtn">
-                    <i class="fas fa-plus-circle"></i> Agregar Región
-                </button>
-                <br>
-                <thead>
-                    <tr>
-                        <th>NOMBRE</th>
-                        <th>COLOR</th>
-                        <th>FECHA CREACIÓN</th>
-                        <th>ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody id="regionsTableBody">
-                    <!-- Se llenará dinámicamente -->
-                </tbody>
-            </table>
+        <!-- Tabla de Regiones - ESTRUCTURA IDÉNTICA A CATEGORÍAS -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-globe-americas"></i> Lista de Regiones</h5>
+                <!-- Botón con la clase adaptada -->
+                <a href="/users/admin/crearRegiones/crearRegiones.html" class="btn-nueva-region-header" id="addBtn">
+                    <i class="fas fa-plus"></i> Nueva Región
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="tablaRegiones">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Color</th>
+                                <th>Fecha Creación</th>
+                                <th style="width: 180px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="regionsTableBody">
+                            <!-- Se llenará dinámicamente por regiones.js -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación (Estructura opcional, por si la implementas) -->
+                <!-- <div class="pagination-container">
+                    <div class="pagination-info" id="paginationInfo"></div>
+                    <nav>
+                        <ul class="pagination" id="pagination"></ul>
+                    </nav>
+                </div> -->
+            </div>
         </div>
     </div>
-
+<br>
     <script type="module" src="/components/themeloader.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>

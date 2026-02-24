@@ -825,7 +825,7 @@ class NavbarComplete {
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
-        navbar.innerHTML = `
+        navbar.innerHTML = /*html*/`
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
