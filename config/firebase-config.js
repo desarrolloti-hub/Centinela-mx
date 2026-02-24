@@ -1,10 +1,11 @@
 // firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getFirestore} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
 
-//Configuracion de firebase
+// Configuracion de firebase
 const firebaseConfig = {
   apiKey: "AIzaSyB5D45RI21rRAJB9mlt1NeI6N4d3PDyEqg",
   authDomain: "centinela-mx.firebaseapp.com",
@@ -19,7 +20,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 const analytics = getAnalytics(app);
 
-//Exportar la instancia de Firestore
-export {db, auth, app, analytics};
+// Exportar las instancias
+export { db, auth, storage, app, analytics };
