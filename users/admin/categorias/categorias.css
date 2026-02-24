@@ -86,9 +86,10 @@
 }
 
 /* =============================================
-   BOTÓN NUEVA CATEGORÍA - VERSIÓN RESPONSIVA CORREGIDA
+   BOTÓN NUEVA CATEGORÍA - ESTILO BASE PARA TODOS LOS BOTONES PRINCIPALES
    ============================================= */
-.btn-nueva-categoria-header {
+.btn-nueva-categoria-header,
+.btn-agregar-sub {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
@@ -111,22 +112,26 @@
     white-space: nowrap;
     box-sizing: border-box;
     min-width: 120px;
+    cursor: pointer;
 }
 
-.btn-nueva-categoria-header:hover {
+.btn-nueva-categoria-header:hover,
+.btn-agregar-sub:hover {
     transform: translateY(-2px) !important;
     background: linear-gradient(145deg, #1a1a1a, #100f0f) !important;
     box-shadow: 0 0 20px rgba(192, 192, 192, 0.3) !important;
     border-color: #ffffff !important;
 }
 
-.btn-nueva-categoria-header i {
+.btn-nueva-categoria-header i,
+.btn-agregar-sub i {
     font-size: 13px !important;
     color: var(--color-text-primary) !important;
     flex-shrink: 0;
 }
 
-.btn-nueva-categoria-header::after {
+.btn-nueva-categoria-header::after,
+.btn-agregar-sub::after {
     content: '';
     position: absolute;
     top: -50%;
@@ -145,7 +150,8 @@
     pointer-events: none;
 }
 
-.btn-nueva-categoria-header:hover::after {
+.btn-nueva-categoria-header:hover::after,
+.btn-agregar-sub:hover::after {
     opacity: 1;
     transform: rotate(30deg) translate(10%, 10%);
 }
@@ -238,7 +244,7 @@
 }
 
 /* Icono de expansión (como toggle-icon en áreas) */
-.expand-icon {
+.toggle-icon {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -252,15 +258,13 @@
     border: 2px solid transparent !important;
 }
 
-.expand-icon i {
+.toggle-icon i {
     color: white !important;
     font-size: 16px !important;
     transition: transform 0.2s ease !important;
 }
 
-.expand-icon:hover {
-    background: #3a3a3a !important;
-    border-color: #2f8cff !important;
+.toggle-icon:hover {
     transform: scale(1.05) !important;
 }
 
@@ -444,32 +448,6 @@ tr.categoria-row.expanded .expand-icon i {
 .subcategorias-header h6 i {
     color: var(--color-text-primary);
     filter: drop-shadow(0 0 5px var(--color-accent-primary));
-    flex-shrink: 0;
-}
-
-.btn-agregar-sub {
-    background: linear-gradient(135deg, #10b981, #059669);
-    border: none;
-    color: white;
-    padding: 8px 16px;
-    border-radius: var(--border-radius-xl);
-    font-size: 0.8rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    transition: all var(--transition-default);
-    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
-    white-space: nowrap;
-}
-
-.btn-agregar-sub:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
-}
-
-.btn-agregar-sub i {
-    color: white;
     flex-shrink: 0;
 }
 
@@ -833,7 +811,8 @@ tr.categoria-row.expanded .expand-icon i {
         margin-bottom: 0;
     }
 
-    .btn-nueva-categoria-header {
+    .btn-nueva-categoria-header,
+    .btn-agregar-sub {
         width: 100%;
         justify-content: center;
         padding: 10px 12px !important;
@@ -846,7 +825,8 @@ tr.categoria-row.expanded .expand-icon i {
         min-width: unset;
     }
 
-    .btn-nueva-categoria-header i {
+    .btn-nueva-categoria-header i,
+    .btn-agregar-sub i {
         font-size: 13px !important;
     }
 
@@ -932,14 +912,16 @@ tr.categoria-row.expanded .expand-icon i {
         width: 100%;
     }
     
-    .btn-nueva-categoria-header {
+    .btn-nueva-categoria-header,
+    .btn-agregar-sub {
         padding: 8px 10px !important;
         font-size: 12px !important;
         gap: 5px !important;
         min-height: 40px;
     }
 
-    .btn-nueva-categoria-header i {
+    .btn-nueva-categoria-header i,
+    .btn-agregar-sub i {
         font-size: 12px !important;
     }
 
@@ -960,13 +942,15 @@ tr.categoria-row.expanded .expand-icon i {
 
 /* Para pantallas extremadamente pequeñas (menos de 360px) */
 @media (max-width: 360px) {
-    .btn-nueva-categoria-header {
+    .btn-nueva-categoria-header,
+    .btn-agregar-sub {
         font-size: 11px !important;
         padding: 6px 8px !important;
         min-height: 36px;
     }
     
-    .btn-nueva-categoria-header i {
+    .btn-nueva-categoria-header i,
+    .btn-agregar-sub i {
         font-size: 11px !important;
     }
 
