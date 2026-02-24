@@ -1,4 +1,4 @@
-// crearSucursales.js - VERSIÓN CON MAPA, LISTENER DE COORDENADAS Y BOTONES DESPUÉS DEL MAPA
+// crearSucursales.js - VERSIÓN CORREGIDA (NO BORRA COORDENADAS)
 import { SucursalManager, ESTADOS_MEXICO } from '/clases/sucursal.js';
 
 // Variable global para debugging
@@ -35,6 +35,9 @@ class CrearSucursalController {
         
         // Timeout para debounce del listener de coordenadas
         this.coordenadasTimeout = null;
+        
+        // Bandera para evitar loops infinitos
+        this.actualizandoDesdeMapa = false;
 
         this._init();
     }
@@ -77,7 +80,7 @@ class CrearSucursalController {
         }
     }
 
-    // ========== NUEVO: LISTENER DE COORDENADAS ==========
+    // ========== LISTENER DE COORDENADAS ==========
     _configurarListenerCoordenadas() {
         const latInput = document.getElementById('latitudSucursal');
         const lngInput = document.getElementById('longitudSucursal');
@@ -107,10 +110,10 @@ class CrearSucursalController {
         }
     }
 
-    // ========== NUEVO: OBTENER DIRECCIÓN DESDE COORDENADAS ==========
+    // ========== OBTENER DIRECCIÓN DESDE COORDENADAS ==========
     async _obtenerDireccionDesdeCoordenadas(lat, lng) {
         try {
-            this._mostrarNotificacion('Obteniendo dirección...', 'info', 1000);
+            this._mostrarNotificacion('Obteniendo dirección exacta...', 'info', 1000);
 
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
             const data = await response.json();
@@ -120,7 +123,7 @@ class CrearSucursalController {
                 const ciudadInput = document.getElementById('ciudadSucursal');
                 const estadoSelect = document.getElementById('estadoSucursal');
 
-                // Actualizar dirección
+                // Actualizar dirección (SOLO si no está vacía o es diferente)
                 if (direccionInput) {
                     direccionInput.value = data.display_name;
                 }
@@ -265,13 +268,13 @@ class CrearSucursalController {
                 btnVolverLista.addEventListener('click', () => this._volverALista());
             }
 
-            // Botón Cancelar (ahora está después del mapa)
+            // Botón Cancelar
             const btnCancelar = document.getElementById('cancelarBtn');
             if (btnCancelar) {
                 btnCancelar.addEventListener('click', () => this._cancelarCreacion());
             }
 
-            // Botón Crear Sucursal (ahora está después del mapa)
+            // Botón Crear Sucursal
             const btnCrear = document.getElementById('crearSucursalBtn');
             if (btnCrear) {
                 btnCrear.addEventListener('click', (e) => {
@@ -712,14 +715,14 @@ class CrearSucursalController {
                 Arrástrame para ajustar la posición
             `).openPopup();
 
-            // Evento cuando se arrastra el marcador - AHORA OBTIENE DIRECCIÓN
+            // Evento cuando se arrastra el marcador
             this.marker.on('dragend', (event) => {
                 const position = event.target.getLatLng();
                 this._actualizarCoordenadasMapa(position.lat, position.lng);
                 this._obtenerDireccionDesdeCoordenadas(position.lat, position.lng);
             });
 
-            // Evento cuando se hace clic en el mapa - AHORA OBTIENE DIRECCIÓN
+            // Evento cuando se hace clic en el mapa
             this.map.on('click', (e) => {
                 this._colocarMarcador(e.latlng);
                 this._obtenerDireccionDesdeCoordenadas(e.latlng.lat, e.latlng.lng);
@@ -753,13 +756,13 @@ class CrearSucursalController {
             });
         }
 
-        // Botón buscar dirección
+        // Botón buscar dirección - CORREGIDO: YA NO BORRA COORDENADAS
         const btnBuscar = document.getElementById('btnBuscarDireccion');
         if (btnBuscar) {
             btnBuscar.addEventListener('click', () => this._buscarDireccionEnMapa());
         }
 
-        // Botón obtener ubicación actual - AHORA OBTIENE DIRECCIÓN
+        // Botón obtener ubicación actual
         const btnUbicacion = document.getElementById('btnObtenerUbicacion');
         if (btnUbicacion) {
             btnUbicacion.addEventListener('click', () => this._obtenerUbicacionActual());
@@ -774,7 +777,9 @@ class CrearSucursalController {
                 const lat = parseFloat(latInput.value);
                 const lng = parseFloat(lngInput.value);
                 if (!isNaN(lat) && !isNaN(lng)) {
+                    this.actualizandoDesdeMapa = true;
                     this._colocarMarcador([lat, lng]);
+                    this.actualizandoDesdeMapa = false;
                 }
             });
 
@@ -782,12 +787,14 @@ class CrearSucursalController {
                 const lat = parseFloat(latInput.value);
                 const lng = parseFloat(lngInput.value);
                 if (!isNaN(lat) && !isNaN(lng)) {
+                    this.actualizandoDesdeMapa = true;
                     this._colocarMarcador([lat, lng]);
+                    this.actualizandoDesdeMapa = false;
                 }
             });
         }
 
-        // ===== EVENTO PARA CUANDO SE SELECCIONA UN ESTADO =====
+        // Evento para cuando se selecciona un estado
         const estadoSelect = document.getElementById('estadoSucursal');
         if (estadoSelect) {
             estadoSelect.addEventListener('change', (e) => {
@@ -812,12 +819,14 @@ class CrearSucursalController {
         const latFormatted = Number(lat).toFixed(6);
         const lngFormatted = Number(lng).toFixed(6);
         
-        // Actualizar campos del formulario
-        const latInput = document.getElementById('latitudSucursal');
-        const lngInput = document.getElementById('longitudSucursal');
-        
-        if (latInput) latInput.value = latFormatted;
-        if (lngInput) lngInput.value = lngFormatted;
+        // Actualizar campos del formulario (SOLO si no estamos actualizando desde el mapa)
+        if (!this.actualizandoDesdeMapa) {
+            const latInput = document.getElementById('latitudSucursal');
+            const lngInput = document.getElementById('longitudSucursal');
+            
+            if (latInput) latInput.value = latFormatted;
+            if (lngInput) lngInput.value = lngFormatted;
+        }
         
         // Actualizar display en el mapa
         const mapLat = document.getElementById('mapLatitud');
@@ -827,6 +836,7 @@ class CrearSucursalController {
         if (mapLng) mapLng.textContent = lngFormatted;
     }
 
+    // ========== BUSCAR DIRECCIÓN - CORREGIDO ==========
     async _buscarDireccionEnMapa() {
         const direccion = document.getElementById('direccionSucursal').value;
         
@@ -836,7 +846,11 @@ class CrearSucursalController {
         }
 
         try {
-            this._mostrarCargando('Buscando dirección...');
+            this._mostrarCargando('Buscando dirección exacta...');
+            
+            // Guardar las coordenadas actuales por si acaso
+            const latActual = document.getElementById('latitudSucursal').value;
+            const lngActual = document.getElementById('longitudSucursal').value;
             
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}&limit=1&countrycodes=mx`);
             const data = await response.json();
@@ -845,10 +859,13 @@ class CrearSucursalController {
                 const lat = parseFloat(data[0].lat);
                 const lon = parseFloat(data[0].lon);
                 
+                // Colocar marcador en las nuevas coordenadas
                 this._colocarMarcador([lat, lon]);
-                this._obtenerDireccionDesdeCoordenadas(lat, lon);
                 
-                this._mostrarNotificacion('Dirección encontrada en el mapa', 'success', 2000);
+                // Obtener la dirección EXACTA de estas coordenadas
+                await this._obtenerDireccionDesdeCoordenadas(lat, lon);
+                
+                this._mostrarNotificacion('Dirección encontrada milimétricamente 🔍', 'success', 2000);
             } else {
                 this._mostrarNotificacion('No se encontró la dirección en México', 'warning');
             }
@@ -866,7 +883,7 @@ class CrearSucursalController {
             return;
         }
 
-        this._mostrarCargando('Obteniendo tu ubicación...');
+        this._mostrarCargando('Obteniendo tu ubicación exacta...');
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -905,7 +922,6 @@ class CrearSucursalController {
         
         // Coordenadas aproximadas de los estados de México
         const coordenadasEstados = {
-            // Norte
             "Aguascalientes": [21.8853, -102.2916],
             "Baja California": [32.5000, -115.5000],
             "Baja California Sur": [25.0000, -111.5000],
@@ -941,25 +957,19 @@ class CrearSucursalController {
             "Zacatecas": [23.5000, -102.5000]
         };
 
-        // Buscar coordenadas del estado seleccionado
         const coords = coordenadasEstados[estado];
         
         if (coords) {
-            // Centrar el mapa en el estado
             this.map.setView(coords, 8);
-            
-            // Crear un popup temporal indicando el estado
             L.popup()
                 .setLatLng(coords)
                 .setContent(`<b>${estado}</b><br>Haz clic en el mapa para colocar la sucursal`)
                 .openOn(this.map);
             
-            // Mostrar notificación
             this._mostrarNotificacion(`Mapa centrado en ${estado}`, 'info', 2000);
         } else {
-            // Si no encontramos el estado, usamos coordenadas por defecto
             console.warn(`No se encontraron coordenadas para el estado: ${estado}`);
-            this.map.setView([23.6345, -102.5528], 5); // Centro de México
+            this.map.setView([23.6345, -102.5528], 5);
         }
     }
 }
