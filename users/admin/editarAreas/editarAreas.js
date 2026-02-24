@@ -1,4 +1,6 @@
 // editarAreas.js - VERSIÓN CON VALIDACIONES DE CARACTERES Y MENSAJES SIMPLIFICADOS
+// SweetAlerts sin estilos personalizados
+
 window.editarAreaDebug = {
     estado: 'iniciando',
     controller: null
@@ -35,10 +37,13 @@ async function cargarDependencias() {
 }
 
 function mostrarErrorInterfaz(mensaje) {
-    const container = document.querySelector('.container-fluid, .centinela-container') || document.body;
+    const container = document.querySelector('.centinela-container') || document.body;
     const errorDiv = document.createElement('div');
-    errorDiv.className = 'alert alert-danger m-4';
-    errorDiv.innerHTML = `<h4 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${mensaje}</h4>`;
+    errorDiv.className = 'error-carga';
+    errorDiv.innerHTML = `
+        <h4><i class="fas fa-exclamation-triangle"></i> Error de Carga</h4>
+        <p>${mensaje}</p>
+    `;
     container.prepend(errorDiv);
 }
 
@@ -211,49 +216,13 @@ class EditarAreaController {
         }
     }
     
-    configurarOrganizacionAutomatica() {
-        const organizacionSelect = document.getElementById('organizacion');
-        if (!organizacionSelect || !this.userManager.currentUser) return;
-        
-        const organizacionUsuario = this.userManager.currentUser.organizacion;
-        
-        organizacionSelect.innerHTML = '';
-        
-        const option = document.createElement('option');
-        option.value = this.userManager.currentUser.organizacionCamelCase || 'adminOrg';
-        option.text = `${organizacionUsuario} (Organización del Administrador)`;
-        option.selected = true;
-        organizacionSelect.add(option);
-        
-        organizacionSelect.disabled = true;
-        organizacionSelect.style.backgroundColor = '#f8f9fa';
-        organizacionSelect.style.cursor = 'not-allowed';
-        
-        this.mostrarInfoOrganizacion();
-    }
-    
-    mostrarInfoOrganizacion() {
-        if (document.querySelector('.organizacion-info')) return;
-        
-        const formHeader = document.querySelector('.card-header');
-        if (!formHeader || !this.userManager.currentUser) return;
-        
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'organizacion-info alert alert-info mt-3 mx-3';
-        infoDiv.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="fas fa-building me-3 fs-4"></i>
-                <div>
-                    <h6 class="mb-1">Organización: <strong>${this.userManager.currentUser.organizacion}</strong></h6>
-                    <p class="mb-0 text-muted small">
-                        <i class="fas fa-user-shield me-1"></i>
-                        Administrador: ${this.userManager.currentUser.nombreCompleto}
-                    </p>
-                </div>
-            </div>
-        `;
-        
-        formHeader.parentNode.insertBefore(infoDiv, formHeader.nextSibling);
+    init() {
+        this.inicializarEventos();
+        this.inicializarValidaciones();
+        this.cargarResponsables();
+        this.inicializarGestionCargos();
+        this.cargarArea();
+        this.aplicarLimitesCaracteres();
     }
     
     aplicarLimitesCaracteres() {
@@ -288,16 +257,6 @@ class EditarAreaController {
             return false;
         }
         return true;
-    }
-    
-    init() {
-        this.inicializarEventos();
-        this.inicializarValidaciones();
-        this.configurarOrganizacionAutomatica();
-        this.cargarResponsables();
-        this.inicializarGestionCargos();
-        this.cargarArea();
-        this.aplicarLimitesCaracteres();
     }
     
     inicializarEventos() {
@@ -374,8 +333,6 @@ class EditarAreaController {
                 setTimeout(() => this.volverALista(), 2000);
                 return;
             }
-            
-            this.mostrarCargando('Cargando información...');
             
             const area = await this.areaManager.getAreaById(
                 areaId, 
@@ -484,7 +441,6 @@ class EditarAreaController {
         }
         
         this.renderizarCargos();
-        this.actualizarContadorCargos();
     }
     
     agregarCargo() {
@@ -498,7 +454,6 @@ class EditarAreaController {
         
         this.cargos.push(nuevoCargo);
         this.renderizarCargos();
-        this.actualizarContadorCargos();
         
         setTimeout(() => {
             const input = document.getElementById(`cargo_nombre_${cargoId}`);
@@ -512,28 +467,13 @@ class EditarAreaController {
             text: "Esta acción no se puede deshacer",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#ff4d4d',
-            cancelButtonColor: '#3085d6',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)'
+            cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
                 this.cargos = this.cargos.filter(c => c.id !== cargoId);
                 this.renderizarCargos();
-                this.actualizarContadorCargos();
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Eliminado',
-                    text: 'El cargo fue eliminado correctamente',
-                    confirmButtonColor: '#2f8cff',
-                    background: 'var(--color-bg-secondary)',
-                    color: 'var(--color-text-primary)',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
+                this.mostrarNotificacion('Cargo eliminado', 'success');
             }
         });
     }
@@ -544,10 +484,10 @@ class EditarAreaController {
         
         if (this.cargos.length === 0) {
             cargosList.innerHTML = `
-                <div class="cargos-empty" id="cargosEmpty">
+                <div class="cargos-empty">
                     <i class="fas fa-briefcase mb-2"></i>
                     <p>No hay cargos agregados</p>
-                    <small class="text-muted">Haga clic en "Agregar Cargo" para añadir uno</small>
+                    <small>Haga clic en "Agregar Cargo" para añadir uno</small>
                 </div>
             `;
             return;
@@ -567,32 +507,30 @@ class EditarAreaController {
                             Eliminar
                         </button>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                    <div style="display: flex; flex-wrap: wrap; margin: 0 -10px;">
+                        <div style="width: 50%; padding: 0 10px; box-sizing: border-box;">
                             <label class="form-label">Nombre del Cargo *</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
                                 <input type="text" class="form-control" 
                                        id="cargo_nombre_${cargo.id}"
                                        value="${this.escapeHTML(cargo.nombre)}"
                                        placeholder="Ej: Gerente, Analista, Coordinador"
                                        maxlength="${LIMITES.NOMBRE_CARGO}"
-                                       onchange="window.editarAreaDebug.controller.actualizarCargo('${cargo.id}', 'nombre', this.value)">
+                                       oninput="window.editarAreaDebug.controller.actualizarCargo('${cargo.id}', 'nombre', this.value)">
                             </div>
                             <div class="char-limit-info">
                                 <span class="char-counter">${cargo.nombre?.length || 0}/${LIMITES.NOMBRE_CARGO}</span>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div style="width: 50%; padding: 0 10px; box-sizing: border-box;">
                             <label class="form-label">Descripción del Cargo</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-align-left"></i></span>
                                 <input type="text" class="form-control" 
                                        id="cargo_descripcion_${cargo.id}"
                                        value="${this.escapeHTML(cargo.descripcion)}"
                                        placeholder="Responsabilidades principales"
                                        maxlength="${LIMITES.DESCRIPCION_CARGO}"
-                                       onchange="window.editarAreaDebug.controller.actualizarCargo('${cargo.id}', 'descripcion', this.value)">
+                                       oninput="window.editarAreaDebug.controller.actualizarCargo('${cargo.id}', 'descripcion', this.value)">
                             </div>
                             <div class="char-limit-info">
                                 <span class="char-counter">${cargo.descripcion?.length || 0}/${LIMITES.DESCRIPCION_CARGO}</span>
@@ -604,39 +542,21 @@ class EditarAreaController {
         });
         
         cargosList.innerHTML = html;
-        
-        this.cargos.forEach(cargo => {
-            const nombreInput = document.getElementById(`cargo_nombre_${cargo.id}`);
-            if (nombreInput) {
-                nombreInput.addEventListener('input', (e) => {
-                    this.actualizarCargo(cargo.id, 'nombre', e.target.value);
-                    const counter = e.target.closest('.col-md-6').querySelector('.char-counter');
-                    if (counter) counter.textContent = `${e.target.value.length}/${LIMITES.NOMBRE_CARGO}`;
-                });
-            }
-            
-            const descInput = document.getElementById(`cargo_descripcion_${cargo.id}`);
-            if (descInput) {
-                descInput.addEventListener('input', (e) => {
-                    this.actualizarCargo(cargo.id, 'descripcion', e.target.value);
-                    const counter = e.target.closest('.col-md-6').querySelector('.char-counter');
-                    if (counter) counter.textContent = `${e.target.value.length}/${LIMITES.DESCRIPCION_CARGO}`;
-                });
-            }
-        });
     }
     
     actualizarCargo(cargoId, campo, valor) {
         const cargo = this.cargos.find(c => c.id === cargoId);
         if (cargo) {
+            // Validar límites de caracteres
+            if (campo === 'nombre' && valor.length > LIMITES.NOMBRE_CARGO) {
+                valor = valor.substring(0, LIMITES.NOMBRE_CARGO);
+                this.mostrarNotificacion(`El nombre no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`, 'warning', 3000);
+            }
+            if (campo === 'descripcion' && valor.length > LIMITES.DESCRIPCION_CARGO) {
+                valor = valor.substring(0, LIMITES.DESCRIPCION_CARGO);
+                this.mostrarNotificacion(`La descripción no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`, 'warning', 3000);
+            }
             cargo[campo] = valor;
-        }
-    }
-    
-    actualizarContadorCargos() {
-        const counter = document.getElementById('cargosCounter');
-        if (counter) {
-            counter.textContent = `(${this.cargos.length} ${this.cargos.length === 1 ? 'cargo' : 'cargos'})`;
         }
     }
     
@@ -697,19 +617,14 @@ class EditarAreaController {
             return false;
         }
         
-        const tieneCargoValido = this.cargos.some(c => c.nombre && c.nombre.trim() !== '');
-        if (!tieneCargoValido) {
+        const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
+        if (cargosValidos.length === 0) {
             this.mostrarError('Debe agregar al menos un cargo con nombre');
             return false;
         }
         
-        for (const cargo of this.cargos) {
-            if (cargo.nombre && cargo.nombre.length > LIMITES.NOMBRE_CARGO) {
-                this.mostrarError(`El nombre del cargo no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`);
-                return false;
-            }
-            if (cargo.descripcion && cargo.descripcion.length > LIMITES.DESCRIPCION_CARGO) {
-                this.mostrarError(`La descripción del cargo no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`);
+        for (const cargo of cargosValidos) {
+            if (!this.validarLongitudCargo(cargo.nombre, cargo.descripcion)) {
                 return false;
             }
         }
@@ -750,12 +665,8 @@ class EditarAreaController {
                 text: '¿Está seguro de guardar los cambios realizados?',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#2f8cff',
-                cancelButtonColor: '#545454',
                 confirmButtonText: 'Sí, guardar',
-                cancelButtonText: 'Cancelar',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)'
+                cancelButtonText: 'Cancelar'
             });
             
             if (result.isConfirmed) {
@@ -813,10 +724,7 @@ class EditarAreaController {
             icon: 'error',
             title: 'Sesión expirada',
             text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login',
-            confirmButtonColor: '#2f8cff',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)'
+            confirmButtonText: 'Ir al login'
         }).then(() => {
             window.location.href = '/users/visitors/login/login.html';
         });
@@ -827,8 +735,6 @@ class EditarAreaController {
             if (!this.areaActual) {
                 throw new Error('No hay área para actualizar');
             }
-            
-            this.mostrarCargando('Actualizando área...');
             
             await this.areaManager.actualizarArea(
                 this.areaActual.id,
@@ -842,15 +748,12 @@ class EditarAreaController {
             Object.assign(this.areaActual, datosActualizados);
             this.datosOriginales = this.obtenerDatosFormulario();
             
-            // MENSAJE SIMPLIFICADO - SOLO ÉXITO
             await Swal.fire({
                 icon: 'success',
                 title: '¡Guardado!',
                 text: 'Cambios guardados correctamente',
                 timer: 2000,
-                showConfirmButton: false,
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)'
+                showConfirmButton: false
             });
             
             setTimeout(() => this.volverALista(), 2100);
@@ -872,12 +775,8 @@ class EditarAreaController {
                 text: "Los cambios no guardados se perderán",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#ff4d4d',
-                cancelButtonColor: '#3085d6',
                 confirmButtonText: 'Sí, cancelar',
-                cancelButtonText: 'No, continuar',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)'
+                cancelButtonText: 'No, continuar'
             }).then((result) => {
                 if (result.isConfirmed) this.volverALista();
             });
@@ -886,35 +785,6 @@ class EditarAreaController {
         }
     }
     
-    mostrarCargando(mensaje = 'Cargando...') {
-        if (this.loadingOverlay) this.ocultarCargando();
-        
-        const overlay = document.createElement('div');
-        overlay.className = 'loading-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            flex-direction: column;
-        `;
-        
-        overlay.innerHTML = `
-            <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status">
-                <span class="visually-hidden">${mensaje}</span>
-            </div>
-            <div class="text-light fs-5">${mensaje}</div>
-        `;
-        
-        document.body.appendChild(overlay);
-        this.loadingOverlay = overlay;
-    }
     
     ocultarCargando() {
         if (this.loadingOverlay?.parentNode) {
@@ -929,12 +799,14 @@ class EditarAreaController {
     
     mostrarNotificacion(mensaje, tipo = 'info', duracion = 3000) {
         Swal.fire({
+            title: tipo === 'success' ? 'Éxito' : 
+                   tipo === 'error' ? 'Error' : 
+                   tipo === 'warning' ? 'Advertencia' : 'Información',
+            text: mensaje,
             icon: tipo,
-            title: mensaje,
             timer: duracion,
-            showConfirmButton: false,
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)'
+            timerProgressBar: true,
+            showConfirmButton: false
         });
     }
 }

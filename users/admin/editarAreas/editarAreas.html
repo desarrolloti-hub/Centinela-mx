@@ -33,16 +33,17 @@
 
     <!-- Contenedor principal -->
     <div class="centinela-container">
-        <!-- Header con la clase page-header añadida -->
-        <div class="centinela-row page-header">
+        <!-- Header -->
+        <div class="centinela-row">
             <div class="centinela-col-12">
-                <div class="d-flex flex-column align-items-center text-center">
+                <div class="header-content">
                     <h1 class="h3 mb-3">
                         <i class="fas fa-edit me-2"></i>
                         Editar Área
                     </h1>
-                    <div class="text-muted" style="max-width: 700px;">
-                        Modifique la información del área seleccionada.
+                    <div class="text-muted">
+                        <i class="fas fa-building"></i>
+                        Modifique la información del área seleccionada.<br>
                         Todos los campos marcados con * son obligatorios.
                     </div>
                 </div>
@@ -50,24 +51,25 @@
         </div>
 
         <!-- Formulario de Edición -->
-        <div class="centinela-row">
-            <div class="centinela-col-12">
-                <div class="centinela-card">
-                    <div class="centinela-card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Área: <span id="nombreAreaTitulo" style="color: var(--color-accent-secondary);">Cargando...</span>
-                        </h5>
-                        <button type="button" id="btnVolverLista" class="btn-volver">
-                            <i class="fas fa-arrow-left"></i>
-                            Volver a la Lista
-                        </button>
-                    </div>
-                    <div class="centinela-card-body">
-                        <form id="formEditarArea">
-                            <input type="hidden" id="areaId">
-
-                            <!-- Sección 1: Información Básica -->
+        <form id="formEditarArea">
+            <input type="hidden" id="areaId">
+            
+            <!-- Tarjeta 1: Información Principal del Área -->
+            <div class="centinela-row">
+                <div class="centinela-col-12">
+                    <div class="centinela-card">
+                        <div class="centinela-card-header">
+                            <h5 class="card-title">
+                                <i class="fas fa-edit me-2"></i>
+                                Información del Área
+                                <span id="nombreAreaTitulo" style="color: var(--color-accent-secondary); margin-left: 10px;">Cargando...</span>
+                            </h5>
+                            <button type="button" id="btnVolverLista" class="btn-volver">
+                                <i class="fas fa-arrow-left"></i>Volver a la lista
+                            </button>
+                        </div>
+                        <div class="centinela-card-body">
+                            <!-- Sección: Información Básica -->
                             <div class="centinela-row mb-4">
                                 <div class="centinela-col-12">
                                     <h6 class="border-bottom pb-2 mb-3">
@@ -77,7 +79,7 @@
 
                                 <div class="col-md-6 mb-3">
                                     <label for="nombreArea" class="form-label">
-                                        <i class="fas fa-building me-1"></i>Nombre del Área
+                                        <i class="fas fa-building me-1"></i>Nombre del Área <span class="required">*</span>
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-building"></i></span>
@@ -87,43 +89,6 @@
                                     <div class="form-text">Modifique el nombre completo del área o departamento</div>
                                 </div>
 
-                                <!-- ORGANIZACIÓN -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="organizacion" class="form-label">
-                                        <i class="fas fa-sitemap me-1"></i>Organización
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-building"></i></span>
-                                        <select class="form-select" id="organizacion" required>
-                                            <option value="">Cargando organización...</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-text">Organización a la que pertenece el área</div>
-                                </div>
-                            </div>
-
-                            <!-- Sección 2: Descripción -->
-                            <div class="centinela-row mb-4">
-                                <div class="centinela-col-12">
-                                    <h6 class="border-bottom pb-2 mb-3">
-                                        <i class="fas fa-align-left me-2"></i>Descripción
-                                    </h6>
-                                </div>
-
-                                <div class="col-md-12 mb-3">
-                                    <label for="descripcionArea" class="form-label">
-                                        <i class="fas fa-align-left me-1"></i>Descripción del Área
-                                    </label>
-                                    <textarea class="form-control" id="descripcionArea" rows="4"
-                                        placeholder="Describa las funciones principales, objetivos y responsabilidades del área..."
-                                        required></textarea>
-                                    <div class="form-text">Ingrese una descripción detallada del área</div>
-                                    <div class="mt-1">
-                                        <small class="text-muted">Caracteres: <span id="contadorCaracteres">0</span></small>
-                                    </div>
-                                </div>
-
-                                <!-- RESPONSABLE -->
                                 <div class="col-md-6 mb-3">
                                     <label for="responsable" class="form-label">
                                         <i class="fas fa-user me-1"></i>Responsable del Área
@@ -131,7 +96,7 @@
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
                                         <select class="form-select" id="responsable">
-                                            <option value="">Cargando responsables...</option>
+                                            <option value="">Seleccionar responsable...</option>
                                         </select>
                                     </div>
                                     <div class="form-text mt-1">
@@ -139,24 +104,42 @@
                                         Persona encargada del área (opcional)
                                     </div>
                                 </div>
+
+                                <div class="col-md-12 mb-3">
+                                    <label for="descripcionArea" class="form-label">
+                                        <i class="fas fa-align-left me-1"></i>Descripción del Área <span class="required">*</span>
+                                    </label>
+                                    <textarea class="form-control" id="descripcionArea" rows="4"
+                                        placeholder="Describa las funciones principales, objetivos y responsabilidades del área..."
+                                        required></textarea>
+                                    <div class="form-text">Ingrese una descripción detallada del área</div>
+                                    <div class="char-limit-info">
+                                        <span class="char-counter" id="contadorCaracteres">0/500</span>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                          
-
-                            <!-- Sección 3: Cargos del Área -->
+            <!-- Tarjeta 2: Gestión de Cargos -->
+            <div class="centinela-row mt-4">
+                <div class="centinela-col-12">
+                    <div class="centinela-card">
+                        <div class="centinela-card-header">
+                            <h5 class="card-title"><i class="fas fa-briefcase me-2"></i>Gestión de Cargos</h5>
+                        </div>
+                        <div class="centinela-card-body">
+                            <!-- Sección de Cargos -->
                             <div class="centinela-row mb-4">
                                 <div class="centinela-col-12">
-                                    <h6 class="border-bottom pb-2 mb-3">
-                                        <i class="fas fa-briefcase me-2"></i>Cargos del Área
-                                        <span class="cargos-counter" id="cargosCounter">(0 cargos)</span>
-                                    </h6>
-
                                     <!-- Contenedor dinámico de cargos -->
                                     <div id="cargosList" class="cargos-container">
-                                        <div class="cargos-empty" id="cargosEmpty">
+                                        <div class="cargos-empty">
                                             <i class="fas fa-briefcase mb-2"></i>
                                             <p>No hay cargos agregados</p>
-                                            <small class="text-muted">Haga clic en "Agregar Cargo" para añadir uno</small>
+                                            <small>Haga clic en "Agregar Cargo" para añadir uno</small>
                                         </div>
                                     </div>
 
@@ -170,20 +153,25 @@
                                 </div>
                             </div>
 
-                            <!-- Botones de acción -->
+                            <!-- Mensaje informativo -->
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Los cargos que modifique aquí estarán disponibles para asignar a los empleados de esta área.
+                            </div>
+                            
                             <div class="d-flex justify-content-start gap-3 mt-4">
-                                <button type="button" class="btn-secondary" id="btnCancelar">
-                                    <i class="fas fa-times me-2"></i>Cancelar
-                                </button>
                                 <button type="submit" class="btn-success" id="btnGuardarCambios">
                                     <i class="fas fa-save me-2"></i>Guardar Cambios
                                 </button>
+                                <button type="button" class="btn-secondary" id="btnCancelar">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
     <br>
 
