@@ -253,10 +253,19 @@
     border-radius: var(--border-radius-xl);
     font-size: 0.75rem;
     font-weight: 600;
-    background: rgba(47, 140, 255, 0.15);
-    color: #2f8cff;
+    background: var(--color-accent-primary);
+    color: var(--color-text-primary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    border: 1px solid var(--color-border-accent);
+    box-shadow: 0 0 10px var(--color-glow-primary);
+    transition: all 0.3s ease;
+}
+
+.tipo-badge:hover {
+    background: var(--color-accent-secondary);
+    box-shadow: 0 0 15px var(--color-glow-secondary);
+    transform: translateY(-1px);
 }
 
 /* =============================================

@@ -77,6 +77,29 @@
     }
     }
     </script>
+    
+    <style>
+        /* Estilos adicionales para los botones dentro del mapa */
+        .map-footer-buttons {
+            padding: 20px;
+            background: var(--color-bg-secondary);
+            border-top: 1px solid var(--color-border-light);
+            display: flex;
+            justify-content: flex-start;
+            gap: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .map-footer-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .map-footer-buttons .btn {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <canvas id="particle-canvas"></canvas>
@@ -184,7 +207,7 @@
                                         <input type="text" class="form-control" id="direccionSucursal"
                                             placeholder="Calle, número, colonia, código postal" required>
                                     </div>
-                                    <div class="form-help-text">Dirección completa</div>
+                                    <div class="form-help-text">Dirección completa</div><br>
                                 </div>
                             </div>
 
@@ -192,15 +215,15 @@
                             <h6 class="section-title" style="margin-top: 20px;"><i class="fas fa-phone-alt"></i>Contacto</h6>
                             
                             <div class="form-field">
-                                <label for="contactoSucursal" class="form-label">Teléfono de Contacto</label>
+                                <label for="contactoSucursal" class="form-label">Teléfono de Contacto *</label>
                                 <div class="input-group">
                                     <span class="input-group-icon"><i class="fas fa-phone"></i></span>
                                     <input type="tel" class="form-control" id="contactoSucursal"
-                                        placeholder="Ej: 8112345678">
+                                        placeholder="Ej: 8112345678" required>
                                 </div>
                                 <div class="form-help-text">
                                     <i class="fas fa-info-circle"></i>
-                                    Opcional - 10 dígitos, solo números
+                                    10 dígitos, solo números
                                 </div>
                             </div>
 
@@ -231,16 +254,6 @@
                                     <span>Formato decimal (grados). Ejemplo: 25.686614, -100.316112</span>
                                 </div>
                             </div>
-
-                            <!-- BOTONES DE ACCIÓN -->
-                            <div class="action-buttons-container">
-                                <button type="button" class="btn btn-success" id="crearSucursalBtn">
-                                    <i class="fas fa-check"></i>Crear Sucursal
-                                </button>
-                                <button type="button" class="btn btn-secondary" id="cancelarBtn">
-                                    <i class="fas fa-times"></i>Cancelar
-                                </button>
-                            </div>
                         </form>
                     </div>
                 </div>
@@ -248,7 +261,7 @@
         </div>
 
         <!-- ============================================= -->
-        <!-- MAPA - NUEVA SECCIÓN (DESPUÉS DEL FORMULARIO) -->
+        <!-- MAPA CON BOTONES DENTRO DEL CONTENEDOR -->
         <!-- ============================================= -->
         <div class="map-container">
             <div class="card">
@@ -298,6 +311,18 @@
                             <i class="fas fa-mouse-pointer"></i>
                             <span>Arrastra el marcador para ajustar</span>
                         </div>
+                    </div>
+                    
+                    <!-- ============================================= -->
+                    <!-- BOTONES DE ACCIÓN DENTRO DEL MAPA (ABAJO) -->
+                    <!-- ============================================= -->
+                    <div class="map-footer-buttons">
+                        <button type="button" class="btn btn-success" id="crearSucursalBtn">
+                            <i class="fas fa-check"></i>Crear Sucursal
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancelarBtn">
+                            <i class="fas fa-times"></i>Cancelar
+                        </button>
                     </div>
                 </div>
             </div>

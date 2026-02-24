@@ -304,14 +304,7 @@ async function deleteRegion(regionId, regionName, admin, regionManager) {
 
     if (!confirmResult.isConfirmed) return;
 
-    Swal.fire({
-        title: 'Verificando región...',
-        html: '<i class="fas fa-spinner fa-spin" style="font-size: 48px;"></i>',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false
-    });
-
+ 
     try {
         await regionManager.deleteRegion(regionId, admin.organizacionCamelCase);
         
@@ -377,7 +370,7 @@ function showEmptyState(admin) {
     const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
-    tbody.innerHTML = `
+    tbody.innerHTML = /*html*/ `
         <tr>
             <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
@@ -396,7 +389,7 @@ function showNoAdminMessage() {
     const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
-    tbody.innerHTML = `
+    tbody.innerHTML = /*html*/ `
         <tr>
             <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
