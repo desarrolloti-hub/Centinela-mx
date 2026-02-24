@@ -1,5 +1,5 @@
 /* =============================================
-   CREAR SUCURSAL - SIN VARIABLES PROPIAS
+   EDITAR SUCURSAL - SIN VARIABLES PROPIAS
    (USA LAS VARIABLES GLOBALES DE personalization.css)
    ============================================= */
 
@@ -217,6 +217,13 @@ body {
     width: 100%;
 }
 
+/* Grid para 3 columnas (coordenadas) */
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
 /* =============================================
    FORMULARIOS
    ============================================= */
@@ -234,16 +241,16 @@ body {
     text-shadow: 0 0 2px rgba(192, 192, 192, 0.3);
 }
 
-.form-label::after {
-    content: " *";
+.form-label span {
     color: var(--color-danger);
-    opacity: 0.8;
+    margin-left: 2px;
 }
 
-.form-label:has(+ :not(:required))::after,
-.form-label:has(+ textarea:not([required]))::after,
-.form-label:has(+ select:not([required]))::after {
-    content: "" !important;
+.form-label .optional {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+    font-weight: normal;
+    margin-left: 5px;
 }
 
 .form-control {
@@ -268,9 +275,11 @@ body {
     color: rgba(255, 255, 255, 0.3) !important;
 }
 
-.form-control option {
-    background: var(--color-bg-secondary);
-    color: var(--color-text-primary);
+.form-control:disabled,
+.form-control[readonly] {
+    background: rgba(20, 20, 20, 0.5) !important;
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 .form-help-text {
@@ -278,6 +287,12 @@ body {
     font-size: 12px !important;
     font-family: var(--font-family-secondary) !important;
     margin-top: 5px !important;
+}
+
+.form-help-text i {
+    color: var(--color-accent-primary);
+    font-size: 10px;
+    margin-right: 4px;
 }
 
 /* Input groups */
@@ -304,35 +319,13 @@ body {
     flex: 1;
 }
 
-/* Char counter */
-.char-limit-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 5px;
-    font-size: 11px;
-}
-
-.char-counter {
-    color: var(--color-accent-primary);
-    font-weight: 600;
-    text-shadow: 0 0 4px var(--color-accent-primary);
-}
-
 /* =============================================
-   SELECTORES ESPECIALES
+   SELECT ESTILOS
    ============================================= */
-.select-region,
-.select-estado {
-    background: var(--color-bg-tertiary) !important;
-    border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-primary) !important;
-    border-radius: var(--border-radius-small) !important;
-    padding: 12px 15px !important;
-    font-family: var(--font-family-secondary) !important;
-    width: 100%;
-    cursor: pointer;
+select.form-control {
     appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f8cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 12px center;
@@ -340,46 +333,67 @@ body {
     padding-right: 40px !important;
 }
 
-.select-region:focus,
-.select-estado:focus {
-    border-color: var(--color-accent-secondary) !important;
-    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
-    outline: none !important;
-}
-
-.select-region option,
-.select-estado option {
-    background: var(--color-bg-secondary);
+select.form-control option {
+    background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
 }
 
 /* =============================================
-   GRID DE COORDENADAS
+   COORDENADAS (estilo especial)
    ============================================= */
+.coordenadas-container {
+    background: rgba(20, 20, 20, 0.5);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-medium);
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
 .coordenadas-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 15px;
+}
+
+.coordenadas-preview {
+    grid-column: 1 / -1;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--border-radius-small);
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--color-accent-primary);
+    border: 1px solid var(--color-border-light);
     margin-top: 10px;
 }
 
-.coordenadas-info {
-    grid-column: 1 / -1;
-    color: var(--color-text-secondary);
-    font-size: 12px;
-    margin-top: 5px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: var(--border-radius-small);
-    border: 1px dashed var(--color-border-light);
+.coordenadas-preview i {
+    color: var(--color-accent-primary);
+    margin-right: 5px;
+    filter: drop-shadow(0 0 3px var(--color-accent-primary));
 }
 
-.coordenadas-info i {
-    color: var(--color-accent-primary);
-    font-size: 14px;
+/* =============================================
+   ALERTAS
+   ============================================= */
+.alert {
+    border-radius: var(--border-radius-small) !important;
+    border: 1px solid !important;
+    padding: 15px 20px !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.alert-info {
+    background: rgba(0, 207, 255, 0.1) !important;
+    border-color: rgba(0, 207, 255, 0.3) !important;
+    color: #00cfff !important;
+}
+
+.alert-info i {
+    color: #00cfff !important;
+    filter: drop-shadow(0 0 4px #00cfff);
 }
 
 /* =============================================
@@ -459,41 +473,6 @@ body {
 }
 
 /* =============================================
-   ALERTAS
-   ============================================= */
-.alert {
-    border-radius: var(--border-radius-small) !important;
-    border: 1px solid !important;
-    padding: 15px 20px !important;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.alert-info {
-    background: rgba(0, 207, 255, 0.1) !important;
-    border-color: rgba(0, 207, 255, 0.3) !important;
-    color: #00cfff !important;
-}
-
-.alert-info i {
-    color: #00cfff !important;
-    filter: drop-shadow(0 0 4px #00cfff);
-}
-
-.alert-warning {
-    background: rgba(255, 193, 7, 0.1) !important;
-    border-color: rgba(255, 193, 7, 0.3) !important;
-    color: #ffc107 !important;
-}
-
-.alert-warning i {
-    color: #ffc107 !important;
-    filter: drop-shadow(0 0 4px #ffc107);
-}
-
-/* =============================================
    LOADING OVERLAY
    ============================================= */
 .loading-overlay {
@@ -547,6 +526,12 @@ body {
     }
 }
 
+/* Clase para campos inválidos */
+.is-invalid {
+    border-color: var(--color-danger) !important;
+    box-shadow: 0 0 0 0.25rem rgba(255, 77, 77, 0.25) !important;
+}
+
 /* =============================================
    ANIMACIONES
    ============================================= */
@@ -562,25 +547,11 @@ body {
 }
 
 /* =============================================
-   ESTILOS DE VALIDACIÓN
-   ============================================= */
-.is-invalid {
-    border-color: var(--color-danger) !important;
-}
-
-.invalid-feedback {
-    color: var(--color-danger);
-    font-size: 12px;
-    margin-top: 5px;
-    display: block;
-}
-
-/* =============================================
    RESPONSIVE - CORREGIDO PARA NAVBAR
    ============================================= */
 @media (max-width: 1023px) {
     body {
-        padding-top: 70px; /* Reducido ligeramente para tablets */
+        padding-top: 70px;
     }
     
     .custom-container {
@@ -619,11 +590,8 @@ body {
         align-items: flex-start !important;
     }
 
-    .form-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-
+    .form-grid,
+    .form-grid-3,
     .coordenadas-grid {
         grid-template-columns: 1fr;
         gap: 10px;
@@ -633,7 +601,7 @@ body {
 @media (max-width: 768px) {
     body {
         padding: 10px !important;
-        padding-top: 70px !important; /* Mantener espacio para navbar */
+        padding-top: 70px !important;
     }
 
     .custom-container {
@@ -664,9 +632,7 @@ body {
         font-size: 13px !important;
     }
 
-    .form-control,
-    .select-region,
-    .select-estado {
+    .form-control {
         padding: 10px 12px !important;
         font-size: 14px !important;
     }
@@ -674,12 +640,17 @@ body {
     .input-group-icon {
         padding: 10px 12px !important;
     }
+
+    select.form-control {
+        background-position: right 8px center;
+        padding-right: 35px !important;
+    }
 }
 
 @media (max-width: 480px) {
     body {
         padding: 8px !important;
-        padding-top: 65px !important; /* Espacio suficiente para navbar en móviles */
+        padding-top: 65px !important;
     }
 
     .custom-container {
@@ -711,7 +682,6 @@ body {
     }
 }
 
-/* Ajuste para pantallas muy pequeñas */
 @media (max-width: 360px) {
     body {
         padding-top: 60px !important;
@@ -729,6 +699,7 @@ body {
         font-size: 0.9rem !important;
     }
 }
+
 /* =============================================
    SCROLLBAR PERSONALIZADO
    ============================================= */
