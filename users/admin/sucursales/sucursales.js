@@ -273,7 +273,7 @@ async function viewBranchDetails(branchId, branchName, admin, sucursalManager) {
     }
 }
 
-// ========== MOSTRAR DETALLES EN MODAL ==========
+// ========== MOSTRAR DETALLES EN MODAL (SIN METADATOS) ==========
 async function showBranchDetails(sucursal, branchName) {
     try {
         // Mostrar loading mientras se obtienen los detalles de la región
@@ -296,7 +296,7 @@ async function showBranchDetails(sucursal, branchName) {
         // Cerrar loading
         Swal.close();
         
-        // Mostrar detalles
+        // Mostrar detalles - SECCIÓN DE METADATOS ELIMINADA
         Swal.fire({
             title: sucursal.nombre,
             html: /*html*/`
@@ -308,16 +308,10 @@ async function showBranchDetails(sucursal, branchName) {
                         <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Contacto:</strong> <span style="color: var(--color-text-primary);">${escapeHTML(contactoFormateado)}</span></p>
                     </div>
 
-                    <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <div style="margin-bottom: 20px;">
                         <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">UBICACIÓN</h4>
                         <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Dirección:</strong> <span style="color: var(--color-text-primary);">${escapeHTML(ubicacionCompleta)}</span></p>
                         <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Coordenadas:</strong> <span style="color: var(--color-text-primary);">${escapeHTML(coordenadas.lat)}, ${escapeHTML(coordenadas.lng)}</span></p>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">METADATOS</h4>
-                        <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Fecha creación:</strong> <span style="color: var(--color-text-primary);">${escapeHTML(sucursal.getFechaCreacionFormateada())}</span></p>
-                        <p style="margin: 8px 0;"><strong style="color: var(--color-accent-primary);">Creado por:</strong> <span style="color: var(--color-text-primary);">${escapeHTML(sucursal.creadoPorNombre || sucursal.creadoPorEmail || 'No disponible')}</span></p>
                     </div>
                 </div>
             `,
@@ -531,3 +525,5 @@ function showError(message) {
         </tr>
     `;
 }
+
+

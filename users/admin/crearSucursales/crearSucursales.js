@@ -27,15 +27,15 @@ class CrearSucursalController {
         this.usuarioActual = null;
         this.sucursalCreadaReciente = null;
         this.loadingOverlay = null;
-        
+
         // Propiedades del mapa
         this.map = null;
         this.marker = null;
         this.mapInitialized = false;
-        
+
         // Timeout para debounce del listener de coordenadas
         this.coordenadasTimeout = null;
-        
+
         // Bandera para evitar loops infinitos
         this.actualizandoDesdeMapa = false;
 
@@ -495,18 +495,6 @@ class CrearSucursalController {
     _confirmarGuardado(datos) {
         Swal.fire({
             title: 'Crear sucursal',
-            html: `
-                <div style="text-align: left; color: var(--color-text-secondary);">
-                    <p><strong style="color: var(--color-accent-primary);">Nombre:</strong> ${this._escapeHTML(datos.nombre)}</p>
-                    <p><strong style="color: var(--color-accent-primary);">Tipo:</strong> ${this._escapeHTML(datos.tipo)}</p>
-                    <p><strong style="color: var(--color-accent-primary);">Región:</strong> ${this._escapeHTML(datos.regionNombre)}</p>
-                    <p><strong style="color: var(--color-accent-primary);">Estado:</strong> ${this._escapeHTML(datos.estado)}</p>
-                    <p><strong style="color: var(--color-accent-primary);">Ciudad:</strong> ${this._escapeHTML(datos.ciudad)}</p>
-                    <p><strong style="color: var(--color-accent-primary);">Dirección:</strong> ${this._escapeHTML(datos.direccion)}</p>
-                    <p><strong style="color: var(--color-accent-primary);">Contacto:</strong> ${datos.contacto || 'No especificado'}</p>
-                    <p><strong style="color: var(--color-accent-primary);">Coordenadas:</strong> ${datos.latitud}, ${datos.longitud}</p>
-                </div>
-            `,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'CONFIRMAR',
@@ -551,12 +539,6 @@ class CrearSucursalController {
             await Swal.fire({
                 icon: 'success',
                 title: '¡Sucursal creada!',
-                html: `
-                    <div>
-                        <p><strong>${this._escapeHTML(nuevaSucursal.nombre)}</strong></p>
-                        <p>${nuevaSucursal.getUbicacionCompleta?.() || 'Ubicación registrada'}</p>
-                    </div>
-                `,
                 showCancelButton: true,
                 confirmButtonText: 'CREAR OTRA',
                 cancelButtonText: 'IR A SUCURSALES'
@@ -591,7 +573,7 @@ class CrearSucursalController {
 
         // Recargar regiones por si acaso
         this._cargarRegiones();
-        
+
         // Resetear mapa a coordenadas por defecto
         if (this.map && this.marker) {
             this._colocarMarcador([25.686614, -100.316112]);
@@ -646,9 +628,9 @@ class CrearSucursalController {
 
     _mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
         Swal.fire({
-            title: tipo === 'success' ? 'Éxito' : 
-                   tipo === 'error' ? 'Error' : 
-                   tipo === 'warning' ? 'Advertencia' : 'Información',
+            title: tipo === 'success' ? 'Éxito' :
+                tipo === 'error' ? 'Error' :
+                    tipo === 'warning' ? 'Advertencia' : 'Información',
             text: mensaje,
             icon: tipo,
             timer: duracion,
@@ -732,7 +714,7 @@ class CrearSucursalController {
             this._actualizarCoordenadasMapa(defaultLat, defaultLng);
 
             this.mapInitialized = true;
-            
+
             // Configurar eventos del mapa
             this._configurarEventosMapa();
 
@@ -749,7 +731,7 @@ class CrearSucursalController {
             btnCentrar.addEventListener('click', () => {
                 const lat = parseFloat(document.getElementById('latitudSucursal').value);
                 const lng = parseFloat(document.getElementById('longitudSucursal').value);
-                
+
                 if (!isNaN(lat) && !isNaN(lng)) {
                     this.map.setView([lat, lng], 15);
                 }
@@ -808,7 +790,7 @@ class CrearSucursalController {
 
     _colocarMarcador(posicion) {
         if (!this.map || !this.marker) return;
-        
+
         this.marker.setLatLng(posicion);
         this.map.setView(posicion, 15);
         this._actualizarCoordenadasMapa(posicion.lat, posicion.lng);
@@ -818,20 +800,20 @@ class CrearSucursalController {
         // Redondear a 6 decimales
         const latFormatted = Number(lat).toFixed(6);
         const lngFormatted = Number(lng).toFixed(6);
-        
+
         // Actualizar campos del formulario (SOLO si no estamos actualizando desde el mapa)
         if (!this.actualizandoDesdeMapa) {
             const latInput = document.getElementById('latitudSucursal');
             const lngInput = document.getElementById('longitudSucursal');
-            
+
             if (latInput) latInput.value = latFormatted;
             if (lngInput) lngInput.value = lngFormatted;
         }
-        
+
         // Actualizar display en el mapa
         const mapLat = document.getElementById('mapLatitud');
         const mapLng = document.getElementById('mapLongitud');
-        
+
         if (mapLat) mapLat.textContent = latFormatted;
         if (mapLng) mapLng.textContent = lngFormatted;
     }
@@ -839,7 +821,7 @@ class CrearSucursalController {
     // ========== BUSCAR DIRECCIÓN - CORREGIDO ==========
     async _buscarDireccionEnMapa() {
         const direccion = document.getElementById('direccionSucursal').value;
-        
+
         if (!direccion) {
             this._mostrarNotificacion('Por favor ingresa una dirección para buscar', 'warning');
             return;
@@ -847,24 +829,24 @@ class CrearSucursalController {
 
         try {
             this._mostrarCargando('Buscando dirección exacta...');
-            
+
             // Guardar las coordenadas actuales por si acaso
             const latActual = document.getElementById('latitudSucursal').value;
             const lngActual = document.getElementById('longitudSucursal').value;
-            
+
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}&limit=1&countrycodes=mx`);
             const data = await response.json();
 
             if (data && data.length > 0) {
                 const lat = parseFloat(data[0].lat);
                 const lon = parseFloat(data[0].lon);
-                
+
                 // Colocar marcador en las nuevas coordenadas
                 this._colocarMarcador([lat, lon]);
-                
+
                 // Obtener la dirección EXACTA de estas coordenadas
                 await this._obtenerDireccionDesdeCoordenadas(lat, lon);
-                
+
                 this._mostrarNotificacion('Dirección encontrada milimétricamente 🔍', 'success', 2000);
             } else {
                 this._mostrarNotificacion('No se encontró la dirección en México', 'warning');
@@ -895,7 +877,7 @@ class CrearSucursalController {
             (error) => {
                 this._ocultarCargando();
                 let mensaje = 'Error obteniendo ubicación';
-                switch(error.code) {
+                switch (error.code) {
                     case error.PERMISSION_DENIED:
                         mensaje = 'Permiso denegado para obtener ubicación';
                         break;
@@ -919,7 +901,7 @@ class CrearSucursalController {
     // ========== FUNCIÓN PARA CENTRAR MAPA EN ESTADO SELECCIONADO ==========
     _centrarMapaEnEstado(estado) {
         if (!this.map) return;
-        
+
         // Coordenadas aproximadas de los estados de México
         const coordenadasEstados = {
             "Aguascalientes": [21.8853, -102.2916],
@@ -958,14 +940,14 @@ class CrearSucursalController {
         };
 
         const coords = coordenadasEstados[estado];
-        
+
         if (coords) {
             this.map.setView(coords, 8);
             L.popup()
                 .setLatLng(coords)
                 .setContent(`<b>${estado}</b><br>Haz clic en el mapa para colocar la sucursal`)
                 .openOn(this.map);
-            
+
             this._mostrarNotificacion(`Mapa centrado en ${estado}`, 'info', 2000);
         } else {
             console.warn(`No se encontraron coordenadas para el estado: ${estado}`);
@@ -977,11 +959,11 @@ class CrearSucursalController {
 // =============================================
 // INICIALIZACIÓN
 // =============================================
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     if (typeof Swal === 'undefined') {
         console.error('❌ SweetAlert2 no está cargado.');
         return;
     }
-    
+
     window.crearSucursalDebug.controller = new CrearSucursalController();
 });
