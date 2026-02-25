@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Nueva Incidencia - Sistema Centinela</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Fuentes del sistema Centinela -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Estilos del navbar y footer -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    
+    <!-- Estilos principales de la vista -->
+    <link rel="stylesheet" href="crearIncidencias.css">
+    
+    <!-- Assets -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+</head>
+
+<body>
+    <canvas id="particle-canvas"></canvas>
+    <br>
+
+    <!-- Contenedor principal -->
+    <div class="custom-container">
+        <!-- Header -->
+        <div class="header-section">
+            <div class="header-content">
+                <h1 class="main-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Crear Nueva Incidencia
+                </h1>
+                <div class="header-description-text">
+                    <i class="fas fa-clipboard-list"></i>
+                    "Registra una nueva incidencia y dale seguimiento desde el inicio."
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- FORMULARIO 1: INFORMACIÓN PRINCIPAL DE LA INCIDENCIA -->
+        <!-- ============================================= -->
+        <div class="form-row">
+            <div class="full-width">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-edit"></i>Información de la Incidencia</h5>
+                        <button id="btnVolverLista" class="btn-volver">
+                            <i class="fas fa-arrow-left"></i>Volver a la lista 
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <form id="formIncidenciaPrincipal">
+                            <!-- Grid de 2 columnas -->
+                            <div class="form-grid">
+                                <div class="full-width">
+                                    <h6 class="section-title"><i class="fas fa-info-circle"></i>Información Básica</h6>
+                                </div>
+
+                                <!-- Sucursal -->
+                                <div class="form-field">
+                                    <label for="sucursalIncidencia" class="form-label">Sucursal *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-store"></i></span>
+                                        <select class="form-control" id="sucursalIncidencia" required>
+                                            <option value="">-- Cargando sucursales... --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-help-text">Selecciona la sucursal donde ocurrió la incidencia</div>
+                                </div>
+
+                                <!-- Categoría -->
+                                <div class="form-field">
+                                    <label for="categoriaIncidencia" class="form-label">Categoría *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-tags"></i></span>
+                                        <select class="form-control" id="categoriaIncidencia" required>
+                                            <option value="">-- Primero selecciona una categoría --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-help-text">Selecciona la categoría principal</div>
+                                </div>
+
+                                <!-- Subcategoría (opcional) -->
+                                <div class="form-field">
+                                    <label for="subcategoriaIncidencia" class="form-label">Subcategoría</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-tag"></i></span>
+                                        <select class="form-control" id="subcategoriaIncidencia">
+                                            <option value="">-- Selecciona una subcategoría (opcional) --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-help-text">Puedes especificar una subcategoría (opcional)</div>
+                                </div>
+
+                                <!-- Nivel de Riesgo -->
+                                <div class="form-field">
+                                    <label for="nivelRiesgo" class="form-label">Nivel de Riesgo *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                                        <select class="form-control" id="nivelRiesgo" required>
+                                            <option value="">-- Selecciona el nivel de riesgo --</option>
+                                            <option value="bajo">Bajo</option>
+                                            <option value="medio">Medio</option>
+                                            <option value="alto">Alto</option>
+                                            <option value="critico">Crítico</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-help-text">Define la criticidad de la incidencia</div>
+                                </div>
+
+                                <!-- Descripción/Detalles -->
+                                <div class="full-width">
+                                    <label for="detallesIncidencia" class="form-label">Descripción de la Incidencia *</label>
+                                    <textarea class="form-control" id="detallesIncidencia" rows="5"
+                                        placeholder="Describa detalladamente lo sucedido, incluyendo fechas, personas involucradas, y cualquier información relevante..."></textarea>
+                                    <div class="form-help-text">Proporcione una descripción detallada del incidente</div>
+                                    <div class="char-limit-info">
+                                        <span class="char-counter" id="contadorCaracteres">0/1000</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- SECCIÓN 2: SEGUIMIENTO INICIAL + BOTONES -->
+        <!-- ============================================= -->
+        <div class="form-row" style="margin-top: 20px;">
+            <div class="full-width">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-history"></i>Seguimiento Inicial</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Sección de Seguimiento Inicial -->
+                        <div class="form-row">
+                            <div class="full-width">
+                                <div class="alert alert-info" style="margin-bottom: 20px;">
+                                    <i class="fas fa-info-circle"></i>
+                                    Puedes agregar un comentario inicial para documentar las primeras acciones tomadas. Este seguimiento quedará registrado con tu usuario y fecha actual.
+                                </div>
+
+                                <!-- Campo de seguimiento inicial -->
+                                <div class="form-field">
+                                    <label for="seguimientoInicial" class="form-label">Comentario Inicial (opcional)</label>
+                                    <textarea class="form-control" id="seguimientoInicial" rows="4"
+                                        placeholder="Ej: Se notificó al área correspondiente, se asignó responsable, se tomaron medidas provisionales..."></textarea>
+                                    <div class="form-help-text">Describe las primeras acciones tomadas (opcional)</div>
+                                    <div class="char-limit-info">
+                                        <span class="char-counter" id="contadorSeguimiento">0/500</span>
+                                    </div>
+                                </div>
+
+                                
+
+                        <!-- BOTONES DE ACCIÓN -->
+                        <div class="action-buttons-container">
+                            <button type="button" class="btn btn-success" id="btnCrearIncidencia">
+                                <i class="fas fa-check"></i>Crear Incidencia
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="btnCancelar">
+                                <i class="fas fa-times"></i>Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <br>
+
+    <!-- Scripts -->
+    <script type="module" src="/components/themeloader.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script src="/components/navbar-admin-component.js"></script>
+    <script src="/components/footer-admin-component.js"></script>
+    <script type="module" src="crearIncidencias.js"></script>
+</body>
+
+</html>
