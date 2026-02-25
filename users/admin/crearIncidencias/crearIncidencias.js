@@ -1,5 +1,5 @@
-// crearIncidencias.js - VERSIÓN COMPLETA CON BUSCADORES Y EDITOR MODAL
-// Basado en el estilo de regiones
+// crearIncidencias.js - VERSIÓN CON SUGERENCIAS EN TIEMPO REAL
+// Muestra sugerencias mientras escribes y recupera subcategorías correctamente
 
 // Variable global para debugging
 window.crearIncidenciaDebug = {
@@ -353,7 +353,7 @@ class CrearIncidenciaController {
         this.categorias = [];
         this.subcategoriasCache = {};
         this.categoriaSeleccionada = null;
-        this.imagenesSeleccionadas = []; // { file, preview, comentario, elementos, edited }
+        this.imagenesSeleccionadas = [];
         this.imageEditorModal = null;
         this.loadingOverlay = null;
 
@@ -375,10 +375,10 @@ class CrearIncidenciaController {
             // 2. Inicializar IncidenciaManager
             await this._inicializarManager();
 
-            // 3. Cargar datos relacionados (sucursales, categorías)
+            // 3. Cargar datos relacionados
             await this._cargarDatosRelacionados();
 
-            // 4. Configurar organización automática
+            // 4. Configurar organización
             this._configurarOrganizacion();
 
             // 5. Inicializar fecha/hora
@@ -437,12 +437,8 @@ class CrearIncidenciaController {
 
     async _cargarDatosRelacionados() {
         try {
-            // Cargar sucursales
             await this._cargarSucursales();
-
-            // Cargar categorías
             await this._cargarCategorias();
-
         } catch (error) {
             console.error('Error cargando datos relacionados:', error);
             throw error;
@@ -458,70 +454,8 @@ class CrearIncidenciaController {
                 this.usuarioActual.organizacionCamelCase
             );
 
-            const selectSucursal = document.getElementById('sucursalIncidencia');
-            if (selectSucursal) {
-                if (this.sucursales.length === 0) {
-                    selectSucursal.innerHTML = '<option value="">-- No hay sucursales disponibles --</option>';
-                } else {
-                    selectSucursal.innerHTML = '<option value="">-- Selecciona una sucursal --</option>';
-                    this.sucursales.forEach(suc => {
-                        const option = document.createElement('option');
-                        option.value = suc.id;
-                        option.textContent = suc.nombre;
-                        selectSucursal.appendChild(option);
-                    });
-                }
-
-                // Inicializar Select2 con búsqueda en tiempo real
-                setTimeout(() => {
-                    if (typeof $ !== 'undefined' && $.fn.select2) {
-                        $(selectSucursal).select2({
-                            placeholder: "Buscar sucursal...",
-                            allowClear: true,
-                            width: '100%',
-                            minimumInputLength: 0,
-                            language: {
-                                noResults: function () {
-                                    return "No se encontraron resultados";
-                                },
-                                searching: function () {
-                                    return "Buscando...";
-                                },
-                                inputTooShort: function () {
-                                    return "Escribe para buscar...";
-                                }
-                            },
-                            matcher: function (params, data) {
-                                // Búsqueda case-insensitive en tiempo real
-                                if ($.trim(params.term) === '') {
-                                    return data;
-                                }
-
-                                // Convertir a minúsculas para comparación
-                                const term = params.term.toLowerCase();
-                                const text = data.text.toLowerCase();
-
-                                if (text.indexOf(term) > -1) {
-                                    return data;
-                                }
-
-                                return null;
-                            }
-                        });
-
-                        // Abrir el dropdown automáticamente al hacer clic
-                        $(selectSucursal).next('.select2-container').find('.select2-selection').on('click', function () {
-                            $(selectSucursal).select2('open');
-                        });
-                    }
-                }, 100);
-            }
         } catch (error) {
             console.error('Error cargando sucursales:', error);
-            const selectSucursal = document.getElementById('sucursalIncidencia');
-            if (selectSucursal) {
-                selectSucursal.innerHTML = '<option value="">-- Error cargando sucursales --</option>';
-            }
             throw error;
         }
     }
@@ -533,70 +467,8 @@ class CrearIncidenciaController {
 
             this.categorias = await categoriaManager.obtenerTodasCategorias();
 
-            const selectCategoria = document.getElementById('categoriaIncidencia');
-            if (selectCategoria) {
-                if (this.categorias.length === 0) {
-                    selectCategoria.innerHTML = '<option value="">-- No hay categorías disponibles --</option>';
-                } else {
-                    selectCategoria.innerHTML = '<option value="">-- Selecciona una categoría --</option>';
-                    this.categorias.forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat.id;
-                        option.textContent = cat.nombre;
-                        selectCategoria.appendChild(option);
-                    });
-                }
-
-                // Inicializar Select2 con búsqueda en tiempo real
-                setTimeout(() => {
-                    if (typeof $ !== 'undefined' && $.fn.select2) {
-                        $(selectCategoria).select2({
-                            placeholder: "Buscar categoría...",
-                            allowClear: true,
-                            width: '100%',
-                            minimumInputLength: 0,
-                            language: {
-                                noResults: function () {
-                                    return "No se encontraron resultados";
-                                },
-                                searching: function () {
-                                    return "Buscando...";
-                                },
-                                inputTooShort: function () {
-                                    return "Escribe para buscar...";
-                                }
-                            },
-                            matcher: function (params, data) {
-                                // Búsqueda case-insensitive en tiempo real
-                                if ($.trim(params.term) === '') {
-                                    return data;
-                                }
-
-                                // Convertir a minúsculas para comparación
-                                const term = params.term.toLowerCase();
-                                const text = data.text.toLowerCase();
-
-                                if (text.indexOf(term) > -1) {
-                                    return data;
-                                }
-
-                                return null;
-                            }
-                        });
-
-                        // Abrir el dropdown automáticamente al hacer clic
-                        $(selectCategoria).next('.select2-container').find('.select2-selection').on('click', function () {
-                            $(selectCategoria).select2('open');
-                        });
-                    }
-                }, 100);
-            }
         } catch (error) {
             console.error('Error cargando categorías:', error);
-            const selectCategoria = document.getElementById('categoriaIncidencia');
-            if (selectCategoria) {
-                selectCategoria.innerHTML = '<option value="">-- Error cargando categorías --</option>';
-            }
             throw error;
         }
     }
@@ -605,11 +477,9 @@ class CrearIncidenciaController {
 
     _cargarUsuario() {
         try {
-            // PRIMERO: Intentar adminInfo (para administradores)
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-
                 this.usuarioActual = {
                     id: adminData.id || adminData.uid || `admin_${Date.now()}`,
                     uid: adminData.uid || adminData.id,
@@ -622,7 +492,6 @@ class CrearIncidenciaController {
                 return;
             }
 
-            // SEGUNDO: Intentar userData
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             if (userData && Object.keys(userData).length > 0) {
                 this.usuarioActual = {
@@ -637,7 +506,6 @@ class CrearIncidenciaController {
                 return;
             }
 
-            // TERCERO: Datos por defecto (para desarrollo)
             this.usuarioActual = {
                 id: `admin_${Date.now()}`,
                 uid: `admin_${Date.now()}`,
@@ -663,10 +531,9 @@ class CrearIncidenciaController {
             .replace(/[^a-zA-Z0-9]/g, '');
     }
 
-    // ========== APLICAR LÍMITES DE CARACTERES ==========
+    // ========== VALIDACIONES ==========
 
     _inicializarValidaciones() {
-        // Campo detalles incidencia
         const detallesInput = document.getElementById('detallesIncidencia');
         if (detallesInput) {
             detallesInput.maxLength = LIMITES.DETALLES_INCIDENCIA;
@@ -680,7 +547,6 @@ class CrearIncidenciaController {
             });
         }
 
-        // Inicializar contadores
         this._actualizarContador('detallesIncidencia', 'contadorCaracteres', LIMITES.DETALLES_INCIDENCIA);
     }
 
@@ -692,7 +558,6 @@ class CrearIncidenciaController {
             const longitud = input.value.length;
             counter.textContent = `${longitud}/${limite}`;
 
-            // Cambiar color si se acerca al límite
             if (longitud > limite * 0.9) {
                 counter.style.color = 'var(--color-warning)';
             } else if (longitud > limite * 0.95) {
@@ -715,69 +580,345 @@ class CrearIncidenciaController {
 
     _configurarEventos() {
         try {
-            // Botón Volver a la lista
-            const btnVolverLista = document.getElementById('btnVolverLista');
-            if (btnVolverLista) {
-                btnVolverLista.addEventListener('click', () => this._volverALista());
-            }
+            // Botones de navegación
+            document.getElementById('btnVolverLista')?.addEventListener('click', () => this._volverALista());
+            document.getElementById('btnCancelar')?.addEventListener('click', () => this._cancelarCreacion());
 
-            // Botón Cancelar
-            const btnCancelar = document.getElementById('btnCancelar');
-            if (btnCancelar) {
-                btnCancelar.addEventListener('click', () => this._cancelarCreacion());
-            }
+            // Botón crear
+            document.getElementById('btnCrearIncidencia')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                this._validarYGuardar();
+            });
 
-            // Botón Crear Incidencia
-            const btnCrear = document.getElementById('btnCrearIncidencia');
-            if (btnCrear) {
-                btnCrear.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this._validarYGuardar();
-                });
-            }
-
-            // Botón Agregar Imágenes
-            const btnAgregarImagen = document.getElementById('btnAgregarImagen');
-            if (btnAgregarImagen) {
-                btnAgregarImagen.addEventListener('click', () => {
-                    document.getElementById('inputImagenes').click();
-                });
-            }
+            // Botón agregar imágenes
+            document.getElementById('btnAgregarImagen')?.addEventListener('click', () => {
+                document.getElementById('inputImagenes').click();
+            });
 
             // Input de imágenes
-            const inputImagenes = document.getElementById('inputImagenes');
-            if (inputImagenes) {
-                inputImagenes.addEventListener('change', (e) => this._procesarImagenes(e.target.files));
-            }
+            document.getElementById('inputImagenes')?.addEventListener('change', (e) => this._procesarImagenes(e.target.files));
 
-            // Formulario Submit
-            const form = document.getElementById('formIncidenciaPrincipal');
-            if (form) {
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this._validarYGuardar();
-                });
-            }
+            // Formulario submit
+            document.getElementById('formIncidenciaPrincipal')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this._validarYGuardar();
+            });
 
-            // Evento cambio de categoría (para cargar subcategorías)
-            const selectCategoria = document.getElementById('categoriaIncidencia');
-            if (selectCategoria) {
-                selectCategoria.addEventListener('change', (e) => this._cargarSubcategorias(e.target.value));
-            }
+            // Evento cambio de categoría
+            document.getElementById('categoriaIncidencia')?.addEventListener('change', (e) => {
+                const categoriaId = e.target.dataset.selectedId;
+                if (categoriaId) {
+                    this._cargarSubcategorias(categoriaId);
+                }
+            });
+
+            // ===== SUGERENCIAS EN TIEMPO REAL =====
+            this._configurarSugerencias();
 
         } catch (error) {
             console.error('Error configurando eventos:', error);
         }
     }
 
+    // ========== SUGERENCIAS EN TIEMPO REAL ==========
+
+    _configurarSugerencias() {
+        const inputSucursal = document.getElementById('sucursalIncidencia');
+        const inputCategoria = document.getElementById('categoriaIncidencia');
+
+        if (inputSucursal) {
+            inputSucursal.addEventListener('input', (e) => {
+                this._mostrarSugerenciasSucursal(e.target.value);
+            });
+
+            inputSucursal.addEventListener('blur', () => {
+                // Pequeño retraso para permitir clic en sugerencias
+                setTimeout(() => {
+                    document.getElementById('sugerenciasSucursal').innerHTML = '';
+                }, 200);
+            });
+
+            inputSucursal.addEventListener('focus', (e) => {
+                if (e.target.value.length > 0) {
+                    this._mostrarSugerenciasSucursal(e.target.value);
+                }
+            });
+        }
+
+        if (inputCategoria) {
+            inputCategoria.addEventListener('input', (e) => {
+                this._mostrarSugerenciasCategoria(e.target.value);
+            });
+
+            inputCategoria.addEventListener('blur', () => {
+                setTimeout(() => {
+                    document.getElementById('sugerenciasCategoria').innerHTML = '';
+                }, 200);
+            });
+
+            inputCategoria.addEventListener('focus', (e) => {
+                if (e.target.value.length > 0) {
+                    this._mostrarSugerenciasCategoria(e.target.value);
+                }
+            });
+        }
+    }
+
+    _mostrarSugerenciasSucursal(termino) {
+        const contenedor = document.getElementById('sugerenciasSucursal');
+        if (!contenedor) return;
+
+        const terminoLower = termino.toLowerCase().trim();
+
+        if (terminoLower.length === 0) {
+            contenedor.innerHTML = '';
+            return;
+        }
+
+        // Filtrar sucursales
+        const sugerencias = this.sucursales.filter(suc =>
+            suc.nombre.toLowerCase().includes(terminoLower) ||
+            (suc.ciudad && suc.ciudad.toLowerCase().includes(terminoLower)) ||
+            (suc.direccion && suc.direccion.toLowerCase().includes(terminoLower))
+        ).slice(0, 8); // Limitar a 8 sugerencias
+
+        if (sugerencias.length === 0) {
+            contenedor.innerHTML = `
+                <div class="sugerencias-lista">
+                    <div class="sugerencia-vacia">
+                        <i class="fas fa-store"></i>
+                        <p>No se encontraron sucursales</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="sugerencias-lista">';
+        sugerencias.forEach(suc => {
+            const seleccionada = document.getElementById('sucursalIncidencia').dataset.selectedId === suc.id;
+            html += `
+                <div class="sugerencia-item ${seleccionada ? 'seleccionada' : ''}" 
+                     data-id="${suc.id}" 
+                     data-nombre="${suc.nombre}">
+                    <div class="sugerencia-icono">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div class="sugerencia-info">
+                        <div class="sugerencia-nombre">${this._escapeHTML(suc.nombre)}</div>
+                        <div class="sugerencia-detalle">
+                            <i class="fas fa-map-marker-alt"></i>
+                            ${suc.ciudad || 'Sin ciudad'} - ${suc.direccion || 'Sin dirección'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        contenedor.innerHTML = html;
+
+        // Agregar eventos a las sugerencias
+        contenedor.querySelectorAll('.sugerencia-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.dataset.id;
+                const nombre = item.dataset.nombre;
+                this._seleccionarSucursal(id, nombre);
+            });
+        });
+    }
+
+    _mostrarSugerenciasCategoria(termino) {
+        const contenedor = document.getElementById('sugerenciasCategoria');
+        if (!contenedor) return;
+
+        const terminoLower = termino.toLowerCase().trim();
+
+        if (terminoLower.length === 0) {
+            contenedor.innerHTML = '';
+            return;
+        }
+
+        // Filtrar categorías
+        const sugerencias = this.categorias.filter(cat =>
+            cat.nombre.toLowerCase().includes(terminoLower)
+        ).slice(0, 8); // Limitar a 8 sugerencias
+
+        if (sugerencias.length === 0) {
+            contenedor.innerHTML = `
+                <div class="sugerencias-lista">
+                    <div class="sugerencia-vacia">
+                        <i class="fas fa-tags"></i>
+                        <p>No se encontraron categorías</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="sugerencias-lista">';
+        sugerencias.forEach(cat => {
+            const seleccionada = document.getElementById('categoriaIncidencia').dataset.selectedId === cat.id;
+            const totalSubcategorias = cat.subcategorias ?
+                (cat.subcategorias instanceof Map ? cat.subcategorias.size : Object.keys(cat.subcategorias).length) : 0;
+
+            html += `
+                <div class="sugerencia-item ${seleccionada ? 'seleccionada' : ''}" 
+                     data-id="${cat.id}" 
+                     data-nombre="${cat.nombre}">
+                    <div class="sugerencia-icono">
+                        <i class="fas fa-tag"></i>
+                    </div>
+                    <div class="sugerencia-info">
+                        <div class="sugerencia-nombre">${this._escapeHTML(cat.nombre)}</div>
+                        <div class="sugerencia-detalle">
+                            <i class="fas fa-layer-group"></i>
+                            ${totalSubcategorias} subcategorías
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        contenedor.innerHTML = html;
+
+        // Agregar eventos a las sugerencias
+        contenedor.querySelectorAll('.sugerencia-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.dataset.id;
+                const nombre = item.dataset.nombre;
+                this._seleccionarCategoria(id, nombre);
+            });
+        });
+    }
+
+    _seleccionarSucursal(id, nombre) {
+        const input = document.getElementById('sucursalIncidencia');
+        input.value = nombre;
+        input.dataset.selectedId = id;
+        input.dataset.selectedName = nombre;
+
+        // Limpiar sugerencias
+        document.getElementById('sugerenciasSucursal').innerHTML = '';
+    }
+
+    _seleccionarCategoria(id, nombre) {
+        const input = document.getElementById('categoriaIncidencia');
+        input.value = nombre;
+        input.dataset.selectedId = id;
+        input.dataset.selectedName = nombre;
+
+        // Limpiar sugerencias
+        document.getElementById('sugerenciasCategoria').innerHTML = '';
+
+        // Cargar subcategorías
+        this._cargarSubcategorias(id);
+    }
+
+    // ========== SUBCATEGORÍAS ==========
+
+    async _cargarSubcategorias(categoriaId) {
+        const selectSubcategoria = document.getElementById('subcategoriaIncidencia');
+        if (!selectSubcategoria) return;
+
+        selectSubcategoria.innerHTML = '<option value="">Cargando subcategorías...</option>';
+        selectSubcategoria.disabled = true;
+
+        if (!categoriaId) {
+            selectSubcategoria.innerHTML = '<option value="">-- Selecciona una subcategoría (opcional) --</option>';
+            selectSubcategoria.disabled = true;
+            return;
+        }
+
+        const categoria = this.categorias.find(c => c.id === categoriaId);
+        if (!categoria) {
+            selectSubcategoria.innerHTML = '<option value="">-- Error: Categoría no encontrada --</option>';
+            selectSubcategoria.disabled = true;
+            return;
+        }
+
+        this.categoriaSeleccionada = categoria;
+
+        try {
+            let subcategoriasArray = [];
+
+            if (categoria.subcategorias) {
+                // Si es un Map
+                if (categoria.subcategorias instanceof Map) {
+                    categoria.subcategorias.forEach((valor, clave) => {
+                        if (valor && typeof valor === 'object') {
+                            subcategoriasArray.push({
+                                id: clave,
+                                nombre: valor.nombre || clave,
+                                ...valor
+                            });
+                        }
+                    });
+                }
+                // Si es un objeto con entries (Firestore Map)
+                else if (categoria.subcategorias.entries && typeof categoria.subcategorias.entries === 'function') {
+                    for (const [clave, valor] of categoria.subcategorias.entries()) {
+                        if (valor && typeof valor === 'object') {
+                            subcategoriasArray.push({
+                                id: clave,
+                                nombre: valor.nombre || clave,
+                                ...valor
+                            });
+                        }
+                    }
+                }
+                // Si es un objeto con forEach
+                else if (typeof categoria.subcategorias.forEach === 'function') {
+                    categoria.subcategorias.forEach((valor, clave) => {
+                        if (valor && typeof valor === 'object') {
+                            subcategoriasArray.push({
+                                id: clave,
+                                nombre: valor.nombre || clave,
+                                ...valor
+                            });
+                        }
+                    });
+                }
+                // Si es un objeto normal
+                else if (typeof categoria.subcategorias === 'object') {
+                    subcategoriasArray = Object.keys(categoria.subcategorias).map(key => ({
+                        id: key,
+                        nombre: categoria.subcategorias[key]?.nombre || key,
+                        ...categoria.subcategorias[key]
+                    }));
+                }
+            }
+
+            if (subcategoriasArray.length === 0) {
+                selectSubcategoria.innerHTML = '<option value="">-- No hay subcategorías disponibles --</option>';
+                selectSubcategoria.disabled = true;
+                return;
+            }
+
+            let options = '<option value="">-- Selecciona una subcategoría (opcional) --</option>';
+            subcategoriasArray.forEach(sub => {
+                options += `<option value="${sub.id}">${sub.nombre || sub.id}</option>`;
+            });
+
+            selectSubcategoria.innerHTML = options;
+            selectSubcategoria.disabled = false;
+
+        } catch (error) {
+            console.error('Error cargando subcategorías:', error);
+            selectSubcategoria.innerHTML = '<option value="">-- Error cargando subcategorías --</option>';
+            selectSubcategoria.disabled = true;
+        }
+    }
+
+    // ========== IMÁGENES ==========
+
     _procesarImagenes(files) {
         if (!files || files.length === 0) return;
 
-        // Convertir FileList a Array
         const nuevosArchivos = Array.from(files);
-
-        // Validar tamaño (máximo 5MB por imagen)
         const maxSize = 5 * 1024 * 1024; // 5MB
+
         const archivosValidos = nuevosArchivos.filter(file => {
             if (file.size > maxSize) {
                 this._mostrarNotificacion(`La imagen ${file.name} excede 5MB`, 'warning');
@@ -786,7 +927,6 @@ class CrearIncidenciaController {
             return true;
         });
 
-        // Agregar a la lista
         archivosValidos.forEach(file => {
             this.imagenesSeleccionadas.push({
                 file: file,
@@ -797,10 +937,7 @@ class CrearIncidenciaController {
             });
         });
 
-        // Actualizar vista previa
         this._actualizarVistaPreviaImagenes();
-
-        // Limpiar input
         document.getElementById('inputImagenes').value = '';
     }
 
@@ -845,7 +982,6 @@ class CrearIncidenciaController {
 
         container.innerHTML = html;
 
-        // Agregar eventos a los botones
         container.querySelectorAll('.edit-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = e.currentTarget.dataset.index;
@@ -869,13 +1005,11 @@ class CrearIncidenciaController {
                 index,
                 img.comentario,
                 (savedIndex, editedFile, comentario, elementos) => {
-                    // Actualizar imagen con los cambios
                     this.imagenesSeleccionadas[savedIndex].file = editedFile;
                     this.imagenesSeleccionadas[savedIndex].comentario = comentario;
                     this.imagenesSeleccionadas[savedIndex].elementos = elementos;
                     this.imagenesSeleccionadas[savedIndex].edited = true;
 
-                    // Actualizar preview URL
                     if (this.imagenesSeleccionadas[savedIndex].preview) {
                         URL.revokeObjectURL(this.imagenesSeleccionadas[savedIndex].preview);
                     }
@@ -899,7 +1033,6 @@ class CrearIncidenciaController {
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Liberar URL object
                 if (this.imagenesSeleccionadas[index].preview) {
                     URL.revokeObjectURL(this.imagenesSeleccionadas[index].preview);
                 }
@@ -909,132 +1042,76 @@ class CrearIncidenciaController {
         });
     }
 
-    async _cargarSubcategorias(categoriaId) {
-        const selectSubcategoria = document.getElementById('subcategoriaIncidencia');
-        if (!selectSubcategoria) return;
-
-        if (!categoriaId) {
-            selectSubcategoria.innerHTML = '<option value="">-- Selecciona una subcategoría (opcional) --</option>';
-            selectSubcategoria.disabled = true;
-            return;
-        }
-
-        const categoria = this.categorias.find(c => c.id === categoriaId);
-        if (!categoria) return;
-
-        this.categoriaSeleccionada = categoria;
-
-        try {
-            let subcategoriasArray = [];
-
-            if (categoria.subcategorias) {
-                if (typeof categoria.subcategorias.forEach === 'function') {
-                    categoria.subcategorias.forEach((value, key) => {
-                        if (value && typeof value === 'object') {
-                            const sub = value instanceof Map ? Object.fromEntries(value) : value;
-                            subcategoriasArray.push({ ...sub, id: key });
-                        }
-                    });
-                } else {
-                    subcategoriasArray = Object.keys(categoria.subcategorias).map(key => ({
-                        ...categoria.subcategorias[key],
-                        id: key
-                    }));
-                }
-            }
-
-            if (subcategoriasArray.length === 0) {
-                selectSubcategoria.innerHTML = '<option value="">-- No hay subcategorías disponibles --</option>';
-                selectSubcategoria.disabled = true;
-                return;
-            }
-
-            selectSubcategoria.innerHTML = '<option value="">-- Selecciona una subcategoría (opcional) --</option>';
-            subcategoriasArray.forEach(sub => {
-                if (sub.nombre) {
-                    const option = document.createElement('option');
-                    option.value = sub.id;
-                    option.textContent = sub.nombre;
-                    selectSubcategoria.appendChild(option);
-                }
-            });
-            selectSubcategoria.disabled = false;
-
-        } catch (error) {
-            console.error('Error cargando subcategorías:', error);
-            selectSubcategoria.innerHTML = '<option value="">-- Error cargando subcategorías --</option>';
-            selectSubcategoria.disabled = true;
-        }
-    }
-
     // ========== VALIDACIÓN Y GUARDADO ==========
 
     _validarYGuardar() {
-        // Validar sucursal
-        const sucursalSelect = document.getElementById('sucursalIncidencia');
-        const sucursalId = sucursalSelect.value;
+        const sucursalInput = document.getElementById('sucursalIncidencia');
+        const categoriaInput = document.getElementById('categoriaIncidencia');
+
+        const sucursalId = sucursalInput.dataset.selectedId;
+        const categoriaId = categoriaInput.dataset.selectedId;
+
         if (!sucursalId) {
-            this._mostrarError('Debe seleccionar una sucursal');
+            this._mostrarError('Debe seleccionar una sucursal válida de la lista');
+            sucursalInput.focus();
             return;
         }
 
-        // Validar categoría
-        const categoriaSelect = document.getElementById('categoriaIncidencia');
-        const categoriaId = categoriaSelect.value;
         if (!categoriaId) {
-            this._mostrarError('Debe seleccionar una categoría');
+            this._mostrarError('Debe seleccionar una categoría válida de la lista');
+            categoriaInput.focus();
             return;
         }
 
-        // Validar nivel de riesgo
         const riesgoSelect = document.getElementById('nivelRiesgo');
         const nivelRiesgo = riesgoSelect.value;
         if (!nivelRiesgo) {
             this._mostrarError('Debe seleccionar el nivel de riesgo');
+            riesgoSelect.focus();
             return;
         }
 
-        // Validar estado
         const estadoSelect = document.getElementById('estadoIncidencia');
         const estado = estadoSelect.value;
         if (!estado) {
             this._mostrarError('Debe seleccionar el estado');
+            estadoSelect.focus();
             return;
         }
 
-        // Validar fecha/hora
         const fechaInput = document.getElementById('fechaHoraIncidencia');
         const fechaHora = fechaInput.value;
         if (!fechaHora) {
             this._mostrarError('Debe seleccionar fecha y hora');
+            fechaInput.focus();
             return;
         }
 
-        // Validar detalles
         const detallesInput = document.getElementById('detallesIncidencia');
         const detalles = detallesInput.value.trim();
         if (!detalles) {
             detallesInput.classList.add('is-invalid');
             this._mostrarError('La descripción de la incidencia es obligatoria');
+            detallesInput.focus();
             return;
         }
         if (detalles.length < 10) {
             detallesInput.classList.add('is-invalid');
             this._mostrarError('La descripción debe tener al menos 10 caracteres');
+            detallesInput.focus();
             return;
         }
         if (detalles.length > LIMITES.DETALLES_INCIDENCIA) {
             detallesInput.classList.add('is-invalid');
             this._mostrarError(`La descripción no puede exceder ${LIMITES.DETALLES_INCIDENCIA} caracteres`);
+            detallesInput.focus();
             return;
         }
         detallesInput.classList.remove('is-invalid');
 
-        // Obtener subcategoría
         const subcategoriaSelect = document.getElementById('subcategoriaIncidencia');
         const subcategoriaId = subcategoriaSelect.value;
 
-        // Confirmar antes de guardar
         this._confirmarYGuardar({
             sucursalId,
             categoriaId,
@@ -1048,9 +1125,31 @@ class CrearIncidenciaController {
     }
 
     async _confirmarYGuardar(datos) {
-        // Obtener nombres para mostrar en confirmación
-        const sucursal = this.sucursales.find(s => s.id === datos.sucursalId);
-        const categoria = this.categorias.find(c => c.id === datos.categoriaId);
+        const sucursalInput = document.getElementById('sucursalIncidencia');
+        const categoriaInput = document.getElementById('categoriaIncidencia');
+
+        const sucursalNombre = sucursalInput.dataset.selectedName || 'No especificada';
+        const categoriaNombre = categoriaInput.dataset.selectedName || 'No especificada';
+
+        let subcategoriaNombre = 'No especificada';
+        if (datos.subcategoriaId && this.categoriaSeleccionada?.subcategorias) {
+            const subcategorias = this.categoriaSeleccionada.subcategorias;
+
+            if (subcategorias instanceof Map) {
+                const sub = subcategorias.get(datos.subcategoriaId);
+                if (sub) subcategoriaNombre = sub.nombre || datos.subcategoriaId;
+            } else if (subcategorias.entries && typeof subcategorias.entries === 'function') {
+                for (const [clave, valor] of subcategorias.entries()) {
+                    if (clave === datos.subcategoriaId) {
+                        subcategoriaNombre = valor.nombre || datos.subcategoriaId;
+                        break;
+                    }
+                }
+            } else if (typeof subcategorias === 'object') {
+                const sub = subcategorias[datos.subcategoriaId];
+                if (sub) subcategoriaNombre = sub.nombre || datos.subcategoriaId;
+            }
+        }
 
         const riesgoTexto = {
             'bajo': 'Bajo',
@@ -1071,8 +1170,9 @@ class CrearIncidenciaController {
             html: `
                 <div style="text-align: left; max-height: 400px; overflow-y: auto;">
                     <p><strong>Organización:</strong> ${this.usuarioActual.organizacion}</p>
-                    <p><strong>Sucursal:</strong> ${sucursal?.nombre || 'No especificada'}</p>
-                    <p><strong>Categoría:</strong> ${categoria?.nombre || 'No especificada'}</p>
+                    <p><strong>Sucursal:</strong> ${sucursalNombre}</p>
+                    <p><strong>Categoría:</strong> ${categoriaNombre}</p>
+                    <p><strong>Subcategoría:</strong> ${subcategoriaNombre}</p>
                     <p><strong>Nivel de Riesgo:</strong> 
                         <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; 
                             background: ${this._getRiesgoColor(datos.nivelRiesgo)}20; 
@@ -1124,10 +1224,8 @@ class CrearIncidenciaController {
 
             this._mostrarCargando('Creando incidencia y subiendo imágenes...');
 
-            // Preparar fecha
             const fechaObj = new Date(datos.fechaHora);
 
-            // Preparar datos para la incidencia
             const incidenciaData = {
                 sucursalId: datos.sucursalId,
                 categoriaId: datos.categoriaId,
@@ -1139,10 +1237,8 @@ class CrearIncidenciaController {
                 reportadoPorId: this.usuarioActual.id
             };
 
-            // Extraer archivos de las imágenes
             const archivos = datos.imagenes.map(img => img.file);
 
-            // Crear la incidencia usando el manager
             const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
                 incidenciaData,
                 this.usuarioActual,
@@ -1151,15 +1247,17 @@ class CrearIncidenciaController {
 
             this._ocultarCargando();
 
-            // Mostrar éxito
+            const sucursalNombre = document.getElementById('sucursalIncidencia').dataset.selectedName || datos.sucursalId;
+            const categoriaNombre = document.getElementById('categoriaIncidencia').dataset.selectedName || datos.categoriaId;
+
             await Swal.fire({
                 icon: 'success',
                 title: '¡Incidencia creada!',
                 html: `
                     <div style="text-align: left;">
                         <p><strong>ID:</strong> <span style="color: var(--color-accent-primary);">${nuevaIncidencia.id}</span></p>
-                        <p><strong>Sucursal:</strong> ${datos.sucursalId}</p>
-                        <p><strong>Categoría:</strong> ${datos.categoriaId}</p>
+                        <p><strong>Sucursal:</strong> ${sucursalNombre}</p>
+                        <p><strong>Categoría:</strong> ${categoriaNombre}</p>
                         <p><strong>Imágenes subidas:</strong> ${datos.imagenes.length}</p>
                     </div>
                 `,
@@ -1196,7 +1294,6 @@ class CrearIncidenciaController {
             cancelButtonText: 'No, continuar'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Liberar URLs de objetos
                 this.imagenesSeleccionadas.forEach(img => {
                     if (img.preview) {
                         URL.revokeObjectURL(img.preview);
