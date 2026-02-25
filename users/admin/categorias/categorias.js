@@ -536,8 +536,7 @@ async function crearFilaCategoria(categoria, tbody) {
             </div>
         </td>
         <td data-label="Subcategorías">
-            <span class="${numSub > 0 ? 'subcategoria-count-badge' : 'badge'}" style="${numSub === 0 ? 'background:rgba(107,114,128,0.2); color:#9ca3af;' : ''}">
-                <i class="fas fa-folder${numSub > 0 ? '-open' : ''}"></i>
+            <span class="${numSub > 0 ? 'subcategoria-count-badge' : 'badge'}" style="${numSub === 0 ? 'background:rgba(107,114,128,0.2); color:#9ca3af;' : ''}">               
                 ${numSub} ${numSub === 1 ? 'subcategoría' : 'subcategorías'}
             </span>
         </td>
@@ -568,7 +567,7 @@ async function crearFilaCategoria(categoria, tbody) {
             <div style="background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.5)); padding: 20px; border-radius: 0 0 20px 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                     <h6 style="color: white; font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-list-ul" style="color: white; filter: drop-shadow(0 0 5px #c0c0c0);"></i>
+                        <i class="fas fa-list-ul" style="color: white; filter: "></i>
                         Subcategorías de <span style="color:#2f8cff;">"${escapeHTML(categoria.nombre)}"</span>
                     </h6>
                     <button class="btn-agregar-sub" onclick="window.agregarSubcategoria('${categoria.id}', event)">
