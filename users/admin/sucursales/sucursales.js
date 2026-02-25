@@ -299,7 +299,7 @@ async function showBranchDetails(sucursal, branchName) {
         // Mostrar detalles
         Swal.fire({
             title: sucursal.nombre,
-            html: `
+            html: /*html*/`
                 <div style="text-align: left;">
                     <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
                         <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">INFORMACIÓN GENERAL</h4>
@@ -355,7 +355,7 @@ async function deleteBranch(branchId, branchName, admin, sucursalManager) {
     // Mostrar confirmación antes de eliminar
     const confirmResult = await Swal.fire({
         title: '¿Eliminar sucursal?',
-        html: `
+        html: /*html*/`
             <div class="delete-confirmation">
                 <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
                     <strong style="color: #ff4d4d;">"${escapeHTML(branchName)}"</strong>
@@ -453,7 +453,7 @@ function showLoadingState() {
     const tbody = document.getElementById('branchesTableBody');
     if (!tbody) return;
     
-    tbody.innerHTML = `
+    tbody.innerHTML = /*html*/`
         <tr>
             <td colspan="6" class="loading-state">
                 <div class="loading-content">
@@ -471,7 +471,7 @@ function showNoAdminMessage() {
     const tbody = document.getElementById('branchesTableBody');
     if (!tbody) return;
     
-    tbody.innerHTML = `
+    tbody.innerHTML = /*html*/`
         <tr>
             <td colspan="6" class="error-state">
                 <div class="error-content">
