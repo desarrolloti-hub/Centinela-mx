@@ -28,15 +28,15 @@ class EditarSucursalController {
         this.sucursalActual = null;
         this.loadingOverlay = null;
         this.notificacionActual = null;
-        
+
         // Propiedades del mapa
         this.map = null;
         this.marker = null;
         this.mapInitialized = false;
-        
+
         // Timeout para debounce del listener de coordenadas
         this.coordenadasTimeout = null;
-        
+
         // Bandera para evitar loops infinitos
         this.actualizandoDesdeMapa = false;
 
@@ -55,8 +55,8 @@ class EditarSucursalController {
             }
 
             // 2. Verificar que sea administrador
-            if (!this.usuarioActual.esAdministrador || typeof this.usuarioActual.esAdministrador === 'function' 
-                ? !this.usuarioActual.esAdministrador() 
+            if (!this.usuarioActual.esAdministrador || typeof this.usuarioActual.esAdministrador === 'function'
+                ? !this.usuarioActual.esAdministrador()
                 : true) {
                 throw new Error('Solo los administradores pueden editar sucursales');
             }
@@ -115,11 +115,11 @@ class EditarSucursalController {
         try {
             const { SucursalManager, ESTADOS_MEXICO } = await import('/clases/sucursal.js');
             const { RegionManager } = await import('/clases/region.js');
-            
+
             this.sucursalManager = new SucursalManager();
             this.regionManager = new RegionManager();
             this.ESTADOS_MEXICO = ESTADOS_MEXICO;
-            
+
         } catch (error) {
             console.error('Error cargando managers:', error);
             throw error;
@@ -252,7 +252,7 @@ class EditarSucursalController {
         if (!select || !this.ESTADOS_MEXICO) return;
 
         select.innerHTML = '<option value="">-- Seleccione un estado --</option>';
-        
+
         this.ESTADOS_MEXICO.forEach(estado => {
             const option = document.createElement('option');
             option.value = estado;
@@ -295,19 +295,19 @@ class EditarSucursalController {
         this._setValue('organizacionCamelCase', sucursal.organizacionCamelCase);
         this._setValue('nombreSucursal', sucursal.nombre || '');
         this._setValue('tipoSucursal', sucursal.tipo || '');
-        
+
         // Ubicación (campos directos)
         this._setValue('zonaSucursal', sucursal.zona || '');
         this._setValue('ciudadSucursal', sucursal.ciudad || '');
         this._setValue('direccionSucursal', sucursal.direccion || '');
-        
+
         // Contacto
         this._setValue('contactoSucursal', sucursal.contacto || '');
-        
+
         // Coordenadas (campos directos)
         this._setValue('latitudSucursal', sucursal.latitud || '');
         this._setValue('longitudSucursal', sucursal.longitud || '');
-        
+
         // Seleccionar región (con timeout para esperar que carguen las opciones)
         if (sucursal.regionId) {
             setTimeout(() => {
@@ -317,7 +317,7 @@ class EditarSucursalController {
                 }
             }, 500);
         }
-        
+
         // Seleccionar estado
         if (sucursal.estado) {
             setTimeout(() => {
@@ -575,32 +575,7 @@ class EditarSucursalController {
         const latitud = document.getElementById('latitudSucursal').value.trim();
         const longitud = document.getElementById('longitudSucursal').value.trim();
 
-        Swal.fire({
-            title: 'Actualizar sucursal',
-            html: `
-                <div style="text-align: left; color: var(--color-text-secondary);">
-                    <p><strong style="color: var(--color-text-primary);">Nombre:</strong> ${nombre}</p>
-                    <p><strong style="color: var(--color-text-primary);">Tipo:</strong> ${tipo}</p>
-                    <p><strong style="color: var(--color-text-primary);">Región:</strong> ${regionNombre}</p>
-                    <p><strong style="color: var(--color-text-primary);">Estado:</strong> ${estado}</p>
-                    <p><strong style="color: var(--color-text-primary);">Ciudad:</strong> ${ciudad}</p>
-                    <p><strong style="color: var(--color-text-primary);">Dirección:</strong> ${direccion}</p>
-                    <p><strong style="color: var(--color-text-primary);">Zona:</strong> ${zona || 'No especificada'}</p>
-                    <p><strong style="color: var(--color-text-primary);">Contacto:</strong> ${contacto}</p>
-                    <p><strong style="color: var(--color-text-primary);">Coordenadas:</strong> ${latitud}, ${longitud}</p>
-                </div>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Confirmar',
-            cancelButtonText: 'Cancelar',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                this._actualizarSucursal();
-            }
-        });
+
     }
 
     async _actualizarSucursal() {
@@ -651,21 +626,13 @@ class EditarSucursalController {
 
     async _mostrarExitoActualizacion(sucursal) {
         const contactoMostrar = sucursal.contacto || 'No especificado';
-        const ubicacionCompleta = sucursal.getUbicacionCompleta ? 
-            sucursal.getUbicacionCompleta() : 
+        const ubicacionCompleta = sucursal.getUbicacionCompleta ?
+            sucursal.getUbicacionCompleta() :
             `${sucursal.direccion}, ${sucursal.ciudad}, ${sucursal.estado}`;
 
         await Swal.fire({
             icon: 'success',
             title: '¡Sucursal actualizada!',
-            html: `
-                <div style="text-align: left;">
-                    <p><strong>Nombre:</strong> ${sucursal.nombre}</p>
-                    <p><strong>Tipo:</strong> ${sucursal.tipo}</p>
-                    <p><strong>Ubicación:</strong> ${ubicacionCompleta}</p>
-                    <p><strong>Contacto:</strong> ${contactoMostrar}</p>
-                </div>
-            `,
             confirmButtonText: 'Ir a Sucursales',
             background: 'var(--color-bg-secondary)',
             color: 'var(--color-text-primary)'
@@ -726,7 +693,7 @@ class EditarSucursalController {
             this._actualizarCoordenadasMapa(lat, lng);
 
             this.mapInitialized = true;
-            
+
             // Configurar eventos del mapa
             this._configurarEventosMapa();
 
@@ -743,7 +710,7 @@ class EditarSucursalController {
             btnCentrar.addEventListener('click', () => {
                 const lat = parseFloat(document.getElementById('latitudSucursal').value);
                 const lng = parseFloat(document.getElementById('longitudSucursal').value);
-                
+
                 if (!isNaN(lat) && !isNaN(lng)) {
                     this.map.setView([lat, lng], 15);
                 }
@@ -802,7 +769,7 @@ class EditarSucursalController {
 
     _colocarMarcador(posicion) {
         if (!this.map || !this.marker) return;
-        
+
         this.marker.setLatLng(posicion);
         this.map.setView(posicion, 15);
         this._actualizarCoordenadasMapa(posicion.lat, posicion.lng);
@@ -812,20 +779,20 @@ class EditarSucursalController {
         // Redondear a 6 decimales
         const latFormatted = Number(lat).toFixed(6);
         const lngFormatted = Number(lng).toFixed(6);
-        
+
         // Actualizar campos del formulario (SOLO si no estamos actualizando desde el mapa)
         if (!this.actualizandoDesdeMapa) {
             const latInput = document.getElementById('latitudSucursal');
             const lngInput = document.getElementById('longitudSucursal');
-            
+
             if (latInput) latInput.value = latFormatted;
             if (lngInput) lngInput.value = lngFormatted;
         }
-        
+
         // Actualizar display en el mapa
         const mapLat = document.getElementById('mapLatitud');
         const mapLng = document.getElementById('mapLongitud');
-        
+
         if (mapLat) mapLat.textContent = latFormatted;
         if (mapLng) mapLng.textContent = lngFormatted;
 
@@ -841,7 +808,7 @@ class EditarSucursalController {
 
     async _buscarDireccionEnMapa() {
         const direccion = document.getElementById('direccionSucursal').value;
-        
+
         if (!direccion) {
             this._mostrarNotificacion('Por favor ingresa una dirección para buscar', 'warning');
             return;
@@ -849,20 +816,20 @@ class EditarSucursalController {
 
         try {
             this._mostrarCargando('Buscando dirección exacta...');
-            
+
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}&limit=1&countrycodes=mx`);
             const data = await response.json();
 
             if (data && data.length > 0) {
                 const lat = parseFloat(data[0].lat);
                 const lon = parseFloat(data[0].lon);
-                
+
                 // Colocar marcador en las nuevas coordenadas
                 this._colocarMarcador([lat, lon]);
-                
+
                 // Obtener la dirección EXACTA de estas coordenadas
                 await this._obtenerDireccionDesdeCoordenadas(lat, lon);
-                
+
                 this._mostrarNotificacion('Dirección encontrada en el mapa', 'success', 2000);
             } else {
                 this._mostrarNotificacion('No se encontró la dirección en México', 'warning');
@@ -893,7 +860,7 @@ class EditarSucursalController {
             (error) => {
                 this._ocultarCargando();
                 let mensaje = 'Error obteniendo ubicación';
-                switch(error.code) {
+                switch (error.code) {
                     case error.PERMISSION_DENIED:
                         mensaje = 'Permiso denegado para obtener ubicación';
                         break;
@@ -917,7 +884,7 @@ class EditarSucursalController {
     // ========== FUNCIÓN PARA CENTRAR MAPA EN ESTADO SELECCIONADO ==========
     _centrarMapaEnEstado(estado) {
         if (!this.map) return;
-        
+
         // Coordenadas aproximadas de los estados de México
         const coordenadasEstados = {
             "Aguascalientes": [21.8853, -102.2916],
@@ -956,14 +923,14 @@ class EditarSucursalController {
         };
 
         const coords = coordenadasEstados[estado];
-        
+
         if (coords) {
             this.map.setView(coords, 8);
             L.popup()
                 .setLatLng(coords)
                 .setContent(`<b>${estado}</b><br>Haz clic en el mapa para ajustar la ubicación`)
                 .openOn(this.map);
-            
+
             this._mostrarNotificacion(`Mapa centrado en ${estado}`, 'info', 2000);
         } else {
             console.warn(`No se encontraron coordenadas para el estado: ${estado}`);
@@ -1007,9 +974,9 @@ class EditarSucursalController {
 
     _mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
         Swal.fire({
-            title: tipo === 'success' ? 'Éxito' : 
-                   tipo === 'error' ? 'Error' : 
-                   tipo === 'warning' ? 'Advertencia' : 'Información',
+            title: tipo === 'success' ? 'Éxito' :
+                tipo === 'error' ? 'Error' :
+                    tipo === 'warning' ? 'Advertencia' : 'Información',
             text: mensaje,
             icon: tipo,
             timer: duracion,
