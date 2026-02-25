@@ -306,7 +306,7 @@ class AreasController {
                 <div class="cargos-container" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)); padding: 20px; border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);">
                     <div class="cargos-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                         <h6 style="color: var(--color-text-primary); font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);">
-                            <i class="fas fa-list-ul" style="color: var(--color-text-primary); filter: drop-shadow(0 0 5px var(--color-accent-primary));"></i>
+                            <i class="fas fa-list-ul""></i>
                             Cargos de <span style="color:#2f8cff;">"${this.escapeHTML(area.nombreArea)}"</span>
                         </h6>
                         ${botonAgregarHTML}
