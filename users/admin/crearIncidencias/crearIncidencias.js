@@ -164,7 +164,7 @@ class ImageEditorModal {
             if (el.type === 'circle') {
                 this.ctx.arc(el.x, el.y, el.radius, 0, 2 * Math.PI);
                 this.ctx.stroke();
-                this.ctx.fill();
+
             } else if (el.type === 'arrow') {
                 const angle = Math.atan2(el.endY - el.startY, el.endX - el.startX);
                 const arrowLength = 15;
