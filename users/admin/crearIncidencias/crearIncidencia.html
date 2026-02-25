@@ -10,6 +10,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- jQuery (requerido para Select2) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 para búsquedas -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- Flatpickr para fecha/hora -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
     <!-- Fuentes del sistema Centinela -->
     <link
@@ -18,10 +27,10 @@
 
     <!-- Estilos del navbar y footer -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
+
     <!-- Estilos principales de la vista -->
     <link rel="stylesheet" href="crearIncidencias.css">
-    
+
     <!-- Assets -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
@@ -42,7 +51,7 @@
                 </h1>
                 <div class="header-description-text">
                     <i class="fas fa-clipboard-list"></i>
-                    "Registra una nueva incidencia y dale seguimiento desde el inicio."
+                    "Registra una nueva incidencia con evidencias fotográficas"
                 </div>
             </div>
         </div>
@@ -56,7 +65,7 @@
                     <div class="card-header">
                         <h5><i class="fas fa-edit"></i>Información de la Incidencia</h5>
                         <button id="btnVolverLista" class="btn-volver">
-                            <i class="fas fa-arrow-left"></i>Volver a la lista 
+                            <i class="fas fa-arrow-left"></i>Volver a la lista
                         </button>
                     </div>
                     <div class="card-body">
@@ -67,31 +76,42 @@
                                     <h6 class="section-title"><i class="fas fa-info-circle"></i>Información Básica</h6>
                                 </div>
 
-                                <!-- Sucursal -->
+                                <!-- Organización (solo lectura) -->
+                                <div class="full-width">
+                                    <label for="organization" class="form-label">Organización</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-building"></i></span>
+                                        <input type="text" class="form-control" id="organization" readonly>
+                                    </div>
+                                    <div class="form-help-text">Organización a la que pertenece la incidencia</div>
+                                </div>
+
+                                <!-- Sucursal con buscador -->
                                 <div class="form-field">
                                     <label for="sucursalIncidencia" class="form-label">Sucursal *</label>
                                     <div class="input-group">
                                         <span class="input-group-icon"><i class="fas fa-store"></i></span>
-                                        <select class="form-control" id="sucursalIncidencia" required>
+                                        <select class="form-control select2-buscador" id="sucursalIncidencia" required>
                                             <option value="">-- Cargando sucursales... --</option>
                                         </select>
                                     </div>
-                                    <div class="form-help-text">Selecciona la sucursal donde ocurrió la incidencia</div>
+                                    <div class="form-help-text">Selecciona o busca la sucursal donde ocurrió la
+                                        incidencia</div>
                                 </div>
 
-                                <!-- Categoría -->
+                                <!-- Categoría con buscador -->
                                 <div class="form-field">
                                     <label for="categoriaIncidencia" class="form-label">Categoría *</label>
                                     <div class="input-group">
                                         <span class="input-group-icon"><i class="fas fa-tags"></i></span>
-                                        <select class="form-control" id="categoriaIncidencia" required>
-                                            <option value="">-- Primero selecciona una categoría --</option>
+                                        <select class="form-control select2-buscador" id="categoriaIncidencia" required>
+                                            <option value="">-- Selecciona una categoría --</option>
                                         </select>
                                     </div>
-                                    <div class="form-help-text">Selecciona la categoría principal</div>
+                                    <div class="form-help-text">Selecciona o busca la categoría principal</div>
                                 </div>
 
-                                <!-- Subcategoría (opcional) -->
+                                <!-- Subcategoría (opcional) - SIN buscador -->
                                 <div class="form-field">
                                     <label for="subcategoriaIncidencia" class="form-label">Subcategoría</label>
                                     <div class="input-group">
@@ -107,7 +127,8 @@
                                 <div class="form-field">
                                     <label for="nivelRiesgo" class="form-label">Nivel de Riesgo *</label>
                                     <div class="input-group">
-                                        <span class="input-group-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                                        <span class="input-group-icon"><i
+                                                class="fas fa-exclamation-triangle"></i></span>
                                         <select class="form-control" id="nivelRiesgo" required>
                                             <option value="">-- Selecciona el nivel de riesgo --</option>
                                             <option value="bajo">Bajo</option>
@@ -119,12 +140,38 @@
                                     <div class="form-help-text">Define la criticidad de la incidencia</div>
                                 </div>
 
+                                <!-- Estado de la incidencia -->
+                                <div class="form-field">
+                                    <label for="estadoIncidencia" class="form-label">Estado *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-check-circle"></i></span>
+                                        <select class="form-control" id="estadoIncidencia" required>
+                                            <option value="pendiente">Pendiente</option>
+                                            <option value="finalizada">Finalizada</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-help-text">Define el estado actual de la incidencia</div>
+                                </div>
+
+                                <!-- Fecha y Hora de la incidencia -->
+                                <div class="form-field">
+                                    <label for="fechaHoraIncidencia" class="form-label">Fecha y Hora *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-calendar-alt"></i></span>
+                                        <input type="text" class="form-control" id="fechaHoraIncidencia"
+                                            placeholder="Selecciona fecha y hora" required>
+                                    </div>
+                                    <div class="form-help-text">Fecha y hora en que ocurrió la incidencia</div>
+                                </div>
+
                                 <!-- Descripción/Detalles -->
                                 <div class="full-width">
-                                    <label for="detallesIncidencia" class="form-label">Descripción de la Incidencia *</label>
+                                    <label for="detallesIncidencia" class="form-label">Descripción de la Incidencia
+                                        *</label>
                                     <textarea class="form-control" id="detallesIncidencia" rows="5"
                                         placeholder="Describa detalladamente lo sucedido, incluyendo fechas, personas involucradas, y cualquier información relevante..."></textarea>
-                                    <div class="form-help-text">Proporcione una descripción detallada del incidente</div>
+                                    <div class="form-help-text">Proporcione una descripción detallada del incidente
+                                    </div>
                                     <div class="char-limit-info">
                                         <span class="char-counter" id="contadorCaracteres">0/1000</span>
                                     </div>
@@ -137,35 +184,57 @@
         </div>
 
         <!-- ============================================= -->
-        <!-- SECCIÓN 2: SEGUIMIENTO INICIAL + BOTONES -->
+        <!-- SECCIÓN 2: IMÁGENES Y EVIDENCIAS -->
         <!-- ============================================= -->
         <div class="form-row" style="margin-top: 20px;">
             <div class="full-width">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-history"></i>Seguimiento Inicial</h5>
+                        <h5><i class="fas fa-images"></i>Evidencias Fotográficas</h5>
                     </div>
                     <div class="card-body">
-                        <!-- Sección de Seguimiento Inicial -->
-                        <div class="form-row">
-                            <div class="full-width">
-                                <div class="alert alert-info" style="margin-bottom: 20px;">
+                        <!-- Alerta informativa -->
+                        <div class="alert alert-info" style="margin-bottom: 20px;">
+                            <i class="fas fa-info-circle"></i>
+                            Puedes agregar imágenes como evidencia. Haz clic en el botón Editar para abrir el editor
+                            completo donde podrás dibujar círculos, flechas y agregar comentarios.
+                        </div>
+
+                        <!-- Sección de carga de imágenes -->
+                        <div class="image-upload-section">
+                            <div class="upload-area">
+                                <input type="file" id="inputImagenes" multiple accept="image/*" style="display: none;">
+                                <button type="button" class="btn-upload" id="btnAgregarImagen">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    Agregar imágenes
+                                </button>
+                                <div class="upload-hint">
                                     <i class="fas fa-info-circle"></i>
-                                    Puedes agregar un comentario inicial para documentar las primeras acciones tomadas. Este seguimiento quedará registrado con tu usuario y fecha actual.
+                                    Formatos: JPG, PNG, GIF. Máximo 5MB por imagen.
                                 </div>
+                            </div>
+                        </div>
 
-                                <!-- Campo de seguimiento inicial -->
-                                <div class="form-field">
-                                    <label for="seguimientoInicial" class="form-label">Comentario Inicial (opcional)</label>
-                                    <textarea class="form-control" id="seguimientoInicial" rows="4"
-                                        placeholder="Ej: Se notificó al área correspondiente, se asignó responsable, se tomaron medidas provisionales..."></textarea>
-                                    <div class="form-help-text">Describe las primeras acciones tomadas (opcional)</div>
-                                    <div class="char-limit-info">
-                                        <span class="char-counter" id="contadorSeguimiento">0/500</span>
-                                    </div>
+                        <!-- Vista previa de imágenes -->
+                        <div class="images-preview-container">
+                            <h6>
+                                <i class="fas fa-images"></i>
+                                Imágenes seleccionadas (<span id="imagenesCount">0</span>)
+                            </h6>
+                            <div class="images-grid" id="imagenesPreview">
+                                <div class="no-images">
+                                    <i class="fas fa-images"></i>
+                                    <p>No hay imágenes seleccionadas</p>
                                 </div>
+                            </div>
+                        </div>
 
-                                
+                        <!-- Mensaje informativo -->
+                        <div class="alert alert-info" style="margin-top: 20px;">
+                            <i class="fas fa-info-circle"></i>
+                            Las imágenes se almacenarán de forma segura en Firebase Storage y estarán vinculadas
+                            permanentemente a esta incidencia.
+                        </div>
 
                         <!-- BOTONES DE ACCIÓN -->
                         <div class="action-buttons-container">
@@ -181,6 +250,81 @@
             </div>
         </div>
     </div>
+
+    <!-- ============================================= -->
+    <!-- MODAL EDITOR DE IMAGEN COMPLETO -->
+    <!-- ============================================= -->
+    <div id="imageEditorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5><i class="fas fa-edit"></i> Editor de Imagen</h5>
+                <button type="button" class="modal-close" id="btnCerrarModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="editor-layout">
+                    <!-- Panel izquierdo - Canvas -->
+                    <div class="editor-canvas-panel">
+                        <div class="canvas-container">
+                            <canvas id="modalImageCanvas"></canvas>
+                        </div>
+                        <div class="image-info" id="modalImageInfo">
+                            Cargando imagen...
+                        </div>
+                    </div>
+
+                    <!-- Panel derecho - Herramientas -->
+                    <div class="editor-tools-panel">
+                        <div class="tools-section">
+                            <h6>Herramientas de dibujo</h6>
+                            <div class="tools-grid">
+                                <button type="button" class="tool-btn-large" id="modalToolCircle">
+                                    <i class="fas fa-circle"></i>
+                                    <span>Círculo</span>
+                                </button>
+                                <button type="button" class="tool-btn-large" id="modalToolArrow">
+                                    <i class="fas fa-arrow-right"></i>
+                                    <span>Flecha</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="tools-section">
+                            <h6>Color</h6>
+                            <div class="color-picker">
+                                <input type="color" id="modalColorPicker" value="#ff0000">
+                                <span class="color-value" id="modalColorValue">#ff0000</span>
+                            </div>
+                        </div>
+
+                        <div class="tools-section">
+                            <h6>Comentario</h6>
+                            <textarea id="modalComentario" class="form-control" rows="3"
+                                placeholder="Agrega un comentario sobre esta imagen..."></textarea>
+                        </div>
+
+                        <div class="tools-section">
+                            <h6>Acciones</h6>
+                            <div class="action-buttons-vertical">
+                                <button type="button" class="tool-btn-large" id="modalLimpiarTodo">
+                                    <i class="fas fa-eraser"></i>
+                                    <span>Limpiar todo</span>
+                                </button>
+                                <button type="button" class="tool-btn-large" id="modalGuardarCambios">
+                                    <i class="fas fa-save"></i>
+                                    <span>Guardar cambios</span>
+                                </button>
+                                <button type="button" class="tool-btn-large" id="modalCancelar">
+                                    <i class="fas fa-times"></i>
+                                    <span>Cancelar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <br>
 
     <!-- Scripts -->

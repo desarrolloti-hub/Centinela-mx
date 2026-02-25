@@ -8,7 +8,6 @@
 // VARIABLES GLOBALES
 // =============================================
 let incidenciaManager = null;
-let incidenciaExpandidaId = null;
 let organizacionActual = null;
 let incidenciasCache = [];
 let sucursalesCache = [];
@@ -38,9 +37,9 @@ async function inicializarIncidenciaManager() {
         await cargarSucursales();
         await cargarCategorias();
         await cargarIncidencias();
-        
+
         configurarEventListeners();
-        
+
         return true;
     } catch (error) {
         console.error('Error al inicializar incidencias:', error);
@@ -64,7 +63,7 @@ async function obtenerDatosOrganizacion() {
         // Fallback a localStorage
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
-        
+
         organizacionActual = {
             nombre: userData.organizacion || adminInfo.organizacion || 'Mi Empresa',
             camelCase: userData.organizacionCamelCase || adminInfo.organizacionCamelCase || ''
@@ -78,10 +77,10 @@ async function cargarSucursales() {
     try {
         const { SucursalManager } = await import('/clases/sucursal.js');
         const sucursalManager = new SucursalManager();
-        
+
         if (organizacionActual.camelCase) {
             sucursalesCache = await sucursalManager.getSucursalesByOrganizacion(organizacionActual.camelCase);
-            
+
             // Llenar el filtro de sucursales
             const filtroSucursal = document.getElementById('filtroSucursal');
             if (filtroSucursal) {
@@ -114,11 +113,11 @@ async function cargarCategorias() {
 function configurarEventListeners() {
     const btnFiltrar = document.getElementById('btnFiltrar');
     const btnLimpiar = document.getElementById('btnLimpiarFiltros');
-    
+
     if (btnFiltrar) {
         btnFiltrar.addEventListener('click', aplicarFiltros);
     }
-    
+
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', limpiarFiltros);
     }
@@ -131,7 +130,7 @@ function aplicarFiltros() {
     filtrosActivos.estado = document.getElementById('filtroEstado').value;
     filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo').value;
     filtrosActivos.sucursalId = document.getElementById('filtroSucursal').value;
-    
+
     paginaActual = 1;
     renderizarIncidencias();
 }
@@ -140,13 +139,13 @@ function limpiarFiltros() {
     document.getElementById('filtroEstado').value = 'todos';
     document.getElementById('filtroRiesgo').value = 'todos';
     document.getElementById('filtroSucursal').value = 'todos';
-    
+
     filtrosActivos = {
         estado: 'todos',
         nivelRiesgo: 'todos',
         sucursalId: 'todos'
     };
-    
+
     paginaActual = 1;
     renderizarIncidencias();
 }
@@ -157,17 +156,17 @@ function filtrarIncidencias(incidencias) {
         if (filtrosActivos.estado !== 'todos' && inc.estado !== filtrosActivos.estado) {
             return false;
         }
-        
+
         // Filtro por nivel de riesgo
         if (filtrosActivos.nivelRiesgo !== 'todos' && inc.nivelRiesgo !== filtrosActivos.nivelRiesgo) {
             return false;
         }
-        
+
         // Filtro por sucursal
         if (filtrosActivos.sucursalId !== 'todos' && inc.sucursalId !== filtrosActivos.sucursalId) {
             return false;
         }
-        
+
         return true;
     });
 }
@@ -185,21 +184,21 @@ window.verDetallesIncidencia = async function (incidenciaId, event) {
     const sucursal = sucursalesCache.find(s => s.id === incidencia.sucursalId);
     const categoria = categoriasCache.find(c => c.id === incidencia.categoriaId);
 
-    const fechaInicio = incidencia.getFechaInicioFormateada ? 
-        incidencia.getFechaInicioFormateada() : 
+    const fechaInicio = incidencia.getFechaInicioFormateada ?
+        incidencia.getFechaInicioFormateada() :
         new Date(incidencia.fechaInicio).toLocaleString('es-MX');
 
-    const fechaFinalizacion = incidencia.fechaFinalizacion ? 
-        (incidencia.getFechaFinalizacionFormateada ? 
-            incidencia.getFechaFinalizacionFormateada() : 
-            new Date(incidencia.fechaFinalizacion).toLocaleString('es-MX')) : 
+    const fechaFinalizacion = incidencia.fechaFinalizacion ?
+        (incidencia.getFechaFinalizacionFormateada ?
+            incidencia.getFechaFinalizacionFormateada() :
+            new Date(incidencia.fechaFinalizacion).toLocaleString('es-MX')) :
         'No finalizada';
 
-    const riesgoColor = incidencia.getNivelRiesgoColor ? 
-        incidencia.getNivelRiesgoColor() : 
-        (incidencia.nivelRiesgo === 'critico' ? '#dc3545' : 
-         incidencia.nivelRiesgo === 'alto' ? '#fd7e14' : 
-         incidencia.nivelRiesgo === 'medio' ? '#ffc107' : '#28a745');
+    const riesgoColor = incidencia.getNivelRiesgoColor ?
+        incidencia.getNivelRiesgoColor() :
+        (incidencia.nivelRiesgo === 'critico' ? '#dc3545' :
+            incidencia.nivelRiesgo === 'alto' ? '#fd7e14' :
+                incidencia.nivelRiesgo === 'medio' ? '#ffc107' : '#28a745');
 
     Swal.fire({
         title: `Incidencia: ${incidencia.id}`,
@@ -231,7 +230,7 @@ window.verDetallesIncidencia = async function (incidenciaId, event) {
 
                 <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
                     <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-align-left" style="margin-right: 8px;"></i>DETALLES
+                        </i>DETALLES
                     </h4>
                     <p style="color: var(--color-text-secondary); margin: 0; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
                         ${escapeHTML(incidencia.detalles) || 'No hay detalles disponibles.'}
@@ -240,20 +239,18 @@ window.verDetallesIncidencia = async function (incidenciaId, event) {
 
                 <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
                     <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>RIESGO Y ESTADO
+                        </i>RIESGO Y ESTADO
                     </h4>
                     <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                         <div>
                             <p style="margin: 5px 0;"><strong>Nivel de Riesgo:</strong></p>
                             <span class="riesgo-badge ${incidencia.nivelRiesgo}" style="background: ${riesgoColor}20; color: ${riesgoColor}; border-color: ${riesgoColor}40;">
-                                <i class="fas fa-exclamation-circle"></i>
                                 ${incidencia.getNivelRiesgoTexto ? incidencia.getNivelRiesgoTexto() : incidencia.nivelRiesgo}
                             </span>
                         </div>
                         <div>
                             <p style="margin: 5px 0;"><strong>Estado:</strong></p>
                             <span class="estado-badge ${incidencia.estado}">
-                                <i class="fas ${incidencia.estado === 'finalizada' ? 'fa-check-circle' : 'fa-clock'}"></i>
                                 ${incidencia.getEstadoTexto ? incidencia.getEstadoTexto() : incidencia.estado}
                             </span>
                         </div>
@@ -286,28 +283,22 @@ window.verDetallesIncidencia = async function (incidenciaId, event) {
         `,
         icon: null,
         width: 800,
-        showConfirmButton: true,
+        showConfirmButton: false,
         showCancelButton: true,
-        confirmButtonText: 'VER SEGUIMIENTO COMPLETO',
-        cancelButtonText: 'CERRAR',
-        reverseButtons: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            toggleSeguimiento(incidencia.id);
-        }
+        cancelButtonText: 'CERRAR'
     });
 };
 
 function renderizarSeguimientoResumen(incidencia) {
     const seguimientos = incidencia.getSeguimientosArray ? incidencia.getSeguimientosArray() : [];
-    
+
     if (seguimientos.length === 0) {
         return '<p style="color: var(--color-text-dim); text-align: center; padding: 20px;">No hay seguimiento registrado</p>';
     }
-    
+
     // Mostrar solo los últimos 3 seguimientos
     const ultimos = seguimientos.slice(0, 3);
-    
+
     return ultimos.map(seg => `
         <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; border-left: 3px solid var(--color-accent-primary);">
             <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
@@ -359,10 +350,10 @@ window.eliminarIncidencia = async function (incidenciaId, event) {
 
             // Obtener usuario actual
             const usuario = window.userManager?.currentUser || { id: 'sistema' };
-            
+
             await incidenciaManager.eliminarIncidencia(
-                incidenciaId, 
-                usuario.id, 
+                incidenciaId,
+                usuario.id,
                 organizacionActual.camelCase,
                 true // eliminar archivos
             );
@@ -434,7 +425,7 @@ window.finalizarIncidencia = async function (incidenciaId, event) {
 
             // Obtener usuario actual
             const usuario = window.userManager?.currentUser || { id: 'sistema', nombreCompleto: 'Sistema' };
-            
+
             await incidenciaManager.finalizarIncidencia(
                 incidenciaId,
                 usuario.id,
@@ -466,191 +457,6 @@ window.finalizarIncidencia = async function (incidenciaId, event) {
     }
 };
 
-window.toggleSeguimiento = function (incidenciaId) {
-    const row = document.getElementById(`seguimiento-${incidenciaId}`);
-    const icon = document.querySelector(`.incidencia-row[data-id="${incidenciaId}"] .toggle-icon i`);
-
-    if (!row || !icon) return;
-
-    if (incidenciaExpandidaId && incidenciaExpandidaId !== incidenciaId) {
-        const prevRow = document.getElementById(`seguimiento-${incidenciaExpandidaId}`);
-        const prevIcon = document.querySelector(`.incidencia-row[data-id="${incidenciaExpandidaId}"] .toggle-icon i`);
-        if (prevRow) prevRow.style.display = 'none';
-        if (prevIcon) {
-            prevIcon.classList.remove('fa-chevron-down');
-            prevIcon.classList.add('fa-chevron-right');
-        }
-    }
-
-    if (row.style.display === 'none') {
-        row.style.display = 'table-row';
-        icon.classList.remove('fa-chevron-right');
-        icon.classList.add('fa-chevron-down');
-        incidenciaExpandidaId = incidenciaId;
-        
-        // Cargar seguimiento si es necesario
-        cargarSeguimiento(incidenciaId);
-    } else {
-        row.style.display = 'none';
-        icon.classList.remove('fa-chevron-down');
-        icon.classList.add('fa-chevron-right');
-        incidenciaExpandidaId = null;
-    }
-};
-
-async function cargarSeguimiento(incidenciaId) {
-    const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
-    if (!incidencia) return;
-
-    const container = document.getElementById(`seguimiento-content-${incidenciaId}`);
-    if (!container) return;
-
-    const seguimientos = incidencia.getSeguimientosArray ? incidencia.getSeguimientosArray() : [];
-
-    if (seguimientos.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center; padding:30px; background:rgba(0,0,0,0.2); border-radius:8px;">
-                <i class="fas fa-history" style="font-size:32px; color:#6b7280;"></i>
-                <p style="color:#6b7280;">No hay seguimiento registrado</p>
-                <button class="btn-agregar-seguimiento" onclick="window.agregarSeguimiento('${incidenciaId}', event)">
-                    <i class="fas fa-plus-circle"></i> Agregar seguimiento
-                </button>
-            </div>
-        `;
-        return;
-    }
-
-    seguimientos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-    let html = `
-        <div style="background: rgba(0,0,0,0.2); border-radius: 12px; overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; min-width: 100%;">
-                <thead>
-                    <tr>
-                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">#</th>
-                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Usuario</th>
-                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Descripción</th>
-                        <th style="padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Fecha</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    seguimientos.forEach((seg, index) => {
-        const fecha = new Date(seg.fecha).toLocaleString('es-MX', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        html += `
-            <tr>
-                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">${index + 1}</td>
-                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
-                    <span class="seguimiento-usuario">${escapeHTML(seg.usuarioNombre || 'Usuario')}</span>
-                </td>
-                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
-                    <span class="seguimiento-descripcion">${escapeHTML(seg.descripcion)}</span>
-                </td>
-                <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
-                    <span class="seguimiento-fecha"><i class="fas fa-clock"></i> ${fecha}</span>
-                </td>
-            </tr>
-        `;
-    });
-
-    html += `
-                </tbody>
-            </table>
-        </div>
-        <div style="margin-top: 15px; text-align: right;">
-            <button class="btn-agregar-seguimiento" onclick="window.agregarSeguimiento('${incidenciaId}', event)">
-                <i class="fas fa-plus-circle"></i> Agregar seguimiento
-            </button>
-        </div>
-    `;
-
-    container.innerHTML = html;
-}
-
-window.agregarSeguimiento = async function (incidenciaId, event) {
-    event?.stopPropagation();
-
-    const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
-    if (!incidencia) return;
-
-    const { value: descripcion } = await Swal.fire({
-        title: 'Agregar Seguimiento',
-        input: 'textarea',
-        inputLabel: 'Descripción',
-        inputPlaceholder: 'Describa las acciones realizadas...',
-        inputAttributes: {
-            'aria-label': 'Escriba su seguimiento'
-        },
-        showCancelButton: true,
-        confirmButtonText: 'AGREGAR',
-        cancelButtonText: 'CANCELAR',
-        inputValidator: (value) => {
-            if (!value) {
-                return 'Debe ingresar una descripción';
-            }
-        }
-    });
-
-    if (descripcion) {
-        try {
-            Swal.fire({
-                title: 'Guardando...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            // Obtener usuario actual
-            const usuario = window.userManager?.currentUser || { id: 'sistema', nombreCompleto: 'Sistema' };
-            
-            await incidenciaManager.agregarSeguimiento(
-                incidenciaId,
-                usuario.id,
-                usuario.nombreCompleto,
-                descripcion,
-                [], // sin archivos por ahora
-                organizacionActual.camelCase
-            );
-
-            Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Agregado!',
-                text: 'Seguimiento registrado correctamente.',
-                timer: 1500,
-                showConfirmButton: false
-            });
-
-            // Recargar la incidencia para obtener el seguimiento actualizado
-            const incidenciaActualizada = await incidenciaManager.getIncidenciaById(incidenciaId, organizacionActual.camelCase);
-            const index = incidenciasCache.findIndex(i => i.id === incidenciaId);
-            if (index !== -1) {
-                incidenciasCache[index] = incidenciaActualizada;
-            }
-
-            // Recargar seguimiento
-            await cargarSeguimiento(incidenciaId);
-
-        } catch (error) {
-            Swal.close();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message || 'Error al agregar seguimiento'
-            });
-        }
-    }
-};
-
 // =============================================
 // CARGAR INCIDENCIAS
 // =============================================
@@ -662,14 +468,14 @@ async function cargarIncidencias() {
 
     try {
         const tbody = document.getElementById('tablaIncidenciasBody');
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px;">Cargando incidencias...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;">Cargando incidencias...</td></tr>';
 
         incidenciasCache = await incidenciaManager.getIncidenciasByOrganizacion(organizacionActual.camelCase);
 
         if (!incidenciasCache || incidenciasCache.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align:center; padding:60px 20px;">
+                    <td colspan="7" style="text-align:center; padding:60px 20px;">
                         <div style="text-align:center;">
                             <i class="fas fa-exclamation-triangle" style="font-size:48px; color:rgba(255,193,7,0.3); margin-bottom:16px;"></i>
                             <h5 style="color:white;">No hay incidencias registradas</h5>
@@ -698,7 +504,7 @@ function renderizarIncidencias() {
 
     // Aplicar filtros
     const incidenciasFiltradas = filtrarIncidencias(incidenciasCache);
-    
+
     // Ordenar por fecha (más recientes primero)
     incidenciasFiltradas.sort((a, b) => {
         const fechaA = a.fechaCreacion ? new Date(a.fechaCreacion) : 0;
@@ -738,9 +544,7 @@ function renderizarPaginacion(totalPaginas) {
 
     for (let i = 1; i <= totalPaginas; i++) {
         html += `
-            <li class="page-item ${i === paginaActual ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="event.preventDefault(); irPagina(${i})">${i}</a>
-            </li>
+           
         `;
     }
 
@@ -757,12 +561,6 @@ async function crearFilaIncidencia(incidencia, tbody) {
     tr.className = 'incidencia-row';
     tr.dataset.id = incidencia.id;
 
-    tr.onclick = (e) => {
-        if (!e.target.closest('.action-buttons') && !e.target.closest('.btn') && !e.target.closest('.toggle-icon')) {
-            toggleSeguimiento(incidencia.id);
-        }
-    };
-
     // Obtener datos relacionados
     const sucursal = sucursalesCache.find(s => s.id === incidencia.sucursalId);
     const categoria = categoriasCache.find(c => c.id === incidencia.categoriaId);
@@ -770,46 +568,38 @@ async function crearFilaIncidencia(incidencia, tbody) {
     const riesgoTexto = incidencia.getNivelRiesgoTexto ? incidencia.getNivelRiesgoTexto() : incidencia.nivelRiesgo;
     const riesgoColor = incidencia.getNivelRiesgoColor ? incidencia.getNivelRiesgoColor() : '';
     const estadoTexto = incidencia.getEstadoTexto ? incidencia.getEstadoTexto() : incidencia.estado;
-    
-    const fechaInicio = incidencia.fechaInicio ? 
-        (incidencia.fechaInicio.toDate ? 
-            incidencia.fechaInicio.toDate().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 
-            new Date(incidencia.fechaInicio).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })) : 
+
+    const fechaInicio = incidencia.fechaInicio ?
+        (incidencia.fechaInicio.toDate ?
+            incidencia.fechaInicio.toDate().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) :
+            new Date(incidencia.fechaInicio).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })) :
         'N/A';
 
     tr.innerHTML = `
-        <td class="text-center" style="width:50px;" data-label="">
-            <span class="toggle-icon"><i class="fas fa-chevron-right"></i></span>
-        </td>
         <td data-label="ID / Folio">
-            <span class="incidencia-id" title="${incidencia.id}">${incidencia.id.substring(0, 12)}...</span>
+            <span class="incidencia-id" title="${incidencia.id}">${incidencia.id}</span>
         </td>
         <td data-label="Sucursal">
             <div style="display: flex; align-items: center;">
-                <i class="fas fa-store" style="margin-right: 8px; color: var(--color-accent-primary);"></i>
                 <span>${sucursal ? sucursal.nombre : 'No disponible'}</span>
             </div>
         </td>
         <td data-label="Categoría">
             <div style="display: flex; align-items: center;">
-                <i class="fas fa-tag" style="margin-right: 8px; color: var(--color-accent-secondary);"></i>
                 <span>${categoria ? categoria.nombre : 'No disponible'}</span>
             </div>
         </td>
         <td data-label="Riesgo">
             <span class="riesgo-badge ${incidencia.nivelRiesgo}" style="background: ${riesgoColor}20; color: ${riesgoColor}; border-color: ${riesgoColor}40;">
-                <i class="fas fa-exclamation-circle"></i>
                 ${riesgoTexto}
             </span>
         </td>
         <td data-label="Estado">
             <span class="estado-badge ${incidencia.estado}">
-                <i class="fas ${incidencia.estado === 'finalizada' ? 'fa-check-circle' : 'fa-clock'}"></i>
                 ${estadoTexto}
             </span>
         </td>
         <td data-label="Fecha">
-            <i class="fas fa-calendar-alt" style="margin-right: 5px; color: var(--color-text-dim);"></i>
             ${fechaInicio}
         </td>
         <td data-label="Acciones">
@@ -834,35 +624,6 @@ async function crearFilaIncidencia(incidencia, tbody) {
 
     tbody.appendChild(tr);
 
-    // Crear fila de seguimiento expandible
-    const seguimientoRow = document.createElement('tr');
-    seguimientoRow.className = 'seguimiento-row';
-    seguimientoRow.id = `seguimiento-${incidencia.id}`;
-    seguimientoRow.style.display = 'none';
-
-    seguimientoRow.innerHTML = `
-        <td colspan="8" style="padding:0; border-top:none;">
-            <div class="seguimiento-container">
-                <div class="seguimiento-header">
-                    <h6>
-                        <i class="fas fa-history"></i>
-                        Seguimiento de incidencia <span style="color: var(--color-accent-primary);">"${incidencia.id}"</span>
-                    </h6>
-                    <button class="btn-agregar-seguimiento" onclick="window.agregarSeguimiento('${incidencia.id}', event)">
-                        <i class="fas fa-plus-circle"></i> Agregar
-                    </button>
-                </div>
-                <div id="seguimiento-content-${incidencia.id}">
-                    <div style="text-align:center; padding:20px; color:#6b7280;">
-                        <i class="fas fa-spinner fa-spin"></i> Cargando seguimiento...
-                    </div>
-                </div>
-            </div>
-        </td>
-    `;
-
-    tbody.appendChild(seguimientoRow);
-
     // Asignar event listeners a los botones
     setTimeout(() => {
         tr.querySelectorAll('[data-action]').forEach(btn => {
@@ -876,20 +637,7 @@ async function crearFilaIncidencia(incidencia, tbody) {
                 else if (action === 'finalizar') window.finalizarIncidencia(id, e);
             });
         });
-        
-        const toggleIcon = tr.querySelector('.toggle-icon');
-        if (toggleIcon) {
-            toggleIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleSeguimiento(incidencia.id);
-            });
-        }
     }, 50);
-
-    // Precargar seguimiento
-    setTimeout(() => {
-        cargarSeguimiento(incidencia.id);
-    }, 100);
 }
 
 // =============================================
@@ -907,7 +655,7 @@ function mostrarError(mensaje) {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align:center; padding:40px;">
+                <td colspan="7" style="text-align:center; padding:40px;">
                     <div style="color: #ef4444;">
                         <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
                         <h5>Error</h5>
@@ -927,7 +675,7 @@ function mostrarErrorInicializacion() {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align:center; padding:40px;">
+                <td colspan="7" style="text-align:center; padding:40px;">
                     <div style="color: #ef4444;">
                         <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
                         <h5>Error de inicialización</h5>

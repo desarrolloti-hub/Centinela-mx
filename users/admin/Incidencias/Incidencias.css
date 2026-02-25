@@ -301,12 +301,10 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: linear-gradient(
-        to bottom right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: rotate(30deg);
     transition: all 0.5s ease;
     opacity: 0;
@@ -358,7 +356,7 @@
     font-size: 13px;
 }
 
-.table > :not(caption) > * > * {
+.table> :not(caption)>*>* {
     background-color: transparent !important;
 }
 
@@ -397,37 +395,18 @@
     background: rgba(47, 140, 255, 0.1) !important;
 }
 
-.table tbody tr.expanded {
-    background: rgba(47, 140, 255, 0.1);
-}
+/* ID / Folio styling - MODIFICADO */
+.incidencia-id {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    color: var(--color-text-primary) !important;
 
-.table tbody tr.expanded:hover {
-    background: rgba(47, 140, 255, 0.15);
-}
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
 
-/* Icono de expansión */
-.toggle-icon {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 50% !important;
-    color: white !important;
-    font-size: 18px !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    border: 2px solid transparent !important;
-}
-
-.toggle-icon i {
-    color: white !important;
-    font-size: 16px !important;
-    transition: transform 0.2s ease !important;
-}
-
-.toggle-icon:hover {
-    transform: scale(1.05) !important;
+    word-break: break-word;
+    max-width: 100%;
 }
 
 /* =============================================
@@ -505,18 +484,6 @@
     border-color: rgba(40, 167, 69, 0.3);
 }
 
-/* ID / Folio styling */
-.incidencia-id {
-    font-family: 'Orbitron', monospace;
-    font-size: 0.75rem;
-    color: var(--color-accent-primary);
-    background: rgba(47, 140, 255, 0.1);
-    padding: 2px 6px;
-    border-radius: 4px;
-    display: inline-block;
-    border: 1px solid rgba(47, 140, 255, 0.3);
-}
-
 /* =============================================
    BOTONES DE ACCIÓN - EXACTAMENTE COMO EN CATEGORÍAS
    ============================================= */
@@ -564,12 +531,10 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: linear-gradient(
-        to bottom right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: rotate(30deg);
     transition: all 0.5s ease;
     opacity: 0;
@@ -614,7 +579,7 @@
     color: #ff4d4d !important;
 }
 
-/* ---- BOTÓN SEGUIMIENTO (SUCCESS) ---- */
+/* ---- BOTÓN FINALIZAR (SUCCESS) ---- */
 .btn-outline-success:hover {
     border-color: #10b981 !important;
     color: #10b981 !important;
@@ -623,129 +588,6 @@
 
 .btn-outline-success:hover i {
     color: #10b981 !important;
-}
-
-/* =============================================
-   SEGUIMIENTO CONTAINER (EXPANDIDO)
-   ============================================= */
-.seguimiento-container {
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5));
-    padding: 20px;
-    border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);
-}
-
-.seguimiento-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.seguimiento-header h6 {
-    color: var(--color-text-primary);
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
-    word-break: break-word;
-}
-
-.seguimiento-header h6 i {
-    color: var(--color-text-primary);
-    filter: drop-shadow(0 0 5px var(--color-accent-primary));
-    flex-shrink: 0;
-}
-
-.btn-agregar-seguimiento {
-    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
-    border: 1px solid #10b981 !important;
-    color: var(--color-text-primary) !important;
-    padding: 8px 16px !important;
-    border-radius: var(--border-radius-medium) !important;
-    font-weight: 600 !important;
-    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
-    font-size: 12px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    transition: all 0.3s ease !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    justify-content: center !important;
-    cursor: pointer;
-    border: none;
-}
-
-.btn-agregar-seguimiento:hover {
-    transform: translateY(-2px) !important;
-    background: linear-gradient(145deg, #1a1a1a, #100f0f) !important;
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3) !important;
-    border-color: #10b981 !important;
-}
-
-.btn-agregar-seguimiento i {
-    color: #10b981 !important;
-}
-
-/* =============================================
-   TABLA DE SEGUIMIENTO
-   ============================================= */
-.seguimiento-tabla-wrapper {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: var(--border-radius-medium);
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.seguimiento-tabla {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 100%;
-}
-
-.seguimiento-tabla th {
-    padding: 12px;
-    text-align: left;
-    color: var(--color-text-dim);
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    white-space: nowrap;
-    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
-}
-
-.seguimiento-tabla td {
-    padding: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: var(--color-text-secondary);
-    vertical-align: middle;
-    font-size: 0.85rem;
-    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
-}
-
-.seguimiento-fecha {
-    color: var(--color-text-dim);
-    font-size: 0.75rem;
-    white-space: nowrap;
-}
-
-.seguimiento-usuario {
-    color: var(--color-accent-primary);
-    font-weight: 600;
-}
-
-.seguimiento-descripcion {
-    max-width: 300px;
-    word-break: break-word;
-    white-space: normal;
-    line-height: 1.4;
 }
 
 /* =============================================
@@ -925,7 +767,33 @@
 }
 
 /* =============================================
-   RESPONSIVE DESIGN MEJORADO
+   FORZAR COLORES DE TEXTO EN FILTROS (RESPUESTA RÁPIDA)
+   ============================================= */
+.filtros-container label,
+.filtro-grupo label,
+.filtros-header h5 {
+    color: #ffffff !important;
+}
+
+.filtro-select {
+    color: #ffffff !important;
+    background-color: #2a2a2a !important;
+}
+
+.filtro-select option {
+    color: #ffffff !important;
+    background-color: #1a1a1a !important;
+}
+
+.btn-filtrar,
+.btn-limpiar,
+.btn-filtrar i,
+.btn-limpiar i {
+    color: #ffffff !important;
+}
+
+/* =============================================
+   RESPONSIVE DESIGN MEJORADO - COMO EN CATEGORÍAS
    ============================================= */
 @media (max-width: 1023px) {
     .admin-container {
@@ -997,6 +865,7 @@
         font-size: 13px !important;
     }
 
+    /* ===== ESTILOS RESPONSIVOS DE TABLA - COMO EN CATEGORÍAS ===== */
     .table thead {
         display: none;
     }
@@ -1013,6 +882,7 @@
         border: 1px solid var(--color-border-light);
         border-radius: var(--border-radius-medium);
         padding: 16px;
+        margin: 0;
     }
 
     .table td {
@@ -1035,68 +905,31 @@
         text-transform: uppercase;
         font-size: 0.7rem;
         margin-bottom: 6px;
-    }
-
-    .seguimiento-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .seguimiento-header h6 {
-        width: 100%;
-    }
-
-    .btn-agregar-seguimiento {
-        width: 100%;
-        justify-content: center;
-        white-space: normal;
-        word-break: break-word;
-        padding: 10px 12px;
-    }
-
-    .seguimiento-tabla,
-    .seguimiento-tabla thead,
-    .seguimiento-tabla tbody,
-    .seguimiento-tabla tr,
-    .seguimiento-tabla td {
         display: block;
     }
 
-    .seguimiento-tabla thead {
-        display: none;
+    /* Ajustes específicos para cada columna */
+    .table td[data-label="ID / Folio"] .incidencia-id {
+
+        text-align: left;
     }
 
-    .seguimiento-tabla tr {
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: var(--border-radius-medium);
-        padding: 16px;
-        margin-bottom: 12px;
-        border: 1px solid var(--color-border-subtle);
+    .table td[data-label="Riesgo"] .riesgo-badge,
+    .table td[data-label="Estado"] .estado-badge {
+        width: auto;
+        min-width: auto;
     }
 
-    .seguimiento-tabla td {
-        display: flex;
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        align-items: flex-start;
-        gap: 10px;
+    .table td[data-label="Acciones"] {
+        padding-top: 15px;
     }
 
-    .seguimiento-tabla td:last-child {
-        border-bottom: none;
+    .table td[data-label="Acciones"] div {
+        justify-content: flex-start;
+        width: 100%;
     }
 
-    .seguimiento-tabla td::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: var(--color-accent-primary);
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        min-width: 90px;
-        width: 90px;
-        flex-shrink: 0;
-    }
-
+    /* Estilos para el modal en móvil */
     .detalles-grid {
         grid-template-columns: 1fr;
     }
@@ -1125,7 +958,7 @@
         justify-content: center;
         width: 100%;
     }
-    
+
     .btn-nueva-incidencia-header {
         padding: 8px 10px !important;
         font-size: 12px !important;
@@ -1159,6 +992,17 @@
     .btn-limpiar {
         width: 100%;
     }
+
+    /* Ajustes específicos para móviles pequeños */
+    .table td[data-label="Acciones"] div {
+        gap: 4px;
+    }
+
+    .incidencia-id {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+        word-break: break-all;
+    }
 }
 
 /* Para pantallas extremadamente pequeñas (menos de 360px) */
@@ -1168,7 +1012,7 @@
         padding: 6px 8px !important;
         min-height: 36px;
     }
-    
+
     .btn-nueva-incidencia-header i {
         font-size: 11px !important;
     }
@@ -1176,30 +1020,10 @@
     .page-header h1 {
         font-size: 1.3rem;
     }
-}
 
-/* =============================================
-   FORZAR COLORES DE TEXTO EN FILTROS (RESPUESTA RÁPIDA)
-   ============================================= */
-.filtros-container label,
-.filtro-grupo label,
-.filtros-header h5 {
-    color: #ffffff !important;
-}
-
-.filtro-select {
-    color: #ffffff !important;
-    background-color: #2a2a2a !important;
-}
-
-.filtro-select option {
-    color: #ffffff !important;
-    background-color: #1a1a1a !important;
-}
-
-.btn-filtrar,
-.btn-limpiar,
-.btn-filtrar i,
-.btn-limpiar i {
-    color: #ffffff !important;
+    .riesgo-badge,
+    .estado-badge {
+        padding: 3px 8px;
+        font-size: 0.7rem;
+    }
 }
