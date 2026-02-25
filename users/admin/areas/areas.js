@@ -656,7 +656,7 @@ class AreasController {
             <td data-label="Organización">${this.escapeHTML(area.organizacionCamelCase || this.userManager.currentUser.organizacion)}</td>
             <td data-label="Cargos">
                 <span class="cargo-count-badge">
-                    <i class="fas fa-briefcase"></i> ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
+                    ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
                 </span>
             </td>
             <td data-label="Estado">${area.getEstadoBadge ? area.getEstadoBadge() : '<span class="badge-activo">Activa</span>'}</td>
