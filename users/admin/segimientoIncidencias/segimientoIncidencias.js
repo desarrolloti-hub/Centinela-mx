@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN CORREGIDA (VALIDACIÓN DE FECHAS)
+// seguimientoIncidencia.js - VERSIÓN CORREGIDA (FECHAS VÁLIDAS)
 
 // =============================================
 // VARIABLES GLOBALES
@@ -323,6 +323,30 @@ class ImageEditorModal {
 }
 
 // =============================================
+// FUNCIÓN PARA CONVERTIR FECHAS DE FIRESTORE
+// =============================================
+function convertirFechaFirestore(fecha) {
+    if (!fecha) return null;
+    
+    // Si es timestamp de Firestore con seconds y nanoseconds
+    if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
+        return new Date(fecha.seconds * 1000);
+    }
+    
+    // Si es un objeto Date normal o string
+    try {
+        const date = new Date(fecha);
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    } catch (e) {
+        console.error('Error convirtiendo fecha:', e);
+    }
+    
+    return null;
+}
+
+// =============================================
 // FUNCIÓN PARA COLLAPSIBLE
 // =============================================
 function configurarCollapsible() {
@@ -482,12 +506,12 @@ async function cargarIncidencia(incidenciaId) {
             throw new Error('Incidencia no encontrada');
         }
 
-        fechaIncidencia = incidenciaActual.fechaInicio;
+        fechaIncidencia = convertirFechaFirestore(incidenciaActual.fechaInicio) || new Date();
         
         // Obtener la fecha del último seguimiento
         const seguimientos = incidenciaActual.getSeguimientosArray();
         if (seguimientos.length > 0) {
-            fechaUltimoSeguimiento = seguimientos[seguimientos.length - 1].fecha;
+            fechaUltimoSeguimiento = convertirFechaFirestore(seguimientos[seguimientos.length - 1].fecha) || fechaIncidencia;
         } else {
             fechaUltimoSeguimiento = fechaIncidencia;
         }
@@ -537,6 +561,10 @@ function configurarFechaSeguimiento() {
 
     const ahora = new Date();
 
+    // Asegurar que las fechas sean objetos Date válidos
+    const minDate = fechaMinima instanceof Date ? fechaMinima : new Date();
+    const maxDate = fechaMaxima instanceof Date ? fechaMaxima : new Date();
+
     if (typeof flatpickr !== 'undefined') {
         flatpickr(fechaInput, {
             enableTime: true,
@@ -545,8 +573,8 @@ function configurarFechaSeguimiento() {
             locale: "es",
             defaultDate: ahora,
             minuteIncrement: 1,
-            minDate: fechaMinima,
-            maxDate: fechaMaxima,
+            minDate: minDate,
+            maxDate: maxDate,
             onChange: (selectedDates) => {
                 if (selectedDates.length > 0) {
                     validarFechaSeguimiento(selectedDates[0]);
@@ -556,14 +584,14 @@ function configurarFechaSeguimiento() {
     } else {
         fechaInput.type = 'datetime-local';
         fechaInput.value = ahora.toISOString().slice(0, 16);
-        fechaInput.min = fechaMinima ? new Date(fechaMinima).toISOString().slice(0, 16) : '';
-        fechaInput.max = fechaMaxima ? new Date(fechaMaxima).toISOString().slice(0, 16) : '';
+        fechaInput.min = minDate.toISOString().slice(0, 16);
+        fechaInput.max = maxDate.toISOString().slice(0, 16);
     }
 
     const helpText = document.getElementById('rangoFechaHelp');
     if (helpText) {
-        const fechaMin = formatearFechaParaHelp(fechaMinima);
-        const fechaMax = formatearFechaParaHelp(fechaMaxima);
+        const fechaMin = formatearFechaParaHelp(minDate);
+        const fechaMax = formatearFechaParaHelp(maxDate);
         helpText.innerHTML = `<i class="fas fa-info-circle"></i> Rango permitido: ${fechaMin} - ${fechaMax}`;
     }
 }
@@ -572,6 +600,8 @@ function formatearFechaParaHelp(fecha) {
     if (!fecha) return 'No disponible';
     try {
         const date = fecha instanceof Date ? fecha : new Date(fecha);
+        if (isNaN(date.getTime())) return 'Fecha inválida';
+        
         return date.toLocaleDateString('es-MX', {
             year: 'numeric',
             month: '2-digit',
@@ -587,12 +617,16 @@ function formatearFechaParaHelp(fecha) {
 function validarFechaSeguimiento(fecha) {
     if (!fecha) return true;
 
-    if (fecha < fechaMinima) {
-        mostrarError(`La fecha del seguimiento no puede ser anterior al último seguimiento (${formatearFechaCompacta(fechaMinima)})`);
+    // Asegurar que fechaMinima sea Date
+    const minDate = fechaMinima instanceof Date ? fechaMinima : new Date(fechaMinima);
+    const maxDate = fechaMaxima instanceof Date ? fechaMaxima : new Date();
+
+    if (fecha < minDate) {
+        mostrarError(`La fecha del seguimiento no puede ser anterior al último seguimiento (${formatearFechaCompacta(minDate)})`);
         return false;
     }
 
-    if (fecha > fechaMaxima) {
+    if (fecha > maxDate) {
         mostrarError('La fecha del seguimiento no puede ser posterior a la fecha actual');
         return false;
     }
@@ -667,8 +701,8 @@ function obtenerRiesgoColor(nivel) {
 function formatearFecha(fecha) {
     if (!fecha) return 'No disponible';
     try {
-        const date = fecha instanceof Date ? fecha : new Date(fecha);
-        if (isNaN(date.getTime())) return 'Fecha inválida';
+        const date = convertirFechaFirestore(fecha);
+        if (!date || isNaN(date.getTime())) return 'Fecha inválida';
         
         return date.toLocaleDateString('es-MX', {
             year: 'numeric',
@@ -685,20 +719,8 @@ function formatearFecha(fecha) {
 function formatearFechaCompacta(fecha) {
     if (!fecha) return 'N/A';
     try {
-        // Si es timestamp de Firestore
-        if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
-            const date = new Date(fecha.seconds * 1000);
-            return date.toLocaleDateString('es-MX', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-        
-        const date = fecha instanceof Date ? fecha : new Date(fecha);
-        if (isNaN(date.getTime())) return 'Fecha inválida';
+        const date = convertirFechaFirestore(fecha);
+        if (!date || isNaN(date.getTime())) return 'Fecha inválida';
         
         return date.toLocaleDateString('es-MX', {
             day: '2-digit',
@@ -759,7 +781,7 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO (VERSIÓN LIMPIA)
+// MOSTRAR HISTORIAL DE SEGUIMIENTO (VERSIÓN SIMPLE - SIN PUNTOS)
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
@@ -784,15 +806,21 @@ function mostrarHistorialSeguimiento() {
         return;
     }
 
+    // Ordenar del más antiguo al más reciente para mostrar en orden cronológico
+    const seguimientosOrdenados = [...seguimientos].sort((a, b) => {
+        const fechaA = a.fecha ? convertirFechaFirestore(a.fecha) : 0;
+        const fechaB = b.fecha ? convertirFechaFirestore(b.fecha) : 0;
+        return fechaA - fechaB;
+    });
+
     let html = '<div class="timeline-simple">';
-    seguimientos.forEach((seg, index) => {
+    seguimientosOrdenados.forEach((seg, index) => {
         const fecha = seg.fecha ? formatearFechaCompacta(seg.fecha) : 'Fecha no disponible';
         const evidencias = seg.evidencias || [];
         const idSeguimiento = seg.id || `SEG-${index + 1}`;
         
         html += `
             <div class="timeline-simple-item">
-                <div class="timeline-simple-marker"></div>
                 <div class="timeline-simple-content">
                     <div class="timeline-simple-header">
                         <div class="timeline-simple-user">
@@ -1108,6 +1136,16 @@ async function confirmarYGuardar(datos) {
 
     const confirmResult = await Swal.fire({
         title: '¿Guardar seguimiento?',
+        html: `
+            <div style="text-align: left;">
+                <p><strong>Fecha:</strong> ${formatearFecha(datos.fecha)}</p>
+                <p><strong>Estado:</strong> <span style="color: ${estadoAnterior === datos.nuevoEstado ? 'var(--color-warning)' : 'var(--color-success)'};">${estadoTexto}</span></p>
+                <p><strong>Evidencias:</strong> ${datos.evidencias.length} imagen(es)</p>
+                <p><strong>Descripción:</strong><br>
+                    <span style="color: var(--color-text-secondary);">${escapeHTML(datos.descripcion.substring(0, 200))}${datos.descripcion.length > 200 ? '...' : ''}</span>
+                </p>
+            </div>
+        `,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'GUARDAR SEGUIMIENTO',
@@ -1134,7 +1172,6 @@ async function guardarSeguimiento(datos) {
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
-        // CORRECCIÓN: Pasar la fecha seleccionada al manager
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,

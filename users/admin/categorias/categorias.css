@@ -13,7 +13,6 @@
 .page-header {
     margin-bottom: 40px;
     padding-bottom: 20px;
-   
     text-align: center;
 }
 
@@ -43,6 +42,138 @@
     text-align: center;
     font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
     line-height: 1.6;
+}
+
+/* =============================================
+   FILTROS / BÚSQUEDA - COMPONENTE COMO INCIDENCIAS
+   ============================================= */
+.filtros-container {
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border-light);
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-normal);
+    margin-bottom: 30px;
+    overflow: hidden;
+}
+
+.filtros-header {
+    background: rgba(20, 20, 20, 0.95);
+    border-bottom: 1px solid var(--color-border-light);
+    padding: 15px 20px;
+}
+
+.filtros-header h5 {
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filtros-header h5 i {
+    color: var(--color-accent-primary);
+}
+
+.filtros-body {
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-end;
+}
+
+.filtro-grupo {
+    flex: 3 1 300px;
+    min-width: 250px;
+}
+
+.filtro-grupo label {
+    display: block;
+    color: var(--color-text-primary) !important;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-weight: 500;
+}
+
+.filtro-input {
+    width: 95%;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--border-radius-medium);
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.filtro-input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 2px rgba(0, 207, 255, 0.1);
+}
+
+.filtro-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.filtro-acciones {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex: 1 1 200px;
+}
+
+.btn-buscar,
+.btn-limpiar {
+    padding: 10px 16px;
+    border-radius: var(--border-radius-medium);
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    flex: 1;
+}
+
+.btn-buscar {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
+    border: 1px solid var(--color-accent-primary);
+    color: var(--color-text-primary) !important;
+}
+
+.btn-buscar:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(145deg, #1a1a1a, #100f0f);
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.3);
+    border-color: #ffffff;
+}
+
+.btn-limpiar {
+    background: transparent;
+    border: 1px solid var(--color-border-light);
+    color: var(--color-text-primary) !important;
+}
+
+.btn-limpiar:hover {
+    border-color: var(--color-accent-primary);
+    color: var(--color-text-primary) !important;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* =============================================
@@ -646,7 +777,7 @@ tr.categoria-row.expanded .expand-icon i {
 }
 
 /* =============================================
-   PAGINACIÓN (COMO EN ÁREAS)
+   PAGINACIÓN (COMO EN INCIDENCIAS)
    ============================================= */
 .pagination-container {
     display: flex;
@@ -658,7 +789,7 @@ tr.categoria-row.expanded .expand-icon i {
 }
 
 .pagination-info {
-    color: var(--color-text-dim);
+    color: #ffffff !important;
     font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
     font-size: 0.85rem;
 }
@@ -668,12 +799,14 @@ tr.categoria-row.expanded .expand-icon i {
     gap: 5px;
     list-style: none;
     flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
 }
 
 .page-link {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-secondary) !important;
+    color: #ffffff !important;
     padding: 6px 12px !important;
     border-radius: var(--border-radius-small) !important;
     cursor: pointer;
@@ -687,14 +820,14 @@ tr.categoria-row.expanded .expand-icon i {
 .page-link:hover {
     background: var(--color-hover) !important;
     border-color: var(--color-accent-primary) !important;
-    color: var(--color-text-primary) !important;
+    color: #ffffff !important;
     box-shadow: var(--shadow-glow);
 }
 
 .page-item.active .page-link {
     background: var(--color-accent-secondary) !important;
     border-color: var(--color-accent-secondary) !important;
-    color: white !important;
+    color: #ffffff !important;
 }
 
 /* =============================================
@@ -780,6 +913,31 @@ tr.categoria-row.expanded .expand-icon i {
 }
 
 /* =============================================
+   FORZAR COLORES DE TEXTO EN FILTROS (RESPUESTA RÁPIDA)
+   ============================================= */
+.filtros-container label,
+.filtro-grupo label,
+.filtros-header h5 {
+    color: #ffffff !important;
+}
+
+.filtro-input {
+    color: #ffffff !important;
+    background-color: #2a2a2a !important;
+}
+
+.filtro-input::placeholder {
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.btn-buscar,
+.btn-limpiar,
+.btn-buscar i,
+.btn-limpiar i {
+    color: #ffffff !important;
+}
+
+/* =============================================
    RESPONSIVE DESIGN MEJORADO
    ============================================= */
 @media (max-width: 1023px) {
@@ -806,6 +964,20 @@ tr.categoria-row.expanded .expand-icon i {
     .page-header .header-description {
         font-size: 1rem;
         padding: 0 10px;
+    }
+
+    .filtros-body {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filtro-grupo {
+        width: 100%;
+    }
+
+    .filtro-acciones {
+        flex-direction: row;
+        margin-top: 10px;
     }
 
     .card-header {
@@ -947,6 +1119,15 @@ tr.categoria-row.expanded .expand-icon i {
 
     .btn i {
         font-size: 12px !important;
+    }
+
+    .filtro-acciones {
+        flex-direction: column;
+    }
+
+    .btn-buscar,
+    .btn-limpiar {
+        width: 100%;
     }
 }
 

@@ -1,6 +1,6 @@
 /**
- * CATEGORÍAS - Sistema Centinela
- * SweetAlert de detalles - VERSIÓN CORREGIDA (usa estilos globales de personalization.css)
+ * CATEGORIAS - Sistema Centinela
+ * VERSIÓN ACTUALIZADA - Con paginación y búsqueda en base de datos
  */
 
 // =============================================
@@ -10,6 +10,14 @@ let categoriaManager = null;
 let categoriaExpandidaId = null;
 let empresaActual = null;
 let categoriasCache = [];
+let todasLasCategorias = []; // Almacena todas las categorías para búsqueda
+
+// Configuración de paginación
+const ITEMS_POR_PAGINA = 10;
+let paginaActual = 1;
+
+// Estado de búsqueda
+let terminoBusqueda = '';
 
 // =============================================
 // INICIALIZACIÓN
@@ -21,10 +29,12 @@ async function inicializarCategoriaManager() {
         const { CategoriaManager } = await import('/clases/categoria.js');
         categoriaManager = new CategoriaManager();
 
-        await cargarCategorias();
+        await cargarTodasLasCategorias(); // Carga todas para búsqueda
+        configurarEventListeners();
         return true;
     } catch (error) {
         console.error('Error al inicializar categorías:', error);
+        mostrarErrorInicializacion();
         return false;
     }
 }
@@ -41,455 +51,233 @@ function obtenerDatosEmpresa() {
     }
 }
 
-// =============================================
-// FUNCIONES GLOBALES
-// =============================================
-window.editarCategoria = function (id, event) {
-    event?.stopPropagation();
-    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${id}`;
-};
+function configurarEventListeners() {
+    const btnBuscar = document.getElementById('btnBuscar');
+    const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+    const inputBuscar = document.getElementById('buscarCategoria');
 
-window.agregarSubcategoria = function (id, event) {
-    event?.stopPropagation();
-    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${id}&nuevaSubcategoria=true`;
-};
-
-window.editarSubcategoria = function (catId, subId, event) {
-    event?.stopPropagation();
-    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${catId}&editarSubcategoria=${subId}`;
-};
-
-// =============================================
-// VER DETALLES - SweetAlert SIN CLASES PERSONALIZADAS
-// =============================================
-window.verDetalles = async function (categoriaId, event) {
-    event?.stopPropagation();
-
-    const categoria = categoriasCache.find(c => c.id === categoriaId);
-    if (!categoria) return;
-
-    // Obtener subcategorías como array
-    let subcategoriasArray = [];
-
-    if (categoria.subcategorias && typeof categoria.subcategorias === 'object') {
-        if (categoria.subcategorias.forEach) {
-            categoria.subcategorias.forEach((value, key) => {
-                if (value && typeof value === 'object') {
-                    const sub = value instanceof Map ? Object.fromEntries(value) : value;
-                    subcategoriasArray.push({ ...sub, id: key });
-                }
-            });
-        } else {
-            subcategoriasArray = Object.keys(categoria.subcategorias).map(key => ({
-                ...categoria.subcategorias[key],
-                id: key
-            }));
-        }
-    }
-
-    const cantidadSub = subcategoriasArray.length;
-
-    // Generar HTML para subcategorías
-    let subcategoriasHTML = '';
-
-    if (cantidadSub === 0) {
-        subcategoriasHTML = '<p style="color: var(--color-text-secondary); text-align: center; padding: 20px;">Esta categoría no tiene subcategorías asignadas</p>';
-    } else {
-        subcategoriasHTML = subcategoriasArray.map(sub => {
-            const subNombre = sub.nombre || 'Sin nombre';
-            const subDesc = sub.descripcion || 'Sin descripción';
-            
-            return `
-                <div style="margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 6px;">
-                    <strong style="color: var(--color-text-primary); display: block; margin-bottom: 5px;">
-                        <i class="fas fa-folder" style="color: var(--color-accent-secondary); margin-right: 8px;"></i>
-                        ${escapeHTML(subNombre)}
-                    </strong>
-                    <p style="color: var(--color-text-secondary); margin: 0; padding-left: 24px; font-size: 0.9rem;">${escapeHTML(subDesc)}</p>
-                </div>
-            `;
-        }).join('');
-    }
-
-    Swal.fire({
-        title: categoria.nombre,
-        html: `
-            <div style="text-align: left;">
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-align-left" style="margin-right: 8px;"></i>DESCRIPCIÓN
-                    </h4>
-                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(categoria.descripcion) || 'No hay descripción disponible para esta categoría.'}</p>
-                </div>
-
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-palette" style="margin-right: 8px;"></i>COLOR
-                    </h4>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="display:inline-block; width:30px; height:30px; background:${categoria.color || '#2f8cff'}; border-radius:4px; border:2px solid rgba(255,255,255,0.1);"></span>
-                        <span style="color: var(--color-text-secondary);">${categoria.color || '#2f8cff'}</span>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-folder-open" style="margin-right: 8px;"></i>SUBCATEGORÍAS (${cantidadSub})
-                    </h4>
-                    ${subcategoriasHTML}
-                </div>
-            </div>
-        `,
-        icon: null,
-        showConfirmButton: true,
-        showCancelButton: true,
-        confirmButtonText: 'EDITAR CATEGORÍA',
-        cancelButtonText: 'CERRAR',
-        reverseButtons: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.editarCategoria(categoria.id, event);
-        }
-    });
-};
-
-// =============================================
-// VER DETALLES DE SUBCATEGORÍA
-// =============================================
-window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId, event) {
-    event?.stopPropagation();
-
-    const categoria = categoriasCache.find(c => c.id === categoriaId);
-    if (!categoria) return;
-
-    let subcategoria = null;
-    let subcategoriaNombre = '';
-
-    if (categoria.subcategorias) {
-        if (categoria.subcategorias.get) {
-            const sub = categoria.subcategorias.get(subcategoriaId);
-            if (sub) {
-                subcategoria = sub instanceof Map ? Object.fromEntries(sub) : sub;
-            }
-        } else {
-            subcategoria = categoria.subcategorias[subcategoriaId];
-        }
-    }
-
-    if (!subcategoria) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Subcategoría no encontrada'
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', () => {
+            terminoBusqueda = inputBuscar?.value.trim() || '';
+            paginaActual = 1;
+            filtrarYRenderizar();
         });
-        return;
     }
 
-    const colorSub = subcategoria.color || categoria.color || '#2f8cff';
-    const hereda = subcategoria.heredaColor || false;
-
-    Swal.fire({
-        title: subcategoria.nombre || 'Subcategoría',
-        html: `
-            <div style="text-align: left;">
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-sitemap" style="margin-right: 8px;"></i>CATEGORÍA PADRE
-                    </h4>
-                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(categoria.nombre)}</p>
-                </div>
-
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-align-left" style="margin-right: 8px;"></i>DESCRIPCIÓN
-                    </h4>
-                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(subcategoria.descripcion) || 'No hay descripción disponible.'}</p>
-                </div>
-
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-palette" style="margin-right: 8px;"></i>COLOR
-                    </h4>
-                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <span style="display:inline-block; width:30px; height:30px; background:${colorSub}; border-radius:4px; border:2px solid rgba(255,255,255,0.1);"></span>
-                        <span style="color: var(--color-text-secondary);">${colorSub}</span>
-                        ${hereda ? '<span style="background:rgba(16,185,129,0.1); color:#10b981; padding:2px 8px; border-radius:12px; font-size:0.7rem;">HEREDA</span>' : ''}
-                    </div>
-                </div>
-
-                <div>
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-info-circle" style="margin-right: 8px;"></i>INFORMACIÓN DEL SISTEMA
-                    </h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">ID</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-fingerprint" style="margin-right: 5px;"></i> ${subcategoriaId.substring(0, 8)}...</span>
-                        </div>
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">HEREDA</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas ${hereda ? 'fa-check-circle' : 'fa-times-circle'}" style="margin-right: 5px;"></i> ${hereda ? 'SÍ' : 'NO'}</span>
-                        </div>
-                        <div style="grid-column: span 2;">
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">FECHA CREACIÓN</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar" style="margin-right: 5px;"></i> ${subcategoria.fechaCreacion ? new Date(subcategoria.fechaCreacion).toLocaleString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No disponible'}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `,
-        icon: null,
-        showConfirmButton: true,
-        showCancelButton: true,
-        confirmButtonText: 'EDITAR SUBCATEGORÍA',
-        cancelButtonText: 'CERRAR',
-        reverseButtons: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.editarSubcategoria(categoriaId, subcategoriaId, event);
-        }
-    });
-};
-
-// =============================================
-// ELIMINAR CATEGORÍA
-// =============================================
-window.eliminarCategoria = async function (categoriaId, event) {
-    event?.stopPropagation();
-
-    const categoria = categoriasCache.find(c => c.id === categoriaId);
-    if (!categoria) return;
-
-    // Contar subcategorías
-    let numSub = 0;
-
-    if (categoria.subcategorias) {
-        if (typeof categoria.subcategorias === 'object') {
-            if (categoria.subcategorias.forEach) {
-                numSub = categoria.subcategorias.size;
-            } else {
-                numSub = Object.keys(categoria.subcategorias).length;
-            }
-        }
-    }
-
-    const result = await Swal.fire({
-        title: '¿Eliminar categoría?',
-        html: `
-            <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
-                <strong style="color: #ff4d4d;">"${escapeHTML(categoria.nombre)}"</strong>
-            </p>
-            ${numSub > 0 ? `
-                <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin: 5px 0;">
-                    <i class="fas fa-folder-open" style="color: #ef4444;"></i>
-                    Tiene ${numSub} subcategoría${numSub !== 1 ? 's' : ''}
-                </p>
-            ` : ''}
-            <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
-                Esta acción no se puede deshacer.
-            </p>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'ELIMINAR',
-        cancelButtonText: 'CANCELAR',
-        reverseButtons: false,
-        focusCancel: true
-    });
-
-    if (result.isConfirmed) {
-        try {
-            Swal.fire({
-                title: 'Eliminando...',
-                html: '<i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #ef4444;"></i>',
-                allowOutsideClick: false,
-                showConfirmButton: false
-            });
-
-            await categoriaManager.eliminarCategoria(categoriaId);
-
-            Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Eliminada!',
-                text: `"${categoria.nombre}" ha sido eliminada.`,
-                timer: 2000,
-                showConfirmButton: false
-            });
-
-            await cargarCategorias();
-
-        } catch (error) {
-            Swal.close();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message || 'Error al eliminar'
-            });
-        }
-    }
-};
-
-// =============================================
-// ELIMINAR SUBCATEGORÍA
-// =============================================
-window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event) {
-    event?.stopPropagation();
-
-    const categoria = categoriasCache.find(c => c.id === categoriaId);
-    if (!categoria) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Categoría no encontrada'
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            if (inputBuscar) inputBuscar.value = '';
+            terminoBusqueda = '';
+            paginaActual = 1;
+            filtrarYRenderizar();
         });
-        return;
     }
 
-    let subcategoria = null;
-    let subcategoriaNombre = '';
-
-    if (categoria.subcategorias) {
-        if (categoria.subcategorias.get) {
-            const sub = categoria.subcategorias.get(subcategoriaId);
-            if (sub) {
-                subcategoria = sub instanceof Map ? Object.fromEntries(sub) : sub;
-            }
-        } else {
-            subcategoria = categoria.subcategorias[subcategoriaId];
-        }
-    }
-
-    if (!subcategoria) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Subcategoría no encontrada'
+    // Búsqueda en tiempo real (con debounce para no saturar)
+    if (inputBuscar) {
+        let timeoutId;
+        inputBuscar.addEventListener('input', (e) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }, 300); // Espera 300ms después de que el usuario deja de escribir
         });
-        return;
+
+        inputBuscar.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }
+        });
     }
+}
 
-    subcategoriaNombre = subcategoria.nombre || 'Sin nombre';
+// =============================================
+// FUNCIONES DE BÚSQUEDA EN BASE DE DATOS
+// =============================================
+async function buscarCategoriasEnDB(termino) {
+    if (!categoriaManager) return [];
 
-    const result = await Swal.fire({
-        title: '¿Eliminar subcategoría?',
-        html: `
-            <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
-                <strong style="color: #ff4d4d;">"${escapeHTML(subcategoriaNombre)}"</strong>
-            </p>
-            <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
-                Esta acción no se puede deshacer.
-            </p>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'ELIMINAR',
-        cancelButtonText: 'CANCELAR',
-        reverseButtons: false,
-        focusCancel: true
-    });
-
-    if (result.isConfirmed) {
-        try {
-            if (categoria.eliminarSubcategoria) {
-                categoria.eliminarSubcategoria(subcategoriaId);
-            } else if (categoria.subcategorias && categoria.subcategorias.delete) {
-                categoria.subcategorias.delete(subcategoriaId);
-            } else {
-                delete categoria.subcategorias[subcategoriaId];
-            }
-
-            await categoriaManager.actualizarCategoria(categoriaId, {
-                nombre: categoria.nombre,
-                descripcion: categoria.descripcion,
-                color: categoria.color,
-                subcategorias: categoria.subcategorias
-            });
-
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Eliminada!',
-                text: `"${subcategoriaNombre}" ha sido eliminada.`,
-                timer: 1500,
-                showConfirmButton: false
-            });
-
-            const categoriaActualizada = await categoriaManager.obtenerCategoriaPorId(categoriaId);
-            const index = categoriasCache.findIndex(c => c.id === categoriaId);
-            if (index !== -1) categoriasCache[index] = categoriaActualizada;
-
-            await cargarSubcategorias(categoriaId);
-
-            const categoriaRow = document.querySelector(`.categoria-row[data-id="${categoriaId}"]`);
-            if (categoriaRow) {
-                let numSub = 0;
-                if (categoriaActualizada.subcategorias) {
-                    numSub = categoriaActualizada.subcategorias.size || 
-                            Object.keys(categoriaActualizada.subcategorias).length;
-                }
-                const badge = categoriaRow.querySelector('td[data-label="Subcategorías"] span');
-                if (badge) {
-                    badge.innerHTML = `<i class="fas fa-folder${numSub > 0 ? '-open' : ''}"></i> ${numSub} ${numSub === 1 ? 'subcategoría' : 'subcategorías'}`;
-                    badge.className = numSub > 0 ? 'subcategoria-count-badge' : 'badge';
-                }
-            }
-
-        } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message
-            });
+    try {
+        if (!termino || termino.length < 2) {
+            // Si el término es muy corto, devolver todas
+            return await categoriaManager.obtenerTodasCategorias();
         }
+
+        // Obtener todas las categorías y filtrar en memoria por ahora
+        // Si tu CategoriaManager tuviera un método de búsqueda en Firestore, sería mejor
+        const todas = await categoriaManager.obtenerTodasCategorias();
+        
+        const terminoLower = termino.toLowerCase();
+        return todas.filter(cat => 
+            cat.nombre?.toLowerCase().includes(terminoLower) ||
+            cat.descripcion?.toLowerCase().includes(terminoLower)
+        );
+    } catch (error) {
+        console.error('Error en búsqueda:', error);
+        return [];
     }
-};
+}
 
 // =============================================
 // CARGAR CATEGORÍAS
 // =============================================
-async function cargarCategorias() {
+async function cargarTodasLasCategorias() {
     if (!categoriaManager) return;
 
     try {
         const tbody = document.getElementById('tablaCategoriasBody');
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">Cargando categorías...</td></tr>';
 
-        categoriasCache = await categoriaManager.obtenerTodasCategorias();
+        todasLasCategorias = await categoriaManager.obtenerTodasCategorias();
 
-        if (!categoriasCache || categoriasCache.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align:center; padding:60px 20px;">
-                        <div style="text-align:center;">
-                            <i class="fas fa-tags" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
-                            <h5 style="color:white;">No hay categorías</h5>
-                            <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria-header" style="display:inline-flex; margin-top:16px;">
-                                <i class="fas fa-plus-circle"></i> Crear Categoría
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-            `;
+        if (!todasLasCategorias || todasLasCategorias.length === 0) {
+            mostrarMensajeVacio();
             return;
         }
 
-        tbody.innerHTML = '';
-        categoriasCache.sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-        for (const categoria of categoriasCache) {
-            await crearFilaCategoria(categoria, tbody);
-        }
+        // Ordenar alfabéticamente
+        todasLasCategorias.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+        
+        // Inicializar la vista con todas las categorías
+        categoriasCache = [...todasLasCategorias];
+        renderizarCategorias();
 
     } catch (error) {
         console.error('Error al cargar categorías:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error al cargar categorías'
-        });
+        mostrarError('Error al cargar categorías: ' + error.message);
     }
 }
+
+function filtrarYRenderizar() {
+    if (!todasLasCategorias.length) {
+        renderizarCategorias();
+        return;
+    }
+
+    if (!terminoBusqueda || terminoBusqueda.length < 2) {
+        // Si no hay término de búsqueda, mostrar todas
+        categoriasCache = [...todasLasCategorias];
+    } else {
+        // Filtrar en memoria
+        const terminoLower = terminoBusqueda.toLowerCase();
+        categoriasCache = todasLasCategorias.filter(cat => 
+            (cat.nombre && cat.nombre.toLowerCase().includes(terminoLower)) ||
+            (cat.descripcion && cat.descripcion.toLowerCase().includes(terminoLower))
+        );
+    }
+
+    renderizarCategorias();
+}
+
+function mostrarMensajeVacio() {
+    const tbody = document.getElementById('tablaCategoriasBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align:center; padding:60px 20px;">
+                <div style="text-align:center;">
+                    <i class="fas fa-tags" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
+                    <h5 style="color:white;">No hay categorías</h5>
+                    <a href="/users/admin/crearCategorias/crearCategorias.html" class="btn-nueva-categoria-header" style="display:inline-flex; margin-top:16px;">
+                        <i class="fas fa-plus-circle"></i> Crear Categoría
+                    </a>
+                </div>
+            </td>
+        </tr>
+    `;
+
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) paginationInfo.textContent = 'Mostrando 0-0 de 0 categorías';
+    
+    const pagination = document.getElementById('pagination');
+    if (pagination) pagination.innerHTML = '';
+}
+
+function renderizarCategorias() {
+    const tbody = document.getElementById('tablaCategoriasBody');
+    if (!tbody) return;
+
+    const totalItems = categoriasCache.length;
+    const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
+    
+    // Ajustar página actual si está fuera de rango
+    if (paginaActual > totalPaginas && totalPaginas > 0) {
+        paginaActual = totalPaginas;
+    }
+    
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
+    const categoriasPagina = categoriasCache.slice(inicio, fin);
+
+    // Actualizar información de paginación
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        if (totalItems === 0) {
+            paginationInfo.textContent = 'No se encontraron categorías';
+        } else {
+            paginationInfo.textContent = `Mostrando ${inicio + 1}-${fin} de ${totalItems} categorías`;
+        }
+    }
+
+    if (totalItems === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center; padding:40px;">
+                    <div style="color: var(--color-text-secondary);">
+                        <i class="fas fa-search" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+                        <h5>No se encontraron categorías</h5>
+                        <p style="margin-top: 10px;">${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        renderizarPaginacion(0);
+        return;
+    }
+
+    tbody.innerHTML = '';
+
+    for (const categoria of categoriasPagina) {
+        crearFilaCategoria(categoria, tbody);
+    }
+
+    renderizarPaginacion(totalPaginas);
+}
+
+function renderizarPaginacion(totalPaginas) {
+    const pagination = document.getElementById('pagination');
+    if (!pagination) return;
+
+    if (totalPaginas <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    for (let i = 1; i <= totalPaginas; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="window.irPagina(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    pagination.innerHTML = html;
+}
+
+// Hacer irPagina global para que funcione desde los botones
+window.irPagina = function(pagina) {
+    paginaActual = pagina;
+    renderizarCategorias();
+    
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 async function crearFilaCategoria(categoria, tbody) {
     const tr = document.createElement('tr');
@@ -618,10 +406,425 @@ async function crearFilaCategoria(categoria, tbody) {
 }
 
 // =============================================
-// CARGAR SUBCATEGORÍAS
+// FUNCIONES GLOBALES (se mantienen igual)
+// =============================================
+window.editarCategoria = function (id, event) {
+    event?.stopPropagation();
+    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${id}`;
+};
+
+window.agregarSubcategoria = function (id, event) {
+    event?.stopPropagation();
+    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${id}&nuevaSubcategoria=true`;
+};
+
+window.editarSubcategoria = function (catId, subId, event) {
+    event?.stopPropagation();
+    window.location.href = `/users/admin/editarCategorias/editarCategorias.html?id=${catId}&editarSubcategoria=${subId}`;
+};
+
+// =============================================
+// VER DETALLES - SweetAlert
+// =============================================
+window.verDetalles = async function (categoriaId, event) {
+    event?.stopPropagation();
+
+    const categoria = categoriasCache.find(c => c.id === categoriaId) || 
+                     todasLasCategorias.find(c => c.id === categoriaId);
+    if (!categoria) return;
+
+    // Obtener subcategorías como array
+    let subcategoriasArray = [];
+
+    if (categoria.subcategorias && typeof categoria.subcategorias === 'object') {
+        if (categoria.subcategorias.forEach) {
+            categoria.subcategorias.forEach((value, key) => {
+                if (value && typeof value === 'object') {
+                    const sub = value instanceof Map ? Object.fromEntries(value) : value;
+                    subcategoriasArray.push({ ...sub, id: key });
+                }
+            });
+        } else {
+            subcategoriasArray = Object.keys(categoria.subcategorias).map(key => ({
+                ...categoria.subcategorias[key],
+                id: key
+            }));
+        }
+    }
+
+    const cantidadSub = subcategoriasArray.length;
+
+    // Generar HTML para subcategorías
+    let subcategoriasHTML = '';
+
+    if (cantidadSub === 0) {
+        subcategoriasHTML = '<p style="color: var(--color-text-secondary); text-align: center; padding: 20px;">Esta categoría no tiene subcategorías asignadas</p>';
+    } else {
+        subcategoriasHTML = subcategoriasArray.map(sub => {
+            const subNombre = sub.nombre || 'Sin nombre';
+            const subDesc = sub.descripcion || 'Sin descripción';
+            
+            return `
+                <div style="margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                    <strong style="color: var(--color-text-primary); display: block; margin-bottom: 5px;">
+                        <i class="fas fa-folder" style="color: var(--color-accent-secondary); margin-right: 8px;"></i>
+                        ${escapeHTML(subNombre)}
+                    </strong>
+                    <p style="color: var(--color-text-secondary); margin: 0; padding-left: 24px; font-size: 0.9rem;">${escapeHTML(subDesc)}</p>
+                </div>
+            `;
+        }).join('');
+    }
+
+    Swal.fire({
+        title: categoria.nombre,
+        html: `
+            <div style="text-align: left;">
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-align-left" style="margin-right: 8px;"></i>DESCRIPCIÓN
+                    </h4>
+                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(categoria.descripcion) || 'No hay descripción disponible para esta categoría.'}</p>
+                </div>
+
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-palette" style="margin-right: 8px;"></i>COLOR
+                    </h4>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="display:inline-block; width:30px; height:30px; background:${categoria.color || '#2f8cff'}; border-radius:4px; border:2px solid rgba(255,255,255,0.1);"></span>
+                        <span style="color: var(--color-text-secondary);">${categoria.color || '#2f8cff'}</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-folder-open" style="margin-right: 8px;"></i>SUBCATEGORÍAS (${cantidadSub})
+                    </h4>
+                    ${subcategoriasHTML}
+                </div>
+            </div>
+        `,
+        icon: null,
+        showConfirmButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'EDITAR CATEGORÍA',
+        cancelButtonText: 'CERRAR',
+        reverseButtons: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.editarCategoria(categoria.id, event);
+        }
+    });
+};
+
+// =============================================
+// VER DETALLES DE SUBCATEGORÍA
+// =============================================
+window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId, event) {
+    event?.stopPropagation();
+
+    const categoria = categoriasCache.find(c => c.id === categoriaId) || 
+                     todasLasCategorias.find(c => c.id === categoriaId);
+    if (!categoria) return;
+
+    let subcategoria = null;
+    let subcategoriaNombre = '';
+
+    if (categoria.subcategorias) {
+        if (categoria.subcategorias.get) {
+            const sub = categoria.subcategorias.get(subcategoriaId);
+            if (sub) {
+                subcategoria = sub instanceof Map ? Object.fromEntries(sub) : sub;
+            }
+        } else {
+            subcategoria = categoria.subcategorias[subcategoriaId];
+        }
+    }
+
+    if (!subcategoria) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Subcategoría no encontrada'
+        });
+        return;
+    }
+
+    const colorSub = subcategoria.color || categoria.color || '#2f8cff';
+    const hereda = subcategoria.heredaColor || false;
+
+    Swal.fire({
+        title: subcategoria.nombre || 'Subcategoría',
+        html: `
+            <div style="text-align: left;">
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-sitemap" style="margin-right: 8px;"></i>CATEGORÍA PADRE
+                    </h4>
+                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(categoria.nombre)}</p>
+                </div>
+
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-align-left" style="margin-right: 8px;"></i>DESCRIPCIÓN
+                    </h4>
+                    <p style="color: var(--color-text-secondary); margin: 0;">${escapeHTML(subcategoria.descripcion) || 'No hay descripción disponible.'}</p>
+                </div>
+
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-palette" style="margin-right: 8px;"></i>COLOR
+                    </h4>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span style="display:inline-block; width:30px; height:30px; background:${colorSub}; border-radius:4px; border:2px solid rgba(255,255,255,0.1);"></span>
+                        <span style="color: var(--color-text-secondary);">${colorSub}</span>
+                        ${hereda ? '<span style="background:rgba(16,185,129,0.1); color:#10b981; padding:2px 8px; border-radius:12px; font-size:0.7rem;">HEREDA</span>' : ''}
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                        <i class="fas fa-info-circle" style="margin-right: 8px;"></i>INFORMACIÓN DEL SISTEMA
+                    </h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">ID</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-fingerprint" style="margin-right: 5px;"></i> ${subcategoriaId.substring(0, 8)}...</span>
+                        </div>
+                        <div>
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">HEREDA</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas ${hereda ? 'fa-check-circle' : 'fa-times-circle'}" style="margin-right: 5px;"></i> ${hereda ? 'SÍ' : 'NO'}</span>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">FECHA CREACIÓN</small>
+                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar" style="margin-right: 5px;"></i> ${subcategoria.fechaCreacion ? new Date(subcategoria.fechaCreacion).toLocaleString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No disponible'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        icon: null,
+        showConfirmButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'EDITAR SUBCATEGORÍA',
+        cancelButtonText: 'CERRAR',
+        reverseButtons: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.editarSubcategoria(categoriaId, subcategoriaId, event);
+        }
+    });
+};
+
+// =============================================
+// ELIMINAR CATEGORÍA
+// =============================================
+window.eliminarCategoria = async function (categoriaId, event) {
+    event?.stopPropagation();
+
+    const categoria = categoriasCache.find(c => c.id === categoriaId) || 
+                     todasLasCategorias.find(c => c.id === categoriaId);
+    if (!categoria) return;
+
+    // Contar subcategorías
+    let numSub = 0;
+
+    if (categoria.subcategorias) {
+        if (typeof categoria.subcategorias === 'object') {
+            if (categoria.subcategorias.forEach) {
+                numSub = categoria.subcategorias.size;
+            } else {
+                numSub = Object.keys(categoria.subcategorias).length;
+            }
+        }
+    }
+
+    const result = await Swal.fire({
+        title: '¿Eliminar categoría?',
+        html: `
+            <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
+                <strong style="color: #ff4d4d;">"${escapeHTML(categoria.nombre)}"</strong>
+            </p>
+            ${numSub > 0 ? `
+                <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin: 5px 0;">
+                    <i class="fas fa-folder-open" style="color: #ef4444;"></i>
+                    Tiene ${numSub} subcategoría${numSub !== 1 ? 's' : ''}
+                </p>
+            ` : ''}
+            <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
+                Esta acción no se puede deshacer.
+            </p>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ELIMINAR',
+        cancelButtonText: 'CANCELAR',
+        reverseButtons: false,
+        focusCancel: true
+    });
+
+    if (result.isConfirmed) {
+        try {
+            Swal.fire({
+                title: 'Eliminando...',
+                html: '<i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #ef4444;"></i>',
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+
+            await categoriaManager.eliminarCategoria(categoriaId);
+
+            Swal.close();
+
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Eliminada!',
+                text: `"${categoria.nombre}" ha sido eliminada.`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            // Recargar datos
+            await cargarTodasLasCategorias();
+
+        } catch (error) {
+            Swal.close();
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'Error al eliminar'
+            });
+        }
+    }
+};
+
+// =============================================
+// ELIMINAR SUBCATEGORÍA
+// =============================================
+window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event) {
+    event?.stopPropagation();
+
+    const categoria = categoriasCache.find(c => c.id === categoriaId) || 
+                     todasLasCategorias.find(c => c.id === categoriaId);
+    if (!categoria) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Categoría no encontrada'
+        });
+        return;
+    }
+
+    let subcategoria = null;
+    let subcategoriaNombre = '';
+
+    if (categoria.subcategorias) {
+        if (categoria.subcategorias.get) {
+            const sub = categoria.subcategorias.get(subcategoriaId);
+            if (sub) {
+                subcategoria = sub instanceof Map ? Object.fromEntries(sub) : sub;
+            }
+        } else {
+            subcategoria = categoria.subcategorias[subcategoriaId];
+        }
+    }
+
+    if (!subcategoria) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Subcategoría no encontrada'
+        });
+        return;
+    }
+
+    subcategoriaNombre = subcategoria.nombre || 'Sin nombre';
+
+    const result = await Swal.fire({
+        title: '¿Eliminar subcategoría?',
+        html: `
+            <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
+                <strong style="color: #ff4d4d;">"${escapeHTML(subcategoriaNombre)}"</strong>
+            </p>
+            <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
+                Esta acción no se puede deshacer.
+            </p>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ELIMINAR',
+        cancelButtonText: 'CANCELAR',
+        reverseButtons: false,
+        focusCancel: true
+    });
+
+    if (result.isConfirmed) {
+        try {
+            if (categoria.eliminarSubcategoria) {
+                categoria.eliminarSubcategoria(subcategoriaId);
+            } else if (categoria.subcategorias && categoria.subcategorias.delete) {
+                categoria.subcategorias.delete(subcategoriaId);
+            } else {
+                delete categoria.subcategorias[subcategoriaId];
+            }
+
+            await categoriaManager.actualizarCategoria(categoriaId, {
+                nombre: categoria.nombre,
+                descripcion: categoria.descripcion,
+                color: categoria.color,
+                subcategorias: categoria.subcategorias
+            });
+
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Eliminada!',
+                text: `"${subcategoriaNombre}" ha sido eliminada.`,
+                timer: 1500,
+                showConfirmButton: false
+            });
+
+            const categoriaActualizada = await categoriaManager.obtenerCategoriaPorId(categoriaId);
+            
+            // Actualizar en ambos cachés
+            const indexCache = categoriasCache.findIndex(c => c.id === categoriaId);
+            if (indexCache !== -1) categoriasCache[indexCache] = categoriaActualizada;
+            
+            const indexAll = todasLasCategorias.findIndex(c => c.id === categoriaId);
+            if (indexAll !== -1) todasLasCategorias[indexAll] = categoriaActualizada;
+
+            await cargarSubcategorias(categoriaId);
+
+            const categoriaRow = document.querySelector(`.categoria-row[data-id="${categoriaId}"]`);
+            if (categoriaRow) {
+                let numSub = 0;
+                if (categoriaActualizada.subcategorias) {
+                    numSub = categoriaActualizada.subcategorias.size || 
+                            Object.keys(categoriaActualizada.subcategorias).length;
+                }
+                const badge = categoriaRow.querySelector('td[data-label="Subcategorías"] span');
+                if (badge) {
+                    badge.innerHTML = `${numSub} ${numSub === 1 ? 'subcategoría' : 'subcategorías'}`;
+                    badge.className = numSub > 0 ? 'subcategoria-count-badge' : 'badge';
+                }
+            }
+
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message
+            });
+        }
+    }
+};
+
+// =============================================
+// CARGAR SUBCATEGORÍAS (se mantiene igual)
 // =============================================
 async function cargarSubcategorias(categoriaId) {
-    const categoria = categoriasCache.find(c => c.id === categoriaId);
+    const categoria = categoriasCache.find(c => c.id === categoriaId) || 
+                     todasLasCategorias.find(c => c.id === categoriaId);
     if (!categoria) return;
 
     const container = document.getElementById(`sub-content-${categoriaId}`);
@@ -774,6 +977,46 @@ function escapeHTML(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function mostrarError(mensaje) {
+    const tbody = document.getElementById('tablaCategoriasBody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center; padding:40px;">
+                    <div style="color: #ef4444;">
+                        <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
+                        <h5>Error</h5>
+                        <p>${escapeHTML(mensaje)}</p>
+                        <button class="btn-nueva-categoria-header" onclick="location.reload()" style="margin-top: 16px;">
+                            <i class="fas fa-sync-alt"></i> Reintentar
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function mostrarErrorInicializacion() {
+    const tbody = document.getElementById('tablaCategoriasBody');
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center; padding:40px;">
+                    <div style="color: #ef4444;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
+                        <h5>Error de inicialización</h5>
+                        <p>No se pudo cargar el módulo de categorías.</p>
+                        <button class="btn-nueva-categoria-header" onclick="location.reload()" style="margin-top: 16px;">
+                            <i class="fas fa-sync-alt"></i> Reintentar
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // =============================================
