@@ -2,8 +2,6 @@
  * INCIDENCIAS - Sistema Centinela
  * Versión completa con tabla estilo regiones
  * MODIFICADO: Botón eliminar reemplazado por botón seguimiento
- * MODIFICADO: Eliminado botón IPH Múltiple
- * MODIFICADO: Eliminada barra azul de sucursal
  */
 
 // =============================================
@@ -41,6 +39,7 @@ async function inicializarIncidenciaManager() {
         await cargarIncidencias();
 
         configurarEventListeners();
+        agregarBotonPDFMultiple();
 
         return true;
     } catch (error) {
@@ -1065,6 +1064,46 @@ window.generarPDFIncidencia = async function (incidenciaId, event) {
     }
 };
 
+window.generarPDFMultiple = async function () {
+    try {
+        const checkboxes = document.querySelectorAll('.incidencia-select:checked');
+
+        if (checkboxes.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Selecciona incidencias',
+                text: 'Debes seleccionar al menos una incidencia para generar los informes.'
+            });
+            return;
+        }
+
+        const incidenciasIds = Array.from(checkboxes).map(cb => cb.value);
+
+        if (incidenciasIds.length > 5) {
+            const confirm = await Swal.fire({
+                icon: 'question',
+                title: 'Múltiples informes',
+                text: `Vas a generar ${incidenciasIds.length} informes. ¿Continuar?`,
+                showCancelButton: true,
+                confirmButtonText: 'SÍ, GENERAR',
+                cancelButtonText: 'CANCELAR'
+            });
+
+            if (!confirm.isConfirmed) return;
+        }
+
+        await generadorPDF.generarPDFMultiple(incidenciasIds);
+
+    } catch (error) {
+        console.error('Error generando PDFs múltiples:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message
+        });
+    }
+};
+
 // =============================================
 // CARGAR INCIDENCIAS
 // =============================================
@@ -1184,8 +1223,9 @@ function crearFilaIncidencia(incidencia, tbody) {
         </td>
         <td data-label="Sucursal">
             <div style="display: flex; align-items: center;">
+                <div style="width:4px; height:24px; background:#00cfff; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
                 <div>
-                    <strong style="color:white;" title="${sucursal ? sucursal.nombre : 'No disponible'}">${sucursal ? sucursal.nombre : 'No disponible'}</strong>
+                    <strong style=" title="${sucursal ? sucursal.nombre : 'No disponible'}">${sucursal ? sucursal.nombre : 'No disponible'}</strong>
                 </div>
             </div>
         </td>
@@ -1236,6 +1276,24 @@ function crearFilaIncidencia(incidencia, tbody) {
             });
         });
     }, 50);
+}
+
+function agregarBotonPDFMultiple() {
+    const cardHeader = document.querySelector('.card-header');
+    if (cardHeader) {
+        const btnPDFMultiple = document.createElement('button');
+        btnPDFMultiple.className = 'btn-nueva-incidencia-header';
+        btnPDFMultiple.style.marginLeft = '10px';
+        btnPDFMultiple.innerHTML = '<i class="fas fa-file-pdf"></i> IPH Múltiple';
+        btnPDFMultiple.onclick = window.generarPDFMultiple;
+
+        const btnNueva = cardHeader.querySelector('.btn-nueva-incidencia-header');
+        if (btnNueva) {
+            btnNueva.parentNode.insertBefore(btnPDFMultiple, btnNueva.nextSibling);
+        } else {
+            cardHeader.appendChild(btnPDFMultiple);
+        }
+    }
 }
 
 // =============================================

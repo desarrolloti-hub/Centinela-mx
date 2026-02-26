@@ -593,6 +593,9 @@
 /* =============================================
    PAGINACIÓN (COMO EN CATEGORÍAS)
    ============================================= */
+/* =============================================
+   PAGINACIÓN (COMO EN CATEGORÍAS)
+   ============================================= */
 .pagination-container {
     display: flex;
     justify-content: space-between;
@@ -603,7 +606,8 @@
 }
 
 .pagination-info {
-    color: var(--color-text-dim);
+    color: #ffffff !important;
+    /* SOLO ESTO - Texto "Mostrando X-Y de Z incidencias" en blanco */
     font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
     font-size: 0.85rem;
 }
@@ -620,7 +624,8 @@
 .page-link {
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
-    color: var(--color-text-secondary) !important;
+    color: #ffffff !important;
+    /* SOLO ESTO - Números de página en blanco */
     padding: 6px 12px !important;
     border-radius: var(--border-radius-small) !important;
     cursor: pointer;
@@ -634,14 +639,16 @@
 .page-link:hover {
     background: var(--color-hover) !important;
     border-color: var(--color-accent-primary) !important;
-    color: var(--color-text-primary) !important;
+    color: #ffffff !important;
+    /* Mantener blanco al hacer hover */
     box-shadow: var(--shadow-glow);
 }
 
 .page-item.active .page-link {
     background: var(--color-accent-secondary) !important;
     border-color: var(--color-accent-secondary) !important;
-    color: white !important;
+    color: #ffffff !important;
+    /* Mantener blanco cuando está activo */
 }
 
 /* =============================================
