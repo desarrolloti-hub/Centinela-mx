@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN CORREGIDA (VALIDACIÓN DE FECHAS)
+// seguimientoIncidencia.js - VERSIÓN CORREGIDA (TIMELINE SIMPLE SIN PUNTOS)
 
 // =============================================
 // VARIABLES GLOBALES
@@ -759,7 +759,7 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO (VERSIÓN LIMPIA)
+// MOSTRAR HISTORIAL DE SEGUIMIENTO (VERSIÓN SIMPLE - SIN PUNTOS)
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
@@ -784,15 +784,21 @@ function mostrarHistorialSeguimiento() {
         return;
     }
 
+    // Ordenar del más antiguo al más reciente para mostrar en orden cronológico
+    const seguimientosOrdenados = [...seguimientos].sort((a, b) => {
+        const fechaA = a.fecha ? new Date(a.fecha) : 0;
+        const fechaB = b.fecha ? new Date(b.fecha) : 0;
+        return fechaA - fechaB;
+    });
+
     let html = '<div class="timeline-simple">';
-    seguimientos.forEach((seg, index) => {
+    seguimientosOrdenados.forEach((seg, index) => {
         const fecha = seg.fecha ? formatearFechaCompacta(seg.fecha) : 'Fecha no disponible';
         const evidencias = seg.evidencias || [];
         const idSeguimiento = seg.id || `SEG-${index + 1}`;
         
         html += `
             <div class="timeline-simple-item">
-                <div class="timeline-simple-marker"></div>
                 <div class="timeline-simple-content">
                     <div class="timeline-simple-header">
                         <div class="timeline-simple-user">
@@ -1108,6 +1114,16 @@ async function confirmarYGuardar(datos) {
 
     const confirmResult = await Swal.fire({
         title: '¿Guardar seguimiento?',
+        html: `
+            <div style="text-align: left;">
+                <p><strong>Fecha:</strong> ${formatearFecha(datos.fecha)}</p>
+                <p><strong>Estado:</strong> <span style="color: ${estadoAnterior === datos.nuevoEstado ? 'var(--color-warning)' : 'var(--color-success)'};">${estadoTexto}</span></p>
+                <p><strong>Evidencias:</strong> ${datos.evidencias.length} imagen(es)</p>
+                <p><strong>Descripción:</strong><br>
+                    <span style="color: var(--color-text-secondary);">${escapeHTML(datos.descripcion.substring(0, 200))}${datos.descripcion.length > 200 ? '...' : ''}</span>
+                </p>
+            </div>
+        `,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'GUARDAR SEGUIMIENTO',
@@ -1134,7 +1150,6 @@ async function guardarSeguimiento(datos) {
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
-        // CORRECCIÓN: Pasar la fecha seleccionada al manager
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
