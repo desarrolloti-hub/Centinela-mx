@@ -1027,3 +1027,58 @@
         font-size: 0.7rem;
     }
 }
+
+/* AÑADE ESTOS ESTILOS AL FINAL DE TU ARCHIVO incidencias.css */
+
+/* =============================================
+   ESTILOS DE TABLA COMO REGIONES
+   ============================================= */
+
+/* Estilo para el ID de incidencia - más compacto como en regiones */
+.incidencia-id {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    color: var(--color-text-primary);
+    padding: 3px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+/* Para la barra de color de sucursal (como en regiones) */
+.sucursal-indicator {
+    width: 4px;
+    height: 24px;
+    border-radius: 2px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+/* Para el color de riesgo (similar al color de regiones) */
+.riesgo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid transparent;
+}
+
+/* Ajuste responsive para móvil */
+@media (max-width: 768px) {
+    .incidencia-id {
+        font-size: 0.65rem;
+        padding: 2px 4px;
+    }
+
+    .riesgo-badge {
+        padding: 3px 8px;
+        font-size: 0.65rem;
+    }
+}

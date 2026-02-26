@@ -1,6 +1,6 @@
 /**
  * INCIDENCIAS - Sistema Centinela
- * Versión completa con generador de PDF estilo IPH (ADAPTADO A LA CLASE INCIDENCIA)
+ * Versión completa con tabla estilo regiones
  */
 
 // =============================================
@@ -168,143 +168,9 @@ function filtrarIncidencias(incidencias) {
 // =============================================
 // FUNCIONES DE ACCIÓN
 // =============================================
-window.verDetallesIncidencia = async function (incidenciaId, event) {
+window.verDetallesIncidencia = function (incidenciaId, event) {
     event?.stopPropagation();
-
-    const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
-    if (!incidencia) return;
-
-    const sucursal = sucursalesCache.find(s => s.id === incidencia.sucursalId);
-    const categoria = categoriasCache.find(c => c.id === incidencia.categoriaId);
-
-    const fechaInicio = incidencia.getFechaInicioFormateada ?
-        incidencia.getFechaInicioFormateada() :
-        new Date(incidencia.fechaInicio).toLocaleString('es-MX');
-
-    const fechaFinalizacion = incidencia.fechaFinalizacion ?
-        (incidencia.getFechaFinalizacionFormateada ?
-            incidencia.getFechaFinalizacionFormateada() :
-            new Date(incidencia.fechaFinalizacion).toLocaleString('es-MX')) :
-        'No finalizada';
-
-    const riesgoColor = incidencia.getNivelRiesgoColor ?
-        incidencia.getNivelRiesgoColor() :
-        (incidencia.nivelRiesgo === 'critico' ? '#dc3545' :
-            incidencia.nivelRiesgo === 'alto' ? '#fd7e14' :
-                incidencia.nivelRiesgo === 'medio' ? '#ffc107' : '#28a745');
-
-    Swal.fire({
-        title: `Incidencia: ${incidencia.id}`,
-        html: `
-            <div style="text-align: left;">
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-info-circle" style="margin-right: 8px;"></i>INFORMACIÓN GENERAL
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
-                        <div>
-                            <p style="margin: 5px 0;"><strong>Sucursal:</strong></p>
-                            <p style="color: var(--color-text-secondary);">${sucursal ? sucursal.nombre : 'No disponible'}</p>
-                        </div>
-                        <div>
-                            <p style="margin: 5px 0;"><strong>Categoría:</strong></p>
-                            <p style="color: var(--color-text-secondary);">${categoria ? categoria.nombre : incidencia.categoriaId || 'No disponible'}</p>
-                        </div>
-                        <div>
-                            <p style="margin: 5px 0;"><strong>Subcategoría:</strong></p>
-                            <p style="color: var(--color-text-secondary);">${incidencia.subcategoriaId || 'No especificada'}</p>
-                        </div>
-                        <div>
-                            <p style="margin: 5px 0;"><strong>Reportado por ID:</strong></p>
-                            <p style="color: var(--color-text-secondary);">${incidencia.reportadoPorId || 'No disponible'}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        DETALLES
-                    </h4>
-                    <p style="color: var(--color-text-secondary); margin: 0; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
-                        ${escapeHTML(incidencia.detalles) || 'No hay detalles disponibles.'}
-                    </p>
-                </div>
-
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        RIESGO Y ESTADO
-                    </h4>
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                        <div>
-                            <p style="margin: 5px 0;"><strong>Nivel de Riesgo:</strong></p>
-                            <span class="riesgo-badge ${incidencia.nivelRiesgo}" style="background: ${riesgoColor}20; color: ${riesgoColor}; border-color: ${riesgoColor}40;">
-                                ${incidencia.getNivelRiesgoTexto ? incidencia.getNivelRiesgoTexto() : incidencia.nivelRiesgo}
-                            </span>
-                        </div>
-                        <div>
-                            <p style="margin: 5px 0;"><strong>Estado:</strong></p>
-                            <span class="estado-badge ${incidencia.estado}">
-                                ${incidencia.getEstadoTexto ? incidencia.getEstadoTexto() : incidencia.estado}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-calendar-alt" style="margin-right: 8px;"></i>FECHAS
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
-                        <div>
-                            <p style="margin: 5px 0;"><strong>Fecha de Inicio:</strong></p>
-                            <p style="color: var(--color-text-secondary);"><i class="fas fa-play"></i> ${fechaInicio}</p>
-                        </div>
-                        <div>
-                            <p style="margin: 5px 0;"><strong>Fecha de Finalización:</strong></p>
-                            <p style="color: var(--color-text-secondary);"><i class="fas fa-stop"></i> ${fechaFinalizacion}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-history" style="margin-right: 8px;"></i>SEGUIMIENTO
-                    </h4>
-                    ${renderizarSeguimientoResumen(incidencia)}
-                </div>
-            </div>
-        `,
-        icon: null,
-        width: 800,
-        showConfirmButton: false,
-        showCancelButton: true,
-        cancelButtonText: 'CERRAR'
-    });
-};
-
-function renderizarSeguimientoResumen(incidencia) {
-    const seguimientos = incidencia.getSeguimientosArray ? incidencia.getSeguimientosArray() : [];
-
-    if (seguimientos.length === 0) {
-        return '<p style="color: var(--color-text-dim); text-align: center; padding: 20px;">No hay seguimiento registrado</p>';
-    }
-
-    const ultimos = seguimientos.slice(0, 3);
-
-    return ultimos.map(seg => `
-        <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; border-left: 3px solid var(--color-accent-primary);">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span style="color: var(--color-accent-primary); font-weight: 600;">${escapeHTML(seg.usuarioNombre || 'Usuario')}</span>
-                <span style="color: var(--color-text-dim); font-size: 0.75rem;">${new Date(seg.fecha).toLocaleString()}</span>
-            </div>
-            <p style="color: var(--color-text-secondary); margin: 0; font-size: 0.9rem;">${escapeHTML(seg.descripcion)}</p>
-        </div>
-    `).join('');
-}
-
-window.editarIncidencia = function (id, event) {
-    event?.stopPropagation();
-    window.location.href = `/users/admin/segimientoIncidencias/segimientoIncidencias.html?id=${id}`;
+    window.location.href = `/users/admin/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
 };
 
 window.eliminarIncidencia = async function (incidenciaId, event) {
@@ -367,80 +233,6 @@ window.eliminarIncidencia = async function (incidenciaId, event) {
                 icon: 'error',
                 title: 'Error',
                 text: error.message || 'Error al eliminar'
-            });
-        }
-    }
-};
-
-window.finalizarIncidencia = async function (incidenciaId, event) {
-    event?.stopPropagation();
-
-    const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
-    if (!incidencia) return;
-
-    if (incidencia.estado === 'finalizada') {
-        Swal.fire({
-            icon: 'info',
-            title: 'Incidencia ya finalizada',
-            text: 'Esta incidencia ya ha sido marcada como finalizada.'
-        });
-        return;
-    }
-
-    const { value: descripcion } = await Swal.fire({
-        title: 'Finalizar Incidencia',
-        input: 'textarea',
-        inputLabel: 'Comentario de cierre',
-        inputPlaceholder: 'Describa las acciones tomadas para finalizar esta incidencia...',
-        inputAttributes: {
-            'aria-label': 'Escriba su comentario'
-        },
-        showCancelButton: true,
-        confirmButtonText: 'FINALIZAR',
-        cancelButtonText: 'CANCELAR',
-        inputValidator: (value) => {
-            if (!value) {
-                return 'Debe ingresar un comentario de cierre';
-            }
-        }
-    });
-
-    if (descripcion) {
-        try {
-            Swal.fire({
-                title: 'Finalizando...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            const usuario = window.userManager?.currentUser || { id: 'sistema', nombreCompleto: 'Sistema' };
-
-            await incidenciaManager.finalizarIncidencia(
-                incidenciaId,
-                usuario.id,
-                usuario.nombreCompleto,
-                organizacionActual.camelCase
-            );
-
-            Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Finalizada!',
-                text: 'La incidencia ha sido marcada como finalizada.',
-                timer: 1500,
-                showConfirmButton: false
-            });
-
-            await cargarIncidencias();
-
-        } catch (error) {
-            Swal.close();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message || 'Error al finalizar la incidencia'
             });
         }
     }
@@ -1382,19 +1174,19 @@ async function cargarIncidencias() {
 
     try {
         const tbody = document.getElementById('tablaIncidenciasBody');
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px;">Cargando incidencias...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;">Cargando incidencias...</td></tr>';
 
         incidenciasCache = await incidenciaManager.getIncidenciasByOrganizacion(organizacionActual.camelCase);
 
         if (!incidenciasCache || incidenciasCache.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align:center; padding:60px 20px;">
+                    <td colspan="7" style="text-align:center; padding:60px 20px;">
                         <div style="text-align:center;">
                             <i class="fas fa-exclamation-triangle" style="font-size:48px; color:rgba(255,193,7,0.3); margin-bottom:16px;"></i>
                             <h5 style="color:white;">No hay incidencias registradas</h5>
                             <p style="color: var(--color-text-dim); margin-bottom: 20px;">Comienza registrando la primera incidencia de tu organización.</p>
-                            <a href="/users/admin/seguimientoIncidencias/seguimientoIncidencias.html" class="btn-nueva-incidencia-header" style="display:inline-flex; margin-top:16px;">
+                            <a href="/users/admin/crearIncidencias/crearIncidencia.html" class="btn-nueva-incidencia-header" style="display:inline-flex; margin-top:16px;">
                                 <i class="fas fa-plus-circle"></i> Crear Incidencia
                             </a>
                         </div>
@@ -1485,15 +1277,15 @@ function crearFilaIncidencia(incidencia, tbody) {
         'N/A';
 
     tr.innerHTML = `
-        <td data-label="Seleccionar" style="width: 40px;">
-            <input type="checkbox" class="incidencia-select" value="${incidencia.id}" style="cursor: pointer; width: 18px; height: 18px;">
-        </td>
         <td data-label="ID / Folio">
             <span class="incidencia-id" title="${incidencia.id}">${incidencia.id}</span>
         </td>
         <td data-label="Sucursal">
             <div style="display: flex; align-items: center;">
-                <span>${sucursal ? sucursal.nombre : 'No disponible'}</span>
+                <div style="width:4px; height:24px; background:#00cfff; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
+                <div>
+                    <strong style="color:white;" title="${sucursal ? sucursal.nombre : 'No disponible'}">${sucursal ? sucursal.nombre : 'No disponible'}</strong>
+                </div>
             </div>
         </td>
         <td data-label="Categoría">
@@ -1515,21 +1307,13 @@ function crearFilaIncidencia(incidencia, tbody) {
             ${fechaInicio}
         </td>
         <td data-label="Acciones">
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <button type="button" class="btn" data-action="ver" data-id="${incidencia.id}" title="Ver detalles">
                     <i class="fas fa-eye"></i>
                 </button>
                 <button type="button" class="btn" data-action="pdf" data-id="${incidencia.id}" title="Generar IPH">
                     <i class="fas fa-file-pdf" style="color: #dc3545;"></i>
                 </button>
-                <button type="button" class="btn btn-warning" data-action="editar" data-id="${incidencia.id}" title="Editar">
-                    <i class="fas fa-edit"></i>
-                </button>
-                ${incidencia.estado !== 'finalizada' ? `
-                    <button type="button" class="btn btn-success" data-action="finalizar" data-id="${incidencia.id}" title="Finalizar">
-                        <i class="fas fa-check"></i>
-                    </button>
-                ` : ''}
                 <button type="button" class="btn btn-danger" data-action="eliminar" data-id="${incidencia.id}" title="Eliminar">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -1547,9 +1331,7 @@ function crearFilaIncidencia(incidencia, tbody) {
                 const id = btn.dataset.id;
                 if (action === 'ver') window.verDetallesIncidencia(id, e);
                 else if (action === 'pdf') window.generarPDFIncidencia(id, e);
-                else if (action === 'editar') window.editarIncidencia(id, e);
                 else if (action === 'eliminar') window.eliminarIncidencia(id, e);
-                else if (action === 'finalizar') window.finalizarIncidencia(id, e);
             });
         });
     }, 50);
@@ -1588,7 +1370,7 @@ function mostrarError(mensaje) {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align:center; padding:40px;">
+                <td colspan="7" style="text-align:center; padding:40px;">
                     <div style="color: #ef4444;">
                         <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
                         <h5>Error</h5>
@@ -1608,7 +1390,7 @@ function mostrarErrorInicializacion() {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align:center; padding:40px;">
+                <td colspan="7" style="text-align:center; padding:40px;">
                     <div style="color: #ef4444;">
                         <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
                         <h5>Error de inicialización</h5>

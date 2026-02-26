@@ -261,7 +261,6 @@ body {
 
 .form-control:focus {
     border-color: var(--color-accent-secondary) !important;
-    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
     background: var(--color-bg-tertiary) !important;
     outline: none !important;
 }
@@ -503,8 +502,7 @@ body {
 }
 
 .alert-info {
-    background: rgba(47, 140, 255, 0.1) !important;
-    border-color: rgba(47, 140, 255, 0.3) !important;
+
     color: var(--color-accent-primary) !important;
 }
 

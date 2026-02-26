@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,29 +8,33 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Fuentes del sistema Centinela -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
 
     <!-- Estilos del navbar y footer -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
+
     <!-- Estilos principales de la vista (basado en crear regiones) -->
     <link rel="stylesheet" href="editarRegiones.css">
-    
+
     <!-- Assets -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
 
     <!-- SEO -->
-    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias.">
+    <meta name="description"
+        content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias.">
     <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad">
     <meta name="author" content="Centinela-MX">
     <link rel="canonical" href="https://centinela-mx.web.app/" />
 </head>
+
 <body>
     <canvas id="particle-canvas"></canvas>
     <br>
@@ -40,8 +45,7 @@
         <div class="header-section">
             <div class="header-content">
                 <h1 class="main-title" id="formMainTitle">
-                    <i class="fas fa-map-marked-alt"></i>
-                    Editar Región
+
                 </h1>
                 <div class="header-description-text">
                     "Modifica los datos de la región seleccionada."
@@ -58,7 +62,7 @@
                     <div class="card-header">
                         <h5><i class="fas fa-edit"></i>Información de la Región</h5>
                         <button id="btnVolverLista" class="btn-volver">
-                            <i class="fas fa-arrow-left"></i>Volver a la lista 
+                            <i class="fas fa-arrow-left"></i>Volver a la lista
                         </button>
                     </div>
                     <div class="card-body">
@@ -85,8 +89,8 @@
                                     <div class="input-group">
                                         <span class="input-group-icon"><i class="fas fa-map-pin"></i></span>
                                         <input type="text" class="form-control" id="nombreRegion"
-                                            placeholder="Ej: Zona Norte, Región Sur, Área Metropolitana" 
-                                            maxlength="50" required>
+                                            placeholder="Ej: Zona Norte, Región Sur, Área Metropolitana" maxlength="50"
+                                            required>
                                     </div>
                                     <div class="form-help-text">Nombre único para identificar la región</div>
                                     <div class="char-limit-info">
@@ -99,7 +103,8 @@
                                     <label class="form-label">Color de Identificación</label>
                                     <div class="color-selector-simple">
                                         <div class="color-preview-card" id="colorPreviewCard">
-                                            <div class="color-circle" id="colorDisplay" style="background-color: #2f8cff;"></div>
+                                            <div class="color-circle" id="colorDisplay"
+                                                style="background-color: #2f8cff;"></div>
                                             <div class="color-info">
                                                 <span class="color-hex" id="colorHex">#2f8cff</span>
                                                 <span class="color-label">
@@ -109,7 +114,9 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <input type="color" id="colorRegion" value="#2f8cff" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" aria-hidden="true">
+                                    <input type="color" id="colorRegion" value="#2f8cff"
+                                        style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;"
+                                        aria-hidden="true">
                                     <div class="form-help-text">
                                         <i class="fas fa-palette"></i>
                                         Este color identificará visualmente la región en mapas y reportes
@@ -142,7 +149,7 @@
             </div>
         </div>
     </div>
-    
+
     <br>
 
     <!-- Scripts -->
@@ -152,4 +159,5 @@
     <script type="module" src="/components/particulas.js"></script>
     <script type="module" src="editarRegiones.js"></script>
 </body>
+
 </html>

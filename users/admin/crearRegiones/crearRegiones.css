@@ -404,8 +404,6 @@ body {
 }
 
 .alert-info {
-    background: rgba(47, 140, 255, 0.1) !important;
-
     color: var(--color-accent-primary) !important;
 }
 

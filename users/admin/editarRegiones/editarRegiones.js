@@ -71,11 +71,11 @@ class EditarRegionController {
             // Esperar a que window.userManager.currentUser esté disponible
             let attempts = 0;
             const maxAttempts = 30;
-            
+
             while (attempts < maxAttempts) {
                 if (window.userManager && window.userManager.currentUser) {
                     const admin = window.userManager.currentUser;
-                    
+
                     this.usuarioActual = {
                         id: admin.id,
                         uid: admin.id,
@@ -84,7 +84,7 @@ class EditarRegionController {
                         organizacionCamelCase: admin.organizacionCamelCase,
                         correo: admin.correoElectronico
                     };
-                    
+
                     Swal.close();
                     return;
                 }
@@ -166,7 +166,7 @@ class EditarRegionController {
 
         // Actualizar título
         if (elements.formMainTitle) {
-            elements.formMainTitle.innerHTML = `<i class="fas fa-map-marked-alt"></i> Editar Región: ${region.nombre}`;
+            elements.formMainTitle.innerHTML = ` Editar Región: ${region.nombre}`;
         }
 
         // Actualizar contador
@@ -362,11 +362,11 @@ class EditarRegionController {
 
             // Preparar datos a actualizar
             const datosActualizar = {};
-            
+
             if (nuevosDatos.nombre !== elements.nombreRegion.defaultValue) {
                 datosActualizar.nombre = nuevosDatos.nombre;
             }
-            
+
             if (nuevosDatos.color !== elements.colorRegion.defaultValue) {
                 datosActualizar.color = nuevosDatos.color;
             }
