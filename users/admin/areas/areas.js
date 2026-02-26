@@ -1,4 +1,4 @@
-// areas.js - VERSIÓN CORREGIDA (usa estilos globales de personalization.css)
+// areas.js - VERSIÓN ACTUALIZADA (CON BÚSQUEDA Y PAGINACIÓN)
 
 window.appDebug = {
     estado: 'iniciando',
@@ -6,6 +6,14 @@ window.appDebug = {
 };
 
 let Area, AreaManager;
+
+// =============================================
+// CONFIGURACIÓN DE PAGINACIÓN
+// =============================================
+const ITEMS_POR_PAGINA = 10;
+let paginaActual = 1;
+let terminoBusqueda = '';
+let todasLasAreas = []; // Almacena todas las áreas para búsqueda
 
 async function cargarDependencias() {
     try {
@@ -53,7 +61,7 @@ function inicializarController() {
 class AreasController {
     constructor() {
         this.areaManager = new AreaManager();
-        this.areas = [];
+        this.areas = []; // Áreas filtradas para mostrar
         this.filaExpandida = null;
 
         this.userManager = this.cargarUsuarioDesdeStorage();
@@ -135,6 +143,213 @@ class AreasController {
         });
     }
 
+    // =============================================
+    // BÚSQUEDA Y FILTRADO
+    // =============================================
+    configurarBusqueda() {
+        const container = document.querySelector('.card');
+        if (!container) return;
+
+        // Verificar si ya existe el contenedor de búsqueda
+        let filtrosContainer = document.querySelector('.filtros-container');
+        
+        if (!filtrosContainer) {
+            // Crear el contenedor de búsqueda igual que en categorías
+            filtrosContainer = document.createElement('div');
+            filtrosContainer.className = 'filtros-container';
+            filtrosContainer.innerHTML = `
+                <div class="filtros-header">
+                    <h5><i class="fas fa-search"></i> Buscar áreas:</h5>
+                </div>
+                <div class="filtros-body">
+                    <div class="filtro-grupo">
+                        <label for="buscarArea">Nombre o descripción</label>
+                        <input type="text" id="buscarArea" class="filtro-input" 
+                               placeholder="Escribe para buscar en tiempo real..." autocomplete="off">
+                    </div>
+                    <div class="filtro-acciones">
+                        <button class="btn-buscar" id="btnBuscarArea">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <button class="btn-limpiar" id="btnLimpiarBusquedaArea">
+                            <i class="fas fa-times"></i> Limpiar
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Insertar antes de la tarjeta
+            container.parentNode.insertBefore(filtrosContainer, container);
+        }
+
+        // Configurar event listeners
+        const inputBuscar = document.getElementById('buscarArea');
+        const btnBuscar = document.getElementById('btnBuscarArea');
+        const btnLimpiar = document.getElementById('btnLimpiarBusquedaArea');
+
+        if (btnBuscar) {
+            btnBuscar.addEventListener('click', () => {
+                terminoBusqueda = inputBuscar?.value.trim() || '';
+                paginaActual = 1;
+                this.filtrarYRenderizar();
+            });
+        }
+
+        if (btnLimpiar) {
+            btnLimpiar.addEventListener('click', () => {
+                if (inputBuscar) inputBuscar.value = '';
+                terminoBusqueda = '';
+                paginaActual = 1;
+                this.filtrarYRenderizar();
+            });
+        }
+
+        // Búsqueda en tiempo real con debounce
+        if (inputBuscar) {
+            let timeoutId;
+            inputBuscar.addEventListener('input', (e) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    terminoBusqueda = e.target.value.trim();
+                    paginaActual = 1;
+                    this.filtrarYRenderizar();
+                }, 300);
+            });
+
+            inputBuscar.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    terminoBusqueda = e.target.value.trim();
+                    paginaActual = 1;
+                    this.filtrarYRenderizar();
+                }
+            });
+        }
+    }
+
+    filtrarYRenderizar() {
+        if (!todasLasAreas.length) {
+            this.areas = [];
+        } else if (!terminoBusqueda || terminoBusqueda.length < 2) {
+            // Si no hay término de búsqueda, mostrar todas
+            this.areas = [...todasLasAreas];
+        } else {
+            // Filtrar en memoria
+            const terminoLower = terminoBusqueda.toLowerCase();
+            this.areas = todasLasAreas.filter(area => 
+                (area.nombreArea && area.nombreArea.toLowerCase().includes(terminoLower)) ||
+                (area.descripcion && area.descripcion.toLowerCase().includes(terminoLower))
+            );
+        }
+
+        this.actualizarTablaConPaginacion();
+    }
+
+    // =============================================
+    // PAGINACIÓN
+    // =============================================
+    irPagina(pagina) {
+        paginaActual = pagina;
+        this.actualizarTablaConPaginacion();
+        
+        // Scroll suave hacia arriba
+        document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    renderizarPaginacion(totalPaginas) {
+        const pagination = document.getElementById('pagination');
+        if (!pagination) return;
+
+        if (totalPaginas <= 1) {
+            pagination.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+
+        for (let i = 1; i <= totalPaginas; i++) {
+            html += `
+                <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                    <button class="page-link" onclick="window.appDebug.controller.irPagina(${i})">${i}</button>
+                </li>
+            `;
+        }
+
+        pagination.innerHTML = html;
+    }
+
+    // =============================================
+    // RENDERIZADO CON PAGINACIÓN
+    // =============================================
+    actualizarTablaConPaginacion() {
+        const tbody = document.getElementById('tablaAreasBody');
+        if (!tbody) return;
+
+        this.filaExpandida = null;
+        
+        const totalItems = this.areas.length;
+        const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
+        
+        // Ajustar página actual si está fuera de rango
+        if (paginaActual > totalPaginas && totalPaginas > 0) {
+            paginaActual = totalPaginas;
+        }
+        
+        const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+        const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
+        const areasPagina = this.areas.slice(inicio, fin);
+
+        // Actualizar información de paginación
+        const paginationInfo = document.getElementById('paginationInfo');
+        if (paginationInfo) {
+            if (totalItems === 0) {
+                paginationInfo.textContent = 'No se encontraron áreas';
+            } else {
+                paginationInfo.textContent = `Mostrando ${inicio + 1}-${fin} de ${totalItems} áreas`;
+            }
+        }
+
+        // Mostrar/ocultar contenedor de paginación
+        const paginacionContainer = document.querySelector('.pagination-container');
+        if (paginacionContainer) {
+            paginacionContainer.style.display = totalItems > ITEMS_POR_PAGINA ? 'flex' : 'none';
+        }
+
+        if (totalItems === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <div style="text-align:center; padding:40px;">
+                            <i class="fas fa-search" style="font-size: 48px; color: rgba(255,255,255,0.3); margin-bottom: 16px;"></i>
+                            <h5 style="color:white;">No se encontraron áreas</h5>
+                            <p style="color: var(--color-text-dim); margin-top: 10px;">
+                                ${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}
+                            </p>
+                            ${!terminoBusqueda ? `
+                                <button class="btn-nueva-area" onclick="window.appDebug.controller.irACrearArea()" style="margin-top: 16px;">
+                                    <i class="fas fa-plus"></i> Crear Área
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            this.renderizarPaginacion(0);
+            return;
+        }
+
+        tbody.innerHTML = '';
+
+        areasPagina.forEach((area) => {
+            tbody.appendChild(this.crearFilaArea(area));
+        });
+
+        this.renderizarPaginacion(totalPaginas);
+    }
+
+    // =============================================
+    // MÉTODOS ORIGINALES (MODIFICADOS PARA USAR this.areas)
+    // =============================================
     init() {
         if (!this.userManager || !this.userManager.currentUser) {
             this.redirigirAlLogin();
@@ -142,6 +357,7 @@ class AreasController {
         }
 
         this.actualizarBadgeEmpresa();
+        this.configurarBusqueda(); // Agregar barra de búsqueda
         this.inicializarEventos();
         this.cargarAreas();
     }
@@ -186,9 +402,15 @@ class AreasController {
             this.mostrarCargando();
 
             const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
-            this.areas = await this.areaManager.getAreasByOrganizacion(organizacionCamelCase);
+            todasLasAreas = await this.areaManager.getAreasByOrganizacion(organizacionCamelCase);
+            
+            // Ordenar alfabéticamente
+            todasLasAreas.sort((a, b) => (a.nombreArea || '').localeCompare(b.nombreArea || ''));
+            
+            // Inicializar áreas filtradas
+            this.areas = [...todasLasAreas];
 
-            this.actualizarTabla();
+            this.actualizarTablaConPaginacion();
             this.ocultarCargando();
         } catch (error) {
             this.mostrarError('Error cargando áreas');
@@ -223,7 +445,8 @@ class AreasController {
     }
 
     mostrarCargosDesplegables(areaId, filaReferencia) {
-        const area = this.areas.find(a => a.id === areaId);
+        // Buscar el área en todasLasAreas para obtener datos actualizados
+        const area = todasLasAreas.find(a => a.id === areaId);
         if (!area) return;
 
         const cargos = area.getCargosAsArray();
@@ -306,7 +529,7 @@ class AreasController {
                 <div class="cargos-container" style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)); padding: 20px; border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);">
                     <div class="cargos-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                         <h6 style="color: var(--color-text-primary); font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);">
-                            <i class="fas fa-list-ul""></i>
+                            <i class="fas fa-list-ul"></i>
                             Cargos de <span style="color:#2f8cff;">"${this.escapeHTML(area.nombreArea)}"</span>
                         </h6>
                         ${botonAgregarHTML}
@@ -337,7 +560,8 @@ class AreasController {
     verDetallesCargo(areaId, cargoId, event) {
         event?.stopPropagation();
         
-        const area = this.areas.find(a => a.id === areaId);
+        // Buscar en todasLasAreas
+        const area = todasLasAreas.find(a => a.id === areaId);
         if (!area) return;
 
         const cargos = area.getCargosAsArray();
@@ -376,7 +600,8 @@ class AreasController {
     async eliminarCargo(areaId, cargoId, event) {
         event?.stopPropagation();
 
-        const area = this.areas.find(a => a.id === areaId);
+        // Buscar en todasLasAreas
+        const area = todasLasAreas.find(a => a.id === areaId);
         if (!area) {
             Swal.fire({
                 icon: 'error',
@@ -437,9 +662,14 @@ class AreasController {
                     showConfirmButton: false
                 });
 
+                // Actualizar en todasLasAreas
                 const areaActualizada = await this.areaManager.obtenerAreaPorId(areaId);
-                const index = this.areas.findIndex(a => a.id === areaId);
-                if (index !== -1) this.areas[index] = areaActualizada;
+                const index = todasLasAreas.findIndex(a => a.id === areaId);
+                if (index !== -1) todasLasAreas[index] = areaActualizada;
+                
+                // Actualizar también en this.areas si está presente
+                const indexFiltrado = this.areas.findIndex(a => a.id === areaId);
+                if (indexFiltrado !== -1) this.areas[indexFiltrado] = areaActualizada;
 
                 const filaCargos = document.getElementById(`cargos-${areaId}`);
                 if (filaCargos) {
@@ -447,12 +677,13 @@ class AreasController {
                     this.filaExpandida = null;
                 }
 
+                // Actualizar el badge de cargos en la fila principal
                 const filaArea = document.getElementById(`fila-${areaId}`);
                 if (filaArea) {
                     const cantidadCargos = areaActualizada.getCantidadCargos();
                     const badge = filaArea.querySelector('.cargo-count-badge');
                     if (badge) {
-                        badge.innerHTML = `<i class="fas fa-briefcase"></i> ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}`;
+                        badge.innerHTML = `${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}`;
                     }
                 }
 
@@ -535,7 +766,8 @@ class AreasController {
 
     async verDetalles(areaId) {
         try {
-            const area = this.areas.find(a => a.id === areaId);
+            // Buscar en todasLasAreas
+            const area = todasLasAreas.find(a => a.id === areaId);
             if (!area) {
                 this.mostrarError('Área no encontrada');
                 return;
@@ -595,38 +827,10 @@ class AreasController {
         }
     }
 
+    // Este método ya no se usa directamente, se reemplaza por actualizarTablaConPaginacion
     actualizarTabla() {
-        const tbody = document.getElementById('tablaAreasBody');
-        if (!tbody) return;
-
-        this.filaExpandida = null;
-        
-        // SIN PAGINACIÓN - mostrar todas las áreas
-        const todasLasAreas = this.areas;
-
-        tbody.innerHTML = '';
-
-        if (todasLasAreas.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center py-5">
-                        <i class="fas fa-inbox fa-3x text-muted"></i>
-                        <p class="text-muted">No se encontraron áreas</p>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        todasLasAreas.forEach((area) => {
-            tbody.appendChild(this.crearFilaArea(area));
-        });
-
-        // Ocultar la paginación completamente
-        const paginacionContainer = document.querySelector('.pagination-container');
-        if (paginacionContainer) {
-            paginacionContainer.style.display = 'none';
-        }
+        // Mantenido por compatibilidad, pero redirige al nuevo método
+        this.actualizarTablaConPaginacion();
     }
 
     crearFilaArea(area) {
