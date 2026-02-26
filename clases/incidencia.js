@@ -1,15 +1,15 @@
 // incidencia.js - VERSIÓN COMPLETA CON SOPORTE PARA COMENTARIOS EN IMÁGENES
 
-import { 
-    collection, 
-    doc, 
-    getDocs, 
-    getDoc, 
-    setDoc, 
-    updateDoc, 
+import {
+    collection,
+    doc,
+    getDocs,
+    getDoc,
+    setDoc,
+    updateDoc,
     deleteDoc,
-    query, 
-    where, 
+    query,
+    where,
     orderBy,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
@@ -32,42 +32,42 @@ class Incidencia {
     // ===== CONSTRUCTOR =====
     constructor(id, data) {
         this.id = id;
-        
+
         // ===== IDs para acceder a información relacionada =====
         this.sucursalId = data.sucursalId || '';
         this.reportadoPorId = data.reportadoPorId || '';
         this.categoriaId = data.categoriaId || '';
         this.subcategoriaId = data.subcategoriaId || '';
-        
+
         // ===== FECHAS =====
         this.fechaInicio = data.fechaInicio ? this._convertirFecha(data.fechaInicio) : new Date();
         this.fechaFinalizacion = data.fechaFinalizacion ? this._convertirFecha(data.fechaFinalizacion) : null;
-        
+
         // ===== NIVEL DE RIESGO =====
         this.nivelRiesgo = data.nivelRiesgo || 'bajo';
-        
+
         // ===== ESTADO =====
         this.estado = data.estado || 'pendiente';
-        
+
         // ===== DESCRIPCIÓN =====
         this.detalles = data.detalles || '';
-        
+
         // ===== IMÁGENES =====
         this.imagenes = data.imagenes || []; // Array de URLs o objetos { url, comentario }
-        
+
         // ===== SEGUIMIENTO (MAP) =====
         this.seguimiento = {};
         if (data.seguimiento) {
             this.seguimiento = JSON.parse(JSON.stringify(data.seguimiento));
         }
-        
+
         // ===== METADATOS =====
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.creadoPorNombre = data.creadoPorNombre || '';
         this.actualizadoPor = data.actualizadoPor || '';
         this.actualizadoPorNombre = data.actualizadoPorNombre || '';
-        
+
         // ===== FECHAS DE AUDITORÍA =====
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
@@ -149,7 +149,7 @@ class Incidencia {
     agregarSeguimiento(usuarioId, usuarioNombre, descripcion, evidencias = []) {
         const seguimientoCount = Object.keys(this.seguimiento).length;
         const seguimientoId = `SEG${seguimientoCount + 1}`;
-        
+
         this.seguimiento[seguimientoId] = {
             usuarioId,
             usuarioNombre,
@@ -157,7 +157,7 @@ class Incidencia {
             evidencias, // Array de objetos { url, comentario }
             fecha: new Date()
         };
-        
+
         return seguimientoId;
     }
 
@@ -304,11 +304,11 @@ class IncidenciaManager {
     async subirArchivo(file, rutaCompleta, onProgress = null) {
         try {
             const storageRef = ref(storage, rutaCompleta);
-            
+
             if (onProgress) {
                 return new Promise((resolve, reject) => {
                     const uploadTask = uploadBytesResumable(storageRef, file);
-                    
+
                     uploadTask.on('state_changed',
                         (snapshot) => {
                             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -368,16 +368,16 @@ class IncidenciaManager {
         try {
             const folderRef = ref(storage, rutaCarpeta);
             const result = await listAll(folderRef);
-            
+
             const deletePromises = [];
             result.items.forEach(itemRef => {
                 deletePromises.push(deleteObject(itemRef));
             });
-            
+
             result.prefixes.forEach(folderRef => {
                 deletePromises.push(this.eliminarCarpetaStorage(folderRef.fullPath));
             });
-            
+
             await Promise.all(deletePromises);
             return true;
         } catch (error) {
@@ -403,7 +403,7 @@ class IncidenciaManager {
             const organizacion = usuarioActual.organizacionCamelCase;
             const collectionName = this._getCollectionName(organizacion);
             const incidenciasCollection = collection(db, collectionName);
-            
+
             const incidenciaId = this._generarIdIncidencia(organizacion);
             const incidenciaRef = doc(incidenciasCollection, incidenciaId);
 
@@ -413,13 +413,13 @@ class IncidenciaManager {
                 for (let i = 0; i < archivos.length; i++) {
                     const file = archivos[i];
                     const comentario = imagenesConDatos[i]?.comentario || '';
-                    
+
                     const timestamp = Date.now();
                     const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
                     const rutaStorage = `incidencias_${organizacion}/${incidenciaId}/imagenes/${nombreArchivo}`;
-                    
+
                     const resultado = await this.subirArchivo(file, rutaStorage);
-                    
+
                     // Guardar URL y comentario juntos
                     imagenesUrls.push({
                         url: resultado.url,
@@ -472,15 +472,15 @@ class IncidenciaManager {
      */
     async getIncidenciaById(incidenciaId, organizacionCamelCase) {
         if (!organizacionCamelCase) return null;
-        
+
         const incidenciaInMemory = this.incidencias.find(inc => inc.id === incidenciaId);
         if (incidenciaInMemory) return incidenciaInMemory;
-        
+
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
-            
+
             if (incidenciaSnap.exists()) {
                 const data = incidenciaSnap.data();
                 const incidencia = new Incidencia(incidenciaId, { ...data, id: incidenciaId });
@@ -488,7 +488,7 @@ class IncidenciaManager {
                 return incidencia;
             }
             return null;
-            
+
         } catch (error) {
             console.error('Error obteniendo incidencia:', error);
             return null;
@@ -501,12 +501,12 @@ class IncidenciaManager {
     async getIncidenciasByOrganizacion(organizacionCamelCase, filtros = {}) {
         try {
             if (!organizacionCamelCase) return [];
-            
+
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciasCollection = collection(db, collectionName);
-            
+
             let constraints = [orderBy("fechaCreacion", "desc")];
-            
+
             if (filtros.estado) {
                 constraints.push(where("estado", "==", filtros.estado));
             }
@@ -522,7 +522,7 @@ class IncidenciaManager {
 
             const incidenciasQuery = query(incidenciasCollection, ...constraints);
             const snapshot = await getDocs(incidenciasQuery);
-            
+
             const incidencias = [];
             snapshot.forEach(doc => {
                 try {
@@ -535,7 +535,7 @@ class IncidenciaManager {
 
             this.incidencias = incidencias;
             return incidencias;
-            
+
         } catch (error) {
             console.error('Error listando incidencias:', error);
             return [];
@@ -550,27 +550,27 @@ class IncidenciaManager {
             if (!organizacionCamelCase) {
                 throw new Error('Se requiere organización para actualizar incidencia');
             }
-            
+
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
-            
+
             if (!incidenciaSnap.exists()) {
                 throw new Error(`Incidencia con ID ${incidenciaId} no encontrada`);
             }
-            
+
             const datosActualizados = {
                 ...nuevosDatos,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId
             };
-            
+
             delete datosActualizados.id;
             delete datosActualizados.organizacionCamelCase;
             delete datosActualizados.fechaCreacion;
-            
+
             await updateDoc(incidenciaRef, datosActualizados);
-            
+
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 const incidenciaActual = this.incidencias[incidenciaIndex];
@@ -582,9 +582,9 @@ class IncidenciaManager {
                 incidenciaActual.fechaActualizacion = new Date();
                 incidenciaActual.actualizadoPor = usuarioId;
             }
-            
+
             return await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
-            
+
         } catch (error) {
             console.error('Error actualizando incidencia:', error);
             throw error;
@@ -600,29 +600,29 @@ class IncidenciaManager {
             if (!incidencia) {
                 throw new Error('Incidencia no encontrada');
             }
-        
+
             const seguimientoCount = Object.keys(incidencia.seguimiento || {}).length;
             const seguimientoId = `SEG${seguimientoCount + 1}`;
-            
+
             const evidenciasUrls = [];
             if (archivos.length > 0) {
                 for (let i = 0; i < archivos.length; i++) {
                     const file = archivos[i];
                     const comentario = evidenciasConComentarios[i]?.comentario || '';
-                    
+
                     const timestamp = Date.now();
                     const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
                     const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}/seguimiento/${seguimientoId}/${nombreArchivo}`;
-                    
+
                     const resultado = await this.subirArchivo(file, rutaStorage);
-                    
+
                     evidenciasUrls.push({
                         url: resultado.url,
                         comentario: comentario
                     });
                 }
             }
-        
+
             const nuevoSeguimiento = {
                 usuarioId,
                 usuarioNombre,
@@ -630,22 +630,22 @@ class IncidenciaManager {
                 evidencias: evidenciasUrls,
                 fecha: serverTimestamp()
             };
-        
+
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-            
+
             const seguimientoActualizado = {
                 ...incidencia.seguimiento,
                 [seguimientoId]: nuevoSeguimiento
             };
-        
+
             await updateDoc(incidenciaRef, {
                 seguimiento: seguimientoActualizado,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId,
                 actualizadoPorNombre: usuarioNombre
             });
-        
+
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 this.incidencias[incidenciaIndex].seguimiento = seguimientoActualizado;
@@ -653,9 +653,9 @@ class IncidenciaManager {
                 this.incidencias[incidenciaIndex].actualizadoPor = usuarioId;
                 this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
             }
-        
+
             return seguimientoId;
-        
+
         } catch (error) {
             console.error('Error agregando seguimiento:', error);
             throw error;
@@ -716,7 +716,7 @@ class IncidenciaManager {
             }
 
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
-            
+
             if (eliminarArchivos && incidencia) {
                 const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}`;
                 await this.eliminarCarpetaStorage(rutaStorage);
@@ -756,7 +756,7 @@ class IncidenciaManager {
     async getEstadisticas(organizacionCamelCase) {
         try {
             const incidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase);
-            
+
             return {
                 total: incidencias.length,
                 pendientes: incidencias.filter(i => i.estado === 'pendiente').length,
