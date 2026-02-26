@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="TSNAXii4zUyJtGCzsTsE" name="Page-1">
-        <mxGraphModel dx="1103" dy="776" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" math="0" shadow="0">
+        <mxGraphModel dx="1066" dy="776" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" background="#ffffff" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -76,7 +76,7 @@
                 <mxCell id="52" value="{&#xa;  id: string (temporal),&#xa;  nombre: string,&#xa;  descripcion: string,&#xa;  heredaColor: boolean,&#xa;  color: string | null,&#xa;  fechaCreacion: string (ISO),&#xa;  fechaActualizacion: string (ISO),&#xa;  colorEfectivo: string (getter)&#xa;}" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="51" vertex="1">
                     <mxGeometry y="30" width="260" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="54" value="" style="endArrow=open;dashed=1;endFill=0;strokeWidth=1;strokeColor=#666666;strokeDashPattern=6 3;edgeStyle=orthogonalEdgeStyle;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="34" target="51">
+                <mxCell id="54" value="" style="endArrow=open;dashed=1;endFill=0;strokeWidth=1;strokeColor=#666666;strokeDashPattern=6 3;edgeStyle=orthogonalEdgeStyle;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" parent="1" source="34" target="51" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="790" y="370" as="sourcePoint"/>
                         <mxPoint x="760" y="290" as="targetPoint"/>
@@ -86,7 +86,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="55" value="lee/escribe" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontColor=#666666;" vertex="1" connectable="0" parent="54">
+                <mxCell id="55" value="lee/escribe" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontColor=#666666;" parent="54" vertex="1" connectable="0">
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="-0.2" y="-1" as="offset"/>
                     </mxGeometry>
