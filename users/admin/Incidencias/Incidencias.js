@@ -1,6 +1,9 @@
 /**
  * INCIDENCIAS - Sistema Centinela
  * Versión completa con tabla estilo regiones
+ * MODIFICADO: Botón eliminar reemplazado por botón seguimiento
+ * MODIFICADO: Eliminado botón IPH Múltiple
+ * MODIFICADO: Eliminada barra azul de sucursal
  */
 
 // =============================================
@@ -38,7 +41,6 @@ async function inicializarIncidenciaManager() {
         await cargarIncidencias();
 
         configurarEventListeners();
-        agregarBotonPDFMultiple();
 
         return true;
     } catch (error) {
@@ -173,69 +175,9 @@ window.verDetallesIncidencia = function (incidenciaId, event) {
     window.location.href = `/users/admin/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
 };
 
-window.eliminarIncidencia = async function (incidenciaId, event) {
+window.seguimientoIncidencia = function (incidenciaId, event) {
     event?.stopPropagation();
-
-    const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
-    if (!incidencia) return;
-
-    const result = await Swal.fire({
-        title: '¿Eliminar incidencia?',
-        html: `
-            <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
-                <strong style="color: #ff4d4d;">"${incidencia.id}"</strong>
-            </p>
-            <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
-                Esta acción no se puede deshacer. Se eliminará toda la información asociada.
-            </p>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'ELIMINAR',
-        cancelButtonText: 'CANCELAR',
-        reverseButtons: false,
-        focusCancel: true
-    });
-
-    if (result.isConfirmed) {
-        try {
-            Swal.fire({
-                title: 'Eliminando...',
-                html: '<i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #ef4444;"></i>',
-                allowOutsideClick: false,
-                showConfirmButton: false
-            });
-
-            const usuario = window.userManager?.currentUser || { id: 'sistema' };
-
-            await incidenciaManager.eliminarIncidencia(
-                incidenciaId,
-                usuario.id,
-                organizacionActual.camelCase,
-                true
-            );
-
-            Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Eliminada!',
-                text: `La incidencia "${incidencia.id}" ha sido eliminada.`,
-                timer: 2000,
-                showConfirmButton: false
-            });
-
-            await cargarIncidencias();
-
-        } catch (error) {
-            Swal.close();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message || 'Error al eliminar'
-            });
-        }
-    }
+    window.location.href = `/users/admin/segimientoIncidencias/segimientoIncidencias.html?id=${incidenciaId}`;
 };
 
 // =============================================
@@ -1123,46 +1065,6 @@ window.generarPDFIncidencia = async function (incidenciaId, event) {
     }
 };
 
-window.generarPDFMultiple = async function () {
-    try {
-        const checkboxes = document.querySelectorAll('.incidencia-select:checked');
-
-        if (checkboxes.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Selecciona incidencias',
-                text: 'Debes seleccionar al menos una incidencia para generar los informes.'
-            });
-            return;
-        }
-
-        const incidenciasIds = Array.from(checkboxes).map(cb => cb.value);
-
-        if (incidenciasIds.length > 5) {
-            const confirm = await Swal.fire({
-                icon: 'question',
-                title: 'Múltiples informes',
-                text: `Vas a generar ${incidenciasIds.length} informes. ¿Continuar?`,
-                showCancelButton: true,
-                confirmButtonText: 'SÍ, GENERAR',
-                cancelButtonText: 'CANCELAR'
-            });
-
-            if (!confirm.isConfirmed) return;
-        }
-
-        await generadorPDF.generarPDFMultiple(incidenciasIds);
-
-    } catch (error) {
-        console.error('Error generando PDFs múltiples:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: error.message
-        });
-    }
-};
-
 // =============================================
 // CARGAR INCIDENCIAS
 // =============================================
@@ -1282,7 +1184,6 @@ function crearFilaIncidencia(incidencia, tbody) {
         </td>
         <td data-label="Sucursal">
             <div style="display: flex; align-items: center;">
-                <div style="width:4px; height:24px; background:#00cfff; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
                 <div>
                     <strong style="color:white;" title="${sucursal ? sucursal.nombre : 'No disponible'}">${sucursal ? sucursal.nombre : 'No disponible'}</strong>
                 </div>
@@ -1314,8 +1215,8 @@ function crearFilaIncidencia(incidencia, tbody) {
                 <button type="button" class="btn" data-action="pdf" data-id="${incidencia.id}" title="Generar IPH">
                     <i class="fas fa-file-pdf" style="color: #dc3545;"></i>
                 </button>
-                <button type="button" class="btn btn-danger" data-action="eliminar" data-id="${incidencia.id}" title="Eliminar">
-                    <i class="fas fa-trash"></i>
+                <button type="button" class="btn btn-success" data-action="seguimiento" data-id="${incidencia.id}" title="Seguimiento">
+                    <i class="fas fa-history"></i>
                 </button>
             </div>
         </td>
@@ -1331,28 +1232,10 @@ function crearFilaIncidencia(incidencia, tbody) {
                 const id = btn.dataset.id;
                 if (action === 'ver') window.verDetallesIncidencia(id, e);
                 else if (action === 'pdf') window.generarPDFIncidencia(id, e);
-                else if (action === 'eliminar') window.eliminarIncidencia(id, e);
+                else if (action === 'seguimiento') window.seguimientoIncidencia(id, e);
             });
         });
     }, 50);
-}
-
-function agregarBotonPDFMultiple() {
-    const cardHeader = document.querySelector('.card-header');
-    if (cardHeader) {
-        const btnPDFMultiple = document.createElement('button');
-        btnPDFMultiple.className = 'btn-nueva-incidencia-header';
-        btnPDFMultiple.style.marginLeft = '10px';
-        btnPDFMultiple.innerHTML = '<i class="fas fa-file-pdf"></i> IPH Múltiple';
-        btnPDFMultiple.onclick = window.generarPDFMultiple;
-
-        const btnNueva = cardHeader.querySelector('.btn-nueva-incidencia-header');
-        if (btnNueva) {
-            btnNueva.parentNode.insertBefore(btnPDFMultiple, btnNueva.nextSibling);
-        } else {
-            cardHeader.appendChild(btnPDFMultiple);
-        }
-    }
 }
 
 // =============================================
