@@ -1,5 +1,4 @@
-// incidencia.js - VERSIÓN COMPLETA CON SOPORTE PARA STORAGE
-// CLASE Incidencia (modelo) e IncidenciaManager (controlador)
+// incidencia.js - VERSIÓN COMPLETA CON SOPORTE PARA COMENTARIOS EN IMÁGENES
 
 import { 
     collection, 
@@ -54,7 +53,7 @@ class Incidencia {
         this.detalles = data.detalles || '';
         
         // ===== IMÁGENES =====
-        this.imagenes = data.imagenes || [];
+        this.imagenes = data.imagenes || []; // Array de URLs o objetos { url, comentario }
         
         // ===== SEGUIMIENTO (MAP) =====
         this.seguimiento = {};
@@ -133,10 +132,6 @@ class Incidencia {
         return errores;
     }
 
-    _generarIdSeguimiento() {
-        return `seg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    }
-
     // ===== MÉTODOS DE RUTAS DE STORAGE =====
     getRutaStorageBase() {
         return `incidencias_${this.organizacionCamelCase}/${this.id}`;
@@ -152,13 +147,14 @@ class Incidencia {
 
     // ===== MÉTODOS DE SEGUIMIENTO =====
     agregarSeguimiento(usuarioId, usuarioNombre, descripcion, evidencias = []) {
-        const seguimientoId = this._generarIdSeguimiento();
+        const seguimientoCount = Object.keys(this.seguimiento).length;
+        const seguimientoId = `SEG${seguimientoCount + 1}`;
         
         this.seguimiento[seguimientoId] = {
             usuarioId,
             usuarioNombre,
             descripcion,
-            evidencias,
+            evidencias, // Array de objetos { url, comentario }
             fecha: new Date()
         };
         
@@ -293,20 +289,11 @@ class IncidenciaManager {
         return `incidencias_${organizacionCamelCase}`;
     }
 
-    _generarIdFirebase() {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let id = '';
-        for (let i = 0; i < 20; i++) {
-            id += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return id;
-    }
-
     _generarIdIncidencia(organizacionCamelCase) {
         const now = new Date();
         const fecha = now.toISOString().slice(0, 10).replace(/-/g, '');
         const hora = now.toTimeString().slice(0, 8).replace(/:/g, '');
-        return `INC-${organizacionCamelCase}-${fecha}-${hora}`;
+        return `INC-${fecha}-${hora}`;
     }
 
     // ===== MÉTODOS DE STORAGE =====
@@ -319,7 +306,6 @@ class IncidenciaManager {
             const storageRef = ref(storage, rutaCompleta);
             
             if (onProgress) {
-                // Subida con progreso
                 return new Promise((resolve, reject) => {
                     const uploadTask = uploadBytesResumable(storageRef, file);
                     
@@ -345,7 +331,6 @@ class IncidenciaManager {
                     );
                 });
             } else {
-                // Subida simple
                 const snapshot = await uploadBytes(storageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
                 return {
@@ -384,13 +369,11 @@ class IncidenciaManager {
             const folderRef = ref(storage, rutaCarpeta);
             const result = await listAll(folderRef);
             
-            // Eliminar archivos
             const deletePromises = [];
             result.items.forEach(itemRef => {
                 deletePromises.push(deleteObject(itemRef));
             });
             
-            // Eliminar archivos en subcarpetas (recursivo)
             result.prefixes.forEach(folderRef => {
                 deletePromises.push(this.eliminarCarpetaStorage(folderRef.fullPath));
             });
@@ -399,7 +382,6 @@ class IncidenciaManager {
             return true;
         } catch (error) {
             console.error('Error eliminando carpeta:', error);
-            // Si la carpeta no existe, ignoramos el error
             if (error.code === 'storage/object-not-found') {
                 return true;
             }
@@ -410,9 +392,9 @@ class IncidenciaManager {
     // ===== MÉTODOS CRUD PRINCIPALES =====
 
     /**
-     * Crear una nueva incidencia
+     * Crear una nueva incidencia - CON SOPORTE PARA COMENTARIOS EN IMÁGENES
      */
-    async crearIncidencia(data, usuarioActual, archivos = []) {
+    async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
             if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
                 throw new Error('Usuario no tiene organización asignada');
@@ -422,37 +404,30 @@ class IncidenciaManager {
             const collectionName = this._getCollectionName(organizacion);
             const incidenciasCollection = collection(db, collectionName);
             
-            // Generar ID personalizado para la incidencia
             const incidenciaId = this._generarIdIncidencia(organizacion);
             const incidenciaRef = doc(incidenciasCollection, incidenciaId);
 
-            // Subir archivos primero si existen
+            // Subir archivos y guardar con sus comentarios
             let imagenesUrls = [];
             if (archivos.length > 0) {
-                for (const file of archivos) {
+                for (let i = 0; i < archivos.length; i++) {
+                    const file = archivos[i];
+                    const comentario = imagenesConDatos[i]?.comentario || '';
+                    
                     const timestamp = Date.now();
                     const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
                     const rutaStorage = `incidencias_${organizacion}/${incidenciaId}/imagenes/${nombreArchivo}`;
                     
                     const resultado = await this.subirArchivo(file, rutaStorage);
-                    imagenesUrls.push(resultado.url);
+                    
+                    // Guardar URL y comentario juntos
+                    imagenesUrls.push({
+                        url: resultado.url,
+                        comentario: comentario
+                    });
                 }
             }
 
-            // Preparar seguimiento inicial
-            let seguimientoInicial = {};
-            if (data.detalles) {
-                const seguimientoId = this._generarIdFirebase();
-                seguimientoInicial[seguimientoId] = {
-                    usuarioId: usuarioActual.id,
-                    usuarioNombre: usuarioActual.nombreCompleto || 'Usuario',
-                    descripcion: 'Incidencia creada',
-                    evidencias: [],
-                    fecha: serverTimestamp()
-                };
-            }
-
-            // Datos para Firestore
             const incidenciaData = {
                 sucursalId: data.sucursalId,
                 reportadoPorId: data.reportadoPorId || usuarioActual.id,
@@ -463,8 +438,8 @@ class IncidenciaManager {
                 nivelRiesgo: data.nivelRiesgo,
                 estado: 'pendiente',
                 detalles: data.detalles?.trim() || '',
-                imagenes: imagenesUrls,
-                seguimiento: seguimientoInicial,
+                imagenes: imagenesUrls, // Array de objetos { url, comentario }
+                seguimiento: {}, // Vacío - sin seguimiento automático
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorNombre: usuarioActual.nombreCompleto || '',
@@ -476,7 +451,6 @@ class IncidenciaManager {
 
             await setDoc(incidenciaRef, incidenciaData);
 
-            // Crear instancia y guardar en memoria
             const nuevaIncidencia = new Incidencia(incidenciaId, {
                 ...incidenciaData,
                 fechaInicio: new Date(),
@@ -499,7 +473,6 @@ class IncidenciaManager {
     async getIncidenciaById(incidenciaId, organizacionCamelCase) {
         if (!organizacionCamelCase) return null;
         
-        // Buscar en memoria primero
         const incidenciaInMemory = this.incidencias.find(inc => inc.id === incidenciaId);
         if (incidenciaInMemory) return incidenciaInMemory;
         
@@ -532,7 +505,6 @@ class IncidenciaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciasCollection = collection(db, collectionName);
             
-            // Construir query con filtros
             let constraints = [orderBy("fechaCreacion", "desc")];
             
             if (filtros.estado) {
@@ -587,22 +559,18 @@ class IncidenciaManager {
                 throw new Error(`Incidencia con ID ${incidenciaId} no encontrada`);
             }
             
-            const datosActuales = incidenciaSnap.data();
-            
             const datosActualizados = {
                 ...nuevosDatos,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId
             };
             
-            // No permitir actualizar ciertos campos
             delete datosActualizados.id;
             delete datosActualizados.organizacionCamelCase;
             delete datosActualizados.fechaCreacion;
             
             await updateDoc(incidenciaRef, datosActualizados);
             
-            // Actualizar en memoria
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 const incidenciaActual = this.incidencias[incidenciaIndex];
@@ -624,83 +592,37 @@ class IncidenciaManager {
     }
 
     /**
-     * Agregar imágenes a una incidencia existente
-     */
-    async agregarImagenesAIncidencia(incidenciaId, archivos, usuarioId, usuarioNombre, organizacionCamelCase) {
-        try {
-            const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
-            if (!incidencia) {
-                throw new Error('Incidencia no encontrada');
-            }
-
-            const nuevasImagenes = [];
-            
-            for (const file of archivos) {
-                const timestamp = Date.now();
-                const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-                const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}/imagenes/${nombreArchivo}`;
-                
-                const resultado = await this.subirArchivo(file, rutaStorage);
-                nuevasImagenes.push(resultado.url);
-            }
-
-            // Actualizar en Firestore
-            const collectionName = this._getCollectionName(organizacionCamelCase);
-            const incidenciaRef = doc(db, collectionName, incidenciaId);
-            
-            const imagenesActualizadas = [...(incidencia.imagenes || []), ...nuevasImagenes];
-            
-            await updateDoc(incidenciaRef, {
-                imagenes: imagenesActualizadas,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: usuarioId,
-                actualizadoPorNombre: usuarioNombre
-            });
-
-            // Actualizar en memoria
-            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
-            if (incidenciaIndex !== -1) {
-                this.incidencias[incidenciaIndex].imagenes = imagenesActualizadas;
-                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
-                this.incidencias[incidenciaIndex].actualizadoPor = usuarioId;
-                this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
-            }
-
-            return nuevasImagenes;
-
-        } catch (error) {
-            console.error('Error agregando imágenes:', error);
-            throw error;
-        }
-    }
-
-    /**
      * Agregar seguimiento con evidencias
      */
-    async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase) {
+    async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase, evidenciasConComentarios = []) {
         try {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
             if (!incidencia) {
                 throw new Error('Incidencia no encontrada');
             }
-
-            // Generar ID para el seguimiento
-            const seguimientoId = this._generarIdFirebase();
+        
+            const seguimientoCount = Object.keys(incidencia.seguimiento || {}).length;
+            const seguimientoId = `SEG${seguimientoCount + 1}`;
             
-            // Subir evidencias si hay archivos
             const evidenciasUrls = [];
             if (archivos.length > 0) {
-                for (const file of archivos) {
+                for (let i = 0; i < archivos.length; i++) {
+                    const file = archivos[i];
+                    const comentario = evidenciasConComentarios[i]?.comentario || '';
+                    
                     const timestamp = Date.now();
                     const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
                     const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}/seguimiento/${seguimientoId}/${nombreArchivo}`;
                     
                     const resultado = await this.subirArchivo(file, rutaStorage);
-                    evidenciasUrls.push(resultado.url);
+                    
+                    evidenciasUrls.push({
+                        url: resultado.url,
+                        comentario: comentario
+                    });
                 }
             }
-
-            // Preparar nuevo seguimiento
+        
             const nuevoSeguimiento = {
                 usuarioId,
                 usuarioNombre,
@@ -708,8 +630,7 @@ class IncidenciaManager {
                 evidencias: evidenciasUrls,
                 fecha: serverTimestamp()
             };
-
-            // Actualizar en Firestore
+        
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             
@@ -717,15 +638,14 @@ class IncidenciaManager {
                 ...incidencia.seguimiento,
                 [seguimientoId]: nuevoSeguimiento
             };
-
+        
             await updateDoc(incidenciaRef, {
                 seguimiento: seguimientoActualizado,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId,
                 actualizadoPorNombre: usuarioNombre
             });
-
-            // Actualizar en memoria
+        
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 this.incidencias[incidenciaIndex].seguimiento = seguimientoActualizado;
@@ -733,9 +653,9 @@ class IncidenciaManager {
                 this.incidencias[incidenciaIndex].actualizadoPor = usuarioId;
                 this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
             }
-
+        
             return seguimientoId;
-
+        
         } catch (error) {
             console.error('Error agregando seguimiento:', error);
             throw error;
@@ -743,9 +663,9 @@ class IncidenciaManager {
     }
 
     /**
-     * Finalizar incidencia
+     * Finalizar incidencia - SIN SEGUIMIENTO AUTOMÁTICO
      */
-    async finalizarIncidencia(incidenciaId, usuarioId, usuarioNombre, descripcionCierre = '', organizacionCamelCase) {
+    async finalizarIncidencia(incidenciaId, usuarioId, usuarioNombre, organizacionCamelCase) {
         try {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
             if (!incidencia) {
@@ -756,41 +676,23 @@ class IncidenciaManager {
                 throw new Error('La incidencia ya está finalizada');
             }
 
-            const seguimientoId = this._generarIdFirebase();
             const fechaFinalizacion = new Date();
 
-            const nuevoSeguimiento = {
-                usuarioId,
-                usuarioNombre,
-                descripcion: descripcionCierre || 'Incidencia finalizada',
-                evidencias: [],
-                fecha: serverTimestamp()
-            };
-
-            const seguimientoActualizado = {
-                ...incidencia.seguimiento,
-                [seguimientoId]: nuevoSeguimiento
-            };
-
-            // Actualizar en Firestore
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
 
             await updateDoc(incidenciaRef, {
                 estado: 'finalizada',
                 fechaFinalizacion: serverTimestamp(),
-                seguimiento: seguimientoActualizado,
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId,
                 actualizadoPorNombre: usuarioNombre
             });
 
-            // Actualizar en memoria
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 this.incidencias[incidenciaIndex].estado = 'finalizada';
                 this.incidencias[incidenciaIndex].fechaFinalizacion = fechaFinalizacion;
-                this.incidencias[incidenciaIndex].seguimiento = seguimientoActualizado;
                 this.incidencias[incidenciaIndex].fechaActualizacion = fechaFinalizacion;
                 this.incidencias[incidenciaIndex].actualizadoPor = usuarioId;
                 this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
@@ -805,7 +707,7 @@ class IncidenciaManager {
     }
 
     /**
-     * Eliminar incidencia (incluye archivos de Storage)
+     * Eliminar incidencia
      */
     async eliminarIncidencia(incidenciaId, usuarioId, organizacionCamelCase, eliminarArchivos = true) {
         try {
@@ -815,18 +717,15 @@ class IncidenciaManager {
 
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
             
-            // Eliminar archivos de Storage si se solicita
             if (eliminarArchivos && incidencia) {
                 const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}`;
                 await this.eliminarCarpetaStorage(rutaStorage);
             }
 
-            // Eliminar de Firestore
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             await deleteDoc(incidenciaRef);
 
-            // Eliminar de memoria
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 this.incidencias.splice(incidenciaIndex, 1);
@@ -836,49 +735,6 @@ class IncidenciaManager {
 
         } catch (error) {
             console.error('Error eliminando incidencia:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Eliminar una imagen específica
-     */
-    async eliminarImagenIncidencia(incidenciaId, urlImagen, usuarioId, usuarioNombre, organizacionCamelCase) {
-        try {
-            const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
-            if (!incidencia) {
-                throw new Error('Incidencia no encontrada');
-            }
-
-            // Eliminar de Storage
-            await this.eliminarArchivo(urlImagen);
-
-            // Actualizar array de imágenes en Firestore
-            const imagenesActualizadas = (incidencia.imagenes || []).filter(img => img !== urlImagen);
-
-            const collectionName = this._getCollectionName(organizacionCamelCase);
-            const incidenciaRef = doc(db, collectionName, incidenciaId);
-
-            await updateDoc(incidenciaRef, {
-                imagenes: imagenesActualizadas,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: usuarioId,
-                actualizadoPorNombre: usuarioNombre
-            });
-
-            // Actualizar en memoria
-            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
-            if (incidenciaIndex !== -1) {
-                this.incidencias[incidenciaIndex].imagenes = imagenesActualizadas;
-                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
-                this.incidencias[incidenciaIndex].actualizadoPor = usuarioId;
-                this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
-            }
-
-            return true;
-
-        } catch (error) {
-            console.error('Error eliminando imagen:', error);
             throw error;
         }
     }
@@ -921,7 +777,7 @@ class IncidenciaManager {
     }
 
     /**
-     * Verificar si existe una incidencia (por ID)
+     * Verificar si existe una incidencia
      */
     async verificarIncidenciaExistente(incidenciaId, organizacionCamelCase) {
         try {

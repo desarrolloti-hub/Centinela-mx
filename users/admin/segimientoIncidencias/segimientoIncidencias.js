@@ -1,5 +1,4 @@
-// seguimientoIncidencia.js - Versión funcional (sin clases)
-// Controlador para agregar seguimiento a incidencias existentes
+// seguimientoIncidencia.js - VERSIÓN CORREGIDA (MUESTRA EVIDENCIAS ORIGINALES)
 
 // =============================================
 // VARIABLES GLOBALES
@@ -9,15 +8,341 @@ let usuarioActual = null;
 let incidenciaActual = null;
 let sucursalesMap = new Map();
 let categoriasMap = new Map();
-let evidenciasSeleccionadas = [];
+let evidenciasSeleccionadas = []; // Array de objetos { file, preview, comentario, elementos, edited }
 let fechaIncidencia = null;
 let fechaMinima = null;
 let fechaMaxima = null;
+let imageEditorModal = null;
+let historialCollapsed = false;
 
 // LÍMITES DE CARACTERES
 const LIMITES = {
     DESCRIPCION_SEGUIMIENTO: 500
 };
+
+// =============================================
+// CLASE EDITOR DE IMAGEN MODAL
+// =============================================
+class ImageEditorModal {
+    constructor() {
+        this.modal = document.getElementById('imageEditorModal');
+        this.canvas = document.getElementById('modalImageCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.image = null;
+        this.elements = [];
+        this.currentTool = 'circle';
+        this.currentColor = '#ff0000';
+        this.isDrawing = false;
+        this.startX = 0;
+        this.startY = 0;
+        this.currentFile = null;
+        this.currentIndex = -1;
+        this.onSaveCallback = null;
+        this.comentario = '';
+
+        this.init();
+    }
+
+    init() {
+        if (!this.modal) return;
+
+        document.getElementById('btnCerrarModal')?.addEventListener('click', () => this.hide());
+        document.getElementById('modalCancelar')?.addEventListener('click', () => this.hide());
+
+        document.getElementById('modalToolCircle')?.addEventListener('click', () => {
+            this.setTool('circle');
+            document.getElementById('modalToolCircle').classList.add('active');
+            document.getElementById('modalToolArrow').classList.remove('active');
+        });
+
+        document.getElementById('modalToolArrow')?.addEventListener('click', () => {
+            this.setTool('arrow');
+            document.getElementById('modalToolArrow').classList.add('active');
+            document.getElementById('modalToolCircle').classList.remove('active');
+        });
+
+        document.getElementById('modalColorPicker')?.addEventListener('input', (e) => {
+            this.currentColor = e.target.value;
+            document.getElementById('modalColorValue').textContent = e.target.value;
+        });
+
+        document.getElementById('modalLimpiarTodo')?.addEventListener('click', () => {
+            this.elements = [];
+            this.redrawCanvas();
+        });
+
+        document.getElementById('modalGuardarCambios')?.addEventListener('click', () => {
+            this.saveImage();
+        });
+
+        this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+        this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+        this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+        this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.modal.style.display === 'block') {
+                this.hide();
+            }
+        });
+    }
+
+    show(file, index, comentario = '', onSaveCallback) {
+        this.currentFile = file;
+        this.currentIndex = index;
+        this.comentario = comentario;
+        this.onSaveCallback = onSaveCallback;
+        this.elements = [];
+
+        document.getElementById('modalToolCircle').classList.add('active');
+        document.getElementById('modalToolArrow').classList.remove('active');
+        this.currentTool = 'circle';
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.image = new Image();
+            this.image.onload = () => {
+                const maxWidth = 1000;
+                const maxHeight = 700;
+                let width = this.image.width;
+                let height = this.image.height;
+
+                if (width > maxWidth) {
+                    height = (maxWidth / width) * height;
+                    width = maxWidth;
+                }
+                if (height > maxHeight) {
+                    width = (maxHeight / height) * width;
+                    height = maxHeight;
+                }
+
+                this.canvas.width = width;
+                this.canvas.height = height;
+                this.redrawCanvas();
+
+                document.getElementById('modalImageInfo').textContent =
+                    `Editando: ${file.name} (${Math.round(width)}x${Math.round(height)})`;
+
+                document.getElementById('modalComentario').value = comentario || '';
+            };
+            this.image.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        this.modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    hide() {
+        this.modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        this.image = null;
+        this.elements = [];
+    }
+
+    setTool(tool) {
+        this.currentTool = tool;
+    }
+
+    redrawCanvas() {
+        if (!this.ctx || !this.image) return;
+
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+
+        this.elements.forEach(el => {
+            this.ctx.beginPath();
+            this.ctx.strokeStyle = el.color;
+            this.ctx.lineWidth = 3;
+            
+            if (el.type === 'circle') {
+                this.ctx.arc(el.x, el.y, el.radius, 0, 2 * Math.PI);
+                this.ctx.stroke();
+            } else if (el.type === 'arrow') {
+                const angle = Math.atan2(el.endY - el.startY, el.endX - el.startX);
+                const arrowLength = 15;
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(el.startX, el.startY);
+                this.ctx.lineTo(el.endX, el.endY);
+                this.ctx.stroke();
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(el.endX, el.endY);
+                this.ctx.lineTo(
+                    el.endX - arrowLength * Math.cos(angle - Math.PI / 6),
+                    el.endY - arrowLength * Math.sin(angle - Math.PI / 6)
+                );
+                this.ctx.lineTo(
+                    el.endX - arrowLength * Math.cos(angle + Math.PI / 6),
+                    el.endY - arrowLength * Math.sin(angle + Math.PI / 6)
+                );
+                this.ctx.closePath();
+                this.ctx.fillStyle = el.color;
+                this.ctx.fill();
+            }
+        });
+    }
+
+    hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    startDrawing(e) {
+        if (!this.image) return;
+
+        this.isDrawing = true;
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+
+        this.startX = (e.clientX - rect.left) * scaleX;
+        this.startY = (e.clientY - rect.top) * scaleY;
+    }
+
+    draw(e) {
+        if (!this.isDrawing || !this.image) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+
+        const currentX = (e.clientX - rect.left) * scaleX;
+        const currentY = (e.clientY - rect.top) * scaleY;
+
+        this.redrawCanvas();
+        
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = this.currentColor;
+        this.ctx.lineWidth = 3;
+
+        if (this.currentTool === 'circle') {
+            const radius = Math.sqrt(
+                Math.pow(currentX - this.startX, 2) +
+                Math.pow(currentY - this.startY, 2)
+            );
+            this.ctx.arc(this.startX, this.startY, radius, 0, 2 * Math.PI);
+            this.ctx.stroke();
+        } else if (this.currentTool === 'arrow') {
+            this.ctx.moveTo(this.startX, this.startY);
+            this.ctx.lineTo(currentX, currentY);
+            this.ctx.stroke();
+
+            const angle = Math.atan2(currentY - this.startY, currentX - this.startX);
+            const arrowLength = 15;
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(currentX, currentY);
+            this.ctx.lineTo(
+                currentX - arrowLength * Math.cos(angle - Math.PI / 6),
+                currentY - arrowLength * Math.sin(angle - Math.PI / 6)
+            );
+            this.ctx.lineTo(
+                currentX - arrowLength * Math.cos(angle + Math.PI / 6),
+                currentY - arrowLength * Math.sin(angle + Math.PI / 6)
+            );
+            this.ctx.closePath();
+            this.ctx.fillStyle = this.currentColor;
+            this.ctx.fill();
+        }
+    }
+
+    stopDrawing() {
+        if (!this.isDrawing || !this.image) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+
+        const lastMouseHandler = (e) => {
+            const currentX = (e.clientX - rect.left) * scaleX;
+            const currentY = (e.clientY - rect.top) * scaleY;
+
+            if (this.currentTool === 'circle') {
+                const radius = Math.sqrt(
+                    Math.pow(currentX - this.startX, 2) +
+                    Math.pow(currentY - this.startY, 2)
+                );
+
+                if (radius > 5) {
+                    this.elements.push({
+                        type: 'circle',
+                        x: this.startX,
+                        y: this.startY,
+                        radius: radius,
+                        color: this.currentColor
+                    });
+                }
+            } else if (this.currentTool === 'arrow') {
+                const distance = Math.sqrt(
+                    Math.pow(currentX - this.startX, 2) +
+                    Math.pow(currentY - this.startY, 2)
+                );
+
+                if (distance > 5) {
+                    this.elements.push({
+                        type: 'arrow',
+                        startX: this.startX,
+                        startY: this.startY,
+                        endX: currentX,
+                        endY: currentY,
+                        color: this.currentColor
+                    });
+                }
+            }
+
+            this.redrawCanvas();
+            document.removeEventListener('mousemove', lastMouseHandler);
+        };
+
+        document.addEventListener('mousemove', lastMouseHandler);
+        this.isDrawing = false;
+    }
+
+    saveImage() {
+        if (!this.canvas || !this.currentFile) return;
+
+        const comentario = document.getElementById('modalComentario').value;
+
+        this.canvas.toBlob((blob) => {
+            const editedFile = new File([blob], `edited_${this.currentFile.name}`, {
+                type: 'image/png'
+            });
+
+            if (this.onSaveCallback) {
+                this.onSaveCallback(this.currentIndex, editedFile, comentario, this.elements);
+            }
+
+            this.hide();
+        }, 'image/png');
+    }
+}
+
+// =============================================
+// FUNCIÓN PARA COLLAPSIBLE
+// =============================================
+function configurarCollapsible() {
+    const historialHeader = document.getElementById('historialHeader');
+    const historialContent = document.getElementById('historialContent');
+    const historialToggle = document.getElementById('historialToggle');
+
+    if (!historialHeader || !historialContent || !historialToggle) return;
+
+    historialHeader.addEventListener('click', () => {
+        historialCollapsed = !historialCollapsed;
+        
+        if (historialCollapsed) {
+            historialContent.style.display = 'none';
+            historialToggle.style.transform = 'rotate(-90deg)';
+        } else {
+            historialContent.style.display = 'block';
+            historialToggle.style.transform = 'rotate(0deg)';
+        }
+    });
+}
 
 // =============================================
 // INICIALIZACIÓN
@@ -26,7 +351,6 @@ async function inicializarSeguimiento() {
     try {
         console.log('Inicializando seguimiento de incidencia...');
 
-        // 1. Obtener ID de la URL
         const urlParams = new URLSearchParams(window.location.search);
         const incidenciaId = urlParams.get('id');
 
@@ -34,39 +358,25 @@ async function inicializarSeguimiento() {
             throw new Error('No se especificó el ID de la incidencia');
         }
 
-        // 2. Cargar usuario
         cargarUsuario();
 
         if (!usuarioActual) {
             throw new Error('No se pudo cargar información del usuario');
         }
 
-        // 3. Inicializar IncidenciaManager
         await inicializarIncidenciaManager();
-
-        // 4. Cargar la incidencia
         await cargarIncidencia(incidenciaId);
-
-        // 5. Cargar datos relacionados (sucursales, categorías)
         await cargarDatosRelacionados();
-
-        // 6. Mostrar información de la incidencia
+        
         mostrarInfoIncidencia();
-
-        // 7. Mostrar evidencias originales
-        mostrarEvidenciasOriginales();
-
-        // 8. Mostrar historial de seguimiento
+        mostrarEvidenciasOriginales(); // AHORA FUNCIONA CON OBJETOS
         mostrarHistorialSeguimiento();
-
-        // 9. Configurar fecha del seguimiento
         configurarFechaSeguimiento();
-
-        // 10. Configurar eventos
         configurarEventos();
-
-        // 11. Inicializar validaciones
         inicializarValidaciones();
+        configurarCollapsible();
+
+        imageEditorModal = new ImageEditorModal();
 
         console.log('Seguimiento inicializado correctamente');
 
@@ -74,7 +384,6 @@ async function inicializarSeguimiento() {
         console.error('Error inicializando:', error);
         mostrarError('Error al inicializar: ' + error.message);
         
-        // Mostrar mensaje en la interfaz
         const container = document.querySelector('.custom-container');
         if (container) {
             container.innerHTML = `
@@ -103,7 +412,6 @@ async function inicializarIncidenciaManager() {
 
 function cargarUsuario() {
     try {
-        // Intentar obtener de userManager primero
         if (window.userManager && window.userManager.currentUser) {
             const user = window.userManager.currentUser;
             usuarioActual = {
@@ -117,7 +425,6 @@ function cargarUsuario() {
             return;
         }
 
-        // Fallback a localStorage
         const adminInfo = localStorage.getItem('adminInfo');
         if (adminInfo) {
             const adminData = JSON.parse(adminInfo);
@@ -174,12 +481,9 @@ async function cargarIncidencia(incidenciaId) {
             throw new Error('Incidencia no encontrada');
         }
 
-        // Guardar fecha de la incidencia para validaciones
         fechaIncidencia = incidenciaActual.fechaInicio;
-        
-        // Configurar fechas mínima y máxima para el seguimiento
         fechaMinima = fechaIncidencia;
-        fechaMaxima = new Date(); // Fecha actual
+        fechaMaxima = new Date();
 
         document.getElementById('incidenciaId').textContent = incidenciaActual.id;
 
@@ -191,7 +495,6 @@ async function cargarIncidencia(incidenciaId) {
 
 async function cargarDatosRelacionados() {
     try {
-        // Cargar sucursales para mostrar nombres
         const { SucursalManager } = await import('/clases/sucursal.js');
         const sucursalManager = new SucursalManager();
         const sucursales = await sucursalManager.getSucursalesByOrganizacion(
@@ -202,7 +505,6 @@ async function cargarDatosRelacionados() {
             sucursalesMap.set(suc.id, suc);
         });
 
-        // Cargar categorías para mostrar nombres
         const { CategoriaManager } = await import('/clases/categoria.js');
         const categoriaManager = new CategoriaManager();
         const categorias = await categoriaManager.obtenerTodasCategorias();
@@ -213,7 +515,6 @@ async function cargarDatosRelacionados() {
 
     } catch (error) {
         console.error('Error cargando datos relacionados:', error);
-        // No es crítico para la funcionalidad principal
     }
 }
 
@@ -226,7 +527,6 @@ function configurarFechaSeguimiento() {
 
     const ahora = new Date();
 
-    // Verificar si flatpickr está disponible
     if (typeof flatpickr !== 'undefined') {
         flatpickr(fechaInput, {
             enableTime: true,
@@ -244,14 +544,12 @@ function configurarFechaSeguimiento() {
             }
         });
     } else {
-        // Fallback a input nativo
         fechaInput.type = 'datetime-local';
         fechaInput.value = ahora.toISOString().slice(0, 16);
         fechaInput.min = fechaMinima ? new Date(fechaMinima).toISOString().slice(0, 16) : '';
         fechaInput.max = fechaMaxima ? new Date(fechaMaxima).toISOString().slice(0, 16) : '';
     }
 
-    // Actualizar texto de ayuda con el rango
     const helpText = document.getElementById('rangoFechaHelp');
     if (helpText) {
         const fechaMin = formatearFechaParaHelp(fechaMinima);
@@ -279,13 +577,11 @@ function formatearFechaParaHelp(fecha) {
 function validarFechaSeguimiento(fecha) {
     if (!fecha) return true;
 
-    // Validar que no sea anterior a la fecha de la incidencia
     if (fecha < fechaMinima) {
         mostrarError('La fecha del seguimiento no puede ser anterior a la fecha de la incidencia');
         return false;
     }
 
-    // Validar que no sea posterior a la fecha actual
     if (fecha > fechaMaxima) {
         mostrarError('La fecha del seguimiento no puede ser posterior a la fecha actual');
         return false;
@@ -300,18 +596,14 @@ function validarFechaSeguimiento(fecha) {
 function mostrarInfoIncidencia() {
     if (!incidenciaActual) return;
 
-    // Organización
     document.getElementById('infoOrganizacion').textContent = usuarioActual.organizacion;
 
-    // Sucursal
     const sucursal = sucursalesMap.get(incidenciaActual.sucursalId);
     document.getElementById('infoSucursal').textContent = sucursal ? sucursal.nombre : incidenciaActual.sucursalId;
 
-    // Categoría
     const categoria = categoriasMap.get(incidenciaActual.categoriaId);
     document.getElementById('infoCategoria').textContent = categoria ? categoria.nombre : incidenciaActual.categoriaId;
 
-    // Subcategoría
     let subcategoriaNombre = incidenciaActual.subcategoriaId || 'No especificada';
     if (incidenciaActual.subcategoriaId && categoria && categoria.subcategorias) {
         if (categoria.subcategorias instanceof Map) {
@@ -324,7 +616,6 @@ function mostrarInfoIncidencia() {
     }
     document.getElementById('infoSubcategoria').textContent = subcategoriaNombre;
 
-    // Nivel de Riesgo
     const riesgoSpan = document.getElementById('infoRiesgo');
     const riesgoTexto = incidenciaActual.getNivelRiesgoTexto ? 
         incidenciaActual.getNivelRiesgoTexto() : incidenciaActual.nivelRiesgo;
@@ -333,7 +624,6 @@ function mostrarInfoIncidencia() {
     
     riesgoSpan.innerHTML = `<span class="riesgo-badge" style="background: ${riesgoColor}20; color: ${riesgoColor};">${riesgoTexto}</span>`;
 
-    // Estado
     const estadoSpan = document.getElementById('infoEstado');
     const estadoTexto = incidenciaActual.getEstadoTexto ? 
         incidenciaActual.getEstadoTexto() : incidenciaActual.estado;
@@ -342,20 +632,15 @@ function mostrarInfoIncidencia() {
     
     estadoSpan.innerHTML = `<span class="estado-badge" style="background: ${estadoColor}20; color: ${estadoColor};">${estadoTexto}</span>`;
     
-    // Sincronizar select de estado
     const estadoSelect = document.getElementById('estadoSeguimiento');
     if (estadoSelect) {
         estadoSelect.value = incidenciaActual.estado;
     }
 
-    // Fecha de inicio
     document.getElementById('infoFechaInicio').textContent = incidenciaActual.getFechaInicioFormateada ?
         incidenciaActual.getFechaInicioFormateada() : formatearFecha(incidenciaActual.fechaInicio);
 
-    // Reportado por
     document.getElementById('infoReportadoPor').textContent = incidenciaActual.creadoPorNombre || 'No especificado';
-
-    // Descripción
     document.getElementById('infoDescripcion').textContent = incidenciaActual.detalles || 'Sin descripción';
 }
 
@@ -385,6 +670,27 @@ function formatearFecha(fecha) {
     }
 }
 
+function formatearFechaCompacta(fecha) {
+    if (!fecha) return 'N/A';
+    try {
+        const date = fecha instanceof Date ? fecha : new Date(fecha);
+        if (isNaN(date.getTime())) return 'Fecha inválida';
+        
+        return date.toLocaleDateString('es-MX', {
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return 'Fecha inválida';
+    }
+}
+
+// =============================================
+// MOSTRAR EVIDENCIAS ORIGINALES (CORREGIDO)
+// =============================================
 function mostrarEvidenciasOriginales() {
     const container = document.getElementById('galeriaOriginal');
     const totalSpan = document.getElementById('totalImagenesOriginales');
@@ -408,15 +714,20 @@ function mostrarEvidenciasOriginales() {
     }
 
     let html = '';
-    imagenes.forEach((imgUrl, index) => {
+    imagenes.forEach((img, index) => {
+        // Determinar si es objeto (con comentario) o string
+        const url = typeof img === 'string' ? img : img.url;
+        const comentario = typeof img === 'object' && img.comentario ? img.comentario : '';
+        
         html += `
-            <div class="gallery-item">
-                <img src="${imgUrl}" alt="Evidencia ${index + 1}" loading="lazy" onclick="window.open('${imgUrl}', '_blank')">
+            <div class="gallery-item" ${comentario ? `title="${escapeHTML(comentario)}"` : ''}>
+                <img src="${url}" alt="Evidencia ${index + 1}" loading="lazy" onclick="window.open('${url}', '_blank')">
                 <div class="gallery-overlay">
-                    <button type="button" class="gallery-btn" onclick="window.open('${imgUrl}', '_blank')">
+                    <button type="button" class="gallery-btn" onclick="window.open('${url}', '_blank')">
                         <i class="fas fa-search-plus"></i>
                     </button>
                 </div>
+                ${comentario ? `<div class="image-comment"><i class="fas fa-comment"></i> ${escapeHTML(comentario.substring(0, 30))}${comentario.length > 30 ? '...' : ''}</div>` : ''}
             </div>
         `;
     });
@@ -424,6 +735,9 @@ function mostrarEvidenciasOriginales() {
     container.innerHTML = html;
 }
 
+// =============================================
+// MOSTRAR HISTORIAL DE SEGUIMIENTO
+// =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
     const totalSpan = document.getElementById('totalSeguimientos');
@@ -449,8 +763,9 @@ function mostrarHistorialSeguimiento() {
 
     let html = '';
     seguimientos.forEach((seg, index) => {
-        const fecha = seg.fecha ? formatearFecha(seg.fecha) : 'Fecha no disponible';
+        const fecha = seg.fecha ? formatearFechaCompacta(seg.fecha) : 'Fecha no disponible';
         const evidencias = seg.evidencias || [];
+        const idSeguimiento = seg.id || `SEG-${index + 1}`;
         
         html += `
             <div class="timeline-item">
@@ -462,6 +777,7 @@ function mostrarHistorialSeguimiento() {
                         <div class="timeline-user">
                             <i class="fas fa-user-circle"></i>
                             <span>${escapeHTML(seg.usuarioNombre || 'Usuario')}</span>
+                            <span class="timeline-id-badge">${idSeguimiento}</span>
                         </div>
                         <div class="timeline-date">
                             <i class="fas fa-calendar-alt"></i>
@@ -476,14 +792,20 @@ function mostrarHistorialSeguimiento() {
         if (evidencias.length > 0) {
             html += `
                     <div class="timeline-evidencias">
-                        <h6><i class="fas fa-images"></i> Evidencias (${evidencias.length})</h6>
+                        <div class="timeline-evidencias-header">
+                            <i class="fas fa-images"></i>
+                            <span>${evidencias.length} ${evidencias.length === 1 ? 'evidencia' : 'evidencias'}</span>
+                        </div>
                         <div class="evidencias-grid">
             `;
 
-            evidencias.forEach((evUrl, evIndex) => {
+            evidencias.forEach((ev, evIndex) => {
+                const url = typeof ev === 'string' ? ev : ev.url;
+                const comentario = typeof ev === 'object' && ev.comentario ? ev.comentario : '';
+                
                 html += `
-                        <div class="evidencia-item">
-                            <img src="${evUrl}" alt="Evidencia ${evIndex + 1}" loading="lazy" onclick="window.open('${evUrl}', '_blank')">
+                        <div class="evidencia-item" ${comentario ? `title="${escapeHTML(comentario)}"` : ''}>
+                            <img src="${url}" alt="Evidencia ${evIndex + 1}" loading="lazy" onclick="window.open('${url}', '_blank')">
                         </div>
                 `;
             });
@@ -508,25 +830,20 @@ function mostrarHistorialSeguimiento() {
 // =============================================
 function configurarEventos() {
     try {
-        // Botones de navegación
         document.getElementById('btnVolverLista')?.addEventListener('click', () => volverALista());
         document.getElementById('btnCancelar')?.addEventListener('click', () => cancelar());
 
-        // Botón guardar seguimiento
         document.getElementById('btnGuardarSeguimiento')?.addEventListener('click', (e) => {
             e.preventDefault();
             validarYGuardar();
         });
 
-        // Botón agregar evidencias
         document.getElementById('btnAgregarEvidencias')?.addEventListener('click', () => {
             document.getElementById('inputEvidencias').click();
         });
 
-        // Input de evidencias
         document.getElementById('inputEvidencias')?.addEventListener('change', (e) => procesarEvidencias(e.target.files));
 
-        // Formulario submit
         document.getElementById('formSeguimiento')?.addEventListener('submit', (e) => {
             e.preventDefault();
             validarYGuardar();
@@ -544,7 +861,7 @@ function procesarEvidencias(files) {
     if (!files || files.length === 0) return;
 
     const nuevosArchivos = Array.from(files);
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
 
     const archivosValidos = nuevosArchivos.filter(file => {
         if (file.size > maxSize) {
@@ -557,7 +874,10 @@ function procesarEvidencias(files) {
     archivosValidos.forEach(file => {
         evidenciasSeleccionadas.push({
             file: file,
-            preview: URL.createObjectURL(file)
+            preview: URL.createObjectURL(file),
+            comentario: '',
+            elementos: [],
+            edited: false
         });
     });
 
@@ -589,15 +909,27 @@ function actualizarVistaPreviaEvidencias() {
             <div class="preview-item">
                 <img src="${img.preview}" alt="Preview ${index + 1}">
                 <div class="preview-overlay">
+                    <button type="button" class="preview-btn edit-btn" data-index="${index}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
                     <button type="button" class="preview-btn delete-btn" data-index="${index}" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
+                    ${img.edited ? '<span class="edited-badge"><i class="fas fa-check"></i> Editada</span>' : ''}
                 </div>
+                ${img.comentario ? `<div class="image-comment"><i class="fas fa-comment"></i> ${escapeHTML(img.comentario.substring(0, 25))}${img.comentario.length > 25 ? '...' : ''}</div>` : ''}
             </div>
         `;
     });
 
     container.innerHTML = html;
+
+    container.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = e.currentTarget.dataset.index;
+            editarEvidencia(parseInt(index));
+        });
+    });
 
     container.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -605,6 +937,30 @@ function actualizarVistaPreviaEvidencias() {
             eliminarEvidencia(parseInt(index));
         });
     });
+}
+
+function editarEvidencia(index) {
+    if (imageEditorModal && evidenciasSeleccionadas[index]) {
+        const img = evidenciasSeleccionadas[index];
+        imageEditorModal.show(
+            img.file,
+            index,
+            img.comentario,
+            (savedIndex, editedFile, comentario, elementos) => {
+                evidenciasSeleccionadas[savedIndex].file = editedFile;
+                evidenciasSeleccionadas[savedIndex].comentario = comentario;
+                evidenciasSeleccionadas[savedIndex].elementos = elementos;
+                evidenciasSeleccionadas[savedIndex].edited = true;
+
+                if (evidenciasSeleccionadas[savedIndex].preview) {
+                    URL.revokeObjectURL(evidenciasSeleccionadas[savedIndex].preview);
+                }
+                evidenciasSeleccionadas[savedIndex].preview = URL.createObjectURL(editedFile);
+
+                actualizarVistaPreviaEvidencias();
+            }
+        );
+    }
 }
 
 function eliminarEvidencia(index) {
@@ -662,7 +1018,6 @@ function validarLongitudCampo(campo, limite, nombreCampo) {
 }
 
 function validarYGuardar() {
-    // Validar fecha
     const fechaInput = document.getElementById('fechaSeguimiento');
     let fechaHora = fechaInput.value;
     
@@ -672,7 +1027,6 @@ function validarYGuardar() {
         return;
     }
 
-    // Convertir string a Date si es necesario
     let fechaObj;
     if (typeof fechaHora === 'string') {
         fechaObj = new Date(fechaHora);
@@ -684,7 +1038,6 @@ function validarYGuardar() {
         return;
     }
 
-    // Validar descripción
     const descripcionInput = document.getElementById('descripcionSeguimiento');
     const descripcion = descripcionInput.value.trim();
     if (!descripcion) {
@@ -707,7 +1060,6 @@ function validarYGuardar() {
     }
     descripcionInput.classList.remove('is-invalid');
 
-    // Validar estado
     const estadoSelect = document.getElementById('estadoSeguimiento');
     const nuevoEstado = estadoSelect.value;
     if (!nuevoEstado) {
@@ -767,60 +1119,46 @@ async function guardarSeguimiento(datos) {
 
         mostrarCargando('Guardando seguimiento y subiendo evidencias...');
 
-        // Extraer archivos
         const archivos = datos.evidencias.map(ev => ev.file);
 
-        // Agregar seguimiento
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
             usuarioActual.nombreCompleto,
             datos.descripcion,
             archivos,
-            usuarioActual.organizacionCamelCase
+            usuarioActual.organizacionCamelCase,
+            datos.evidencias // Pasamos los objetos completos con comentarios
         );
 
-        // Si cambió el estado, actualizar
         if (datos.nuevoEstado !== incidenciaActual.estado) {
-            if (datos.nuevoEstado === 'finalizada') {
-                await incidenciaManager.finalizarIncidencia(
-                    incidenciaActual.id,
-                    usuarioActual.id,
-                    usuarioActual.nombreCompleto,
-                    'Incidencia finalizada mediante seguimiento',
-                    usuarioActual.organizacionCamelCase
-                );
-            } else {
-                // Actualizar estado a pendiente (si se cambió de finalizada a pendiente)
-                await incidenciaManager.actualizarIncidencia(
-                    incidenciaActual.id,
-                    { estado: datos.nuevoEstado },
-                    usuarioActual.id,
-                    usuarioActual.organizacionCamelCase
-                );
-            }
+            await incidenciaManager.actualizarIncidencia(
+                incidenciaActual.id,
+                { estado: datos.nuevoEstado },
+                usuarioActual.id,
+                usuarioActual.organizacionCamelCase
+            );
         }
 
-        // Limpiar evidencias seleccionadas
+        // Limpiar evidencias
         evidenciasSeleccionadas.forEach(ev => {
             if (ev.preview) URL.revokeObjectURL(ev.preview);
         });
         evidenciasSeleccionadas = [];
         actualizarVistaPreviaEvidencias();
 
-        // Recargar la incidencia para obtener los datos actualizados
+        // Recargar incidencia
         await cargarIncidencia(incidenciaActual.id);
 
-        // Actualizar vistas
+        // Actualizar UI
         mostrarInfoIncidencia();
-        mostrarEvidenciasOriginales();
+        mostrarEvidenciasOriginales(); // AHORA MUESTRA LAS IMÁGENES ORIGINALES
         mostrarHistorialSeguimiento();
 
         // Limpiar formulario
         document.getElementById('descripcionSeguimiento').value = '';
         actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
 
-        // Restablecer fecha a la actual
         const fechaInput = document.getElementById('fechaSeguimiento');
         if (fechaInput) {
             if (fechaInput._flatpickr) {

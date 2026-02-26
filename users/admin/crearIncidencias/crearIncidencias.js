@@ -1,11 +1,4 @@
-// crearIncidencias.js - VERSIÓN CON SUGERENCIAS EN TIEMPO REAL
-// Muestra sugerencias mientras escribes y recupera subcategorías correctamente
-
-// Variable global para debugging
-window.crearIncidenciaDebug = {
-    estado: 'iniciando',
-    controller: null
-};
+// crearIncidencias.js - VERSIÓN CON COMENTARIOS EN EVIDENCIAS
 
 // LÍMITES DE CARACTERES
 const LIMITES = {
@@ -38,11 +31,9 @@ class ImageEditorModal {
     init() {
         if (!this.modal) return;
 
-        // Configurar eventos del modal
         document.getElementById('btnCerrarModal')?.addEventListener('click', () => this.hide());
         document.getElementById('modalCancelar')?.addEventListener('click', () => this.hide());
 
-        // Herramientas
         document.getElementById('modalToolCircle')?.addEventListener('click', () => {
             this.setTool('circle');
             document.getElementById('modalToolCircle').classList.add('active');
@@ -55,30 +46,25 @@ class ImageEditorModal {
             document.getElementById('modalToolCircle').classList.remove('active');
         });
 
-        // Color picker
         document.getElementById('modalColorPicker')?.addEventListener('input', (e) => {
             this.currentColor = e.target.value;
             document.getElementById('modalColorValue').textContent = e.target.value;
         });
 
-        // Limpiar todo
         document.getElementById('modalLimpiarTodo')?.addEventListener('click', () => {
             this.elements = [];
             this.redrawCanvas();
         });
 
-        // Guardar cambios
         document.getElementById('modalGuardarCambios')?.addEventListener('click', () => {
             this.saveImage();
         });
 
-        // Eventos del canvas
         this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
         this.canvas.addEventListener('mousemove', (e) => this.draw(e));
         this.canvas.addEventListener('mouseup', () => this.stopDrawing());
         this.canvas.addEventListener('mouseout', () => this.stopDrawing());
 
-        // Cerrar modal con Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.modal.style.display === 'block') {
                 this.hide();
@@ -93,17 +79,14 @@ class ImageEditorModal {
         this.onSaveCallback = onSaveCallback;
         this.elements = [];
 
-        // Establecer tool activo por defecto
         document.getElementById('modalToolCircle').classList.add('active');
         document.getElementById('modalToolArrow').classList.remove('active');
         this.currentTool = 'circle';
 
-        // Cargar imagen
         const reader = new FileReader();
         reader.onload = (e) => {
             this.image = new Image();
             this.image.onload = () => {
-                // Ajustar canvas manteniendo proporción
                 const maxWidth = 1200;
                 const maxHeight = 800;
                 let width = this.image.width;
@@ -125,7 +108,6 @@ class ImageEditorModal {
                 document.getElementById('modalImageInfo').textContent =
                     `Editando: ${file.name} (${width}x${height})`;
 
-                // Cargar comentario si existe
                 document.getElementById('modalComentario').value = comentario || '';
             };
             this.image.src = e.target.result;
@@ -150,32 +132,26 @@ class ImageEditorModal {
     redrawCanvas() {
         if (!this.ctx || !this.image) return;
 
-        // Dibujar imagen
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
 
-        // Dibujar elementos
         this.elements.forEach(el => {
             this.ctx.beginPath();
             this.ctx.strokeStyle = el.color;
             this.ctx.lineWidth = 3;
-            this.ctx.fillStyle = this.hexToRgba(el.color, 0.2);
 
             if (el.type === 'circle') {
                 this.ctx.arc(el.x, el.y, el.radius, 0, 2 * Math.PI);
                 this.ctx.stroke();
-
             } else if (el.type === 'arrow') {
                 const angle = Math.atan2(el.endY - el.startY, el.endX - el.startX);
                 const arrowLength = 15;
 
-                // Línea
                 this.ctx.beginPath();
                 this.ctx.moveTo(el.startX, el.startY);
                 this.ctx.lineTo(el.endX, el.endY);
                 this.ctx.stroke();
 
-                // Punta de flecha
                 this.ctx.beginPath();
                 this.ctx.moveTo(el.endX, el.endY);
                 this.ctx.lineTo(
@@ -222,7 +198,6 @@ class ImageEditorModal {
         const currentX = (e.clientX - rect.left) * scaleX;
         const currentY = (e.clientY - rect.top) * scaleY;
 
-        // Redibujar para vista previa
         this.redrawCanvas();
         this.ctx.beginPath();
         this.ctx.strokeStyle = this.currentColor;
@@ -235,15 +210,11 @@ class ImageEditorModal {
             );
             this.ctx.arc(this.startX, this.startY, radius, 0, 2 * Math.PI);
             this.ctx.stroke();
-            this.ctx.fillStyle = this.hexToRgba(this.currentColor, 0.2);
-            this.ctx.fill();
         } else if (this.currentTool === 'arrow') {
-            // Línea
             this.ctx.moveTo(this.startX, this.startY);
             this.ctx.lineTo(currentX, currentY);
             this.ctx.stroke();
 
-            // Punta de flecha (preview)
             const angle = Math.atan2(currentY - this.startY, currentX - this.startX);
             const arrowLength = 15;
 
@@ -266,12 +237,10 @@ class ImageEditorModal {
     stopDrawing() {
         if (!this.isDrawing || !this.image) return;
 
-        // Guardar el elemento dibujado
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
         const scaleY = this.canvas.height / rect.height;
 
-        // Necesitamos la última posición del mouse
         const lastMouseMove = (e) => {
             const currentX = (e.clientX - rect.left) * scaleX;
             const currentY = (e.clientY - rect.top) * scaleY;
@@ -282,7 +251,6 @@ class ImageEditorModal {
                     Math.pow(currentY - this.startY, 2)
                 );
 
-                // Solo guardar si el radio es significativo
                 if (radius > 5) {
                     this.elements.push({
                         type: 'circle',
@@ -298,7 +266,6 @@ class ImageEditorModal {
                     Math.pow(currentY - this.startY, 2)
                 );
 
-                // Solo guardar si la distancia es significativa
                 if (distance > 5) {
                     this.elements.push({
                         type: 'arrow',
@@ -322,17 +289,13 @@ class ImageEditorModal {
     saveImage() {
         if (!this.canvas || !this.currentFile) return;
 
-        // Obtener comentario
         const comentario = document.getElementById('modalComentario').value;
 
-        // Convertir canvas a blob
         this.canvas.toBlob((blob) => {
-            // Crear nuevo archivo con las ediciones
             const editedFile = new File([blob], `edited_${this.currentFile.name}`, {
                 type: 'image/png'
             });
 
-            // Llamar callback con el archivo editado y comentario
             if (this.onSaveCallback) {
                 this.onSaveCallback(this.currentIndex, editedFile, comentario, this.elements);
             }
@@ -353,11 +316,10 @@ class CrearIncidenciaController {
         this.categorias = [];
         this.subcategoriasCache = {};
         this.categoriaSeleccionada = null;
-        this.imagenesSeleccionadas = [];
+        this.imagenesSeleccionadas = []; // Array de objetos { file, preview, comentario, elementos, edited }
         this.imageEditorModal = null;
         this.loadingOverlay = null;
 
-        // Inicializar
         this._init();
     }
 
@@ -365,35 +327,19 @@ class CrearIncidenciaController {
 
     async _init() {
         try {
-            // 1. Cargar usuario
             this._cargarUsuario();
 
             if (!this.usuarioActual) {
                 throw new Error('No se pudo cargar información del usuario');
             }
 
-            // 2. Inicializar IncidenciaManager
             await this._inicializarManager();
-
-            // 3. Cargar datos relacionados
             await this._cargarDatosRelacionados();
-
-            // 4. Configurar organización
             this._configurarOrganizacion();
-
-            // 5. Inicializar fecha/hora
             this._inicializarDateTimePicker();
-
-            // 6. Configurar eventos
             this._configurarEventos();
-
-            // 7. Inicializar validaciones
             this._inicializarValidaciones();
-
-            // 8. Inicializar modal editor
             this.imageEditorModal = new ImageEditorModal();
-
-            window.crearIncidenciaDebug.controller = this;
 
         } catch (error) {
             console.error('Error inicializando:', error);
@@ -580,31 +526,25 @@ class CrearIncidenciaController {
 
     _configurarEventos() {
         try {
-            // Botones de navegación
             document.getElementById('btnVolverLista')?.addEventListener('click', () => this._volverALista());
             document.getElementById('btnCancelar')?.addEventListener('click', () => this._cancelarCreacion());
 
-            // Botón crear
             document.getElementById('btnCrearIncidencia')?.addEventListener('click', (e) => {
                 e.preventDefault();
                 this._validarYGuardar();
             });
 
-            // Botón agregar imágenes
             document.getElementById('btnAgregarImagen')?.addEventListener('click', () => {
                 document.getElementById('inputImagenes').click();
             });
 
-            // Input de imágenes
             document.getElementById('inputImagenes')?.addEventListener('change', (e) => this._procesarImagenes(e.target.files));
 
-            // Formulario submit
             document.getElementById('formIncidenciaPrincipal')?.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this._validarYGuardar();
             });
 
-            // Evento cambio de categoría
             document.getElementById('categoriaIncidencia')?.addEventListener('change', (e) => {
                 const categoriaId = e.target.dataset.selectedId;
                 if (categoriaId) {
@@ -612,7 +552,6 @@ class CrearIncidenciaController {
                 }
             });
 
-            // ===== SUGERENCIAS EN TIEMPO REAL =====
             this._configurarSugerencias();
 
         } catch (error) {
@@ -632,7 +571,6 @@ class CrearIncidenciaController {
             });
 
             inputSucursal.addEventListener('blur', () => {
-                // Pequeño retraso para permitir clic en sugerencias
                 setTimeout(() => {
                     document.getElementById('sugerenciasSucursal').innerHTML = '';
                 }, 200);
@@ -675,12 +613,11 @@ class CrearIncidenciaController {
             return;
         }
 
-        // Filtrar sucursales
         const sugerencias = this.sucursales.filter(suc =>
             suc.nombre.toLowerCase().includes(terminoLower) ||
             (suc.ciudad && suc.ciudad.toLowerCase().includes(terminoLower)) ||
             (suc.direccion && suc.direccion.toLowerCase().includes(terminoLower))
-        ).slice(0, 8); // Limitar a 8 sugerencias
+        ).slice(0, 8);
 
         if (sugerencias.length === 0) {
             contenedor.innerHTML = `
@@ -718,7 +655,6 @@ class CrearIncidenciaController {
 
         contenedor.innerHTML = html;
 
-        // Agregar eventos a las sugerencias
         contenedor.querySelectorAll('.sugerencia-item').forEach(item => {
             item.addEventListener('click', () => {
                 const id = item.dataset.id;
@@ -739,10 +675,9 @@ class CrearIncidenciaController {
             return;
         }
 
-        // Filtrar categorías
         const sugerencias = this.categorias.filter(cat =>
             cat.nombre.toLowerCase().includes(terminoLower)
-        ).slice(0, 8); // Limitar a 8 sugerencias
+        ).slice(0, 8);
 
         if (sugerencias.length === 0) {
             contenedor.innerHTML = `
@@ -783,7 +718,6 @@ class CrearIncidenciaController {
 
         contenedor.innerHTML = html;
 
-        // Agregar eventos a las sugerencias
         contenedor.querySelectorAll('.sugerencia-item').forEach(item => {
             item.addEventListener('click', () => {
                 const id = item.dataset.id;
@@ -799,7 +733,6 @@ class CrearIncidenciaController {
         input.dataset.selectedId = id;
         input.dataset.selectedName = nombre;
 
-        // Limpiar sugerencias
         document.getElementById('sugerenciasSucursal').innerHTML = '';
     }
 
@@ -809,10 +742,8 @@ class CrearIncidenciaController {
         input.dataset.selectedId = id;
         input.dataset.selectedName = nombre;
 
-        // Limpiar sugerencias
         document.getElementById('sugerenciasCategoria').innerHTML = '';
 
-        // Cargar subcategorías
         this._cargarSubcategorias(id);
     }
 
@@ -844,7 +775,6 @@ class CrearIncidenciaController {
             let subcategoriasArray = [];
 
             if (categoria.subcategorias) {
-                // Si es un Map
                 if (categoria.subcategorias instanceof Map) {
                     categoria.subcategorias.forEach((valor, clave) => {
                         if (valor && typeof valor === 'object') {
@@ -856,7 +786,6 @@ class CrearIncidenciaController {
                         }
                     });
                 }
-                // Si es un objeto con entries (Firestore Map)
                 else if (categoria.subcategorias.entries && typeof categoria.subcategorias.entries === 'function') {
                     for (const [clave, valor] of categoria.subcategorias.entries()) {
                         if (valor && typeof valor === 'object') {
@@ -868,7 +797,6 @@ class CrearIncidenciaController {
                         }
                     }
                 }
-                // Si es un objeto con forEach
                 else if (typeof categoria.subcategorias.forEach === 'function') {
                     categoria.subcategorias.forEach((valor, clave) => {
                         if (valor && typeof valor === 'object') {
@@ -880,7 +808,6 @@ class CrearIncidenciaController {
                         }
                     });
                 }
-                // Si es un objeto normal
                 else if (typeof categoria.subcategorias === 'object') {
                     subcategoriasArray = Object.keys(categoria.subcategorias).map(key => ({
                         id: key,
@@ -917,7 +844,7 @@ class CrearIncidenciaController {
         if (!files || files.length === 0) return;
 
         const nuevosArchivos = Array.from(files);
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        const maxSize = 5 * 1024 * 1024;
 
         const archivosValidos = nuevosArchivos.filter(file => {
             if (file.size > maxSize) {
@@ -975,7 +902,7 @@ class CrearIncidenciaController {
                         </button>
                         ${img.edited ? '<span class="edited-badge"><i class="fas fa-check"></i> Editada</span>' : ''}
                     </div>
-                    ${img.comentario ? `<div class="image-comment"><i class="fas fa-comment"></i> ${img.comentario.substring(0, 30)}${img.comentario.length > 30 ? '...' : ''}</div>` : ''}
+                    ${img.comentario ? `<div class="image-comment"><i class="fas fa-comment"></i> ${this._escapeHTML(img.comentario.substring(0, 30))}${img.comentario.length > 30 ? '...' : ''}</div>` : ''}
                 </div>
             `;
         });
@@ -1120,7 +1047,7 @@ class CrearIncidenciaController {
             estado,
             fechaHora,
             detalles,
-            imagenes: this.imagenesSeleccionadas
+            imagenes: this.imagenesSeleccionadas // Array completo con comentarios
         });
     }
 
@@ -1237,12 +1164,16 @@ class CrearIncidenciaController {
                 reportadoPorId: this.usuarioActual.id
             };
 
+            // IMPORTANTE: Pasamos el array completo de objetos con file y comentario
             const archivos = datos.imagenes.map(img => img.file);
-
+            
+            // También necesitamos pasar los comentarios
+            // Modificar el método crearIncidencia para aceptar los comentarios
             const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
                 incidenciaData,
                 this.usuarioActual,
-                archivos
+                archivos,
+                datos.imagenes // Pasamos los objetos completos con comentarios
             );
 
             this._ocultarCargando();
@@ -1259,6 +1190,8 @@ class CrearIncidenciaController {
                         <p><strong>Sucursal:</strong> ${sucursalNombre}</p>
                         <p><strong>Categoría:</strong> ${categoriaNombre}</p>
                         <p><strong>Imágenes subidas:</strong> ${datos.imagenes.length}</p>
+                        <p><strong>Imágenes con comentarios:</strong> ${datos.imagenes.filter(img => img.comentario).length}</p>
+                        <p><em>Nota:</em> La incidencia se creó sin seguimientos automáticos</p>
                     </div>
                 `,
                 confirmButtonText: 'Ver incidencias'
@@ -1372,5 +1305,5 @@ class CrearIncidenciaController {
 // INICIALIZACIÓN
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
-    window.crearIncidenciaDebug.controller = new CrearIncidenciaController();
+    window.crearIncidenciaDebug = { controller: new CrearIncidenciaController() };
 });
