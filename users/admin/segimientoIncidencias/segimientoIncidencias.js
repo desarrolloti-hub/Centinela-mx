@@ -1108,16 +1108,6 @@ async function confirmarYGuardar(datos) {
 
     const confirmResult = await Swal.fire({
         title: '¿Guardar seguimiento?',
-        html: `
-            <div style="text-align: left;">
-                <p><strong>Fecha:</strong> ${formatearFecha(datos.fecha)}</p>
-                <p><strong>Estado:</strong> <span style="color: ${estadoAnterior === datos.nuevoEstado ? 'var(--color-warning)' : 'var(--color-success)'};">${estadoTexto}</span></p>
-                <p><strong>Evidencias:</strong> ${datos.evidencias.length} imagen(es)</p>
-                <p><strong>Descripción:</strong><br>
-                    <span style="color: var(--color-text-secondary);">${escapeHTML(datos.descripcion.substring(0, 200))}${datos.descripcion.length > 200 ? '...' : ''}</span>
-                </p>
-            </div>
-        `,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'GUARDAR SEGUIMIENTO',

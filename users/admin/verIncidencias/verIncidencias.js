@@ -1,11 +1,15 @@
-// verIncidencias.js - Visualización de incidencias
-// Carga y muestra los detalles de una incidencia específica
+// verIncidencias.js - VERSIÓN CORREGIDA (MISMO DISEÑO QUE SEGUIMIENTO)
+// Visualización de incidencias con el mismo estilo que seguimiento
 
-// Variable global para debugging
-window.verIncidenciaDebug = {
-    estado: 'iniciando',
-    controller: null
-};
+// =============================================
+// VARIABLES GLOBALES
+// =============================================
+let incidenciaManager = null;
+let usuarioActual = null;
+let incidenciaActual = null;
+let sucursalesMap = new Map();
+let categoriasMap = new Map();
+let imageViewerModal = null;
 
 // LÍMITES DE CARACTERES
 const LIMITES = {
@@ -13,517 +17,518 @@ const LIMITES = {
 };
 
 // =============================================
-// CLASE PRINCIPAL - VerIncidenciaController
+// INICIALIZACIÓN
 // =============================================
-class VerIncidenciaController {
-    constructor() {
-        this.incidenciaManager = null;
-        this.usuarioActual = null;
-        this.incidencia = null;
-        this.incidenciaId = null;
-        this.sucursales = [];
-        this.categorias = [];
-        this.imageViewerModal = null;
+async function inicializarVerIncidencia() {
+    try {
+        console.log('Inicializando vista de incidencia...');
 
-        // Inicializar
-        this._init();
-    }
-
-    // ========== INICIALIZACIÓN ==========
-
-    async _init() {
-        try {
-            // 1. Obtener ID de incidencia de la URL
-            this._obtenerIdIncidencia();
-
-            if (!this.incidenciaId) {
-                throw new Error('No se especificó el ID de la incidencia');
-            }
-
-            // 2. Cargar usuario
-            this._cargarUsuario();
-
-            if (!this.usuarioActual) {
-                throw new Error('No se pudo cargar información del usuario');
-            }
-
-            // 3. Inicializar IncidenciaManager
-            await this._inicializarManager();
-
-            // 4. Cargar datos relacionados
-            await this._cargarDatosRelacionados();
-
-            // 5. Cargar la incidencia
-            await this._cargarIncidencia();
-
-            // 6. Configurar eventos
-            this._configurarEventos();
-
-            // 7. Inicializar modal visualizador
-            this._inicializarModal();
-
-            window.verIncidenciaDebug.controller = this;
-
-        } catch (error) {
-            console.error('Error inicializando:', error);
-            this._mostrarError('Error al cargar la incidencia: ' + error.message);
-            setTimeout(() => this._volverALista(), 3000);
-        }
-    }
-
-    _obtenerIdIncidencia() {
         const urlParams = new URLSearchParams(window.location.search);
-        this.incidenciaId = urlParams.get('id');
+        const incidenciaId = urlParams.get('id');
 
-        if (this.incidenciaId) {
-            console.log('ID de incidencia:', this.incidenciaId);
+        if (!incidenciaId) {
+            throw new Error('No se especificó el ID de la incidencia');
+        }
+
+        cargarUsuario();
+
+        if (!usuarioActual) {
+            throw new Error('No se pudo cargar información del usuario');
+        }
+
+        await inicializarIncidenciaManager();
+        await cargarIncidencia(incidenciaId);
+        await cargarDatosRelacionados();
+        
+        mostrarInfoIncidencia();
+        mostrarEvidenciasOriginales();
+        mostrarHistorialSeguimiento();
+        configurarEventos();
+        inicializarModal();
+
+        console.log('Vista de incidencia inicializada correctamente');
+
+    } catch (error) {
+        console.error('Error inicializando:', error);
+        mostrarError('Error al cargar la incidencia: ' + error.message);
+        
+        const container = document.querySelector('.custom-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-danger" style="margin: 20px; padding: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h4>Error al cargar la incidencia</h4>
+                    <p>${error.message}</p>
+                    <button class="btn-volver" onclick="window.location.href='/users/admin/incidencias/incidencias.html'" style="margin-top: 15px;">
+                        <i class="fas fa-arrow-left"></i> Volver a la lista
+                    </button>
+                </div>
+            `;
         }
     }
+}
 
-    async _inicializarManager() {
-        try {
-            const { IncidenciaManager } = await import('/clases/incidencia.js');
-            this.incidenciaManager = new IncidenciaManager();
-        } catch (error) {
-            console.error('Error cargando IncidenciaManager:', error);
-            throw error;
-        }
+async function inicializarIncidenciaManager() {
+    try {
+        const { IncidenciaManager } = await import('/clases/incidencia.js');
+        incidenciaManager = new IncidenciaManager();
+    } catch (error) {
+        console.error('Error cargando IncidenciaManager:', error);
+        throw error;
     }
+}
 
-    // ========== CARGA DE USUARIO ==========
-
-    _cargarUsuario() {
-        try {
-            const adminInfo = localStorage.getItem('adminInfo');
-            if (adminInfo) {
-                const adminData = JSON.parse(adminInfo);
-                this.usuarioActual = {
-                    id: adminData.id || adminData.uid || `admin_${Date.now()}`,
-                    uid: adminData.uid || adminData.id,
-                    nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    organizacion: adminData.organizacion || 'Sin organización',
-                    organizacionCamelCase: adminData.organizacionCamelCase ||
-                        this._generarCamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || ''
-                };
-                return;
-            }
-
-            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-            if (userData && Object.keys(userData).length > 0) {
-                this.usuarioActual = {
-                    id: userData.uid || userData.id || `user_${Date.now()}`,
-                    uid: userData.uid || userData.id,
-                    nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
-                    organizacion: userData.organizacion || userData.empresa || 'Sin organización',
-                    organizacionCamelCase: userData.organizacionCamelCase ||
-                        this._generarCamelCase(userData.organizacion || userData.empresa),
-                    correo: userData.correo || userData.email || ''
-                };
-                return;
-            }
-
-            this.usuarioActual = {
-                id: `admin_${Date.now()}`,
-                uid: `admin_${Date.now()}`,
-                nombreCompleto: 'Administrador',
-                organizacion: 'Mi Organización',
-                organizacionCamelCase: 'miOrganizacion',
-                correo: 'admin@centinela.com'
+function cargarUsuario() {
+    try {
+        if (window.userManager && window.userManager.currentUser) {
+            const user = window.userManager.currentUser;
+            usuarioActual = {
+                id: user.id || user.uid || `user_${Date.now()}`,
+                uid: user.uid || user.id,
+                nombreCompleto: user.nombreCompleto || user.nombre || 'Usuario',
+                organizacion: user.organizacion || 'Sin organización',
+                organizacionCamelCase: user.organizacionCamelCase || generarCamelCase(user.organizacion),
+                correo: user.correo || user.email || ''
             };
+            return;
+        }
 
-        } catch (error) {
-            console.error('Error cargando usuario:', error);
-            throw error;
+        const adminInfo = localStorage.getItem('adminInfo');
+        if (adminInfo) {
+            const adminData = JSON.parse(adminInfo);
+            usuarioActual = {
+                id: adminData.id || adminData.uid || `admin_${Date.now()}`,
+                uid: adminData.uid || adminData.id,
+                nombreCompleto: adminData.nombreCompleto || 'Administrador',
+                organizacion: adminData.organizacion || 'Sin organización',
+                organizacionCamelCase: adminData.organizacionCamelCase || generarCamelCase(adminData.organizacion),
+                correo: adminData.correoElectronico || ''
+            };
+            return;
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            usuarioActual = {
+                id: userData.uid || userData.id || `user_${Date.now()}`,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa || 'Sin organización',
+                organizacionCamelCase: userData.organizacionCamelCase || generarCamelCase(userData.organizacion || userData.empresa),
+                correo: userData.correo || userData.email || ''
+            };
+            return;
+        }
+
+        throw new Error('No hay sesión activa');
+
+    } catch (error) {
+        console.error('Error cargando usuario:', error);
+        throw error;
+    }
+}
+
+function generarCamelCase(texto) {
+    if (!texto || typeof texto !== 'string') return 'sinOrganizacion';
+    return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+        .replace(/[^a-zA-Z0-9]/g, '');
+}
+
+async function cargarIncidencia(incidenciaId) {
+    try {
+        incidenciaActual = await incidenciaManager.getIncidenciaById(
+            incidenciaId,
+            usuarioActual.organizacionCamelCase
+        );
+
+        if (!incidenciaActual) {
+            throw new Error('Incidencia no encontrada');
+        }
+
+        document.getElementById('incidenciaId').textContent = incidenciaActual.id;
+
+    } catch (error) {
+        console.error('Error cargando incidencia:', error);
+        throw error;
+    }
+}
+
+async function cargarDatosRelacionados() {
+    try {
+        const { SucursalManager } = await import('/clases/sucursal.js');
+        const sucursalManager = new SucursalManager();
+        const sucursales = await sucursalManager.getSucursalesByOrganizacion(
+            usuarioActual.organizacionCamelCase
+        );
+        
+        sucursales.forEach(suc => {
+            sucursalesMap.set(suc.id, suc);
+        });
+
+        const { CategoriaManager } = await import('/clases/categoria.js');
+        const categoriaManager = new CategoriaManager();
+        const categorias = await categoriaManager.obtenerTodasCategorias();
+        
+        categorias.forEach(cat => {
+            categoriasMap.set(cat.id, cat);
+        });
+
+    } catch (error) {
+        console.error('Error cargando datos relacionados:', error);
+    }
+}
+
+// =============================================
+// MOSTRAR INFORMACIÓN
+// =============================================
+function mostrarInfoIncidencia() {
+    if (!incidenciaActual) return;
+
+    document.getElementById('infoOrganizacion').textContent = usuarioActual.organizacion;
+
+    const sucursal = sucursalesMap.get(incidenciaActual.sucursalId);
+    document.getElementById('infoSucursal').textContent = sucursal ? sucursal.nombre : incidenciaActual.sucursalId;
+
+    const categoria = categoriasMap.get(incidenciaActual.categoriaId);
+    document.getElementById('infoCategoria').textContent = categoria ? categoria.nombre : incidenciaActual.categoriaId;
+
+    let subcategoriaNombre = incidenciaActual.subcategoriaId || 'No especificada';
+    if (incidenciaActual.subcategoriaId && categoria && categoria.subcategorias) {
+        if (categoria.subcategorias instanceof Map) {
+            const sub = categoria.subcategorias.get(incidenciaActual.subcategoriaId);
+            if (sub) subcategoriaNombre = sub.nombre || incidenciaActual.subcategoriaId;
+        } else if (typeof categoria.subcategorias === 'object') {
+            const sub = categoria.subcategorias[incidenciaActual.subcategoriaId];
+            if (sub) subcategoriaNombre = sub.nombre || incidenciaActual.subcategoriaId;
         }
     }
+    document.getElementById('infoSubcategoria').textContent = subcategoriaNombre;
 
-    _generarCamelCase(texto) {
-        if (!texto || typeof texto !== 'string') return 'sinOrganizacion';
-        return texto
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
-            .replace(/[^a-zA-Z0-9]/g, '');
-    }
+    const riesgoSpan = document.getElementById('infoRiesgo');
+    const riesgoTexto = incidenciaActual.getNivelRiesgoTexto ? 
+        incidenciaActual.getNivelRiesgoTexto() : incidenciaActual.nivelRiesgo;
+    const riesgoColor = incidenciaActual.getNivelRiesgoColor ? 
+        incidenciaActual.getNivelRiesgoColor() : obtenerRiesgoColor(incidenciaActual.nivelRiesgo);
+    
+    riesgoSpan.innerHTML = `<span class="riesgo-badge" style="background: ${riesgoColor}20; color: ${riesgoColor};">${riesgoTexto}</span>`;
 
-    // ========== CARGA DE DATOS RELACIONADOS ==========
+    const estadoSpan = document.getElementById('infoEstado');
+    const estadoTexto = incidenciaActual.getEstadoTexto ? 
+        incidenciaActual.getEstadoTexto() : incidenciaActual.estado;
+    const estadoColor = incidenciaActual.getEstadoColor ? 
+        incidenciaActual.getEstadoColor() : (incidenciaActual.estado === 'finalizada' ? '#28a745' : '#ffc107');
+    
+    estadoSpan.innerHTML = `<span class="estado-badge" style="background: ${estadoColor}20; color: ${estadoColor};">${estadoTexto}</span>`;
 
-    async _cargarDatosRelacionados() {
-        try {
-            await this._cargarSucursales();
-            await this._cargarCategorias();
-        } catch (error) {
-            console.error('Error cargando datos relacionados:', error);
-            // No es crítico, continuamos
-        }
-    }
+    document.getElementById('infoFechaInicio').textContent = incidenciaActual.getFechaInicioFormateada ?
+        incidenciaActual.getFechaInicioFormateada() : formatearFecha(incidenciaActual.fechaInicio);
 
-    async _cargarSucursales() {
-        try {
-            const { SucursalManager } = await import('/clases/sucursal.js');
-            const sucursalManager = new SucursalManager();
-
-            this.sucursales = await sucursalManager.getSucursalesByOrganizacion(
-                this.usuarioActual.organizacionCamelCase
-            );
-        } catch (error) {
-            console.error('Error cargando sucursales:', error);
-        }
-    }
-
-    async _cargarCategorias() {
-        try {
-            const { CategoriaManager } = await import('/clases/categoria.js');
-            const categoriaManager = new CategoriaManager();
-
-            this.categorias = await categoriaManager.obtenerTodasCategorias();
-        } catch (error) {
-            console.error('Error cargando categorías:', error);
-        }
-    }
-
-    // ========== CARGA DE LA INCIDENCIA ==========
-
-    async _cargarIncidencia() {
-        try {
-            this._mostrarCargando('Cargando incidencia...');
-
-            this.incidencia = await this.incidenciaManager.getIncidenciaById(
-                this.incidenciaId,
-                this.usuarioActual.organizacionCamelCase
-            );
-
-            if (!this.incidencia) {
-                throw new Error('No se encontró la incidencia');
-            }
-
-            this._renderizarIncidencia();
-
-        } catch (error) {
-            console.error('Error cargando incidencia:', error);
-            throw error;
-        } finally {
-            this._ocultarCargando();
-        }
-    }
-
-    // ========== RENDERIZADO ==========
-
-    _renderizarIncidencia() {
-        // Información básica
-        document.getElementById('incidenciaId').value = this.incidencia.id;
-
-        // Organización
-        document.getElementById('organization').value = this.usuarioActual.organizacion;
-
-        // Sucursal
-        const sucursal = this.sucursales.find(s => s.id === this.incidencia.sucursalId);
-        document.getElementById('sucursalIncidencia').value = sucursal?.nombre || this.incidencia.sucursalId || 'No especificada';
-
-        // Categoría
-        const categoria = this.categorias.find(c => c.id === this.incidencia.categoriaId);
-        document.getElementById('categoriaIncidencia').value = categoria?.nombre || this.incidencia.categoriaId || 'No especificada';
-
-        // Subcategoría
-        let subcategoriaNombre = 'No especificada';
-        if (this.incidencia.subcategoriaId && categoria?.subcategorias) {
-            if (categoria.subcategorias instanceof Map) {
-                const sub = categoria.subcategorias.get(this.incidencia.subcategoriaId);
-                subcategoriaNombre = sub?.nombre || this.incidencia.subcategoriaId;
-            } else if (typeof categoria.subcategorias === 'object') {
-                const sub = categoria.subcategorias[this.incidencia.subcategoriaId];
-                subcategoriaNombre = sub?.nombre || this.incidencia.subcategoriaId;
-            }
-        }
-        document.getElementById('subcategoriaIncidencia').value = subcategoriaNombre;
-
-        // Nivel de riesgo con badge
-        const riesgoBadge = document.getElementById('nivelRiesgoBadge');
-        riesgoBadge.textContent = this.incidencia.getNivelRiesgoTexto();
-        riesgoBadge.style.backgroundColor = `${this.incidencia.getNivelRiesgoColor()}20`;
-        riesgoBadge.style.color = this.incidencia.getNivelRiesgoColor();
-        riesgoBadge.style.border = `1px solid ${this.incidencia.getNivelRiesgoColor()}`;
-
-        // Estado con badge
-        const estadoBadge = document.getElementById('estadoBadge');
-        estadoBadge.textContent = this.incidencia.getEstadoTexto();
-        estadoBadge.style.backgroundColor = `${this.incidencia.getEstadoColor()}20`;
-        estadoBadge.style.color = this.incidencia.getEstadoColor();
-        estadoBadge.style.border = `1px solid ${this.incidencia.getEstadoColor()}`;
-
-        // Fechas
-        document.getElementById('fechaCreacion').value = this.incidencia.getFechaCreacionFormateada();
-        document.getElementById('fechaHoraIncidencia').value = this.incidencia.getFechaInicioFormateada();
-
-        // Fecha finalización (si existe)
-        if (this.incidencia.fechaFinalizacion) {
-            document.getElementById('fechaFinalizacion').value = this.incidencia.getFechaFinalizacionFormateada();
+    if (incidenciaActual.fechaFinalizacion) {
+        const fechaFinSpan = document.getElementById('infoFechaFinalizacion');
+        if (fechaFinSpan) {
+            fechaFinSpan.innerHTML = `<span class="info-value">${incidenciaActual.getFechaFinalizacionFormateada()}</span>`;
             document.getElementById('fechaFinalizacionContainer').style.display = 'block';
         }
-
-        // Reportado por
-        document.getElementById('reportadoPor').value = this.incidencia.creadoPorNombre || 'Usuario';
-
-        // Descripción
-        const detallesInput = document.getElementById('detallesIncidencia');
-        detallesInput.value = this.incidencia.detalles || '';
-        this._actualizarContador('detallesIncidencia', 'contadorCaracteres', LIMITES.DETALLES_INCIDENCIA);
-
-        // Imágenes
-        this._renderizarImagenes();
-
-        // Seguimiento
-        this._renderizarSeguimiento();
     }
 
-    _renderizarImagenes() {
-        const container = document.getElementById('imagenesPreview');
-        const countSpan = document.getElementById('imagenesCount');
+    document.getElementById('infoReportadoPor').textContent = incidenciaActual.creadoPorNombre || 'No especificado';
+    document.getElementById('infoDescripcion').textContent = incidenciaActual.detalles || 'Sin descripción';
+}
 
-        if (!container) return;
+function obtenerRiesgoColor(nivel) {
+    const colores = {
+        'bajo': '#28a745',
+        'medio': '#ffc107',
+        'alto': '#fd7e14',
+        'critico': '#dc3545'
+    };
+    return colores[nivel] || '#28a745';
+}
 
-        const imagenes = this.incidencia.imagenes || [];
-
-        if (countSpan) {
-            countSpan.textContent = imagenes.length;
-        }
-
-        if (imagenes.length === 0) {
-            container.innerHTML = `
-                <div class="no-images">
-                    <i class="fas fa-images"></i>
-                    <p>No hay imágenes disponibles</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-        imagenes.forEach((imgUrl, index) => {
-            // Extraer nombre del archivo de la URL
-            const nombreArchivo = imgUrl.split('/').pop() || `Imagen ${index + 1}`;
-
-            html += `
-                <div class="preview-item" data-url="${imgUrl}">
-                    <img src="${imgUrl}" alt="Imagen ${index + 1}" loading="lazy">
-                    <div class="preview-overlay">
-                        <button type="button" class="preview-btn view-btn" data-url="${imgUrl}" title="Ver">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <div class="image-comment">
-                        <i class="fas fa-image"></i> ${nombreArchivo.substring(0, 15)}${nombreArchivo.length > 15 ? '...' : ''}
-                    </div>
-                </div>
-            `;
+function formatearFecha(fecha) {
+    if (!fecha) return 'No disponible';
+    try {
+        const date = fecha instanceof Date ? fecha : new Date(fecha);
+        if (isNaN(date.getTime())) return 'Fecha inválida';
+        
+        return date.toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
         });
+    } catch {
+        return 'Fecha inválida';
+    }
+}
 
-        container.innerHTML = html;
-
-        // Eventos para ver imágenes
-        container.querySelectorAll('.preview-item, .view-btn').forEach(element => {
-            element.addEventListener('click', (e) => {
-                const url = e.currentTarget.closest('.preview-item')?.dataset.url ||
-                    e.currentTarget.dataset.url;
-                if (url) {
-                    this._verImagen(url);
-                }
+function formatearFechaCompacta(fecha) {
+    if (!fecha) return 'N/A';
+    try {
+        if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
+            const date = new Date(fecha.seconds * 1000);
+            return date.toLocaleDateString('es-MX', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
+        }
+        
+        const date = fecha instanceof Date ? fecha : new Date(fecha);
+        if (isNaN(date.getTime())) return 'Fecha inválida';
+        
+        return date.toLocaleDateString('es-MX', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
         });
+    } catch {
+        return 'Fecha inválida';
+    }
+}
+
+// =============================================
+// MOSTRAR EVIDENCIAS ORIGINALES
+// =============================================
+function mostrarEvidenciasOriginales() {
+    const container = document.getElementById('galeriaOriginal');
+    const totalSpan = document.getElementById('totalImagenesOriginales');
+    
+    if (!container) return;
+
+    const imagenes = incidenciaActual.imagenes || [];
+
+    if (totalSpan) {
+        totalSpan.textContent = `${imagenes.length} ${imagenes.length === 1 ? 'imagen' : 'imágenes'}`;
     }
 
-    _renderizarSeguimiento() {
-        const container = document.getElementById('seguimientoContainer');
-        if (!container) return;
+    if (imagenes.length === 0) {
+        container.innerHTML = `
+            <div class="no-images">
+                <i class="fas fa-images"></i>
+                <p>No hay evidencias originales</p>
+            </div>
+        `;
+        return;
+    }
 
-        const seguimientos = this.incidencia.getSeguimientosArray();
-
-        if (seguimientos.length === 0) {
-            container.innerHTML = `
-                <div class="no-seguimiento">
-                    <i class="fas fa-comment-dots"></i>
-                    <p>No hay registros de seguimiento</p>
+    let html = '';
+    imagenes.forEach((img, index) => {
+        const url = typeof img === 'string' ? img : img.url;
+        const comentario = typeof img === 'object' && img.comentario ? img.comentario : '';
+        
+        html += `
+            <div class="gallery-item" ${comentario ? `title="${escapeHTML(comentario)}"` : ''}>
+                <img src="${url}" alt="Evidencia ${index + 1}" loading="lazy" onclick="window.open('${url}', '_blank')">
+                <div class="gallery-overlay">
+                    <button type="button" class="gallery-btn" onclick="window.open('${url}', '_blank')">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
                 </div>
-            `;
-            return;
-        }
+                ${comentario ? `<div class="image-comment"><i class="fas fa-comment"></i> ${escapeHTML(comentario.substring(0, 30))}${comentario.length > 30 ? '...' : ''}</div>` : ''}
+            </div>
+        `;
+    });
 
-        let html = '';
-        seguimientos.forEach(seg => {
-            const fecha = seg.fecha ? this._formatearFecha(seg.fecha) : 'Fecha no disponible';
+    container.innerHTML = html;
+}
 
-            html += `
-                <div class="seguimiento-item">
-                    <div class="seguimiento-header">
-                        <div class="seguimiento-avatar">
-                            <i class="fas fa-user"></i>
+// =============================================
+// MOSTRAR HISTORIAL DE SEGUIMIENTO (VERSIÓN LIMPIA)
+// =============================================
+function mostrarHistorialSeguimiento() {
+    const container = document.getElementById('timelineSeguimientos');
+    const totalSpan = document.getElementById('totalSeguimientos');
+    
+    if (!container || !incidenciaActual) return;
+
+    const seguimientos = incidenciaActual.getSeguimientosArray ? 
+        incidenciaActual.getSeguimientosArray() : [];
+
+    if (totalSpan) {
+        totalSpan.textContent = `${seguimientos.length} ${seguimientos.length === 1 ? 'seguimiento' : 'seguimientos'}`;
+    }
+
+    if (seguimientos.length === 0) {
+        container.innerHTML = `
+            <div class="timeline-empty">
+                <i class="fas fa-clock"></i>
+                <p>No hay seguimientos registrados</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '<div class="timeline-simple">';
+    seguimientos.forEach((seg, index) => {
+        const fecha = seg.fecha ? formatearFechaCompacta(seg.fecha) : 'Fecha no disponible';
+        const evidencias = seg.evidencias || [];
+        const idSeguimiento = seg.id || `SEG-${index + 1}`;
+        
+        html += `
+            <div class="timeline-simple-item">
+                <div class="timeline-simple-marker"></div>
+                <div class="timeline-simple-content">
+                    <div class="timeline-simple-header">
+                        <div class="timeline-simple-user">
+                            <span class="timeline-simple-name">${escapeHTML(seg.usuarioNombre || 'Usuario')}</span>
+                            <span class="timeline-simple-badge">${idSeguimiento}</span>
                         </div>
-                        <div class="seguimiento-info">
-                            <div class="seguimiento-usuario">${this._escapeHTML(seg.usuarioNombre || 'Usuario')}</div>
-                            <div class="seguimiento-fecha">
-                                <i class="fas fa-clock"></i>
-                                ${fecha}
+                        <div class="timeline-simple-date">
+                            <i class="far fa-calendar-alt"></i>
+                            <span>${fecha}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-simple-description">
+                        ${escapeHTML(seg.descripcion || 'Sin descripción')}
+                    </div>
+        `;
+
+        if (evidencias.length > 0) {
+            html += `
+                    <div class="timeline-simple-evidencias">
+                        <div class="timeline-simple-evidencias-header">
+                            <i class="fas fa-images"></i>
+                            <span>${evidencias.length} ${evidencias.length === 1 ? 'evidencia' : 'evidencias'}</span>
+                        </div>
+                        <div class="timeline-simple-evidencias-grid">
+            `;
+
+            evidencias.forEach((ev, evIndex) => {
+                const url = typeof ev === 'string' ? ev : ev.url;
+                const comentario = typeof ev === 'object' && ev.comentario ? ev.comentario : '';
+                
+                html += `
+                            <div class="timeline-simple-evidencia" onclick="window.open('${url}', '_blank')">
+                                <img src="${url}" alt="Evidencia ${evIndex + 1}" loading="lazy">
+                                ${comentario ? `<div class="timeline-simple-evidencia-comentario" title="${escapeHTML(comentario)}">${escapeHTML(comentario.substring(0, 30))}${comentario.length > 30 ? '...' : ''}</div>` : ''}
                             </div>
+                `;
+            });
+
+            html += `
                         </div>
-                    </div>
-                    <div class="seguimiento-descripcion">
-                        ${this._escapeHTML(seg.descripcion || 'Sin descripción')}
                     </div>
             `;
-
-            if (seg.evidencias && seg.evidencias.length > 0) {
-                html += '<div class="seguimiento-evidencias">';
-                seg.evidencias.forEach(evidencia => {
-                    html += `
-                        <div class="seguimiento-evidencia" onclick="window.verIncidenciaDebug.controller._verImagen('${evidencia}')">
-                            <img src="${evidencia}" alt="Evidencia">
-                        </div>
-                    `;
-                });
-                html += '</div>';
-            }
-
-            html += '</div>';
-        });
-
-        container.innerHTML = html;
-    }
-
-    // ========== MODAL VISUALIZADOR ==========
-
-    _inicializarModal() {
-        const modal = document.getElementById('imageViewerModal');
-        const closeBtn = document.getElementById('btnCerrarModal');
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            });
         }
 
-        window.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }
-        });
+        html += `
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal.style.display === 'block') {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }
-        });
+    container.innerHTML = html;
+}
+
+// =============================================
+// CONFIGURACIÓN DE EVENTOS
+// =============================================
+function configurarEventos() {
+    try {
+        document.getElementById('btnVolverLista')?.addEventListener('click', () => volverALista());
+
+    } catch (error) {
+        console.error('Error configurando eventos:', error);
     }
+}
 
-    _verImagen(url) {
-        const modal = document.getElementById('imageViewerModal');
-        const modalImg = document.getElementById('modalImage');
+// =============================================
+// MODAL VISUALIZADOR DE IMAGEN
+// =============================================
+function inicializarModal() {
+    const modal = document.getElementById('imageViewerModal');
+    const closeBtn = document.getElementById('btnCerrarModal');
 
-        if (modal && modalImg) {
-            modalImg.src = url;
-            modal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
+    if (!modal || !closeBtn) return;
+
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
         }
-    }
+    });
 
-    // ========== CONFIGURACIÓN DE EVENTOS ==========
-
-    _configurarEventos() {
-        // Botones volver
-        document.getElementById('btnVolverLista')?.addEventListener('click', () => this._volverALista());
-    }
-
-    // ========== NAVEGACIÓN ==========
-
-    _volverALista() {
-        window.location.href = '/users/admin/incidencias/incidencias.html';
-    }
-
-    // ========== UTILIDADES ==========
-
-    _actualizarContador(inputId, counterId, limite) {
-        const input = document.getElementById(inputId);
-        const counter = document.getElementById(counterId);
-
-        if (input && counter) {
-            const longitud = input.value.length;
-            counter.textContent = `${longitud}/${limite}`;
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'block') {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
         }
-    }
+    });
+}
 
-    _formatearFecha(fecha) {
-        if (!fecha) return 'No disponible';
-        try {
-            if (fecha && typeof fecha.toDate === 'function') {
-                return fecha.toDate().toLocaleDateString('es-MX', {
-                    year: 'numeric', month: 'long', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                });
-            }
-            if (fecha instanceof Date) {
-                return fecha.toLocaleDateString('es-MX', {
-                    year: 'numeric', month: 'long', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
-                });
-            }
-            if (typeof fecha === 'string' || typeof fecha === 'number') {
-                const date = new Date(fecha);
-                if (!isNaN(date.getTime())) {
-                    return date.toLocaleDateString('es-MX', {
-                        year: 'numeric', month: 'long', day: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                    });
-                }
-            }
-            return 'Fecha no disponible';
-        } catch {
-            return 'Fecha no disponible';
+// =============================================
+// NAVEGACIÓN
+// =============================================
+function volverALista() {
+    window.location.href = '/users/admin/incidencias/incidencias.html';
+}
+
+// =============================================
+// UTILIDADES
+// =============================================
+function escapeHTML(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function mostrarError(mensaje) {
+    mostrarNotificacion(mensaje, 'error');
+}
+
+function mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
+    Swal.fire({
+        title: tipo === 'success' ? 'Éxito' :
+            tipo === 'error' ? 'Error' :
+                tipo === 'warning' ? 'Advertencia' : 'Información',
+        text: mensaje,
+        icon: tipo,
+        timer: duracion,
+        timerProgressBar: true,
+        showConfirmButton: false
+    });
+}
+
+function mostrarCargando(mensaje = 'Cargando...') {
+    Swal.fire({
+        title: mensaje,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
         }
-    }
+    });
+}
 
-    _mostrarError(mensaje) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: mensaje,
-            confirmButtonText: 'Aceptar'
-        });
-    }
-
-    _mostrarCargando(mensaje = 'Cargando...') {
-        Swal.fire({
-            title: mensaje,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-    }
-
-    _ocultarCargando() {
-        Swal.close();
-    }
-
-    _escapeHTML(text) {
-        if (!text) return '';
-        return String(text)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
+function ocultarCargando() {
+    Swal.close();
 }
 
 // =============================================
 // INICIALIZACIÓN
 // =============================================
-document.addEventListener('DOMContentLoaded', () => {
-    window.verIncidenciaDebug.controller = new VerIncidenciaController();
+document.addEventListener('DOMContentLoaded', function () {
+    inicializarVerIncidencia();
 });
