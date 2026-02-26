@@ -1,4 +1,4 @@
-// incidencia.js - VERSIÓN COMPLETA CON SOPORTE PARA COMENTARIOS EN IMÁGENES
+// incidencia.js - VERSIÓN CORREGIDA (FECHA DE SEGUIMIENTO Y VALIDACIÓN)
 
 import { 
     collection, 
@@ -146,7 +146,7 @@ class Incidencia {
     }
 
     // ===== MÉTODOS DE SEGUIMIENTO =====
-    agregarSeguimiento(usuarioId, usuarioNombre, descripcion, evidencias = []) {
+    agregarSeguimiento(usuarioId, usuarioNombre, descripcion, evidencias = [], fecha = new Date()) {
         const seguimientoCount = Object.keys(this.seguimiento).length;
         const seguimientoId = `SEG${seguimientoCount + 1}`;
         
@@ -155,7 +155,7 @@ class Incidencia {
             usuarioNombre,
             descripcion,
             evidencias, // Array de objetos { url, comentario }
-            fecha: new Date()
+            fecha: fecha
         };
         
         return seguimientoId;
@@ -173,13 +173,18 @@ class Incidencia {
             seguimientosArray.sort((a, b) => {
                 const fechaA = a.fecha ? new Date(a.fecha) : 0;
                 const fechaB = b.fecha ? new Date(b.fecha) : 0;
-                return fechaB - fechaA;
+                return fechaA - fechaB; // Orden ascendente (más antiguo primero)
             });
         }
         return seguimientosArray;
     }
 
     getUltimoSeguimiento() {
+        const seguimientos = this.getSeguimientosArray();
+        return seguimientos.length > 0 ? seguimientos[seguimientos.length - 1] : null;
+    }
+
+    getPrimerSeguimiento() {
         const seguimientos = this.getSeguimientosArray();
         return seguimientos.length > 0 ? seguimientos[0] : null;
     }
@@ -392,7 +397,7 @@ class IncidenciaManager {
     // ===== MÉTODOS CRUD PRINCIPALES =====
 
     /**
-     * Crear una nueva incidencia - CON SOPORTE PARA COMENTARIOS EN IMÁGENES
+     * Crear una nueva incidencia
      */
     async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
@@ -428,17 +433,20 @@ class IncidenciaManager {
                 }
             }
 
+            // Usar la fecha seleccionada por el usuario
+            const fechaInicio = data.fechaInicio || new Date();
+
             const incidenciaData = {
                 sucursalId: data.sucursalId,
                 reportadoPorId: data.reportadoPorId || usuarioActual.id,
                 categoriaId: data.categoriaId,
                 subcategoriaId: data.subcategoriaId || '',
-                fechaInicio: serverTimestamp(),
+                fechaInicio: fechaInicio,
                 fechaFinalizacion: null,
                 nivelRiesgo: data.nivelRiesgo,
                 estado: 'pendiente',
                 detalles: data.detalles?.trim() || '',
-                imagenes: imagenesUrls, // Array de objetos { url, comentario }
+                imagenes: imagenesUrls,
                 seguimiento: {}, // Vacío - sin seguimiento automático
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
@@ -453,7 +461,6 @@ class IncidenciaManager {
 
             const nuevaIncidencia = new Incidencia(incidenciaId, {
                 ...incidenciaData,
-                fechaInicio: new Date(),
                 fechaCreacion: new Date(),
                 fechaActualizacion: new Date()
             });
@@ -592,9 +599,9 @@ class IncidenciaManager {
     }
 
     /**
-     * Agregar seguimiento con evidencias
+     * Agregar seguimiento con evidencias - USA LA FECHA SELECCIONADA
      */
-    async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase, evidenciasConComentarios = []) {
+    async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase, evidenciasConComentarios = [], fechaSeleccionada) {
         try {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
             if (!incidencia) {
@@ -623,12 +630,15 @@ class IncidenciaManager {
                 }
             }
         
+            // CORRECCIÓN: Usar la fecha seleccionada por el usuario
+            const fechaSeguimiento = fechaSeleccionada || new Date();
+
             const nuevoSeguimiento = {
                 usuarioId,
                 usuarioNombre,
                 descripcion,
                 evidencias: evidenciasUrls,
-                fecha: serverTimestamp()
+                fecha: fechaSeguimiento // ← AHORA USA LA FECHA DEL FORMULARIO
             };
         
             const collectionName = this._getCollectionName(organizacionCamelCase);

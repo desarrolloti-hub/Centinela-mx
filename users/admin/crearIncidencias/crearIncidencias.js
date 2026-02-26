@@ -1094,28 +1094,6 @@ class CrearIncidenciaController {
 
         const confirmResult = await Swal.fire({
             title: '¿Crear incidencia?',
-            html: `
-                <div style="text-align: left; max-height: 400px; overflow-y: auto;">
-                    <p><strong>Organización:</strong> ${this.usuarioActual.organizacion}</p>
-                    <p><strong>Sucursal:</strong> ${sucursalNombre}</p>
-                    <p><strong>Categoría:</strong> ${categoriaNombre}</p>
-                    <p><strong>Subcategoría:</strong> ${subcategoriaNombre}</p>
-                    <p><strong>Nivel de Riesgo:</strong> 
-                        <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; 
-                            background: ${this._getRiesgoColor(datos.nivelRiesgo)}20; 
-                            color: ${this._getRiesgoColor(datos.nivelRiesgo)};">
-                            ${riesgoTexto}
-                        </span>
-                    </p>
-                    <p><strong>Estado:</strong> ${estadoTexto}</p>
-                    <p><strong>Fecha/Hora:</strong> ${datos.fechaHora}</p>
-                    <p><strong>Descripción:</strong><br>
-                        <span style="color: var(--color-text-secondary);">${this._escapeHTML(datos.detalles.substring(0, 200))}${datos.detalles.length > 200 ? '...' : ''}</span>
-                    </p>
-                    <p><strong>Imágenes:</strong> ${datos.imagenes.length} seleccionada(s)</p>
-                    ${imagenesConComentarios > 0 ? `<p><strong>Con comentarios:</strong> ${imagenesConComentarios}</p>` : ''}
-                </div>
-            `,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'CREAR INCIDENCIA',
@@ -1184,16 +1162,6 @@ class CrearIncidenciaController {
             await Swal.fire({
                 icon: 'success',
                 title: '¡Incidencia creada!',
-                html: `
-                    <div style="text-align: left;">
-                        <p><strong>ID:</strong> <span style="color: var(--color-accent-primary);">${nuevaIncidencia.id}</span></p>
-                        <p><strong>Sucursal:</strong> ${sucursalNombre}</p>
-                        <p><strong>Categoría:</strong> ${categoriaNombre}</p>
-                        <p><strong>Imágenes subidas:</strong> ${datos.imagenes.length}</p>
-                        <p><strong>Imágenes con comentarios:</strong> ${datos.imagenes.filter(img => img.comentario).length}</p>
-                        <p><em>Nota:</em> La incidencia se creó sin seguimientos automáticos</p>
-                    </div>
-                `,
                 confirmButtonText: 'Ver incidencias'
             });
 
