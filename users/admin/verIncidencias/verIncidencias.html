@@ -45,14 +45,13 @@
                     Ver Detalle de Incidencia
                 </h1>
                 <div class="header-description-text">
-                    <i class="fas fa-clipboard-list"></i>
                     "Visualiza toda la información de la incidencia seleccionada"
                 </div>
             </div>
         </div>
 
         <!-- ============================================= -->
-        <!-- FORMULARIO ÚNICO: INFORMACIÓN DE LA INCIDENCIA -->
+        <!-- SECCIÓN 1: INFORMACIÓN DE LA INCIDENCIA -->
         <!-- ============================================= -->
         <div class="form-row">
             <div class="full-width">
@@ -67,13 +66,12 @@
                     </div>
                     <div class="card-body">
                         <form id="formVerIncidencia">
-                            <!-- Grid de UNA sola columna -->
                             <div class="form-grid" style="grid-template-columns: 1fr;">
                                 <div class="full-width">
                                     <h6 class="section-title"><i class="fas fa-info-circle"></i>Información Básica</h6>
                                 </div>
 
-                                <!-- ID de Incidencia (solo lectura) -->
+                                <!-- ID de Incidencia -->
                                 <div class="full-width">
                                     <label for="incidenciaId" class="form-label">ID de Incidencia</label>
                                     <div class="input-group">
@@ -83,7 +81,7 @@
                                     <div class="form-help-text">Identificador único de la incidencia</div>
                                 </div>
 
-                                <!-- Organización (solo lectura) -->
+                                <!-- Organización -->
                                 <div class="full-width">
                                     <label for="organization" class="form-label">Organización</label>
                                     <div class="input-group">
@@ -93,7 +91,7 @@
                                     <div class="form-help-text">Organización a la que pertenece la incidencia</div>
                                 </div>
 
-                                <!-- Sucursal (solo lectura) -->
+                                <!-- Sucursal -->
                                 <div class="full-width">
                                     <label for="sucursalIncidencia" class="form-label">Sucursal</label>
                                     <div class="input-group">
@@ -103,7 +101,7 @@
                                     <div class="form-help-text">Sucursal donde ocurrió la incidencia</div>
                                 </div>
 
-                                <!-- Categoría (solo lectura) -->
+                                <!-- Categoría -->
                                 <div class="full-width">
                                     <label for="categoriaIncidencia" class="form-label">Categoría</label>
                                     <div class="input-group">
@@ -113,7 +111,7 @@
                                     <div class="form-help-text">Categoría de la incidencia</div>
                                 </div>
 
-                                <!-- Subcategoría (solo lectura) -->
+                                <!-- Subcategoría -->
                                 <div class="full-width">
                                     <label for="subcategoriaIncidencia" class="form-label">Subcategoría</label>
                                     <div class="input-group">
@@ -148,7 +146,7 @@
                                     <div class="form-help-text">Estado actual de la incidencia</div>
                                 </div>
 
-                                <!-- Fecha y Hora de creación -->
+                                <!-- Fecha de Creación -->
                                 <div class="full-width">
                                     <label for="fechaCreacion" class="form-label">Fecha de Creación</label>
                                     <div class="input-group">
@@ -158,7 +156,7 @@
                                     <div class="form-help-text">Fecha y hora en que se registró la incidencia</div>
                                 </div>
 
-                                <!-- Fecha y Hora del incidente -->
+                                <!-- Fecha del Incidente -->
                                 <div class="full-width">
                                     <label for="fechaHoraIncidencia" class="form-label">Fecha y Hora del
                                         Incidente</label>
@@ -169,7 +167,7 @@
                                     <div class="form-help-text">Fecha y hora en que ocurrió la incidencia</div>
                                 </div>
 
-                                <!-- Fecha de finalización (si está finalizada) -->
+                                <!-- Fecha de Finalización -->
                                 <div class="full-width" id="fechaFinalizacionContainer" style="display: none;">
                                     <label for="fechaFinalizacion" class="form-label">Fecha de Finalización</label>
                                     <div class="input-group">
@@ -189,7 +187,7 @@
                                     <div class="form-help-text">Usuario que reportó la incidencia</div>
                                 </div>
 
-                                <!-- Descripción/Detalles -->
+                                <!-- Descripción -->
                                 <div class="full-width">
                                     <label for="detallesIncidencia" class="form-label">Descripción de la
                                         Incidencia</label>
@@ -216,7 +214,6 @@
                         <h5><i class="fas fa-images"></i>Evidencias Fotográficas</h5>
                     </div>
                     <div class="card-body">
-                        <!-- Vista de imágenes -->
                         <div class="images-preview-container">
                             <h6>
                                 <i class="fas fa-images"></i>
@@ -230,30 +227,53 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <br>
-
-                    <!-- Modal para ver imagen ampliada -->
-                    <div id="imageViewerModal" class="modal">
-                        <div class="modal-content" style="max-width: 900px;">
-                            <div class="modal-header">
-                                <h5><i class="fas fa-image"></i> Visualizar Imagen</h5>
-                                <button type="button" class="modal-close" id="btnCerrarModal">&times;</button>
-                            </div>
-                            <div class="modal-body" style="text-align: center;">
-                                <img id="modalImage" src="" alt="Imagen ampliada"
-                                    style="max-width: 100%; max-height: 70vh;">
-                                <div class="image-info" id="modalImageInfo" style="margin-top: 15px;"></div>
+        <!-- ============================================= -->
+        <!-- SECCIÓN 3: SEGUIMIENTO -->
+        <!-- ============================================= -->
+        <div class="form-row" style="margin-top: 20px;">
+            <div class="full-width">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-history"></i>Seguimiento de la Incidencia</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="seguimiento-container" id="seguimientoContainer">
+                            <div class="no-seguimiento">
+                                <i class="fas fa-comment-dots"></i>
+                                <p>No hay registros de seguimiento</p>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <!-- Scripts -->
-                    <script type="module" src="/components/themeloader.js"></script>
-                    <script type="module" src="/components/particulas.js"></script>
-                    <script src="/components/navbar-admin-component.js"></script>
-                    <script src="/components/footer-admin-component.js"></script>
-                    <script type="module" src="verIncidencias.js"></script>
+    <br>
+
+    <!-- Modal para ver imagen ampliada -->
+    <div id="imageViewerModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h5><i class="fas fa-image"></i> Visualizar Imagen</h5>
+                <button type="button" class="modal-close" id="btnCerrarModal">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <img id="modalImage" src="" alt="Imagen ampliada" style="max-width: 100%; max-height: 70vh;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="/components/themeloader.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script src="/components/navbar-admin-component.js"></script>
+    <script src="/components/footer-admin-component.js"></script>
+    <script type="module" src="verIncidencias.js"></script>
 </body>
 
 </html>

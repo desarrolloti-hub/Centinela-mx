@@ -271,18 +271,6 @@ class VerIncidenciaController {
         detallesInput.value = this.incidencia.detalles || '';
         this._actualizarContador('detallesIncidencia', 'contadorCaracteres', LIMITES.DETALLES_INCIDENCIA);
 
-        // Metadatos
-        document.getElementById('creadoPor').textContent = this.incidencia.creadoPorNombre || 'Usuario';
-        document.getElementById('fechaCreacionMeta').textContent = this.incidencia.getFechaCreacionFormateada();
-
-        if (this.incidencia.fechaActualizacion) {
-            document.getElementById('fechaActualizacion').textContent = this._formatearFecha(this.incidencia.fechaActualizacion);
-        } else {
-            document.getElementById('fechaActualizacion').textContent = 'No disponible';
-        }
-
-        document.getElementById('actualizadoPor').textContent = this.incidencia.actualizadoPorNombre || 'Usuario';
-
         // Imágenes
         this._renderizarImagenes();
 
@@ -434,14 +422,9 @@ class VerIncidenciaController {
     _verImagen(url) {
         const modal = document.getElementById('imageViewerModal');
         const modalImg = document.getElementById('modalImage');
-        const modalInfo = document.getElementById('modalImageInfo');
 
         if (modal && modalImg) {
             modalImg.src = url;
-            if (modalInfo) {
-                const nombreArchivo = url.split('/').pop() || 'Imagen';
-                modalInfo.textContent = nombreArchivo;
-            }
             modal.style.display = 'block';
             document.body.style.overflow = 'hidden';
         }
@@ -452,7 +435,6 @@ class VerIncidenciaController {
     _configurarEventos() {
         // Botones volver
         document.getElementById('btnVolverLista')?.addEventListener('click', () => this._volverALista());
-        document.getElementById('btnVolver')?.addEventListener('click', () => this._volverALista());
     }
 
     // ========== NAVEGACIÓN ==========
