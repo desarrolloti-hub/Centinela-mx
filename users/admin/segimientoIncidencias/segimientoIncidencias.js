@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN CORREGIDA (MUESTRA EVIDENCIAS ORIGINALES)
+// seguimientoIncidencia.js - VERSIÓN CORREGIDA (VALIDACIÓN DE FECHAS)
 
 // =============================================
 // VARIABLES GLOBALES
@@ -12,6 +12,7 @@ let evidenciasSeleccionadas = []; // Array de objetos { file, preview, comentari
 let fechaIncidencia = null;
 let fechaMinima = null;
 let fechaMaxima = null;
+let fechaUltimoSeguimiento = null;
 let imageEditorModal = null;
 let historialCollapsed = false;
 
@@ -369,7 +370,7 @@ async function inicializarSeguimiento() {
         await cargarDatosRelacionados();
         
         mostrarInfoIncidencia();
-        mostrarEvidenciasOriginales(); // AHORA FUNCIONA CON OBJETOS
+        mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
         configurarFechaSeguimiento();
         configurarEventos();
@@ -482,7 +483,16 @@ async function cargarIncidencia(incidenciaId) {
         }
 
         fechaIncidencia = incidenciaActual.fechaInicio;
-        fechaMinima = fechaIncidencia;
+        
+        // Obtener la fecha del último seguimiento
+        const seguimientos = incidenciaActual.getSeguimientosArray();
+        if (seguimientos.length > 0) {
+            fechaUltimoSeguimiento = seguimientos[seguimientos.length - 1].fecha;
+        } else {
+            fechaUltimoSeguimiento = fechaIncidencia;
+        }
+        
+        fechaMinima = fechaUltimoSeguimiento; // No puede ser antes del último seguimiento
         fechaMaxima = new Date();
 
         document.getElementById('incidenciaId').textContent = incidenciaActual.id;
@@ -578,7 +588,7 @@ function validarFechaSeguimiento(fecha) {
     if (!fecha) return true;
 
     if (fecha < fechaMinima) {
-        mostrarError('La fecha del seguimiento no puede ser anterior a la fecha de la incidencia');
+        mostrarError(`La fecha del seguimiento no puede ser anterior al último seguimiento (${formatearFechaCompacta(fechaMinima)})`);
         return false;
     }
 
@@ -658,6 +668,8 @@ function formatearFecha(fecha) {
     if (!fecha) return 'No disponible';
     try {
         const date = fecha instanceof Date ? fecha : new Date(fecha);
+        if (isNaN(date.getTime())) return 'Fecha inválida';
+        
         return date.toLocaleDateString('es-MX', {
             year: 'numeric',
             month: 'long',
@@ -673,13 +685,25 @@ function formatearFecha(fecha) {
 function formatearFechaCompacta(fecha) {
     if (!fecha) return 'N/A';
     try {
+        // Si es timestamp de Firestore
+        if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
+            const date = new Date(fecha.seconds * 1000);
+            return date.toLocaleDateString('es-MX', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
         const date = fecha instanceof Date ? fecha : new Date(fecha);
         if (isNaN(date.getTime())) return 'Fecha inválida';
         
         return date.toLocaleDateString('es-MX', {
             day: '2-digit',
             month: '2-digit',
-            year: '2-digit',
+            year: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
         });
@@ -689,7 +713,7 @@ function formatearFechaCompacta(fecha) {
 }
 
 // =============================================
-// MOSTRAR EVIDENCIAS ORIGINALES (CORREGIDO)
+// MOSTRAR EVIDENCIAS ORIGINALES
 // =============================================
 function mostrarEvidenciasOriginales() {
     const container = document.getElementById('galeriaOriginal');
@@ -715,7 +739,6 @@ function mostrarEvidenciasOriginales() {
 
     let html = '';
     imagenes.forEach((img, index) => {
-        // Determinar si es objeto (con comentario) o string
         const url = typeof img === 'string' ? img : img.url;
         const comentario = typeof img === 'object' && img.comentario ? img.comentario : '';
         
@@ -736,7 +759,7 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO
+// MOSTRAR HISTORIAL DE SEGUIMIENTO (VERSIÓN LIMPIA)
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
@@ -761,42 +784,40 @@ function mostrarHistorialSeguimiento() {
         return;
     }
 
-    let html = '';
+    let html = '<div class="timeline-simple">';
     seguimientos.forEach((seg, index) => {
         const fecha = seg.fecha ? formatearFechaCompacta(seg.fecha) : 'Fecha no disponible';
         const evidencias = seg.evidencias || [];
         const idSeguimiento = seg.id || `SEG-${index + 1}`;
         
         html += `
-            <div class="timeline-item">
-                <div class="timeline-icon">
-                    <i class="fas fa-${index === 0 ? 'star' : 'comment'}"></i>
-                </div>
-                <div class="timeline-content">
-                    <div class="timeline-header">
-                        <div class="timeline-user">
-                            <i class="fas fa-user-circle"></i>
-                            <span>${escapeHTML(seg.usuarioNombre || 'Usuario')}</span>
-                            <span class="timeline-id-badge">${idSeguimiento}</span>
+            <div class="timeline-simple-item">
+                <div class="timeline-simple-marker"></div>
+                <div class="timeline-simple-content">
+                    <div class="timeline-simple-header">
+                        <div class="timeline-simple-user">
+                            <span class="timeline-simple-name">${escapeHTML(seg.usuarioNombre || 'Usuario')}</span>
+                            <span class="timeline-simple-badge">${idSeguimiento}</span>
                         </div>
-                        <div class="timeline-date">
-                            <i class="fas fa-calendar-alt"></i>
+                        <div class="timeline-simple-date">
+                            <i class="far fa-calendar-alt"></i>
                             <span>${fecha}</span>
                         </div>
                     </div>
-                    <div class="timeline-descripcion">
+                    
+                    <div class="timeline-simple-description">
                         ${escapeHTML(seg.descripcion || 'Sin descripción')}
                     </div>
         `;
 
         if (evidencias.length > 0) {
             html += `
-                    <div class="timeline-evidencias">
-                        <div class="timeline-evidencias-header">
+                    <div class="timeline-simple-evidencias">
+                        <div class="timeline-simple-evidencias-header">
                             <i class="fas fa-images"></i>
                             <span>${evidencias.length} ${evidencias.length === 1 ? 'evidencia' : 'evidencias'}</span>
                         </div>
-                        <div class="evidencias-grid">
+                        <div class="timeline-simple-evidencias-grid">
             `;
 
             evidencias.forEach((ev, evIndex) => {
@@ -804,9 +825,10 @@ function mostrarHistorialSeguimiento() {
                 const comentario = typeof ev === 'object' && ev.comentario ? ev.comentario : '';
                 
                 html += `
-                        <div class="evidencia-item" ${comentario ? `title="${escapeHTML(comentario)}"` : ''}>
-                            <img src="${url}" alt="Evidencia ${evIndex + 1}" loading="lazy" onclick="window.open('${url}', '_blank')">
-                        </div>
+                            <div class="timeline-simple-evidencia" onclick="window.open('${url}', '_blank')">
+                                <img src="${url}" alt="Evidencia ${evIndex + 1}" loading="lazy">
+                                ${comentario ? `<div class="timeline-simple-evidencia-comentario" title="${escapeHTML(comentario)}">${escapeHTML(comentario.substring(0, 30))}${comentario.length > 30 ? '...' : ''}</div>` : ''}
+                            </div>
                 `;
             });
 
@@ -821,6 +843,7 @@ function mostrarHistorialSeguimiento() {
             </div>
         `;
     });
+    html += '</div>';
 
     container.innerHTML = html;
 }
@@ -1121,6 +1144,7 @@ async function guardarSeguimiento(datos) {
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
+        // CORRECCIÓN: Pasar la fecha seleccionada al manager
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
@@ -1128,7 +1152,8 @@ async function guardarSeguimiento(datos) {
             datos.descripcion,
             archivos,
             usuarioActual.organizacionCamelCase,
-            datos.evidencias // Pasamos los objetos completos con comentarios
+            datos.evidencias, // Objetos completos con comentarios
+            datos.fecha // ← Fecha seleccionada por el usuario
         );
 
         if (datos.nuevoEstado !== incidenciaActual.estado) {
@@ -1152,21 +1177,15 @@ async function guardarSeguimiento(datos) {
 
         // Actualizar UI
         mostrarInfoIncidencia();
-        mostrarEvidenciasOriginales(); // AHORA MUESTRA LAS IMÁGENES ORIGINALES
+        mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
 
         // Limpiar formulario
         document.getElementById('descripcionSeguimiento').value = '';
         actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
 
-        const fechaInput = document.getElementById('fechaSeguimiento');
-        if (fechaInput) {
-            if (fechaInput._flatpickr) {
-                fechaInput._flatpickr.setDate(new Date());
-            } else {
-                fechaInput.value = new Date().toISOString().slice(0, 16);
-            }
-        }
+        // Actualizar rango de fechas después de guardar
+        configurarFechaSeguimiento();
 
         ocultarCargando();
 
