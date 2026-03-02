@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN CORREGIDA (FECHAS VÁLIDAS)
+// seguimientoIncidencia.js - VERSIÓN CON EDITOR DE IMAGEN COMPONENTE
 
 // =============================================
 // VARIABLES GLOBALES
@@ -22,318 +22,15 @@ const LIMITES = {
 };
 
 // =============================================
-// CLASE EDITOR DE IMAGEN MODAL
-// =============================================
-class ImageEditorModal {
-    constructor() {
-        this.modal = document.getElementById('imageEditorModal');
-        this.canvas = document.getElementById('modalImageCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.image = null;
-        this.elements = [];
-        this.currentTool = 'circle';
-        this.currentColor = '#ff0000';
-        this.isDrawing = false;
-        this.startX = 0;
-        this.startY = 0;
-        this.currentFile = null;
-        this.currentIndex = -1;
-        this.onSaveCallback = null;
-        this.comentario = '';
-
-        this.init();
-    }
-
-    init() {
-        if (!this.modal) return;
-
-        document.getElementById('btnCerrarModal')?.addEventListener('click', () => this.hide());
-        document.getElementById('modalCancelar')?.addEventListener('click', () => this.hide());
-
-        document.getElementById('modalToolCircle')?.addEventListener('click', () => {
-            this.setTool('circle');
-            document.getElementById('modalToolCircle').classList.add('active');
-            document.getElementById('modalToolArrow').classList.remove('active');
-        });
-
-        document.getElementById('modalToolArrow')?.addEventListener('click', () => {
-            this.setTool('arrow');
-            document.getElementById('modalToolArrow').classList.add('active');
-            document.getElementById('modalToolCircle').classList.remove('active');
-        });
-
-        document.getElementById('modalColorPicker')?.addEventListener('input', (e) => {
-            this.currentColor = e.target.value;
-            document.getElementById('modalColorValue').textContent = e.target.value;
-        });
-
-        document.getElementById('modalLimpiarTodo')?.addEventListener('click', () => {
-            this.elements = [];
-            this.redrawCanvas();
-        });
-
-        document.getElementById('modalGuardarCambios')?.addEventListener('click', () => {
-            this.saveImage();
-        });
-
-        this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
-        this.canvas.addEventListener('mousemove', (e) => this.draw(e));
-        this.canvas.addEventListener('mouseup', () => this.stopDrawing());
-        this.canvas.addEventListener('mouseout', () => this.stopDrawing());
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.modal.style.display === 'block') {
-                this.hide();
-            }
-        });
-    }
-
-    show(file, index, comentario = '', onSaveCallback) {
-        this.currentFile = file;
-        this.currentIndex = index;
-        this.comentario = comentario;
-        this.onSaveCallback = onSaveCallback;
-        this.elements = [];
-
-        document.getElementById('modalToolCircle').classList.add('active');
-        document.getElementById('modalToolArrow').classList.remove('active');
-        this.currentTool = 'circle';
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            this.image = new Image();
-            this.image.onload = () => {
-                const maxWidth = 1000;
-                const maxHeight = 700;
-                let width = this.image.width;
-                let height = this.image.height;
-
-                if (width > maxWidth) {
-                    height = (maxWidth / width) * height;
-                    width = maxWidth;
-                }
-                if (height > maxHeight) {
-                    width = (maxHeight / height) * width;
-                    height = maxHeight;
-                }
-
-                this.canvas.width = width;
-                this.canvas.height = height;
-                this.redrawCanvas();
-
-                document.getElementById('modalImageInfo').textContent =
-                    `Editando: ${file.name} (${Math.round(width)}x${Math.round(height)})`;
-
-                document.getElementById('modalComentario').value = comentario || '';
-            };
-            this.image.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-
-        this.modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-    }
-
-    hide() {
-        this.modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        this.image = null;
-        this.elements = [];
-    }
-
-    setTool(tool) {
-        this.currentTool = tool;
-    }
-
-    redrawCanvas() {
-        if (!this.ctx || !this.image) return;
-
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
-
-        this.elements.forEach(el => {
-            this.ctx.beginPath();
-            this.ctx.strokeStyle = el.color;
-            this.ctx.lineWidth = 3;
-            
-            if (el.type === 'circle') {
-                this.ctx.arc(el.x, el.y, el.radius, 0, 2 * Math.PI);
-                this.ctx.stroke();
-            } else if (el.type === 'arrow') {
-                const angle = Math.atan2(el.endY - el.startY, el.endX - el.startX);
-                const arrowLength = 15;
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(el.startX, el.startY);
-                this.ctx.lineTo(el.endX, el.endY);
-                this.ctx.stroke();
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(el.endX, el.endY);
-                this.ctx.lineTo(
-                    el.endX - arrowLength * Math.cos(angle - Math.PI / 6),
-                    el.endY - arrowLength * Math.sin(angle - Math.PI / 6)
-                );
-                this.ctx.lineTo(
-                    el.endX - arrowLength * Math.cos(angle + Math.PI / 6),
-                    el.endY - arrowLength * Math.sin(angle + Math.PI / 6)
-                );
-                this.ctx.closePath();
-                this.ctx.fillStyle = el.color;
-                this.ctx.fill();
-            }
-        });
-    }
-
-    hexToRgba(hex, alpha) {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-
-    startDrawing(e) {
-        if (!this.image) return;
-
-        this.isDrawing = true;
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-
-        this.startX = (e.clientX - rect.left) * scaleX;
-        this.startY = (e.clientY - rect.top) * scaleY;
-    }
-
-    draw(e) {
-        if (!this.isDrawing || !this.image) return;
-
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-
-        const currentX = (e.clientX - rect.left) * scaleX;
-        const currentY = (e.clientY - rect.top) * scaleY;
-
-        this.redrawCanvas();
-        
-        this.ctx.beginPath();
-        this.ctx.strokeStyle = this.currentColor;
-        this.ctx.lineWidth = 3;
-
-        if (this.currentTool === 'circle') {
-            const radius = Math.sqrt(
-                Math.pow(currentX - this.startX, 2) +
-                Math.pow(currentY - this.startY, 2)
-            );
-            this.ctx.arc(this.startX, this.startY, radius, 0, 2 * Math.PI);
-            this.ctx.stroke();
-        } else if (this.currentTool === 'arrow') {
-            this.ctx.moveTo(this.startX, this.startY);
-            this.ctx.lineTo(currentX, currentY);
-            this.ctx.stroke();
-
-            const angle = Math.atan2(currentY - this.startY, currentX - this.startX);
-            const arrowLength = 15;
-
-            this.ctx.beginPath();
-            this.ctx.moveTo(currentX, currentY);
-            this.ctx.lineTo(
-                currentX - arrowLength * Math.cos(angle - Math.PI / 6),
-                currentY - arrowLength * Math.sin(angle - Math.PI / 6)
-            );
-            this.ctx.lineTo(
-                currentX - arrowLength * Math.cos(angle + Math.PI / 6),
-                currentY - arrowLength * Math.sin(angle + Math.PI / 6)
-            );
-            this.ctx.closePath();
-            this.ctx.fillStyle = this.currentColor;
-            this.ctx.fill();
-        }
-    }
-
-    stopDrawing() {
-        if (!this.isDrawing || !this.image) return;
-
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-
-        const lastMouseHandler = (e) => {
-            const currentX = (e.clientX - rect.left) * scaleX;
-            const currentY = (e.clientY - rect.top) * scaleY;
-
-            if (this.currentTool === 'circle') {
-                const radius = Math.sqrt(
-                    Math.pow(currentX - this.startX, 2) +
-                    Math.pow(currentY - this.startY, 2)
-                );
-
-                if (radius > 5) {
-                    this.elements.push({
-                        type: 'circle',
-                        x: this.startX,
-                        y: this.startY,
-                        radius: radius,
-                        color: this.currentColor
-                    });
-                }
-            } else if (this.currentTool === 'arrow') {
-                const distance = Math.sqrt(
-                    Math.pow(currentX - this.startX, 2) +
-                    Math.pow(currentY - this.startY, 2)
-                );
-
-                if (distance > 5) {
-                    this.elements.push({
-                        type: 'arrow',
-                        startX: this.startX,
-                        startY: this.startY,
-                        endX: currentX,
-                        endY: currentY,
-                        color: this.currentColor
-                    });
-                }
-            }
-
-            this.redrawCanvas();
-            document.removeEventListener('mousemove', lastMouseHandler);
-        };
-
-        document.addEventListener('mousemove', lastMouseHandler);
-        this.isDrawing = false;
-    }
-
-    saveImage() {
-        if (!this.canvas || !this.currentFile) return;
-
-        const comentario = document.getElementById('modalComentario').value;
-
-        this.canvas.toBlob((blob) => {
-            const editedFile = new File([blob], `edited_${this.currentFile.name}`, {
-                type: 'image/png'
-            });
-
-            if (this.onSaveCallback) {
-                this.onSaveCallback(this.currentIndex, editedFile, comentario, this.elements);
-            }
-
-            this.hide();
-        }, 'image/png');
-    }
-}
-
-// =============================================
 // FUNCIÓN PARA CONVERTIR FECHAS DE FIRESTORE
 // =============================================
 function convertirFechaFirestore(fecha) {
     if (!fecha) return null;
     
-    // Si es timestamp de Firestore con seconds y nanoseconds
     if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
         return new Date(fecha.seconds * 1000);
     }
     
-    // Si es un objeto Date normal o string
     try {
         const date = new Date(fecha);
         if (!isNaN(date.getTime())) {
@@ -401,7 +98,8 @@ async function inicializarSeguimiento() {
         inicializarValidaciones();
         configurarCollapsible();
 
-        imageEditorModal = new ImageEditorModal();
+        // Inicializar el editor de imágenes componente
+        imageEditorModal = new window.ImageEditorModal();
 
         console.log('Seguimiento inicializado correctamente');
 
@@ -508,7 +206,6 @@ async function cargarIncidencia(incidenciaId) {
 
         fechaIncidencia = convertirFechaFirestore(incidenciaActual.fechaInicio) || new Date();
         
-        // Obtener la fecha del último seguimiento
         const seguimientos = incidenciaActual.getSeguimientosArray();
         if (seguimientos.length > 0) {
             fechaUltimoSeguimiento = convertirFechaFirestore(seguimientos[seguimientos.length - 1].fecha) || fechaIncidencia;
@@ -516,7 +213,7 @@ async function cargarIncidencia(incidenciaId) {
             fechaUltimoSeguimiento = fechaIncidencia;
         }
         
-        fechaMinima = fechaUltimoSeguimiento; // No puede ser antes del último seguimiento
+        fechaMinima = fechaUltimoSeguimiento;
         fechaMaxima = new Date();
 
         document.getElementById('incidenciaId').textContent = incidenciaActual.id;
@@ -561,7 +258,6 @@ function configurarFechaSeguimiento() {
 
     const ahora = new Date();
 
-    // Asegurar que las fechas sean objetos Date válidos
     const minDate = fechaMinima instanceof Date ? fechaMinima : new Date();
     const maxDate = fechaMaxima instanceof Date ? fechaMaxima : new Date();
 
@@ -617,7 +313,6 @@ function formatearFechaParaHelp(fecha) {
 function validarFechaSeguimiento(fecha) {
     if (!fecha) return true;
 
-    // Asegurar que fechaMinima sea Date
     const minDate = fechaMinima instanceof Date ? fechaMinima : new Date(fechaMinima);
     const maxDate = fechaMaxima instanceof Date ? fechaMaxima : new Date();
 
@@ -806,7 +501,6 @@ function mostrarHistorialSeguimiento() {
         return;
     }
 
-    // Ordenar del más antiguo al más reciente para mostrar en orden cronológico
     const seguimientosOrdenados = [...seguimientos].sort((a, b) => {
         const fechaA = a.fecha ? convertirFechaFirestore(a.fecha) : 0;
         const fechaB = b.fecha ? convertirFechaFirestore(b.fecha) : 0;
@@ -1179,8 +873,8 @@ async function guardarSeguimiento(datos) {
             datos.descripcion,
             archivos,
             usuarioActual.organizacionCamelCase,
-            datos.evidencias, // Objetos completos con comentarios
-            datos.fecha // ← Fecha seleccionada por el usuario
+            datos.evidencias,
+            datos.fecha
         );
 
         if (datos.nuevoEstado !== incidenciaActual.estado) {
@@ -1192,26 +886,21 @@ async function guardarSeguimiento(datos) {
             );
         }
 
-        // Limpiar evidencias
         evidenciasSeleccionadas.forEach(ev => {
             if (ev.preview) URL.revokeObjectURL(ev.preview);
         });
         evidenciasSeleccionadas = [];
         actualizarVistaPreviaEvidencias();
 
-        // Recargar incidencia
         await cargarIncidencia(incidenciaActual.id);
 
-        // Actualizar UI
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
 
-        // Limpiar formulario
         document.getElementById('descripcionSeguimiento').value = '';
         actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
 
-        // Actualizar rango de fechas después de guardar
         configurarFechaSeguimiento();
 
         ocultarCargando();

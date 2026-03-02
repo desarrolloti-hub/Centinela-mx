@@ -1,4 +1,6 @@
-// areas.js - VERSIÓN ACTUALIZADA (CON BÚSQUEDA Y PAGINACIÓN)
+// areas.js - VERSIÓN CORREGIDA
+// - No permite eliminar áreas con cargos
+// - Sin redirección al login (auth será componente posterior)
 
 window.appDebug = {
     estado: 'iniciando',
@@ -64,11 +66,28 @@ class AreasController {
         this.areas = []; // Áreas filtradas para mostrar
         this.filaExpandida = null;
 
+        // Cargar datos del usuario desde localStorage sin redirección al login
         this.userManager = this.cargarUsuarioDesdeStorage();
-
+        
+        // Si no hay usuario, usar valores por defecto (no redirigir)
         if (!this.userManager || !this.userManager.currentUser) {
-            this.redirigirAlLogin();
-            return;
+            console.warn('No se encontró usuario en localStorage, usando valores por defecto');
+            this.userManager = {
+                currentUser: {
+                    id: 'default-user',
+                    nombre: 'Usuario',
+                    nombreCompleto: 'Usuario',
+                    rol: 'colaborador',
+                    organizacion: 'Mi Organización',
+                    organizacionCamelCase: 'miOrganizacion',
+                    correo: '',
+                    fotoUsuario: null,
+                    fotoOrganizacion: null,
+                    esSuperAdmin: false,
+                    esAdminOrganizacion: false,
+                    timestamp: new Date().toISOString()
+                }
+            };
         }
     }
 
@@ -76,6 +95,7 @@ class AreasController {
         try {
             let userData = null;
 
+            // Intentar cargar desde adminInfo
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -95,6 +115,7 @@ class AreasController {
                 };
             }
 
+            // Si no hay adminInfo, intentar con userData
             if (!userData) {
                 const storedUserData = localStorage.getItem('userData');
                 if (storedUserData) {
@@ -103,10 +124,12 @@ class AreasController {
                 }
             }
 
+            // Si aún no hay datos, retornar null
             if (!userData) {
                 return null;
             }
 
+            // Asegurar campos requeridos
             if (!userData.id) userData.id = `user_${Date.now()}`;
             if (!userData.organizacion) userData.organizacion = 'Sin organización';
             if (!userData.organizacionCamelCase) {
@@ -118,6 +141,7 @@ class AreasController {
             return { currentUser: userData };
 
         } catch (error) {
+            console.warn('Error cargando usuario desde storage:', error);
             return null;
         }
     }
@@ -130,17 +154,6 @@ class AreasController {
             .replace(/[\u0300-\u036f]/g, "")
             .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
             .replace(/[^a-zA-Z0-9]/g, '');
-    }
-
-    redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión expirada',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/users/visitors/login/login.html';
-        });
     }
 
     // =============================================
@@ -348,16 +361,12 @@ class AreasController {
     }
 
     // =============================================
-    // MÉTODOS ORIGINALES (MODIFICADOS PARA USAR this.areas)
+    // MÉTODOS PRINCIPALES
     // =============================================
     init() {
-        if (!this.userManager || !this.userManager.currentUser) {
-            this.redirigirAlLogin();
-            return;
-        }
-
+        // No validar sesión, solo cargar áreas
         this.actualizarBadgeEmpresa();
-        this.configurarBusqueda(); // Agregar barra de búsqueda
+        this.configurarBusqueda();
         this.inicializarEventos();
         this.cargarAreas();
     }
@@ -413,6 +422,7 @@ class AreasController {
             this.actualizarTablaConPaginacion();
             this.ocultarCargando();
         } catch (error) {
+            console.error('Error cargando áreas:', error);
             this.mostrarError('Error cargando áreas');
         }
     }
@@ -697,10 +707,53 @@ class AreasController {
         }
     }
 
+    // =============================================
+    // ELIMINACIÓN DE ÁREA - CORREGIDA: NO PERMITIR SI TIENE CARGOS
+    // =============================================
     solicitarEliminacion(areaId) {
+        // Buscar el área en todasLasAreas
+        const area = todasLasAreas.find(a => a.id === areaId);
+        if (!area) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Área no encontrada'
+            });
+            return;
+        }
+
+        const cantidadCargos = area.getCantidadCargos();
+
+        // VERIFICAR SI TIENE CARGOS - NO PERMITIR ELIMINACIÓN
+        if (cantidadCargos > 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No se puede eliminar',
+                html: `
+                    <p style="color: var(--color-text-primary); margin: 10px 0;">
+                        El área <strong style="color: #ffcc00;">"${this.escapeHTML(area.nombreArea)}"</strong> tiene <strong style="color: #ff4d4d;">${cantidadCargos} cargo(s)</strong> asignados.
+                    </p>
+                    <p style="color: var(--color-text-dim); font-size: 0.9rem; margin-top: 15px;">
+                        Debes eliminar todos los cargos antes de poder eliminar el área.
+                    </p>
+                `,
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#0B1E33'
+            });
+            return;
+        }
+
+        // Si no tiene cargos, proceder con la confirmación normal
         Swal.fire({
             title: '¿Eliminar área?',
-            text: "Esta acción no se puede deshacer",
+            html: `
+                <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
+                    <strong style="color: #ff4d4d;">"${this.escapeHTML(area.nombreArea)}"</strong>
+                </p>
+                <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
+                    Esta acción no se puede deshacer.
+                </p>
+            `,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'ELIMINAR',
@@ -827,9 +880,7 @@ class AreasController {
         }
     }
 
-    // Este método ya no se usa directamente, se reemplaza por actualizarTablaConPaginacion
     actualizarTabla() {
-        // Mantenido por compatibilidad, pero redirige al nuevo método
         this.actualizarTablaConPaginacion();
     }
 

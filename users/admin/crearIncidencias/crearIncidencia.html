@@ -303,86 +303,13 @@
         </div>
     </div>
 
-    <!-- ============================================= -->
-    <!-- MODAL EDITOR DE IMAGEN COMPLETO -->
-    <!-- ============================================= -->
-    <div id="imageEditorModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5><i class="fas fa-edit"></i> Editor de Imagen</h5>
-                <button type="button" class="modal-close" id="btnCerrarModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="editor-layout">
-                    <!-- Panel izquierdo - Canvas -->
-                    <div class="editor-canvas-panel">
-                        <div class="canvas-container">
-                            <canvas id="modalImageCanvas"></canvas>
-                        </div>
-                        <div class="image-info" id="modalImageInfo">
-                            Cargando imagen...
-                        </div>
-                    </div>
-
-                    <!-- Panel derecho - Herramientas -->
-                    <div class="editor-tools-panel">
-                        <div class="tools-section">
-                            <h6>Herramientas de dibujo</h6>
-                            <div class="tools-grid">
-                                <button type="button" class="tool-btn-large" id="modalToolCircle">
-                                    <i class="fas fa-circle"></i>
-                                    <span>Círculo</span>
-                                </button>
-                                <button type="button" class="tool-btn-large" id="modalToolArrow">
-                                    <i class="fas fa-arrow-right"></i>
-                                    <span>Flecha</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="tools-section">
-                            <h6>Color</h6>
-                            <div class="color-picker">
-                                <input type="color" id="modalColorPicker" value="#ff0000">
-                                <span class="color-value" id="modalColorValue">#ff0000</span>
-                            </div>
-                        </div>
-
-                        <div class="tools-section">
-                            <h6>Comentario</h6>
-                            <textarea id="modalComentario" class="form-control" rows="3"
-                                placeholder="Agrega un comentario sobre esta imagen..."></textarea>
-                        </div>
-
-                        <div class="tools-section">
-                            <h6>Acciones</h6>
-                            <div class="action-buttons-vertical">
-                                <button type="button" class="tool-btn-large" id="modalLimpiarTodo">
-                                    <i class="fas fa-eraser"></i>
-                                    <span>Limpiar todo</span>
-                                </button>
-                                <button type="button" class="tool-btn-large" id="modalGuardarCambios">
-                                    <i class="fas fa-save"></i>
-                                    <span>Guardar cambios</span>
-                                </button>
-                                <button type="button" class="tool-btn-large" id="modalCancelar">
-                                    <i class="fas fa-times"></i>
-                                    <span>Cancelar</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <br>
 
     <!-- Scripts -->
     <script type="module" src="/components/themeloader.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbar-admin-component.js"></script>
+    <script src="/components/imagenEditorEvidencias.js"></script>
     <script src="/components/footer-admin-component.js"></script>
     <script type="module" src="crearIncidencias.js"></script>
 </body>
