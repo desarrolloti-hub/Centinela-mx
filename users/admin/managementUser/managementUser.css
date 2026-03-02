@@ -889,7 +889,6 @@
     }
 
     .filtros-body {
-        flex-direction: column;
         align-items: stretch;
     }
 

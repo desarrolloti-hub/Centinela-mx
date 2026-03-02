@@ -45,7 +45,7 @@
 }
 
 /* =============================================
-   FILTROS / BÚSQUEDA - COMPONENTE COMO CATEGORÍAS
+   FILTROS / BÚSQUEDA - VERSIÓN RESPONSIVE CORREGIDA
    ============================================= */
 .filtros-container {
     background: var(--color-bg-secondary);
@@ -54,6 +54,7 @@
     box-shadow: var(--shadow-normal);
     margin-bottom: 30px;
     overflow: hidden;
+    width: 100%;
 }
 
 .filtros-header {
@@ -103,7 +104,7 @@
 }
 
 .filtro-input {
-    width: 95%;
+    width: 100%;
     padding: 10px 12px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--color-border-light);
@@ -112,6 +113,7 @@
     font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
     font-size: 0.9rem;
     transition: all 0.2s ease;
+    box-sizing: border-box;
 }
 
 .filtro-input:focus {
@@ -589,18 +591,42 @@
         padding: 0 10px;
     }
 
+    /* BÚSQUEDA RESPONSIVE MEJORADA */
     .filtros-body {
-        flex-direction: column;
         align-items: stretch;
+        gap: 15px;
+        padding: 15px;
     }
 
     .filtro-grupo {
         width: 100%;
+        min-width: 100%;
+    }
+
+    .filtro-grupo label {
+        margin-bottom: 8px;
+        font-size: 0.8rem;
+    }
+
+    .filtro-input {
+        padding: 12px 15px;
+        font-size: 1rem;
+        width: 100%;
     }
 
     .filtro-acciones {
+        width: 100%;
         flex-direction: row;
-        margin-top: 10px;
+        gap: 10px;
+        margin-top: 5px;
+    }
+
+    .btn-buscar,
+    .btn-limpiar {
+        flex: 1;
+        padding: 12px 10px;
+        font-size: 0.85rem;
+        white-space: nowrap;
     }
 
     .card-header {
@@ -687,13 +713,31 @@
         font-size: 0.9rem;
     }
 
+    /* BÚSQUEDA RESPONSIVE MÓVIL PEQUEÑO */
+    .filtros-body {
+        padding: 12px;
+    }
+
+    .filtro-grupo label {
+        font-size: 0.75rem;
+    }
+
+    .filtro-input {
+        padding: 10px 12px;
+        font-size: 0.95rem;
+    }
+
     .filtro-acciones {
         flex-direction: column;
+        gap: 8px;
     }
 
     .btn-buscar,
     .btn-limpiar {
         width: 100%;
+        padding: 12px 15px;
+        font-size: 0.9rem;
+        white-space: normal;
     }
 
     .btn-group {
@@ -742,6 +786,17 @@
 
     .page-header h1 {
         font-size: 1.3rem;
+    }
+
+    .filtro-input {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+
+    .btn-buscar,
+    .btn-limpiar {
+        padding: 10px 12px;
+        font-size: 0.8rem;
     }
 }
 

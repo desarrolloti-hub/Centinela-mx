@@ -1095,8 +1095,7 @@ tr.area-row.expanded .toggle-icon i {
 
 /* Responsive para búsqueda */
 @media (max-width: 768px) {
-    .filtros-body {
-        flex-direction: column;
+    .filtros-body { 
         align-items: stretch;
     }
 
