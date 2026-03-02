@@ -30,14 +30,14 @@ class NavbarComplete {
             this.removeOriginalNavbar();
             this.createNavbar();
             this.setupFunctionalities();
-            
+
             // PRIMERO: Cargar desde localStorage (inmediato)
             this.loadAdminDataFromLocalStorage();
             this.updateNavbarWithAdminData();
-            
+
             // SEGUNDO: Cargar desde Firebase para actualizar (si hay cambios)
             await this.loadAdminDataFromFirebase();
-            
+
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
         }
@@ -452,7 +452,7 @@ class NavbarComplete {
             }
             
             .administracion-dropdown-options.active {
-                max-height: 350px;
+                max-height: 500px;
                 opacity: 1;
                 overflow: visible;
             }
@@ -593,7 +593,7 @@ class NavbarComplete {
             }
             
             .admin-dropdown-options.active {
-                max-height: 450px;
+                max-height: 500px;
                 opacity: 1;
                 overflow: visible;
             }
@@ -713,7 +713,7 @@ class NavbarComplete {
                 }
 
                 .administracion-dropdown-options.active {
-                    max-height: 400px;
+                    max-height: 500px;
                 }
             }
             
@@ -786,7 +786,7 @@ class NavbarComplete {
                 }
                 
                 .admin-dropdown-options.active {
-                    max-height: 500px;
+                    max-height: 550px;
                 }
 
                 .administracion-dropdown-options {
@@ -794,7 +794,7 @@ class NavbarComplete {
                 }
                 
                 .administracion-dropdown-options.active {
-                    max-height: 450px;
+                    max-height: 500px;
                 }
                 
                 .admin-dropdown-option {
@@ -905,7 +905,7 @@ class NavbarComplete {
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
-        navbar.innerHTML = /*html*/`
+        navbar.innerHTML = `
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
@@ -988,7 +988,7 @@ class NavbarComplete {
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
                     
-                    <!-- Contenedor de opciones expandido con los 4 botones -->
+                    <!-- Contenedor de opciones expandido con los 5 botones (Áreas, Categorías, Sucursales, Regiones, Incidencias) -->
                     <div class="administracion-dropdown-options" id="administracionDropdownOptions">
                         <!-- Botón para ÁREAS -->
                         <a href="/users/admin/areas/areas.html" class="administracion-dropdown-option" id="areasBtn">
@@ -1002,16 +1002,22 @@ class NavbarComplete {
                             <span>Categorías</span>
                         </a>
 
-                        <!-- Botón para SUCURSALES (NUEVO) -->
+                        <!-- Botón para SUCURSALES -->
                         <a href="/users/admin/sucursales/sucursales.html" class="administracion-dropdown-option" id="sucursalesBtn">
                             <i class="fa-solid fa-store"></i>
                             <span>Sucursales</span>
                         </a>
 
-                        <!-- Botón para REGIONES (NUEVO) -->
+                        <!-- Botón para REGIONES -->
                         <a href="/users/admin/regiones/regiones.html" class="administracion-dropdown-option" id="regionesBtn">
                             <i class="fa-solid fa-location-dot"></i>
                             <span>Regiones</span>
+                        </a>
+
+                        <!-- Botón para INCIDENCIAS (NUEVO) -->
+                        <a href="/users/admin/Incidencias/Incidencias.html" class="administracion-dropdown-option" id="incidenciasBtn">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Incidencias</span>
                         </a>
                     </div>
                 </div>
@@ -1073,19 +1079,19 @@ class NavbarComplete {
     loadAdminDataFromLocalStorage() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            
+
             if (!isLoggedIn) {
                 return false;
             }
-            
+
             const userDataString = localStorage.getItem('userData');
-            
+
             if (userDataString) {
                 const userData = JSON.parse(userDataString);
-                
+
                 let fotoUsuario = null;
                 let fotoOrganizacion = null;
-                
+
                 if (userData.fotoUsuario && userData.fotoUsuario.length > 10) {
                     fotoUsuario = userData.fotoUsuario;
                 } else {
@@ -1094,7 +1100,7 @@ class NavbarComplete {
                         fotoUsuario = userFotoKey;
                     }
                 }
-                
+
                 if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) {
                     fotoOrganizacion = userData.fotoOrganizacion;
                 } else {
@@ -1103,7 +1109,7 @@ class NavbarComplete {
                         fotoOrganizacion = orgLogoKey;
                     }
                 }
-                
+
                 this.currentAdmin = {
                     id: userData.id || localStorage.getItem('userId'),
                     uid: userData.id,
@@ -1118,10 +1124,10 @@ class NavbarComplete {
                     verificado: userData.verificado || true,
                     ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
                 };
-                
+
                 return true;
             }
-            
+
             this.currentAdmin = {
                 id: localStorage.getItem('userId'),
                 correoElectronico: localStorage.getItem('userEmail'),
@@ -1132,13 +1138,13 @@ class NavbarComplete {
                 fotoUsuario: localStorage.getItem('userFoto') || null,
                 fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
             };
-            
+
             if (this.currentAdmin.nombreCompleto && this.currentAdmin.rol) {
                 return true;
             }
-            
+
             return false;
-            
+
         } catch (error) {
             return false;
         }
@@ -1156,10 +1162,10 @@ class NavbarComplete {
 
             if (this.userManager.currentUser) {
                 const firebaseUser = this.userManager.currentUser;
-                
+
                 // Verificar si hubo cambios comparando con localStorage
                 let needsUpdate = false;
-                
+
                 if (!this.currentAdmin) {
                     needsUpdate = true;
                 } else {
@@ -1170,22 +1176,22 @@ class NavbarComplete {
                     if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
                     if (firebaseUser.rol !== this.currentAdmin.rol) needsUpdate = true;
                 }
-                
+
                 if (needsUpdate) {
                     this.currentAdmin = {
                         ...this.currentAdmin,
                         ...firebaseUser,
                         rol: firebaseUser.rol
                     };
-                    
+
                     // Actualizar el navbar con los nuevos datos
                     this.updateNavbarWithAdminData();
-                    
+
                     // Actualizar localStorage para futuras cargas
                     this.updateLocalStorageFromFirebase(firebaseUser);
                 }
             }
-            
+
         } catch (error) {
             // Silencioso - no interrumpir la experiencia del usuario
         }
@@ -1211,9 +1217,9 @@ class NavbarComplete {
                 verificado: userData.verificado,
                 ultimoAcceso: userData.ultimoAcceso
             };
-            
+
             localStorage.setItem('userData', JSON.stringify(updatedUserData));
-            
+
             // Actualizar claves individuales
             if (userData.fotoUsuario) localStorage.setItem('userFoto', userData.fotoUsuario);
             if (userData.fotoOrganizacion) localStorage.setItem('organizacionLogo', userData.fotoOrganizacion);
@@ -1222,7 +1228,7 @@ class NavbarComplete {
             if (userData.rol) localStorage.setItem('userRole', userData.rol);
             if (userData.organizacion) localStorage.setItem('userOrganizacion', userData.organizacion);
             if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
-            
+
         } catch (error) {
             // Silencioso
         }
@@ -1235,11 +1241,11 @@ class NavbarComplete {
             const adminName = document.getElementById('adminName');
             const adminEmail = document.getElementById('adminEmail');
             const adminOrganization = document.getElementById('adminOrganization');
-            
+
             if (adminName) adminName.textContent = 'No autenticado';
             if (adminEmail) adminEmail.textContent = 'Inicia sesión para continuar';
             if (adminOrganization) adminOrganization.textContent = '';
-            
+
             return;
         }
 
@@ -1295,12 +1301,12 @@ class NavbarComplete {
     showOrgTextLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
-        
+
         if (!organizationLogoImg || !orgTextLogo) return;
-        
+
         organizationLogoImg.style.display = 'none';
         orgTextLogo.style.display = 'flex';
-        
+
         const orgName = this.currentAdmin?.organizacion || 'Organización';
         const initials = orgName
             .split(' ')
@@ -1308,7 +1314,7 @@ class NavbarComplete {
             .join('')
             .toUpperCase()
             .substring(0, 3);
-        
+
         orgTextLogo.textContent = initials;
         orgTextLogo.title = orgName;
     }
@@ -1353,12 +1359,12 @@ class NavbarComplete {
     showProfilePlaceholder() {
         const adminProfileImg = document.getElementById('adminProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
-        
+
         if (!adminProfileImg || !profilePlaceholder) return;
-        
+
         adminProfileImg.style.display = 'none';
         profilePlaceholder.style.display = 'flex';
-        
+
         const placeholderText = profilePlaceholder.querySelector('span');
         if (placeholderText && this.currentAdmin?.nombreCompleto) {
             const initials = this.currentAdmin.nombreCompleto
@@ -1377,7 +1383,7 @@ class NavbarComplete {
         this.setupScroll();
         this.loadFontAwesome();
         this.setupAdminDropdown();
-        this.setupAdministracionDropdown(); // Nuevo método para el dropdown de Administración
+        this.setupAdministracionDropdown(); // Método para el dropdown de Administración
         this.loadOrbitronFont();
         this.setupLogout();
     }
@@ -1438,7 +1444,7 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de Administración (nuevo)
+    // Configura el dropdown de Administración (con el botón de Incidencias)
     setupAdministracionDropdown() {
         const dropdownBtn = document.getElementById('administracionDropdownBtn');
         const dropdownOptions = document.getElementById('administracionDropdownOptions');
