@@ -118,6 +118,14 @@
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 35px;
 }
 
 .filtro-select option {
@@ -400,11 +408,9 @@
     font-family: 'Orbitron', monospace;
     font-size: 0.65rem;
     color: var(--color-text-primary) !important;
-
     padding: 4px 8px;
     border-radius: 4px;
     display: inline-block;
-
     word-break: break-word;
     max-width: 100%;
 }
@@ -593,9 +599,6 @@
 /* =============================================
    PAGINACIÓN (COMO EN CATEGORÍAS)
    ============================================= */
-/* =============================================
-   PAGINACIÓN (COMO EN CATEGORÍAS)
-   ============================================= */
 .pagination-container {
     display: flex;
     justify-content: space-between;
@@ -607,7 +610,6 @@
 
 .pagination-info {
     color: #ffffff !important;
-    /* SOLO ESTO - Texto "Mostrando X-Y de Z incidencias" en blanco */
     font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
     font-size: 0.85rem;
 }
@@ -625,7 +627,6 @@
     background: var(--color-bg-tertiary) !important;
     border: 1px solid var(--color-border-light) !important;
     color: #ffffff !important;
-    /* SOLO ESTO - Números de página en blanco */
     padding: 6px 12px !important;
     border-radius: var(--border-radius-small) !important;
     cursor: pointer;
@@ -640,7 +641,6 @@
     background: var(--color-hover) !important;
     border-color: var(--color-accent-primary) !important;
     color: #ffffff !important;
-    /* Mantener blanco al hacer hover */
     box-shadow: var(--shadow-glow);
 }
 
@@ -648,7 +648,6 @@
     background: var(--color-accent-secondary) !important;
     border-color: var(--color-accent-secondary) !important;
     color: #ffffff !important;
-    /* Mantener blanco cuando está activo */
 }
 
 /* =============================================
@@ -800,244 +799,6 @@
 }
 
 /* =============================================
-   RESPONSIVE DESIGN MEJORADO - COMO EN CATEGORÍAS
-   ============================================= */
-@media (max-width: 1023px) {
-    .admin-container {
-        padding: 20px;
-    }
-}
-
-@media (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-
-    .admin-container {
-        padding: 15px;
-    }
-
-    .page-header h1 {
-        font-size: 2rem;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .page-header .header-description {
-        font-size: 1rem;
-        padding: 0 10px;
-    }
-
-    .filtros-body {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .filtro-grupo {
-        width: 100%;
-    }
-
-    .filtro-acciones {
-        flex-direction: row;
-        margin-top: 10px;
-    }
-
-    .card-header {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 15px 15px;
-        gap: 10px;
-    }
-
-    .card-header h5 {
-        font-size: 1rem;
-        width: 100%;
-        margin-bottom: 0;
-    }
-
-    .btn-nueva-incidencia-header {
-        width: 100%;
-        justify-content: center;
-        padding: 10px 12px !important;
-        font-size: 13px !important;
-        white-space: normal;
-        word-break: break-word;
-        height: auto;
-        min-height: 44px;
-        line-height: 1.3;
-        min-width: unset;
-    }
-
-    .btn-nueva-incidencia-header i {
-        font-size: 13px !important;
-    }
-
-    /* ===== ESTILOS RESPONSIVOS DE TABLA - COMO EN CATEGORÍAS ===== */
-    .table thead {
-        display: none;
-    }
-
-    .table tbody {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .table tr {
-        display: block;
-        background: var(--color-bg-secondary);
-        border: 1px solid var(--color-border-light);
-        border-radius: var(--border-radius-medium);
-        padding: 16px;
-        margin: 0;
-    }
-
-    .table td {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 10px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        width: 100%;
-    }
-
-    .table td:last-child {
-        border-bottom: none;
-    }
-
-    .table td::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: var(--color-accent-primary);
-        text-transform: uppercase;
-        font-size: 0.7rem;
-        margin-bottom: 6px;
-        display: block;
-    }
-
-    /* Ajustes específicos para cada columna */
-    .table td[data-label="ID / Folio"] .incidencia-id {
-
-        text-align: left;
-    }
-
-    .table td[data-label="Riesgo"] .riesgo-badge,
-    .table td[data-label="Estado"] .estado-badge {
-        width: auto;
-        min-width: auto;
-    }
-
-    .table td[data-label="Acciones"] {
-        padding-top: 15px;
-    }
-
-    .table td[data-label="Acciones"] div {
-        justify-content: flex-start;
-        width: 100%;
-    }
-
-    /* Estilos para el modal en móvil */
-    .detalles-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .detalle-card.full-width {
-        grid-column: span 1;
-    }
-
-    .modal-dialog {
-        width: 95%;
-        margin: 10px;
-    }
-}
-
-@media (max-width: 480px) {
-    .page-header h1 {
-        font-size: 1.5rem;
-    }
-
-    .page-header .header-description {
-        font-size: 0.9rem;
-    }
-
-    .btn-group {
-        flex-wrap: wrap;
-        justify-content: center;
-        width: 100%;
-    }
-
-    .btn-nueva-incidencia-header {
-        padding: 8px 10px !important;
-        font-size: 12px !important;
-        gap: 5px !important;
-        min-height: 40px;
-    }
-
-    .btn-nueva-incidencia-header i {
-        font-size: 12px !important;
-    }
-
-    .card-header {
-        padding: 12px 12px;
-    }
-
-    .btn {
-        min-width: 32px !important;
-        height: 32px !important;
-        padding: 4px 6px !important;
-    }
-
-    .btn i {
-        font-size: 12px !important;
-    }
-
-    .filtro-acciones {
-        flex-direction: column;
-    }
-
-    .btn-filtrar,
-    .btn-limpiar {
-        width: 100%;
-    }
-
-    /* Ajustes específicos para móviles pequeños */
-    .table td[data-label="Acciones"] div {
-        gap: 4px;
-    }
-
-    .incidencia-id {
-        font-size: 0.7rem;
-        padding: 3px 6px;
-        word-break: break-all;
-    }
-}
-
-/* Para pantallas extremadamente pequeñas (menos de 360px) */
-@media (max-width: 360px) {
-    .btn-nueva-incidencia-header {
-        font-size: 11px !important;
-        padding: 6px 8px !important;
-        min-height: 36px;
-    }
-
-    .btn-nueva-incidencia-header i {
-        font-size: 11px !important;
-    }
-
-    .page-header h1 {
-        font-size: 1.3rem;
-    }
-
-    .riesgo-badge,
-    .estado-badge {
-        padding: 3px 8px;
-        font-size: 0.7rem;
-    }
-}
-
-/* AÑADE ESTOS ESTILOS AL FINAL DE TU ARCHIVO incidencias.css */
-
-/* =============================================
    ESTILOS DE TABLA COMO REGIONES
    ============================================= */
 
@@ -1077,52 +838,6 @@
     border: 1px solid transparent;
 }
 
-/* Ajuste responsive para móvil */
-@media (max-width: 768px) {
-    .incidencia-id {
-        font-size: 0.65rem;
-        padding: 2px 4px;
-    }
-
-    .riesgo-badge {
-        padding: 3px 8px;
-        font-size: 0.65rem;
-    }
-}
-
-/* AÑADE ESTOS ESTILOS AL FINAL DE TU ARCHIVO incidencias.css */
-
-/* =============================================
-   ESTILOS DE TABLA COMO REGIONES
-   ============================================= */
-
-/* Estilo para el ID de incidencia - más compacto como en regiones */
-.incidencia-id {
-    font-family: 'Orbitron', monospace;
-    font-size: 0.7rem;
-    color: var(--color-text-primary);
-    padding: 3px 6px;
-    border-radius: 3px;
-    display: inline-block;
-    word-break: break-word;
-    max-width: 100%;
-}
-
-/* Para el color de riesgo (similar al color de regiones) */
-.riesgo-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid transparent;
-}
-
 /* Quitar la barra azul de la sucursal */
 .sucursal-indicator {
     display: none !important;
@@ -1138,26 +853,341 @@ td[data-label="Sucursal"] div div:first-child {
     display: none !important;
 }
 
-/* Ajuste responsive para móvil */
-@media (max-width: 768px) {
-    .incidencia-id {
-        font-size: 0.65rem;
-        padding: 2px 4px;
-    }
-
-    .riesgo-badge {
-        padding: 3px 8px;
-        font-size: 0.65rem;
-    }
-}
-
-
+/* Ocultar botón IPH Múltiple */
 .btn-nueva-incidencia-header+.btn-nueva-incidencia-header {
     display: none !important;
 }
 
-
 button:contains("IPH Múltiple"),
 [class*="btn"][onclick*="generarPDFMultiple"] {
     display: none !important;
+}
+
+/* =============================================
+   RESPONSIVE DESIGN MEJORADO - FILTROS Y TABLA MÁS COMPACTOS
+   ============================================= */
+@media (max-width: 1023px) {
+    .admin-container {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .admin-container {
+        padding: 15px;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .page-header .header-description {
+        font-size: 1rem;
+        padding: 0 10px;
+    }
+
+    /* FILTROS MUCHO MÁS COMPACTOS EN MÓVIL */
+    .filtros-body {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .filtro-grupo {
+        width: 100%;
+        min-width: 100%;
+        margin-bottom: 2px;
+    }
+
+    .filtro-grupo label {
+        font-size: 0.6rem;
+        margin-bottom: 2px;
+        letter-spacing: 0.3px;
+    }
+
+    .filtro-select {
+        padding: 6px 8px;
+        font-size: 0.75rem;
+        background-position: right 6px center;
+        background-size: 12px;
+        padding-right: 25px;
+    }
+
+    .filtro-acciones {
+        flex-direction: row;
+        margin-top: 5px;
+        gap: 5px;
+        width: 100%;
+    }
+
+    /* BOTONES MUCHO MÁS PEQUEÑOS EN MÓVIL */
+    .btn-filtrar,
+    .btn-limpiar {
+        padding: 4px 6px !important;
+        font-size: 0.6rem !important;
+        gap: 3px;
+        min-height: 22px;
+        width: 48%;
+        justify-content: center;
+        border-radius: var(--border-radius-small) !important;
+    }
+
+    .btn-filtrar i,
+    .btn-limpiar i {
+        font-size: 9px !important;
+    }
+
+    .filtro-acciones {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px 12px;
+        gap: 8px;
+    }
+
+    .card-header h5 {
+        font-size: 0.9rem;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    .btn-nueva-incidencia-header {
+        width: 100%;
+        justify-content: center;
+        padding: 8px 10px !important;
+        font-size: 12px !important;
+        white-space: normal;
+        word-break: break-word;
+        height: auto;
+        min-height: 36px;
+        line-height: 1.2;
+        min-width: unset;
+    }
+
+    .btn-nueva-incidencia-header i {
+        font-size: 12px !important;
+    }
+
+    /* ===== ESTILOS RESPONSIVOS DE TABLA - MÁS COMPACTOS ===== */
+    .table thead {
+        display: none;
+    }
+
+    .table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .table tr {
+        display: block;
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border-light);
+        border-radius: var(--border-radius-medium);
+        padding: 10px;
+        margin: 0;
+    }
+
+    .table td {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        width: 100%;
+        font-size: 11px;
+    }
+
+    .table td:last-child {
+        border-bottom: none;
+    }
+
+    .table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-accent-primary);
+        text-transform: uppercase;
+        font-size: 0.55rem;
+        margin-bottom: 2px;
+        display: block;
+    }
+
+    /* Ajustes específicos para cada columna */
+    .table td[data-label="ID / Folio"] .incidencia-id {
+        font-size: 0.55rem;
+        padding: 2px 4px;
+    }
+
+    .table td[data-label="Riesgo"] .riesgo-badge,
+    .table td[data-label="Estado"] .estado-badge {
+        padding: 2px 5px;
+        font-size: 0.55rem;
+        width: auto;
+        min-width: auto;
+    }
+
+    .table td[data-label="Acciones"] {
+        padding-top: 6px;
+    }
+
+    .table td[data-label="Acciones"] div {
+        justify-content: flex-start;
+        width: 100%;
+        gap: 4px;
+    }
+
+    /* Botones de acción más pequeños */
+    .btn {
+        min-width: 28px !important;
+        height: 28px !important;
+        padding: 3px 4px !important;
+    }
+
+    .btn i {
+        font-size: 11px !important;
+    }
+
+    /* Estilos para el modal en móvil */
+    .detalles-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .detalle-card.full-width {
+        grid-column: span 1;
+    }
+
+    .modal-dialog {
+        width: 95%;
+        margin: 10px;
+    }
+
+    /* Paginación más compacta */
+    .pagination-container {
+        margin-top: 12px;
+        gap: 8px;
+    }
+
+    .pagination-info {
+        font-size: 0.7rem;
+    }
+
+    .page-link {
+        padding: 4px 6px !important;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .page-header .header-description {
+        font-size: 0.9rem;
+    }
+
+    .btn-group {
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .btn-nueva-incidencia-header {
+        padding: 6px 8px !important;
+        font-size: 11px !important;
+        gap: 4px !important;
+        min-height: 32px;
+    }
+
+    .btn-nueva-incidencia-header i {
+        font-size: 11px !important;
+    }
+
+    .card-header {
+        padding: 8px 8px;
+    }
+
+    .btn {
+        min-width: 26px !important;
+        height: 26px !important;
+        padding: 2px 3px !important;
+    }
+
+    .btn i {
+        font-size: 10px !important;
+    }
+
+    .filtro-acciones {
+        flex-direction: row;
+        gap: 4px;
+    }
+
+    .btn-filtrar,
+    .btn-limpiar {
+        padding: 3px 5px !important;
+        font-size: 0.55rem !important;
+        min-height: 20px;
+    }
+
+    /* Ajustes específicos para móviles pequeños */
+    .table td[data-label="Acciones"] div {
+        gap: 3px;
+    }
+
+    .incidencia-id {
+        font-size: 0.6rem;
+        padding: 2px 4px;
+        word-break: break-all;
+    }
+
+    .table tr {
+        padding: 8px;
+    }
+}
+
+/* Para pantallas extremadamente pequeñas (menos de 360px) */
+@media (max-width: 360px) {
+    .btn-nueva-incidencia-header {
+        font-size: 10px !important;
+        padding: 5px 6px !important;
+        min-height: 30px;
+    }
+
+    .btn-nueva-incidencia-header i {
+        font-size: 10px !important;
+    }
+
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+
+    .riesgo-badge,
+    .estado-badge {
+        padding: 2px 4px;
+        font-size: 0.5rem;
+    }
+
+    .btn-filtrar,
+    .btn-limpiar {
+        padding: 2px 4px !important;
+        font-size: 0.5rem !important;
+        min-height: 18px;
+    }
+
+    .btn-filtrar i,
+    .btn-limpiar i {
+        font-size: 8px !important;
+    }
 }
