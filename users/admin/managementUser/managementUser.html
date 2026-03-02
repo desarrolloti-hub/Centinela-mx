@@ -19,7 +19,6 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
     <!-- SEO Básico -->
     <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
     <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
@@ -81,7 +80,7 @@
 <canvas id="particle-canvas"></canvas>
 
 <div class="admin-container">
-    <!-- Page Header (fuera del contenedor de la tabla) -->
+    <!-- Page Header -->
     <div class="page-header">
         <h1>
             <i class="fas fa-users"></i> Gestión de Colaboradores
@@ -92,29 +91,64 @@
         </div>
     </div>
 
-    <!-- Contenedor de la tabla con su propio header -->
-    <div class="card-header">
+    <!-- Barra de búsqueda -->
+    <div class="filtros-container">
+        <div class="filtros-header">
+            <h5><i class="fas fa-search"></i> Buscar colaboradores:</h5>
+        </div>
+        <div class="filtros-body">
+            <div class="filtro-grupo">
+                <label for="buscarColaborador">Nombre, email o rol</label>
+                <input type="text" id="buscarColaborador" class="filtro-input" 
+                       placeholder="Escribe para buscar" autocomplete="off">
+            </div>
+            <div class="filtro-acciones">
+                <button class="btn-buscar" id="btnBuscarColaborador">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+                <button class="btn-limpiar" id="btnLimpiarBusqueda">
+                    <i class="fas fa-times"></i> Limpiar
+                </button>
+            </div>
+        </div>
     </div>
 
-     <div class="table-wrapper">
-        <table class="collaborators-table">
-            <button class="add-btn" id="addBtn">
-                <i class="fas fa-user-plus"></i> Agregar Colaborador
+    <!-- Tarjeta contenedora de la tabla (estilo categorías) -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-users"></i> Lista de Colaboradores</h5>
+            <button class="btn-nuevo-colaborador" id="addBtn">
+                <i class="fas fa-plus"></i> Nuevo Colaborador
             </button>
-            <br>
-            <thead>
-                <tr>
-                    <th>NOMBRE COMPLETO</th>
-                    <th>ROL</th>
-                    <th>CORREO</th>
-                    <th>ESTADO</th>
-                    <th>ACCIONES</th>
-                </tr>
-            </thead>
-            <tbody id="usersTableBody">
-                <!-- Se llenará dinámicamente -->
-            </tbody>
-        </table>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table" id="tablaColaboradores">
+                    <thead>
+                        <tr>
+                            <th>Nombre Completo</th>
+                            <th>Rol</th>
+                            <th>Correo</th>
+                            <th>Estado</th>
+                            <th style="width: 180px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Se llenará dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="pagination-container">
+                <div class="pagination-info" id="paginationInfo"></div>
+                <nav>
+                    <ul class="pagination" id="pagination">
+                        <!-- Se llenará dinámicamente -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
     </div>
 </div>
 

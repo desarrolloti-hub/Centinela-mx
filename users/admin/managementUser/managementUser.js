@@ -1,8 +1,19 @@
+// ========== VARIABLES GLOBALES ==========
+let userManager = null;
+let adminActual = null;
+
+// Configuración de paginación
+const ITEMS_POR_PAGINA = 10;
+let paginaActual = 1;
+let terminoBusqueda = '';
+let todosLosColaboradores = []; // Almacena todos los colaboradores para búsqueda
+let colaboradoresFiltrados = []; // Colaboradores filtrados para mostrar
+
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function() {    
     try {
         const { UserManager } = await import('/clases/user.js');
-        const userManager = new UserManager();
+        userManager = new UserManager();
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -12,22 +23,23 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         
-        const admin = userManager.currentUser;
+        adminActual = userManager.currentUser;
         
         localStorage.setItem('adminInfo', JSON.stringify({
-            id: admin.id,
-            nombreCompleto: admin.nombreCompleto,
-            organizacion: admin.organizacion,
-            organizacionCamelCase: admin.organizacionCamelCase,
-            rol: admin.rol,
-            correoElectronico: admin.correoElectronico,
+            id: adminActual.id,
+            nombreCompleto: adminActual.nombreCompleto,
+            organizacion: adminActual.organizacion,
+            organizacionCamelCase: adminActual.organizacionCamelCase,
+            rol: adminActual.rol,
+            correoElectronico: adminActual.correoElectronico,
             timestamp: new Date().toISOString()
         }));
         
         localStorage.removeItem('selectedCollaborator');
         
-        await loadCollaborators(admin, userManager);
-        setupEvents(admin, userManager);
+        await loadCollaborators();
+        configurarBusqueda();
+        setupEvents();
         
     } catch (error) {
         console.error('❌ Error inicializando:', error);
@@ -35,19 +47,181 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// ========== CARGAR COLABORADORES ==========
-async function loadCollaborators(admin, userManager) {
+// ========== CONFIGURAR BÚSQUEDA ==========
+function configurarBusqueda() {
+    const inputBuscar = document.getElementById('buscarColaborador');
+    const btnBuscar = document.getElementById('btnBuscarColaborador');
+    const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', () => {
+            terminoBusqueda = inputBuscar?.value.trim() || '';
+            paginaActual = 1;
+            filtrarYRenderizar();
+        });
+    }
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            if (inputBuscar) inputBuscar.value = '';
+            terminoBusqueda = '';
+            paginaActual = 1;
+            filtrarYRenderizar();
+        });
+    }
+
+    // Búsqueda en tiempo real con debounce
+    if (inputBuscar) {
+        let timeoutId;
+        inputBuscar.addEventListener('input', (e) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }, 300);
+        });
+
+        inputBuscar.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }
+        });
+    }
+}
+
+// ========== FUNCIÓN DE FILTRADO ==========
+function filtrarYRenderizar() {
+    if (!todosLosColaboradores.length) {
+        colaboradoresFiltrados = [];
+    } else if (!terminoBusqueda || terminoBusqueda.length < 2) {
+        // Si no hay término de búsqueda, mostrar todas
+        colaboradoresFiltrados = [...todosLosColaboradores];
+    } else {
+        // Filtrar en memoria
+        const terminoLower = terminoBusqueda.toLowerCase();
+        colaboradoresFiltrados = todosLosColaboradores.filter(col => 
+            (col.nombreCompleto && col.nombreCompleto.toLowerCase().includes(terminoLower)) ||
+            (col.correoElectronico && col.correoElectronico.toLowerCase().includes(terminoLower)) ||
+            (col.rol && col.rol.toLowerCase().includes(terminoLower))
+        );
+    }
+
+    renderizarConPaginacion();
+}
+
+// ========== FUNCIONES DE PAGINACIÓN ==========
+function irPagina(pagina) {
+    paginaActual = pagina;
+    renderizarConPaginacion();
     
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderizarPaginacion(totalPaginas) {
+    const pagination = document.getElementById('pagination');
+    if (!pagination) return;
+
+    if (totalPaginas <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    for (let i = 1; i <= totalPaginas; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="window.irPaginaColaborador(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    pagination.innerHTML = html;
+}
+
+// Hacer la función global para que funcionen los botones
+window.irPaginaColaborador = function(pagina) {
+    paginaActual = pagina;
+    renderizarConPaginacion();
+    
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ========== RENDERIZAR CON PAGINACIÓN ==========
+function renderizarConPaginacion() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+
+    const totalItems = colaboradoresFiltrados.length;
+    const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
+    
+    // Ajustar página actual si está fuera de rango
+    if (paginaActual > totalPaginas && totalPaginas > 0) {
+        paginaActual = totalPaginas;
+    }
+    
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
+    const colaboradoresPagina = colaboradoresFiltrados.slice(inicio, fin);
+
+    // Actualizar información de paginación
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        if (totalItems === 0) {
+            paginationInfo.textContent = 'No se encontraron colaboradores';
+        } else {
+            paginationInfo.textContent = `Mostrando ${inicio + 1}-${fin} de ${totalItems} colaboradores`;
+        }
+    }
+
+    // Mostrar/ocultar contenedor de paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = totalItems > ITEMS_POR_PAGINA ? 'flex' : 'none';
+    }
+
+    if (totalItems === 0) {
+        if (!todosLosColaboradores.length) {
+            showEmptyState();
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <div class="empty-state-content">
+                            <i class="fas fa-search" style="font-size: 48px; color: rgba(255,255,255,0.3); margin-bottom: 16px;"></i>
+                            <h3>No se encontraron colaboradores</h3>
+                            <p>${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        renderizarPaginacion(0);
+        return;
+    }
+
+    renderCollaboratorsTable(colaboradoresPagina);
+    renderizarPaginacion(totalPaginas);
+}
+
+// ========== CARGAR COLABORADORES ==========
+async function loadCollaborators() {
     try {
         showLoadingState();
         
-        const colaboradores = await userManager.getColaboradoresByOrganizacion(
-            admin.organizacionCamelCase,
+        todosLosColaboradores = await userManager.getColaboradoresByOrganizacion(
+            adminActual.organizacionCamelCase,
             true
         );
         
         localStorage.setItem('colaboradoresList', JSON.stringify(
-            colaboradores.map(col => ({
+            todosLosColaboradores.map(col => ({
                 id: col.id,
                 nombreCompleto: col.nombreCompleto,
                 correoElectronico: col.correoElectronico,
@@ -58,12 +232,10 @@ async function loadCollaborators(admin, userManager) {
             }))
         ));
         
-        if (colaboradores.length === 0) {
-            showEmptyState(admin);
-        } else {
-            renderCollaboratorsTable(colaboradores, admin);
-            updateStats(colaboradores);
-        }
+        // Inicializar filtrados
+        colaboradoresFiltrados = [...todosLosColaboradores];
+        
+        renderizarConPaginacion();
         
     } catch (error) {
         console.error('❌ Error cargando colaboradores:', error);
@@ -72,8 +244,8 @@ async function loadCollaborators(admin, userManager) {
 }
 
 // ========== RENDERIZAR TABLA DE COLABORADORES ==========
-function renderCollaboratorsTable(collaborators, admin) {
-    const tbody = document.querySelector('.collaborators-table tbody');
+function renderCollaboratorsTable(collaborators) {
+    const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = '';
@@ -81,56 +253,48 @@ function renderCollaboratorsTable(collaborators, admin) {
     collaborators.forEach(col => {
         const row = document.createElement('tr');
         const isActive = col.status === true || col.status === 'active';
-        const statusInfo = isActive ? 
-            { text: 'Activo', class: 'active', icon: 'fa-check-circle' } :
-            { text: 'Inactivo', class: 'inactive', icon: 'fa-ban' };
-        
-        const enableBtnText = isActive ? 'Inhabilitar' : 'Habilitar';
-        const enableBtnIcon = isActive ? 'fa-user-slash' : 'fa-user-check';
-        const enableBtnClass = isActive ? 'disable' : 'enable';
         
         const fullName = col.nombreCompleto || '';
-        const nameParts = fullName.split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
         const fotoUrl = col.getFotoUrl ? col.getFotoUrl() : (col.fotoUsuario || '');
         
-        row.className = isActive ? 'collaborator-row active' : 'collaborator-row inactive';
+        row.className = isActive ? 'collaborator-row' : 'collaborator-row inactive';
+        
         row.innerHTML = `
-            <td data-label="INFORMACIÓN">
+            <td data-label="NOMBRE">
                 <div class="user-info">
                     <div class="user-avatar ${!fotoUrl ? 'no-photo' : ''}" 
                          ${fotoUrl ? `style="background-image: url('${fotoUrl}')"` : ''}>
                         ${!fotoUrl ? '<i class="fas fa-user"></i>' : ''}
                     </div>
                     <div class="user-details">
-                        <div class="user-name">${col.nombreCompleto}</div>                    </div>
+                        <span class="user-name">${escapeHTML(fullName)}</span>
+                    </div>
                 </div>
             </td>
-            <td data-label="CARGO" class="user-lastname">${col.rol}</td>
-            <td data-label="EMAIL" class="user-email">${col.correoElectronico || 'sin@email.com'}</td>
+            <td data-label="ROL">${escapeHTML(col.rol || 'Colaborador')}</td>
+            <td data-label="CORREO">${escapeHTML(col.correoElectronico || 'No disponible')}</td>
             <td data-label="ESTADO">
-                <span class="status ${statusInfo.class}">
-                    <i class="fas ${statusInfo.icon}"></i> ${statusInfo.text}
+                <span class="status ${isActive ? 'active' : 'inactive'}">
+                    <i class="fas ${isActive ? 'fa-check-circle' : 'fa-ban'}"></i> 
+                    ${isActive ? 'Activo' : 'Inactivo'}
                 </span>
             </td>
-            <td data-label="ACCIONES" class="actions-cell">
-                <button class="row-btn ${enableBtnClass}" title="${enableBtnText}"
-                    data-collaborator-id="${col.id}"
-                    data-collaborator-name="${fullName}"
-                    data-current-status="${isActive}">
-                    <i class="fas ${enableBtnIcon}"></i>
-                </button>
-                <button class="row-btn edit" title="Editar" 
-                    data-collaborator-id="${col.id}"
-                    data-collaborator-name="${fullName}">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="row-btn view" title="Ver detalles" 
-                    data-collaborator-id="${col.id}"
-                    data-collaborator-name="${fullName}">
-                    <i class="fas fa-eye"></i>
-                </button>
+            <td data-label="ACCIONES">
+                <div class="btn-group">
+                    <button type="button" class="btn ${isActive ? 'btn-disable' : 'btn-enable'}" 
+                            data-action="toggle" data-id="${col.id}" data-name="${escapeHTML(fullName)}" 
+                            data-status="${isActive}" title="${isActive ? 'Inhabilitar' : 'Habilitar'}">
+                        <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i>
+                    </button>
+                    <button type="button" class="btn btn-edit" data-action="edit" 
+                            data-id="${col.id}" data-name="${escapeHTML(fullName)}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-view" data-action="view" 
+                            data-id="${col.id}" data-name="${escapeHTML(fullName)}" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </td>
         `;
         
@@ -138,61 +302,8 @@ function renderCollaboratorsTable(collaborators, admin) {
     });
 }
 
-// ========== ACTUALIZAR ESTADÍSTICAS ==========
-function updateStats(collaborators) {
-    const total = collaborators.length;
-    const active = collaborators.filter(c => c.status === true || c.status === 'active').length;
-    const inactive = total - active;
-    
-    let statsContainer = document.getElementById('collaboratorsStats');
-    if (!statsContainer) {
-        statsContainer = document.createElement('div');
-        statsContainer.id = 'collaboratorsStats';
-        statsContainer.className = 'stats-container';
-        
-        const sectionHeader = document.querySelector('.card-header');
-        if (sectionHeader) {
-            sectionHeader.parentNode.insertBefore(statsContainer, sectionHeader.nextSibling);
-        } else {
-            const tableWrapper = document.querySelector('.table-wrapper');
-            if (tableWrapper) {
-                tableWrapper.parentNode.insertBefore(statsContainer, tableWrapper.nextSibling);
-            }
-        }
-    }
-    
-    statsContainer.innerHTML = `
-        <div class="stats-header">
-            <h3><i class="fas fa-chart-bar"></i> ESTADÍSTICAS DE COLABORADORES</h3>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="stat-card total">
-                <p><i class="fas fa-users"></i> TOTAL</p>
-                <h2>${total}</h2>
-            </div>
-            
-            <div class="stat-card active">
-                <p><i class="fas fa-check-circle"></i> ACTIVOS</p>
-                <h2>${active}</h2>
-                <small>${total > 0 ? Math.round((active/total)*100) : 0}%</small>
-            </div>
-            
-            <div class="stat-card inactive">
-                <p><i class="fas fa-ban"></i> INACTIVOS</p>
-                <h2>${inactive}</h2>
-                <small>${total > 0 ? Math.round((inactive/total)*100) : 0}%</small>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('refreshStats')?.addEventListener('click', async () => {
-        location.reload();
-    });
-}
-
 // ========== CONFIGURAR EVENTOS ==========
-function setupEvents(admin, userManager) {
+function setupEvents() {
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
@@ -200,53 +311,51 @@ function setupEvents(admin, userManager) {
         });
     }
     
-    const table = document.querySelector('.collaborators-table');
-    if (table) {
-        table.addEventListener('click', async (e) => {
-            const button = e.target.closest('button');
-            const row = e.target.closest('tr');
+    const tbody = document.getElementById('usersTableBody');
+    if (tbody) {
+        tbody.addEventListener('click', async (e) => {
+            const button = e.target.closest('.btn');
             
-            if (!button || !row) return;
+            if (!button) return;
             
-            const collaboratorId = button.getAttribute('data-collaborator-id');
-            const collaboratorName = button.getAttribute('data-collaborator-name');
-            const isEnableBtn = button.classList.contains('enable');
-            const isDisableBtn = button.classList.contains('disable');
+            const action = button.getAttribute('data-action');
+            const collaboratorId = button.getAttribute('data-id');
+            const collaboratorName = button.getAttribute('data-name');
+            const currentStatus = button.getAttribute('data-status') === 'true';
             
-            if (isEnableBtn || isDisableBtn) {
-                await toggleUserStatus(collaboratorId, collaboratorName, admin, userManager, isEnableBtn);
+            if (action === 'toggle') {
+                await toggleUserStatus(collaboratorId, collaboratorName, !currentStatus);
             } 
-            else if (button.classList.contains('edit')) {
-                await editUser(collaboratorId, collaboratorName, admin);
+            else if (action === 'edit') {
+                await editUser(collaboratorId, collaboratorName);
             } 
-            else if (button.classList.contains('view')) {
-                await viewUserDetails(collaboratorId, collaboratorName, admin, userManager);
+            else if (action === 'view') {
+                await viewUserDetails(collaboratorId, collaboratorName);
             }
         });
     }
 }
 
 // ========== CAMBIAR ESTADO DEL COLABORADOR ==========
-async function toggleUserStatus(collaboratorId, collaboratorName, admin, userManager, isEnabling) {
+async function toggleUserStatus(collaboratorId, collaboratorName, enable) {
     try {
         const collaborator = await userManager.getUserById(collaboratorId);
         if (!collaborator) throw new Error('Colaborador no encontrado');
         
-        const newStatus = isEnabling;
-        const actionText = isEnabling ? 'Habilitar' : 'Inhabilitar';
-        const statusText = isEnabling ? 'habilitado' : 'inhabilitado';
-        const iconType = isEnabling ? 'question' : 'warning';
+        const actionText = enable ? 'Habilitar' : 'Inhabilitar';
+        const statusText = enable ? 'habilitado' : 'inhabilitado';
+        const iconType = enable ? 'question' : 'warning';
         
         const result = await Swal.fire({
             title: `${actionText} colaborador`,
             html: `
                 <div>
-                    <p><strong>${collaboratorName}</strong></p>
+                    <p><strong>${escapeHTML(collaboratorName)}</strong></p>
                     <p>${collaborator.correoElectronico || 'No email'}</p>
                     <p>¿Estás seguro de ${statusText} al colaborador?</p>
-                    ${isEnabling ? 
-                        '<p><i class="fas fa-check-circle"></i> El usuario podrá acceder al sistema normalmente</p>' :
-                        '<p><i class="fas fa-exclamation-triangle"></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente</p>'
+                    ${enable ? 
+                        '<p><i class="fas fa-check-circle" style="color: #2ecc71;"></i> El usuario podrá acceder al sistema normalmente</p>' :
+                        '<p><i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente</p>'
                     }
                 </div>
             `,
@@ -267,37 +376,37 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
             }
         });
         
-        if (isEnabling) {
+        if (enable) {
             await userManager.reactivarUsuario(
                 collaboratorId, 
                 'colaborador', 
-                admin.organizacionCamelCase
+                adminActual.organizacionCamelCase
             );
         } else {
             await userManager.inactivarUsuario(
                 collaboratorId, 
                 'colaborador', 
-                admin.organizacionCamelCase,
+                adminActual.organizacionCamelCase,
                 'Estado cambiado por administrador'
             );
         }
         
         await userManager.updateUser(
             collaboratorId, 
-            { status: newStatus }, 
+            { status: enable }, 
             'colaborador', 
-            admin.organizacionCamelCase
+            adminActual.organizacionCamelCase
         );
         
         Swal.close();
-        await loadCollaborators(admin, userManager);
+        await loadCollaborators();
         
         Swal.fire({
             icon: 'success',
             title: '¡Estado cambiado!',
             html: `
                 <div>
-                    <p><strong>${collaboratorName}</strong></p>
+                    <p><strong>${escapeHTML(collaboratorName)}</strong></p>
                     <p>ha sido ${statusText} exitosamente</p>
                 </div>
             `,
@@ -319,23 +428,23 @@ async function toggleUserStatus(collaboratorId, collaboratorName, admin, userMan
 }
 
 // ========== EDITAR COLABORADOR ==========
-async function editUser(collaboratorId, collaboratorName, admin) {    
+async function editUser(collaboratorId, collaboratorName) {    
     const selectedCollaborator = {
         id: collaboratorId,
         nombreCompleto: collaboratorName,
-        organizacion: admin.organizacion,
-        organizacionCamelCase: admin.organizacionCamelCase,
+        organizacion: adminActual.organizacion,
+        organizacionCamelCase: adminActual.organizacionCamelCase,
         fechaSeleccion: new Date().toISOString(),
-        admin: admin.nombreCompleto
+        admin: adminActual.nombreCompleto
     };
     
     localStorage.setItem('selectedCollaborator', JSON.stringify(selectedCollaborator));
     
-    window.location.href = `/users/admin/editUser/editUser.html?id=${collaboratorId}&org=${admin.organizacionCamelCase}`;
+    window.location.href = `/users/admin/editUser/editUser.html?id=${collaboratorId}&org=${adminActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DEL COLABORADOR ==========
-async function viewUserDetails(collaboratorId, collaboratorName, admin, userManager) {
+async function viewUserDetails(collaboratorId, collaboratorName) {
     try {
         const collaborator = await userManager.getUserById(collaboratorId);
         
@@ -366,47 +475,50 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
         }
     }
     
+    const isActive = collaborator.status === true || collaborator.status === 'active';
+    const fotoUrl = collaborator.getFotoUrl ? collaborator.getFotoUrl() : (collaborator.fotoUsuario || '');
+    
     Swal.fire({
         title: `Detalles de: ${collaboratorName}`,
         html: `
             <div class="swal-details-container">
                 <div class="swal-user-profile">
                     <div class="swal-user-avatar-large">
-                        ${collaborator.fotoUsuario ? 
-                            `<img src="${collaborator.getFotoUrl()}" alt="${collaboratorName}">` : 
+                        ${fotoUrl ? 
+                            `<img src="${fotoUrl}" alt="${escapeHTML(collaboratorName)}">` : 
                             `<i class="fas fa-user"></i>`
                         }
                     </div>
                     <div class="swal-user-info-large">
-                        <h3>${collaborator.nombreCompleto || 'Sin nombre'}</h3>
-                        <p>${collaborator.rol || 'Colaborador'}</p>
-                        
+                        <h3>${escapeHTML(collaborator.nombreCompleto || 'Sin nombre')}</h3>
+                        <p>${escapeHTML(collaborator.rol || 'Colaborador')}</p>
                     </div>
                 </div>
                 
                 <div class="swal-details-grid">
                     <div class="swal-detail-card">
-                        <p><strong>Email:</strong><br><span>${collaborator.correoElectronico || 'No especificado'}</span></p>
-                        <p><strong>Estado:</strong><br>
-                            <span class="status-detail ${collaborator.status ? 'active' : 'inactive'}">
-                                <i class="fas ${collaborator.status ? 'fa-check-circle' : 'fa-ban'}"></i> 
-                                ${collaborator.status ? 'Activo' : 'Inactivo'}
+                        <p><strong>Email</strong> <span>${escapeHTML(collaborator.correoElectronico || 'No especificado')}</span></p>
+                        <p><strong>Estado</strong> 
+                            <span class="status-detail ${isActive ? 'active' : 'inactive'}">
+                                <i class="fas ${isActive ? 'fa-check-circle' : 'fa-ban'}"></i> 
+                                ${isActive ? 'Activo' : 'Inactivo'}
                             </span>
                         </p>
-                        <p><strong>Organización:</strong><br><span>${collaborator.organizacion || 'No especificado'}</span></p>
+                        <p><strong>Organización</strong> <span>${escapeHTML(collaborator.organizacion || 'No especificado')}</span></p>
                     </div>
                     <div class="swal-detail-card">
-                        <p><strong>Fecha de creación:</strong><br><span>${fechaCreacion}</span></p>
-                        <p><strong>Plan:</strong><br><span>${collaborator.plan || 'No especificado'}</span></p>
-                        <p><strong>Verificado:</strong><br>
+                        <p><strong>Fecha creación</strong> <span>${fechaCreacion}</span></p>
+                        <p><strong>Plan</strong> <span>${escapeHTML(collaborator.plan || 'No especificado')}</span></p>
+                        <p><strong>Verificado</strong> 
                             <span class="${collaborator.verificado ? 'verified' : 'not-verified'}">
+                                <i class="fas ${collaborator.verificado ? 'fa-check-circle' : 'fa-times-circle'}"></i> 
                                 ${collaborator.verificado ? 'Sí' : 'No'}
                             </span>
                         </p>
                     </div>
                 </div>
                 
-                ${collaborator.eliminado ? `
+                ${!isActive ? `
                     <div class="swal-warning-alert">
                         <p><i class="fas fa-exclamation-triangle"></i> Este usuario está inhabilitado</p>
                     </div>
@@ -419,9 +531,20 @@ function showCollaboratorDetails(collaborator, collaboratorName) {
     });
 }
 
+// ========== FUNCIÓN AUXILIAR ESCAPE HTML ==========
+function escapeHTML(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // ========== ESTADO VACÍO ==========
-function showEmptyState(admin) {
-    const tbody = document.querySelector('.collaborators-table tbody');
+function showEmptyState() {
+    const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
@@ -429,8 +552,11 @@ function showEmptyState(admin) {
             <td colspan="5" class="empty-state">
                 <div class="empty-state-content">
                     <i class="fas fa-users"></i>
-                    <h3>No hay colaboradores en ${admin.organizacion || 'tu organización'}</h3>
+                    <h3>No hay colaboradores en ${adminActual?.organizacion || 'tu organización'}</h3>
                     <p>Comienza agregando tu primer colaborador</p>
+                    <button class="btn-nuevo-colaborador" id="addFirstCollaborator" style="margin-top: 16px;">
+                        <i class="fas fa-plus"></i> Agregar Colaborador
+                    </button>
                 </div>
             </td>
         </tr>
@@ -439,11 +565,17 @@ function showEmptyState(admin) {
     document.getElementById('addFirstCollaborator')?.addEventListener('click', () => {
         window.location.href = '/users/admin/newUser/newUser.html';
     });
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 // ========== ESTADO DE CARGA ==========
 function showLoadingState() {
-    const tbody = document.querySelector('.collaborators-table tbody');
+    const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
@@ -457,11 +589,17 @@ function showLoadingState() {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación mientras carga
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 // ========== MANEJO DE ERRORES ==========
 function showNoAdminMessage() {
-    const tbody = document.querySelector('.collaborators-table tbody');
+    const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
@@ -483,10 +621,16 @@ function showNoAdminMessage() {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 function showFirebaseError(error) {
-    const tbody = document.querySelector('.collaborators-table tbody');
+    const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
@@ -495,7 +639,7 @@ function showFirebaseError(error) {
                 <div class="error-content firebase-error">
                     <i class="fas fa-exclamation-triangle"></i>
                     <h3>Error al cargar colaboradores</h3>
-                    <p class="error-message">${error.message || 'Error de conexión con Firebase'}</p>
+                    <p class="error-message">${escapeHTML(error.message || 'Error de conexión con Firebase')}</p>
                     <p>Verifica tu conexión a internet y recarga la página.</p>
                     <button onclick="window.location.reload()" class="reload-btn">
                         <i class="fas fa-sync-alt"></i> Recargar página
@@ -504,10 +648,16 @@ function showFirebaseError(error) {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 function showError(message) {
-    const tbody = document.querySelector('.collaborators-table tbody');
+    const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
     
     tbody.innerHTML = `
@@ -515,7 +665,7 @@ function showError(message) {
             <td colspan="5" class="error-state">
                 <div class="error-content">
                     <i class="fas fa-exclamation-circle"></i>
-                    <h3>${message}</h3>
+                    <h3>${escapeHTML(message)}</h3>
                     <button onclick="window.location.reload()" class="reload-btn">
                         <i class="fas fa-sync-alt"></i> Reintentar
                     </button>
@@ -523,4 +673,10 @@ function showError(message) {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
