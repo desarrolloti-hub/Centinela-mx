@@ -1,9 +1,20 @@
+// ========== VARIABLES GLOBALES ==========
+let sucursalManager = null;
+let adminActual = null;
+
+// Configuración de paginación
+const ITEMS_POR_PAGINA = 10;
+let paginaActual = 1;
+let terminoBusqueda = '';
+let todasLasSucursales = []; // Almacena todas las sucursales para búsqueda
+let sucursalesFiltradas = []; // Sucursales filtradas para mostrar
+
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function() {    
     try {
         const { SucursalManager } = await import('/clases/sucursal.js');
         
-        const sucursalManager = new SucursalManager();
+        sucursalManager = new SucursalManager();
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -14,20 +25,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         
-        const admin = window.userManager.currentUser;
+        adminActual = window.userManager.currentUser;
         
         localStorage.setItem('adminInfo', JSON.stringify({
-            id: admin.id,
-            nombreCompleto: admin.nombreCompleto,
-            organizacion: admin.organizacion,
-            organizacionCamelCase: admin.organizacionCamelCase,
-            rol: admin.rol,
-            correoElectronico: admin.correoElectronico,
+            id: adminActual.id,
+            nombreCompleto: adminActual.nombreCompleto,
+            organizacion: adminActual.organizacion,
+            organizacionCamelCase: adminActual.organizacionCamelCase,
+            rol: adminActual.rol,
+            correoElectronico: adminActual.correoElectronico,
             timestamp: new Date().toISOString()
         }));
         
-        await loadBranches(admin, sucursalManager);
-        setupEvents(admin, sucursalManager);
+        await loadBranches();
+        configurarBusqueda();
+        setupEvents();
         
     } catch (error) {
         console.error('❌ Error inicializando:', error);
@@ -35,18 +47,183 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
+// ========== CONFIGURAR BÚSQUEDA ==========
+function configurarBusqueda() {
+    const inputBuscar = document.getElementById('buscarSucursal');
+    const btnBuscar = document.getElementById('btnBuscarSucursal');
+    const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', () => {
+            terminoBusqueda = inputBuscar?.value.trim() || '';
+            paginaActual = 1;
+            filtrarYRenderizar();
+        });
+    }
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            if (inputBuscar) inputBuscar.value = '';
+            terminoBusqueda = '';
+            paginaActual = 1;
+            filtrarYRenderizar();
+        });
+    }
+
+    // Búsqueda en tiempo real con debounce
+    if (inputBuscar) {
+        let timeoutId;
+        inputBuscar.addEventListener('input', (e) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }, 300);
+        });
+
+        inputBuscar.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }
+        });
+    }
+}
+
+// ========== FUNCIÓN DE FILTRADO ==========
+function filtrarYRenderizar() {
+    if (!todasLasSucursales.length) {
+        sucursalesFiltradas = [];
+    } else if (!terminoBusqueda || terminoBusqueda.length < 2) {
+        // Si no hay término de búsqueda, mostrar todas
+        sucursalesFiltradas = [...todasLasSucursales];
+    } else {
+        // Filtrar en memoria
+        const terminoLower = terminoBusqueda.toLowerCase();
+        sucursalesFiltradas = todasLasSucursales.filter(suc => 
+            (suc.nombre && suc.nombre.toLowerCase().includes(terminoLower)) ||
+            (suc.direccion && suc.direccion.toLowerCase().includes(terminoLower)) ||
+            (suc.ciudad && suc.ciudad.toLowerCase().includes(terminoLower)) ||
+            (suc.contacto && suc.contacto.toLowerCase().includes(terminoLower)) ||
+            (suc.tipo && suc.tipo.toLowerCase().includes(terminoLower))
+        );
+    }
+
+    renderizarConPaginacion();
+}
+
+// ========== FUNCIONES DE PAGINACIÓN ==========
+function irPagina(pagina) {
+    paginaActual = pagina;
+    renderizarConPaginacion();
+    
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderizarPaginacion(totalPaginas) {
+    const pagination = document.getElementById('pagination');
+    if (!pagination) return;
+
+    if (totalPaginas <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    for (let i = 1; i <= totalPaginas; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="window.irPaginaSucursal(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    pagination.innerHTML = html;
+}
+
+// Hacer la función global para que funcionen los botones
+window.irPaginaSucursal = function(pagina) {
+    paginaActual = pagina;
+    renderizarConPaginacion();
+    
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ========== RENDERIZAR CON PAGINACIÓN ==========
+function renderizarConPaginacion() {
+    const tbody = document.getElementById('branchesTableBody');
+    if (!tbody) return;
+
+    const totalItems = sucursalesFiltradas.length;
+    const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
+    
+    // Ajustar página actual si está fuera de rango
+    if (paginaActual > totalPaginas && totalPaginas > 0) {
+        paginaActual = totalPaginas;
+    }
+    
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
+    const sucursalesPagina = sucursalesFiltradas.slice(inicio, fin);
+
+    // Actualizar información de paginación
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        if (totalItems === 0) {
+            paginationInfo.textContent = 'No se encontraron sucursales';
+        } else {
+            paginationInfo.textContent = `Mostrando ${inicio + 1}-${fin} de ${totalItems} sucursales`;
+        }
+    }
+
+    // Mostrar/ocultar contenedor de paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = totalItems > ITEMS_POR_PAGINA ? 'flex' : 'none';
+    }
+
+    if (totalItems === 0) {
+        if (!todasLasSucursales.length) {
+            showEmptyState();
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <div class="empty-state-content">
+                            <i class="fas fa-search"></i>
+                            <h3>No se encontraron sucursales</h3>
+                            <p>${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        renderizarPaginacion(0);
+        return;
+    }
+
+    renderBranchesTable(sucursalesPagina);
+    renderizarPaginacion(totalPaginas);
+}
+
 // ========== CARGAR SUCURSALES ==========
-async function loadBranches(admin, sucursalManager) {
+async function loadBranches() {
     try {
         showLoadingState();
         
-        const sucursales = await sucursalManager.getSucursalesByOrganizacion(
-            admin.organizacionCamelCase
+        todasLasSucursales = await sucursalManager.getSucursalesByOrganizacion(
+            adminActual.organizacionCamelCase
         );
         
         // Guardar en localStorage con campos directos
         localStorage.setItem('sucursalesList', JSON.stringify(
-            sucursales.map(suc => ({
+            todasLasSucursales.map(suc => ({
                 id: suc.id,
                 nombre: suc.nombre,
                 tipo: suc.tipo,
@@ -63,11 +240,10 @@ async function loadBranches(admin, sucursalManager) {
             }))
         ));
         
-        if (sucursales.length === 0) {
-            showEmptyState(admin);
-        } else {
-            renderBranchesTable(sucursales, admin);
-        }
+        // Inicializar filtradas
+        sucursalesFiltradas = [...todasLasSucursales];
+        
+        renderizarConPaginacion();
         
     } catch (error) {
         console.error('❌ Error cargando sucursales:', error);
@@ -76,7 +252,7 @@ async function loadBranches(admin, sucursalManager) {
 }
 
 // ========== RENDERIZAR TABLA DE SUCURSALES ==========
-function renderBranchesTable(sucursales, admin) {
+function renderBranchesTable(sucursales) {
     const tbody = document.getElementById('branchesTableBody');
     if (!tbody) return;
     
@@ -184,12 +360,6 @@ function renderBranchesTable(sucursales, admin) {
         
         tbody.appendChild(row);
     });
-    
-    // Actualizar información de paginación
-    const paginationInfo = document.getElementById('paginationInfo');
-    if (paginationInfo) {
-        paginationInfo.textContent = `Mostrando ${sucursales.length} sucursal${sucursales.length !== 1 ? 'es' : ''}`;
-    }
 }
 
 // Función auxiliar para escapar HTML
@@ -204,7 +374,7 @@ function escapeHTML(text) {
 }
 
 // ========== CONFIGURAR EVENTOS ==========
-function setupEvents(admin, sucursalManager) {
+function setupEvents() {
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
@@ -224,38 +394,38 @@ function setupEvents(admin, sucursalManager) {
             const branchName = button.getAttribute('data-branch-name');
             
             if (action === 'edit') {
-                await editBranch(branchId, branchName, admin);
+                await editBranch(branchId, branchName);
             } 
             else if (action === 'view') {
-                await viewBranchDetails(branchId, branchName, admin, sucursalManager);
+                await viewBranchDetails(branchId, branchName);
             }
             else if (action === 'delete') {
-                await deleteBranch(branchId, branchName, admin, sucursalManager);
+                await deleteBranch(branchId, branchName);
             }
         });
     }
 }
 
 // ========== EDITAR SUCURSAL ==========
-async function editBranch(branchId, branchName, admin) {    
+async function editBranch(branchId, branchName) {    
     const selectedBranch = {
         id: branchId,
         nombre: branchName,
-        organizacion: admin.organizacion,
-        organizacionCamelCase: admin.organizacionCamelCase,
+        organizacion: adminActual.organizacion,
+        organizacionCamelCase: adminActual.organizacionCamelCase,
         fechaSeleccion: new Date().toISOString(),
-        admin: admin.nombreCompleto
+        admin: adminActual.nombreCompleto
     };
     
     localStorage.setItem('selectedBranch', JSON.stringify(selectedBranch));
     
-    window.location.href = `/users/admin/editarSucursales/editarSucursales.html?id=${branchId}&org=${admin.organizacionCamelCase}`;
+    window.location.href = `/users/admin/editarSucursales/editarSucursales.html?id=${branchId}&org=${adminActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DE LA SUCURSAL ==========
-async function viewBranchDetails(branchId, branchName, admin, sucursalManager) {
+async function viewBranchDetails(branchId, branchName) {
     try {
-        const sucursal = await sucursalManager.getSucursalById(branchId, admin.organizacionCamelCase);
+        const sucursal = await sucursalManager.getSucursalById(branchId, adminActual.organizacionCamelCase);
         
         if (!sucursal) {
             throw new Error('Sucursal no encontrada');
@@ -273,7 +443,7 @@ async function viewBranchDetails(branchId, branchName, admin, sucursalManager) {
     }
 }
 
-// ========== MOSTRAR DETALLES EN MODAL (SIN METADATOS) ==========
+// ========== MOSTRAR DETALLES EN MODAL ==========
 async function showBranchDetails(sucursal, branchName) {
     try {
         // Mostrar loading mientras se obtienen los detalles de la región
@@ -296,7 +466,7 @@ async function showBranchDetails(sucursal, branchName) {
         // Cerrar loading
         Swal.close();
         
-        // Mostrar detalles - SECCIÓN DE METADATOS ELIMINADA
+        // Mostrar detalles
         Swal.fire({
             title: sucursal.nombre,
             html: /*html*/`
@@ -325,11 +495,7 @@ async function showBranchDetails(sucursal, branchName) {
             color: 'var(--color-text-primary)'
         }).then((result) => {
             if (result.isConfirmed) {
-                editBranch(sucursal.id, sucursal.nombre, { 
-                    organizacion: admin.organizacion,
-                    organizacionCamelCase: admin.organizacionCamelCase,
-                    nombreCompleto: admin.nombreCompleto
-                });
+                editBranch(sucursal.id, sucursal.nombre);
             }
         });
         
@@ -345,7 +511,7 @@ async function showBranchDetails(sucursal, branchName) {
 }
 
 // ========== ELIMINAR SUCURSAL ==========
-async function deleteBranch(branchId, branchName, admin, sucursalManager) {
+async function deleteBranch(branchId, branchName) {
     // Mostrar confirmación antes de eliminar
     const confirmResult = await Swal.fire({
         title: '¿Eliminar sucursal?',
@@ -384,7 +550,7 @@ async function deleteBranch(branchId, branchName, admin, sucursalManager) {
     });
 
     try {
-        await sucursalManager.eliminarSucursal(branchId, admin.organizacionCamelCase);
+        await sucursalManager.eliminarSucursal(branchId, adminActual.organizacionCamelCase);
         
         Swal.close();
         
@@ -400,7 +566,7 @@ async function deleteBranch(branchId, branchName, admin, sucursalManager) {
         });
         
         // Recargar la lista de sucursales
-        await loadBranches(admin, sucursalManager);
+        await loadBranches();
         
     } catch (error) {
         console.error('❌ Error eliminando sucursal:', error);
@@ -418,7 +584,7 @@ async function deleteBranch(branchId, branchName, admin, sucursalManager) {
 }
 
 // ========== ESTADO VACÍO ==========
-function showEmptyState(admin) {
+function showEmptyState() {
     const tbody = document.getElementById('branchesTableBody');
     if (!tbody) return;
     
@@ -427,7 +593,7 @@ function showEmptyState(admin) {
             <td colspan="6" class="empty-state">
                 <div class="empty-state-content">
                     <i class="fas fa-store-alt"></i>
-                    <h3>No hay sucursales en ${escapeHTML(admin.organizacion || 'tu organización')}</h3>
+                    <h3>No hay sucursales en ${escapeHTML(adminActual?.organizacion || 'tu organización')}</h3>
                     <p>Comienza agregando tu primera sucursal</p>
                     <button class="add-first-btn" id="addFirstBranch">
                         <i class="fas fa-plus-circle"></i> CREAR PRIMERA SUCURSAL
@@ -440,6 +606,12 @@ function showEmptyState(admin) {
     document.getElementById('addFirstBranch')?.addEventListener('click', () => {
         window.location.href = '/users/admin/crearSucursales/crearSucursales.html';
     });
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 // ========== ESTADO DE CARGA ==========
@@ -484,6 +656,12 @@ function showNoAdminMessage() {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 function showFirebaseError(error) {
@@ -505,6 +683,12 @@ function showFirebaseError(error) {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 function showError(message) {
@@ -524,6 +708,10 @@ function showError(message) {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
-
-
