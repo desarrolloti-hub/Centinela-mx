@@ -1,4 +1,4 @@
-// crearIncidencias.js - VERSIÓN CON COMENTARIOS EN EVIDENCIAS
+// crearIncidencias.js - VERSIÓN CON CALENDARIO Y VALIDACIÓN DE FECHA ACTUAL
 
 // LÍMITES DE CARACTERES
 const LIMITES = {
@@ -319,6 +319,7 @@ class CrearIncidenciaController {
         this.imagenesSeleccionadas = []; // Array de objetos { file, preview, comentario, elementos, edited }
         this.imageEditorModal = null;
         this.loadingOverlay = null;
+        this.flatpickrInstance = null;
 
         this._init();
     }
@@ -365,18 +366,66 @@ class CrearIncidenciaController {
         }
     }
 
+    // ========== INICIALIZAR FLATPICKR - CON LÍMITE DE FECHA ACTUAL ==========
     _inicializarDateTimePicker() {
         const fechaInput = document.getElementById('fechaHoraIncidencia');
         if (fechaInput && typeof flatpickr !== 'undefined') {
-            flatpickr(fechaInput, {
-                enableTime: true,
-                dateFormat: "Y-m-d H:i",
-                time_24hr: true,
-                locale: "es",
-                defaultDate: new Date(),
-                minuteIncrement: 1
-            });
+            try {
+                // Configuración con límite de fecha actual
+                const ahora = new Date();
+
+                this.flatpickrInstance = flatpickr(fechaInput, {
+                    enableTime: true,
+                    dateFormat: "Y-m-d H:i",
+                    time_24hr: true,
+                    locale: "es",
+                    defaultDate: ahora,
+                    minuteIncrement: 1,
+                    maxDate: ahora, // ¡ESTA ES LA CLAVE! - No permite fechas futuras
+                    disableMobile: true, // Para consistencia en móviles
+                    onChange: function (selectedDates, dateStr, instance) {
+                        // Validación adicional por si acaso
+                        if (selectedDates.length > 0) {
+                            const selectedDate = selectedDates[0];
+                            const now = new Date();
+                            if (selectedDate > now) {
+                                instance.setDate(now, true); // Forzar a fecha actual
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Fecha no válida',
+                                    text: 'No puedes seleccionar una fecha futura',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                            }
+                        }
+                    }
+                });
+                console.log('Flatpickr inicializado correctamente con límite de fecha actual');
+            } catch (error) {
+                console.error('Error inicializando Flatpickr:', error);
+                // Fallback a input nativo con validación
+                fechaInput.type = 'datetime-local';
+                fechaInput.max = this._formatearFechaParaInput(new Date());
+            }
+        } else {
+            console.warn('Flatpickr no está disponible, usando input nativo');
+            const fechaInput = document.getElementById('fechaHoraIncidencia');
+            if (fechaInput) {
+                fechaInput.type = 'datetime-local';
+                fechaInput.max = this._formatearFechaParaInput(new Date());
+            }
         }
+    }
+
+    // Helper para formatear fecha para input nativo
+    _formatearFechaParaInput(fecha) {
+        const year = fecha.getFullYear();
+        const month = String(fecha.getMonth() + 1).padStart(2, '0');
+        const day = String(fecha.getDate()).padStart(2, '0');
+        const hours = String(fecha.getHours()).padStart(2, '0');
+        const minutes = String(fecha.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
     // ========== CARGA DE DATOS ==========
@@ -1006,10 +1055,22 @@ class CrearIncidenciaController {
             return;
         }
 
+        // Validar fecha
         const fechaInput = document.getElementById('fechaHoraIncidencia');
-        const fechaHora = fechaInput.value;
+        let fechaHora = fechaInput.value;
+
         if (!fechaHora) {
             this._mostrarError('Debe seleccionar fecha y hora');
+            fechaInput.focus();
+            return;
+        }
+
+        // Validar que la fecha no sea futura
+        const fechaSeleccionada = new Date(fechaHora);
+        const ahora = new Date();
+
+        if (fechaSeleccionada > ahora) {
+            this._mostrarError('No puede seleccionar una fecha futura');
             fechaInput.focus();
             return;
         }
@@ -1047,54 +1108,15 @@ class CrearIncidenciaController {
             estado,
             fechaHora,
             detalles,
-            imagenes: this.imagenesSeleccionadas // Array completo con comentarios
+            imagenes: this.imagenesSeleccionadas
         });
     }
 
     async _confirmarYGuardar(datos) {
-        const sucursalInput = document.getElementById('sucursalIncidencia');
-        const categoriaInput = document.getElementById('categoriaIncidencia');
-
-        const sucursalNombre = sucursalInput.dataset.selectedName || 'No especificada';
-        const categoriaNombre = categoriaInput.dataset.selectedName || 'No especificada';
-
-        let subcategoriaNombre = 'No especificada';
-        if (datos.subcategoriaId && this.categoriaSeleccionada?.subcategorias) {
-            const subcategorias = this.categoriaSeleccionada.subcategorias;
-
-            if (subcategorias instanceof Map) {
-                const sub = subcategorias.get(datos.subcategoriaId);
-                if (sub) subcategoriaNombre = sub.nombre || datos.subcategoriaId;
-            } else if (subcategorias.entries && typeof subcategorias.entries === 'function') {
-                for (const [clave, valor] of subcategorias.entries()) {
-                    if (clave === datos.subcategoriaId) {
-                        subcategoriaNombre = valor.nombre || datos.subcategoriaId;
-                        break;
-                    }
-                }
-            } else if (typeof subcategorias === 'object') {
-                const sub = subcategorias[datos.subcategoriaId];
-                if (sub) subcategoriaNombre = sub.nombre || datos.subcategoriaId;
-            }
-        }
-
-        const riesgoTexto = {
-            'bajo': 'Bajo',
-            'medio': 'Medio',
-            'alto': 'Alto',
-            'critico': 'Crítico'
-        }[datos.nivelRiesgo] || datos.nivelRiesgo;
-
-        const estadoTexto = {
-            'pendiente': 'Pendiente',
-            'finalizada': 'Finalizada'
-        }[datos.estado] || datos.estado;
-
-        const imagenesConComentarios = datos.imagenes.filter(img => img.comentario).length;
-
         const confirmResult = await Swal.fire({
             title: '¿Crear incidencia?',
-            icon: 'warning',
+            text: 'Revise que todos los datos sean correctos',
+            icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'CREAR INCIDENCIA',
             cancelButtonText: 'CANCELAR',
@@ -1105,16 +1127,6 @@ class CrearIncidenciaController {
         if (confirmResult.isConfirmed) {
             await this._guardarIncidencia(datos);
         }
-    }
-
-    _getRiesgoColor(nivel) {
-        const colores = {
-            'bajo': '#28a745',
-            'medio': '#ffc107',
-            'alto': '#fd7e14',
-            'critico': '#dc3545'
-        };
-        return colores[nivel] || '#28a745';
     }
 
     async _guardarIncidencia(datos) {
@@ -1142,26 +1154,21 @@ class CrearIncidenciaController {
                 reportadoPorId: this.usuarioActual.id
             };
 
-            // IMPORTANTE: Pasamos el array completo de objetos con file y comentario
             const archivos = datos.imagenes.map(img => img.file);
-            
-            // También necesitamos pasar los comentarios
-            // Modificar el método crearIncidencia para aceptar los comentarios
+
             const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
                 incidenciaData,
                 this.usuarioActual,
                 archivos,
-                datos.imagenes // Pasamos los objetos completos con comentarios
+                datos.imagenes
             );
 
             this._ocultarCargando();
 
-            const sucursalNombre = document.getElementById('sucursalIncidencia').dataset.selectedName || datos.sucursalId;
-            const categoriaNombre = document.getElementById('categoriaIncidencia').dataset.selectedName || datos.categoriaId;
-
             await Swal.fire({
                 icon: 'success',
                 title: '¡Incidencia creada!',
+                text: 'La incidencia se ha creado correctamente',
                 confirmButtonText: 'Ver incidencias'
             });
 
@@ -1182,6 +1189,11 @@ class CrearIncidenciaController {
     // ========== NAVEGACIÓN ==========
 
     _volverALista() {
+        this.imagenesSeleccionadas.forEach(img => {
+            if (img.preview) {
+                URL.revokeObjectURL(img.preview);
+            }
+        });
         window.location.href = '/users/admin/incidencias/incidencias.html';
     }
 
