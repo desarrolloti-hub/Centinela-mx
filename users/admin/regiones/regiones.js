@@ -1,9 +1,20 @@
+// ========== VARIABLES GLOBALES ==========
+let regionManager = null;
+let adminActual = null;
+
+// Configuración de paginación
+const ITEMS_POR_PAGINA = 10;
+let paginaActual = 1;
+let terminoBusqueda = '';
+let todasLasRegiones = []; // Almacena todas las regiones para búsqueda
+let regionesFiltradas = []; // Regiones filtradas para mostrar
+
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function() {    
     try {
         const { RegionManager } = await import('/clases/region.js');
         
-        const regionManager = new RegionManager();
+        regionManager = new RegionManager();
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -14,20 +25,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         
-        const admin = window.userManager.currentUser;
+        adminActual = window.userManager.currentUser;
         
         localStorage.setItem('adminInfo', JSON.stringify({
-            id: admin.id,
-            nombreCompleto: admin.nombreCompleto,
-            organizacion: admin.organizacion,
-            organizacionCamelCase: admin.organizacionCamelCase,
-            rol: admin.rol,
-            correoElectronico: admin.correoElectronico,
+            id: adminActual.id,
+            nombreCompleto: adminActual.nombreCompleto,
+            organizacion: adminActual.organizacion,
+            organizacionCamelCase: adminActual.organizacionCamelCase,
+            rol: adminActual.rol,
+            correoElectronico: adminActual.correoElectronico,
             timestamp: new Date().toISOString()
         }));
         
-        await loadRegions(admin, regionManager);
-        setupEvents(admin, regionManager);
+        await loadRegions();
+        configurarBusqueda();
+        setupEvents();
         
     } catch (error) {
         console.error('❌ Error inicializando:', error);
@@ -35,17 +47,181 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
+// ========== CONFIGURAR BÚSQUEDA ==========
+function configurarBusqueda() {
+    const inputBuscar = document.getElementById('buscarRegion');
+    const btnBuscar = document.getElementById('btnBuscarRegion');
+    const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', () => {
+            terminoBusqueda = inputBuscar?.value.trim() || '';
+            paginaActual = 1;
+            filtrarYRenderizar();
+        });
+    }
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            if (inputBuscar) inputBuscar.value = '';
+            terminoBusqueda = '';
+            paginaActual = 1;
+            filtrarYRenderizar();
+        });
+    }
+
+    // Búsqueda en tiempo real con debounce
+    if (inputBuscar) {
+        let timeoutId;
+        inputBuscar.addEventListener('input', (e) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }, 300);
+        });
+
+        inputBuscar.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }
+        });
+    }
+}
+
+// ========== FUNCIÓN DE FILTRADO ==========
+function filtrarYRenderizar() {
+    if (!todasLasRegiones.length) {
+        regionesFiltradas = [];
+    } else if (!terminoBusqueda || terminoBusqueda.length < 2) {
+        // Si no hay término de búsqueda, mostrar todas
+        regionesFiltradas = [...todasLasRegiones];
+    } else {
+        // Filtrar en memoria
+        const terminoLower = terminoBusqueda.toLowerCase();
+        regionesFiltradas = todasLasRegiones.filter(reg => 
+            (reg.nombre && reg.nombre.toLowerCase().includes(terminoLower)) ||
+            (reg.color && reg.color.toLowerCase().includes(terminoLower))
+        );
+    }
+
+    renderizarConPaginacion();
+}
+
+// ========== FUNCIONES DE PAGINACIÓN ==========
+function irPagina(pagina) {
+    paginaActual = pagina;
+    renderizarConPaginacion();
+    
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderizarPaginacion(totalPaginas) {
+    const pagination = document.getElementById('pagination');
+    if (!pagination) return;
+
+    if (totalPaginas <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    for (let i = 1; i <= totalPaginas; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="window.irPaginaRegion(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    pagination.innerHTML = html;
+}
+
+// Hacer la función global para que funcionen los botones
+window.irPaginaRegion = function(pagina) {
+    paginaActual = pagina;
+    renderizarConPaginacion();
+    
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ========== RENDERIZAR CON PAGINACIÓN ==========
+function renderizarConPaginacion() {
+    const tbody = document.getElementById('regionsTableBody');
+    if (!tbody) return;
+
+    const totalItems = regionesFiltradas.length;
+    const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
+    
+    // Ajustar página actual si está fuera de rango
+    if (paginaActual > totalPaginas && totalPaginas > 0) {
+        paginaActual = totalPaginas;
+    }
+    
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
+    const regionesPagina = regionesFiltradas.slice(inicio, fin);
+
+    // Actualizar información de paginación
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        if (totalItems === 0) {
+            paginationInfo.textContent = 'No se encontraron regiones';
+        } else {
+            paginationInfo.textContent = `Mostrando ${inicio + 1}-${fin} de ${totalItems} regiones`;
+        }
+    }
+
+    // Mostrar/ocultar contenedor de paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = totalItems > ITEMS_POR_PAGINA ? 'flex' : 'none';
+    }
+
+    if (totalItems === 0) {
+        if (!todasLasRegiones.length) {
+            showEmptyState();
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="empty-state" style="text-align:center; padding:60px 20px;">
+                        <div style="text-align:center;">
+                            <i class="fas fa-search" style="font-size: 48px; color: rgba(255,255,255,0.3); margin-bottom: 16px;"></i>
+                            <h5 style="color:white;">No se encontraron regiones</h5>
+                            <p style="color: var(--color-text-dim); margin-top: 10px;">
+                                ${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        renderizarPaginacion(0);
+        return;
+    }
+
+    renderRegionsTable(regionesPagina);
+    renderizarPaginacion(totalPaginas);
+}
+
 // ========== CARGAR REGIONES ==========
-async function loadRegions(admin, regionManager) {
+async function loadRegions() {
     try {
         showLoadingState();
         
-        const regiones = await regionManager.getRegionesByOrganizacion(
-            admin.organizacionCamelCase
+        todasLasRegiones = await regionManager.getRegionesByOrganizacion(
+            adminActual.organizacionCamelCase
         );
         
         localStorage.setItem('regionesList', JSON.stringify(
-            regiones.map(reg => ({
+            todasLasRegiones.map(reg => ({
                 id: reg.id,
                 nombre: reg.nombre,
                 color: reg.color,
@@ -54,11 +230,10 @@ async function loadRegions(admin, regionManager) {
             }))
         ));
         
-        if (regiones.length === 0) {
-            showEmptyState(admin);
-        } else {
-            renderRegionsTable(regiones, admin);
-        }
+        // Inicializar filtradas
+        regionesFiltradas = [...todasLasRegiones];
+        
+        renderizarConPaginacion();
         
     } catch (error) {
         console.error('❌ Error cargando regiones:', error);
@@ -67,7 +242,7 @@ async function loadRegions(admin, regionManager) {
 }
 
 // ========== RENDERIZAR TABLA DE REGIONES ==========
-function renderRegionsTable(regiones, admin) {
+function renderRegionsTable(regiones) {
     const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
@@ -99,7 +274,7 @@ function renderRegionsTable(regiones, admin) {
             }
         }
 
-        // Usar las clases de CSS y la estructura de datos-label para móvil
+        // Usar las clases de CSS y la estructura de data-label para móvil
         row.innerHTML = `
             <td data-label="Nombre">
                 <div style="display: flex; align-items: center;">
@@ -136,7 +311,7 @@ function renderRegionsTable(regiones, admin) {
 }
 
 // ========== CONFIGURAR EVENTOS ==========
-function setupEvents(admin, regionManager) {
+function setupEvents() {
     // El botón "Agregar Región" ahora es un enlace <a> en el header, pero mantenemos el evento por si acaso
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
@@ -155,40 +330,41 @@ function setupEvents(admin, regionManager) {
             
             const regionId = button.getAttribute('data-region-id');
             const regionName = button.getAttribute('data-region-name');
+            const action = button.getAttribute('data-action');
             
-            if (button.classList.contains('btn-warning') || button.dataset.action === 'edit') {
-                await editRegion(regionId, regionName, admin);
+            if (action === 'edit' || button.classList.contains('btn-warning')) {
+                await editRegion(regionId, regionName);
             } 
-            else if (button.classList.contains('btn') && !button.classList.contains('btn-warning') && !button.classList.contains('btn-danger') || button.dataset.action === 'view') {
-                await viewRegionDetails(regionId, regionName, admin, regionManager);
+            else if (action === 'view' || (button.classList.contains('btn') && !button.classList.contains('btn-warning') && !button.classList.contains('btn-danger'))) {
+                await viewRegionDetails(regionId, regionName);
             }
-            else if (button.classList.contains('btn-danger') || button.dataset.action === 'delete') {
-                await deleteRegion(regionId, regionName, admin, regionManager);
+            else if (action === 'delete' || button.classList.contains('btn-danger')) {
+                await deleteRegion(regionId, regionName);
             }
         });
     }
 }
 
 // ========== EDITAR REGIÓN ==========
-async function editRegion(regionId, regionName, admin) {    
+async function editRegion(regionId, regionName) {    
     const selectedRegion = {
         id: regionId,
         nombre: regionName,
-        organizacion: admin.organizacion,
-        organizacionCamelCase: admin.organizacionCamelCase,
+        organizacion: adminActual.organizacion,
+        organizacionCamelCase: adminActual.organizacionCamelCase,
         fechaSeleccion: new Date().toISOString(),
-        admin: admin.nombreCompleto
+        admin: adminActual.nombreCompleto
     };
     
     localStorage.setItem('selectedRegion', JSON.stringify(selectedRegion));
     
-    window.location.href = `/users/admin/editarRegiones/editarRegiones.html?id=${regionId}&org=${admin.organizacionCamelCase}`;
+    window.location.href = `/users/admin/editarRegiones/editarRegiones.html?id=${regionId}&org=${adminActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DE LA REGIÓN ==========
-async function viewRegionDetails(regionId, regionName, admin, regionManager) {
+async function viewRegionDetails(regionId, regionName) {
     try {
-        const region = await regionManager.getRegionById(regionId, admin.organizacionCamelCase);
+        const region = await regionManager.getRegionById(regionId, adminActual.organizacionCamelCase);
         
         if (!region) {
             throw new Error('Región no encontrada');
@@ -196,7 +372,7 @@ async function viewRegionDetails(regionId, regionName, admin, regionManager) {
         
         // Asegurarse de que la región tenga organizacionCamelCase
         if (!region.organizacionCamelCase) {
-            region.organizacionCamelCase = admin.organizacionCamelCase;
+            region.organizacionCamelCase = adminActual.organizacionCamelCase;
         }
         
         showRegionDetails(region, regionName);
@@ -272,7 +448,7 @@ function showRegionDetails(region, regionName) {
         cancelButtonText: 'CERRAR',
         confirmButtonColor: 'var(--color-accent-primary)',
         cancelButtonColor: 'var(--color-border-light)',
-        reverseButtons: false, // false = Cancelar a la izquierda, Editar a la derecha
+        reverseButtons: false,
         focusCancel: true,
         preConfirm: () => {
             window.location.href = `/users/admin/editarRegiones/editarRegiones.html?id=${region.id}&org=${region.organizacionCamelCase || ''}`;
@@ -281,7 +457,7 @@ function showRegionDetails(region, regionName) {
 }
 
 // ========== ELIMINAR REGIÓN ==========
-async function deleteRegion(regionId, regionName, admin, regionManager) {
+async function deleteRegion(regionId, regionName) {
     const confirmResult = await Swal.fire({
         title: '¿Eliminar región?',
         html: `
@@ -304,9 +480,8 @@ async function deleteRegion(regionId, regionName, admin, regionManager) {
 
     if (!confirmResult.isConfirmed) return;
 
- 
     try {
-        await regionManager.deleteRegion(regionId, admin.organizacionCamelCase);
+        await regionManager.deleteRegion(regionId, adminActual.organizacionCamelCase);
         
         Swal.close();
         
@@ -318,7 +493,7 @@ async function deleteRegion(regionId, regionName, admin, regionManager) {
             showConfirmButton: false
         });
         
-        await loadRegions(admin, regionManager);
+        await loadRegions();
         
     } catch (error) {
         console.error('❌ Error eliminando región:', error);
@@ -364,9 +539,15 @@ function showLoadingState() {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación mientras carga
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
-function showEmptyState(admin) {
+function showEmptyState() {
     const tbody = document.getElementById('regionsTableBody');
     if (!tbody) return;
     
@@ -375,7 +556,7 @@ function showEmptyState(admin) {
             <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
                     <i class="fas fa-map-marked-alt" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
-                    <h5 style="color:white;">No hay regiones en ${admin.organizacion || 'tu organización'}</h5>
+                    <h5 style="color:white;">No hay regiones en ${adminActual?.organizacion || 'tu organización'}</h5>
                     <a href="/users/admin/crearRegiones/crearRegiones.html" class="btn-nueva-region-header" style="display:inline-flex; margin-top:16px;">
                         <i class="fas fa-plus-circle"></i> Crear Primera Región
                     </a>
@@ -383,6 +564,12 @@ function showEmptyState(admin) {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 function showNoAdminMessage() {
@@ -408,6 +595,12 @@ function showNoAdminMessage() {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 function showFirebaseError(error) {
@@ -420,7 +613,7 @@ function showFirebaseError(error) {
                 <div style="text-align:center;">
                     <i class="fas fa-exclamation-triangle" style="font-size:48px; color:#f97316; margin-bottom:16px;"></i>
                     <h5 style="color:white;">Error al cargar regiones</h5>
-                    <p style="color:var(--color-text-dim); max-width:400px; margin:0 auto;">${error.message || 'Error de conexión con Firebase'}</p>
+                    <p style="color:var(--color-text-dim); max-width:400px; margin:0 auto;">${escapeHTML(error.message || 'Error de conexión con Firebase')}</p>
                     <button onclick="window.location.reload()" class="btn" style="margin-top:16px; padding:8px 16px !important; min-width:auto !important;">
                         <i class="fas fa-sync-alt"></i> Recargar
                     </button>
@@ -428,6 +621,12 @@ function showFirebaseError(error) {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 function showError(message) {
@@ -439,7 +638,7 @@ function showError(message) {
             <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
                     <i class="fas fa-exclamation-circle" style="font-size:48px; color:#ef4444; margin-bottom:16px;"></i>
-                    <h5 style="color:white;">${message}</h5>
+                    <h5 style="color:white;">${escapeHTML(message)}</h5>
                     <button onclick="window.location.reload()" class="btn" style="margin-top:16px; padding:8px 16px !important; min-width:auto !important;">
                         <i class="fas fa-sync-alt"></i> Reintentar
                     </button>
@@ -447,6 +646,12 @@ function showError(message) {
             </td>
         </tr>
     `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
 }
 
 // ========== UTILIDADES ==========

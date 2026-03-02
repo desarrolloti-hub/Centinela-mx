@@ -165,7 +165,7 @@ class AreasController {
                     <div class="filtro-grupo">
                         <label for="buscarArea">Nombre o descripción</label>
                         <input type="text" id="buscarArea" class="filtro-input" 
-                               placeholder="Escribe para buscar en tiempo real..." autocomplete="off">
+                               placeholder="Escribe para buscar" autocomplete="off">
                     </div>
                     <div class="filtro-acciones">
                         <button class="btn-buscar" id="btnBuscarArea">
