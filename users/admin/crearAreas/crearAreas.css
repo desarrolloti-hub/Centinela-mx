@@ -72,13 +72,14 @@ h1.h3 i {
 @keyframes titleGlow {
     0% {
         text-shadow: 0 0 5px var(--color-accent-primary),
-                     0 0 15px var(--color-accent-primary);
+            0 0 15px var(--color-accent-primary);
         opacity: 0.9;
     }
+
     100% {
         text-shadow: 0 0 15px var(--color-accent-primary),
-                     0 0 30px var(--color-accent-primary),
-                     0 0 45px var(--color-accent-primary);
+            0 0 30px var(--color-accent-primary),
+            0 0 45px var(--color-accent-primary);
         opacity: 1;
     }
 }
@@ -141,7 +142,8 @@ h1.h3 i {
     box-shadow: var(--shadow-normal) !important;
     margin-bottom: 20px !important;
     overflow: hidden;
-    width: 100%; /* Asegurar que ambas tarjetas ocupen el 100% del contenedor */
+    width: 100%;
+    /* Asegurar que ambas tarjetas ocupen el 100% del contenedor */
 }
 
 .centinela-card-header {
@@ -272,7 +274,7 @@ h6 i {
 .form-control:focus,
 .form-select:focus {
     border-color: var(--color-accent-secondary) !important;
-    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
+
     background: var(--color-bg-tertiary) !important;
     outline: none !important;
 }
@@ -338,7 +340,8 @@ h6 i {
     padding: 20px;
     margin-bottom: 20px;
     border: 1px solid var(--color-border-light);
-    width: 100%; /* Asegurar que ocupe todo el ancho */
+    width: 100%;
+    /* Asegurar que ocupe todo el ancho */
 }
 
 .cargo-item {
@@ -349,7 +352,8 @@ h6 i {
     margin-bottom: 15px;
     position: relative;
     transition: all 0.3s ease;
-    width: 100%; /* Asegurar que ocupe todo el ancho */
+    width: 100%;
+    /* Asegurar que ocupe todo el ancho */
 }
 
 .cargo-item:hover {
@@ -460,7 +464,8 @@ h6 i {
     background: rgba(0, 0, 0, 0.2);
     border-radius: var(--border-radius-medium);
     border: 1px dashed var(--color-border-light);
-    width: 100%; /* Asegurar que ocupe todo el ancho */
+    width: 100%;
+    /* Asegurar que ocupe todo el ancho */
 }
 
 .cargos-empty i {
@@ -488,18 +493,16 @@ h6 i {
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 100%; /* Asegurar que ocupe todo el ancho */
 }
 
 .alert-info {
-    background: rgba(0, 207, 255, 0.1) !important;
-    border-color: rgba(0, 207, 255, 0.3) !important;
-    color: #00cfff !important;
+    color: var(--color-accent-primary) !important;
 }
 
 .alert-info i {
-    color: #00cfff !important;
-    filter: drop-shadow(0 0 4px #00cfff);
+    color: var(--color-accent-primary) !important;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+    font-size: 18px;
 }
 
 /* =============================================
@@ -512,7 +515,8 @@ h6 i {
     padding-top: 20px;
     border-top: 1px solid var(--color-border-light);
     margin-top: 20px;
-    width: 100%; /* Asegurar que ocupe todo el ancho */
+    width: 100%;
+    /* Asegurar que ocupe todo el ancho */
 }
 
 .btn-success,
@@ -573,6 +577,7 @@ h6 i {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -586,7 +591,7 @@ h6 i {
     body {
         padding-top: 70px;
     }
-    
+
     .centinela-container {
         padding: 20px !important;
     }
@@ -632,7 +637,7 @@ h6 i {
         margin-bottom: 15px;
         padding: 0;
     }
-    
+
     .col-md-12 {
         padding: 0;
     }
@@ -753,15 +758,15 @@ h6 i {
     body {
         padding-top: 60px !important;
     }
-    
+
     h1.h3 {
         font-size: 18px !important;
     }
-    
+
     h1.h3 i {
         font-size: 20px !important;
     }
-    
+
     .text-muted {
         font-size: 0.9rem !important;
     }
