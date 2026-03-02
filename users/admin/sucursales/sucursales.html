@@ -89,6 +89,28 @@
             </div>
         </div>
 
+        <!-- Barra de búsqueda -->
+        <div class="filtros-container">
+            <div class="filtros-header">
+                <h5><i class="fas fa-search"></i> Buscar sucursales:</h5>
+            </div>
+            <div class="filtros-body">
+                <div class="filtro-grupo">
+                    <label for="buscarSucursal">Nombre, ubicación o contacto</label>
+                    <input type="text" id="buscarSucursal" class="filtro-input" 
+                           placeholder="Escribe para buscar" autocomplete="off">
+                </div>
+                <div class="filtro-acciones">
+                    <button class="btn-buscar" id="btnBuscarSucursal">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <button class="btn-limpiar" id="btnLimpiarBusqueda">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Card contenedor de la tabla (estilo categorías) -->
         <div class="card">
             <div class="card-header">
@@ -116,6 +138,15 @@
                     </table>
                 </div>
 
+                <!-- Paginación -->
+                <div class="pagination-container">
+                    <div class="pagination-info" id="paginationInfo"></div>
+                    <nav>
+                        <ul class="pagination" id="pagination">
+                            <!-- Se llenará dinámicamente -->
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
     </div>
