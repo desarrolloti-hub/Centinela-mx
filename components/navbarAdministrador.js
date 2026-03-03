@@ -60,7 +60,7 @@ class NavbarComplete {
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
-        const styles = `
+        const styles = /*css*/`
             /* Navbar fijo en la parte superior */
             #complete-navbar {
                 position: fixed;
@@ -905,7 +905,7 @@ class NavbarComplete {
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
-        navbar.innerHTML = `
+        navbar.innerHTML = /*html*/`
             <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
@@ -961,7 +961,7 @@ class NavbarComplete {
                             </div>
                         </div>
                         <!-- Ícono de lápiz para editar -->
-                        <a href="/usuarios/administrador/editarAdmin/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
+                        <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
                     </div>
@@ -991,7 +991,7 @@ class NavbarComplete {
                     <!-- Contenedor de opciones expandido con los 5 botones (Áreas, Categorías, Sucursales, Regiones, Incidencias) -->
                     <div class="administracion-dropdown-options" id="administracionDropdownOptions">
                         <!-- Botón para ÁREAS -->
-                        <a href="/users/admin/areas/areas.html" class="administracion-dropdown-option" id="areasBtn">
+                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option" id="areasBtn">
                             <i class="fa-solid fa-map"></i>
                             <span>Áreas</span>
                         </a>
