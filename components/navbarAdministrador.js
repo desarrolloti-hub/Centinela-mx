@@ -1035,16 +1035,12 @@ class NavbarComplete {
                     </button>
                     
                     <div class="admin-dropdown-options" id="adminDropdownOptions">
-                        <a href="#" class="admin-dropdown-option">
-                            <i class="fa-solid fa-gears"></i>
-                            <span>Administración</span>
-                        </a>
                         <a href="/usuarios/administrador/usuarios/usuarios.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Gestionar Usuarios</span>
                         </a>
                         <!-- Botón de Personalización de colores movido AQUÍ, antes de cerrar sesión -->
-                        <a href="/users/admin/themeManager/themeManager.html" class="admin-dropdown-option" id="themeManagerBtn">
+                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option" id="themeManagerBtn">
                             <i class="fa-solid fa-palette"></i>
                             <span>Personalización de colores</span>
                         </a>
