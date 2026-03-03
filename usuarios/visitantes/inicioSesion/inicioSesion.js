@@ -579,7 +579,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             setTimeout(() => {
                 if (user.esAdministrador()) {
-                    window.location.href = '/users/admin/dashAdmin/dashAdmin.html';
+                    window.location.href = '/usuarios/administrador/panelControl/panelControl.html';
                 } else if (user.esColaborador()) {
                     window.location.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
                 } else if (user.esMaster()) {
