@@ -378,7 +378,7 @@ function setupEvents() {
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
-            window.location.href = '/users/admin/crearSucursales/crearSucursales.html';
+            window.location.href = '/usuarios/administrador/crearSucursales/crearSucursales.html';
         });
     }
     
@@ -419,7 +419,7 @@ async function editBranch(branchId, branchName) {
     
     localStorage.setItem('selectedBranch', JSON.stringify(selectedBranch));
     
-    window.location.href = `/users/admin/editarSucursales/editarSucursales.html?id=${branchId}&org=${adminActual.organizacionCamelCase}`;
+    window.location.href = `/usuarios/administrador/editarSucursales/editarSucursales.html?id=${branchId}&org=${adminActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DE LA SUCURSAL ==========
@@ -604,7 +604,7 @@ function showEmptyState() {
     `;
     
     document.getElementById('addFirstBranch')?.addEventListener('click', () => {
-        window.location.href = '/users/admin/crearSucursales/crearSucursales.html';
+        window.location.href = '/usuarios/administrador/crearSucursales/crearSucursales.html';
     });
 
     // Ocultar paginación
@@ -648,7 +648,7 @@ function showNoAdminMessage() {
                         <button onclick="window.location.reload()" class="reload-btn">
                             <i class="fas fa-sync-alt"></i> Recargar
                         </button>
-                        <button onclick="window.location.href='/users/visitors/login/login.html'" class="login-btn">
+                        <button onclick="window.location.href='/usuarios/visitantes/inicioSesion/inicioSesion.html'" class="login-btn">
                             <i class="fas fa-sign-in-alt"></i> Iniciar sesión
                         </button>
                     </div>

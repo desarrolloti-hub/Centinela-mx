@@ -582,7 +582,7 @@ class CrearSucursalController {
 
     // ========== NAVEGACIÓN ==========
     _volverALista() {
-        window.location.href = '/users/admin/sucursales/sucursales.html';
+        window.location.href = '/usuarios/administrador/sucursales/sucursales.html';
     }
 
     _cancelarCreacion() {
@@ -607,7 +607,7 @@ class CrearSucursalController {
             text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login'
         }).then(() => {
-            window.location.href = '/users/visitors/login/login.html';
+            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
 

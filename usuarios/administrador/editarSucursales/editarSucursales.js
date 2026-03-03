@@ -940,7 +940,7 @@ class EditarSucursalController {
 
     // ========== NAVEGACIÓN ==========
     _volverALista() {
-        window.location.href = '/users/admin/sucursales/sucursales.html';
+        window.location.href = '/usuarios/administrador/sucursales/sucursales.html';
     }
 
     _cancelarEdicion() {

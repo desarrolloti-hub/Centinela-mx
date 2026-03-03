@@ -1003,7 +1003,7 @@ class NavbarComplete {
                         </a>
 
                         <!-- Botón para SUCURSALES -->
-                        <a href="/users/admin/sucursales/sucursales.html" class="administracion-dropdown-option" id="sucursalesBtn">
+                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option" id="sucursalesBtn">
                             <i class="fa-solid fa-store"></i>
                             <span>Sucursales</span>
                         </a>
