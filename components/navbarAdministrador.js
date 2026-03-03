@@ -1009,7 +1009,7 @@ class NavbarComplete {
                         </a>
 
                         <!-- Botón para REGIONES -->
-                        <a href="/users/admin/regiones/regiones.html" class="administracion-dropdown-option" id="regionesBtn">
+                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option" id="regionesBtn">
                             <i class="fa-solid fa-location-dot"></i>
                             <span>Regiones</span>
                         </a>

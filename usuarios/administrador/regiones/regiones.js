@@ -358,7 +358,7 @@ async function editRegion(regionId, regionName) {
     
     localStorage.setItem('selectedRegion', JSON.stringify(selectedRegion));
     
-    window.location.href = `/users/admin/editarRegiones/editarRegiones.html?id=${regionId}&org=${adminActual.organizacionCamelCase}`;
+    window.location.href = `/usuarios/administrador/editarRegiones/editarRegiones.html?id=${regionId}&org=${adminActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DE LA REGIÓN ==========
@@ -451,7 +451,7 @@ function showRegionDetails(region, regionName) {
         reverseButtons: false,
         focusCancel: true,
         preConfirm: () => {
-            window.location.href = `/users/admin/editarRegiones/editarRegiones.html?id=${region.id}&org=${region.organizacionCamelCase || ''}`;
+            window.location.href = `/usuarios/administrador/editarRegiones/editarRegiones.html?id=${region.id}&org=${region.organizacionCamelCase || ''}`;
         }
     });
 }
@@ -557,7 +557,7 @@ function showEmptyState() {
                 <div style="text-align:center;">
                     <i class="fas fa-map-marked-alt" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
                     <h5 style="color:white;">No hay regiones en ${adminActual?.organizacion || 'tu organización'}</h5>
-                    <a href="/users/admin/crearRegiones/crearRegiones.html" class="btn-nueva-region-header" style="display:inline-flex; margin-top:16px;">
+                    <a href="/usuarios/administrador/crearRegiones/crearRegiones.html" class="btn-nueva-region-header" style="display:inline-flex; margin-top:16px;">
                         <i class="fas fa-plus-circle"></i> Crear Primera Región
                     </a>
                 </div>
@@ -587,7 +587,7 @@ function showNoAdminMessage() {
                         <button onclick="window.location.reload()" class="btn" style="padding:8px 16px !important; min-width:auto !important;">
                             <i class="fas fa-sync-alt"></i> Recargar
                         </button>
-                        <button onclick="window.location.href='/users/visitors/login/login.html'" class="btn btn-warning" style="padding:8px 16px !important; min-width:auto !important;">
+                        <button onclick="window.location.href='/usuarios/visitantes/inicioSesion/inicioSesion.html'" class="btn btn-warning" style="padding:8px 16px !important; min-width:auto !important;">
                             <i class="fas fa-sign-in-alt"></i> Iniciar sesión
                         </button>
                     </div>

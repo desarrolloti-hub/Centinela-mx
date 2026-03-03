@@ -413,7 +413,7 @@ class EditarRegionController {
 
     // ========== NAVEGACIÓN ==========
     _volverALista() {
-        window.location.href = '/users/admin/regiones/regiones.html';
+        window.location.href = '/usuarios/administrador/regiones/regiones.html';
     }
 
     _cancelarEdicion() {
