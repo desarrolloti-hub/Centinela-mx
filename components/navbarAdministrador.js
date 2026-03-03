@@ -1696,7 +1696,7 @@ class NavbarComplete {
         const timestamp = new Date().getTime();
 
         // Redirigir con parámetros para forzar cierre de sesión completo
-        const loginUrl = `/users/visitors/login/login.html?logout=true&timestamp=${timestamp}&nocache=1`;
+        const loginUrl = `/usuarios/visitantes/inicioSesion/inicioSesion.html?logout=true&timestamp=${timestamp}&nocache=1`;
 
         // Forzar recarga completa
         window.location.href = loginUrl;
