@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (user.esAdministrador()) {
                     window.location.href = '/usuarios/administrador/panelControl/panelControl.html';
                 } else if (user.esColaborador()) {
-                    window.location.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
+                    window.location.href = '/usuarios/colaboradores/panelControl/panelControl.html';
                 } else if (user.esMaster()) {
                     window.location.href = '/users/master/dashMaster/dashMaster.html';
                 } else {

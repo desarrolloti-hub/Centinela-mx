@@ -767,7 +767,7 @@ class NavbarComplete {
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
                     <!-- Logo del sistema Centinela -->
-                    <a href="/users/colaborador/dashboardColaborador/dashboardColaborador.html" class="navbar-logo-link">
+                    <a href="/usuarios/colaboradores/panelControl/panelControl.html" class="navbar-logo-link">
                         <div class="logo-circle-container">
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                         </div>
@@ -777,7 +777,7 @@ class NavbarComplete {
                     <div class="logo-separator"></div>
                     
                     <!-- Logo de la organización -->
-                    <a href="/users/colaborador/dashboardColaborador/dashboardColaborador.html" class="navbar-logo-link" id="orgLogoLink">
+                    <a href="/usuarios/colaboradores/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
                             <img src="/assets/images/logo.png" alt="Logo Organización" 
                                  class="navbar-logo-img" id="orgLogoImg">
@@ -1046,7 +1046,7 @@ class NavbarComplete {
             this.showOrgTextLogo();
         }
 
-        orgLogoLink.href = '/users/colaborador/dashboardColaborador/dashboardColaborador.html';
+        orgLogoLink.href = '/usuarios/colaboradores/panelControl/panelControl.html';
     }
 
     // Muestra iniciales cuando no hay logo
@@ -1356,7 +1356,7 @@ class NavbarComplete {
     // Redirige al login
     redirectToLogin() {
         const timestamp = new Date().getTime();
-        const loginUrl = `/users/visitors/login/login.html?logout=true&timestamp=${timestamp}&nocache=1`;
+        const loginUrl = `/usuarios/visitantes/inicioSesion/inicioSesion.html?logout=true&timestamp=${timestamp}&nocache=1`;
         window.location.href = loginUrl;
     }
 
