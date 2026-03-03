@@ -1,5 +1,4 @@
-
-import generadorIPH from './iph-generator.js';
+import { generadorIPH } from '/components/iph-generator.js';
 
 // =============================================
 // VARIABLES GLOBALES incidencias
