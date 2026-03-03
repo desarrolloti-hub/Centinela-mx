@@ -692,7 +692,7 @@ class CrearCategoriaController {
     // ========== NAVEGACIÓN ==========
 
     _volverALista() {
-        window.location.href = '/users/admin/categorias/categorias.html';
+        window.location.href = '/usuarios/administrador/categorias/categorias.html';
     }
 
     _cancelarCreacion() {
@@ -717,7 +717,7 @@ class CrearCategoriaController {
             text: 'Debes iniciar sesión para continuar',
             confirmButtonText: 'Ir al login'
         }).then(() => {
-            window.location.href = '/users/visitors/login/login.html';
+            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
 

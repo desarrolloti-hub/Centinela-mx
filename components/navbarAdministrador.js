@@ -997,7 +997,7 @@ class NavbarComplete {
                         </a>
 
                         <!-- Botón para CATEGORIAS -->
-                        <a href="/users/admin/categorias/categorias.html" class="administracion-dropdown-option" id="categoriasBtn">
+                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option" id="categoriasBtn">
                             <i class="fa-solid fa-tags"></i>
                             <span>Categorías</span>
                         </a>

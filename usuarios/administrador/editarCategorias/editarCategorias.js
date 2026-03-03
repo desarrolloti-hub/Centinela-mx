@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     if (!categoriaId) {
         mostrarNotificacion('No se especificó la categoría a editar', 'error');
-        setTimeout(() => window.location.href = '/users/admin/categorias/categorias.html', 2000);
+        setTimeout(() => window.location.href = '/usuarios/administrador/categorias/categorias.html', 2000);
         return;
     }
 
@@ -145,7 +145,7 @@ async function cargarCategoria(id) {
 
         if (!categoriaActual) {
             mostrarNotificacion('Categoría no encontrada', 'error');
-            setTimeout(() => window.location.href = '/users/admin/categorias/categorias.html', 2000);
+            setTimeout(() => window.location.href = '/usuarios/administrador/categorias/categorias.html', 2000);
             return;
         }
 
@@ -551,7 +551,7 @@ async function guardarCategoria(datos) {
             confirmButtonText: 'Ver categorías'
         });
 
-        window.location.href = '/users/admin/categorias/categorias.html';
+        window.location.href = '/usuarios/administrador/categorias/categorias.html';
 
     } catch (error) {
         console.error('Error guardando categoría:', error);
@@ -569,7 +569,7 @@ async function guardarCategoria(datos) {
 // =============================================
 
 function volverALista() {
-    window.location.href = '/users/admin/categorias/categorias.html';
+    window.location.href = '/usuarios/administrador/categorias/categorias.html';
 }
 
 function cancelarEdicion() {
@@ -594,7 +594,7 @@ function redirigirAlLogin() {
         text: 'Debes iniciar sesión para continuar',
         confirmButtonText: 'Ir al login'
     }).then(() => {
-        window.location.href = '/users/visitors/login/login.html';
+        window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
     });
 }
 
