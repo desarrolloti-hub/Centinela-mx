@@ -2,7 +2,7 @@
 import generadorIPH from './iph-generator.js';
 
 // =============================================
-// VARIABLES GLOBALES
+// VARIABLES GLOBALES incidencias
 // =============================================
 let incidenciaManager = null;
 let organizacionActual = null;
