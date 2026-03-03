@@ -73,7 +73,7 @@ function obtenerIdDesdeURL() {
             text: 'No se especificó el colaborador a editar',
             confirmButtonText: 'Volver'
         }).then(() => {
-            window.location.href = '/users/admin/managementUser/managementUser.html';
+            window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
         });
         return null;
     }
@@ -146,7 +146,7 @@ function mostrarErrorConfiguracion(error) {
         confirmButtonText: 'Entendido',
         allowOutsideClick: false
     }).then(() => {
-        window.location.href = '/users/admin/managementUser/managementUser.html';
+        window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
     });
 }
 
@@ -190,7 +190,7 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
             text: error.message,
             confirmButtonText: 'Volver'
         }).then(() => {
-            window.location.href = '/users/admin/managementUser/managementUser.html';
+            window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
         });
         
         throw error;
@@ -484,7 +484,7 @@ function configurarHandlersBasicos(elements) {
                 cancelButtonText: 'CANCELAR'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = '/users/admin/managementUser/managementUser.html';
+                    window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
                 }
             });
         });
@@ -961,7 +961,7 @@ function configurarEliminacion(elements, userManager) {
             });
             
             setTimeout(() => {
-                window.location.href = '/users/admin/managementUser/managementUser.html';
+                window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
             }, 3000);
             
         } catch (error) {

@@ -307,7 +307,7 @@ function setupEvents() {
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
-            window.location.href = '/users/admin/newUser/newUser.html';
+            window.location.href = '/usuarios/administrador/crearUsuarios/crearUsuarios.html';
         });
     }
     
@@ -440,7 +440,7 @@ async function editUser(collaboratorId, collaboratorName) {
     
     localStorage.setItem('selectedCollaborator', JSON.stringify(selectedCollaborator));
     
-    window.location.href = `/users/admin/editUser/editUser.html?id=${collaboratorId}&org=${adminActual.organizacionCamelCase}`;
+    window.location.href = `/usuarios/administrador/editarUsuarios/editarUsuarios.html?id=${collaboratorId}&org=${adminActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DEL COLABORADOR ==========
@@ -563,7 +563,7 @@ function showEmptyState() {
     `;
     
     document.getElementById('addFirstCollaborator')?.addEventListener('click', () => {
-        window.location.href = '/users/admin/newUser/newUser.html';
+        window.location.href = '/usuarios/administrador/crearUsuarios/crearUsuarios.html';
     });
 
     // Ocultar paginación
@@ -613,7 +613,7 @@ function showNoAdminMessage() {
                         <button onclick="window.location.reload()" class="reload-btn">
                             <i class="fas fa-sync-alt"></i> Recargar
                         </button>
-                        <button onclick="window.location.href='/users/visitors/login/login.html'" class="login-btn">
+                        <button onclick="window.location.href='/usuarios/visitantes/inicioSesion/inicioSesion.html'" class="login-btn">
                             <i class="fas fa-sign-in-alt"></i> Iniciar sesión
                         </button>
                     </div>

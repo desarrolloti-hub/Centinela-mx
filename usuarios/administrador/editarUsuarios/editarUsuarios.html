@@ -15,7 +15,7 @@
     <!-- Archivo para PWA -->
     <link rel="manifest" href="/manifest.json">
     <!-- Estilos modulo -->
-    <link rel="stylesheet" href="editUser.css">
+    <link rel="stylesheet" href="editarUsuarios.css">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -190,7 +190,7 @@
 
                 <!-- Botón volver -->
                 <footer class="back-btn-container">
-                    <a href="/users/admin/managementUser/managementUser.html" class="back-btn">
+                    <a href="/usuarios/administrador/usuarios/usuarios.html" class="back-btn">
                         <i class="fas fa-arrow-left"></i> VOLVER A GESTIÓN
                     </a>
                 </footer>
@@ -359,33 +359,13 @@
         </div>
     </div>
 
-    <!-- Modal para fotos -->
-    <div class="photo-modal" id="photoModal">
-        <div class="modal-content">
-            <h3 class="modal-title">
-                <i class="fas fa-camera"></i>
-                <span id="modalTitle">CAMBIAR FOTO</span>
-            </h3>
-            <div class="modal-preview">
-                <img id="previewImage" class="preview-image" src="" alt="Vista previa">
-            </div>
-            <p class="modal-message" id="modalMessage">
-                ¿Deseas usar esta imagen?
-            </p>
-            <div class="modal-buttons">
-                <button class="modal-btn modal-btn-confirm" id="confirmChangeBtn">CONFIRMAR</button>
-                <button class="modal-btn modal-btn-cancel" id="cancelChangeBtn">CANCELAR</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Scripts externos -->
     <script type="module" src="/components/themeloader.js"></script>
-    <script src="/components/navbar-admin-component.js"></script>
-    <script src="/components/footer-admin-component.js"></script>
+    <script src="/components/navbarAdministrador.js"></script>
+    <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     
     <!-- Script principal - MÓDULO ES6 -->
-    <script type="module" src="editUser.js"></script>
+    <script type="module" src="editarUsuarios.js"></script>
 </body>
 </html>
