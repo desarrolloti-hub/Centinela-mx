@@ -910,7 +910,7 @@ class NavbarComplete {
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
                     <!-- Logo del sistema Centinela -->
-                    <a href="/users/admin/dashAdmin/dashAdmin.html" class="navbar-logo-link">
+                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link">
                         <div class="logo-circle-container">
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                         </div>
@@ -920,7 +920,7 @@ class NavbarComplete {
                     <div class="logo-separator"></div>
                     
                     <!-- Logo de la organización -->
-                    <a href="/users/admin/dashAdmin/dashAdmin.html" class="navbar-logo-link" id="orgLogoLink">
+                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
                             <img src="/assets/images/logo.png" alt="Logo Organización" 
                                  class="navbar-logo-img" id="orgLogoImg">
@@ -961,7 +961,7 @@ class NavbarComplete {
                             </div>
                         </div>
                         <!-- Ícono de lápiz para editar -->
-                        <a href="/users/admin/editAdmin/editAdmin.html" class="edit-profile-icon" id="editProfileIcon">
+                        <a href="/usuarios/administrador/editarAdmin/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
                     </div>
@@ -1290,7 +1290,7 @@ class NavbarComplete {
         }
 
         // Actualizar el enlace del logo para redirigir al dashboard
-        orgLogoLink.href = '/users/admin/dashAdmin/dashAdmin.html';
+        orgLogoLink.href = '/usuarios/administrador/panelControl/panelControl.html';
 
         // Asegurar que el contenedor sea un círculo perfecto
         orgLogoContainer.style.borderRadius = '50%';
