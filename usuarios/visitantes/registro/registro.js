@@ -648,7 +648,7 @@ async function mostrarExitoRegistro(adminData) {
         allowOutsideClick: false
     }).then(() => {
         // Redirigir al login
-        window.location.href = '/users/visitors/login/login.html';
+        window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
     });
 }
 
@@ -739,7 +739,7 @@ function cancelarRegistro() {
         cancelButtonText: 'CANCELAR'
     }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = '/users/visitors/login/login.html';
+            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         }
     });
 }

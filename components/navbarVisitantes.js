@@ -357,9 +357,9 @@
                     
                         <li><a href="/index.html" class="active"><i class="fas fa-home"></i> <span>Inicio</span></a></li>
                         <li><a href="/index.html#quienes-somos"><i class="fas fa-box-open"></i><span>¿Quiénes somos?</span></a></li>
-                        <li><a href="/users/visitors/planes/planes.html"><i class="fas fa-box-open"></i> <span>Planes</span></a></li>
-                        <li><a href="/users/visitors/contact/contact.html"><i class="fas fa-map-marker-alt"></i> <span>Contactanos</span></a></li>
-                        <li><a href="/users/visitors/login/login.html"><i class="fas fa-envelope"></i> <span>Inicio de sesion</span></a></li>
+                        <li><a href="/usuarios/visitantes/planes/planes.html"><i class="fas fa-box-open"></i> <span>Planes</span></a></li>
+                        <li><a href="/usuarios/visitantes/contacto/contacto.html"><i class="fas fa-map-marker-alt"></i> <span>Contactanos</span></a></li>
+                        <li><a href="/usuarios/visitantes/inicioSesion/inicioSesion.html"><i class="fas fa-envelope"></i> <span>Inicio de sesion</span></a></li>
                     </ul>
 
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
