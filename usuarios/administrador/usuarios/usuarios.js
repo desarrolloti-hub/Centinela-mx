@@ -1,0 +1,682 @@
+// ========== VARIABLES GLOBALES ==========
+let userManager = null;
+let adminActual = null;
+
+// Configuración de paginación
+const ITEMS_POR_PAGINA = 10;
+let paginaActual = 1;
+let terminoBusqueda = '';
+let todosLosColaboradores = []; // Almacena todos los colaboradores para búsqueda
+let colaboradoresFiltrados = []; // Colaboradores filtrados para mostrar
+
+// ========== INICIALIZACIÓN ==========
+document.addEventListener('DOMContentLoaded', async function() {    
+    try {
+        const { UserManager } = await import('/clases/user.js');
+        userManager = new UserManager();
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        if (!userManager.currentUser || !userManager.currentUser.esAdministrador()) {
+            console.error('❌ No hay administrador autenticado');
+            showNoAdminMessage();
+            return;
+        }
+        
+        adminActual = userManager.currentUser;
+        
+        localStorage.setItem('adminInfo', JSON.stringify({
+            id: adminActual.id,
+            nombreCompleto: adminActual.nombreCompleto,
+            organizacion: adminActual.organizacion,
+            organizacionCamelCase: adminActual.organizacionCamelCase,
+            rol: adminActual.rol,
+            correoElectronico: adminActual.correoElectronico,
+            timestamp: new Date().toISOString()
+        }));
+        
+        localStorage.removeItem('selectedCollaborator');
+        
+        await loadCollaborators();
+        configurarBusqueda();
+        setupEvents();
+        
+    } catch (error) {
+        console.error('❌ Error inicializando:', error);
+        showError(error.message || 'Error al cargar la página');
+    }
+});
+
+// ========== CONFIGURAR BÚSQUEDA ==========
+function configurarBusqueda() {
+    const inputBuscar = document.getElementById('buscarColaborador');
+    const btnBuscar = document.getElementById('btnBuscarColaborador');
+    const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', () => {
+            terminoBusqueda = inputBuscar?.value.trim() || '';
+            paginaActual = 1;
+            filtrarYRenderizar();
+        });
+    }
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            if (inputBuscar) inputBuscar.value = '';
+            terminoBusqueda = '';
+            paginaActual = 1;
+            filtrarYRenderizar();
+        });
+    }
+
+    // Búsqueda en tiempo real con debounce
+    if (inputBuscar) {
+        let timeoutId;
+        inputBuscar.addEventListener('input', (e) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }, 300);
+        });
+
+        inputBuscar.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                terminoBusqueda = e.target.value.trim();
+                paginaActual = 1;
+                filtrarYRenderizar();
+            }
+        });
+    }
+}
+
+// ========== FUNCIÓN DE FILTRADO ==========
+function filtrarYRenderizar() {
+    if (!todosLosColaboradores.length) {
+        colaboradoresFiltrados = [];
+    } else if (!terminoBusqueda || terminoBusqueda.length < 2) {
+        // Si no hay término de búsqueda, mostrar todas
+        colaboradoresFiltrados = [...todosLosColaboradores];
+    } else {
+        // Filtrar en memoria
+        const terminoLower = terminoBusqueda.toLowerCase();
+        colaboradoresFiltrados = todosLosColaboradores.filter(col => 
+            (col.nombreCompleto && col.nombreCompleto.toLowerCase().includes(terminoLower)) ||
+            (col.correoElectronico && col.correoElectronico.toLowerCase().includes(terminoLower)) ||
+            (col.rol && col.rol.toLowerCase().includes(terminoLower))
+        );
+    }
+
+    renderizarConPaginacion();
+}
+
+// ========== FUNCIONES DE PAGINACIÓN ==========
+function irPagina(pagina) {
+    paginaActual = pagina;
+    renderizarConPaginacion();
+    
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderizarPaginacion(totalPaginas) {
+    const pagination = document.getElementById('pagination');
+    if (!pagination) return;
+
+    if (totalPaginas <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    for (let i = 1; i <= totalPaginas; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="window.irPaginaColaborador(${i})">${i}</button>
+            </li>
+        `;
+    }
+
+    pagination.innerHTML = html;
+}
+
+// Hacer la función global para que funcionen los botones
+window.irPaginaColaborador = function(pagina) {
+    paginaActual = pagina;
+    renderizarConPaginacion();
+    
+    // Scroll suave hacia arriba
+    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ========== RENDERIZAR CON PAGINACIÓN ==========
+function renderizarConPaginacion() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+
+    const totalItems = colaboradoresFiltrados.length;
+    const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
+    
+    // Ajustar página actual si está fuera de rango
+    if (paginaActual > totalPaginas && totalPaginas > 0) {
+        paginaActual = totalPaginas;
+    }
+    
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
+    const colaboradoresPagina = colaboradoresFiltrados.slice(inicio, fin);
+
+    // Actualizar información de paginación
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        if (totalItems === 0) {
+            paginationInfo.textContent = 'No se encontraron colaboradores';
+        } else {
+            paginationInfo.textContent = `Mostrando ${inicio + 1}-${fin} de ${totalItems} colaboradores`;
+        }
+    }
+
+    // Mostrar/ocultar contenedor de paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = totalItems > ITEMS_POR_PAGINA ? 'flex' : 'none';
+    }
+
+    if (totalItems === 0) {
+        if (!todosLosColaboradores.length) {
+            showEmptyState();
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <div class="empty-state-content">
+                            <i class="fas fa-search" style="font-size: 48px; color: rgba(255,255,255,0.3); margin-bottom: 16px;"></i>
+                            <h3>No se encontraron colaboradores</h3>
+                            <p>${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        renderizarPaginacion(0);
+        return;
+    }
+
+    renderCollaboratorsTable(colaboradoresPagina);
+    renderizarPaginacion(totalPaginas);
+}
+
+// ========== CARGAR COLABORADORES ==========
+async function loadCollaborators() {
+    try {
+        showLoadingState();
+        
+        todosLosColaboradores = await userManager.getColaboradoresByOrganizacion(
+            adminActual.organizacionCamelCase,
+            true
+        );
+        
+        localStorage.setItem('colaboradoresList', JSON.stringify(
+            todosLosColaboradores.map(col => ({
+                id: col.id,
+                nombreCompleto: col.nombreCompleto,
+                correoElectronico: col.correoElectronico,
+                rol: col.rol,
+                status: col.status,
+                organizacion: col.organizacion,
+                fotoUsuario: col.fotoUsuario,
+            }))
+        ));
+        
+        // Inicializar filtrados
+        colaboradoresFiltrados = [...todosLosColaboradores];
+        
+        renderizarConPaginacion();
+        
+    } catch (error) {
+        console.error('❌ Error cargando colaboradores:', error);
+        showFirebaseError(error);
+    }
+}
+
+// ========== RENDERIZAR TABLA DE COLABORADORES ==========
+function renderCollaboratorsTable(collaborators) {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    collaborators.forEach(col => {
+        const row = document.createElement('tr');
+        const isActive = col.status === true || col.status === 'active';
+        
+        const fullName = col.nombreCompleto || '';
+        const fotoUrl = col.getFotoUrl ? col.getFotoUrl() : (col.fotoUsuario || '');
+        
+        row.className = isActive ? 'collaborator-row' : 'collaborator-row inactive';
+        
+        row.innerHTML = `
+            <td data-label="NOMBRE">
+                <div class="user-info">
+                    <div class="user-avatar ${!fotoUrl ? 'no-photo' : ''}" 
+                         ${fotoUrl ? `style="background-image: url('${fotoUrl}')"` : ''}>
+                        ${!fotoUrl ? '<i class="fas fa-user"></i>' : ''}
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">${escapeHTML(fullName)}</span>
+                    </div>
+                </div>
+            </td>
+            <td data-label="ROL">${escapeHTML(col.rol || 'Colaborador')}</td>
+            <td data-label="CORREO">${escapeHTML(col.correoElectronico || 'No disponible')}</td>
+            <td data-label="ESTADO">
+                <span class="status ${isActive ? 'active' : 'inactive'}">
+                    <i class="fas ${isActive ? 'fa-check-circle' : 'fa-ban'}"></i> 
+                    ${isActive ? 'Activo' : 'Inactivo'}
+                </span>
+            </td>
+            <td data-label="ACCIONES">
+                <div class="btn-group">
+                    <button type="button" class="btn ${isActive ? 'btn-disable' : 'btn-enable'}" 
+                            data-action="toggle" data-id="${col.id}" data-name="${escapeHTML(fullName)}" 
+                            data-status="${isActive}" title="${isActive ? 'Inhabilitar' : 'Habilitar'}">
+                        <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i>
+                    </button>
+                    <button type="button" class="btn btn-edit" data-action="edit" 
+                            data-id="${col.id}" data-name="${escapeHTML(fullName)}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-view" data-action="view" 
+                            data-id="${col.id}" data-name="${escapeHTML(fullName)}" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+// ========== CONFIGURAR EVENTOS ==========
+function setupEvents() {
+    const addBtn = document.getElementById('addBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            window.location.href = '/usuarios/administrador/crearUsuarios/crearUsuarios.html';
+        });
+    }
+    
+    const tbody = document.getElementById('usersTableBody');
+    if (tbody) {
+        tbody.addEventListener('click', async (e) => {
+            const button = e.target.closest('.btn');
+            
+            if (!button) return;
+            
+            const action = button.getAttribute('data-action');
+            const collaboratorId = button.getAttribute('data-id');
+            const collaboratorName = button.getAttribute('data-name');
+            const currentStatus = button.getAttribute('data-status') === 'true';
+            
+            if (action === 'toggle') {
+                await toggleUserStatus(collaboratorId, collaboratorName, !currentStatus);
+            } 
+            else if (action === 'edit') {
+                await editUser(collaboratorId, collaboratorName);
+            } 
+            else if (action === 'view') {
+                await viewUserDetails(collaboratorId, collaboratorName);
+            }
+        });
+    }
+}
+
+// ========== CAMBIAR ESTADO DEL COLABORADOR ==========
+async function toggleUserStatus(collaboratorId, collaboratorName, enable) {
+    try {
+        const collaborator = await userManager.getUserById(collaboratorId);
+        if (!collaborator) throw new Error('Colaborador no encontrado');
+        
+        const actionText = enable ? 'Habilitar' : 'Inhabilitar';
+        const statusText = enable ? 'habilitado' : 'inhabilitado';
+        const iconType = enable ? 'question' : 'warning';
+        
+        const result = await Swal.fire({
+            title: `${actionText} colaborador`,
+            html: `
+                <div>
+                    <p><strong>${escapeHTML(collaboratorName)}</strong></p>
+                    <p>${collaborator.correoElectronico || 'No email'}</p>
+                    <p>¿Estás seguro de ${statusText} al colaborador?</p>
+                    ${enable ? 
+                        '<p><i class="fas fa-check-circle" style="color: #2ecc71;"></i> El usuario podrá acceder al sistema normalmente</p>' :
+                        '<p><i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente</p>'
+                    }
+                </div>
+            `,
+            icon: iconType,
+            showCancelButton: true,
+            confirmButtonText: `Sí, ${statusText}`,
+            cancelButtonText: 'Cancelar'
+        });
+        
+        if (!result.isConfirmed) return;
+        
+        Swal.fire({
+            title: `${actionText}...`,
+            text: 'Por favor espera',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        if (enable) {
+            await userManager.reactivarUsuario(
+                collaboratorId, 
+                'colaborador', 
+                adminActual.organizacionCamelCase
+            );
+        } else {
+            await userManager.inactivarUsuario(
+                collaboratorId, 
+                'colaborador', 
+                adminActual.organizacionCamelCase,
+                'Estado cambiado por administrador'
+            );
+        }
+        
+        await userManager.updateUser(
+            collaboratorId, 
+            { status: enable }, 
+            'colaborador', 
+            adminActual.organizacionCamelCase
+        );
+        
+        Swal.close();
+        await loadCollaborators();
+        
+        Swal.fire({
+            icon: 'success',
+            title: '¡Estado cambiado!',
+            html: `
+                <div>
+                    <p><strong>${escapeHTML(collaboratorName)}</strong></p>
+                    <p>ha sido ${statusText} exitosamente</p>
+                </div>
+            `,
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false
+        });
+        
+    } catch (error) {
+        console.error('Error cambiando estado:', error);
+        Swal.close();
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'No se pudo cambiar el estado del colaborador'
+        });
+    }
+}
+
+// ========== EDITAR COLABORADOR ==========
+async function editUser(collaboratorId, collaboratorName) {    
+    const selectedCollaborator = {
+        id: collaboratorId,
+        nombreCompleto: collaboratorName,
+        organizacion: adminActual.organizacion,
+        organizacionCamelCase: adminActual.organizacionCamelCase,
+        fechaSeleccion: new Date().toISOString(),
+        admin: adminActual.nombreCompleto
+    };
+    
+    localStorage.setItem('selectedCollaborator', JSON.stringify(selectedCollaborator));
+    
+    window.location.href = `/usuarios/administrador/editarUsuarios/editarUsuarios.html?id=${collaboratorId}&org=${adminActual.organizacionCamelCase}`;
+}
+
+// ========== VER DETALLES DEL COLABORADOR ==========
+async function viewUserDetails(collaboratorId, collaboratorName) {
+    try {
+        const collaborator = await userManager.getUserById(collaboratorId);
+        
+        if (!collaborator) {
+            throw new Error('Colaborador no encontrado');
+        }
+        
+        showCollaboratorDetails(collaborator, collaboratorName);
+        
+    } catch (error) {
+        console.error('Error obteniendo detalles:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron obtener los detalles del colaborador'
+        });
+    }
+}
+
+// ========== MOSTRAR DETALLES EN MODAL ==========
+function showCollaboratorDetails(collaborator, collaboratorName) {
+    let fechaCreacion = 'No disponible';
+    if (collaborator.fechaCreacion) {
+        if (collaborator.fechaCreacion.toDate) {
+            fechaCreacion = collaborator.fechaCreacion.toDate().toLocaleDateString('es-MX');
+        } else if (typeof collaborator.fechaCreacion === 'string') {
+            fechaCreacion = new Date(collaborator.fechaCreacion).toLocaleDateString('es-MX');
+        }
+    }
+    
+    const isActive = collaborator.status === true || collaborator.status === 'active';
+    const fotoUrl = collaborator.getFotoUrl ? collaborator.getFotoUrl() : (collaborator.fotoUsuario || '');
+    
+    Swal.fire({
+        title: `Detalles de: ${collaboratorName}`,
+        html: `
+            <div class="swal-details-container">
+                <div class="swal-user-profile">
+                    <div class="swal-user-avatar-large">
+                        ${fotoUrl ? 
+                            `<img src="${fotoUrl}" alt="${escapeHTML(collaboratorName)}">` : 
+                            `<i class="fas fa-user"></i>`
+                        }
+                    </div>
+                    <div class="swal-user-info-large">
+                        <h3>${escapeHTML(collaborator.nombreCompleto || 'Sin nombre')}</h3>
+                        <p>${escapeHTML(collaborator.rol || 'Colaborador')}</p>
+                    </div>
+                </div>
+                
+                <div class="swal-details-grid">
+                    <div class="swal-detail-card">
+                        <p><strong>Email</strong> <span>${escapeHTML(collaborator.correoElectronico || 'No especificado')}</span></p>
+                        <p><strong>Estado</strong> 
+                            <span class="status-detail ${isActive ? 'active' : 'inactive'}">
+                                <i class="fas ${isActive ? 'fa-check-circle' : 'fa-ban'}"></i> 
+                                ${isActive ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </p>
+                        <p><strong>Organización</strong> <span>${escapeHTML(collaborator.organizacion || 'No especificado')}</span></p>
+                    </div>
+                    <div class="swal-detail-card">
+                        <p><strong>Fecha creación</strong> <span>${fechaCreacion}</span></p>
+                        <p><strong>Plan</strong> <span>${escapeHTML(collaborator.plan || 'No especificado')}</span></p>
+                        <p><strong>Verificado</strong> 
+                            <span class="${collaborator.verificado ? 'verified' : 'not-verified'}">
+                                <i class="fas ${collaborator.verificado ? 'fa-check-circle' : 'fa-times-circle'}"></i> 
+                                ${collaborator.verificado ? 'Sí' : 'No'}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                
+                ${!isActive ? `
+                    <div class="swal-warning-alert">
+                        <p><i class="fas fa-exclamation-triangle"></i> Este usuario está inhabilitado</p>
+                    </div>
+                ` : ''}
+            </div>
+        `,
+        width: 700,
+        showCloseButton: true,
+        showConfirmButton: false
+    });
+}
+
+// ========== FUNCIÓN AUXILIAR ESCAPE HTML ==========
+function escapeHTML(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// ========== ESTADO VACÍO ==========
+function showEmptyState() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="empty-state">
+                <div class="empty-state-content">
+                    <i class="fas fa-users"></i>
+                    <h3>No hay colaboradores en ${adminActual?.organizacion || 'tu organización'}</h3>
+                    <p>Comienza agregando tu primer colaborador</p>
+                    <button class="btn-nuevo-colaborador" id="addFirstCollaborator" style="margin-top: 16px;">
+                        <i class="fas fa-plus"></i> Agregar Colaborador
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+    
+    document.getElementById('addFirstCollaborator')?.addEventListener('click', () => {
+        window.location.href = '/usuarios/administrador/crearUsuarios/crearUsuarios.html';
+    });
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
+}
+
+// ========== ESTADO DE CARGA ==========
+function showLoadingState() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="loading-state">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <h3>Cargando colaboradores...</h3>
+                    <p>Obteniendo datos de Firebase</p>
+                </div>
+            </td>
+        </tr>
+    `;
+
+    // Ocultar paginación mientras carga
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
+}
+
+// ========== MANEJO DE ERRORES ==========
+function showNoAdminMessage() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="error-state">
+                <div class="error-content">
+                    <i class="fas fa-user-slash"></i>
+                    <h3>No se detectó sesión activa de administrador</h3>
+                    <p>Para gestionar colaboradores, debes iniciar sesión como administrador.</p>
+                    <div class="error-buttons">
+                        <button onclick="window.location.reload()" class="reload-btn">
+                            <i class="fas fa-sync-alt"></i> Recargar
+                        </button>
+                        <button onclick="window.location.href='/usuarios/visitantes/inicioSesion/inicioSesion.html'" class="login-btn">
+                            <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
+}
+
+function showFirebaseError(error) {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="error-state">
+                <div class="error-content firebase-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error al cargar colaboradores</h3>
+                    <p class="error-message">${escapeHTML(error.message || 'Error de conexión con Firebase')}</p>
+                    <p>Verifica tu conexión a internet y recarga la página.</p>
+                    <button onclick="window.location.reload()" class="reload-btn">
+                        <i class="fas fa-sync-alt"></i> Recargar página
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
+}
+
+function showError(message) {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="error-state">
+                <div class="error-content">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>${escapeHTML(message)}</h3>
+                    <button onclick="window.location.reload()" class="reload-btn">
+                        <i class="fas fa-sync-alt"></i> Reintentar
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+
+    // Ocultar paginación
+    const paginacionContainer = document.querySelector('.pagination-container');
+    if (paginacionContainer) {
+        paginacionContainer.style.display = 'none';
+    }
+}

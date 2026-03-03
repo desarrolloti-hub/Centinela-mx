@@ -1,0 +1,1766 @@
+class NavbarComplete {
+    constructor() {
+        this.isMenuOpen = false;
+        this.isAdminDropdownOpen = false;
+        this.isAdministracionDropdownOpen = false; // Nuevo estado para el dropdown de Administración
+        this.currentAdmin = null;
+        this.userManager = null;
+        this.init();
+    }
+
+    // Inicializa el navbar evitando duplicados
+    init() {
+        if (window.NavbarCompleteLoaded) {
+            return;
+        }
+
+        window.NavbarCompleteLoaded = true;
+
+        // Esperar a que el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setup());
+        } else {
+            setTimeout(() => this.setup(), 100);
+        }
+    }
+
+    // Configuración principal del navbar
+    async setup() {
+        try {
+            this.removeOriginalNavbar();
+            this.createNavbar();
+            this.setupFunctionalities();
+
+            // PRIMERO: Cargar desde localStorage (inmediato)
+            this.loadAdminDataFromLocalStorage();
+            this.updateNavbarWithAdminData();
+
+            // SEGUNDO: Cargar desde Firebase para actualizar (si hay cambios)
+            await this.loadAdminDataFromFirebase();
+
+        } catch (error) {
+            console.error('❌ Error en inicialización:', error);
+        }
+    }
+
+    // Remueve el navbar original si existe
+    removeOriginalNavbar() {
+        const originalHeader = document.getElementById('main-header');
+        originalHeader?.remove();
+    }
+
+    // Crea el navbar completo
+    createNavbar() {
+        this.addStyles();
+        this.insertHTML();
+        this.adjustBodyPadding();
+    }
+
+    // Agrega todos los estilos CSS necesarios
+    addStyles() {
+        if (document.getElementById('navbar-complete-styles')) return;
+
+        const styles = /*css*/`
+            /* Navbar fijo en la parte superior */
+            #complete-navbar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                z-index: 1000;
+                background-color: var(--navbar-bg);
+                box-shadow: 0 2px 10px transparent;
+                transition: var(--transition-default);
+                font-family: var(--font-family-primary);
+            }
+            
+            /* Efecto al hacer scroll */
+            #complete-navbar.scrolled {
+                background-color: var(--navbar-scrolled-bg);
+                box-shadow: var(--navbar-scrolled-shadow);
+            }
+            
+            /* Sección superior: Logo | Título | Botón hamburguesa */
+            .navbar-top-section {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 20px;
+                min-height: 50px;
+                margin: 0;
+                position: relative;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            /* Contenedor izquierdo para el logo */
+            .navbar-left-container {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                gap: 10px;
+                flex: 0 0 auto;
+                margin-right: auto;
+            }
+            
+            /* Logo del sistema */
+            .navbar-logo-link {
+                display: flex;
+                align-items: center;
+                text-decoration: none;
+                z-index: 1003;
+                height: 70px;
+                flex: 0 0 auto;
+            }
+
+            /* Contenedor para logo circular */
+            .logo-circle-container {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                overflow: hidden;
+                border: 3px solid var(--color-accent-primary);
+                background-color: var(--color-bg-secondary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.3s ease;
+                flex-shrink: 0;
+            }
+
+            /* Todos los logos en círculo perfecto */
+            .navbar-logo-img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition: transform var(--transition-default);
+                display: block;
+            }
+
+            /* Efecto hover en el logo */
+            .navbar-logo-link:hover .logo-circle-container {
+                transform: scale(1.05);
+                border-color: var(--color-accent-secondary);
+            }
+            
+            /* BARRA SEPARADORA ENTRE LOGOS */
+            .logo-separator {
+                width: 2px;
+                height: 45px;
+                background: linear-gradient(
+                    to bottom,
+                    var(--color-accent-primary) 0%,
+                    var(--color-accent-primary) 20%,
+                    var(--color-accent-primary) 80%,
+                    var(--color-accent-primary) 100%
+                );
+                margin: 0 5px;
+                border-radius: 1px;
+                flex-shrink: 0;
+            }
+            
+            /* Logo de organización cuando es texto */
+            .org-text-logo {
+                display: none;
+                align-items: center;
+                justify-content: center;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background-color: var(--color-accent-primary);
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                text-align: center;
+                border: 3px solid var(--color-accent-primary);
+                flex-shrink: 0;
+            }
+            
+            /* Título "CENTINELA" centrado */
+            .navbar-title {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                font-weight: 700;
+                font-size: 24px;
+                color: var(--navbar-logo-text);
+                text-shadow: var(--text-shadow-effect);
+                margin: 0;
+                white-space: nowrap;
+                pointer-events: none;
+                z-index: 1;
+                font-family: 'Orbitron', sans-serif;
+                text-align: center;
+                width: max-content;
+            }
+            
+            /* Contenedor derecho para el botón hamburguesa */
+            .navbar-right-container {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                flex: 0 0 auto;
+                margin-left: auto;
+            }
+            
+            /* Botón hamburguesa */
+            .navbar-hamburger-btn {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background: none;
+                border: none;
+                cursor: pointer;
+                width: 40px;
+                height: 40px;
+                padding: 0;
+                position: relative;
+                z-index: 1002;
+                transition: var(--transition-default);
+                flex-shrink: 0;
+            }
+            
+            /* Líneas del botón hamburguesa */
+            .hamburger-line {
+                display: block;
+                width: 25px;
+                height: 3px;
+                background-color: var(--navbar-text);
+                margin: 3px 0;
+                border-radius: var(--border-radius-small);
+                transition: var(--transition-default);
+            }
+            
+            /* Animación a "X" cuando está activo */
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
+                transform: rotate(45deg) translate(6.3px, 6.3px);
+            }
+            
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(2) {
+                opacity: 0;
+            }
+            
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(3) {
+                transform: rotate(-45deg) translate(6.3px, -6.3px);
+            }
+            
+            /* Menú lateral */
+            .navbar-main-menu {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 25%;
+                height: 100vh;
+                background-color: var(--navbar-scrolled-bg);
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1001;
+                overflow-y: auto;
+                box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+                visibility: hidden;
+                opacity: 0;
+            }
+            
+            /* Cuando el menú está activo (visible) */
+            .navbar-main-menu.active {
+                right: 0;
+                visibility: visible;
+                opacity: 1;
+            }
+            
+            /* Sección superior del menú: Perfil del administrador */
+            .admin-profile-section {
+                padding: 30px 25px 20px;
+                background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
+                color: var(--color-text-primary);
+                border-bottom: 1px solid var(--color-border-light);
+                text-align: center;
+                position: relative;
+            }
+            
+            /* Contenedor para la foto de perfil con lápiz */
+            .profile-photo-container {
+                position: relative;
+                width: 120px;
+                height: 120px;
+                margin: 0 auto 20px;
+                display: inline-block;
+            }
+            
+            /* Círculo de imagen del administrador */
+            .admin-profile-circle {
+                width: 100%;
+                height: 100%;
+                border-radius: var(--border-radius-circle);
+                overflow: hidden;
+                border: 3px solid var(--color-accent-primary);
+                background-color: var(--color-bg-secondary);
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .admin-profile-img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            /* Placeholder para foto cuando no hay imagen */
+            .profile-placeholder {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: var(--color-accent-primary);
+                font-size: 40px;
+            }
+
+            .profile-placeholder span {
+                font-size: 12px;
+                margin-top: 5px;
+                font-weight: bold;
+            }
+            
+            /* Ícono de lápiz para editar */
+            .edit-profile-icon {
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                background-color: var(--color-accent-primary);
+                width: 35px;
+                height: 35px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                border: 2px solid white;
+                z-index: 10;
+                text-decoration: none;
+                color: white;
+            }
+            
+            .edit-profile-icon:hover {
+                background-color: var(--color-accent-secondary);
+                transform: scale(1.1) rotate(10deg);
+                color: white;
+            }
+            
+            .edit-profile-icon i {
+                font-size: 14px;
+            }
+            
+            /* Información del administrador */
+            .admin-info {
+                margin-bottom: 20px;
+            }
+            
+            .admin-name {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: var(--color-text-primary);
+                font-family: 'Orbitron', sans-serif;
+                min-height: 25px;
+            }
+            
+            .admin-role {
+                font-size: 14px;
+                color: var(--color-text-secondary);
+                margin-bottom: 10px;
+                font-family: 'Orbitron', sans-serif;
+            }
+            
+            .admin-email {
+                font-size: 13px;
+                color: var(--color-text-tertiary);
+                min-height: 20px;
+            }
+
+            .admin-organization {
+                font-size: 13px;
+                color: var(--color-accent-primary);
+                margin-top: 5px;
+                font-weight: 600;
+            }
+            
+            /* Estilos para el botón desplegable de Administración */
+            .administracion-dropdown-btn {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 14px 16px;
+                background-color: var(--color-bg-primary);
+                border: 2px solid var(--color-border-medium);
+                border-radius: var(--border-radius-medium);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text-primary);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+                font-family: 'Orbitron', sans-serif;
+                margin-bottom: 15px;
+            }
+            
+            .administracion-dropdown-btn:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateY(-2px);
+                box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+            }
+            
+            .administracion-dropdown-btn:active {
+                transform: translateY(0);
+            }
+            
+            .administracion-dropdown-btn i {
+                transition: transform 0.3s ease;
+                font-size: 14px;
+            }
+            
+            .administracion-dropdown-btn.active i {
+                transform: rotate(180deg);
+            }
+            
+            /* Contenedor de opciones de Administración expandido */
+            .administracion-dropdown-options {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 20px;
+                padding: 15px;
+                background-color: var(--color-bg-tertiary);
+                border-radius: var(--border-radius-medium);
+                border: 1px solid var(--color-border-light);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .administracion-dropdown-options.active {
+                max-height: 500px;
+                opacity: 1;
+                overflow: visible;
+            }
+            
+            .administracion-dropdown-option {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 15px;
+                background-color: var(--color-bg-primary);
+                border: 1px solid var(--color-border-light);
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                color: var(--color-text-primary);
+                font-weight: 500;
+                font-family: 'Orbitron', sans-serif;
+                word-break: break-word;
+            }
+            
+            .administracion-dropdown-option:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateX(5px);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            }
+            
+            .administracion-dropdown-option i {
+                width: 20px;
+                text-align: center;
+                font-size: 16px;
+                color: var(--color-accent-primary);
+                flex-shrink: 0;
+            }
+            
+            .administracion-dropdown-option span {
+                flex: 1;
+                white-space: normal;
+                word-break: break-word;
+            }
+            
+            /* Sección de navegación */
+            .nav-section {
+                padding: 20px 25px;
+                border-bottom: 1px solid var(--color-border-light);
+            }
+            
+            .nav-section-title {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 15px;
+                color: var(--color-text-secondary);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-family: 'Orbitron', sans-serif;
+            }
+            
+            /* Sección de espacios vacíos */
+            .menu-section {
+                padding: 20px 25px;
+                border-bottom: 1px solid var(--color-border-light);
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .empty-menu-item {
+                padding: 10px 15px;
+                border-radius: var(--border-radius-small);
+                transition: var(--transition-default);
+                height: 40px;
+                background-color: transparent;
+                border: none;
+                cursor: default;
+            }
+            
+            /* Sección de opciones de administración (al final) */
+            .admin-options-section {
+                padding: 20px 25px;
+                border-top: 1px solid var(--color-border-light);
+                margin-top: auto;
+            }
+            
+            /* Botón desplegable de administración */
+            .admin-dropdown-btn {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 14px 16px;
+                background-color: var(--color-bg-primary);
+                border: 2px solid var(--color-border-medium);
+                border-radius: var(--border-radius-medium);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text-primary);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+                font-family: 'Orbitron', sans-serif;
+            }
+            
+            .admin-dropdown-btn:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateY(-2px);
+                box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+            }
+            
+            .admin-dropdown-btn:active {
+                transform: translateY(0);
+            }
+            
+            .admin-dropdown-btn i {
+                transition: transform 0.3s ease;
+                font-size: 14px;
+            }
+            
+            .admin-dropdown-btn.active i {
+                transform: rotate(180deg);
+            }
+            
+            /* Contenedor de opciones expandido */
+            .admin-dropdown-options {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-top: 15px;
+                padding: 15px;
+                background-color: var(--color-bg-tertiary);
+                border-radius: var(--border-radius-medium);
+                border: 1px solid var(--color-border-light);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .admin-dropdown-options.active {
+                max-height: 500px;
+                opacity: 1;
+                overflow: visible;
+            }
+            
+            .admin-dropdown-option {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 15px;
+                background-color: var(--color-bg-primary);
+                border: 1px solid var(--color-border-light);
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                color: var(--color-text-primary);
+                font-weight: 500;
+                font-family: 'Orbitron', sans-serif;
+                word-break: break-word;
+            }
+            
+            .admin-dropdown-option:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateX(5px);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            }
+            
+            .admin-dropdown-option i {
+                width: 20px;
+                text-align: center;
+                font-size: 16px;
+                color: var(--color-accent-primary);
+                flex-shrink: 0;
+            }
+            
+            .admin-dropdown-option span {
+                flex: 1;
+                white-space: normal;
+                word-break: break-word;
+            }
+            
+            /* Opción especial para cerrar sesión */
+            .logout-option {
+                background: linear-gradient(135deg, #ff6b6b, #ff5252);
+                border-color: #ff5252;
+                color: white;
+            }
+            
+            .logout-option:hover {
+                background: linear-gradient(135deg, #ff5252, #ff3838);
+                border-color: #ff3838;
+            }
+            
+            .logout-option i {
+                color: white;
+            }
+            
+            /* Overlay para cerrar el menú */
+            .navbar-mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+                display: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .navbar-mobile-overlay.active {
+                display: block;
+                opacity: 1;
+            }
+            
+            /* Responsive para tablet */
+            @media (max-width: 992px) {
+                .navbar-main-menu {
+                    width: 85%;
+                }
+                
+                .logo-circle-container {
+                    width: 50px;
+                    height: 50px;
+                }
+
+                .org-text-logo {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 12px;
+                }
+
+                .logo-separator {
+                    height: 35px;
+                }
+                
+                .navbar-title {
+                    font-size: 22px;
+                }
+
+                body.menu-open {
+                    overflow: hidden;
+                }
+                
+                .admin-dropdown-option {
+                    padding: 12px 12px;
+                    gap: 10px;
+                }
+                
+                .admin-dropdown-option i {
+                    font-size: 14px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 14px;
+                }
+
+                .administracion-dropdown-options.active {
+                    max-height: 500px;
+                }
+            }
+            
+            /* Responsive para móvil */
+            @media (max-width: 768px) {
+                .navbar-top-section {
+                    padding: 5px 15px;
+                }
+                
+                .navbar-main-menu {
+                    width: 100%;
+                }
+
+                .logo-circle-container {
+                    width: 40px;
+                    height: 40px;
+                }
+
+                .org-text-logo {
+                    width: 40px;
+                    height: 40px;
+                    font-size: 10px;
+                }
+                
+                .logo-separator {
+                    height: 30px;
+                    margin: 0 3px;
+                }
+                
+                .navbar-title {
+                    font-size: 18px;
+                    white-space: normal;
+                    max-width: 150px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                
+                .profile-photo-container {
+                    width: 100px;
+                    height: 100px;
+                }
+                
+                .edit-profile-icon {
+                    width: 30px;
+                    height: 30px;
+                }
+                
+                .admin-dropdown-btn {
+                    padding: 12px 14px;
+                    font-size: 15px;
+                }
+
+                .administracion-dropdown-btn {
+                    padding: 12px 14px;
+                    font-size: 15px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 36px;
+                    height: 36px;
+                }
+                
+                .hamburger-line {
+                    width: 22px;
+                    height: 2.5px;
+                }
+                
+                .admin-dropdown-options {
+                    padding: 12px;
+                }
+                
+                .admin-dropdown-options.active {
+                    max-height: 550px;
+                }
+
+                .administracion-dropdown-options {
+                    padding: 12px;
+                }
+                
+                .administracion-dropdown-options.active {
+                    max-height: 500px;
+                }
+                
+                .admin-dropdown-option {
+                    padding: 14px 12px;
+                    gap: 12px;
+                }
+                
+                .admin-dropdown-option i {
+                    font-size: 16px;
+                    width: 24px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 15px;
+                    line-height: 1.4;
+                }
+
+                .administracion-dropdown-option {
+                    padding: 14px 12px;
+                    gap: 12px;
+                }
+                
+                .nav-section-title {
+                    font-size: 15px;
+                }
+            }
+            
+            /* Para pantallas muy pequeñas */
+            @media (max-width: 480px) {
+                .navbar-top-section {
+                    padding: 5px 10px;
+                }
+                
+                .navbar-title {
+                    font-size: 16px;
+                    max-width: 120px;
+                }
+                
+                .logo-circle-container {
+                    width: 36px;
+                    height: 36px;
+                }
+                
+                .org-text-logo {
+                    width: 36px;
+                    height: 36px;
+                    font-size: 9px;
+                }
+                
+                .logo-separator {
+                    height: 28px;
+                    margin: 0 2px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 32px;
+                    height: 32px;
+                }
+                
+                .hamburger-line {
+                    width: 20px;
+                    height: 2px;
+                }
+                
+                .admin-dropdown-option {
+                    padding: 12px 10px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 14px;
+                }
+
+                .administracion-dropdown-option {
+                    padding: 12px 10px;
+                }
+            }
+            
+            /* Para pantallas extra grandes */
+            @media (min-width: 1600px) {
+                .navbar-top-section {
+                    padding: 5px 40px;
+                }
+                
+                .navbar-title {
+                    font-size: 28px;
+                }
+                
+                .logo-circle-container {
+                    width: 55px;
+                    height: 55px;
+                }
+                
+                .org-text-logo {
+                    width: 55px;
+                    height: 55px;
+                    font-size: 16px;
+                }
+            }
+        `;
+
+        const styleElement = document.createElement('style');
+        styleElement.id = 'navbar-complete-styles';
+        styleElement.textContent = styles;
+        document.head.appendChild(styleElement);
+    }
+
+    // Inserta la estructura HTML del navbar
+    insertHTML() {
+        const navbar = document.createElement('header');
+        navbar.id = 'complete-navbar';
+        navbar.innerHTML = /*html*/`
+            <!-- Sección superior con logo, título y botón hamburguesa -->
+            <div class="navbar-top-section">
+                <div class="navbar-left-container">
+                    <!-- Logo del sistema Centinela -->
+                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link">
+                        <div class="logo-circle-container">
+                            <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
+                        </div>
+                    </a>
+                    
+                    <!-- BARRA SEPARADORA ENTRE LOGOS -->
+                    <div class="logo-separator"></div>
+                    
+                    <!-- Logo de la organización -->
+                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
+                        <div class="logo-circle-container" id="orgLogoContainer">
+                            <img src="/assets/images/logo.png" alt="Logo Organización" 
+                                 class="navbar-logo-img" id="orgLogoImg">
+                            <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                        </div>
+                    </a>
+                </div>
+                
+                <!-- Título centrado -->
+                <h1 class="navbar-title">CENTINELA</h1>
+                
+                <div class="navbar-right-container">
+                    <!-- Botón hamburguesa -->
+                    <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Overlay para cerrar menú -->
+            <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
+            
+            <!-- Menú lateral -->
+            <div class="navbar-main-menu" id="navbarMainMenu">
+                
+                <!-- Sección superior: Perfil del administrador -->
+                <div class="admin-profile-section">
+                    <!-- Contenedor para la foto con ícono de lápiz -->
+                    <div class="profile-photo-container">
+                        <!-- Círculo con imagen del administrador -->
+                        <div class="admin-profile-circle">
+                            <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
+                            <div class="profile-placeholder" id="profilePlaceholder" style="display: none;">
+                                <i class="fas fa-user"></i>
+                                <span>Admin</span>
+                            </div>
+                        </div>
+                        <!-- Ícono de lápiz para editar -->
+                        <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
+                            <i class="fas fa-pencil-alt"></i>
+                        </a>
+                    </div>
+                    
+                    <!-- Información del administrador -->
+                    <div class="admin-info">
+                        <div class="admin-name" id="adminName">Cargando...</div>
+                        <div class="admin-role">Administrador</div>
+                        <div class="admin-email" id="adminEmail">cargando@email.com</div>
+                        <div class="admin-organization" id="adminOrganization"></div>
+                    </div>
+                </div>
+                
+                <!-- SECCIÓN DE ADMINISTRACIÓN CON BOTÓN DESPLEGABLE -->
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fa-solid fa-gear"></i>
+                        <span>Administración</span>
+                    </div>
+                    
+                    <!-- Botón desplegable de Administración -->
+                    <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
+                        <span>Gestionar</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    
+                    <!-- Contenedor de opciones expandido con los 5 botones (Áreas, Categorías, Sucursales, Regiones, Incidencias) -->
+                    <div class="administracion-dropdown-options" id="administracionDropdownOptions">
+                        <!-- Botón para ÁREAS -->
+                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option" id="areasBtn">
+                            <i class="fa-solid fa-map"></i>
+                            <span>Áreas</span>
+                        </a>
+
+                        <!-- Botón para CATEGORIAS -->
+                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option" id="categoriasBtn">
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Categorías</span>
+                        </a>
+
+                        <!-- Botón para SUCURSALES -->
+                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option" id="sucursalesBtn">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Sucursales</span>
+                        </a>
+
+                        <!-- Botón para REGIONES -->
+                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option" id="regionesBtn">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>Regiones</span>
+                        </a>
+
+                        <!-- Botón para INCIDENCIAS (NUEVO) -->
+                        <a href="/users/admin/incidencias/incidencias.html" class="administracion-dropdown-option" id="incidenciasBtn">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Incidencias</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Sección de espacios vacíos -->
+                <div class="menu-section">
+                    <div class="empty-menu-item"></div>
+                </div>
+                
+                <!-- Sección de opciones de administración -->
+                <div class="admin-options-section">
+                    <button class="admin-dropdown-btn" id="adminDropdownBtn">
+                        <span>Opciones de Administración</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    
+                    <div class="admin-dropdown-options" id="adminDropdownOptions">
+                        <a href="/usuarios/administrador/usuarios/usuarios.html" class="admin-dropdown-option">
+                            <i class="fa-solid fa-users-gear"></i>
+                            <span>Gestionar Usuarios</span>
+                        </a>
+                        <!-- Botón de Personalización de colores movido AQUÍ, antes de cerrar sesión -->
+                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option" id="themeManagerBtn">
+                            <i class="fa-solid fa-palette"></i>
+                            <span>Personalización de colores</span>
+                        </a>
+                        <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.prepend(navbar);
+    }
+
+    // Ajusta el padding del body
+    adjustBodyPadding() {
+        const navbar = document.getElementById('complete-navbar');
+        if (!navbar) return;
+
+        const updatePadding = () => {
+            document.body.style.paddingTop = `${navbar.offsetHeight}px`;
+        };
+
+        updatePadding();
+
+        const resizeObserver = new ResizeObserver(updatePadding);
+        resizeObserver.observe(navbar);
+    }
+
+    // CARGA DESDE LOCALSTORAGE (inmediata)
+    loadAdminDataFromLocalStorage() {
+        try {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+            if (!isLoggedIn) {
+                return false;
+            }
+
+            const userDataString = localStorage.getItem('userData');
+
+            if (userDataString) {
+                const userData = JSON.parse(userDataString);
+
+                let fotoUsuario = null;
+                let fotoOrganizacion = null;
+
+                if (userData.fotoUsuario && userData.fotoUsuario.length > 10) {
+                    fotoUsuario = userData.fotoUsuario;
+                } else {
+                    const userFotoKey = localStorage.getItem('userFoto');
+                    if (userFotoKey && userFotoKey.length > 10) {
+                        fotoUsuario = userFotoKey;
+                    }
+                }
+
+                if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) {
+                    fotoOrganizacion = userData.fotoOrganizacion;
+                } else {
+                    const orgLogoKey = localStorage.getItem('organizacionLogo');
+                    if (orgLogoKey && orgLogoKey.length > 10) {
+                        fotoOrganizacion = orgLogoKey;
+                    }
+                }
+
+                this.currentAdmin = {
+                    id: userData.id || localStorage.getItem('userId'),
+                    uid: userData.id,
+                    correoElectronico: userData.email || localStorage.getItem('userEmail'),
+                    nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'),
+                    rol: userData.rol || localStorage.getItem('userRole'),
+                    organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
+                    organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
+                    fotoUsuario: fotoUsuario,
+                    fotoOrganizacion: fotoOrganizacion,
+                    status: userData.status || 'activo',
+                    verificado: userData.verificado || true,
+                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
+                };
+
+                return true;
+            }
+
+            this.currentAdmin = {
+                id: localStorage.getItem('userId'),
+                correoElectronico: localStorage.getItem('userEmail'),
+                nombreCompleto: localStorage.getItem('userNombre'),
+                rol: localStorage.getItem('userRole'),
+                organizacion: localStorage.getItem('userOrganizacion'),
+                organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
+                fotoUsuario: localStorage.getItem('userFoto') || null,
+                fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
+            };
+
+            if (this.currentAdmin.nombreCompleto && this.currentAdmin.rol) {
+                return true;
+            }
+
+            return false;
+
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // CARGA DESDE FIREBASE (actualización)
+    async loadAdminDataFromFirebase() {
+        try {
+            // Importar UserManager dinámicamente
+            const { UserManager } = await import('/clases/user.js');
+            this.userManager = new UserManager();
+
+            // Esperar un poco a que UserManager cargue
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            if (this.userManager.currentUser) {
+                const firebaseUser = this.userManager.currentUser;
+
+                // Verificar si hubo cambios comparando con localStorage
+                let needsUpdate = false;
+
+                if (!this.currentAdmin) {
+                    needsUpdate = true;
+                } else {
+                    if (firebaseUser.nombreCompleto !== this.currentAdmin.nombreCompleto) needsUpdate = true;
+                    if (firebaseUser.fotoUsuario !== this.currentAdmin.fotoUsuario) needsUpdate = true;
+                    if (firebaseUser.fotoOrganizacion !== this.currentAdmin.fotoOrganizacion) needsUpdate = true;
+                    if (firebaseUser.organizacion !== this.currentAdmin.organizacion) needsUpdate = true;
+                    if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
+                    if (firebaseUser.rol !== this.currentAdmin.rol) needsUpdate = true;
+                }
+
+                if (needsUpdate) {
+                    this.currentAdmin = {
+                        ...this.currentAdmin,
+                        ...firebaseUser,
+                        rol: firebaseUser.rol
+                    };
+
+                    // Actualizar el navbar con los nuevos datos
+                    this.updateNavbarWithAdminData();
+
+                    // Actualizar localStorage para futuras cargas
+                    this.updateLocalStorageFromFirebase(firebaseUser);
+                }
+            }
+
+        } catch (error) {
+            // Silencioso - no interrumpir la experiencia del usuario
+        }
+    }
+
+    // Actualiza localStorage con datos de Firebase
+    updateLocalStorageFromFirebase(userData) {
+        try {
+            // Actualizar userData
+            const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const updatedUserData = {
+                ...currentUserData,
+                id: userData.id,
+                uid: userData.id,
+                email: userData.correoElectronico,
+                nombreCompleto: userData.nombreCompleto,
+                rol: userData.rol,
+                organizacion: userData.organizacion,
+                organizacionCamelCase: userData.organizacionCamelCase,
+                fotoUsuario: userData.fotoUsuario,
+                fotoOrganizacion: userData.fotoOrganizacion,
+                status: userData.status,
+                verificado: userData.verificado,
+                ultimoAcceso: userData.ultimoAcceso
+            };
+
+            localStorage.setItem('userData', JSON.stringify(updatedUserData));
+
+            // Actualizar claves individuales
+            if (userData.fotoUsuario) localStorage.setItem('userFoto', userData.fotoUsuario);
+            if (userData.fotoOrganizacion) localStorage.setItem('organizacionLogo', userData.fotoOrganizacion);
+            if (userData.nombreCompleto) localStorage.setItem('userNombre', userData.nombreCompleto);
+            if (userData.correoElectronico) localStorage.setItem('userEmail', userData.correoElectronico);
+            if (userData.rol) localStorage.setItem('userRole', userData.rol);
+            if (userData.organizacion) localStorage.setItem('userOrganizacion', userData.organizacion);
+            if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
+
+        } catch (error) {
+            // Silencioso
+        }
+    }
+
+    // Actualiza el navbar con los datos del administrador
+    updateNavbarWithAdminData() {
+        if (!this.currentAdmin) {
+            // Mostrar valores por defecto si no hay datos
+            const adminName = document.getElementById('adminName');
+            const adminEmail = document.getElementById('adminEmail');
+            const adminOrganization = document.getElementById('adminOrganization');
+
+            if (adminName) adminName.textContent = 'No autenticado';
+            if (adminEmail) adminEmail.textContent = 'Inicia sesión para continuar';
+            if (adminOrganization) adminOrganization.textContent = '';
+
+            return;
+        }
+
+        // 1. Actualizar segundo logo (logo de la organización)
+        this.updateOrganizationLogo();
+
+        // 2. Actualizar información en el menú desplegable
+        this.updateAdminMenuInfo();
+
+        // 3. Configurar eventos para los botones nuevos
+        this.setupAdminButtons();
+    }
+
+    // Configura los eventos para los botones de administración
+    setupAdminButtons() {
+        // Los botones ahora son enlaces con href, no necesitan eventos adicionales
+        // pero mantenemos el método por si se necesita agregar funcionalidad extra
+    }
+
+    // Actualiza el segundo logo con el logo de la organización
+    updateOrganizationLogo() {
+        const organizationLogoImg = document.getElementById('orgLogoImg');
+        const orgTextLogo = document.getElementById('orgTextLogo');
+        const orgLogoLink = document.getElementById('orgLogoLink');
+        const orgLogoContainer = document.getElementById('orgLogoContainer');
+
+        if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
+
+        // Si tiene logo de organización
+        if (this.currentAdmin?.fotoOrganizacion && this.currentAdmin.fotoOrganizacion.length > 10) {
+            organizationLogoImg.src = this.currentAdmin.fotoOrganizacion;
+            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion || 'Organización'}`;
+            organizationLogoImg.style.display = 'block';
+            orgTextLogo.style.display = 'none';
+
+            // Añadir tooltip y atributos
+            organizationLogoImg.title = this.currentAdmin.organizacion || 'Organización';
+            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion || '');
+        } else {
+            // Mostrar texto en lugar de imagen
+            this.showOrgTextLogo();
+        }
+
+        // Actualizar el enlace del logo para redirigir al dashboard
+        orgLogoLink.href = '/usuarios/administrador/panelControl/panelControl.html';
+
+        // Asegurar que el contenedor sea un círculo perfecto
+        orgLogoContainer.style.borderRadius = '50%';
+        orgLogoContainer.style.overflow = 'hidden';
+    }
+
+    // Muestra iniciales cuando no hay logo
+    showOrgTextLogo() {
+        const organizationLogoImg = document.getElementById('orgLogoImg');
+        const orgTextLogo = document.getElementById('orgTextLogo');
+
+        if (!organizationLogoImg || !orgTextLogo) return;
+
+        organizationLogoImg.style.display = 'none';
+        orgTextLogo.style.display = 'flex';
+
+        const orgName = this.currentAdmin?.organizacion || 'Organización';
+        const initials = orgName
+            .split(' ')
+            .map(word => word.charAt(0))
+            .join('')
+            .toUpperCase()
+            .substring(0, 3);
+
+        orgTextLogo.textContent = initials;
+        orgTextLogo.title = orgName;
+    }
+
+    // Actualiza la información del administrador en el menú
+    updateAdminMenuInfo() {
+        // Nombre del administrador
+        const adminName = document.getElementById('adminName');
+        if (adminName) {
+            adminName.textContent = this.currentAdmin?.nombreCompleto || 'Administrador';
+        }
+
+        // Email del administrador
+        const adminEmail = document.getElementById('adminEmail');
+        if (adminEmail) {
+            adminEmail.textContent = this.currentAdmin?.correoElectronico || 'No especificado';
+        }
+
+        // Organización del administrador
+        const adminOrganization = document.getElementById('adminOrganization');
+        if (adminOrganization) {
+            adminOrganization.textContent = this.currentAdmin?.organizacion || 'Sin organización';
+        }
+
+        // Foto de perfil del administrador
+        const adminProfileImg = document.getElementById('adminProfileImg');
+        const profilePlaceholder = document.getElementById('profilePlaceholder');
+
+        if (adminProfileImg && profilePlaceholder) {
+            if (this.currentAdmin?.fotoUsuario && this.currentAdmin.fotoUsuario.length > 10) {
+                adminProfileImg.src = this.currentAdmin.fotoUsuario;
+                adminProfileImg.style.display = 'block';
+                profilePlaceholder.style.display = 'none';
+                adminProfileImg.alt = `Foto de ${this.currentAdmin.nombreCompleto || 'Administrador'}`;
+            } else {
+                this.showProfilePlaceholder();
+            }
+        }
+    }
+
+    // Muestra placeholder cuando no hay foto
+    showProfilePlaceholder() {
+        const adminProfileImg = document.getElementById('adminProfileImg');
+        const profilePlaceholder = document.getElementById('profilePlaceholder');
+
+        if (!adminProfileImg || !profilePlaceholder) return;
+
+        adminProfileImg.style.display = 'none';
+        profilePlaceholder.style.display = 'flex';
+
+        const placeholderText = profilePlaceholder.querySelector('span');
+        if (placeholderText && this.currentAdmin?.nombreCompleto) {
+            const initials = this.currentAdmin.nombreCompleto
+                .split(' ')
+                .map(word => word.charAt(0))
+                .join('')
+                .toUpperCase()
+                .substring(0, 2);
+            placeholderText.textContent = initials;
+        }
+    }
+
+    // Configura todas las funcionalidades
+    setupFunctionalities() {
+        this.setupMenu();
+        this.setupScroll();
+        this.loadFontAwesome();
+        this.setupAdminDropdown();
+        this.setupAdministracionDropdown(); // Método para el dropdown de Administración
+        this.loadOrbitronFont();
+        this.setupLogout();
+    }
+
+    // Configura el menú hamburguesa
+    setupMenu() {
+        const hamburgerBtn = document.getElementById('navbarHamburger');
+        const mainMenu = document.getElementById('navbarMainMenu');
+        const overlay = document.getElementById('navbarMobileOverlay');
+
+        if (!hamburgerBtn || !mainMenu || !overlay) return;
+
+        const toggleMenu = () => {
+            this.isMenuOpen = !this.isMenuOpen;
+
+            mainMenu.classList.toggle('active', this.isMenuOpen);
+            hamburgerBtn.classList.toggle('active', this.isMenuOpen);
+            overlay.classList.toggle('active', this.isMenuOpen);
+            document.body.classList.toggle('menu-open', this.isMenuOpen);
+
+            // Cerrar dropdowns si está abierto
+            if (!this.isMenuOpen) {
+                if (this.isAdminDropdownOpen) {
+                    this.toggleAdminDropdown(false);
+                }
+                if (this.isAdministracionDropdownOpen) {
+                    this.toggleAdministracionDropdown(false);
+                }
+            }
+        };
+
+        const closeMenu = () => {
+            if (this.isMenuOpen) {
+                this.isMenuOpen = false;
+                mainMenu.classList.remove('active');
+                hamburgerBtn.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.classList.remove('menu-open');
+
+                if (this.isAdminDropdownOpen) {
+                    this.toggleAdminDropdown(false);
+                }
+                if (this.isAdministracionDropdownOpen) {
+                    this.toggleAdministracionDropdown(false);
+                }
+            }
+        };
+
+        hamburgerBtn.addEventListener('click', toggleMenu);
+        overlay.addEventListener('click', closeMenu);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isMenuOpen) closeMenu();
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 992 && this.isMenuOpen) closeMenu();
+        });
+    }
+
+    // Configura el dropdown de Administración (con el botón de Incidencias)
+    setupAdministracionDropdown() {
+        const dropdownBtn = document.getElementById('administracionDropdownBtn');
+        const dropdownOptions = document.getElementById('administracionDropdownOptions');
+
+        if (!dropdownBtn || !dropdownOptions) return;
+
+        const toggleDropdown = () => {
+            this.isAdministracionDropdownOpen = !this.isAdministracionDropdownOpen;
+            this.toggleAdministracionDropdown(this.isAdministracionDropdownOpen);
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isAdministracionDropdownOpen) {
+                this.toggleAdministracionDropdown(false);
+            }
+        });
+
+        // Cerrar dropdown al presionar Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isAdministracionDropdownOpen) {
+                this.toggleAdministracionDropdown(false);
+            }
+        });
+
+        // Evitar que los clics en las opciones cierren el menú principal
+        const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', (e) => {
+                // No detener propagación para permitir la navegación
+                // Pero cerrar el dropdown después de la navegación
+                setTimeout(() => {
+                    this.toggleAdministracionDropdown(false);
+                }, 100);
+            });
+        });
+    }
+
+    // Configura el dropdown de administración (opciones generales)
+    setupAdminDropdown() {
+        const dropdownBtn = document.getElementById('adminDropdownBtn');
+        const dropdownOptions = document.getElementById('adminDropdownOptions');
+
+        if (!dropdownBtn || !dropdownOptions) return;
+
+        const toggleDropdown = () => {
+            this.isAdminDropdownOpen = !this.isAdminDropdownOpen;
+            this.toggleAdminDropdown(this.isAdminDropdownOpen);
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isAdminDropdownOpen) {
+                this.toggleAdminDropdown(false);
+            }
+        });
+
+        // Cerrar dropdown al presionar Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isAdminDropdownOpen) {
+                this.toggleAdminDropdown(false);
+            }
+        });
+    }
+
+    // Configura la funcionalidad de cerrar sesión
+    setupLogout() {
+        const logoutOption = document.getElementById('logoutOption');
+
+        if (!logoutOption) return;
+
+        logoutOption.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Confirmar cierre de sesión
+            const confirmLogout = await this.showLogoutConfirmation();
+
+            if (confirmLogout) {
+                await this.performLogout();
+            }
+        });
+    }
+
+    // Muestra confirmación para cerrar sesión
+    async showLogoutConfirmation() {
+        return new Promise((resolve) => {
+            // Usar SweetAlert2 para confirmación
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '¿Cerrar sesión?',
+                    text: '¿Estás seguro de que deseas salir del sistema?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'CONFIRMAR',
+                    cancelButtonText: 'CANCELAR'
+                }).then((result) => {
+                    resolve(result.isConfirmed);
+                });
+            } else {
+                // Fallback si SweetAlert2 no está disponible
+                const confirmed = confirm('¿Estás seguro de que deseas cerrar sesión?');
+                resolve(confirmed);
+            }
+        });
+    }
+
+    // Realiza el cierre de sesión COMPLETO
+    async performLogout() {
+        try {
+            // 1. Cerrar sesión en Firebase si UserManager está disponible
+            if (this.userManager && typeof this.userManager.logout === 'function') {
+                await this.userManager.logout();
+            } else {
+                // Intentar cerrar sesión directamente si firebase está disponible
+                await this.signOutFirebaseDirectly();
+            }
+
+            // 2. Limpiar TODOS los datos de almacenamiento local
+            this.clearAllStorage();
+
+            // 3. Mostrar mensaje de éxito
+            await this.showLogoutSuccessMessage();
+
+            // 4. Redirigir a la página de login con parámetros para evitar caché
+            this.redirectToLogin();
+
+        } catch (error) {
+            // Aún así limpiar almacenamiento y redirigir
+            this.clearAllStorage();
+            this.redirectToLogin();
+        }
+    }
+
+    // Intenta cerrar sesión en Firebase directamente
+    async signOutFirebaseDirectly() {
+        try {
+            // Método 1: Si firebase está disponible globalmente
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                await firebase.auth().signOut();
+                return;
+            }
+
+            // Método 2: Intentar con la importación dinámica
+            const { getAuth, signOut } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js');
+
+            // Buscar cualquier app de Firebase inicializada
+            const firebaseApps = typeof firebase !== 'undefined' ? firebase.apps : [];
+            if (firebaseApps && firebaseApps.length > 0) {
+                const auth = getAuth(firebaseApps[0]);
+                await signOut(auth);
+            }
+
+        } catch (error) {
+            // Silencioso - continuar de todos modos
+        }
+    }
+
+    // Limpia TODOS los datos de almacenamiento
+    clearAllStorage() {
+        try {
+            // Limpiar localStorage completamente
+            localStorage.clear();
+
+            // Limpiar sessionStorage
+            sessionStorage.clear();
+
+            // Limpiar cookies relacionadas con sesión
+            this.clearSessionCookies();
+
+            // Limpiar indexedDB si es necesario
+            this.clearIndexedDB();
+
+        } catch (error) {
+            // Silencioso
+        }
+    }
+
+    // Limpia cookies de sesión
+    clearSessionCookies() {
+        try {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i];
+                const eqPos = cookie.indexOf('=');
+                const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+
+                // Eliminar cookies relacionadas con sesión o auth
+                if (name.includes('session') || name.includes('auth') || name.includes('firebase')) {
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                }
+            }
+        } catch (error) {
+            // Silencioso
+        }
+    }
+
+    // Limpia indexedDB si existe
+    async clearIndexedDB() {
+        try {
+            // Lista de bases de datos que podrían contener datos de sesión
+            const databases = ['firebaseLocalStorageDb', 'firestore', 'centinela-db'];
+
+            for (const dbName of databases) {
+                try {
+                    await indexedDB.deleteDatabase(dbName);
+                } catch (e) {
+                    // La base de datos podría no existir, continuar
+                }
+            }
+        } catch (error) {
+            // Silencioso
+        }
+    }
+
+    // Muestra mensaje de éxito al cerrar sesión
+    async showLogoutSuccessMessage() {
+        if (typeof Swal !== 'undefined') {
+            await Swal.fire({
+                icon: 'success',
+                title: 'Sesión cerrada',
+                text: 'Has cerrado sesión exitosamente. Redirigiendo...',
+                timer: 2000,
+                showConfirmButton: false,
+                timerProgressBar: true,
+                willClose: () => {
+                    this.redirectToLogin();
+                }
+            });
+        } else {
+            // Fallback simple
+            alert('Sesión cerrada exitosamente. Redirigiendo...');
+        }
+    }
+
+    // Redirige a la página de login
+    redirectToLogin() {
+        // Agregar timestamp para evitar caché
+        const timestamp = new Date().getTime();
+
+        // Redirigir con parámetros para forzar cierre de sesión completo
+        const loginUrl = `/usuarios/visitantes/inicioSesion/inicioSesion.html?logout=true&timestamp=${timestamp}&nocache=1`;
+
+        // Forzar recarga completa
+        window.location.href = loginUrl;
+
+        // Doble seguridad: forzar recarga si no redirige en 1 segundo
+        setTimeout(() => {
+            window.location.replace(loginUrl);
+        }, 1000);
+    }
+
+    // Alterna la visibilidad del dropdown de administración general
+    toggleAdminDropdown(show) {
+        const dropdownBtn = document.getElementById('adminDropdownBtn');
+        const dropdownOptions = document.getElementById('adminDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isAdminDropdownOpen = show;
+        }
+    }
+
+    // Alterna la visibilidad del dropdown de Administración (nuevo)
+    toggleAdministracionDropdown(show) {
+        const dropdownBtn = document.getElementById('administracionDropdownBtn');
+        const dropdownOptions = document.getElementById('administracionDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isAdministracionDropdownOpen = show;
+        }
+    }
+
+    // Configura efecto visual al hacer scroll
+    setupScroll() {
+        const navbar = document.getElementById('complete-navbar');
+        if (!navbar) return;
+
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+    }
+
+    // Carga Font Awesome
+    loadFontAwesome() {
+        if (!document.querySelector('link[href*="font-awesome"]')) {
+            const faLink = document.createElement('link');
+            faLink.rel = 'stylesheet';
+            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+            document.head.appendChild(faLink);
+        }
+    }
+
+    // Carga la fuente Orbitron desde Google Fonts
+    loadOrbitronFont() {
+        if (!document.querySelector('link[href*="orbitron"]')) {
+            const orbitronLink = document.createElement('link');
+            orbitronLink.rel = 'stylesheet';
+            orbitronLink.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap';
+            document.head.appendChild(orbitronLink);
+        }
+    }
+}
+
+// Inicializa automáticamente al cargar la página
+new NavbarComplete();
