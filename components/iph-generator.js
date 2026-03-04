@@ -1,6 +1,6 @@
 /**
  * IPH GENERATOR - Sistema Centinela
- * VERSIÓN: 3.18 - LOGOS Y COMENTARIOS CORREGIDOS
+ * VERSIÓN: 3.34 - CORREGIDO: DESBORDAMIENTO EN SEGUIMIENTOS
  */
 
 // =============================================
@@ -41,9 +41,9 @@ export const generadorIPH = {
         titulo: 14,
         subtitulo: 12,
         normal: 10,
-        small: 8,
-        mini: 7,
-        micro: 6
+        small: 10,
+        mini: 9,
+        micro: 8
     },
 
     dimensionesLogo: {
@@ -60,7 +60,7 @@ export const generadorIPH = {
         reportadoPor: 15,
         descripcion: 45,
         anexos: 45,
-        tarjetaSeguimiento: 60,
+        tarjetaSeguimiento: 80,
         avisoPrivacidad: 20
     },
 
@@ -71,7 +71,10 @@ export const generadorIPH = {
         if (config.sucursalesCache) this.sucursalesCache = config.sucursalesCache;
         if (config.categoriasCache) this.categoriasCache = config.categoriasCache;
         if (config.subcategoriasCache) this.subcategoriasCache = config.subcategoriasCache;
-        if (config.usuariosCache) this.usuariosCache = config.usuariosCache;
+        if (config.usuariosCache) {
+            this.usuariosCache = config.usuariosCache;
+            console.log('✅ Usuarios cargados:', this.usuariosCache.length);
+        }
         if (config.authToken) this.authToken = config.authToken;
         console.log('✅ Generador configurado');
     },
@@ -95,15 +98,36 @@ export const generadorIPH = {
     },
 
     obtenerNombreUsuario(usuarioId) {
-        if (!usuarioId) return 'Sistema';
-        const usuario = this.usuariosCache.find(u => u.id === usuarioId);
-        return usuario ? usuario.nombreCompleto || usuario.email || 'Usuario' : 'Usuario desconocido';
+        if (!usuarioId) {
+            return 'No especificado';
+        }
+
+        // Buscar por diferentes formatos de ID
+        const usuario = this.usuariosCache.find(u =>
+            u.id === usuarioId ||
+            u.uid === usuarioId ||
+            u._id === usuarioId ||
+            u.usuarioId === usuarioId
+        );
+
+        if (usuario) {
+            return usuario.nombreCompleto || usuario.nombre || usuario.email || usuario.displayName || 'Usuario';
+        }
+
+        return 'No especificado';
     },
 
     obtenerCargoUsuario(usuarioId) {
         if (!usuarioId) return '';
-        const usuario = this.usuariosCache.find(u => u.id === usuarioId);
-        return usuario ? usuario.cargo || 'No especificado' : '';
+
+        const usuario = this.usuariosCache.find(u =>
+            u.id === usuarioId ||
+            u.uid === usuarioId ||
+            u._id === usuarioId ||
+            u.usuarioId === usuarioId
+        );
+
+        return usuario ? (usuario.cargo || usuario.rol || usuario.puesto || '') : '';
     },
 
     async cargarLibrerias() {
@@ -134,7 +158,6 @@ export const generadorIPH = {
         try {
             console.log('🔍 Cargando logo Centinela...');
 
-            // Intentar 1: Desde localStorage
             const logoBase64 = localStorage.getItem('logo');
             if (logoBase64) {
                 console.log('✅ Logo Centinela encontrado en localStorage');
@@ -147,7 +170,6 @@ export const generadorIPH = {
                 return true;
             }
 
-            // Intentar 2: Desde assets
             try {
                 const response = await fetch('/assets/images/logo.png');
                 if (response.ok) {
@@ -209,36 +231,73 @@ export const generadorIPH = {
 
     extraerUrlImagen(item) {
         if (!item) return null;
-        if (typeof item === 'string') return item.trim();
+
+        if (typeof item === 'string') {
+            const trimmed = item.trim();
+            return trimmed.startsWith('http') || trimmed.startsWith('data:image') || trimmed.startsWith('blob:') ? trimmed : null;
+        }
+
         if (typeof item === 'object') {
-            const props = ['url', 'URL', 'src', 'path', 'downloadURL', 'imageUrl', 'foto', 'imagen', 'evidencia'];
+            const props = [
+                'url', 'URL', 'src', 'path', 'downloadURL', 'imageUrl',
+                'foto', 'imagen', 'evidencia', 'fotoUrl', 'imagenUrl',
+                'firebaseUrl', 'storageUrl', 'urlDescarga'
+            ];
+
             for (const prop of props) {
-                if (item[prop] && typeof item[prop] === 'string') return item[prop].trim();
+                if (item[prop] && typeof item[prop] === 'string') {
+                    const valor = item[prop].trim();
+                    if (valor.startsWith('http') || valor.startsWith('data:image') || valor.startsWith('blob:')) {
+                        return valor;
+                    }
+                }
+            }
+
+            if (item.url && typeof item.url === 'object' && item.url.url) {
+                return item.url.url;
             }
         }
+
         return null;
     },
 
     extraerComentario(item) {
         if (!item) return '';
+
+        if (typeof item === 'string') return '';
+
         if (typeof item === 'object') {
-            const props = ['comentario', 'descripcion', 'nombre', 'titulo', 'caption', 'texto', 'nota'];
+            const props = [
+                'comentario', 'descripcion', 'nombre', 'titulo',
+                'caption', 'texto', 'nota', 'observacion',
+                'detalle', 'comentarios', 'description'
+            ];
+
             for (const prop of props) {
-                if (item[prop] && typeof item[prop] === 'string') return item[prop];
+                if (item[prop] && typeof item[prop] === 'string') {
+                    return item[prop].trim();
+                }
+            }
+
+            if (item.metadata && item.metadata.comentario) {
+                return item.metadata.comentario;
             }
         }
+
         return '';
     },
 
     async cargarImagenFirebase(url) {
         if (!url) return null;
         const urlLimpia = url.trim();
+
         if (this.imagenesCache.has(urlLimpia)) return this.imagenesCache.get(urlLimpia);
 
         const estrategias = [
             this.cargarConFetch.bind(this),
             this.cargarConProxy.bind(this),
-            this.cargarConImage.bind(this)
+            this.cargarConImage.bind(this),
+            this.cargarConIframe.bind(this)
         ];
 
         for (const estrategia of estrategias) {
@@ -248,8 +307,12 @@ export const generadorIPH = {
                     this.imagenesCache.set(urlLimpia, imgData);
                     return imgData;
                 }
-            } catch (error) { }
+            } catch (error) {
+                console.warn(`Estrategia falló para ${urlLimpia}:`, error);
+            }
         }
+
+        console.warn(`No se pudo cargar imagen: ${urlLimpia}`);
         return null;
     },
 
@@ -273,12 +336,18 @@ export const generadorIPH = {
         const proxies = [
             'https://corsproxy.io/?' + encodeURIComponent(url),
             'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-            'https://cors-anywhere.herokuapp.com/' + url
+            'https://cors-anywhere.herokuapp.com/' + url,
+            'https://proxy.cors.sh/' + url,
+            'https://crossorigin.me/' + url
         ];
 
         for (const proxyUrl of proxies) {
             try {
-                const response = await fetch(proxyUrl);
+                const response = await fetch(proxyUrl, {
+                    headers: {
+                        'Origin': window.location.origin
+                    }
+                });
                 if (response.ok) {
                     const blob = await response.blob();
                     if (blob.type.startsWith('image/')) {
@@ -310,6 +379,45 @@ export const generadorIPH = {
             };
             img.onerror = () => resolve(null);
             img.src = url;
+        });
+    },
+
+    cargarConIframe(url) {
+        return new Promise((resolve) => {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            iframe.onload = () => {
+                try {
+                    const img = iframe.contentDocument.createElement('img');
+                    img.crossOrigin = 'Anonymous';
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        document.body.removeChild(iframe);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.onerror = () => {
+                        document.body.removeChild(iframe);
+                        resolve(null);
+                    };
+                    img.src = url;
+                } catch {
+                    document.body.removeChild(iframe);
+                    resolve(null);
+                }
+            };
+
+            iframe.onerror = () => {
+                document.body.removeChild(iframe);
+                resolve(null);
+            };
+
+            iframe.src = 'about:blank';
         });
     },
 
@@ -359,12 +467,39 @@ export const generadorIPH = {
 
     formatearFecha(fecha) {
         if (!fecha) return 'Fecha no disponible';
+
         try {
+            let fechaObj;
+
+            // Si es un objeto Firestore Timestamp
             if (fecha && typeof fecha === 'object' && fecha.toDate) {
-                fecha = fecha.toDate();
+                fechaObj = fecha.toDate();
             }
-            const fechaObj = new Date(fecha);
-            if (isNaN(fechaObj.getTime())) return 'Fecha no disponible';
+            // Si es un objeto con seconds (Firestore Timestamp en formato plano)
+            else if (fecha && typeof fecha === 'object' && fecha.seconds) {
+                fechaObj = new Date(fecha.seconds * 1000);
+            }
+            // Si es un string ISO
+            else if (typeof fecha === 'string') {
+                fechaObj = new Date(fecha);
+            }
+            // Si ya es un objeto Date
+            else if (fecha instanceof Date) {
+                fechaObj = fecha;
+            }
+            // Si es un número (timestamp)
+            else if (typeof fecha === 'number') {
+                fechaObj = new Date(fecha);
+            }
+            else {
+                return 'Fecha no disponible';
+            }
+
+            // Verificar si la fecha es válida
+            if (!(fechaObj instanceof Date) || isNaN(fechaObj.getTime())) {
+                return 'Fecha no disponible';
+            }
+
             return fechaObj.toLocaleString('es-MX', {
                 day: '2-digit',
                 month: '2-digit',
@@ -372,7 +507,9 @@ export const generadorIPH = {
                 hour: '2-digit',
                 minute: '2-digit'
             });
-        } catch {
+
+        } catch (error) {
+            console.error('❌ Error formateando fecha:', error);
             return 'Fecha no disponible';
         }
     },
@@ -423,22 +560,15 @@ export const generadorIPH = {
         // ===== LOGO CENTINELA =====
         if (this.logoCentinelaCircular) {
             try {
-                // Fondo blanco para el logo
                 pdf.setFillColor(255, 255, 255);
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.circle(xCentinela + radio, yLogo, radio, 'FD');
-
-                // Agregar imagen
                 pdf.addImage(this.logoCentinelaCircular, 'PNG',
                     xCentinela, yLogo - radio,
                     dimensiones.diametro, dimensiones.diametro);
-
-                // Borde gris
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.setLineWidth(1);
                 pdf.circle(xCentinela + radio, yLogo, radio, 'S');
-
-                console.log('✅ Logo Centinela dibujado');
             } catch (e) {
                 console.error('Error dibujando logo Centinela:', e);
                 this.dibujarLogoPlaceholderCircular(pdf, xCentinela + radio, yLogo, radio, 'C');
@@ -450,22 +580,15 @@ export const generadorIPH = {
         // ===== LOGO ORGANIZACIÓN =====
         if (this.logoOrganizacionCircular) {
             try {
-                // Fondo blanco para el logo
                 pdf.setFillColor(255, 255, 255);
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.circle(xOrganizacion + radio, yLogo, radio, 'FD');
-
-                // Agregar imagen
                 pdf.addImage(this.logoOrganizacionCircular, 'PNG',
                     xOrganizacion, yLogo - radio,
                     dimensiones.diametro, dimensiones.diametro);
-
-                // Borde gris
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.setLineWidth(1);
                 pdf.circle(xOrganizacion + radio, yLogo, radio, 'S');
-
-                console.log('✅ Logo Organización dibujado');
             } catch (e) {
                 console.error('Error dibujando logo organización:', e);
                 this.dibujarLogoPlaceholderCircular(pdf, xOrganizacion + radio, yLogo, radio, 'ORG');
@@ -474,7 +597,7 @@ export const generadorIPH = {
             this.dibujarLogoPlaceholderCircular(pdf, xOrganizacion + radio, yLogo, radio, 'ORG');
         }
 
-        // Línea divisoria entre logos (si hay al menos uno)
+        // Línea divisoria
         if (this.logoCentinelaCircular || this.logoOrganizacionCircular) {
             const xLineaVertical = xCentinela + dimensiones.diametro + (dimensiones.separacion / 2);
             pdf.setDrawColor(coloresIPH.borde);
@@ -500,13 +623,11 @@ export const generadorIPH = {
         pdf.setTextColor(coloresIPH.textoClaro);
         pdf.text(subtitulo, centroPagina, 26, { align: 'center' });
 
-        // Fecha a la izquierda
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(this.fonts.small);
         pdf.setTextColor(coloresIPH.textoClaro);
         pdf.text(`Fecha: ${fechaStr}`, margen, 22);
 
-        // Línea decorativa abajo
         pdf.setDrawColor(coloresIPH.secundario);
         pdf.setLineWidth(0.8);
         pdf.line(margen, this.alturaEncabezado - 2, anchoPagina - margen, this.alturaEncabezado - 2);
@@ -625,21 +746,37 @@ export const generadorIPH = {
 
     dividirTextoEnLineas(pdf, texto, anchoMaximo) {
         if (!texto) return [''];
-        const palabras = texto.toString().split(' ');
-        const lineas = [];
-        let lineaActual = '';
 
-        for (const palabra of palabras) {
-            const textoPrueba = lineaActual ? `${lineaActual} ${palabra}` : palabra;
-            if (pdf.getTextWidth(textoPrueba) <= anchoMaximo) {
-                lineaActual = textoPrueba;
-            } else {
-                if (lineaActual) lineas.push(lineaActual);
-                lineaActual = palabra;
+        // Dividir el texto por saltos de línea primero
+        const parrafos = texto.toString().split('\n');
+        const todasLasLineas = [];
+
+        for (const parrafo of parrafos) {
+            if (parrafo.trim() === '') {
+                todasLasLineas.push(''); // Línea vacía para mantener el espacio
+                continue;
+            }
+
+            const palabras = parrafo.split(' ');
+            let lineaActual = '';
+
+            for (const palabra of palabras) {
+                const textoPrueba = lineaActual ? `${lineaActual} ${palabra}` : palabra;
+                if (pdf.getTextWidth(textoPrueba) <= anchoMaximo) {
+                    lineaActual = textoPrueba;
+                } else {
+                    if (lineaActual) {
+                        todasLasLineas.push(lineaActual);
+                    }
+                    lineaActual = palabra;
+                }
+            }
+            if (lineaActual) {
+                todasLasLineas.push(lineaActual);
             }
         }
-        if (lineaActual) lineas.push(lineaActual);
-        return lineas;
+
+        return todasLasLineas;
     },
 
     async generarPaginaIPH(pdf, incidencia, paginaNum, onProgress) {
@@ -717,27 +854,43 @@ export const generadorIPH = {
         pdf.text(`HORA INCIDENCIA: ${this.formatearHoraVisualizacion(fechaInicio)}`, margen + 80, yPos);
         yPos += this.alturasContenedores.clasificacion - 12;
 
-        // REPORTADO POR
-        pdf.setFillColor(coloresIPH.fondo);
-        pdf.setDrawColor(coloresIPH.borde);
-        pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.reportadoPor, 'FD');
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(this.fonts.normal);
-        pdf.setTextColor(coloresIPH.primario);
-        pdf.text('REPORTADO POR:', margen + 2, yPos);
-        yPos += 5;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.small);
-        pdf.setTextColor(coloresIPH.texto);
-        const reportadoPor = this.obtenerNombreUsuario(incidencia.reportadoPorId);
-        const cargo = this.obtenerCargoUsuario(incidencia.reportadoPorId);
-        pdf.text(`${reportadoPor}`, margen + 2, yPos);
-        yPos += 4;
-        pdf.text(`CARGO / PUESTO: ${cargo}`, margen + 2, yPos);
-        yPos += this.alturasContenedores.reportadoPor - 7;
+        // REPORTADO POR - Solo si hay datos
+        const nombreReportadoPor = this.obtenerNombreUsuario(incidencia.reportadoPorId);
+        const cargoReportadoPor = this.obtenerCargoUsuario(incidencia.reportadoPorId);
+
+        if (nombreReportadoPor !== 'No especificado' || cargoReportadoPor) {
+            if (!this.verificarEspacio(pdf, yPos, this.alturasContenedores.reportadoPor + 5)) {
+                this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+                pdf.addPage();
+                paginaNum++;
+                this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+                yPos = this.alturaEncabezado + 5;
+            }
+
+            pdf.setFillColor(coloresIPH.fondo);
+            pdf.setDrawColor(coloresIPH.borde);
+            pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.reportadoPor, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(this.fonts.normal);
+            pdf.setTextColor(coloresIPH.primario);
+            pdf.text('REPORTADO POR:', margen + 2, yPos);
+            yPos += 5;
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(this.fonts.small);
+            pdf.setTextColor(coloresIPH.texto);
+            pdf.text(`${nombreReportadoPor}`, margen + 2, yPos);
+            yPos += 4;
+            if (cargoReportadoPor) {
+                pdf.text(`CARGO / PUESTO: ${cargoReportadoPor}`, margen + 2, yPos);
+            }
+            yPos += this.alturasContenedores.reportadoPor - 7;
+        }
 
         // DESCRIPCIÓN
-        if (!this.verificarEspacio(pdf, yPos, this.alturasContenedores.descripcion + 5)) {
+        const lineasDesc = this.dividirTextoEnLineas(pdf, incidencia.detalles || 'No hay descripción disponible.', anchoContenido - 10);
+        const espacioNecesarioDesc = 15 + (lineasDesc.length * 4);
+
+        if (!this.verificarEspacio(pdf, yPos, espacioNecesarioDesc)) {
             this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
             pdf.addPage();
             paginaNum++;
@@ -745,34 +898,30 @@ export const generadorIPH = {
             yPos = this.alturaEncabezado + 5;
         }
 
+        const alturaContenedorDesc = Math.max(this.alturasContenedores.descripcion, espacioNecesarioDesc + 10);
         pdf.setFillColor(coloresIPH.fondo);
         pdf.setDrawColor(coloresIPH.borde);
-        pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.descripcion, 'FD');
+        pdf.rect(margen, yPos - 3, anchoContenido, alturaContenedorDesc, 'FD');
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.normal);
         pdf.setTextColor(coloresIPH.primario);
         pdf.text('DESCRIPCIÓN DE LA INCIDENCIA:', margen + 2, yPos);
 
-        const descripcion = incidencia.detalles || 'No hay descripción disponible.';
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(this.fonts.small);
-        const lineasDesc = this.dividirTextoEnLineas(pdf, descripcion, anchoContenido - 10);
+        pdf.setTextColor(coloresIPH.texto);
 
         let yTextoDesc = yPos + 5;
-        const espacioParaTextoDesc = this.alturasContenedores.descripcion - 10;
-        const maxLineasDesc = Math.floor(espacioParaTextoDesc / 4);
-
-        for (let i = 0; i < Math.min(lineasDesc.length, maxLineasDesc); i++) {
-            pdf.text(lineasDesc[i], margen + 5, yTextoDesc + (i * 4));
+        for (let i = 0; i < lineasDesc.length; i++) {
+            if (lineasDesc[i] === '') {
+                yTextoDesc += 4;
+            } else {
+                pdf.text(lineasDesc[i], margen + 5, yTextoDesc);
+                yTextoDesc += 4;
+            }
         }
 
-        if (lineasDesc.length > maxLineasDesc) {
-            pdf.setFont('helvetica', 'italic');
-            pdf.setFontSize(this.fonts.mini);
-            pdf.setTextColor(coloresIPH.textoClaro);
-            pdf.text('... (texto continúa)', margen + 5, yTextoDesc + (maxLineasDesc * 4));
-        }
-        yPos += this.alturasContenedores.descripcion + 5;
+        yPos = yTextoDesc + 5;
 
         // ANEXOS PRINCIPALES
         if (incidencia.imagenes && incidencia.imagenes.length > 0) {
@@ -792,60 +941,71 @@ export const generadorIPH = {
             pdf.text('ANEXOS - EVIDENCIAS FOTOGRÁFICAS PRINCIPALES', margen + 2, yPos);
             yPos += 5;
 
-            const imgWidth = 45;
-            const imgHeight = 35;
+            const imgWidth = 35;
+            const imgHeight = 30;
             const espaciado = 5;
 
+            const anchoComentario = anchoContenido - imgWidth - (espaciado * 2);
+
             for (let i = 0; i < Math.min(incidencia.imagenes.length, 3); i++) {
-                const xPos = margen + 5 + (i * (imgWidth + espaciado));
+                const xPos = margen + 5;
+                const xComentario = xPos + imgWidth + espaciado;
+
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.setFillColor(255, 255, 255);
                 pdf.roundedRect(xPos, yPos, imgWidth, imgHeight, 2, 2, 'FD');
-                await this.procesarImagenConProxy(pdf, incidencia.imagenes[i], xPos, yPos, imgWidth, imgHeight, i + 1, false, onProgress);
+
+                pdf.setFillColor(250, 250, 250);
+                pdf.setDrawColor(coloresIPH.borde);
+                pdf.roundedRect(xComentario, yPos, anchoComentario, imgHeight, 2, 2, 'FD');
+
+                await this.procesarImagenConProxy(pdf, incidencia.imagenes[i], xPos, yPos, imgWidth, imgHeight, xComentario, anchoComentario, i + 1, false, onProgress);
+
+                yPos += imgHeight + espaciado;
             }
-            yPos += this.alturasContenedores.anexos;
+            yPos += 5;
         }
 
         // EVIDENCIAS DE CONTINUACIÓN
         if (incidencia.imagenes && incidencia.imagenes.length > 3) {
             for (let i = 3; i < incidencia.imagenes.length; i++) {
-                const indiceFila = i - 3;
-                const columna = indiceFila % 3;
-                if (columna === 0 && i > 3) {
-                    yPos += 40;
-                    if (!this.verificarEspacio(pdf, yPos, 45)) {
-                        this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
-                        pdf.addPage();
-                        paginaNum++;
-                        this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
-                        yPos = this.alturaEncabezado + 5;
-                    }
+                if (!this.verificarEspacio(pdf, yPos, 45)) {
+                    this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+                    pdf.addPage();
+                    paginaNum++;
+                    this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+                    yPos = this.alturaEncabezado + 5;
                 }
-                const xPos = margen + 5 + (columna * 50);
-                const imgWidth = 45;
-                const imgHeight = 35;
+
+                const imgWidth = 35;
+                const imgHeight = 30;
+                const espaciado = 5;
+                const anchoComentario = anchoContenido - imgWidth - (espaciado * 2);
+
+                const xPos = margen + 5;
+                const xComentario = xPos + imgWidth + espaciado;
+
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.setFillColor(255, 255, 255);
                 pdf.roundedRect(xPos, yPos, imgWidth, imgHeight, 2, 2, 'FD');
-                await this.procesarImagenConProxy(pdf, incidencia.imagenes[i], xPos, yPos, imgWidth, imgHeight, i + 1, false, onProgress);
+
+                pdf.setFillColor(250, 250, 250);
+                pdf.setDrawColor(coloresIPH.borde);
+                pdf.roundedRect(xComentario, yPos, anchoComentario, imgHeight, 2, 2, 'FD');
+
+                await this.procesarImagenConProxy(pdf, incidencia.imagenes[i], xPos, yPos, imgWidth, imgHeight, xComentario, anchoComentario, i + 1, false, onProgress);
+
+                yPos += imgHeight + espaciado;
             }
-            yPos += 45;
         }
 
         // =============================================
-        // HISTORIAL DE SEGUIMIENTO
+        // HISTORIAL DE SEGUIMIENTO - CORREGIDO EL DESBORDAMIENTO
         // =============================================
         const seguimientos = incidencia.getSeguimientosArray ? incidencia.getSeguimientosArray() : [];
 
         if (seguimientos && seguimientos.length > 0) {
             yPos += 10;
-            if (!this.verificarEspacio(pdf, yPos, 20)) {
-                this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
-                pdf.addPage();
-                paginaNum++;
-                this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
-                yPos = this.alturaEncabezado + 5;
-            }
 
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(this.fonts.subtitulo);
@@ -856,12 +1016,29 @@ export const generadorIPH = {
             for (let s = 0; s < seguimientos.length; s++) {
                 const seg = seguimientos[s];
 
-                if (!this.verificarEspacio(pdf, yPos, this.alturasContenedores.tarjetaSeguimiento + 5)) {
+                // Calcular altura necesaria para este seguimiento
+                const lineasSeg = this.dividirTextoEnLineas(pdf, seg.descripcion || 'Sin descripción', anchoContenido - 10);
+                const alturaTexto = lineasSeg.length * 4;
+
+                // Calcular altura de evidencias
+                let alturaEvidencias = 0;
+                if (seg.evidencias && seg.evidencias.length > 0) {
+                    alturaEvidencias = 10; // Título
+                    for (let e = 0; e < seg.evidencias.length; e++) {
+                        alturaEvidencias += 35; // 30 de imagen + 5 de espacio
+                    }
+                }
+
+                const alturaNecesaria = 25 + alturaTexto + alturaEvidencias; // 25 para encabezado y márgenes
+
+                // Verificar espacio y crear nueva página si es necesario
+                if (!this.verificarEspacio(pdf, yPos, alturaNecesaria + 10)) {
                     this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
                     pdf.addPage();
                     paginaNum++;
                     this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
                     yPos = this.alturaEncabezado + 5;
+
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(this.fonts.subtitulo);
                     pdf.setTextColor(coloresIPH.primario);
@@ -869,119 +1046,105 @@ export const generadorIPH = {
                     yPos += 8;
                 }
 
-                // TARJETA DE SEGUIMIENTO
+                // Dibujar contenedor principal del seguimiento
                 pdf.setFillColor(coloresIPH.fondo);
                 pdf.setDrawColor(coloresIPH.borde);
-                pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.tarjetaSeguimiento, 'FD');
+                pdf.rect(margen, yPos - 3, anchoContenido, alturaNecesaria, 'FD');
 
                 // ENCABEZADO
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(this.fonts.small);
                 pdf.setTextColor(coloresIPH.primario);
-                const fechaStr = this.formatearFecha(seg.fecha);
+
+                let fechaSeg = seg.fecha || seg.fechaCreacion || seg.createdAt || null;
+                const fechaStr = this.formatearFecha(fechaSeg);
+
                 pdf.text(`Seguimiento #${s + 1} - ${fechaStr}`, margen + 2, yPos);
 
                 pdf.setFont('helvetica', 'italic');
                 pdf.setFontSize(this.fonts.mini);
                 pdf.setTextColor(coloresIPH.texto);
-                pdf.text(`por: ${seg.usuarioNombre || 'Usuario'}`, margen + 2, yPos + 5);
+
+                const nombreUsuario = seg.usuarioNombre || seg.usuario || this.obtenerNombreUsuario(seg.usuarioId) || 'Usuario';
+                pdf.text(`por: ${nombreUsuario}`, margen + 2, yPos + 5);
 
                 // DESCRIPCIÓN
-                const descSeg = seg.descripcion || 'Sin descripción';
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(this.fonts.small);
-                const lineasSeg = this.dividirTextoEnLineas(pdf, descSeg, anchoContenido - 10);
-
-                let yTexto = yPos + 12;
-                const espacioParaTexto = this.alturasContenedores.tarjetaSeguimiento - 20;
-                const maxLineas = Math.floor(espacioParaTexto / 4);
                 pdf.setTextColor(coloresIPH.texto);
 
-                for (let i = 0; i < Math.min(lineasSeg.length, maxLineas); i++) {
-                    pdf.text(lineasSeg[i], margen + 5, yTexto + (i * 4));
-                }
-
-                if (lineasSeg.length > maxLineas) {
-                    pdf.setFont('helvetica', 'italic');
-                    pdf.setFontSize(this.fonts.mini);
-                    pdf.setTextColor(coloresIPH.textoClaro);
-                    pdf.text('... (texto continúa)', margen + 5, yTexto + (maxLineas * 4));
-                }
-
-                yPos += this.alturasContenedores.tarjetaSeguimiento + 5;
-
-                // EVIDENCIAS DEL SEGUIMIENTO CON COMENTARIOS
-                if (seg.evidencias && seg.evidencias.length > 0) {
-                    if (!this.verificarEspacio(pdf, yPos, 10)) {
-                        this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
-                        pdf.addPage();
-                        paginaNum++;
-                        this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
-                        yPos = this.alturaEncabezado + 5;
+                let yTexto = yPos + 12;
+                for (let i = 0; i < lineasSeg.length; i++) {
+                    if (lineasSeg[i] === '') {
+                        yTexto += 4;
+                    } else {
+                        pdf.text(lineasSeg[i], margen + 5, yTexto);
+                        yTexto += 4;
                     }
+                }
+
+                // EVIDENCIAS DEL SEGUIMIENTO
+                if (seg.evidencias && seg.evidencias.length > 0) {
+                    yTexto += 5;
 
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(this.fonts.small);
                     pdf.setTextColor(coloresIPH.primario);
-                    pdf.text(`Evidencias del seguimiento #${s + 1}:`, margen, yPos);
-                    yPos += 5;
+                    pdf.text(`Evidencias del seguimiento #${s + 1}:`, margen, yTexto);
+                    yTexto += 5;
 
-                    const evidenciaWidth = 40;
+                    const evidenciaWidth = 35;
                     const evidenciaHeight = 30;
                     const espaciado = 5;
-                    const evidenciasPorFila = 3;
+                    const anchoComentario = anchoContenido - evidenciaWidth - (espaciado * 2);
 
                     for (let e = 0; e < seg.evidencias.length; e++) {
-                        if (e > 0 && e % evidenciasPorFila === 0) {
-                            yPos += evidenciaHeight + 10;
-                            if (!this.verificarEspacio(pdf, yPos, evidenciaHeight + 15)) {
-                                this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
-                                pdf.addPage();
-                                paginaNum++;
-                                this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
-                                yPos = this.alturaEncabezado + 5;
-                                pdf.setFont('helvetica', 'bold');
-                                pdf.setFontSize(this.fonts.small);
-                                pdf.setTextColor(coloresIPH.primario);
-                                pdf.text(`Evidencias del seguimiento #${s + 1} (continuación):`, margen, yPos);
-                                yPos += 5;
-                            }
-                        }
-
-                        const columna = e % evidenciasPorFila;
-                        const xPos = margen + (columna * (evidenciaWidth + espaciado));
+                        const xPos = margen + 5;
+                        const xComentario = xPos + evidenciaWidth + espaciado;
 
                         pdf.setDrawColor(coloresIPH.borde);
                         pdf.setFillColor(255, 255, 255);
-                        pdf.roundedRect(xPos, yPos, evidenciaWidth, evidenciaHeight, 2, 2, 'FD');
+                        pdf.roundedRect(xPos, yTexto, evidenciaWidth, evidenciaHeight, 2, 2, 'FD');
+
+                        pdf.setFillColor(250, 250, 250);
+                        pdf.setDrawColor(coloresIPH.borde);
+                        pdf.roundedRect(xComentario, yTexto, anchoComentario, evidenciaHeight, 2, 2, 'FD');
 
                         pdf.setFillColor(coloresIPH.secundario);
                         pdf.setGState(new pdf.GState({ opacity: 0.8 }));
-                        pdf.circle(xPos + 8, yPos + 8, 4, 'F');
+                        pdf.circle(xPos + 8, yTexto + 8, 4, 'F');
                         pdf.setGState(new pdf.GState({ opacity: 1 }));
 
                         pdf.setTextColor(coloresIPH.primario);
                         pdf.setFont('helvetica', 'bold');
                         pdf.setFontSize(this.fonts.mini);
-                        pdf.text((e + 1).toString(), xPos + 8, yPos + 8.5, { align: 'center' });
+                        pdf.text((e + 1).toString(), xPos + 8, yTexto + 8.5, { align: 'center' });
 
-                        await this.procesarImagenConProxy(pdf, seg.evidencias[e], xPos, yPos, evidenciaWidth, evidenciaHeight, e + 1, true, onProgress);
+                        await this.procesarImagenConProxy(pdf, seg.evidencias[e], xPos, yTexto, evidenciaWidth, evidenciaHeight, xComentario, anchoComentario, e + 1, true, onProgress);
+
+                        yTexto += evidenciaHeight + espaciado;
                     }
 
-                    const filasEvidencias = Math.ceil(seg.evidencias.length / evidenciasPorFila);
-                    yPos += (evidenciaHeight * filasEvidencias) + (10 * filasEvidencias) + 5;
+                    yPos = yTexto + 5;
+                } else {
+                    yPos = yTexto + 5;
                 }
             }
         }
 
-        // AVISO DE PRIVACIDAD
-        if (!this.verificarEspacio(pdf, yPos, this.alturasContenedores.avisoPrivacidad + 5)) {
+        // ===== AVISO DE PRIVACIDAD =====
+        const altoPagina = pdf.internal.pageSize.getHeight();
+        const espacioRestante = altoPagina - yPos - 25;
+
+        if (espacioRestante < this.alturasContenedores.avisoPrivacidad + 5) {
             this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
             pdf.addPage();
             paginaNum++;
             this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
             yPos = this.alturaEncabezado + 5;
         }
+
+        yPos = altoPagina - 25 - this.alturasContenedores.avisoPrivacidad;
 
         pdf.setFillColor(245, 245, 245);
         pdf.setDrawColor(coloresIPH.borde);
@@ -992,43 +1155,64 @@ export const generadorIPH = {
         pdf.text('AVISO DE PRIVACIDAD', margen + 2, yPos + 4);
 
         pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(this.fonts.mini - 0.5);
+        pdf.setFontSize(this.fonts.mini);
         pdf.setTextColor(coloresIPH.textoClaro);
 
         const aviso = 'La privacidad de esta información se garantiza a la vez que el responsable del tratamiento sea el responsable de la protección de datos personales. La finalidad de la gestión de datos es la prestación de servicios públicos y la promoción de la igualdad de oportunidades.';
         const lineasAviso = this.dividirTextoEnLineas(pdf, aviso, anchoContenido - 10);
-        const espacioParaAviso = this.alturasContenedores.avisoPrivacidad - 8;
-        const maxLineasAviso = Math.floor(espacioParaAviso / 3);
 
-        for (let i = 0; i < Math.min(lineasAviso.length, maxLineasAviso); i++) {
+        for (let i = 0; i < Math.min(lineasAviso.length, 4); i++) {
             pdf.text(lineasAviso[i], margen + 2, yPos + 8 + (i * 3));
         }
 
         this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
     },
 
-    async procesarImagenConProxy(pdf, imagen, x, y, ancho, alto, numero, esEvidencia, onProgress) {
+    async procesarImagenConProxy(pdf, imagen, x, y, ancho, alto, xComentario, anchoComentario, numero, esEvidencia, onProgress) {
         try {
             const url = this.extraerUrlImagen(imagen);
             const comentario = this.extraerComentario(imagen);
 
             if (url) {
                 let imgData = null;
-                try {
-                    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
-                    const response = await fetch(proxyUrl);
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        imgData = await this.blobToBase64(blob);
+
+                const metodosCarga = [
+                    async () => {
+                        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+                        const response = await fetch(proxyUrl);
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            return await this.blobToBase64(blob);
+                        }
+                        return null;
+                    },
+                    async () => {
+                        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+                        const response = await fetch(proxyUrl);
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            return await this.blobToBase64(blob);
+                        }
+                        return null;
+                    },
+                    async () => {
+                        return await this.cargarConImage(url);
                     }
-                } catch (e) {
-                    imgData = await this.cargarImagenFirebase(url);
+                ];
+
+                for (const metodo of metodosCarga) {
+                    try {
+                        imgData = await metodo();
+                        if (imgData) break;
+                    } catch (e) {
+                        continue;
+                    }
                 }
 
                 if (imgData) {
                     try {
                         pdf.addImage(imgData, 'JPEG', x + 2, y + 2, ancho - 4, alto - 4, undefined, 'FAST');
-                    } catch {
+                    } catch (e) {
                         this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
                     }
                 } else {
@@ -1038,19 +1222,39 @@ export const generadorIPH = {
                 this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
             }
 
-            // ===== MOSTRAR COMENTARIO DE LA IMAGEN =====
             if (comentario) {
-                pdf.setFont('helvetica', 'italic');
-                pdf.setFontSize(this.fonts.mini - 0.5);
-                pdf.setTextColor(coloresIPH.textoClaro);
-                const comentCorto = comentario.length > 25 ? comentario.substring(0, 22) + '...' : comentario;
-                pdf.text(comentCorto, x + (ancho / 2), y + alto + 4, { align: 'center' });
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(this.fonts.small);
+                pdf.setTextColor(coloresIPH.primario);
+                pdf.text('Comentario:', xComentario + 2, y + 5);
+
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(this.fonts.small);
+                pdf.setTextColor(coloresIPH.texto);
+
+                const anchoTextoComentario = anchoComentario - 6;
+                const lineasComentario = this.dividirTextoEnLineas(pdf, comentario, anchoTextoComentario);
+
+                const alturaDisponible = alto - 10;
+                const maxLineas = Math.floor(alturaDisponible / 4);
+
+                for (let i = 0; i < Math.min(lineasComentario.length, maxLineas); i++) {
+                    pdf.text(lineasComentario[i], xComentario + 2, y + 9 + (i * 4));
+                }
+
+                if (lineasComentario.length > maxLineas) {
+                    pdf.setFont('helvetica', 'italic');
+                    pdf.setFontSize(this.fonts.mini);
+                    pdf.setTextColor(coloresIPH.textoClaro);
+                    pdf.text('...', xComentario + 2, y + 9 + (maxLineas * 4));
+                }
             }
 
             if (onProgress) {
                 onProgress(Math.min(90, 50 + Math.random() * 30));
             }
-        } catch {
+        } catch (error) {
+            console.error(`Error procesando imagen #${numero}:`, error);
             this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
         }
     },
@@ -1058,10 +1262,16 @@ export const generadorIPH = {
     dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia) {
         pdf.setFillColor(245, 245, 245);
         pdf.rect(x + 2, y + 2, ancho - 4, alto - 4, 'F');
+
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(this.fonts.mini);
+        pdf.setFontSize(this.fonts.small);
         pdf.setTextColor(coloresIPH.texto);
-        pdf.text(esEvidencia ? `📷 ${numero}` : `FOTO ${numero}`, x + (ancho / 2), y + (alto / 2), { align: 'center' });
+        pdf.text(esEvidencia ? `📷 ${numero}` : `FOTO ${numero}`, x + (ancho / 2), y + (alto / 2) - 3, { align: 'center' });
+
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(this.fonts.mini);
+        pdf.setTextColor(coloresIPH.textoClaro);
+        pdf.text('(imagen no disponible)', x + (ancho / 2), y + (alto / 2) + 5, { align: 'center' });
     },
 
     async mostrarOpcionesDescarga(pdf, nombreArchivo) {
