@@ -1,8 +1,6 @@
 // /usuarios/administrador/pruebasNotificaciones/pruebasNotificaciones.js
-// Versión: 1.0.0 - Basado en permisos.js de rsienterprise
-
 import { UserManager } from '../../../clases/user.js';
-import { fcmInicializador } from '../../../components/fcm-inicializador.js';
+import { fcmInitializer } from '../../../components/fcm-initializer.js';
 
 const userManager = new UserManager();
 
@@ -45,10 +43,10 @@ function actualizarUI() {
     }
     
     // Actualizar estado de notificaciones
-    if (fcmInicializador.estaActiva()) {
+    if (fcmInitializer.isEnabled()) {
         statusBadge.textContent = 'Activadas';
         statusBadge.className = 'badge-enabled';
-        const token = fcmInicializador.getCurrentToken();
+        const token = fcmInitializer.getCurrentToken();
         tokenSpan.textContent = token ? token.substring(0, 30) + '...' : 'Token obtenido';
         enableBtn.disabled = true;
         disableBtn.disabled = false;
@@ -71,7 +69,7 @@ async function guardarEstadoNotificaciones(habilitadas, token = null) {
         if (habilitadas && token) {
             await userManager.guardarDispositivo({
                 token: token,
-                deviceId: fcmInicializador.deviceId,
+                deviceId: fcmInitializer.deviceId,
                 userAgent: navigator.userAgent,
                 platform: navigator.platform,
                 enabled: true
@@ -79,7 +77,7 @@ async function guardarEstadoNotificaciones(habilitadas, token = null) {
             console.log('✅ Token guardado en el array dispositivos del usuario');
         } else {
             // Si se deshabilitan, eliminar el dispositivo
-            await userManager.eliminarDispositivo(fcmInicializador.deviceId);
+            await userManager.eliminarDispositivo(fcmInitializer.deviceId);
             console.log('✅ Dispositivo eliminado del array dispositivos');
         }
         
@@ -115,12 +113,9 @@ async function suscribirANotificaciones() {
     try {
         // Verificar soporte
         console.log("📋 Verificando soporte del navegador...");
-        if (!fcmInicializador.checkBrowserSupport()) {
-            throw new Error('Navegador no soporta notificaciones push');
-        }
         
         // Solicitar permiso y token
-        const token = await fcmInicializador.solicitarPermisoYToken();
+        const token = await fcmInitializer.enableNotifications();
         
         if (!token) {
             throw new Error('No se pudo obtener el token FCM');
@@ -221,16 +216,16 @@ async function verificarConfiguracionActual() {
         
         // Verificar si el usuario ya tiene dispositivos activos
         const tieneDispositivosActivos = AppState.currentUser.dispositivos?.some(
-            d => d.deviceId === fcmInicializador.deviceId && d.enabled !== false
+            d => d.deviceId === fcmInitializer.deviceId && d.enabled !== false
         );
         
         if (tieneDispositivosActivos) {
             console.log("✅ Este dispositivo ya tiene notificaciones activas");
             AppState.fcmToken = AppState.currentUser.dispositivos.find(
-                d => d.deviceId === fcmInicializador.deviceId
+                d => d.deviceId === fcmInitializer.deviceId
             )?.token;
-            fcmInicializador.notificationsEnabled = true;
-            localStorage.setItem(`fcm_enabled_${fcmInicializador.deviceId}`, 'true');
+            fcmInitializer.notificationsEnabled = true;
+            localStorage.setItem(`fcm_enabled_${fcmInitializer.deviceId}`, 'true');
         } else {
             console.log("ℹ️ Este dispositivo no tiene notificaciones configuradas");
         }
@@ -256,7 +251,7 @@ async function init() {
                 AppState.currentUser = userManager.currentUser;
                 
                 // Inicializar FCM
-                await fcmInicializador.init(userManager);
+                await fcmInitializer.init(userManager);
                 
                 // Verificar configuración actual
                 await verificarConfiguracionActual();
@@ -282,7 +277,7 @@ async function init() {
                     });
                     
                     if (result.isConfirmed) {
-                        await fcmInicializador.desactivar();
+                        await fcmInitializer.disableNotifications();
                         await guardarEstadoNotificaciones(false);
                         manejarFinalizacion(true);
                     }

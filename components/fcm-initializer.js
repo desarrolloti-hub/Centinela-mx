@@ -1,4 +1,4 @@
-// /components/fcm-inicializador.js
+// /components/fcm-initializer.js
 // Versión: 1.0.0 - Basado en rsienterprise para Centinela-MX
 
 import { getMessaging, getToken, onMessage, deleteToken } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-messaging.js";
@@ -10,7 +10,7 @@ const db = getFirestore(app);
 // VAPID Key pública (la nueva que generaste)
 const VAPID_KEY = "BAFZBcxxfwA7zXX0RQsMPhHb3KAspBohLRjQJSD0HDPATB_GIK27G4GT_WzVX4aaeZUhKEdzHDhX0tA5BfWRM1M";
 
-class FCMInicializador {
+class FCMInitializer {
     constructor() {
         this.messaging = null;
         this.userManager = null;
@@ -53,7 +53,7 @@ class FCMInicializador {
             this.loadLocalState();
             
             this.isInitialized = true;
-            console.log('✅ FCMInicializador listo');
+            console.log('✅ FCMInitializer listo');
             
         } catch (error) {
             console.error('❌ Error inicializando FCM:', error);
@@ -168,7 +168,7 @@ class FCMInicializador {
         }
     }
 
-    async solicitarPermisoYToken() {
+    async enableNotifications() {
         if (this.notificationsEnabled) return this.currentToken;
 
         if (!this.checkBrowserSupport()) {
@@ -199,12 +199,12 @@ class FCMInicializador {
             return this.currentToken;
 
         } catch (error) {
-            console.error('❌ Error solicitando permiso:', error);
+            console.error('❌ Error en enableNotifications:', error);
             throw error;
         }
     }
 
-    async desactivar() {
+    async disableNotifications() {
         this.notificationsEnabled = false;
         localStorage.setItem(`fcm_enabled_${this.deviceId}`, 'false');
         
@@ -228,7 +228,7 @@ class FCMInicializador {
         console.log('🔕 Notificaciones desactivadas');
     }
 
-    estaActiva() {
+    isEnabled() {
         return this.notificationsEnabled;
     }
 
@@ -237,4 +237,5 @@ class FCMInicializador {
     }
 }
 
-export const fcmInicializador = new FCMInicializador();
+// 👉 EXPORTACIÓN CORRECTA CON EL NOMBRE QUE ESPERA INICIOSESION.JS
+export const fcmInitializer = new FCMInitializer();
