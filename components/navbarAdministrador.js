@@ -1015,9 +1015,15 @@ class NavbarComplete {
                         </a>
 
                         <!-- Botón para INCIDENCIAS (NUEVO) -->
-                        <a href="/users/admin/incidencias/incidencias.html" class="administracion-dropdown-option" id="incidenciasBtn">
+                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option" id="incidenciasBtn">
                             <i class="fa-solid fa-exclamation-triangle"></i>
                             <span>Incidencias</span>
+                        </a>
+
+                        <!-- Botón para INCIDENCIAS (NUEVO) -->
+                        <a href="/usuarios/administrador/pruebasNotificaciones/pruebasNotificaciones.html" class="administracion-dropdown-option" id="incidenciasBtn">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Pruebas Notificaciones</span>
                         </a>
                     </div>
                 </div>

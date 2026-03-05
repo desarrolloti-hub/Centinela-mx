@@ -11,7 +11,9 @@ import {
     doc,
     serverTimestamp,
     query,
-    where
+    where,
+    arrayUnion, // <-- NUEVO: Para agregar dispositivos
+    arrayRemove // <-- NUEVO: Para eliminar dispositivos
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import {
     createUserWithEmailAndPassword,
@@ -52,6 +54,9 @@ class User {
 
         // ✅ SOLO EL ID DEL ÁREA SE MANTIENE
         this.areaAsignadaId = data.areaAsignadaId || null;
+
+        // ===== 🔥 NUEVO: Array de dispositivos para notificaciones push =====
+        this.dispositivos = data.dispositivos || []; // Array de objetos { token, deviceId, userAgent, platform, lastUsed, enabled }
 
         // Fechas y timestamps
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
@@ -173,6 +178,39 @@ class User {
 
         // Si por alguna razón el rol no es reconocido, no tiene permiso.
         return false;
+    }
+
+    // ========== 🔥 NUEVOS MÉTODOS PARA NOTIFICACIONES ==========
+
+    /**
+     * Obtiene un array con los tokens de los dispositivos activos.
+     * @returns {Array<string>} Array de tokens FCM.
+     */
+    getTokensActivos() {
+        if (!this.dispositivos || !Array.isArray(this.dispositivos)) {
+            return [];
+        }
+        return this.dispositivos
+            .filter(d => d.token && d.enabled !== false) // enabled por defecto es true si no existe
+            .map(d => d.token);
+    }
+
+    /**
+     * Verifica si el usuario tiene al menos un dispositivo con notificaciones habilitadas.
+     * @returns {boolean} True si tiene notificaciones habilitadas.
+     */
+    tieneNotificacionesHabilitadas() {
+        return this.getTokensActivos().length > 0;
+    }
+
+    /**
+     * Obtiene la información de un dispositivo específico por su deviceId.
+     * @param {string} deviceId - ID único del dispositivo.
+     * @returns {object|null} Objeto del dispositivo o null si no se encuentra.
+     */
+    getDispositivo(deviceId) {
+        if (!this.dispositivos) return null;
+        return this.dispositivos.find(d => d.deviceId === deviceId) || null;
     }
 
     // ========== MÉTODOS DE ESTADO ==========
@@ -484,6 +522,8 @@ class UserManager {
                 verificado: false, // Hasta que verifique el email
                 emailVerified: false,
                 status: true,
+                // 🔥 NUEVO: Inicializar array de dispositivos vacío
+                dispositivos: [],
                 creadoPor: uid, // Se crea a sí mismo
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp(),
@@ -625,6 +665,8 @@ class UserManager {
                     eliminarContenido: false
                 },
                 status: true,
+                // 🔥 NUEVO: Inicializar array de dispositivos vacío
+                dispositivos: [],
                 creadoPor: idAdministrador, // ID del administrador que lo creó
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp(),
@@ -681,6 +723,246 @@ class UserManager {
                 }
             }
 
+            throw error;
+        }
+    }
+
+    // ========== 🔥 NUEVOS MÉTODOS PARA GESTIÓN DE DISPOSITIVOS ==========
+
+    /**
+     * Agrega o actualiza un dispositivo (token FCM) para el usuario actual.
+     * @param {Object} dispositivoInfo - Información del dispositivo { token, deviceId, userAgent, platform }
+     * @returns {Promise<boolean>} True si se guardó correctamente.
+     */
+    async guardarDispositivo(dispositivoInfo) {
+        if (!this.currentUser) {
+            throw new Error('No hay usuario autenticado');
+        }
+
+        const userId = this.currentUser.id;
+        const org = this.currentUser.organizacionCamelCase;
+        const isAdmin = this.currentUser.esAdministrador();
+
+        try {
+            let userDocRef;
+            if (isAdmin) {
+                userDocRef = doc(db, "administradores", userId);
+            } else {
+                const coleccion = `colaboradores_${org}`;
+                userDocRef = doc(db, coleccion, userId);
+            }
+
+            // Crear objeto del dispositivo con timestamp
+            const dispositivo = {
+                token: dispositivoInfo.token,
+                deviceId: dispositivoInfo.deviceId,
+                userAgent: dispositivoInfo.userAgent || navigator.userAgent,
+                platform: dispositivoInfo.platform || navigator.platform,
+                lastUsed: new Date().toISOString(),
+                enabled: true // Por defecto habilitado
+            };
+
+            // 1. Primero, intentamos remover cualquier dispositivo existente con el mismo deviceId para evitar duplicados.
+            // Esto es necesario porque arrayUnion agregaría uno nuevo si el objeto no es exactamente igual.
+            // La mejor práctica es leer el documento, modificar el array y actualizar.
+            // Pero para simplificar y evitar lecturas extra, podemos usar una combinación de arrayRemove y arrayUnion.
+            
+            // Obtener el documento actual para leer el array 'dispositivos'
+            const userSnap = await getDoc(userDocRef);
+            if (!userSnap.exists()) {
+                throw new Error('Usuario no encontrado en Firestore');
+            }
+
+            const userData = userSnap.data();
+            let dispositivosActualizados = userData.dispositivos || [];
+
+            // Filtrar para eliminar cualquier dispositivo con el mismo deviceId o token (si es que existe)
+            dispositivosActualizados = dispositivosActualizados.filter(d => 
+                d.deviceId !== dispositivo.deviceId && d.token !== dispositivo.token
+            );
+
+            // Agregar el nuevo dispositivo al inicio del array (para que sea el más reciente)
+            dispositivosActualizados.unshift(dispositivo);
+
+            // Actualizar en Firestore
+            await updateDoc(userDocRef, {
+                dispositivos: dispositivosActualizados,
+                fechaActualizacion: serverTimestamp()
+            });
+
+            // Actualizar el objeto en memoria
+            if (this.currentUser) {
+                this.currentUser.dispositivos = dispositivosActualizados;
+            }
+
+            console.log(`✅ Dispositivo ${dispositivo.deviceId} guardado/actualizado para usuario ${userId}`);
+            return true;
+
+        } catch (error) {
+            console.error('❌ Error guardando dispositivo:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Deshabilita un dispositivo (sin eliminar su token) para el usuario actual.
+     * @param {string} deviceId - ID del dispositivo a deshabilitar.
+     * @returns {Promise<boolean>} True si se deshabilitó correctamente.
+     */
+    async deshabilitarDispositivo(deviceId) {
+        if (!this.currentUser) {
+            throw new Error('No hay usuario autenticado');
+        }
+
+        const userId = this.currentUser.id;
+        const org = this.currentUser.organizacionCamelCase;
+        const isAdmin = this.currentUser.esAdministrador();
+
+        try {
+            let userDocRef;
+            if (isAdmin) {
+                userDocRef = doc(db, "administradores", userId);
+            } else {
+                const coleccion = `colaboradores_${org}`;
+                userDocRef = doc(db, coleccion, userId);
+            }
+
+            const userSnap = await getDoc(userDocRef);
+            if (!userSnap.exists()) {
+                throw new Error('Usuario no encontrado');
+            }
+
+            const userData = userSnap.data();
+            let dispositivos = userData.dispositivos || [];
+
+            // Mapear para cambiar 'enabled' a false para el dispositivo específico
+            const dispositivosActualizados = dispositivos.map(d => 
+                d.deviceId === deviceId ? { ...d, enabled: false, lastUsed: new Date().toISOString() } : d
+            );
+
+            await updateDoc(userDocRef, {
+                dispositivos: dispositivosActualizados,
+                fechaActualizacion: serverTimestamp()
+            });
+
+            // Actualizar memoria
+            if (this.currentUser) {
+                this.currentUser.dispositivos = dispositivosActualizados;
+            }
+
+            console.log(`🔕 Dispositivo ${deviceId} deshabilitado.`);
+            return true;
+
+        } catch (error) {
+            console.error('❌ Error deshabilitando dispositivo:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Habilita un dispositivo previamente deshabilitado.
+     * @param {string} deviceId - ID del dispositivo a habilitar.
+     * @returns {Promise<boolean>} True si se habilitó correctamente.
+     */
+    async habilitarDispositivo(deviceId) {
+        if (!this.currentUser) {
+            throw new Error('No hay usuario autenticado');
+        }
+
+        const userId = this.currentUser.id;
+        const org = this.currentUser.organizacionCamelCase;
+        const isAdmin = this.currentUser.esAdministrador();
+
+        try {
+            let userDocRef;
+            if (isAdmin) {
+                userDocRef = doc(db, "administradores", userId);
+            } else {
+                const coleccion = `colaboradores_${org}`;
+                userDocRef = doc(db, coleccion, userId);
+            }
+
+            const userSnap = await getDoc(userDocRef);
+            if (!userSnap.exists()) {
+                throw new Error('Usuario no encontrado');
+            }
+
+            const userData = userSnap.data();
+            let dispositivos = userData.dispositivos || [];
+
+            // Mapear para cambiar 'enabled' a true para el dispositivo específico
+            const dispositivosActualizados = dispositivos.map(d => 
+                d.deviceId === deviceId ? { ...d, enabled: true, lastUsed: new Date().toISOString() } : d
+            );
+
+            await updateDoc(userDocRef, {
+                dispositivos: dispositivosActualizados,
+                fechaActualizacion: serverTimestamp()
+            });
+
+            // Actualizar memoria
+            if (this.currentUser) {
+                this.currentUser.dispositivos = dispositivosActualizados;
+            }
+
+            console.log(`🔔 Dispositivo ${deviceId} habilitado.`);
+            return true;
+
+        } catch (error) {
+            console.error('❌ Error habilitando dispositivo:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Elimina un dispositivo específico del usuario actual.
+     * @param {string} deviceId - ID del dispositivo a eliminar.
+     * @returns {Promise<boolean>} True si se eliminó correctamente.
+     */
+    async eliminarDispositivo(deviceId) {
+        if (!this.currentUser) {
+            throw new Error('No hay usuario autenticado');
+        }
+
+        const userId = this.currentUser.id;
+        const org = this.currentUser.organizacionCamelCase;
+        const isAdmin = this.currentUser.esAdministrador();
+
+        try {
+            let userDocRef;
+            if (isAdmin) {
+                userDocRef = doc(db, "administradores", userId);
+            } else {
+                const coleccion = `colaboradores_${org}`;
+                userDocRef = doc(db, coleccion, userId);
+            }
+
+            const userSnap = await getDoc(userDocRef);
+            if (!userSnap.exists()) {
+                throw new Error('Usuario no encontrado');
+            }
+
+            const userData = userSnap.data();
+            let dispositivos = userData.dispositivos || [];
+
+            // Filtrar para eliminar el dispositivo con el deviceId dado
+            const dispositivosActualizados = dispositivos.filter(d => d.deviceId !== deviceId);
+
+            await updateDoc(userDocRef, {
+                dispositivos: dispositivosActualizados,
+                fechaActualizacion: serverTimestamp()
+            });
+
+            // Actualizar memoria
+            if (this.currentUser) {
+                this.currentUser.dispositivos = dispositivosActualizados;
+            }
+
+            console.log(`🗑️ Dispositivo ${deviceId} eliminado.`);
+            return true;
+
+        } catch (error) {
+            console.error('❌ Error eliminando dispositivo:', error);
             throw error;
         }
     }
@@ -1475,6 +1757,22 @@ class UserManager {
      */
     tienePermiso(permiso) {
         return this.currentUser && this.currentUser.tienePermiso(permiso);
+    }
+
+    // ========== MÉTODO DE CIERRE DE SESIÓN (MEJORADO) ==========
+    /**
+     * Cierra la sesión del usuario actual.
+     * @returns {Promise<void>}
+     */
+    async logout() {
+        try {
+            await signOut(auth);
+            // No es necesario limpiar this.currentUser aquí porque onAuthStateChanged lo hará.
+            console.log('Sesión cerrada correctamente');
+        } catch (error) {
+            console.error('Error al cerrar sesión:', error);
+            throw error;
+        }
     }
 }
 

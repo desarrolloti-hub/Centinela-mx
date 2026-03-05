@@ -4,6 +4,7 @@
 
 // IMPORTACIÓN DE MÓDULOS
 import { UserManager } from '/clases/user.js';
+import { fcmInitializer } from '/components/fcm-initializer.js';
 
 // FUNCIÓN AUXILIAR: Convertir texto a camelCase
 function toCamelCase(text) {
@@ -48,9 +49,18 @@ function configurarSweetAlertEstilos() {
     };
 }
 
+// 🔥 NUEVA FUNCIÓN: Detectar si estamos en producción (HTTPS) o local
+function isProduction() {
+    return window.location.protocol === 'https:' || 
+           window.location.hostname !== 'localhost' && 
+           window.location.hostname !== '127.0.0.1';
+}
+
 // INICIALIZACIÓN PRINCIPAL - Se ejecuta cuando el DOM está completamente cargado
 document.addEventListener('DOMContentLoaded', function () {
     const estilos = configurarSweetAlertEstilos();
+    const entorno = isProduction() ? 'PRODUCCIÓN' : 'DESARROLLO';
+    console.log(`🌐 Entorno detectado: ${entorno} (${window.location.protocol}//${window.location.hostname})`);
 
     const loginForm = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
@@ -577,6 +587,71 @@ document.addEventListener('DOMContentLoaded', function () {
 
             mostrarSweetAlertExito(user);
 
+            // ===========================================================
+            // 🔥 SOLO PREGUNTAR POR NOTIFICACIONES SI ESTAMOS EN PRODUCCIÓN
+            // ===========================================================
+            if (isProduction()) {
+                try {
+                    // Inicializar FCM después del login exitoso
+                    await fcmInitializer.init(userManager);
+                    
+                    // Verificar si el usuario ya había tomado una decisión
+                    if (fcmInitializer.isEnabled()) {
+                        console.log('Notificaciones ya estaban activadas para este dispositivo.');
+                    } else {
+                        // Preguntar solo si el permiso del navegador aún no ha sido concedido
+                        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+                            const result = await Swal.fire({
+                                title: '¿Recibir notificaciones?',
+                                text: '¿Deseas activar las notificaciones push para estar al tanto de las incidencias?',
+                                icon: 'question',
+                                showCancelButton: true,
+                                confirmButtonText: 'Sí, activar',
+                                cancelButtonText: 'No, ahora no',
+                                reverseButtons: true,
+                                allowOutsideClick: false
+                            });
+
+                            if (result.isConfirmed) {
+                                try {
+                                    await fcmInitializer.enableNotifications();
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Notificaciones activadas',
+                                        text: 'Ahora recibirás alertas importantes en este dispositivo.',
+                                        timer: 2000,
+                                        showConfirmButton: false
+                                    });
+                                } catch (error) {
+                                    if (error.message.includes('denegado')) {
+                                        Swal.fire({
+                                            icon: 'info',
+                                            title: 'Notificaciones desactivadas',
+                                            text: 'Puedes activarlas más tarde desde tu perfil o panel de control.',
+                                            timer: 3000,
+                                            showConfirmButton: false
+                                        });
+                                    } else {
+                                        console.error('Error al activar notificaciones:', error);
+                                    }
+                                }
+                            } else {
+                                await fcmInitializer.disableNotifications();
+                            }
+                        } else if (Notification.permission === 'denied') {
+                            console.log('Notificaciones bloqueadas por el navegador.');
+                        }
+                    }
+                } catch (fcmError) {
+                    console.error('Error al inicializar FCM:', fcmError);
+                }
+            } else {
+                console.log('🔔 Entorno de desarrollo: no se activan notificaciones push');
+            }
+
+            // ===========================================================
+            // Redirigir según el rol
+            // ===========================================================
             setTimeout(() => {
                 if (user.esAdministrador()) {
                     window.location.href = '/usuarios/administrador/panelControl/panelControl.html';
