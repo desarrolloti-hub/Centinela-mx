@@ -81,10 +81,11 @@ exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
             return;
         }
 
-        console.log(`📱 Enviando a ${tokensActivos.length} dispositivo(s):`, tokensActivos);
+        console.log(`📱 Enviando a ${tokensActivos.length} dispositivo(s)`);
 
         // 3. Preparar el mensaje para FCM
-        const message = {
+        const messages = tokensActivos.map(token => ({
+            token: token,
             notification: {
                 title: title,
                 body: body,
@@ -94,36 +95,52 @@ exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
                 title: title,
                 body: body,
                 url: url || '',
+                incidenciaId: url ? url.split('/').pop() : '',
+                tipo: userType,
                 sender: senderToken || 'sistema',
                 timestamp: Date.now().toString()
             },
-            tokens: tokensActivos
-        };
+            android: {
+                priority: "high",
+                notification: {
+                    sound: "default",
+                    clickAction: "FLUTTER_NOTIFICATION_CLICK"
+                }
+            },
+            apns: {
+                payload: {
+                    aps: {
+                        sound: "default"
+                    }
+                }
+            }
+        }));
 
-        // 4. Enviar la notificación
-        const response = await admin.messaging().sendEachForMulticast(message);
+        // 4. Enviar notificaciones en lote
+        const responses = await Promise.allSettled(
+            messages.map(msg => admin.messaging().send(msg))
+        );
+
+        // Contar éxitos y fallos
+        const successCount = responses.filter(r => r.status === "fulfilled").length;
+        const failureCount = responses.filter(r => r.status === "rejected").length;
         
-        console.log(`✅ Notificaciones enviadas. Éxitos: ${response.successCount}, Fallos: ${response.failureCount}`);
-        
-        // 5. Procesar fallos (tokens inválidos)
-        if (response.failureCount > 0) {
-            const failedTokens = [];
-            response.responses.forEach((resp, idx) => {
-                if (!resp.success) {
-                    console.error(`❌ Error enviando al token ${tokensActivos[idx].substring(0, 30)}...:`, resp.error);
-                    failedTokens.push(tokensActivos[idx]);
-                    
-                    // Aquí podrías marcar el token como inválido en la BD
-                    // Por ahora solo registramos
+        // Registrar detalles de fallos
+        if (failureCount > 0) {
+            responses.forEach((response, index) => {
+                if (response.status === "rejected") {
+                    console.error(`❌ Error en token ${index + 1}:`, response.reason);
                 }
             });
         }
 
+        console.log(`✅ Notificaciones enviadas. Éxitos: ${successCount}, Fallos: ${failureCount}`);
+
         res.status(200).json({
             success: true,
-            message: `Notificación enviada a ${response.successCount} dispositivo(s)`,
-            successCount: response.successCount,
-            failures: response.failureCount
+            message: `Notificación enviada a ${successCount} dispositivo(s)`,
+            successCount: successCount,
+            failures: failureCount
         });
 
     } catch (error) {

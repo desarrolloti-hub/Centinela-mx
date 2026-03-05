@@ -22,6 +22,7 @@
             border-radius: var(--border-radius-large, 12px);
             border: 1px solid var(--color-border-light, rgba(255,255,255,0.1));
             box-shadow: var(--shadow-large, 0 10px 25px rgba(0,0,0,0.15));
+            backdrop-filter: blur(10px);
         }
         h1 {
             text-align: center;
@@ -69,12 +70,24 @@
             transform: translateY(-2px);
             box-shadow: var(--shadow-normal, 0 5px 15px rgba(255,255,255,0.55));
         }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
         .status-card {
             background: rgba(0,0,0,0.2);
             border: 1px solid var(--color-border-light);
             border-radius: var(--border-radius-medium);
             padding: 20px;
             margin-bottom: 20px;
+        }
+        .info-box {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
         }
         .status-item {
             display: flex;
@@ -100,6 +113,14 @@
             border-radius: 20px;
             font-size: 12px;
         }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .button-group button {
+            flex: 1;
+        }
         #responseMessage {
             margin-top: 20px;
             padding: 15px;
@@ -116,18 +137,21 @@
             border: 1px solid #dc3545;
             color: #dc3545;
         }
+        hr {
+            border: 1px solid var(--color-border-light);
+            margin: 30px 0;
+        }
     </style>
 </head>
 <body>
     <canvas id="particle-canvas"></canvas>
 
     <div class="container">
-        <h1><i class="fa-regular fa-bell"></i> Prueba de Notificaciones Push</h1>
+        <h1><i class="fa-regular fa-bell"></i> Configuración de Notificaciones Push</h1>
         
         <div class="status-card">
             <h3>Estado de Notificaciones en este Dispositivo</h3>
-            <!-- Dentro del div.status-card, después del h3 -->
-            <div class="info-box" style="background: #ffc10720; border: 1px solid #ffc107; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            <div class="info-box">
                 <i class="fas fa-info-circle" style="color: #ffc107;"></i>
                 <span id="entornoInfo" style="color: #ffc107; margin-left: 5px;"></span>
             </div>
@@ -139,11 +163,13 @@
                 <span><i class="fa-regular fa-key"></i> Token:</span>
                 <span id="deviceToken" style="font-size: 12px; word-break: break-all;">No disponible</span>
             </div>
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button id="enableNotificationsBtn" style="flex: 1; background: #28a745; color: white;">Activar</button>
-                <button id="disableNotificationsBtn" style="flex: 1; background: #dc3545; color: white;">Desactivar</button>
+            <div class="button-group">
+                <button id="enableNotificationsBtn" style="background: #28a745; color: white;">Activar</button>
+                <button id="disableNotificationsBtn" style="background: #dc3545; color: white;" disabled>Desactivar</button>
             </div>
         </div>
+
+        <hr>
 
         <h3 style="margin-top: 40px;">Enviar Notificación de Prueba</h3>
         <form id="notificationForm">
@@ -160,7 +186,7 @@
             </div>
             <div class="form-group">
                 <label for="title"><i class="fa-regular fa-heading"></i> Título:</label>
-                <input type="text" id="title" placeholder="Ej: Alerta de seguridad" value="Notificación de Prueba" required>
+                <input type="text" id="title" placeholder="Ej: Nueva incidencia reportada" value="Notificación de Prueba" required>
             </div>
             <div class="form-group">
                 <label for="body"><i class="fa-regular fa-message"></i> Mensaje:</label>
@@ -168,9 +194,9 @@
             </div>
             <div class="form-group">
                 <label for="url"><i class="fa-regular fa-link"></i> URL (opcional):</label>
-                <input type="text" id="url" placeholder="Ej: /usuarios/colaboradores/incidencias/incidencia123.html">
+                <input type="text" id="url" placeholder="Ej: /usuarios/administrador/incidencias/incidencia.html">
             </div>
-            <button type="submit"><i class="fa-regular fa-paper-plane"></i> Enviar Notificación</button>
+            <button type="submit"><i class="fa-regular fa-paper-plane"></i> Enviar Notificación de Prueba</button>
         </form>
         <div id="responseMessage"></div>
     </div>
