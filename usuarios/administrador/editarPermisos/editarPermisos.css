@@ -1,5 +1,5 @@
 /* =============================================
-   CREAR PERMISO - BASADO EN CREAR REGIONES
+   EDITAR PERMISO - MISMO ESTILO QUE CREAR PERMISOS
    (USA LAS VARIABLES GLOBALES DE personalization.css)
    ============================================= */
 
@@ -29,7 +29,7 @@ body {
    ============================================= */
 .custom-container {
     max-width: min(800px, 95vw);
-    /* Mismo ancho que crear regiones */
+    /* Mismo ancho que crear permisos */
     margin: 0 auto;
     padding: 25px;
     background: transparent;
@@ -309,37 +309,30 @@ body {
     flex: 1;
 }
 
-/* Char counter */
-.char-limit-info {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 5px;
-    font-size: 11px;
-}
-
-.char-counter {
-    color: var(--color-accent-primary);
-    font-weight: 600;
-    text-shadow: 0 0 4px var(--color-accent-primary);
-}
-
 /* =============================================
-   SELECTORES (SELECT)
+   PERMISO ID - DENTRO DE LA TARJETA
    ============================================= */
-select.form-control {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232f8cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-    background-repeat: no-repeat;
-    background-position: right 15px center;
-    background-size: 16px;
-    padding-right: 45px !important;
+.permiso-id-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-family-primary);
+    color: var(--color-accent-primary);
+    font-size: 13px;
+    background: rgba(0, 207, 255, 0.1);
+    padding: 6px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--color-accent-primary);
 }
 
-select.form-control option {
-    background: var(--color-bg-secondary);
-    color: var(--color-text-primary);
+.permiso-id-container i {
+    font-size: 14px;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+}
+
+.permiso-id {
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 /* =============================================
@@ -524,13 +517,13 @@ select.form-control option {
     transform: rotate(30deg) translate(10%, 10%);
 }
 
-.btn-success {
+.btn-primary {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
 }
 
-.btn-success:hover {
+.btn-primary:hover {
     background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
     border-color: var(--color-accent-secondary) !important;
     transform: translateY(-2px) !important;
@@ -548,6 +541,19 @@ select.form-control option {
     transform: translateY(-2px) !important;
     border-color: var(--color-danger) !important;
     color: var(--color-danger) !important;
+}
+
+.btn-success {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.btn-success:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border-color: var(--color-accent-secondary) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
 }
 
 /* =============================================

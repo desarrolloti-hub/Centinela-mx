@@ -59,7 +59,7 @@ async function inicializarVerIncidencia() {
                     <i class="fas fa-exclamation-triangle"></i>
                     <h4>Error al cargar la incidencia</h4>
                     <p>${error.message}</p>
-                    <button class="btn-volver" onclick="window.location.href='/users/admin/incidencias/incidencias.html'" style="margin-top: 15px;">
+                    <button class="btn-volver" onclick="window.location.href='/usuarios/administrador/incidencias/incidencias.html'" style="margin-top: 15px;">
                         <i class="fas fa-arrow-left"></i> Volver a la lista
                     </button>
                 </div>
@@ -477,7 +477,7 @@ function inicializarModal() {
 // NAVEGACIÓN
 // =============================================
 function volverALista() {
-    window.location.href = '/users/admin/incidencias/incidencias.html';
+    window.location.href = '/usuarios/administrador/incidencias/incidencias.html';
 }
 
 // =============================================

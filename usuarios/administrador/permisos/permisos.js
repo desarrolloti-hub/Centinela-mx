@@ -1,5 +1,5 @@
 // ========== permisos.js - GESTIÓN DE PERMISOS ==========
-// Basado en la estructura de regiones.js
+// Basado en la estructura de regiones.js - VERSIÓN CORREGIDA CON FIREBASE
 
 // ========== VARIABLES GLOBALES ==========
 let permisoManager = null;
@@ -16,9 +16,39 @@ let permisosFiltrados = []; // Permisos filtrados para mostrar
 // Cache de áreas para mostrar nombres
 let areasCache = new Map();
 
+// Nombres amigables para los módulos
+const nombresModulos = {
+    areas: 'Áreas',
+    categorias: 'Categorías',
+    sucursales: 'Sucursales',
+    regiones: 'Regiones',
+    incidencias: 'Incidencias'
+};
+
+// Iconos para los módulos
+const iconosModulos = {
+    areas: 'fa-sitemap',
+    categorias: 'fa-tags',
+    sucursales: 'fa-store',
+    regiones: 'fa-map-marked-alt',
+    incidencias: 'fa-exclamation-triangle'
+};
+
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
     try {
+        // Mostrar estado de carga
+        showLoadingState();
+
+        // Intentar cargar usuario desde localStorage primero
+        const usuarioCargado = cargarUsuarioDesdeStorage();
+
+        if (!usuarioCargado) {
+            console.error('❌ No hay administrador autenticado');
+            showNoAdminMessage();
+            return;
+        }
+
         // Importar las clases necesarias
         const { PermisoManager } = await import('/clases/permiso.js');
         const { AreaManager } = await import('/clases/area.js');
@@ -26,31 +56,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         permisoManager = new PermisoManager();
         areaManager = new AreaManager();
 
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Verificar autenticación
-        if (!window.userManager || !window.userManager.currentUser || !window.userManager.currentUser.esAdministrador()) {
-            console.error('❌ No hay administrador autenticado');
-            showNoAdminMessage();
-            return;
-        }
-
-        adminActual = window.userManager.currentUser;
-
-        localStorage.setItem('adminInfo', JSON.stringify({
-            id: adminActual.id,
-            nombreCompleto: adminActual.nombreCompleto,
-            organizacion: adminActual.organizacion,
-            organizacionCamelCase: adminActual.organizacionCamelCase,
-            rol: adminActual.rol,
-            correoElectronico: adminActual.correoElectronico,
-            timestamp: new Date().toISOString()
-        }));
+        // Pequeña pausa para simular carga
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         // Cargar áreas primero para tener los nombres
         await loadAreas();
+
         // Luego cargar permisos
         await loadPermisos();
+
+        // Configurar búsqueda y eventos
         configurarBusqueda();
         setupEvents();
 
@@ -60,9 +75,70 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 });
 
+// ========== CARGAR USUARIO DESDE STORAGE ==========
+function cargarUsuarioDesdeStorage() {
+    try {
+        // Intentar obtener de adminInfo (guardado por otras páginas)
+        const adminInfo = localStorage.getItem('adminInfo');
+        if (adminInfo) {
+            const adminData = JSON.parse(adminInfo);
+            adminActual = {
+                id: adminData.id || adminData.uid,
+                uid: adminData.uid || adminData.id,
+                nombreCompleto: adminData.nombreCompleto || 'Administrador',
+                organizacion: adminData.organizacion || 'Sin organización',
+                organizacionCamelCase: adminData.organizacionCamelCase,
+                rol: adminData.rol || 'administrador',
+                correoElectronico: adminData.correoElectronico || ''
+            };
+            console.log('✅ Usuario cargado desde adminInfo:', adminActual);
+            return true;
+        }
+
+        // Intentar obtener de window.userManager como fallback
+        if (window.userManager && window.userManager.currentUser) {
+            const user = window.userManager.currentUser;
+            adminActual = {
+                id: user.id || user.uid,
+                uid: user.uid || user.id,
+                nombreCompleto: user.nombreCompleto || 'Administrador',
+                organizacion: user.organizacion || 'Mi Organización',
+                organizacionCamelCase: user.organizacionCamelCase,
+                rol: user.rol || 'administrador',
+                correoElectronico: user.correoElectronico || ''
+            };
+
+            // Guardar en localStorage para futuras cargas
+            localStorage.setItem('adminInfo', JSON.stringify({
+                id: adminActual.id,
+                uid: adminActual.uid,
+                nombreCompleto: adminActual.nombreCompleto,
+                organizacion: adminActual.organizacion,
+                organizacionCamelCase: adminActual.organizacionCamelCase,
+                rol: adminActual.rol,
+                correoElectronico: adminActual.correoElectronico,
+                timestamp: new Date().toISOString()
+            }));
+
+            console.log('✅ Usuario cargado desde userManager:', adminActual);
+            return true;
+        }
+
+        return false;
+    } catch (error) {
+        console.error('Error cargando usuario:', error);
+        return false;
+    }
+}
+
 // ========== CARGAR ÁREAS ==========
 async function loadAreas() {
     try {
+        if (!adminActual?.organizacionCamelCase) {
+            console.warn('No hay organización definida para cargar áreas');
+            return;
+        }
+
         const areas = await areaManager.getAreasByOrganizacion(adminActual.organizacionCamelCase);
         areasCache.clear();
         areas.forEach(area => {
@@ -71,6 +147,7 @@ async function loadAreas() {
                 cargos: area.cargos || {}
             });
         });
+        console.log(`✅ Cargadas ${areas.length} áreas`);
     } catch (error) {
         console.error('Error cargando áreas:', error);
     }
@@ -146,14 +223,6 @@ function filtrarYRenderizar() {
 }
 
 // ========== FUNCIONES DE PAGINACIÓN ==========
-function irPagina(pagina) {
-    paginaActual = pagina;
-    renderizarConPaginacion();
-
-    // Scroll suave hacia arriba
-    document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 function renderizarPaginacion(totalPaginas) {
     const pagination = document.getElementById('pagination');
     if (!pagination) return;
@@ -200,6 +269,8 @@ function renderizarConPaginacion() {
 
     const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
     const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
+
+    // Los permisos ya están ordenados en permisosFiltrados (más recientes primero)
     const permisosPagina = permisosFiltrados.slice(inicio, fin);
 
     // Actualizar información de paginación
@@ -224,7 +295,7 @@ function renderizarConPaginacion() {
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="empty-state" style="text-align:center; padding:60px 20px;">
+                    <td colspan="4" class="empty-state" style="text-align:center; padding:60px 20px;">
                         <div style="text-align:center;">
                             <i class="fas fa-search" style="font-size: 48px; color: rgba(255,255,255,0.3); margin-bottom: 16px;"></i>
                             <h5 style="color:white;">No se encontraron permisos</h5>
@@ -249,9 +320,16 @@ async function loadPermisos() {
     try {
         showLoadingState();
 
-        todosLosPermisos = await permisoManager.getPermisosByOrganizacion(
+        if (!adminActual?.organizacionCamelCase) {
+            throw new Error('No hay organización definida');
+        }
+
+        // Obtener permisos usando el manager (DESDE FIREBASE)
+        todosLosPermisos = await permisoManager.obtenerPorOrganizacion(
             adminActual.organizacionCamelCase
         );
+
+        console.log(`📊 Cargados ${todosLosPermisos.length} permisos desde Firebase`);
 
         // Enriquecer permisos con nombres de área y cargo
         todosLosPermisos = todosLosPermisos.map(permiso => {
@@ -269,18 +347,15 @@ async function loadPermisos() {
             };
         });
 
-        localStorage.setItem('permisosList', JSON.stringify(
-            todosLosPermisos.map(perm => ({
-                id: perm.id,
-                areaId: perm.areaId,
-                cargoId: perm.cargoId,
-                areaNombre: perm.areaNombre,
-                cargoNombre: perm.cargoNombre,
-                permisos: perm.permisos,
-                estado: perm.estado,
-                fechaCreacion: perm.fechaCreacion
-            }))
-        ));
+        // ORDENAR POR FECHA DE CREACIÓN DESCENDENTE (MÁS RECIENTES PRIMERO)
+        todosLosPermisos.sort((a, b) => {
+            // Convertir a timestamp para comparar
+            const fechaA = a.fechaCreacion ? new Date(a.fechaCreacion).getTime() : 0;
+            const fechaB = b.fechaCreacion ? new Date(b.fechaCreacion).getTime() : 0;
+
+            // Orden descendente (más reciente primero)
+            return fechaB - fechaA;
+        });
 
         // Inicializar filtradas
         permisosFiltrados = [...todosLosPermisos];
@@ -289,7 +364,13 @@ async function loadPermisos() {
 
     } catch (error) {
         console.error('❌ Error cargando permisos:', error);
-        showFirebaseError(error);
+
+        // Si es error por falta de datos, mostrar empty state
+        if (error.message.includes('organización')) {
+            showEmptyState();
+        } else {
+            showFirebaseError(error);
+        }
     }
 }
 
@@ -303,51 +384,25 @@ function renderPermisosTable(permisos) {
     permisos.forEach(permiso => {
         const row = document.createElement('tr');
 
-        // Determinar estado
-        const estado = permiso.estado || 'activo';
-        const estadoTexto = estado === 'activo' ? 'Activo' : 'Inactivo';
-        const estadoColor = estado === 'activo' ? '#10b981' : '#ef4444';
-
-        // Construir badges de permisos
-        const permisosHTML = `
-            <div class="permisos-container">
-                <span class="permiso-badge ${permiso.permisos?.ver ? 'activo' : 'inactivo'}">
-                    <i class="fas fa-eye"></i> Ver
-                </span>
-                <span class="permiso-badge ${permiso.permisos?.crear ? 'activo' : 'inactivo'}">
-                    <i class="fas fa-plus-circle"></i> Crear
-                </span>
-                <span class="permiso-badge ${permiso.permisos?.editar ? 'activo' : 'inactivo'}">
-                    <i class="fas fa-edit"></i> Editar
-                </span>
-                <span class="permiso-badge ${permiso.permisos?.eliminar ? 'activo' : 'inactivo'}">
-                    <i class="fas fa-trash-alt"></i> Eliminar
-                </span>
-            </div>
-        `;
+        // Construir badges de permisos (SIN ICONOS)
+        const permisosHTML = generarBadgesPermisos(permiso.permisos);
 
         // Usar data-label para responsive
         row.innerHTML = `
             <td data-label="Área">
                 <div style="display: flex; align-items: center;">
-                    <i class= style="color: var(--color-accent-primary); margin-right: 8px; font-size: 14px;"></i>
                     <strong style="color:white;" title="${escapeHTML(permiso.areaNombre || '')}">${escapeHTML(permiso.areaNombre)}</strong>
                 </div>
             </td>
             <td data-label="Cargo">
                 <div style="display: flex; align-items: center;">
-                    <i class="" style="color: var(--color-accent-secondary); margin-right: 8px; font-size: 14px;"></i>
                     <span>${escapeHTML(permiso.cargoNombre || 'Cargo no encontrado')}</span>
                 </div>
             </td>
             <td data-label="Permisos">
-                ${permisosHTML}
-            </td>
-            <td data-label="Estado">
-                <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 20px; background: rgba(0,0,0,0.3); border: 1px solid ${estadoColor}20;">
-                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${estadoColor};"></span>
-                    <span style="color: ${estadoColor};">${estadoTexto}</span>
-                </span>
+                <div class="permisos-container">
+                    ${permisosHTML}
+                </div>
             </td>
             <td data-label="Acciones">
                 <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
@@ -357,15 +412,31 @@ function renderPermisosTable(permisos) {
                     <button type="button" class="btn btn-warning" data-action="edit" data-permiso-id="${permiso.id}" data-permiso-area="${permiso.areaNombre}" data-permiso-cargo="${permiso.cargoNombre}" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button type="button" class="btn btn-danger" data-action="delete" data-permiso-id="${permiso.id}" data-permiso-area="${permiso.areaNombre}" data-permiso-cargo="${permiso.cargoNombre}" title="Eliminar">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
                 </div>
             </td>
         `;
 
         tbody.appendChild(row);
     });
+}
+
+// ========== GENERAR BADGES DE PERMISOS (SIN ICONOS) ==========
+function generarBadgesPermisos(permisos) {
+    const modulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias'];
+    let badges = '';
+
+    modulos.forEach(modulo => {
+        const activo = permisos?.[modulo] || false;
+        const nombreMostrar = nombresModulos[modulo] || modulo;
+
+        badges += `
+            <span class="permiso-badge ${activo ? 'activo' : 'inactivo'}" title="${activo ? 'Tiene acceso' : 'Sin acceso'}">
+                ${nombreMostrar}
+            </span>
+        `;
+    });
+
+    return badges;
 }
 
 // ========== CONFIGURAR EVENTOS ==========
@@ -393,14 +464,18 @@ function setupEvents() {
             if (action === 'edit' || button.classList.contains('btn-warning')) {
                 await editPermiso(permisoId, permisoArea, permisoCargo);
             }
-            else if (action === 'view' || (button.classList.contains('btn') && !button.classList.contains('btn-warning') && !button.classList.contains('btn-danger'))) {
-                await viewPermisoDetails(permisoId, permisoArea, permisoCargo);
-            }
-            else if (action === 'delete' || button.classList.contains('btn-danger')) {
-                await deletePermiso(permisoId, permisoArea, permisoCargo);
+            else if (action === 'view' || (button.classList.contains('btn') && !button.classList.contains('btn-warning'))) {
+                // Redirigir a la vista de ver permiso
+                verPermiso(permisoId, permisoArea, permisoCargo);
             }
         });
     }
+}
+
+// ========== VER PERMISO (REDIRECCIÓN A LA VISTA DETALLADA) ==========
+function verPermiso(permisoId, areaNombre, cargoNombre) {
+    // Redirigir a la página de ver permiso con el ID en la URL
+    window.location.href = `/usuarios/administrador/verPermisos/verPermisos.html?id=${permisoId}`;
 }
 
 // ========== EDITAR PERMISO ==========
@@ -423,185 +498,8 @@ async function editPermiso(permisoId, areaNombre, cargoNombre) {
 
     localStorage.setItem('selectedPermiso', JSON.stringify(selectedPermiso));
 
-    window.location.href = `/usuarios/administrador/editarPermiso/editarPermiso.html?id=${permisoId}&org=${adminActual.organizacionCamelCase}`;
-}
-
-// ========== VER DETALLES DEL PERMISO ==========
-async function viewPermisoDetails(permisoId, areaNombre, cargoNombre) {
-    try {
-        const permiso = todosLosPermisos.find(p => p.id === permisoId);
-
-        if (!permiso) {
-            throw new Error('Permiso no encontrado');
-        }
-
-        // Asegurarse de que el permiso tenga organizacionCamelCase
-        if (!permiso.organizacionCamelCase) {
-            permiso.organizacionCamelCase = adminActual.organizacionCamelCase;
-        }
-
-        showPermisoDetails(permiso, areaNombre, cargoNombre);
-
-    } catch (error) {
-        console.error('Error obteniendo detalles:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudieron obtener los detalles del permiso'
-        });
-    }
-}
-
-// ========== MOSTRAR DETALLES EN MODAL ==========
-function showPermisoDetails(permiso, areaNombre, cargoNombre) {
-    const fechaCreacion = permiso.getFechaCreacionFormateada ?
-        permiso.getFechaCreacionFormateada() :
-        (permiso.fechaCreacion || 'No disponible');
-    const fechaActualizacion = permiso.getFechaActualizacionFormateada ?
-        permiso.getFechaActualizacionFormateada() :
-        (permiso.fechaActualizacion || 'No disponible');
-
-    // Construir lista de permisos activos
-    const permisosActivos = [];
-    if (permiso.permisos?.ver) permisosActivos.push('<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Ver</span>');
-    if (permiso.permisos?.crear) permisosActivos.push('<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Crear</span>');
-    if (permiso.permisos?.editar) permisosActivos.push('<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Editar</span>');
-    if (permiso.permisos?.eliminar) permisosActivos.push('<span style="color: #10b981;"><i class="fas fa-check-circle"></i> Eliminar</span>');
-
-    const permisosHTML = permisosActivos.length > 0 ?
-        permisosActivos.join(' ') :
-        '<span style="color: #ef4444;"><i class="fas fa-times-circle"></i> Sin permisos</span>';
-
-    Swal.fire({
-        title: 'Detalles del Permiso',
-        html:/*html*/ `
-            <div style="text-align: left;">
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-info-circle" style="margin-right: 8px;"></i>INFORMACIÓN GENERAL
-                    </h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Área</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-building" style="margin-right: 5px;"></i> ${escapeHTML(areaNombre)}</span>
-                        </div>
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Cargo</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-user-tie" style="margin-right: 5px;"></i> ${escapeHTML(cargoNombre)}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-lock" style="margin-right: 8px;"></i>PERMISOS ASIGNADOS
-                    </h4>
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
-                        ${permisosHTML}
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-calendar-alt" style="margin-right: 8px;"></i>FECHAS
-                    </h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Creación</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar-plus" style="margin-right: 5px;"></i> ${fechaCreacion}</span>
-                        </div>
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Actualización</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-calendar-check" style="margin-right: 5px;"></i> ${fechaActualizacion}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                        <i class="fas fa-user-shield" style="margin-right: 8px;"></i>AUDITORÍA
-                    </h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Estado</small>
-                            <span style="color: ${permiso.estado === 'activo' ? '#10b981' : '#ef4444'};">
-                                <i class="fas ${permiso.estado === 'activo' ? 'fa-check-circle' : 'fa-times-circle'}" style="margin-right: 5px;"></i> 
-                                ${permiso.estado === 'activo' ? 'Activo' : 'Inactivo'}
-                            </span>
-                        </div>
-                        <div>
-                            <small style="color: var(--color-accent-primary); display: block; font-size: 0.7rem; text-transform: uppercase;">Organización</small>
-                            <span style="color: var(--color-text-secondary);"><i class="fas fa-globe" style="margin-right: 5px;"></i> ${permiso.organizacionCamelCase || adminActual.organizacion}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `,
-        width: 700,
-        showCloseButton: true,
-        showConfirmButton: true,
-        showCancelButton: true,
-        confirmButtonText: 'EDITAR PERMISO',
-        cancelButtonText: 'CERRAR',
-        confirmButtonColor: 'var(--color-accent-primary)',
-        cancelButtonColor: 'var(--color-border-light)',
-        reverseButtons: false,
-        focusCancel: true,
-        preConfirm: () => {
-            window.location.href = `/usuarios/administrador/editarPermiso/editarPermiso.html?id=${permiso.id}&org=${adminActual.organizacionCamelCase}`;
-        }
-    });
-}
-
-// ========== ELIMINAR PERMISO ==========
-async function deletePermiso(permisoId, areaNombre, cargoNombre) {
-    const confirmResult = await Swal.fire({
-        title: '¿Eliminar permiso?',
-        html: `
-            <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
-                <strong style="color: #ff4d4d;">"${escapeHTML(areaNombre)} - ${escapeHTML(cargoNombre)}"</strong>
-            </p>
-            <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
-                Esta acción no se puede deshacer.
-            </p>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'ELIMINAR',
-        cancelButtonText: 'CANCELAR',
-        reverseButtons: false,
-        focusCancel: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6'
-    });
-
-    if (!confirmResult.isConfirmed) return;
-
-    try {
-        await permisoManager.eliminarPermiso(permisoId, adminActual.id, adminActual.organizacionCamelCase);
-
-        Swal.close();
-
-        await Swal.fire({
-            icon: 'success',
-            title: '¡Permiso eliminado!',
-            text: `El permiso para "${areaNombre} - ${cargoNombre}" ha sido eliminado.`,
-            timer: 2000,
-            showConfirmButton: false
-        });
-
-        await loadPermisos();
-
-    } catch (error) {
-        console.error('❌ Error eliminando permiso:', error);
-        Swal.close();
-
-        Swal.fire({
-            icon: 'error',
-            title: 'Error al eliminar',
-            text: error.message || 'Ocurrió un error al eliminar el permiso.'
-        });
-    }
+    // Usar la ruta correcta para editar permisos
+    window.location.href = `/usuarios/administrador/editarPermisos/editarPermisos.html?id=${permisoId}`;
 }
 
 // ========== ESTADOS DE CARGA Y ERROR ==========
@@ -611,11 +509,11 @@ function showLoadingState() {
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="5" style="text-align:center; padding:60px 20px;">
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
                     <i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--color-accent-primary); margin-bottom:16px;"></i>
                     <h5 style="color:white;">Cargando permisos...</h5>
-                    <p style="color:var(--color-text-dim);">Obteniendo datos de Firebase</p>
+                    <p style="color:var(--color-text-dim);">Obteniendo datos desde Firebase</p>
                 </div>
             </td>
         </tr>
@@ -634,14 +532,14 @@ function showEmptyState() {
 
     tbody.innerHTML = /*html*/ `
         <tr>
-            <td colspan="5" style="text-align:center; padding:60px 20px;">
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
                     <i class="fas fa-shield-alt" style="font-size:48px; color:rgba(0,207,255,0.3); margin-bottom:16px;"></i>
                     <h5 style="color:white;">No hay permisos configurados en ${adminActual?.organizacion || 'tu organización'}</h5>
                     <p style="color:var(--color-text-dim); max-width:400px; margin:10px auto;">
-                        Los permisos te permiten controlar qué acciones puede realizar cada cargo en las diferentes áreas.
+                        Los permisos te permiten controlar a qué módulos puede acceder cada cargo en las diferentes áreas.
                     </p>
-                    <a href="/usuarios/administrador/crearPermiso/crearPermiso.html" class="btn-nuevo-permiso-header" style="display:inline-flex; margin-top:16px;">
+                    <a href="/usuarios/administrador/crearPermisos/crearPermisos.html" class="btn-nuevo-permiso-header" style="display:inline-flex; margin-top:16px;">
                         <i class="fas fa-plus-circle"></i> Crear Primer Permiso
                     </a>
                 </div>
@@ -662,7 +560,7 @@ function showNoAdminMessage() {
 
     tbody.innerHTML = /*html*/ `
         <tr>
-            <td colspan="5" style="text-align:center; padding:60px 20px;">
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
                     <i class="fas fa-user-slash" style="font-size:48px; color:#ef4444; margin-bottom:16px;"></i>
                     <h5 style="color:white;">No se detectó sesión activa de administrador</h5>
@@ -693,7 +591,7 @@ function showFirebaseError(error) {
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="5" style="text-align:center; padding:60px 20px;">
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
                     <i class="fas fa-exclamation-triangle" style="font-size:48px; color:#f97316; margin-bottom:16px;"></i>
                     <h5 style="color:white;">Error al cargar permisos</h5>
@@ -719,7 +617,7 @@ function showError(message) {
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="5" style="text-align:center; padding:60px 20px;">
+            <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
                     <i class="fas fa-exclamation-circle" style="font-size:48px; color:#ef4444; margin-bottom:16px;"></i>
                     <h5 style="color:white;">${escapeHTML(message)}</h5>

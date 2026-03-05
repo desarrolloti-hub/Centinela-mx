@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +8,10 @@
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Icono en barra de titulo -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
@@ -21,8 +24,10 @@
 
 
     <!-- SEO Básico -->
-    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
-    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="description"
+        content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords"
+        content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
     <meta name="author" content="Centinela-MX">
     <link rel="canonical" href="https://centinela-mx.web.app/" />
 
@@ -30,7 +35,8 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://centinela-mx.web.app">
     <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
-    <meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:description"
+        content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
     <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
@@ -45,7 +51,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://centinela-mx.web.app">
     <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
-    <meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+    <meta name="twitter:description"
+        content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
     <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta name="twitter:creator" content="">
 
@@ -75,7 +82,7 @@
     }
     }
     </script>
-    
+
     <style>
         * {
             margin: 0;
@@ -96,7 +103,7 @@
             overflow-x: hidden;
             position: relative;
         }
-        
+
         /* Canvas de partículas */
         #particle-canvas {
             position: fixed;
@@ -107,7 +114,7 @@
             z-index: 1;
             pointer-events: none;
         }
-        
+
         .container {
             position: relative;
             z-index: 100;
@@ -124,7 +131,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         /* Efecto de borde con brillo */
         .container::before {
             content: '';
@@ -133,17 +140,16 @@
             left: -2px;
             right: -2px;
             bottom: -2px;
-            background: linear-gradient(45deg, 
-                var(--color-accent-primary, #c0c0c0), 
-                var(--color-glow, #ffffff),
-                var(--color-accent-primary, #c0c0c0)
-            );
+            background: linear-gradient(45deg,
+                    var(--color-accent-primary, #c0c0c0),
+                    var(--color-glow, #ffffff),
+                    var(--color-accent-primary, #c0c0c0));
             border-radius: calc(var(--border-radius-large, 12px) + 2px);
             z-index: -2;
             animation: borderGlow 3s linear infinite;
             opacity: 0.5;
         }
-        
+
         .container::after {
             content: '';
             position: absolute;
@@ -155,7 +161,7 @@
             border-radius: var(--border-radius-large, 12px);
             z-index: -1;
         }
-        
+
         h1 {
             color: var(--color-text-primary, #ffffff);
             margin-bottom: 20px;
@@ -167,7 +173,7 @@
             position: relative;
             padding-bottom: 15px;
         }
-        
+
         h1::after {
             content: '';
             position: absolute;
@@ -179,54 +185,84 @@
             background: var(--color-accent-primary, #c0c0c0);
             border-radius: 1px;
         }
-        
+
         .status-icon {
             font-size: 60px;
             margin-bottom: 20px;
             text-shadow: var(--text-shadow-effect, 0 0 10px var(--color-glow));
             animation: pulse 2s ease-in-out infinite;
         }
-        
-        .success { color: #4CAF50; }
-        .error { color: #f44336; }
-        .warning { color: #FF9800; }
-        .loading { 
+
+        .success {
+            color: #4CAF50;
+        }
+
+        .error {
+            color: #f44336;
+        }
+
+        .warning {
+            color: #FF9800;
+        }
+
+        .loading {
             color: var(--color-accent-secondary, #ffffff);
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
-        
+
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
         }
-        
+
         @keyframes fadeInScale {
             0% {
                 opacity: 0;
                 transform: scale(0.9);
             }
+
             100% {
                 opacity: 1;
                 transform: scale(1);
             }
         }
-        
+
         @keyframes borderGlow {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 0.8; }
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
         }
-        
+
         .btn {
             display: inline-block;
-            background: linear-gradient(135deg, 
-                var(--color-accent-primary, #c0c0c0), 
-                var(--color-accent-secondary, #ffffff)
-            );
+            background: linear-gradient(135deg,
+                    var(--color-accent-primary, #c0c0c0),
+                    var(--color-accent-secondary, #ffffff));
             color: var(--color-text-dark, #000000);
             padding: 12px 24px;
             border-radius: 30px;
@@ -243,7 +279,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         .btn::before {
             content: '';
             position: absolute;
@@ -251,54 +287,52 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, 
-                transparent, 
-                rgba(255, 255, 255, 0.3), 
-                transparent
-            );
+            background: linear-gradient(90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.3),
+                    transparent);
             transition: left 0.5s ease;
         }
-        
+
         .btn:hover {
             transform: translateY(-3px);
             box-shadow: var(--shadow-normal, 0 5px 15px var(--color-shadow));
-            background: linear-gradient(135deg, 
-                var(--color-accent-secondary, #ffffff), 
-                var(--color-accent-primary, #c0c0c0)
-            );
+            background: linear-gradient(135deg,
+                    var(--color-accent-secondary, #ffffff),
+                    var(--color-accent-primary, #c0c0c0));
         }
-        
+
         .btn:hover::before {
             left: 100%;
         }
-        
+
         .btn-secondary {
             background: var(--color-bg-tertiary, #0000007a);
             color: var(--color-text-primary, #ffffff);
             border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
         }
-        
+
         .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.1);
             border-color: var(--color-accent-primary, #c0c0c0);
         }
-        
+
         p {
             color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
             line-height: 1.6;
             margin-bottom: 20px;
             font-family: var(--font-family-secondary, 'Orbitron', sans-serif);
         }
-        
+
         .reset-form {
             text-align: left;
             margin: 20px 0;
         }
-        
+
         .input-group {
             margin-bottom: 20px;
         }
-        
+
         .input-group label {
             display: block;
             margin-bottom: 8px;
@@ -309,11 +343,11 @@
             font-size: 12px;
             letter-spacing: 1px;
         }
-        
+
         .password-container {
             position: relative;
         }
-        
+
         .password-container input {
             width: 100%;
             padding: 12px 40px 12px 12px;
@@ -325,14 +359,14 @@
             transition: var(--transition-default, all 0.3s ease-in-out);
             font-family: var(--font-family-secondary, 'Orbitron', sans-serif);
         }
-        
+
         .password-container input:focus {
             outline: none;
             border-color: var(--color-accent-primary, #c0c0c0);
             box-shadow: 0 0 0 3px rgba(192, 192, 192, 0.1);
             background: rgba(0, 0, 0, 0.9);
         }
-        
+
         .toggle-password {
             position: absolute;
             right: 12px;
@@ -346,11 +380,11 @@
             z-index: 10;
             transition: var(--transition-default, all 0.3s ease-in-out);
         }
-        
+
         .toggle-password:hover {
             color: var(--color-icon-primary, var(--color-accent-secondary, #ffffff));
         }
-        
+
         .strength-meter {
             height: 5px;
             background: rgba(255, 255, 255, 0.1);
@@ -358,32 +392,33 @@
             margin-top: 8px;
             overflow: hidden;
         }
-        
+
         .strength-bar {
             height: 100%;
             width: 0%;
             transition: width 0.3s;
             border-radius: 3px;
         }
-        
-        .strength-weak { 
+
+        .strength-weak {
             background: linear-gradient(90deg, #f44336, #ff8a80);
             box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
         }
-        .strength-medium { 
+
+        .strength-medium {
             background: linear-gradient(90deg, #FF9800, #ffb74d);
             box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
         }
-        .strength-strong { 
+
+        .strength-strong {
             background: linear-gradient(90deg, #4CAF50, #81c784);
             box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
         }
-        
+
         .reset-btn {
-            background: linear-gradient(135deg, 
-                var(--color-accent-primary, #c0c0c0), 
-                var(--color-accent-secondary, #ffffff)
-            );
+            background: linear-gradient(135deg,
+                    var(--color-accent-primary, #c0c0c0),
+                    var(--color-accent-secondary, #ffffff));
             color: var(--color-text-dark, #000000);
             border: none;
             border-radius: 30px;
@@ -401,7 +436,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         .reset-btn::before {
             content: '';
             position: absolute;
@@ -409,37 +444,35 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, 
-                transparent, 
-                rgba(255, 255, 255, 0.3), 
-                transparent
-            );
+            background: linear-gradient(90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.3),
+                    transparent);
             transition: left 0.5s ease;
         }
-        
+
         .reset-btn:hover {
             transform: translateY(-3px);
             box-shadow: var(--shadow-normal, 0 5px 15px var(--color-shadow));
-            background: linear-gradient(135deg, 
-                var(--color-accent-secondary, #ffffff), 
-                var(--color-accent-primary, #c0c0c0)
-            );
+            background: linear-gradient(135deg,
+                    var(--color-accent-secondary, #ffffff),
+                    var(--color-accent-primary, #c0c0c0));
         }
-        
+
         .reset-btn:hover::before {
             left: 100%;
         }
-        
+
         .reset-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
-        
+
         .reset-btn:disabled::before {
             display: none;
         }
-        
+
         .message {
             padding: 12px;
             border-radius: var(--border-radius-medium, 8px);
@@ -448,72 +481,74 @@
             border-left: 4px solid;
             animation: slideIn 0.3s ease-out;
         }
-        
+
         @keyframes slideIn {
             0% {
                 opacity: 0;
                 transform: translateY(-10px);
             }
+
             100% {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        
+
         .message-success {
             background: rgba(76, 175, 80, 0.1);
             border-color: #4CAF50;
             color: #4CAF50;
         }
-        
+
         .message-error {
             background: rgba(244, 67, 54, 0.1);
             border-color: #f44336;
             color: #f44336;
         }
-        
+
         .message-info {
             background: rgba(33, 150, 243, 0.1);
             border-color: #2196F3;
             color: #2196F3;
         }
-        
+
         .spinner {
             display: inline-block;
             animation: spin 1s linear infinite;
             margin-right: 8px;
         }
-        
+
         small {
             color: var(--color-text-secondary, rgba(255, 255, 255, 0.6));
             font-size: 12px;
             display: block;
             margin-top: 5px;
         }
-        
+
         #actionButtons {
             margin-top: 20px;
         }
-        
+
         #actionButtons a {
             margin: 5px 0;
         }
     </style>
 </head>
+
 <body>
     <canvas id="particle-canvas"></canvas>
-    
+
     <div class="container">
         <div id="status" class="status-icon loading">
             <i class="fas fa-circle-notch"></i>
         </div>
         <h1 id="title">Procesando solicitud...</h1>
         <div id="message" class="message" style="display: none;"></div>
-        
+
         <!-- Formulario para restablecer contraseña -->
         <div id="resetPasswordForm" class="reset-form" style="display: none;">
             <div id="resetMessage" class="message" style="display: none;"></div>
-            
+
             <div class="input-group">
                 <label for="newPassword">
                     <i class="fas fa-lock" style="margin-right: 8px;"></i>
@@ -533,7 +568,7 @@
                     Mínimo 8 caracteres con mayúsculas, minúsculas, números y símbolos
                 </small>
             </div>
-            
+
             <div class="input-group">
                 <label for="confirmPassword">
                     <i class="fas fa-lock" style="margin-right: 8px;"></i>
@@ -546,7 +581,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <button id="resetBtn" onclick="resetPassword()" class="reset-btn">
                 <span id="resetBtnText">
                     <i class="fas fa-key"></i>
@@ -558,7 +593,7 @@
                 </span>
             </button>
         </div>
-        
+
         <div id="actionButtons" style="display: none;">
             <a href="#" id="loginBtn" class="btn" onclick="clearStorageAndRedirect(event)">
                 <i class="fas fa-sign-in-alt"></i>
@@ -576,10 +611,10 @@
     <script type="module">
         // ========== IMPORTAR CONFIGURACIÓN DE FIREBASE ==========
         import { auth } from '/config/firebase-config.js';
-        
+
         // Importar funciones necesarias de Firebase Auth
-        import { 
-            confirmPasswordReset, 
+        import {
+            confirmPasswordReset,
             applyActionCode,
             checkActionCode
         } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
@@ -588,11 +623,11 @@
         let actionCode = null;
         let actionCodeInfo = null;
         let actionMode = null;
-        
+
         // ========== FUNCIÓN PARA LIMPIAR STORAGE Y REDIRIGIR ==========
-        window.clearStorageAndRedirect = function(event) {
+        window.clearStorageAndRedirect = function (event) {
             event.preventDefault();
-            
+
             // Limpiar localStorage
             localStorage.removeItem('userData');
             localStorage.removeItem('isLoggedIn');
@@ -607,7 +642,7 @@
             localStorage.removeItem('theme');
             localStorage.removeItem('user-plan');
             localStorage.removeItem('user-verified');
-            
+
             // Limpiar sessionStorage
             sessionStorage.removeItem('currentSession');
             sessionStorage.removeItem('isAuthenticated');
@@ -616,18 +651,18 @@
             sessionStorage.removeItem('sessionOrganizacionCamelCase');
             sessionStorage.removeItem('sessionUser');
             sessionStorage.removeItem('sessionRole');
-            
+
             // Redirigir al login
-            window.location.href = '/users/visitors/login/login.html';
+            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         };
-        
+
         // ========== FUNCIÓN PARA MOSTRAR/OCULTAR CONTRASEÑA ==========
-        window.togglePassword = function(inputId, button) {
+        window.togglePassword = function (inputId, button) {
             const input = document.getElementById(inputId);
             const icon = button.querySelector('i');
-            
+
             if (!input || !icon) return;
-            
+
             if (input.type === 'password') {
                 input.type = 'text';
                 icon.classList.remove('fa-eye');
@@ -637,7 +672,7 @@
                 icon.classList.remove('fa-eye-slash');
                 icon.classList.add('fa-eye');
             }
-            
+
             input.focus();
         }
 
@@ -657,7 +692,7 @@
         function showMessage(text, type = 'info') {
             const messageEl = document.getElementById('message');
             if (!messageEl) return;
-            
+
             messageEl.innerHTML = `<p><i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${text}</p>`;
             messageEl.className = `message message-${type}`;
             messageEl.style.display = 'block';
@@ -666,13 +701,13 @@
         // Validar fortaleza de contraseña
         function checkPasswordStrength(password) {
             let score = 0;
-            
+
             if (password.length >= 8) score++;
             if (/[A-Z]/.test(password)) score++;
             if (/[a-z]/.test(password)) score++;
             if (/\d/.test(password)) score++;
             if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
-            
+
             return score;
         }
 
@@ -680,11 +715,11 @@
         function updateStrengthBar(password) {
             const strengthBar = document.getElementById('strengthBar');
             if (!strengthBar) return;
-            
+
             const score = checkPasswordStrength(password);
-            
+
             strengthBar.className = 'strength-bar';
-            
+
             if (score === 0) {
                 strengthBar.style.width = '0%';
             } else if (score <= 2) {
@@ -703,30 +738,30 @@
         async function verifyEmail() {
             const statusEl = document.getElementById('status');
             const titleEl = document.getElementById('title');
-            
+
             try {
                 // Verificar el código de acción
                 await checkActionCode(auth, actionCode);
-                
+
                 // Aplicar la verificación
                 await applyActionCode(auth, actionCode);
-                
+
                 statusEl.className = 'status-icon success';
                 statusEl.innerHTML = '<i class="fas fa-check-circle"></i>';
                 titleEl.textContent = '¡Email Verificado!';
                 showMessage('Tu correo electrónico ha sido verificado exitosamente. Ya puedes iniciar sesión.', 'success');
-                
+
                 document.getElementById('actionButtons').style.display = 'block';
-                
+
             } catch (error) {
                 console.error('❌ Error verificando email:', error);
-                
+
                 statusEl.className = 'status-icon error';
                 statusEl.innerHTML = '<i class="fas fa-times-circle"></i>';
                 titleEl.textContent = 'Error de Verificación';
-                
+
                 let errorMsg = 'No se pudo verificar tu correo electrónico.';
-                
+
                 if (error.code === 'auth/expired-action-code') {
                     errorMsg = 'El enlace de verificación ha expirado. Solicita un nuevo correo de verificación.';
                 } else if (error.code === 'auth/invalid-action-code') {
@@ -736,21 +771,21 @@
                 } else if (error.code === 'auth/user-not-found') {
                     errorMsg = 'No se encontró el usuario asociado a este enlace.';
                 }
-                
+
                 showMessage(errorMsg, 'error');
                 document.getElementById('actionButtons').style.display = 'block';
             }
         }
 
         // ========== FUNCIÓN PARA RESTABLECER CONTRASEÑA ==========
-        window.resetPassword = async function() {
+        window.resetPassword = async function () {
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const resetBtn = document.getElementById('resetBtn');
             const resetBtnText = document.getElementById('resetBtnText');
             const resetBtnLoader = document.getElementById('resetBtnLoader');
             const resetMessage = document.getElementById('resetMessage');
-            
+
             // Validaciones básicas
             if (!newPassword || !confirmPassword) {
                 resetMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> Por favor, completa todos los campos.';
@@ -758,14 +793,14 @@
                 resetMessage.style.display = 'block';
                 return;
             }
-            
+
             if (newPassword !== confirmPassword) {
                 resetMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> Las contraseñas no coinciden.';
                 resetMessage.className = 'message message-error';
                 resetMessage.style.display = 'block';
                 return;
             }
-            
+
             const strength = checkPasswordStrength(newPassword);
             if (strength < 3) {
                 resetMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> Contraseña muy débil. Usa mayúsculas, minúsculas, números y símbolos.';
@@ -773,44 +808,44 @@
                 resetMessage.style.display = 'block';
                 return;
             }
-            
+
             const codeToUse = actionCode;
-            
+
             if (!codeToUse) {
                 resetMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error: Código de verificación no encontrado.';
                 resetMessage.className = 'message message-error';
                 resetMessage.style.display = 'block';
                 return;
             }
-            
+
             // Mostrar loader
             resetBtn.disabled = true;
             resetBtnText.style.display = 'none';
             resetBtnLoader.style.display = 'inline';
             resetMessage.style.display = 'none';
-            
+
             try {
                 await confirmPasswordReset(auth, codeToUse, newPassword);
-                
+
                 document.getElementById('status').className = 'status-icon success';
                 document.getElementById('status').innerHTML = '<i class="fas fa-check-circle"></i>';
                 document.getElementById('title').textContent = '¡Contraseña Cambiada!';
-                
+
                 resetMessage.innerHTML = '<i class="fas fa-check-circle"></i> ¡Contraseña cambiada exitosamente! Redirigiendo al login...';
                 resetMessage.className = 'message message-success';
                 resetMessage.style.display = 'block';
-                
+
                 document.getElementById('resetPasswordForm').style.display = 'none';
                 document.getElementById('actionButtons').style.display = 'block';
-                
+
             } catch (error) {
                 resetBtn.disabled = false;
                 resetBtnText.style.display = 'inline';
                 resetBtnLoader.style.display = 'none';
-                
+
                 let errorMsg = 'Error cambiando contraseña';
                 let icon = 'fa-exclamation-circle';
-                
+
                 if (error.code === 'auth/expired-action-code') {
                     errorMsg = 'El enlace expiró. Solicita uno nuevo.';
                 } else if (error.code === 'auth/invalid-action-code') {
@@ -820,7 +855,7 @@
                 } else {
                     errorMsg = `Error: ${error.message || 'Error desconocido'}`;
                 }
-                
+
                 resetMessage.innerHTML = `<i class="fas ${icon}"></i> ${errorMsg}`;
                 resetMessage.className = 'message message-error';
                 resetMessage.style.display = 'block';
@@ -831,40 +866,40 @@
         async function recoverEmail() {
             const statusEl = document.getElementById('status');
             const titleEl = document.getElementById('title');
-            
+
             try {
                 // Verificar el código de acción
                 const info = await checkActionCode(auth, actionCode);
-                
+
                 // Aplicar la recuperación
                 await applyActionCode(auth, actionCode);
-                
+
                 statusEl.className = 'status-icon success';
                 statusEl.innerHTML = '<i class="fas fa-check-circle"></i>';
                 titleEl.textContent = '¡Email Recuperado!';
-                
+
                 const oldEmail = info.data.email || 'anterior';
                 const restoredEmail = info.data.restoredEmail || 'recuperado';
-                
+
                 showMessage(`Tu correo electrónico ha sido recuperado exitosamente. El email ${oldEmail} ha sido restaurado a ${restoredEmail}.`, 'success');
-                
+
                 document.getElementById('actionButtons').style.display = 'block';
-                
+
             } catch (error) {
                 console.error('❌ Error recuperando email:', error);
-                
+
                 statusEl.className = 'status-icon error';
                 statusEl.innerHTML = '<i class="fas fa-times-circle"></i>';
                 titleEl.textContent = 'Error de Recuperación';
-                
+
                 let errorMsg = 'No se pudo recuperar tu correo electrónico.';
-                
+
                 if (error.code === 'auth/expired-action-code') {
                     errorMsg = 'El enlace de recuperación ha expirado. Solicita uno nuevo.';
                 } else if (error.code === 'auth/invalid-action-code') {
                     errorMsg = 'El enlace de recuperación no es válido o ya ha sido usado.';
                 }
-                
+
                 showMessage(errorMsg, 'error');
                 document.getElementById('actionButtons').style.display = 'block';
             }
@@ -875,60 +910,60 @@
             const params = getUrlParams();
             const actionCodeParam = params.oobCode;
             const mode = params.mode;
-            
+
             if (!actionCodeParam) {
                 showNoParameters();
                 return;
             }
-            
+
             actionCode = actionCodeParam;
             actionMode = mode;
-            
+
             try {
                 // Verificar el código de acción para obtener información
                 actionCodeInfo = await checkActionCode(auth, actionCode);
-                
+
                 console.log('📋 Información del código de acción:', {
                     mode: mode,
                     data: actionCodeInfo.data
                 });
-                
+
                 // Procesar según el modo
-                switch(mode) {
+                switch (mode) {
                     case 'verifyEmail':
                         document.getElementById('status').className = 'status-icon warning';
                         document.getElementById('status').innerHTML = '<i class="fas fa-envelope"></i>';
                         document.getElementById('title').textContent = 'Verificando Email...';
                         showMessage('Verificando tu correo electrónico. Por favor espera...', 'info');
-                        
+
                         await verifyEmail();
                         break;
-                        
+
                     case 'resetPassword':
                         document.getElementById('status').className = 'status-icon warning';
                         document.getElementById('status').innerHTML = '<i class="fas fa-lock"></i>';
                         document.getElementById('title').textContent = 'Restablecer Contraseña';
                         showMessage('Ingresa tu nueva contraseña a continuación. El enlace expirará en 1 hora.', 'info');
-                        
+
                         document.getElementById('resetPasswordForm').style.display = 'block';
-                        
+
                         const newPasswordInput = document.getElementById('newPassword');
                         if (newPasswordInput) {
-                            newPasswordInput.addEventListener('input', function() {
+                            newPasswordInput.addEventListener('input', function () {
                                 updateStrengthBar(this.value);
                             });
                         }
                         break;
-                        
+
                     case 'recoverEmail':
                         document.getElementById('status').className = 'status-icon warning';
                         document.getElementById('status').innerHTML = '<i class="fas fa-undo-alt"></i>';
                         document.getElementById('title').textContent = 'Recuperando Email...';
                         showMessage('Procesando la recuperación de tu correo electrónico. Por favor espera...', 'info');
-                        
+
                         await recoverEmail();
                         break;
-                        
+
                     default:
                         showMessage('Acción no reconocida. Por favor, verifica el enlace.', 'error');
                         document.getElementById('status').className = 'status-icon error';
@@ -936,16 +971,16 @@
                         document.getElementById('title').textContent = 'Error';
                         document.getElementById('actionButtons').style.display = 'block';
                 }
-                
+
             } catch (error) {
                 console.error('❌ Error verificando código de acción:', error);
-                
+
                 document.getElementById('status').className = 'status-icon error';
                 document.getElementById('status').innerHTML = '<i class="fas fa-times-circle"></i>';
                 document.getElementById('title').textContent = 'Error';
-                
+
                 let errorMsg = 'El enlace no es válido o ha expirado.';
-                
+
                 if (error.code === 'auth/expired-action-code') {
                     errorMsg = 'El enlace ha expirado. Solicita uno nuevo.';
                 } else if (error.code === 'auth/invalid-action-code') {
@@ -955,7 +990,7 @@
                 } else if (error.code === 'auth/user-not-found') {
                     errorMsg = 'No se encontró el usuario asociado a este enlace.';
                 }
-                
+
                 showMessage(errorMsg, 'error');
                 document.getElementById('actionButtons').style.display = 'block';
             }
@@ -976,4 +1011,5 @@
     <script type="module" src="/components/themeloader.js"></script>
     <script type="module" src="/components/particulas.js"></script>
 </body>
+
 </html>

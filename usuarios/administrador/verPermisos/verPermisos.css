@@ -1,6 +1,5 @@
 /* =============================================
-   CREAR PERMISO - BASADO EN CREAR REGIONES
-   (USA LAS VARIABLES GLOBALES DE personalization.css)
+   VER PERMISO - MISMO ESTILO QUE CREAR PERMISOS
    ============================================= */
 
 /* =============================================
@@ -25,11 +24,11 @@ body {
 }
 
 /* =============================================
-   CONTENEDOR PRINCIPAL
+   CONTENEDOR PRINCIPAL - MISMO ANCHO QUE CREAR PERMISOS
    ============================================= */
 .custom-container {
     max-width: min(800px, 95vw);
-    /* Mismo ancho que crear regiones */
+    /* Mismo ancho que crear permisos */
     margin: 0 auto;
     padding: 25px;
     background: transparent;
@@ -221,7 +220,7 @@ body {
 }
 
 /* =============================================
-   FORMULARIOS
+   FORMULARIOS (para la vista de solo lectura)
    ============================================= */
 .form-field {
     margin-bottom: 16px;
@@ -237,15 +236,8 @@ body {
     text-shadow: 0 0 2px rgba(192, 192, 192, 0.3);
 }
 
+/* Quitar asterisco rojo en vista de solo lectura */
 .form-label::after {
-    content: " *";
-    color: var(--color-danger);
-    opacity: 0.8;
-}
-
-.form-label:has(+ :not(:required))::after,
-.form-label:has(+ select:not([required]))::after,
-.form-label:has(+ .permisos-grid)::after {
     content: "" !important;
 }
 
@@ -274,7 +266,7 @@ body {
 .form-control[readonly] {
     background: rgba(0, 0, 0, 0.3) !important;
     opacity: 0.8;
-    cursor: not-allowed;
+    cursor: default;
     border-color: var(--color-accent-primary) !important;
 }
 
@@ -309,73 +301,65 @@ body {
     flex: 1;
 }
 
-/* Char counter */
-.char-limit-info {
+/* =============================================
+   PERMISO ID - DENTRO DE LA TARJETA
+   ============================================= */
+.permiso-id-container {
     display: flex;
-    justify-content: flex-end;
-    margin-top: 5px;
-    font-size: 11px;
-}
-
-.char-counter {
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-family-primary);
     color: var(--color-accent-primary);
-    font-weight: 600;
-    text-shadow: 0 0 4px var(--color-accent-primary);
+    font-size: 13px;
+    background: rgba(0, 207, 255, 0.1);
+    padding: 6px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--color-accent-primary);
+}
+
+.permiso-id-container i {
+    font-size: 14px;
+    filter: drop-shadow(0 0 4px var(--color-accent-primary));
+}
+
+.permiso-id {
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 /* =============================================
-   SELECTORES (SELECT)
+   MÓDULOS GRID - ESTILO TARJETAS
    ============================================= */
-select.form-control {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232f8cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
-    background-repeat: no-repeat;
-    background-position: right 15px center;
-    background-size: 16px;
-    padding-right: 45px !important;
-}
-
-select.form-control option {
-    background: var(--color-bg-secondary);
-    color: var(--color-text-primary);
-}
-
-/* =============================================
-   PERMISOS GRID - Checkboxes estilo tarjetas
-   ============================================= */
-.permisos-grid {
+.modulos-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
     margin-top: 10px;
 }
 
-.permiso-card {
+.modulo-item {
     background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-medium);
-    padding: 20px;
-    transition: all 0.3s ease;
-    cursor: pointer;
+    padding: 15px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
+    transition: all 0.3s ease;
 }
 
-.permiso-card:hover {
-    border-color: var(--color-accent-primary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-small);
-}
-
-.permiso-card.activo {
+.modulo-item.activo {
     border-color: var(--color-accent-primary);
     background: linear-gradient(145deg, rgba(47, 140, 255, 0.1), var(--color-bg-tertiary));
 }
 
-.permiso-icon {
+.modulo-item.inactivo {
+    border-color: var(--color-border-light);
+    background: var(--color-bg-tertiary);
+    opacity: 0.8;
+}
+
+.modulo-icon {
     width: 40px;
     height: 40px;
     border-radius: var(--border-radius-small);
@@ -388,68 +372,35 @@ select.form-control option {
     border: 1px solid var(--color-border-light);
 }
 
-.permiso-contenido {
+.modulo-info {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
 }
 
-.permiso-nombre {
+.modulo-nombre {
     color: var(--color-text-primary);
     font-family: var(--font-family-primary);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.permiso-descripcion {
-    color: var(--color-text-dim);
-    font-size: 12px;
-}
-
-.permiso-checkbox {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--color-accent-primary);
-    cursor: pointer;
-}
-
-/* =============================================
-   ACCIONES RÁPIDAS
-   ============================================= */
-.acciones-rapidas {
+.modulo-estado {
+    font-size: 11px;
     display: flex;
-    gap: 10px;
-    margin: 20px 0;
-    flex-wrap: wrap;
-}
-
-.btn-accion-rapida {
-    background: var(--color-bg-tertiary);
-    border: 1px solid var(--color-border-light);
-    color: var(--color-text-secondary);
-    padding: 8px 15px;
-    border-radius: var(--border-radius-small);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
 }
 
-.btn-accion-rapida:hover {
-    border-color: var(--color-accent-primary);
-    color: var(--color-text-primary);
-    transform: translateY(-1px);
+.modulo-item.activo .modulo-estado {
+    color: #10b981;
 }
 
-.btn-accion-rapida i {
-    color: var(--color-accent-primary);
-    font-size: 12px;
+.modulo-item.inactivo .modulo-estado {
+    color: #ef4444;
 }
 
 /* =============================================
@@ -472,6 +423,15 @@ select.form-control option {
     color: var(--color-accent-primary) !important;
     filter: drop-shadow(0 0 4px var(--color-accent-primary));
     font-size: 18px;
+}
+
+.alert-danger {
+    color: var(--color-danger) !important;
+}
+
+.alert-danger i {
+    color: var(--color-danger) !important;
+    filter: drop-shadow(0 0 4px var(--color-danger));
 }
 
 /* =============================================
@@ -524,13 +484,13 @@ select.form-control option {
     transform: rotate(30deg) translate(10%, 10%);
 }
 
-.btn-success {
+.btn-primary {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
     border: 1px solid var(--color-accent-primary) !important;
     color: var(--color-text-primary) !important;
 }
 
-.btn-success:hover {
+.btn-primary:hover {
     background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
     border-color: var(--color-accent-secondary) !important;
     transform: translateY(-2px) !important;
@@ -546,8 +506,8 @@ select.form-control option {
 .btn-secondary:hover {
     background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
     transform: translateY(-2px) !important;
-    border-color: var(--color-danger) !important;
-    color: var(--color-danger) !important;
+    border-color: var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
 }
 
 /* =============================================
@@ -563,6 +523,47 @@ select.form-control option {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* =============================================
+   LOADING OVERLAY
+   ============================================= */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(5px);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border-light);
+    border-top-color: var(--color-accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-text {
+    color: var(--color-text-primary);
+    font-family: var(--font-family-primary);
+    font-size: 14px;
+    text-shadow: 0 0 5px var(--color-accent-primary);
 }
 
 /* =============================================
@@ -614,7 +615,7 @@ select.form-control option {
         gap: 10px;
     }
 
-    .permisos-grid {
+    .modulos-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
@@ -662,17 +663,8 @@ select.form-control option {
         padding: 10px 12px !important;
     }
 
-    .permisos-grid {
+    .modulos-grid {
         grid-template-columns: 1fr;
-    }
-
-    .acciones-rapidas {
-        flex-direction: column;
-    }
-
-    .btn-accion-rapida {
-        width: 100%;
-        justify-content: center;
     }
 }
 

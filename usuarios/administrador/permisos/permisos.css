@@ -428,7 +428,7 @@
 }
 
 /* =============================================
-   BOTONES DE ACCIÓN
+   BOTONES DE ACCIÓN - EXACTAMENTE COMO EN REGIONES
    ============================================= */
 .btn-group {
     display: flex;
@@ -489,6 +489,7 @@
     transform: rotate(30deg) translate(10%, 10%);
 }
 
+/* ---- BOTÓN VER (INFO) ---- */
 .btn-outline-info:hover {
     border-color: #00cfff !important;
     color: #00cfff !important;
@@ -499,6 +500,7 @@
     color: #00cfff !important;
 }
 
+/* ---- BOTÓN EDITAR (WARNING) ---- */
 .btn-outline-warning:hover {
     border-color: #ffcc00 !important;
     color: #ffcc00 !important;
@@ -509,6 +511,7 @@
     color: #ffcc00 !important;
 }
 
+/* ---- BOTÓN ELIMINAR (DANGER) ---- */
 .btn-outline-danger:hover {
     border-color: #ff4d4d !important;
     color: #ff4d4d !important;
@@ -769,7 +772,7 @@
     }
 
     .btn {
-        min-width: 32px !important;
+        min-width: 62px !important;
         height: 32px !important;
         padding: 4px 6px !important;
     }
