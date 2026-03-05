@@ -91,7 +91,7 @@
                 Gestión de Permisos
             </h1>
             <div class="header-description">
-                Administra los permisos por área y cargo. Define qué acciones puede realizar cada rol en tu
+                Administra los permisos por área y cargo. Define a qué módulos puede acceder cada rol en tu
                 organización.
             </div>
         </div>
@@ -135,7 +135,6 @@
                                 <th>Área</th>
                                 <th>Cargo</th>
                                 <th>Permisos</th>
-                                <th>Estado</th>
                                 <th style="width: 180px;">Acciones</th>
                             </tr>
                         </thead>
@@ -150,7 +149,7 @@
                     <div class="pagination-info" id="paginationInfo"></div>
                     <nav>
                         <ul class="pagination" id="pagination">
-                            <!-- Se llenará dinámicamente por permisos.js -->
+                            <!-- Se llenará dinámicamente -->
                         </ul>
                     </nav>
                 </div>
@@ -160,12 +159,12 @@
     <br>
 
     <!-- Scripts -->
-    <script type="module" src="/components/themeloader.js"></script>
+    <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="permisos.js"></script>
+    <script type="module" src="permisos.js"></script>
 </body>
 
 </html>
