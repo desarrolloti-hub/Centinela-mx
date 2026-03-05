@@ -1019,6 +1019,12 @@ class NavbarComplete {
                             <i class="fa-solid fa-exclamation-triangle"></i>
                             <span>Incidencias</span>
                         </a>
+
+                        <!-- Botón para INCIDENCIAS (NUEVO) -->
+                        <a href="/usuarios/administrador/pruebasNotificaciones/pruebasNotificaciones.html" class="administracion-dropdown-option" id="incidenciasBtn">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Pruebas Notificaciones</span>
+                        </a>
                     </div>
                 </div>
                 
