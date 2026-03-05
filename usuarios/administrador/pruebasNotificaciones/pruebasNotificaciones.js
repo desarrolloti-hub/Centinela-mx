@@ -58,6 +58,8 @@ async function init() {
                 clearInterval(checkUser);
                 
                 console.log('👤 Usuario:', userManager.currentUser.nombreCompleto);
+                console.log('📧 Email:', userManager.currentUser.correoElectronico);
+                console.log('🏢 Organización:', userManager.currentUser.organizacionCamelCase);
                 
                 try {
                     // Inicializar FCM
@@ -108,6 +110,89 @@ async function init() {
             }
         }, 500);
 
+        // Configurar el formulario de envío
+        document.getElementById('notificationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('userId').value.trim();
+            const userType = document.getElementById('userType').value;
+            const title = document.getElementById('title').value.trim();
+            const body = document.getElementById('body').value.trim();
+            const url = document.getElementById('url').value.trim();
+            
+            if (!userId || !title || !body) {
+                mostrarMensaje('warning', 'Campos incompletos', 'Usuario, título y mensaje son obligatorios');
+                return;
+            }
+            
+            Swal.fire({
+                title: 'Enviando notificación...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            
+            try {
+                // URL de la Cloud Function (ya desplegada)
+                const functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
+                
+                console.log('📤 Enviando solicitud a:', functionUrl);
+                console.log('📦 Datos:', {
+                    userId,
+                    userType,
+                    organizacionCamelCase: userManager.currentUser?.organizacionCamelCase,
+                    title,
+                    body,
+                    url
+                });
+                
+                const response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        userType: userType,
+                        organizacionCamelCase: userManager.currentUser?.organizacionCamelCase,
+                        title: title,
+                        body: body,
+                        url: url,
+                        senderToken: userManager.currentUser?.id
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('📥 Respuesta:', result);
+                
+                Swal.close();
+                
+                if (response.ok && result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '✅ Notificación enviada',
+                        html: `
+                            <p>${result.message || 'Notificación enviada correctamente'}</p>
+                            ${result.failures ? `<p>Fallos: ${result.failures}</p>` : ''}
+                        `,
+                        timer: 3000
+                    });
+                } else {
+                    throw new Error(result.error || 'Error al enviar la notificación');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: '❌ Error',
+                    text: error.message
+                });
+            }
+        });
+
+        // Timeout de seguridad
         setTimeout(() => {
             if (!userManager.currentUser) {
                 console.error('⏰ Timeout: No hay usuario');

@@ -1,3 +1,4 @@
+// /functions/index.js
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp();
@@ -6,12 +7,11 @@ const db = admin.firestore();
 
 /**
  * Cloud Function para enviar una notificación push a un usuario específico.
- * Se activa mediante una petición HTTP POST.
  */
 exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
-    // Habilitar CORS para peticiones desde tu dominio
-    res.set('Access-Control-Allow-Origin', '*'); // En producción, especifica tu dominio
-    res.set('Access-Control-Allow-Methods', 'POST');
+    // Habilitar CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.set('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
@@ -24,7 +24,7 @@ exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
         return;
     }
 
-    const { userId, userType, title, body, url, senderToken } = req.body;
+    const { userId, userType, organizacionCamelCase, title, body, url, senderToken } = req.body;
 
     // Validaciones básicas
     if (!userId || !userType || !title || !body) {
@@ -37,23 +37,19 @@ exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
         return;
     }
 
+    // Para colaboradores, necesitamos la organización
+    if (userType === 'colaborador' && !organizacionCamelCase) {
+        res.status(400).json({ success: false, error: 'Para colaboradores, se requiere organizacionCamelCase' });
+        return;
+    }
+
     try {
         // 1. Obtener el documento del usuario destino
         let userDocRef;
         if (userType === 'administrador') {
             userDocRef = db.collection('administradores').doc(userId);
         } else {
-            // Necesitamos la organización del colaborador. Esto es más complejo.
-            // Podríamos buscarlo en todas las colecciones, pero es ineficiente.
-            // Lo ideal es que el frontend también envíe la organización.
-            // Por simplicidad, asumimos que el frontend envía la organización.
-            // Si no, podemos buscarlo.
-            // --- MEJOR: El frontend debe enviar 'organizacionCamelCase'
-            if (!req.body.organizacionCamelCase) {
-                res.status(400).json({ success: false, error: 'Para colaboradores, se requiere organizacionCamelCase' });
-                return;
-            }
-            const coleccion = `colaboradores_${req.body.organizacionCamelCase}`;
+            const coleccion = `colaboradores_${organizacionCamelCase}`;
             userDocRef = db.collection(coleccion).doc(userId);
         }
 
@@ -76,9 +72,16 @@ exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
         }
 
         if (tokensActivos.length === 0) {
-            res.status(200).json({ success: true, message: 'El usuario no tiene dispositivos con notificaciones activas.' });
+            res.status(200).json({ 
+                success: true, 
+                message: 'El usuario no tiene dispositivos con notificaciones activas.',
+                successCount: 0,
+                failures: 0
+            });
             return;
         }
+
+        console.log(`📱 Enviando a ${tokensActivos.length} dispositivo(s):`, tokensActivos);
 
         // 3. Preparar el mensaje para FCM
         const message = {
@@ -94,33 +97,37 @@ exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
                 sender: senderToken || 'sistema',
                 timestamp: Date.now().toString()
             },
-            tokens: tokensActivos, // Enviar a múltiples tokens
-            // Si quieres enviar a uno solo: token: tokensActivos[0]
+            tokens: tokensActivos
         };
 
         // 4. Enviar la notificación
         const response = await admin.messaging().sendEachForMulticast(message);
         
-        console.log(`Notificaciones enviadas. Éxitos: ${response.successCount}, Fallos: ${response.failureCount}`);
+        console.log(`✅ Notificaciones enviadas. Éxitos: ${response.successCount}, Fallos: ${response.failureCount}`);
         
-        // Opcional: procesar los fallos (tokens inválidos, etc.)
+        // 5. Procesar fallos (tokens inválidos)
         if (response.failureCount > 0) {
+            const failedTokens = [];
             response.responses.forEach((resp, idx) => {
                 if (!resp.success) {
-                    console.error(`Error enviando al token ${tokensActivos[idx]}:`, resp.error);
+                    console.error(`❌ Error enviando al token ${tokensActivos[idx].substring(0, 30)}...:`, resp.error);
+                    failedTokens.push(tokensActivos[idx]);
+                    
                     // Aquí podrías marcar el token como inválido en la BD
+                    // Por ahora solo registramos
                 }
             });
         }
 
         res.status(200).json({
             success: true,
-            message: `Notificación enviada a ${response.successCount} dispositivo(s).`,
+            message: `Notificación enviada a ${response.successCount} dispositivo(s)`,
+            successCount: response.successCount,
             failures: response.failureCount
         });
 
     } catch (error) {
-        console.error('Error en Cloud Function:', error);
+        console.error('❌ Error en Cloud Function:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
