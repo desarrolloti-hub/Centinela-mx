@@ -1,6 +1,6 @@
 /**
  * IPH GENERATOR - Sistema Centinela
- * VERSIÓN: 3.34 - CORREGIDO: DESBORDAMIENTO EN SEGUIMIENTOS
+ * VERSIÓN: 3.42 - CORREGIDO: CONTEO PARA INCIDENCIAS NUEVAS Y VIEJAS
  */
 
 // =============================================
@@ -35,6 +35,7 @@ export const generadorIPH = {
     authToken: null,
     totalPaginas: 1,
     incidenciaActual: null,
+    paginaActualReal: 1,
 
     fonts: {
         tituloPrincipal: 16,
@@ -56,12 +57,12 @@ export const generadorIPH = {
     alturasContenedores: {
         identificacion: 15,
         datosGenerales: 20,
-        clasificacion: 35,
+        clasificacion: 40,
         reportadoPor: 15,
         descripcion: 45,
         anexos: 45,
         tarjetaSeguimiento: 80,
-        avisoPrivacidad: 20
+        avisoPrivacidad: 25
     },
 
     imagenesCache: new Map(),
@@ -70,7 +71,10 @@ export const generadorIPH = {
         if (config.organizacionActual) this.organizacionActual = config.organizacionActual;
         if (config.sucursalesCache) this.sucursalesCache = config.sucursalesCache;
         if (config.categoriasCache) this.categoriasCache = config.categoriasCache;
-        if (config.subcategoriasCache) this.subcategoriasCache = config.subcategoriasCache;
+        if (config.subcategoriasCache) {
+            this.subcategoriasCache = config.subcategoriasCache;
+            console.log('✅ Subcategorías cargadas:', this.subcategoriasCache.length);
+        }
         if (config.usuariosCache) {
             this.usuariosCache = config.usuariosCache;
             console.log('✅ Usuarios cargados:', this.usuariosCache.length);
@@ -93,8 +97,18 @@ export const generadorIPH = {
 
     obtenerNombreSubcategoria(subcategoriaId) {
         if (!subcategoriaId) return 'No especificada';
-        const subcategoria = this.subcategoriasCache.find(s => s.id === subcategoriaId);
-        return subcategoria ? subcategoria.nombre : 'No disponible';
+
+        const subcategoria = this.subcategoriasCache.find(s =>
+            s.id === subcategoriaId ||
+            s._id === subcategoriaId ||
+            s.uid === subcategoriaId
+        );
+
+        if (subcategoria) {
+            return subcategoria.nombre || subcategoria.descripcion || 'Subcategoría';
+        }
+
+        return 'No disponible';
     },
 
     obtenerNombreUsuario(usuarioId) {
@@ -102,7 +116,6 @@ export const generadorIPH = {
             return 'No especificado';
         }
 
-        // Buscar por diferentes formatos de ID
         const usuario = this.usuariosCache.find(u =>
             u.id === usuarioId ||
             u.uid === usuarioId ||
@@ -471,23 +484,18 @@ export const generadorIPH = {
         try {
             let fechaObj;
 
-            // Si es un objeto Firestore Timestamp
             if (fecha && typeof fecha === 'object' && fecha.toDate) {
                 fechaObj = fecha.toDate();
             }
-            // Si es un objeto con seconds (Firestore Timestamp en formato plano)
             else if (fecha && typeof fecha === 'object' && fecha.seconds) {
                 fechaObj = new Date(fecha.seconds * 1000);
             }
-            // Si es un string ISO
             else if (typeof fecha === 'string') {
                 fechaObj = new Date(fecha);
             }
-            // Si ya es un objeto Date
             else if (fecha instanceof Date) {
                 fechaObj = fecha;
             }
-            // Si es un número (timestamp)
             else if (typeof fecha === 'number') {
                 fechaObj = new Date(fecha);
             }
@@ -495,7 +503,6 @@ export const generadorIPH = {
                 return 'Fecha no disponible';
             }
 
-            // Verificar si la fecha es válida
             if (!(fechaObj instanceof Date) || isNaN(fechaObj.getTime())) {
                 return 'Fecha no disponible';
             }
@@ -505,7 +512,8 @@ export const generadorIPH = {
                 month: '2-digit',
                 year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: true
             });
 
         } catch (error) {
@@ -531,7 +539,7 @@ export const generadorIPH = {
         return fecha.toLocaleTimeString('es-MX', {
             hour: '2-digit',
             minute: '2-digit',
-            second: '2-digit'
+            hour12: true
         });
     },
 
@@ -543,11 +551,9 @@ export const generadorIPH = {
 
         pdf.saveGraphicsState();
 
-        // Fondo blanco
         pdf.setFillColor(255, 255, 255);
         pdf.rect(0, 0, anchoPagina, this.alturaEncabezado, 'F');
 
-        // Barra superior azul
         pdf.setDrawColor(coloresIPH.primario);
         pdf.setFillColor(coloresIPH.primario);
         pdf.rect(0, 0, anchoPagina, 4, 'F');
@@ -557,7 +563,6 @@ export const generadorIPH = {
         const xCentinela = xLogoDerecha;
         const xOrganizacion = xCentinela + dimensiones.diametro + dimensiones.separacion;
 
-        // ===== LOGO CENTINELA =====
         if (this.logoCentinelaCircular) {
             try {
                 pdf.setFillColor(255, 255, 255);
@@ -577,7 +582,6 @@ export const generadorIPH = {
             this.dibujarLogoPlaceholderCircular(pdf, xCentinela + radio, yLogo, radio, 'C');
         }
 
-        // ===== LOGO ORGANIZACIÓN =====
         if (this.logoOrganizacionCircular) {
             try {
                 pdf.setFillColor(255, 255, 255);
@@ -597,7 +601,6 @@ export const generadorIPH = {
             this.dibujarLogoPlaceholderCircular(pdf, xOrganizacion + radio, yLogo, radio, 'ORG');
         }
 
-        // Línea divisoria
         if (this.logoCentinelaCircular || this.logoOrganizacionCircular) {
             const xLineaVertical = xCentinela + dimensiones.diametro + (dimensiones.separacion / 2);
             pdf.setDrawColor(coloresIPH.borde);
@@ -605,7 +608,6 @@ export const generadorIPH = {
             pdf.line(xLineaVertical, yLogo - radio - 2, xLineaVertical, yLogo + radio + 2);
         }
 
-        // Título
         pdf.setTextColor(coloresIPH.primario);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.titulo);
@@ -613,7 +615,7 @@ export const generadorIPH = {
         const fechaActual = new Date();
         const fechaStr = this.formatearFechaVisualizacion(fechaActual);
         const titulo = `INFORME DE INCIDENCIA`;
-        const subtitulo = `ID: ${incidencia.id?.substring(0, 8) || 'N/A'}`;
+        const subtitulo = `${incidencia.id}`;
 
         const centroPagina = anchoPagina / 2;
         pdf.text(titulo, centroPagina, 18, { align: 'center' });
@@ -665,14 +667,8 @@ export const generadorIPH = {
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(this.fonts.micro);
         pdf.setTextColor(coloresIPH.textoClaro);
-        pdf.text('Sistema Centinela-MX', margen, yPos + 5);
-        if (this.incidenciaActual) {
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(this.fonts.micro);
-            pdf.setTextColor(coloresIPH.primario);
-            const idCorto = this.incidenciaActual.id?.substring(0, 8) || 'N/A';
-            pdf.text(`ID: ${idCorto}`, anchoPagina / 2, yPos + 5, { align: 'center' });
-        }
+        pdf.text('Infome Generado con Sistema Centinela', margen, yPos + 5);
+
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(this.fonts.micro);
         pdf.setTextColor(coloresIPH.textoClaro);
@@ -709,8 +705,15 @@ export const generadorIPH = {
             this.incidenciaActual = incidencia;
 
             const pdf = new this.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            this.totalPaginas = await this.calcularTotalPaginas(incidencia);
-            await this.generarPaginaIPH(pdf, incidencia, 1, onProgress);
+
+            // PRIMERO: Calculamos el total REAL de páginas
+            this.totalPaginas = await this.calcularTotalPaginasReal(incidencia);
+
+            // Inicializamos el contador de página actual
+            this.paginaActualReal = 1;
+
+            // Generamos la primera página
+            await this.generarPaginaIPH(pdf, incidencia, onProgress);
 
             const nombreArchivo = `INFORME_${incidencia.id?.substring(0, 8) || 'incidencia'}_${this.formatearFechaArchivo()}.pdf`;
 
@@ -730,30 +733,82 @@ export const generadorIPH = {
         }
     },
 
-    async calcularTotalPaginas(incidencia) {
-        let total = 1;
-        const seguimientos = incidencia.getSeguimientosArray ? incidencia.getSeguimientosArray() : [];
-        if (incidencia.imagenes && incidencia.imagenes.length > 3) {
-            total += Math.ceil((incidencia.imagenes.length - 3) / 6);
+    // NUEVA FUNCIÓN MEJORADA: Calcula el número REAL de páginas para cualquier incidencia
+    async calcularTotalPaginasReal(incidencia) {
+        let total = 1; // Página principal
+
+        // 1. Calcular páginas para imágenes principales
+        let imagenes = [];
+
+        // Intentar obtener imágenes de diferentes formas (para incidencias viejas y nuevas)
+        if (incidencia.imagenes && Array.isArray(incidencia.imagenes)) {
+            imagenes = incidencia.imagenes;
+        } else if (incidencia.evidencias && Array.isArray(incidencia.evidencias)) {
+            imagenes = incidencia.evidencias;
+        } else if (incidencia.fotos && Array.isArray(incidencia.fotos)) {
+            imagenes = incidencia.fotos;
+        } else if (incidencia.anexos && Array.isArray(incidencia.anexos)) {
+            imagenes = incidencia.anexos;
         }
-        for (const seg of seguimientos) {
-            if (seg.evidencias && seg.evidencias.length > 0) {
-                total += Math.ceil(seg.evidencias.length / 9);
+
+        console.log('📸 Imágenes encontradas:', imagenes.length);
+
+        if (imagenes.length > 0) {
+            // Las primeras 3 imágenes van en la página principal
+            // Las imágenes restantes van en páginas adicionales (4 por página)
+            if (imagenes.length > 3) {
+                const imagenesRestantes = imagenes.length - 3;
+                total += Math.ceil(imagenesRestantes / 4);
             }
         }
+
+        // 2. Calcular páginas para seguimientos
+        let seguimientos = [];
+
+        // Intentar obtener seguimientos de diferentes formas
+        if (incidencia.getSeguimientosArray && typeof incidencia.getSeguimientosArray === 'function') {
+            seguimientos = incidencia.getSeguimientosArray() || [];
+        } else if (incidencia.seguimientos && Array.isArray(incidencia.seguimientos)) {
+            seguimientos = incidencia.seguimientos;
+        } else if (incidencia.historial && Array.isArray(incidencia.historial)) {
+            seguimientos = incidencia.historial;
+        }
+
+        console.log('📋 Seguimientos encontrados:', seguimientos.length);
+
+        for (const seg of seguimientos) {
+            let evidenciasSeg = [];
+
+            // Intentar obtener evidencias del seguimiento de diferentes formas
+            if (seg.evidencias && Array.isArray(seg.evidencias)) {
+                evidenciasSeg = seg.evidencias;
+            } else if (seg.imagenes && Array.isArray(seg.imagenes)) {
+                evidenciasSeg = seg.imagenes;
+            } else if (seg.fotos && Array.isArray(seg.fotos)) {
+                evidenciasSeg = seg.fotos;
+            } else if (seg.anexos && Array.isArray(seg.anexos)) {
+                evidenciasSeg = seg.anexos;
+            }
+
+            if (evidenciasSeg.length > 0) {
+                // Cada página puede contener hasta 3 evidencias de seguimiento
+                total += Math.ceil(evidenciasSeg.length / 3);
+            }
+        }
+
+        console.log('📊 Total REAL de páginas calculado:', total);
         return total;
     },
 
     dividirTextoEnLineas(pdf, texto, anchoMaximo) {
         if (!texto) return [''];
 
-        // Dividir el texto por saltos de línea primero
         const parrafos = texto.toString().split('\n');
         const todasLasLineas = [];
 
         for (const parrafo of parrafos) {
             if (parrafo.trim() === '') {
-                todasLasLineas.push(''); // Línea vacía para mantener el espacio
+                todasLasLineas.push('');
                 continue;
             }
 
@@ -779,13 +834,14 @@ export const generadorIPH = {
         return todasLasLineas;
     },
 
-    async generarPaginaIPH(pdf, incidencia, paginaNum, onProgress) {
+    async generarPaginaIPH(pdf, incidencia, onProgress) {
         const margen = 15;
         const anchoPagina = pdf.internal.pageSize.getWidth();
         const anchoContenido = anchoPagina - (margen * 2);
         let yPos = this.alturaEncabezado + 5;
 
-        this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+        // Usamos this.totalPaginas que ya tiene el valor REAL calculado
+        this.dibujarEncabezadoFijo(pdf, incidencia, this.paginaActualReal, this.totalPaginas);
 
         // IDENTIFICACIÓN
         pdf.setFillColor(coloresIPH.fondo);
@@ -794,7 +850,7 @@ export const generadorIPH = {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.normal);
         pdf.setTextColor(coloresIPH.primario);
-        pdf.text('IDENTIFICACIÓN DE LA UNIDAD/PERSONA', margen + 2, yPos);
+        pdf.text('IDENTIFICACIÓN DE LA UNIDAD', margen + 2, yPos);
         yPos += 5;
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(this.fonts.small);
@@ -811,21 +867,21 @@ export const generadorIPH = {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.normal);
         pdf.setTextColor(coloresIPH.primario);
-        pdf.text('DATOS GENERALES DE LA PUESTA A DISPOSICIÓN', margen + 2, yPos);
+        pdf.text('DATOS GENERALES', margen + 2, yPos);
         yPos += 5;
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(this.fonts.small);
         pdf.setTextColor(coloresIPH.texto);
+
         const fechaReporte = incidencia.fechaCreacion ? new Date(incidencia.fechaCreacion) : new Date();
         const fechaStr = this.formatearFechaVisualizacion(fechaReporte);
         const horaStr = this.formatearHoraVisualizacion(fechaReporte);
+
         pdf.text(`FECHA DEL REPORTE: ${fechaStr}`, margen + 2, yPos);
-        pdf.text(`HORA DEL REPORTE: ${horaStr}`, margen + 80, yPos);
+        pdf.text(`HORA: ${horaStr}`, margen + 100, yPos);
         yPos += 4;
-        pdf.text(`NÚMERO DE CARPETA DE INVESTIGACIÓN (N.C.I.): ${incidencia.id?.substring(0, 8) || 'N/A'}`, margen + 2, yPos);
-        yPos += 4;
-        pdf.text(`MINISTERIO PÚBLICO: ${this.obtenerNombreUsuario(incidencia.reportadoPorId)}`, margen + 2, yPos);
-        yPos += this.alturasContenedores.datosGenerales - 8;
+
+        yPos += this.alturasContenedores.datosGenerales - 12;
 
         // CLASIFICACIÓN
         pdf.setFillColor(coloresIPH.fondo);
@@ -839,31 +895,41 @@ export const generadorIPH = {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(this.fonts.small);
         pdf.setTextColor(coloresIPH.texto);
-        pdf.text(`CATEGORÍAS: ${this.obtenerNombreCategoria(incidencia.categoriaId)}`, margen + 2, yPos);
+
+        const categoriaNombre = this.obtenerNombreCategoria(incidencia.categoriaId);
+        pdf.text(`CATEGORÍA: ${categoriaNombre}`, margen + 2, yPos);
         yPos += 4;
-        pdf.text(`SUBCATEGORÍAS: ${this.obtenerNombreSubcategoria(incidencia.subcategoriaId)}`, margen + 2, yPos);
+
+        const subcategoriaNombre = this.obtenerNombreSubcategoria(incidencia.subcategoriaId);
+        pdf.text(`SUBCATEGORÍA: ${subcategoriaNombre}`, margen + 2, yPos);
         yPos += 4;
+
         const nivelRiesgo = incidencia.getNivelRiesgoTexto ? incidencia.getNivelRiesgoTexto() : incidencia.nivelRiesgo;
         pdf.text(`NIVEL DE RIESGO: ${nivelRiesgo?.toUpperCase() || 'NO ESPECIFICADO'}`, margen + 2, yPos);
         yPos += 4;
+
         const estado = incidencia.getEstadoTexto ? incidencia.getEstadoTexto() : incidencia.estado;
         pdf.text(`ESTADO (Actual): ${estado?.toUpperCase() || 'NO ESPECIFICADO'}`, margen + 2, yPos);
         yPos += 4;
-        const fechaInicio = incidencia.fechaInicio ? new Date(incidencia.fechaInicio) : new Date();
-        pdf.text(`FECHA INCIDENCIA: ${this.formatearFechaVisualizacion(fechaInicio)}`, margen + 2, yPos);
-        pdf.text(`HORA INCIDENCIA: ${this.formatearHoraVisualizacion(fechaInicio)}`, margen + 80, yPos);
-        yPos += this.alturasContenedores.clasificacion - 12;
 
-        // REPORTADO POR - Solo si hay datos
+        const fechaInicio = incidencia.fechaInicio ? new Date(incidencia.fechaInicio) : new Date();
+        const fechaInicioStr = this.formatearFechaVisualizacion(fechaInicio);
+        const horaInicioStr = this.formatearHoraVisualizacion(fechaInicio);
+
+        pdf.text(`FECHA INCIDENCIA: ${fechaInicioStr}`, margen + 2, yPos);
+        pdf.text(`HORA: ${horaInicioStr}`, margen + 100, yPos);
+        yPos += this.alturasContenedores.clasificacion - 16;
+
+        // REPORTADO POR
         const nombreReportadoPor = this.obtenerNombreUsuario(incidencia.reportadoPorId);
         const cargoReportadoPor = this.obtenerCargoUsuario(incidencia.reportadoPorId);
 
         if (nombreReportadoPor !== 'No especificado' || cargoReportadoPor) {
             if (!this.verificarEspacio(pdf, yPos, this.alturasContenedores.reportadoPor + 5)) {
-                this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+                this.dibujarPiePaginaFijo(pdf, this.paginaActualReal, this.totalPaginas);
                 pdf.addPage();
-                paginaNum++;
-                this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+                this.paginaActualReal++;
+                this.dibujarEncabezadoFijo(pdf, incidencia, this.paginaActualReal, this.totalPaginas);
                 yPos = this.alturaEncabezado + 5;
             }
 
@@ -891,10 +957,10 @@ export const generadorIPH = {
         const espacioNecesarioDesc = 15 + (lineasDesc.length * 4);
 
         if (!this.verificarEspacio(pdf, yPos, espacioNecesarioDesc)) {
-            this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+            this.dibujarPiePaginaFijo(pdf, this.paginaActualReal, this.totalPaginas);
             pdf.addPage();
-            paginaNum++;
-            this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+            this.paginaActualReal++;
+            this.dibujarEncabezadoFijo(pdf, incidencia, this.paginaActualReal, this.totalPaginas);
             yPos = this.alturaEncabezado + 5;
         }
 
@@ -923,31 +989,46 @@ export const generadorIPH = {
 
         yPos = yTextoDesc + 5;
 
-        // ANEXOS PRINCIPALES
-        if (incidencia.imagenes && incidencia.imagenes.length > 0) {
+        // Obtener imágenes principales (para incidencias viejas y nuevas)
+        let imagenesPrincipales = [];
+        if (incidencia.imagenes && Array.isArray(incidencia.imagenes)) {
+            imagenesPrincipales = incidencia.imagenes;
+        } else if (incidencia.evidencias && Array.isArray(incidencia.evidencias)) {
+            imagenesPrincipales = incidencia.evidencias;
+        } else if (incidencia.fotos && Array.isArray(incidencia.fotos)) {
+            imagenesPrincipales = incidencia.fotos;
+        } else if (incidencia.anexos && Array.isArray(incidencia.anexos)) {
+            imagenesPrincipales = incidencia.anexos;
+        }
+
+        // ANEXOS PRINCIPALES (primeras 3 imágenes)
+        if (imagenesPrincipales.length > 0) {
             if (!this.verificarEspacio(pdf, yPos, this.alturasContenedores.anexos + 5)) {
-                this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+                this.dibujarPiePaginaFijo(pdf, this.paginaActualReal, this.totalPaginas);
                 pdf.addPage();
-                paginaNum++;
-                this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+                this.paginaActualReal++;
+                this.dibujarEncabezadoFijo(pdf, incidencia, this.paginaActualReal, this.totalPaginas);
                 yPos = this.alturaEncabezado + 5;
             }
+
             pdf.setFillColor(coloresIPH.fondo);
             pdf.setDrawColor(coloresIPH.borde);
             pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.anexos, 'FD');
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(this.fonts.normal);
             pdf.setTextColor(coloresIPH.primario);
-            pdf.text('ANEXOS - EVIDENCIAS FOTOGRÁFICAS PRINCIPALES', margen + 2, yPos);
+            pdf.text('ANEXOS - EVIDENCIAS FOTOGRÁFICAS', margen + 2, yPos);
             yPos += 5;
 
             const imgWidth = 35;
             const imgHeight = 30;
             const espaciado = 5;
-
             const anchoComentario = anchoContenido - imgWidth - (espaciado * 2);
 
-            for (let i = 0; i < Math.min(incidencia.imagenes.length, 3); i++) {
+            // Mostrar solo las primeras 3 imágenes en la página principal
+            const imagenesMostrar = Math.min(imagenesPrincipales.length, 3);
+
+            for (let i = 0; i < imagenesMostrar; i++) {
                 const xPos = margen + 5;
                 const xComentario = xPos + imgWidth + espaciado;
 
@@ -959,22 +1040,32 @@ export const generadorIPH = {
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.roundedRect(xComentario, yPos, anchoComentario, imgHeight, 2, 2, 'FD');
 
-                await this.procesarImagenConProxy(pdf, incidencia.imagenes[i], xPos, yPos, imgWidth, imgHeight, xComentario, anchoComentario, i + 1, false, onProgress);
+                await this.procesarImagenConProxy(pdf, imagenesPrincipales[i], xPos, yPos, imgWidth, imgHeight, xComentario, anchoComentario, i + 1, false, onProgress);
 
                 yPos += imgHeight + espaciado;
             }
             yPos += 5;
         }
 
-        // EVIDENCIAS DE CONTINUACIÓN
-        if (incidencia.imagenes && incidencia.imagenes.length > 3) {
-            for (let i = 3; i < incidencia.imagenes.length; i++) {
-                if (!this.verificarEspacio(pdf, yPos, 45)) {
-                    this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+        // EVIDENCIAS DE CONTINUACIÓN (imágenes restantes)
+        if (imagenesPrincipales.length > 3) {
+            let imagenesRestantes = imagenesPrincipales.slice(3);
+            let indiceImagen = 4; // Para numerar desde la imagen 4 en adelante
+
+            for (let i = 0; i < imagenesRestantes.length; i++) {
+                // Verificar espacio para cada imagen
+                if (!this.verificarEspacio(pdf, yPos, 40)) {
+                    this.dibujarPiePaginaFijo(pdf, this.paginaActualReal, this.totalPaginas);
                     pdf.addPage();
-                    paginaNum++;
-                    this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+                    this.paginaActualReal++;
+                    this.dibujarEncabezadoFijo(pdf, incidencia, this.paginaActualReal, this.totalPaginas);
                     yPos = this.alturaEncabezado + 5;
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(this.fonts.normal);
+                    pdf.setTextColor(coloresIPH.primario);
+                    pdf.text('ANEXOS - EVIDENCIAS FOTOGRÁFICAS (CONTINUACIÓN)', margen, yPos);
+                    yPos += 8;
                 }
 
                 const imgWidth = 35;
@@ -993,65 +1084,65 @@ export const generadorIPH = {
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.roundedRect(xComentario, yPos, anchoComentario, imgHeight, 2, 2, 'FD');
 
-                await this.procesarImagenConProxy(pdf, incidencia.imagenes[i], xPos, yPos, imgWidth, imgHeight, xComentario, anchoComentario, i + 1, false, onProgress);
+                await this.procesarImagenConProxy(pdf, imagenesRestantes[i], xPos, yPos, imgWidth, imgHeight, xComentario, anchoComentario, indiceImagen, false, onProgress);
 
                 yPos += imgHeight + espaciado;
+                indiceImagen++;
             }
         }
 
         // =============================================
-        // HISTORIAL DE SEGUIMIENTO - CORREGIDO EL DESBORDAMIENTO
+        // SEGUIMIENTOS (SIN TÍTULO)
         // =============================================
-        const seguimientos = incidencia.getSeguimientosArray ? incidencia.getSeguimientosArray() : [];
+        let seguimientos = [];
+        if (incidencia.getSeguimientosArray && typeof incidencia.getSeguimientosArray === 'function') {
+            seguimientos = incidencia.getSeguimientosArray() || [];
+        } else if (incidencia.seguimientos && Array.isArray(incidencia.seguimientos)) {
+            seguimientos = incidencia.seguimientos;
+        } else if (incidencia.historial && Array.isArray(incidencia.historial)) {
+            seguimientos = incidencia.historial;
+        }
 
         if (seguimientos && seguimientos.length > 0) {
-            yPos += 10;
-
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(this.fonts.subtitulo);
-            pdf.setTextColor(coloresIPH.primario);
-            pdf.text('HISTORIAL DE SEGUIMIENTO', margen, yPos);
-            yPos += 8;
-
             for (let s = 0; s < seguimientos.length; s++) {
                 const seg = seguimientos[s];
 
-                // Calcular altura necesaria para este seguimiento
-                const lineasSeg = this.dividirTextoEnLineas(pdf, seg.descripcion || 'Sin descripción', anchoContenido - 10);
+                const lineasSeg = this.dividirTextoEnLineas(pdf, seg.descripcion || seg.comentario || 'Sin descripción', anchoContenido - 10);
                 const alturaTexto = lineasSeg.length * 4;
 
-                // Calcular altura de evidencias
+                let evidenciasSeg = [];
+                if (seg.evidencias && Array.isArray(seg.evidencias)) {
+                    evidenciasSeg = seg.evidencias;
+                } else if (seg.imagenes && Array.isArray(seg.imagenes)) {
+                    evidenciasSeg = seg.imagenes;
+                } else if (seg.fotos && Array.isArray(seg.fotos)) {
+                    evidenciasSeg = seg.fotos;
+                } else if (seg.anexos && Array.isArray(seg.anexos)) {
+                    evidenciasSeg = seg.anexos;
+                }
+
                 let alturaEvidencias = 0;
-                if (seg.evidencias && seg.evidencias.length > 0) {
-                    alturaEvidencias = 10; // Título
-                    for (let e = 0; e < seg.evidencias.length; e++) {
-                        alturaEvidencias += 35; // 30 de imagen + 5 de espacio
+                if (evidenciasSeg.length > 0) {
+                    alturaEvidencias = 10;
+                    for (let e = 0; e < evidenciasSeg.length; e++) {
+                        alturaEvidencias += 35;
                     }
                 }
 
-                const alturaNecesaria = 25 + alturaTexto + alturaEvidencias; // 25 para encabezado y márgenes
+                const alturaNecesaria = 25 + alturaTexto + alturaEvidencias;
 
-                // Verificar espacio y crear nueva página si es necesario
                 if (!this.verificarEspacio(pdf, yPos, alturaNecesaria + 10)) {
-                    this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+                    this.dibujarPiePaginaFijo(pdf, this.paginaActualReal, this.totalPaginas);
                     pdf.addPage();
-                    paginaNum++;
-                    this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+                    this.paginaActualReal++;
+                    this.dibujarEncabezadoFijo(pdf, incidencia, this.paginaActualReal, this.totalPaginas);
                     yPos = this.alturaEncabezado + 5;
-
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(this.fonts.subtitulo);
-                    pdf.setTextColor(coloresIPH.primario);
-                    pdf.text('HISTORIAL DE SEGUIMIENTO (CONTINUACIÓN)', margen, yPos);
-                    yPos += 8;
                 }
 
-                // Dibujar contenedor principal del seguimiento
                 pdf.setFillColor(coloresIPH.fondo);
                 pdf.setDrawColor(coloresIPH.borde);
                 pdf.rect(margen, yPos - 3, anchoContenido, alturaNecesaria, 'FD');
 
-                // ENCABEZADO
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(this.fonts.small);
                 pdf.setTextColor(coloresIPH.primario);
@@ -1068,7 +1159,6 @@ export const generadorIPH = {
                 const nombreUsuario = seg.usuarioNombre || seg.usuario || this.obtenerNombreUsuario(seg.usuarioId) || 'Usuario';
                 pdf.text(`por: ${nombreUsuario}`, margen + 2, yPos + 5);
 
-                // DESCRIPCIÓN
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(this.fonts.small);
                 pdf.setTextColor(coloresIPH.texto);
@@ -1083,8 +1173,7 @@ export const generadorIPH = {
                     }
                 }
 
-                // EVIDENCIAS DEL SEGUIMIENTO
-                if (seg.evidencias && seg.evidencias.length > 0) {
+                if (evidenciasSeg.length > 0) {
                     yTexto += 5;
 
                     pdf.setFont('helvetica', 'bold');
@@ -1098,7 +1187,7 @@ export const generadorIPH = {
                     const espaciado = 5;
                     const anchoComentario = anchoContenido - evidenciaWidth - (espaciado * 2);
 
-                    for (let e = 0; e < seg.evidencias.length; e++) {
+                    for (let e = 0; e < evidenciasSeg.length; e++) {
                         const xPos = margen + 5;
                         const xComentario = xPos + evidenciaWidth + espaciado;
 
@@ -1120,7 +1209,7 @@ export const generadorIPH = {
                         pdf.setFontSize(this.fonts.mini);
                         pdf.text((e + 1).toString(), xPos + 8, yTexto + 8.5, { align: 'center' });
 
-                        await this.procesarImagenConProxy(pdf, seg.evidencias[e], xPos, yTexto, evidenciaWidth, evidenciaHeight, xComentario, anchoComentario, e + 1, true, onProgress);
+                        await this.procesarImagenConProxy(pdf, evidenciasSeg[e], xPos, yTexto, evidenciaWidth, evidenciaHeight, xComentario, anchoComentario, e + 1, true, onProgress);
 
                         yTexto += evidenciaHeight + espaciado;
                     }
@@ -1137,10 +1226,10 @@ export const generadorIPH = {
         const espacioRestante = altoPagina - yPos - 25;
 
         if (espacioRestante < this.alturasContenedores.avisoPrivacidad + 5) {
-            this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+            this.dibujarPiePaginaFijo(pdf, this.paginaActualReal, this.totalPaginas);
             pdf.addPage();
-            paginaNum++;
-            this.dibujarEncabezadoFijo(pdf, incidencia, paginaNum, this.totalPaginas);
+            this.paginaActualReal++;
+            this.dibujarEncabezadoFijo(pdf, incidencia, this.paginaActualReal, this.totalPaginas);
             yPos = this.alturaEncabezado + 5;
         }
 
@@ -1158,14 +1247,14 @@ export const generadorIPH = {
         pdf.setFontSize(this.fonts.mini);
         pdf.setTextColor(coloresIPH.textoClaro);
 
-        const aviso = 'La privacidad de esta información se garantiza a la vez que el responsable del tratamiento sea el responsable de la protección de datos personales. La finalidad de la gestión de datos es la prestación de servicios públicos y la promoción de la igualdad de oportunidades.';
+        const aviso = 'La información contenida en este documento es responsabilidad exclusiva de quien utiliza el Sistema Centinela y de la persona que ingresó los datos.';
         const lineasAviso = this.dividirTextoEnLineas(pdf, aviso, anchoContenido - 10);
 
-        for (let i = 0; i < Math.min(lineasAviso.length, 4); i++) {
+        for (let i = 0; i < lineasAviso.length; i++) {
             pdf.text(lineasAviso[i], margen + 2, yPos + 8 + (i * 3));
         }
 
-        this.dibujarPiePaginaFijo(pdf, paginaNum, this.totalPaginas);
+        this.dibujarPiePaginaFijo(pdf, this.paginaActualReal, this.totalPaginas);
     },
 
     async procesarImagenConProxy(pdf, imagen, x, y, ancho, alto, xComentario, anchoComentario, numero, esEvidencia, onProgress) {
@@ -1236,17 +1325,10 @@ export const generadorIPH = {
                 const lineasComentario = this.dividirTextoEnLineas(pdf, comentario, anchoTextoComentario);
 
                 const alturaDisponible = alto - 10;
-                const maxLineas = Math.floor(alturaDisponible / 4);
+                const lineasPosibles = Math.floor(alturaDisponible / 4);
 
-                for (let i = 0; i < Math.min(lineasComentario.length, maxLineas); i++) {
+                for (let i = 0; i < Math.min(lineasComentario.length, lineasPosibles); i++) {
                     pdf.text(lineasComentario[i], xComentario + 2, y + 9 + (i * 4));
-                }
-
-                if (lineasComentario.length > maxLineas) {
-                    pdf.setFont('helvetica', 'italic');
-                    pdf.setFontSize(this.fonts.mini);
-                    pdf.setTextColor(coloresIPH.textoClaro);
-                    pdf.text('...', xComentario + 2, y + 9 + (maxLineas * 4));
                 }
             }
 
