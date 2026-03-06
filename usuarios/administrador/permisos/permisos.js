@@ -1,5 +1,5 @@
 // ========== permisos.js - GESTIÓN DE PERMISOS ==========
-// Basado en la estructura de regiones.js - VERSIÓN CORREGIDA CON FIREBASE
+// Basado en la estructura de categorias.js - VERSIÓN CON LOCALSTORAGE ÚNICAMENTE
 
 // ========== VARIABLES GLOBALES ==========
 let permisoManager = null;
@@ -25,22 +25,13 @@ const nombresModulos = {
     incidencias: 'Incidencias'
 };
 
-// Iconos para los módulos
-const iconosModulos = {
-    areas: 'fa-sitemap',
-    categorias: 'fa-tags',
-    sucursales: 'fa-store',
-    regiones: 'fa-map-marked-alt',
-    incidencias: 'fa-exclamation-triangle'
-};
-
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
     try {
         // Mostrar estado de carga
         showLoadingState();
 
-        // Intentar cargar usuario desde localStorage primero
+        // Cargar usuario desde localStorage SOLAMENTE
         const usuarioCargado = cargarUsuarioDesdeStorage();
 
         if (!usuarioCargado) {
@@ -75,10 +66,40 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 });
 
-// ========== CARGAR USUARIO DESDE STORAGE ==========
+// ========== CARGAR USUARIO DESDE LOCALSTORAGE SOLAMENTE ==========
 function cargarUsuarioDesdeStorage() {
     try {
-        // Intentar obtener de adminInfo (guardado por otras páginas)
+        // Intentar obtener de userData (formato estándar como en categorías)
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+        if (userData && (userData.organizacion || userData.organizacionCamelCase)) {
+            adminActual = {
+                id: userData.id || userData.uid || 'admin',
+                uid: userData.uid || userData.id || 'admin',
+                nombreCompleto: userData.nombreCompleto || 'Administrador',
+                organizacion: userData.organizacion || 'Sin organización',
+                organizacionCamelCase: userData.organizacionCamelCase || '',
+                rol: userData.rol || 'administrador',
+                correoElectronico: userData.correoElectronico || ''
+            };
+
+            // También guardar como adminInfo para compatibilidad con otros módulos
+            localStorage.setItem('adminInfo', JSON.stringify({
+                id: adminActual.id,
+                uid: adminActual.uid,
+                nombreCompleto: adminActual.nombreCompleto,
+                organizacion: adminActual.organizacion,
+                organizacionCamelCase: adminActual.organizacionCamelCase,
+                rol: adminActual.rol,
+                correoElectronico: adminActual.correoElectronico,
+                timestamp: new Date().toISOString()
+            }));
+
+            console.log('✅ Usuario cargado desde userData:', adminActual);
+            return true;
+        }
+
+        // Fallback a adminInfo si existe (para compatibilidad)
         const adminInfo = localStorage.getItem('adminInfo');
         if (adminInfo) {
             const adminData = JSON.parse(adminInfo);
@@ -95,35 +116,7 @@ function cargarUsuarioDesdeStorage() {
             return true;
         }
 
-        // Intentar obtener de window.userManager como fallback
-        if (window.userManager && window.userManager.currentUser) {
-            const user = window.userManager.currentUser;
-            adminActual = {
-                id: user.id || user.uid,
-                uid: user.uid || user.id,
-                nombreCompleto: user.nombreCompleto || 'Administrador',
-                organizacion: user.organizacion || 'Mi Organización',
-                organizacionCamelCase: user.organizacionCamelCase,
-                rol: user.rol || 'administrador',
-                correoElectronico: user.correoElectronico || ''
-            };
-
-            // Guardar en localStorage para futuras cargas
-            localStorage.setItem('adminInfo', JSON.stringify({
-                id: adminActual.id,
-                uid: adminActual.uid,
-                nombreCompleto: adminActual.nombreCompleto,
-                organizacion: adminActual.organizacion,
-                organizacionCamelCase: adminActual.organizacionCamelCase,
-                rol: adminActual.rol,
-                correoElectronico: adminActual.correoElectronico,
-                timestamp: new Date().toISOString()
-            }));
-
-            console.log('✅ Usuario cargado desde userManager:', adminActual);
-            return true;
-        }
-
+        console.warn('No se encontraron datos de usuario en localStorage');
         return false;
     } catch (error) {
         console.error('Error cargando usuario:', error);
@@ -384,7 +377,7 @@ function renderPermisosTable(permisos) {
     permisos.forEach(permiso => {
         const row = document.createElement('tr');
 
-        // Construir badges de permisos (SIN ICONOS)
+        // Construir badges de permisos
         const permisosHTML = generarBadgesPermisos(permiso.permisos);
 
         // Usar data-label para responsive
@@ -420,7 +413,7 @@ function renderPermisosTable(permisos) {
     });
 }
 
-// ========== GENERAR BADGES DE PERMISOS (SIN ICONOS) ==========
+// ========== GENERAR BADGES DE PERMISOS ==========
 function generarBadgesPermisos(permisos) {
     const modulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias'];
     let badges = '';
@@ -530,7 +523,7 @@ function showEmptyState() {
     const tbody = document.getElementById('permisosTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = /*html*/ `
+    tbody.innerHTML = `
         <tr>
             <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
@@ -558,7 +551,7 @@ function showNoAdminMessage() {
     const tbody = document.getElementById('permisosTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = /*html*/ `
+    tbody.innerHTML = `
         <tr>
             <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">

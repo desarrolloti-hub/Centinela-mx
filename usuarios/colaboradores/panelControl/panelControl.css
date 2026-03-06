@@ -9,21 +9,19 @@
     --color-dash-hover: #141414;
     --color-accent-primary: #c0c0c0;
 
-    /* ICONOS POR MÓDULO */
-    --color-areas: #2f8cff;
-    --color-categorias: #00cfff;
-    --color-sucursales: #ffcc00;
-    --color-regiones: #b16bff;
-    --color-incidencias: #ff4d00;
-    --color-usuarios: #00cfff;
-    --color-estadisticas: #2f8cff;
+    /* ICONOS */
+    --color-icon-blue: #2f8cff;
+    --color-icon-cyan: #00cfff;
+    --color-icon-yellow: #ffcc00;
+    --color-icon-purple: #b16bff;
+    --color-icon-danger: #ff4d00;
+    --color-icon-arrow: #9caba4;
 
     /* FONDOS ICONOS */
-    --color-bg-areas: #0d1f33;
-    --color-bg-categorias: #0b2430;
-    --color-bg-sucursales: #2b260c;
-    --color-bg-regiones: #24102f;
-    --color-bg-incidencias: #331100;
+    --color-bg-icon-blue: #0d1f33;
+    --color-bg-icon-cyan: #0b2430;
+    --color-bg-icon-yellow: #2b260c;
+    --color-bg-icon-purple: #24102f;
 
     /* TIPOGRAFÍA */
     --font-family-primary: 'Orbitron', sans-serif;
@@ -61,7 +59,7 @@ body {
 }
 
 /* =============================================
-    ANIMACIONES
+    ANIMACIONES DE ILUMINACIÓN
    ============================================= */
 @keyframes glow-cycle {
 
@@ -74,6 +72,32 @@ body {
     50% {
         box-shadow: 0 0 16px rgba(214, 214, 214, 0.75);
         border-color: var(--color-accent-primary);
+    }
+}
+
+@keyframes glow-cycle-danger {
+
+    0%,
+    100% {
+        box-shadow: 0 0 8px rgba(255, 77, 0, 0.3);
+        border-color: var(--color-dash-border);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(255, 77, 0, 0.8);
+        border-color: #ff4d00;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
@@ -105,21 +129,26 @@ body {
     }
 }
 
-@keyframes fadeInUp {
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
     }
 }
 
-/* =============================================
-    LAYOUT PRINCIPAL
-   ============================================= */
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
 .right-layout {
     position: relative;
     z-index: 2;
@@ -127,7 +156,6 @@ body {
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    animation: fadeInUp 0.5s ease;
 }
 
 @media (min-width: 768px) {
@@ -137,7 +165,7 @@ body {
 }
 
 /* =============================================
-   📊 SECCIÓN KPI SUPERIOR
+   📊 SECCIÓN KPI - COMPACTA
    ============================================= */
 .kpi-section {
     margin-bottom: var(--spacing-xl);
@@ -153,10 +181,6 @@ body {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-}
-
-.kpi-section h2 i {
-    color: var(--color-accent-primary);
 }
 
 .kpi-row {
@@ -178,6 +202,7 @@ body {
     }
 }
 
+/* TARJETAS KPI COMPACTAS */
 .kpi-card {
     background: linear-gradient(145deg, #151515, #0b0b0b);
     border: 1px solid var(--color-dash-border);
@@ -191,13 +216,16 @@ body {
     position: relative;
     overflow: hidden;
     animation: glow-cycle var(--glow-cycle-duration) infinite ease-in-out;
-    cursor: pointer;
+}
+
+.kpi-card.danger {
+    animation: glow-cycle-danger var(--glow-cycle-duration) infinite ease-in-out;
 }
 
 .kpi-card:hover {
     border-color: var(--color-accent-primary);
     transform: translateY(-2px);
-    animation: hover-glow 1.8s infinite ease-in-out;
+    animation-play-state: paused;
 }
 
 .kpi-card i {
@@ -206,7 +234,11 @@ body {
     margin-bottom: var(--spacing-xs);
 }
 
-.kpi-card .kpi-number {
+.kpi-card.danger i {
+    color: var(--color-icon-danger);
+}
+
+.kpi-number {
     font-family: var(--font-family-primary);
     font-size: 1.5rem;
     font-weight: 700;
@@ -230,335 +262,491 @@ body {
 }
 
 /* =============================================
-   SECCIÓN DE MÓDULOS
+   MÓDULOS PRINCIPALES - Tarjetas bajo KPI
    ============================================= */
-.modulos-section {
-    margin-top: var(--spacing-xl);
+.modulos-principales {
+    margin-top: 30px;
+    margin-bottom: 40px;
+    width: 100%;
 }
 
-.modulos-section h2 {
-    font-family: var(--font-family-primary);
-    font-size: 0.875rem;
-    color: var(--color-text-primary);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: var(--spacing-lg);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.modulos-section h2 i {
-    color: var(--color-accent-primary);
-}
-
-.modulos-grid {
+.cards-grid-modulos {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--spacing-md);
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    width: 100%;
 }
 
-@media (min-width: 640px) {
-    .modulos-grid {
+/* ESTILOS BASE - SIN FORZAR DISPLAY (lo controla JavaScript) */
+.modulos-principales .dashboard-card {
+    height: 130px !important;
+    min-height: 130px !important;
+    padding: 1.2rem 1rem !important;
+}
+
+.modulos-principales .dashboard-card .card-icon {
+    margin-bottom: 0.8rem !important;
+    font-size: 1.4rem !important;
+}
+
+.modulos-principales .dashboard-card .card-text h3 {
+    font-size: 0.9rem !important;
+}
+
+.modulos-principales .dashboard-card .card-text p {
+    font-size: 0.7rem !important;
+}
+
+/* Responsive para los módulos principales */
+@media (max-width: 768px) {
+    .cards-grid-modulos {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-@media (min-width: 1024px) {
-    .modulos-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--spacing-md);
+@media (max-width: 480px) {
+    .cards-grid-modulos {
+        grid-template-columns: 1fr;
+    }
+
+    .modulos-principales .dashboard-card {
+        height: 110px !important;
+        min-height: 110px !important;
+        padding: 1rem !important;
     }
 }
 
-.modulo-card {
-    background: linear-gradient(145deg, #151515, #0b0b0b);
-    border: 1px solid var(--color-dash-border);
-    border-radius: var(--border-radius);
-    padding: var(--spacing-lg);
-    transition: all 0.3s ease;
+/* =============================================
+   CENTER ROW - ESTRUCTURA PRINCIPAL
+   ============================================= */
+.center-row {
     display: flex;
     flex-direction: column;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    min-height: 140px;
+    gap: var(--spacing-lg);
+    width: 100%;
 }
 
-.modulo-card:hover {
-    border-color: var(--color-accent-primary);
-    transform: translateY(-3px);
-    animation: system-glow 2s infinite ease-in-out;
+@media (min-width: 1024px) {
+    .center-row {
+        flex-direction: row;
+        gap: var(--spacing-xl);
+        align-items: flex-start;
+    }
 }
 
-.modulo-card.areas:hover {
-    border-color: var(--color-areas);
-    box-shadow: 0 0 20px rgba(47, 140, 255, 0.3);
-}
-
-.modulo-card.categorias:hover {
-    border-color: var(--color-categorias);
-    box-shadow: 0 0 20px rgba(0, 207, 255, 0.3);
-}
-
-.modulo-card.sucursales:hover {
-    border-color: var(--color-sucursales);
-    box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
-}
-
-.modulo-card.regiones:hover {
-    border-color: var(--color-regiones);
-    box-shadow: 0 0 20px rgba(177, 107, 255, 0.3);
-}
-
-.modulo-card.incidencias:hover {
-    border-color: var(--color-incidencias);
-    box-shadow: 0 0 20px rgba(255, 77, 0, 0.3);
-}
-
-.modulo-card.usuarios:hover {
-    border-color: var(--color-usuarios);
-    box-shadow: 0 0 20px rgba(0, 207, 255, 0.3);
-}
-
-.modulo-card.estadisticas:hover {
-    border-color: var(--color-estadisticas);
-    box-shadow: 0 0 20px rgba(47, 140, 255, 0.3);
-}
-
-.modulo-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 10px;
+/* ⬅ PANEL IZQUIERDO */
+.side.left {
+    width: 100%;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    margin-bottom: var(--spacing-md);
-    transition: all 0.3s ease;
+    flex-direction: column;
+    gap: var(--spacing-lg);
 }
 
-.modulo-card.areas .modulo-icon {
-    background: var(--color-bg-areas);
-    color: var(--color-areas);
+@media (min-width: 1024px) {
+    .side.left {
+        width: 45%;
+        min-width: 380px;
+        max-width: 420px;
+    }
 }
 
-.modulo-card.categorias .modulo-icon {
-    background: var(--color-bg-categorias);
-    color: var(--color-categorias);
+/* ➡️ PANEL DERECHO */
+.side.right {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
 }
 
-.modulo-card.sucursales .modulo-icon {
-    background: var(--color-bg-sucursales);
-    color: var(--color-sucursales);
-}
-
-.modulo-card.regiones .modulo-icon {
-    background: var(--color-bg-regiones);
-    color: var(--color-regiones);
-}
-
-.modulo-card.incidencias .modulo-icon {
-    background: var(--color-bg-incidencias);
-    color: var(--color-incidencias);
-}
-
-.modulo-card.usuarios .modulo-icon {
-    background: #0b2430;
-    color: var(--color-usuarios);
-}
-
-.modulo-card.estadisticas .modulo-icon {
-    background: #0d1f33;
-    color: var(--color-estadisticas);
-}
-
-.modulo-card:hover .modulo-icon {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px currentColor;
-}
-
-.modulo-contenido {
-    flex: 1;
-}
-
-.modulo-nombre {
-    font-family: var(--font-family-primary);
-    font-size: 1rem;
-    color: var(--color-text-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.25rem;
-}
-
-.modulo-descripcion {
-    font-size: 0.75rem;
-    color: var(--color-dash-text);
-    line-height: 1.4;
-}
-
-.modulo-arrow {
-    position: absolute;
-    right: var(--spacing-lg);
-    bottom: var(--spacing-lg);
-    font-size: 1rem;
-    color: var(--color-dash-text);
-    transition: all 0.3s ease;
-}
-
-.modulo-card:hover .modulo-arrow {
-    transform: translateX(5px);
-    color: var(--color-text-primary);
+@media (min-width: 1024px) {
+    .side.right {
+        width: 55%;
+        flex: 1;
+    }
 }
 
 /* =============================================
-   MENSAJE DE SIN PERMISOS
+   SECCIONES Y CONTENEDORES
    ============================================= */
-.sin-permisos {
-    text-align: center;
-    padding: 60px 20px;
-    background: linear-gradient(145deg, #151515, #0b0b0b);
+.section-header {
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-dash-border);
+}
+
+.section-title {
+    font-family: var(--font-family-primary);
+    font-size: 0.813rem;
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.125rem;
+}
+
+.section-subtitle {
+    font-size: 0.688rem;
+    color: #7a7a7a;
+}
+
+.section-container {
+    background: rgba(15, 15, 15, 0.3);
     border: 1px solid var(--color-dash-border);
     border-radius: var(--border-radius);
-    margin-top: var(--spacing-xl);
-    grid-column: 1 / -1;
+    padding: var(--spacing-md);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
-.sin-permisos i {
-    font-size: 48px;
-    color: var(--color-dash-text);
-    margin-bottom: 20px;
-    opacity: 0.5;
+.section-container:hover {
+    border-color: var(--color-accent-primary);
+    animation: system-glow 2.5s infinite ease-in-out;
 }
 
-.sin-permisos h3 {
+/* =============================================
+   CARDS GRID - Para todas las tarjetas
+   ============================================= */
+.cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+@media (min-width: 768px) {
+    .side.right .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .side.left .section-container:last-child .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* =============================================
+   DASHBOARD CARDS - Estilo base para todas
+   ============================================= */
+.dashboard-card {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    height: 90px !important;
+    min-height: 90px !important;
+    padding: 1rem !important;
+    position: relative;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-dash-border);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.dashboard-card .card-icon {
+    margin-bottom: 0.6rem !important;
+    transition: all 0.3s ease;
+}
+
+.dashboard-card .card-text {
+    width: 100%;
+    overflow: hidden;
+}
+
+.dashboard-card .card-text h3 {
     font-family: var(--font-family-primary);
-    font-size: 1.2rem;
+    font-size: 0.75rem;
     color: var(--color-text-primary);
-    margin-bottom: 10px;
+    margin-bottom: 0.125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
 }
 
-.sin-permisos p {
+.dashboard-card .card-text p {
+    font-size: 0.688rem;
     color: var(--color-dash-text);
-    font-size: 0.9rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-card .card-arrow {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 1rem;
+    color: var(--color-icon-arrow);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+/* HOVER para todas las tarjetas */
+.dashboard-card:hover {
+    border-color: var(--color-accent-primary);
+    background: var(--color-dash-hover);
+    animation: hover-glow 1.8s infinite ease-in-out;
+    transform: translateY(-2px);
+}
+
+.dashboard-card:hover .card-icon {
+    box-shadow: 0 0 12px currentColor;
+    transform: scale(1.05);
+}
+
+.dashboard-card:hover .card-arrow {
+    transform: translateX(3px);
+    color: var(--color-text-primary);
+    text-shadow: 0 0 6px var(--color-text-primary);
+}
+
+/* Transición suave para tarjetas */
+.dashboard-card {
+    transition: all 0.3s ease;
+}
+
+.dashboard-card[style*="display: none"] {
+    display: none !important;
+}
+
+/* =============================================
+   COLORES DE ICONOS
+   ============================================= */
+.card-icon.blue {
+    color: var(--color-icon-blue);
+}
+
+.card-icon.cyan {
+    color: var(--color-icon-cyan);
+}
+
+.card-icon.yellow {
+    color: var(--color-icon-yellow);
+}
+
+.card-icon.purple {
+    color: var(--color-icon-purple);
+}
+
+.card-icon.danger {
+    color: var(--color-icon-danger);
+}
+
+/* =============================================
+   RESPONSIVE OPTIMIZADO
+   ============================================= */
+
+/* TABLET */
+@media (min-width: 768px) {
+    .side.left .section-container:first-child .dashboard-card {
+        height: 70px;
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .side.left .section-container:first-child .card-icon {
+        width: 42px;
+        height: 42px;
+        font-size: 1.125rem;
+    }
+
+    .side.left .section-container:last-child .dashboard-card {
+        height: 75px;
+    }
+
+    .side.left .section-container:last-child .card-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 0.938rem;
+    }
+
+    .side.right .dashboard-card {
+        height: 75px;
+    }
+
+    .section-title {
+        font-size: 0.875rem;
+    }
+
+    .card-text h3 {
+        font-size: 0.813rem;
+    }
+
+    .card-text p {
+        font-size: 0.75rem;
+    }
+}
+
+/* DESKTOP */
+@media (min-width: 1024px) {
+    .side.left .section-container:first-child .dashboard-card {
+        height: 72px;
+    }
+
+    .side.left .section-container:last-child .dashboard-card {
+        height: 78px;
+    }
+
+    .side.left .section-container:last-child .card-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .side.right .dashboard-card {
+        height: 78px;
+    }
+
+    .kpi-card {
+        min-height: 110px;
+        padding: var(--spacing-lg);
+    }
+
+    .kpi-number {
+        font-size: 1.75rem;
+    }
+}
+
+/* DESKTOP GRANDE */
+@media (min-width: 1280px) {
+    .dashboard-card {
+        height: 80px;
+        min-height: 80px;
+    }
+
+    .kpi-card {
+        min-height: 120px;
+    }
+}
+
+/* MÓVIL PEQUEÑO */
+@media (max-width: 480px) {
+    .right-layout {
+        padding: var(--spacing-md);
+    }
+
+    .dashboard-card {
+        height: 60px;
+        min-height: 60px;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        gap: var(--spacing-sm);
+    }
+
+    .card-icon {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        font-size: 0.875rem;
+    }
+
+    .card-text h3 {
+        font-size: 0.688rem;
+    }
+
+    .card-text p {
+        font-size: 0.625rem;
+    }
+
+    .card-arrow {
+        font-size: 0.875rem;
+    }
+
+    .kpi-card {
+        min-height: 90px;
+        padding: var(--spacing-sm);
+    }
+
+    .kpi-number {
+        font-size: 1.25rem;
+    }
+}
+
+/* MÓVIL EXTREMO */
+@media (max-width: 360px) {
+    .cards-grid-modulos {
+        grid-template-columns: 1fr;
+    }
+
+    .modulos-principales .dashboard-card {
+        height: 100px !important;
+        min-height: 100px !important;
+    }
+
+    .modulos-principales .dashboard-card .card-icon {
+        font-size: 1.2rem !important;
+    }
 }
 
 /* =============================================
    LOADING OVERLAY
    ============================================= */
-.loading-overlay {
+#loading-overlay {
+    animation: fadeIn 0.3s ease;
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     z-index: 9999;
     backdrop-filter: blur(5px);
 }
 
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--color-dash-border);
-    border-top-color: var(--color-accent-primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 12px;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.loading-text {
-    color: var(--color-text-primary);
-    font-family: var(--font-family-primary);
-    font-size: 14px;
-    text-shadow: 0 0 5px var(--color-accent-primary);
+#loading-overlay.fade-out {
+    animation: fadeOut 0.3s ease forwards;
 }
 
 /* =============================================
-   RESPONSIVE
+   ACCESIBILIDAD Y PRINT
    ============================================= */
-@media (max-width: 1023px) {
-    .kpi-card {
-        min-height: 90px;
-    }
+@media (prefers-reduced-motion: reduce) {
 
-    .modulo-card {
-        min-height: 120px;
-    }
-}
-
-@media (max-width: 768px) {
-    .kpi-card {
-        min-height: 80px;
-        padding: var(--spacing-sm);
-    }
-
-    .kpi-number {
-        font-size: 1.3rem;
-    }
-
-    .modulo-card {
-        min-height: 110px;
-        padding: var(--spacing-md);
-    }
-
-    .modulo-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 1.2rem;
-    }
-
-    .modulo-nombre {
-        font-size: 0.9rem;
+    .kpi-card,
+    .dashboard-card,
+    .section-container {
+        animation: none !important;
+        transition: none;
     }
 }
 
-@media (max-width: 480px) {
-
-    .kpi-section h2,
-    .modulos-section h2 {
-        font-size: 0.8rem;
+@media print {
+    .right-layout {
+        padding: 0.5rem;
     }
 
-    .kpi-card {
-        min-height: 70px;
+    .kpi-card,
+    .dashboard-card {
+        break-inside: avoid;
+        border: 1px solid #ccc;
+        box-shadow: none !important;
+        animation: none !important;
     }
 
-    .kpi-number {
-        font-size: 1.2rem;
-    }
-
-    .kpi-card h3 {
-        font-size: 0.7rem;
-    }
-
-    .modulo-card {
-        min-height: 100px;
-    }
-
-    .modulo-icon {
-        width: 35px;
-        height: 35px;
-        font-size: 1rem;
-    }
-
-    .modulo-nombre {
-        font-size: 0.8rem;
+    .card-arrow {
+        display: none;
     }
 }
 
-@media (max-width: 360px) {
-    .modulos-grid {
-        grid-template-columns: 1fr;
-    }
+/* =============================================
+   UTILIDADES
+   ============================================= */
+.no-gap {
+    gap: 0 !important;
+}
+
+.align-center {
+    align-items: center !important;
+}
+
+.justify-center {
+    justify-content: center !important;
 }
