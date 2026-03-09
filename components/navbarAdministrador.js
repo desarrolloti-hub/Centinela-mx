@@ -988,7 +988,7 @@ class NavbarComplete {
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
                     
-                    <!-- Contenedor de opciones expandido con los 5 botones (Áreas, Categorías, Sucursales, Regiones, Incidencias) -->
+                    <!-- Contenedor de opciones expandido con los botones (Áreas, Categorías, Sucursales, Regiones, Incidencias, Estadísticas, Permisos) -->
                     <div class="administracion-dropdown-options" id="administracionDropdownOptions">
                         <!-- Botón para ÁREAS -->
                         <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option" id="areasBtn">
@@ -1014,15 +1014,27 @@ class NavbarComplete {
                             <span>Regiones</span>
                         </a>
 
-                        <!-- Botón para INCIDENCIAS (NUEVO) -->
+                        <!-- Botón para INCIDENCIAS -->
                         <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option" id="incidenciasBtn">
                             <i class="fa-solid fa-exclamation-triangle"></i>
                             <span>Incidencias</span>
                         </a>
 
-                        <!-- Botón para INCIDENCIAS (NUEVO) -->
-                        <a href="/usuarios/administrador/pruebasNotificaciones/pruebasNotificaciones.html" class="administracion-dropdown-option" id="incidenciasBtn">
-                            <i class="fa-solid fa-exclamation-triangle"></i>
+                        <!-- Botón para ESTADÍSTICAS -->
+                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option" id="estadisticasBtn">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Estadísticas</span>
+                        </a>
+
+                        <!-- Botón para PERMISOS (NUEVO) -->
+                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option" id="permisosBtn">
+                            <i class="fa-solid fa-lock"></i>
+                            <span>Permisos</span>
+                        </a>
+
+                        <!-- Botón para PRUEBAS NOTIFICACIONES -->
+                        <a href="/usuarios/administrador/pruebasNotificaciones/pruebasNotificaciones.html" class="administracion-dropdown-option" id="pruebasBtn">
+                            <i class="fa-solid fa-bell"></i>
                             <span>Pruebas Notificaciones</span>
                         </a>
                     </div>
@@ -1045,7 +1057,7 @@ class NavbarComplete {
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Gestionar Usuarios</span>
                         </a>
-                        <!-- Botón de Personalización de colores movido AQUÍ, antes de cerrar sesión -->
+                        <!-- Botón de Personalización de colores -->
                         <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option" id="themeManagerBtn">
                             <i class="fa-solid fa-palette"></i>
                             <span>Personalización de colores</span>
@@ -1446,7 +1458,7 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de Administración (con el botón de Incidencias)
+    // Configura el dropdown de Administración (con todos los botones)
     setupAdministracionDropdown() {
         const dropdownBtn = document.getElementById('administracionDropdownBtn');
         const dropdownOptions = document.getElementById('administracionDropdownOptions');

@@ -24,7 +24,7 @@ let filtrosActivos = {
 };
 
 // =============================================
-// INICIALIZACIÓN
+// INICIALIZACIÓN - VERSIÓN CORREGIDA
 //==============================================
 async function inicializarIncidenciaManager() {
     try {
@@ -34,18 +34,28 @@ async function inicializarIncidenciaManager() {
         const { IncidenciaManager } = await import('/clases/incidencia.js');
         incidenciaManager = new IncidenciaManager();
 
+        // CARGAR PRIMERO todos los datos necesarios
         await cargarSucursales();
         await cargarCategorias();
-        await cargarSubcategorias();
+        await cargarSubcategorias(); // <-- IMPORTANTE: Esto debe ejecutarse
         await cargarUsuarios();
+
+        // LUEGO cargar incidencias
         await cargarIncidencias();
 
-        // Configurar generador IPH con datos de caché
+        // VERIFICAR que las subcategorías se cargaron
+        console.log('📋 Verificando cachés:');
+        console.log('   - Sucursales:', sucursalesCache.length);
+        console.log('   - Categorías:', categoriasCache.length);
+        console.log('   - Subcategorías:', subcategoriasCache.length);
+        console.log('   - Usuarios:', usuariosCache.length);
+
+        // Configurar generador IPH con TODOS los datos de caché
         generadorIPH.configurar({
             organizacionActual,
             sucursalesCache,
             categoriasCache,
-            subcategoriasCache,
+            subcategoriasCache, // <-- ASEGURAR que esto se pasa
             usuariosCache,
             authToken
         });
@@ -146,7 +156,24 @@ async function cargarSubcategorias() {
     try {
         const { SubcategoriaManager } = await import('/clases/subcategoria.js');
         const subcategoriaManager = new SubcategoriaManager();
-        subcategoriasCache = await subcategoriaManager.obtenerTodasSubcategorias();
+
+        // IMPORTANTE: Obtener subcategorías de la organización actual
+        if (organizacionActual?.camelCase) {
+            subcategoriasCache = await subcategoriaManager.obtenerSubcategoriasPorOrganizacion(organizacionActual.camelCase);
+            console.log(`✅ ${subcategoriasCache.length} subcategorías cargadas para ${organizacionActual.camelCase}`);
+        } else {
+            // Fallback: obtener todas
+            subcategoriasCache = await subcategoriaManager.obtenerTodasSubcategorias();
+            console.log(`✅ ${subcategoriasCache.length} subcategorías cargadas (todas)`);
+        }
+
+        // Mostrar primeras 3 como ejemplo
+        if (subcategoriasCache.length > 0) {
+            console.log('📋 Ejemplos de subcategorías:');
+            subcategoriasCache.slice(0, 3).forEach(sub => {
+                console.log(`   - ID: ${sub.id}, Nombre: ${sub.nombre}`);
+            });
+        }
     } catch (error) {
         console.error('Error cargando subcategorías:', error);
         subcategoriasCache = [];
