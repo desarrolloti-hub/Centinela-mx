@@ -1,5 +1,5 @@
 // ========== panelControl.js - PANEL DE CONTROL CON PERMISOS ==========
-// VERSIÓN FINAL - Relación usuario + área + cargo
+// VERSIÓN FINAL - Corregida para usar areaAsignadaId y cargoId
 
 // ========== VARIABLES GLOBALES ==========
 let permisoManager = null;
@@ -185,10 +185,17 @@ document.addEventListener('DOMContentLoaded', async function () {
 // ========== CARGAR USUARIO DESDE LOCALSTORAGE ==========
 function cargarUsuarioDesdeStorage() {
     try {
+        console.log('🔍 Verificando localStorage...');
+
+        // Ver qué datos hay realmente en localStorage
+        console.log('📦 userData raw:', localStorage.getItem('userData'));
+        console.log('📦 adminInfo raw:', localStorage.getItem('adminInfo'));
+
         // Intentar obtener de userData (para colaboradores)
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
 
         if (userData && Object.keys(userData).length > 0) {
+            // ✅ CORREGIDO: Usar los campos exactos de la clase User
             usuarioActual = {
                 id: userData.id || userData.uid || 'usuario',
                 uid: userData.uid || userData.id || 'usuario',
@@ -196,17 +203,28 @@ function cargarUsuarioDesdeStorage() {
                 correo: userData.correoElectronico || userData.correo || '',
                 organizacion: userData.organizacion || 'Mi Organización',
                 organizacionCamelCase: userData.organizacionCamelCase || '',
-                areaId: userData.areaAsignadaId || userData.area || userData.areaId || '',
-                cargoId: userData.cargoId || userData.cargo || '',
+                // ✅ IMPORTANTE: Usar areaAsignadaId (NO areaId)
+                areaId: userData.areaAsignadaId || '',
+                // ✅ IMPORTANTE: Usar cargoId directamente
+                cargoId: userData.cargoId || '',
                 rol: userData.rol || 'colaborador'
             };
 
             console.log('✅ Usuario cargado desde userData:', {
                 nombre: usuarioActual.nombreCompleto,
-                area: usuarioActual.areaId,
-                cargo: usuarioActual.cargoId,
+                areaAsignadaId: usuarioActual.areaId,
+                cargoId: usuarioActual.cargoId,
                 rol: usuarioActual.rol
             });
+
+            // Advertencias si faltan datos
+            if (!usuarioActual.areaId) {
+                console.warn('⚠️ El usuario NO tiene área asignada (areaAsignadaId vacío)');
+            }
+            if (!usuarioActual.cargoId) {
+                console.warn('⚠️ El usuario NO tiene cargo asignado (cargoId vacío)');
+            }
+
             return true;
         }
 
@@ -221,14 +239,15 @@ function cargarUsuarioDesdeStorage() {
                 correo: adminData.correoElectronico || '',
                 organizacion: adminData.organizacion || 'Mi Organización',
                 organizacionCamelCase: adminData.organizacionCamelCase || '',
-                areaId: adminData.areaAsignadaId || adminData.areaId || '',
+                // ✅ Para admin también usar areaAsignadaId
+                areaId: adminData.areaAsignadaId || '',
                 cargoId: adminData.cargoId || '',
                 rol: adminData.rol || 'administrador'
             };
             console.log('✅ Usuario cargado desde adminInfo:', {
                 nombre: usuarioActual.nombreCompleto,
-                area: usuarioActual.areaId,
-                cargo: usuarioActual.cargoId,
+                areaAsignadaId: usuarioActual.areaId,
+                cargoId: usuarioActual.cargoId,
                 rol: usuarioActual.rol
             });
             return true;
@@ -238,7 +257,7 @@ function cargarUsuarioDesdeStorage() {
         return false;
 
     } catch (error) {
-        console.error('Error cargando usuario:', error);
+        console.error('❌ Error cargando usuario:', error);
         return false;
     }
 }
@@ -270,7 +289,7 @@ async function obtenerPermisosUsuario() {
                 categorias: false,
                 sucursales: false,
                 regiones: false,
-                incidencias: true, // Por defecto todos pueden ver incidencias
+                incidencias: true,
                 usuarios: false,
                 permisos: false,
                 admin: false
@@ -484,8 +503,8 @@ function mostrarResumenPermisos() {
     console.log('='.repeat(50));
     console.log(`👤 Usuario: ${usuarioActual.nombreCompleto}`);
     console.log(`🏢 Organización: ${usuarioActual.organizacion}`);
-    console.log(`📌 Área ID: ${usuarioActual.areaId || 'No asignada'}`);
-    console.log(`👔 Cargo ID: ${usuarioActual.cargoId || 'No asignado'}`);
+    console.log(`📌 areaAsignadaId: ${usuarioActual.areaId || 'No asignada'}`);
+    console.log(`👔 cargoId: ${usuarioActual.cargoId || 'No asignado'}`);
     console.log(`👑 Rol: ${usuarioActual.rol}`);
     console.log('-'.repeat(50));
     console.log('🔑 Permisos:');

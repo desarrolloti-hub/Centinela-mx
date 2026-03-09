@@ -48,12 +48,15 @@ class User {
         // ===== ✅ CORREGIDO: Separación clara de ROL y CARGO =====
         // `rol` define el nivel de acceso en el sistema ('master', 'administrador', 'colaborador')
         this.rol = data.rol || 'colaborador';
-        
+
         // `cargo` es la información del puesto (hereda de AreaManager). Puede ser un objeto o null.
-        this.cargo = data.cargo || null; 
+        this.cargo = data.cargo || null;
 
         // ✅ SOLO EL ID DEL ÁREA SE MANTIENE
         this.areaAsignadaId = data.areaAsignadaId || null;
+
+        // ✅ ✅ ✅ IMPORTANTE: Agregar cargoId explícitamente
+        this.cargoId = data.cargoId || null;
 
         // ===== 🔥 NUEVO: Array de dispositivos para notificaciones push =====
         this.dispositivos = data.dispositivos || []; // Array de objetos { token, deviceId, userAgent, platform, lastUsed, enabled }
@@ -364,9 +367,11 @@ class UserManager {
                     ...data,
                     idAuth: userId,
                     // ✅ CORREGIDO: Asignar el rol correctamente. Para admin, el rol es 'administrador'
-                    rol: data.rol || 'administrador', 
+                    rol: data.rol || 'administrador',
                     // ✅ CORREGIDO: Para admin, el cargo (puesto) se asigna desde los datos
-                    cargo: data.cargo || null, 
+                    cargo: data.cargo || null,
+                    // ✅ ✅ ✅ IMPORTANTE: Pasar cargoId explícitamente
+                    cargoId: data.cargoId || (data.cargo && data.cargo.id) || null,
                     // Asegurar que las fotos se pasen explícitamente
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
@@ -415,6 +420,8 @@ class UserManager {
                         rol: data.rol || 'colaborador',
                         // ✅ CORREGIDO: El cargo (puesto) se asigna desde los datos
                         cargo: data.cargo || null,
+                        // ✅ ✅ ✅ IMPORTANTE: Pasar cargoId explícitamente
+                        cargoId: data.cargoId || (data.cargo && data.cargo.id) || null,
                         fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                         fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                         email: data.correoElectronico || data.email,
@@ -517,7 +524,9 @@ class UserManager {
                 // ✅ CORREGIDO: El rol es 'administrador'
                 rol: 'administrador',
                 // ✅ CORREGIDO: El cargo (puesto) para un admin es null (o el que venga en adminData)
-                cargo: adminData.cargo || null, 
+                cargo: adminData.cargo || null,
+                // ✅ ✅ ✅ IMPORTANTE: Guardar cargoId también
+                cargoId: adminData.cargoId || (adminData.cargo && adminData.cargo.id) || null,
                 plan: adminData.plan || 'gratis',
                 verificado: false, // Hasta que verifique el email
                 emailVerified: false,
@@ -649,6 +658,8 @@ class UserManager {
                 rol: 'colaborador',
                 // ✅ CORREGIDO: El cargo (puesto) se asigna desde los datos del formulario
                 cargo: colaboradorData.cargo || null,
+                // ✅ ✅ ✅ IMPORTANTE: Guardar cargoId también
+                cargoId: colaboradorData.cargoId || (colaboradorData.cargo && colaboradorData.cargo.id) || null,
                 organizacion: adminData.organizacion,
                 organizacionCamelCase: adminData.organizacionCamelCase,
                 fotoOrganizacion: adminData.fotoOrganizacion || adminData.logoOrganizacion || null,
@@ -766,7 +777,7 @@ class UserManager {
             // Esto es necesario porque arrayUnion agregaría uno nuevo si el objeto no es exactamente igual.
             // La mejor práctica es leer el documento, modificar el array y actualizar.
             // Pero para simplificar y evitar lecturas extra, podemos usar una combinación de arrayRemove y arrayUnion.
-            
+
             // Obtener el documento actual para leer el array 'dispositivos'
             const userSnap = await getDoc(userDocRef);
             if (!userSnap.exists()) {
@@ -777,7 +788,7 @@ class UserManager {
             let dispositivosActualizados = userData.dispositivos || [];
 
             // Filtrar para eliminar cualquier dispositivo con el mismo deviceId o token (si es que existe)
-            dispositivosActualizados = dispositivosActualizados.filter(d => 
+            dispositivosActualizados = dispositivosActualizados.filter(d =>
                 d.deviceId !== dispositivo.deviceId && d.token !== dispositivo.token
             );
 
@@ -836,7 +847,7 @@ class UserManager {
             let dispositivos = userData.dispositivos || [];
 
             // Mapear para cambiar 'enabled' a false para el dispositivo específico
-            const dispositivosActualizados = dispositivos.map(d => 
+            const dispositivosActualizados = dispositivos.map(d =>
                 d.deviceId === deviceId ? { ...d, enabled: false, lastUsed: new Date().toISOString() } : d
             );
 
@@ -891,7 +902,7 @@ class UserManager {
             let dispositivos = userData.dispositivos || [];
 
             // Mapear para cambiar 'enabled' a true para el dispositivo específico
-            const dispositivosActualizados = dispositivos.map(d => 
+            const dispositivosActualizados = dispositivos.map(d =>
                 d.deviceId === deviceId ? { ...d, enabled: true, lastUsed: new Date().toISOString() } : d
             );
 
@@ -1049,52 +1060,52 @@ class UserManager {
     async enviarCorreoRecuperacion(email) {
         try {
             console.log('📧 Enviando correo de recuperación a:', email);
-            
+
             const actionCodeSettings = {
                 url: window.location.origin + '/verifyEmail.html',
                 handleCodeInApp: true
             };
-            
+
             await sendPasswordResetEmail(auth, email, actionCodeSettings);
-            
+
             console.log('✅ Correo de recuperación enviado exitosamente');
-            
+
             return {
                 success: true,
                 message: 'Correo enviado correctamente. Revisa tu bandeja de entrada y SPAM.'
             };
-            
+
         } catch (error) {
             console.error('❌ Error enviando correo de recuperación:', error);
-            
+
             // Manejar errores específicos
             if (error.code === 'auth/user-not-found') {
-                return { 
-                    success: false, 
+                return {
+                    success: false,
                     message: 'No existe una cuenta con este correo electrónico.',
                     code: 'user-not-found'
                 };
             } else if (error.code === 'auth/invalid-email') {
-                return { 
-                    success: false, 
+                return {
+                    success: false,
                     message: 'El formato del correo no es válido.',
                     code: 'invalid-email'
                 };
             } else if (error.code === 'auth/too-many-requests') {
-                return { 
-                    success: false, 
+                return {
+                    success: false,
                     message: 'Demasiados intentos. Intenta más tarde.',
                     code: 'too-many-requests'
                 };
             } else if (error.code === 'auth/network-request-failed') {
-                return { 
-                    success: false, 
+                return {
+                    success: false,
                     message: 'Error de conexión. Verifica tu internet.',
                     code: 'network-error'
                 };
             } else {
-                return { 
-                    success: false, 
+                return {
+                    success: false,
                     message: 'Error al enviar el correo: ' + (error.message || 'Intenta nuevamente.'),
                     code: 'unknown'
                 };
@@ -1674,6 +1685,8 @@ class UserManager {
                     // ✅ CORREGIDO: Usar el rol de la BD o 'administrador' por defecto
                     rol: data.rol || 'administrador',
                     cargo: data.cargo || null,
+                    // ✅ ✅ ✅ IMPORTANTE: Pasar cargoId explícitamente
+                    cargoId: data.cargoId || (data.cargo && data.cargo.id) || null,
                     fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                     fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                     email: data.correoElectronico || data.email,
@@ -1714,6 +1727,8 @@ class UserManager {
                             // ✅ CORREGIDO: Usar el rol de la BD o 'colaborador' por defecto
                             rol: data.rol || 'colaborador',
                             cargo: data.cargo || null,
+                            // ✅ ✅ ✅ IMPORTANTE: Pasar cargoId explícitamente
+                            cargoId: data.cargoId || (data.cargo && data.cargo.id) || null,
                             fotoUsuario: data.fotoUsuario || data.fotoURL || data.foto || null,
                             fotoOrganizacion: data.fotoOrganizacion || data.logoOrganizacion || data.logo || null,
                             email: data.correoElectronico || data.email,

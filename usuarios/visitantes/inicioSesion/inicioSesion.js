@@ -51,9 +51,9 @@ function configurarSweetAlertEstilos() {
 
 // 🔥 NUEVA FUNCIÓN: Detectar si estamos en producción (HTTPS) o local
 function isProduction() {
-    return window.location.protocol === 'https:' || 
-           window.location.hostname !== 'localhost' && 
-           window.location.hostname !== '127.0.0.1';
+    return window.location.protocol === 'https:' ||
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1';
 }
 
 // INICIALIZACIÓN PRINCIPAL - Se ejecuta cuando el DOM está completamente cargado
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ===============================================================
-    // 🔥 FUNCIÓN MEJORADA: Guarda usuario en localStorage con imágenes
+    // 🔥 FUNCIÓN CORREGIDA - Guarda usuario en localStorage con área y cargo
     // ===============================================================
     function saveUserToLocalStorage(user) {
         try {
@@ -164,20 +164,32 @@ document.addEventListener('DOMContentLoaded', function () {
             else if (user.organizacionLogo) fotoOrganizacion = user.organizacionLogo;
             else if (user.logoUrl) fotoOrganizacion = user.logoUrl;
 
+            // ✅ GUARDAR TODOS LOS DATOS DEL USUARIO INCLUYENDO ÁREA Y CARGO
             const userData = {
                 id: user.id,
                 email: user.email || user.correoElectronico,
+                correoElectronico: user.email || user.correoElectronico,
                 nombreCompleto: user.nombreCompleto,
-                rol: user.rol, 
+                nombre: user.nombreCompleto,
+                rol: user.rol,
+
+                // ✅ GUARDAR ORGANIZACIÓN
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
+
+                // ✅ ✅ ✅ IMPORTANTE: GUARDAR ÁREA Y CARGO (SEGÚN LA CLASE USER)
+                areaAsignadaId: user.areaAsignadaId || '',
+                cargoId: user.cargoId || '',
+
+                // ✅ GUARDAR ESTADO
                 status: user.status,
                 verificado: user.verificado,
 
-                // ✅ GUARDAR IMÁGENES EXPLÍCITAMENTE
+                // ✅ GUARDAR IMÁGENES
                 fotoUsuario: fotoUsuario || '',
                 fotoOrganizacion: fotoOrganizacion || '',
 
+                // ✅ METADATOS DE SESIÓN
                 ultimoAcceso: new Date().toISOString(),
                 sessionStart: new Date().toISOString(),
                 fechaLogin: new Date().toLocaleDateString('es-ES', {
@@ -189,15 +201,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
             };
 
+            // Guardar en localStorage (SOLO userData)
             localStorage.setItem('userData', JSON.stringify(userData));
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userRole', user.rol);
-            localStorage.setItem('userId', user.id);
             localStorage.setItem('userOrganizacion', user.organizacion);
             localStorage.setItem('userOrganizacionCamelCase', organizacionCamelCase);
             localStorage.setItem('userNombre', user.nombreCompleto);
             localStorage.setItem('userEmail', user.email || user.correoElectronico || '');
 
+            // Guardar fotos si existen
             if (fotoUsuario) {
                 localStorage.setItem('userFoto', fotoUsuario);
             } else {
@@ -210,6 +223,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 localStorage.removeItem('organizacionLogo');
             }
 
+            console.log('✅ Usuario guardado en localStorage:', {
+                nombre: user.nombreCompleto,
+                areaAsignadaId: user.areaAsignadaId || 'NO ASIGNADA',
+                cargoId: user.cargoId || 'NO ASIGNADO',
+                rol: user.rol
+            });
+
             return true;
         } catch (error) {
             console.error('❌ Error al guardar en localStorage:', error);
@@ -217,6 +237,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // ===============================================================
+    // 🔥 FUNCIÓN MEJORADA - Guardar en sessionStorage con área y cargo
+    // ===============================================================
     function saveUserToSessionStorage(user) {
         try {
             const organizacionCamelCase = toCamelCase(user.organizacion);
@@ -224,10 +247,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const sessionData = {
                 id: user.id,
                 email: user.email,
+                correoElectronico: user.email,
                 nombreCompleto: user.nombreCompleto,
+                nombre: user.nombreCompleto,
                 rol: user.rol,
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
+
+                // ✅ GUARDAR ÁREA Y CARGO EN SESSION TAMBIÉN
+                areaAsignadaId: user.areaAsignadaId || '',
+                cargoId: user.cargoId || '',
+
                 sessionId: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 sessionStart: new Date().toISOString(),
                 sessionStartFormatted: new Date().toLocaleTimeString('es-ES'),
@@ -264,6 +294,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     usuario: userData.nombreCompleto,
                     organizacion: userData.organizacion,
                     rol: userData.rol,
+                    areaAsignadaId: userData.areaAsignadaId || 'NO ASIGNADA',
+                    cargoId: userData.cargoId || 'NO ASIGNADO',
                     tieneFotoUsuario: !!userData.fotoUsuario,
                     tieneFotoOrganizacion: !!userData.fotoOrganizacion
                 });
@@ -294,6 +326,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div>
                         <p><strong>Organización:</strong> ${user.organizacion}</p>
                         <p><strong>Rol:</strong> ${user.rol === 'administrador' ? 'ADMINISTRADOR' : 'COLABORADOR'}</p>
+                        <p><strong>Área ID:</strong> ${user.areaAsignadaId || 'No asignada'}</p>
+                        <p><strong>Cargo ID:</strong> ${user.cargoId || 'No asignado'}</p>
                         <p><strong>Estado:</strong> ${user.verificado ? 'Verificado' : 'Pendiente'}</p>
                     </div>
                     
@@ -417,17 +451,17 @@ document.addEventListener('DOMContentLoaded', function () {
             preConfirm: () => {
                 const input = document.getElementById('swal-input-email');
                 const email = input ? input.value.trim() : '';
-                
+
                 if (!email) {
                     Swal.showValidationMessage('Por favor ingresa tu correo electrónico');
                     return false;
                 }
-                
+
                 if (!validateEmail(email)) {
                     Swal.showValidationMessage('El formato del correo no es válido');
                     return false;
                 }
-                
+
                 return email;
             }
         });
@@ -573,6 +607,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 nombre: user.nombreCompleto,
                 rol: user.rol,
                 organizacion: user.organizacion,
+                areaAsignadaId: user.areaAsignadaId || 'NO ASIGNADA',
+                cargoId: user.cargoId || 'NO ASIGNADO',
                 tieneFotoUsuario: !!(user.fotoUsuario || user.fotoURL),
                 tieneFotoOrganizacion: !!user.fotoOrganizacion
             });
@@ -594,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 try {
                     // Inicializar FCM después del login exitoso
                     await fcmInitializer.init(userManager);
-                    
+
                     // Verificar si el usuario ya había tomado una decisión
                     if (fcmInitializer.isEnabled()) {
                         console.log('Notificaciones ya estaban activadas para este dispositivo.');
