@@ -48,14 +48,14 @@ class IPHGenerator extends PDFBaseGenerator {
         if (config.categoriasCache) this.categoriasCache = config.categoriasCache;
         if (config.subcategoriasCache) {
             this.subcategoriasCache = config.subcategoriasCache;
-            console.log('✅ Subcategorías cargadas:', this.subcategoriasCache.length);
+            ;
         }
         if (config.usuariosCache) {
             this.usuariosCache = config.usuariosCache;
-            console.log('✅ Usuarios cargados:', this.usuariosCache.length);
+            ;
         }
         if (config.authToken) this.authToken = config.authToken;
-        console.log('✅ Generador IPH configurado');
+
     }
 
     obtenerNombreSucursal(sucursalId) {
