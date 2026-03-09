@@ -1,6 +1,3 @@
-// /components/fcm-initializer.js
-// Versión: 1.0.0 - Basado en rsienterprise para Centinela-MX
-
 import { getMessaging, getToken, onMessage, deleteToken } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-messaging.js";
 import { app } from '/config/firebase-config.js';
 import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
