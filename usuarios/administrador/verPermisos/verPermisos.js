@@ -164,12 +164,12 @@ async function cargarPermiso(permisoId) {
         }
 
         // Verificar que el elemento existe antes de asignar
+        // Opcional: mostrar ID si el elemento existe
         const permisoIdElement = document.getElementById('permisoId');
         if (permisoIdElement) {
             permisoIdElement.textContent = permisoActual.id;
-        } else {
-            console.warn('Elemento permisoId no encontrado');
         }
+        // Eliminado el warning
 
     } catch (error) {
         console.error('Error cargando permiso:', error);
