@@ -1,6 +1,6 @@
 // /usuarios/administrador/pruebasNotificaciones/pruebasNotificaciones.js
-import { UserManager } from '../../../clases/user.js';
-import { fcmInitializer } from '../../../components/fcm-initializer.js';
+import { UserManager } from '/clases/user.js';
+import { fcmInitializer } from '/components/fcm-initializer.js';
 
 const userManager = new UserManager();
 
