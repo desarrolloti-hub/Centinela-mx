@@ -86,7 +86,6 @@ class ParticleSystem {
             // Configurar eventos
             this.setupEventListeners();
 
-            console.log('✅ Sistema de partículas activado');
 
         } catch (error) {
             console.error('❌ Error inicializando ParticleSystem:', error);

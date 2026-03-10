@@ -7,6 +7,8 @@ window.appDebug = {
     controller: null
 };
 
+;
+
 let Area, AreaManager;
 
 // =============================================
@@ -54,6 +56,7 @@ function inicializarController() {
         const app = new AreasController();
         window.appDebug.controller = app;
         app.init();
+        console.log('Áreas: Inicializado correctamente');
     } catch (error) {
         console.error('[Error]', error.message);
         mostrarErrorInterfaz(error.message);
@@ -68,10 +71,9 @@ class AreasController {
 
         // Cargar datos del usuario desde localStorage sin redirección al login
         this.userManager = this.cargarUsuarioDesdeStorage();
-        
+
         // Si no hay usuario, usar valores por defecto (no redirigir)
         if (!this.userManager || !this.userManager.currentUser) {
-            console.warn('No se encontró usuario en localStorage, usando valores por defecto');
             this.userManager = {
                 currentUser: {
                     id: 'default-user',
@@ -141,7 +143,6 @@ class AreasController {
             return { currentUser: userData };
 
         } catch (error) {
-            console.warn('Error cargando usuario desde storage:', error);
             return null;
         }
     }
@@ -165,7 +166,7 @@ class AreasController {
 
         // Verificar si ya existe el contenedor de búsqueda
         let filtrosContainer = document.querySelector('.filtros-container');
-        
+
         if (!filtrosContainer) {
             // Crear el contenedor de búsqueda igual que en categorías
             filtrosContainer = document.createElement('div');
@@ -249,7 +250,7 @@ class AreasController {
         } else {
             // Filtrar en memoria
             const terminoLower = terminoBusqueda.toLowerCase();
-            this.areas = todasLasAreas.filter(area => 
+            this.areas = todasLasAreas.filter(area =>
                 (area.nombreArea && area.nombreArea.toLowerCase().includes(terminoLower)) ||
                 (area.descripcion && area.descripcion.toLowerCase().includes(terminoLower))
             );
@@ -264,7 +265,7 @@ class AreasController {
     irPagina(pagina) {
         paginaActual = pagina;
         this.actualizarTablaConPaginacion();
-        
+
         // Scroll suave hacia arriba
         document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -299,15 +300,15 @@ class AreasController {
         if (!tbody) return;
 
         this.filaExpandida = null;
-        
+
         const totalItems = this.areas.length;
         const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
-        
+
         // Ajustar página actual si está fuera de rango
         if (paginaActual > totalPaginas && totalPaginas > 0) {
             paginaActual = totalPaginas;
         }
-        
+
         const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
         const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
         const areasPagina = this.areas.slice(inicio, fin);
@@ -374,7 +375,7 @@ class AreasController {
     actualizarBadgeEmpresa() {
         const badgeEmpresa = document.getElementById('badge-empresa');
         const empresaNombre = badgeEmpresa?.querySelector('.empresa-nombre');
-        
+
         if (badgeEmpresa && empresaNombre && this.userManager?.currentUser?.organizacion) {
             empresaNombre.textContent = this.userManager.currentUser.organizacion;
             badgeEmpresa.style.display = 'inline-flex';
@@ -412,10 +413,10 @@ class AreasController {
 
             const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
             todasLasAreas = await this.areaManager.getAreasByOrganizacion(organizacionCamelCase);
-            
+
             // Ordenar alfabéticamente
             todasLasAreas.sort((a, b) => (a.nombreArea || '').localeCompare(b.nombreArea || ''));
-            
+
             // Inicializar áreas filtradas
             this.areas = [...todasLasAreas];
 
@@ -499,12 +500,12 @@ class AreasController {
         } else {
             let cargosHTML = '';
             cargos.forEach((cargo, index) => {
-                const descripcionTruncada = cargo.descripcion && cargo.descripcion.length > 40 
-                    ? cargo.descripcion.substring(0, 37) + '...' 
+                const descripcionTruncada = cargo.descripcion && cargo.descripcion.length > 40
+                    ? cargo.descripcion.substring(0, 37) + '...'
                     : cargo.descripcion || '';
-                    
-                const nombreTruncado = cargo.nombre && cargo.nombre.length > 18 
-                    ? cargo.nombre.substring(0, 15) + '...' 
+
+                const nombreTruncado = cargo.nombre && cargo.nombre.length > 18
+                    ? cargo.nombre.substring(0, 15) + '...'
                     : cargo.nombre || 'Sin nombre';
 
                 cargosHTML += `
@@ -569,14 +570,14 @@ class AreasController {
 
     verDetallesCargo(areaId, cargoId, event) {
         event?.stopPropagation();
-        
+
         // Buscar en todasLasAreas
         const area = todasLasAreas.find(a => a.id === areaId);
         if (!area) return;
 
         const cargos = area.getCargosAsArray();
         const cargo = cargos.find(c => c.id === cargoId);
-        
+
         if (!cargo) return;
 
         Swal.fire({
@@ -623,7 +624,7 @@ class AreasController {
 
         const cargos = area.getCargosAsArray();
         const cargo = cargos.find(c => c.id === cargoId);
-        
+
         if (!cargo) {
             Swal.fire({
                 icon: 'error',
@@ -676,7 +677,7 @@ class AreasController {
                 const areaActualizada = await this.areaManager.obtenerAreaPorId(areaId);
                 const index = todasLasAreas.findIndex(a => a.id === areaId);
                 if (index !== -1) todasLasAreas[index] = areaActualizada;
-                
+
                 // Actualizar también en this.areas si está presente
                 const indexFiltrado = this.areas.findIndex(a => a.id === areaId);
                 if (indexFiltrado !== -1) this.areas[indexFiltrado] = areaActualizada;
@@ -825,7 +826,7 @@ class AreasController {
                 this.mostrarError('Área no encontrada');
                 return;
             }
-            
+
             const cantidadCargos = area.getCantidadCargos();
             const nombreAreaTruncado = this.truncarTexto(area.nombreArea, 25);
 
@@ -935,17 +936,17 @@ class AreasController {
 
         const toggleIcon = fila.querySelector('.toggle-icon');
         if (toggleIcon) {
-            toggleIcon.addEventListener('click', (e) => { 
-                e.stopPropagation(); 
-                this.toggleCargos(area.id, e); 
+            toggleIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleCargos(area.id, e);
             });
         }
 
         const badgeCargos = fila.querySelector('.cargo-count-badge');
         if (badgeCargos) {
-            badgeCargos.addEventListener('click', (e) => { 
-                e.stopPropagation(); 
-                this.toggleCargos(area.id, e); 
+            badgeCargos.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleCargos(area.id, e);
             });
         }
 
@@ -993,7 +994,7 @@ class AreasController {
             timer: 5000,
             timerProgressBar: true
         });
-        
+
         Toast.fire({ icon: tipo, title: mensaje });
     }
 }

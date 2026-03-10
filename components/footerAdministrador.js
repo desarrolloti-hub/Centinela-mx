@@ -20,10 +20,10 @@ class FooterComponent {
     // Configuración principal del footer
     setup() {
         try {
-            this.removeOriginalFooter();  
-            this.createFooter();          
-            this.updateDateTime();       
-            console.log('✅ Footer inicializado');
+            this.removeOriginalFooter();
+            this.createFooter();
+            this.updateDateTime();
+
         } catch (error) {
             console.error('❌ Error:', error);
         }
@@ -37,7 +37,7 @@ class FooterComponent {
 
     // Crea el footer completo
     createFooter() {
-        this.addStyles();  
+        this.addStyles();
         this.insertHTML();
     }
 

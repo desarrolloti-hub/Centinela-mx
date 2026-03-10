@@ -1,6 +1,10 @@
 // crearAreas.js - VERSIÓN CON VALIDACIONES DE CARACTERES Y MENSAJES SIMPLIFICADOS
 // SweetAlerts sin estilos personalizados
 
+// Limpiar consola y mostrar solo "inicializado"
+console.clear();
+console.log('inicializado');
+
 window.crearAreaDebug = {
     estado: 'iniciando',
     controller: null
@@ -21,9 +25,9 @@ async function cargarDependencias() {
         const areaModule = await import('/clases/area.js');
         Area = areaModule.Area;
         AreaManager = areaModule.AreaManager;
-        
+
         iniciarAplicacion();
-        
+
     } catch (error) {
         console.error('[Error]', error.message);
         mostrarErrorInterfaz(error.message);
@@ -64,22 +68,22 @@ class CrearAreaController {
     constructor() {
         this.areaManager = new AreaManager();
         this.userManager = this.cargarUsuarioDesdeStorage();
-        
+
         if (!this.userManager || !this.userManager.currentUser) {
             this.redirigirAlLogin();
             throw new Error('Usuario no autenticado');
         }
-        
+
         this.areaEnProceso = null;
         this.areaCreadaReciente = null;
         this.loadingOverlay = null;
         this.cargos = [];
     }
-    
+
     cargarUsuarioDesdeStorage() {
         try {
             let userData = null;
-            
+
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -99,7 +103,7 @@ class CrearAreaController {
                     esResponsable: true
                 };
             }
-            
+
             if (!userData) {
                 const storedUserData = localStorage.getItem('userData');
                 if (storedUserData) {
@@ -108,11 +112,11 @@ class CrearAreaController {
                     userData.esResponsable = false;
                 }
             }
-            
+
             if (!userData) {
                 return null;
             }
-            
+
             if (!userData.id) userData.id = `user_${Date.now()}`;
             if (!userData.organizacion) userData.organizacion = 'Sin organización';
             if (!userData.organizacionCamelCase) {
@@ -120,21 +124,21 @@ class CrearAreaController {
             }
             if (!userData.rol) userData.rol = 'colaborador';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
-            
+
             return { currentUser: userData };
-            
+
         } catch (error) {
             return null;
         }
     }
-    
+
     async cargarResponsables() {
         const responsableSelect = document.getElementById('responsable');
         if (!responsableSelect) return;
-        
+
         try {
             responsableSelect.innerHTML = '<option value="">Seleccionar responsable...</option>';
-            
+
             if (this.userManager.currentUser) {
                 const adminOption = document.createElement('option');
                 adminOption.value = 'admin_fijo';
@@ -143,18 +147,18 @@ class CrearAreaController {
                 adminOption.style.fontWeight = 'bold';
                 responsableSelect.appendChild(adminOption);
             }
-            
+
             const colaboradores = await this.cargarColaboradoresDesdeSistema();
             if (colaboradores?.length > 0) {
                 const separator = document.createElement('option');
                 separator.disabled = true;
                 separator.text = '────────── COLABORADORES ──────────';
                 responsableSelect.appendChild(separator);
-                
+
                 colaboradores.forEach(colaborador => {
                     const option = document.createElement('option');
                     option.value = colaborador.id || colaborador.userId || `colab_${Date.now()}`;
-                    
+
                     let nombreMostrar = colaborador.nombre || 'Colaborador';
                     if (colaborador.apellido) {
                         nombreMostrar += ` ${colaborador.apellido}`;
@@ -162,74 +166,74 @@ class CrearAreaController {
                     if (colaborador.cargo) {
                         nombreMostrar += ` (${colaborador.cargo})`;
                     }
-                    
+
                     option.text = nombreMostrar;
                     responsableSelect.appendChild(option);
                 });
             }
-            
+
             const otroSeparator = document.createElement('option');
             otroSeparator.disabled = true;
             otroSeparator.text = '────────── OTRAS OPCIONES ──────────';
             responsableSelect.appendChild(otroSeparator);
-            
+
             const nuevoOption = document.createElement('option');
             nuevoOption.value = 'nuevo';
             nuevoOption.text = '🆕 Asignar nuevo responsable...';
             responsableSelect.appendChild(nuevoOption);
-            
+
         } catch (error) {
             this.mostrarNotificacion('Error cargando responsables', 'warning');
         }
     }
-    
+
     async cargarColaboradoresDesdeSistema() {
         try {
             const orgKey = this.userManager.currentUser.organizacionCamelCase;
             const colaboradoresStorage = localStorage.getItem(`colaboradores_${orgKey}`);
-            
+
             if (colaboradoresStorage) {
                 const colaboradores = JSON.parse(colaboradoresStorage);
                 if (colaboradores.length > 0) {
                     return colaboradores;
                 }
             }
-            
+
             if (this.areaManager && typeof this.areaManager.obtenerColaboradoresPorOrganizacion === 'function') {
                 const colaboradoresFB = await this.areaManager.obtenerColaboradoresPorOrganizacion(orgKey);
-                
+
                 if (colaboradoresFB?.length > 0) {
                     localStorage.setItem(`colaboradores_${orgKey}`, JSON.stringify(colaboradoresFB));
                     return colaboradoresFB;
                 }
             }
-            
+
             const usuariosStorage = localStorage.getItem('usuariosOrganizacion');
             if (usuariosStorage) {
                 const usuarios = JSON.parse(usuariosStorage);
-                return usuarios.filter(user => 
-                    user.organizacionCamelCase === orgKey && 
+                return usuarios.filter(user =>
+                    user.organizacionCamelCase === orgKey &&
                     user.id !== this.userManager.currentUser.id
                 );
             }
-            
+
             return [];
-            
+
         } catch (error) {
             return [];
         }
     }
-    
+
     init() {
         this.inicializarEventos();
         this.inicializarValidaciones();
         this.cargarResponsables();
         this.inicializarGestionCargos();
-        
+
         // Aplicar límites de caracteres a los campos
         this.aplicarLimitesCaracteres();
     }
-    
+
     aplicarLimitesCaracteres() {
         // Campo nombre área
         const nombreArea = document.getElementById('nombreArea');
@@ -237,7 +241,7 @@ class CrearAreaController {
             nombreArea.maxLength = LIMITES.NOMBRE_AREA;
             nombreArea.addEventListener('input', () => this.validarLongitudCampo(nombreArea, LIMITES.NOMBRE_AREA, 'El nombre del área'));
         }
-        
+
         // Campo descripción área
         const descripcionArea = document.getElementById('descripcionArea');
         if (descripcionArea) {
@@ -248,7 +252,7 @@ class CrearAreaController {
             });
         }
     }
-    
+
     validarLongitudCampo(campo, limite, nombreCampo) {
         const longitud = campo.value.length;
         if (longitud > limite) {
@@ -256,7 +260,7 @@ class CrearAreaController {
             this.mostrarNotificacion(`${nombreCampo} no puede exceder ${limite} caracteres`, 'warning', 3000);
         }
     }
-    
+
     validarLongitudCargo(nombre, descripcion) {
         if (nombre && nombre.length > LIMITES.NOMBRE_CARGO) {
             this.mostrarNotificacion(`El nombre del cargo no puede exceder ${LIMITES.NOMBRE_CARGO} caracteres`, 'warning', 3000);
@@ -268,23 +272,23 @@ class CrearAreaController {
         }
         return true;
     }
-    
+
     inicializarEventos() {
         const btnVolverLista = document.getElementById('btnVolverLista');
         if (btnVolverLista) {
             btnVolverLista.addEventListener('click', () => this.volverALista());
         }
-        
+
         const descripcionArea = document.getElementById('descripcionArea');
         if (descripcionArea) {
             descripcionArea.addEventListener('input', () => this.actualizarContadorCaracteres());
         }
-        
+
         const btnCancelar = document.getElementById('btnCancelar');
         if (btnCancelar) {
             btnCancelar.addEventListener('click', () => this.cancelarCreacion());
         }
-        
+
         const formCrearArea = document.getElementById('formCrearArea');
         if (formCrearArea) {
             formCrearArea.addEventListener('submit', (e) => {
@@ -293,19 +297,19 @@ class CrearAreaController {
             });
         }
     }
-    
+
     inicializarValidaciones() {
         this.actualizarContadorCaracteres();
     }
-    
+
     actualizarContadorCaracteres() {
         const descripcionArea = document.getElementById('descripcionArea');
         const contador = document.getElementById('contadorCaracteres');
-        
+
         if (descripcionArea && contador) {
             const longitud = descripcionArea.value.length;
             contador.textContent = `${longitud}/${LIMITES.DESCRIPCION_AREA}`;
-            
+
             // Cambiar color si se acerca al límite
             if (longitud > LIMITES.DESCRIPCION_AREA * 0.9) {
                 contador.style.color = 'var(--color-warning)';
@@ -316,11 +320,11 @@ class CrearAreaController {
             }
         }
     }
-    
+
     volverALista() {
         window.location.href = '/usuarios/administrador/areas/areas.html';
     }
-    
+
     cancelarCreacion() {
         Swal.fire({
             title: '¿Cancelar registro?',
@@ -335,88 +339,88 @@ class CrearAreaController {
             }
         });
     }
-    
+
     validarFormulario() {
         const nombreArea = document.getElementById('nombreArea')?.value.trim();
         const descripcion = document.getElementById('descripcionArea')?.value.trim();
         const responsableSelect = document.getElementById('responsable');
-        
+
         if (!nombreArea) {
             this.mostrarError('El nombre del área es requerido');
             return false;
         }
-        
+
         if (nombreArea.length > LIMITES.NOMBRE_AREA) {
             this.mostrarError(`El nombre del área no puede exceder ${LIMITES.NOMBRE_AREA} caracteres`);
             return false;
         }
-        
+
         if (!descripcion) {
             this.mostrarError('La descripción es requerida');
             return false;
         }
-        
+
         if (descripcion.length < 20) {
             this.mostrarError('La descripción debe tener al menos 20 caracteres');
             return false;
         }
-        
+
         if (descripcion.length > LIMITES.DESCRIPCION_AREA) {
             this.mostrarError(`La descripción no puede exceder ${LIMITES.DESCRIPCION_AREA} caracteres`);
             return false;
         }
-        
+
         if (nombreArea.length < 3) {
             this.mostrarError('El nombre del área debe tener al menos 3 caracteres');
             return false;
         }
-        
+
         if (responsableSelect && !responsableSelect.value) {
             this.mostrarError('Debe seleccionar un responsable para el área');
             return false;
         }
-        
-        if (responsableSelect && 
-            (responsableSelect.value.includes('──────────') || 
-             responsableSelect.value === 'nuevo')) {
+
+        if (responsableSelect &&
+            (responsableSelect.value.includes('──────────') ||
+                responsableSelect.value === 'nuevo')) {
             this.mostrarError('Debe seleccionar un responsable válido');
             return false;
         }
-        
+
         const cargosValidos = this.cargos.filter(c => c.nombre && c.nombre.trim() !== '');
         if (cargosValidos.length === 0) {
             this.mostrarError('Debe agregar al menos un cargo con nombre');
             return false;
         }
-        
+
         // Validar límites de caracteres de los cargos
         for (const cargo of cargosValidos) {
             if (!this.validarLongitudCargo(cargo.nombre, cargo.descripcion)) {
                 return false;
             }
         }
-        
+
         return true;
     }
-    
+
     async validarYPrepararCreacion() {
         try {
             if (!this.validarFormulario()) return;
-            
+
             const datosArea = this.obtenerDatosFormulario();
-            
+
             const existe = await this.areaManager.verificarAreaExistente(
                 datosArea.nombreArea,
                 this.userManager.currentUser.organizacionCamelCase
             );
-            
+
             if (existe) {
                 this.mostrarError('Ya existe un área con ese nombre en esta organización');
                 return;
             }
-            
+
             this.areaEnProceso = datosArea;
-            
+
             const result = await Swal.fire({
                 title: '¿Confirmar creación?',
                 text: '¿Está seguro de crear esta área?',
@@ -425,35 +429,35 @@ class CrearAreaController {
                 confirmButtonText: 'Sí, crear',
                 cancelButtonText: 'Cancelar'
             });
-            
+
             if (result.isConfirmed) {
                 await this.confirmarCreacion();
             }
-            
+
         } catch (error) {
             this.mostrarError('Error validando datos');
         }
     }
-    
+
     inicializarGestionCargos() {
         const btnAgregarCargo = document.getElementById('btnAgregarCargo');
         if (btnAgregarCargo) {
             btnAgregarCargo.addEventListener('click', () => this.agregarCargo());
         }
     }
-    
+
     agregarCargo() {
         const cargoId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-        
+
         const nuevoCargo = {
             id: cargoId,
             nombre: '',
             descripcion: ''
         };
-        
+
         this.cargos.push(nuevoCargo);
         this.renderizarCargos();
-        
+
         setTimeout(() => {
             const input = document.getElementById(`cargo_nombre_${cargoId}`);
             if (input) {
@@ -462,7 +466,7 @@ class CrearAreaController {
             }
         }, 100);
     }
-    
+
     eliminarCargo(cargoId) {
         Swal.fire({
             title: '¿Eliminar cargo?',
@@ -479,11 +483,11 @@ class CrearAreaController {
             }
         });
     }
-    
+
     renderizarCargos() {
         const cargosList = document.getElementById('cargosList');
         if (!cargosList) return;
-        
+
         if (this.cargos.length === 0) {
             cargosList.innerHTML = `
                 <div class="cargos-empty">
@@ -494,7 +498,7 @@ class CrearAreaController {
             `;
             return;
         }
-        
+
         let html = '';
         this.cargos.forEach((cargo, index) => {
             html += `
@@ -542,10 +546,10 @@ class CrearAreaController {
                 </div>
             `;
         });
-        
+
         cargosList.innerHTML = html;
     }
-    
+
     actualizarCargo(cargoId, campo, valor) {
         const cargo = this.cargos.find(c => c.id === cargoId);
         if (cargo) {
@@ -561,7 +565,7 @@ class CrearAreaController {
             cargo[campo] = valor;
         }
     }
-    
+
     escapeHTML(text) {
         if (!text) return '';
         return String(text)
@@ -571,22 +575,22 @@ class CrearAreaController {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
-    
+
     obtenerDatosFormulario() {
         const userOrgCamel = this.userManager.currentUser.organizacionCamelCase;
-        
+
         const cargosArray = this.cargos
             .filter(c => c.nombre && c.nombre.trim() !== '')
             .map(c => ({
                 nombre: c.nombre.trim(),
                 descripcion: c.descripcion ? c.descripcion.trim() : ''
             }));
-        
+
         const cargosObject = {};
         cargosArray.forEach((cargo, index) => {
             cargosObject[`cargo_${index}`] = cargo;
         });
-        
+
         return {
             nombreArea: document.getElementById('nombreArea').value.trim(),
             descripcion: document.getElementById('descripcionArea').value.trim(),
@@ -596,7 +600,7 @@ class CrearAreaController {
             responsableNombre: this.userManager.currentUser.nombreCompleto
         };
     }
-    
+
     convertirACamelCase(texto) {
         if (!texto) return 'sinOrganizacion';
         return texto
@@ -606,7 +610,7 @@ class CrearAreaController {
             .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
             .replace(/[^a-zA-Z0-9]/g, '');
     }
-    
+
     redirigirAlLogin() {
         Swal.fire({
             icon: 'error',
@@ -617,21 +621,21 @@ class CrearAreaController {
             window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
-    
+
     async confirmarCreacion() {
         try {
             if (!this.areaEnProceso) {
                 throw new Error('No hay datos de área para crear');
             }
-            
+
             this.mostrarCargando('Creando área...');
-            
+
             const nuevaArea = await this.areaManager.crearArea(this.areaEnProceso, this.userManager);
-            
+
             this.ocultarCargando();
-            
+
             this.areaCreadaReciente = nuevaArea;
-            
+
             // MENSAJE SIMPLIFICADO
             await Swal.fire({
                 icon: 'success',
@@ -640,7 +644,7 @@ class CrearAreaController {
                 timer: 2000,
                 showConfirmButton: false
             });
-            
+
             // Preguntar qué hacer después
             const result = await Swal.fire({
                 title: '¿Qué desea hacer?',
@@ -651,39 +655,39 @@ class CrearAreaController {
                 denyButtonText: 'Crear otra',
                 cancelButtonText: 'Cancelar'
             });
-            
+
             if (result.isConfirmed) {
                 this.verAreaCreada();
             } else if (result.isDenied) {
                 this.crearOtraArea();
             }
-            
+
         } catch (error) {
             this.ocultarCargando();
             this.mostrarError('Error creando área');
         }
     }
-    
+
     crearOtraArea() {
         this.limpiarFormulario();
-        
+
         setTimeout(() => {
             const nombreArea = document.getElementById('nombreArea');
             if (nombreArea) nombreArea.focus();
         }, 100);
     }
-    
+
     verAreaCreada() {
         window.location.href = '/usuarios/administrador/areas/areas.html';
     }
-    
+
     limpiarFormulario() {
         const form = document.getElementById('formCrearArea');
         if (form) form.reset();
-        
+
         this.cargos = [];
         this.renderizarCargos();
-        
+
         const responsableSelect = document.getElementById('responsable');
         if (responsableSelect) {
             for (let i = 0; i < responsableSelect.options.length; i++) {
@@ -693,14 +697,14 @@ class CrearAreaController {
                 }
             }
         }
-        
+
         this.actualizarContadorCaracteres();
         this.areaEnProceso = null;
     }
-    
+
     mostrarCargando(mensaje = 'Guardando...') {
         if (this.loadingOverlay) this.ocultarCargando();
-        
+
         const overlay = document.createElement('div');
         overlay.className = 'loading-overlay';
         overlay.style.cssText = `
@@ -716,34 +720,34 @@ class CrearAreaController {
             z-index: 9999;
             flex-direction: column;
         `;
-        
+
         overlay.innerHTML = `
             <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status">
                 <span class="visually-hidden">${mensaje}</span>
             </div>
             <div class="text-light fs-5">${mensaje}</div>
         `;
-        
+
         document.body.appendChild(overlay);
         this.loadingOverlay = overlay;
     }
-    
+
     ocultarCargando() {
         if (this.loadingOverlay?.parentNode) {
             this.loadingOverlay.remove();
             this.loadingOverlay = null;
         }
     }
-    
+
     mostrarError(mensaje) {
         this.mostrarNotificacion(mensaje, 'error');
     }
-    
+
     mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
         Swal.fire({
-            title: tipo === 'success' ? 'Éxito' : 
-                   tipo === 'error' ? 'Error' : 
-                   tipo === 'warning' ? 'Advertencia' : 'Información',
+            title: tipo === 'success' ? 'Éxito' :
+                tipo === 'error' ? 'Error' :
+                    tipo === 'warning' ? 'Advertencia' : 'Información',
             text: mensaje,
             icon: tipo,
             timer: duracion,
