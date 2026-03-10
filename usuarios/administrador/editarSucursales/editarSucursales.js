@@ -1,4 +1,4 @@
-// editarSucursales.js - VERSIÓN CON MAPA Y LISTENER DE COORDENADAS
+// editarSucursales.js - VERSIÓN CORREGIDA CON ACTUALIZACIÓN FUNCIONAL
 
 // Variable global para debugging
 window.editarSucursalDebug = {
@@ -575,7 +575,31 @@ class EditarSucursalController {
         const latitud = document.getElementById('latitudSucursal').value.trim();
         const longitud = document.getElementById('longitudSucursal').value.trim();
 
-
+        // Mostrar confirmación con SweetAlert2
+        Swal.fire({
+            title: '¿Confirmar actualización?',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>Nombre:</strong> ${nombre}</p>
+                    <p><strong>Tipo:</strong> ${tipo}</p>
+                    <p><strong>Región:</strong> ${regionNombre}</p>
+                    <p><strong>Estado:</strong> ${estado}</p>
+                    <p><strong>Ciudad:</strong> ${ciudad}</p>
+                    <p><strong>Dirección:</strong> ${direccion}</p>
+                    <p><strong>Coordenadas:</strong> ${latitud}, ${longitud}</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, actualizar',
+            cancelButtonText: 'Cancelar',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this._actualizarSucursal();
+            }
+        });
     }
 
     async _actualizarSucursal() {
@@ -588,6 +612,8 @@ class EditarSucursalController {
                 btnActualizar.disabled = true;
             }
 
+            this._mostrarCargando('Actualizando sucursal...');
+
             // Obtener datos del formulario (campos directos)
             const sucursalData = {
                 nombre: document.getElementById('nombreSucursal').value.trim(),
@@ -596,11 +622,16 @@ class EditarSucursalController {
                 estado: document.getElementById('estadoSucursal').value,
                 ciudad: document.getElementById('ciudadSucursal').value.trim(),
                 direccion: document.getElementById('direccionSucursal').value.trim(),
-                zona: document.getElementById('zonaSucursal').value.trim(),
+                zona: document.getElementById('zonaSucursal').value.trim() || '',
                 contacto: document.getElementById('contactoSucursal').value.trim(),
-                latitud: document.getElementById('latitudSucursal').value.trim(),
-                longitud: document.getElementById('longitudSucursal').value.trim()
+                latitud: parseFloat(document.getElementById('latitudSucursal').value),
+                longitud: parseFloat(document.getElementById('longitudSucursal').value)
             };
+
+            // Validar que las coordenadas sean números válidos
+            if (isNaN(sucursalData.latitud) || isNaN(sucursalData.longitud)) {
+                throw new Error('Las coordenadas deben ser números válidos');
+            }
 
             // Actualizar sucursal
             const sucursalActualizada = await this.sucursalManager.actualizarSucursal(
@@ -610,10 +641,13 @@ class EditarSucursalController {
                 this.usuarioActual.organizacionCamelCase
             );
 
+            this._ocultarCargando();
+
             // Mostrar éxito
             await this._mostrarExitoActualizacion(sucursalActualizada);
 
         } catch (error) {
+            this._ocultarCargando();
             console.error('Error actualizando sucursal:', error);
             this._mostrarError(error.message || 'No se pudo actualizar la sucursal');
         } finally {
@@ -625,14 +659,10 @@ class EditarSucursalController {
     }
 
     async _mostrarExitoActualizacion(sucursal) {
-        const contactoMostrar = sucursal.contacto || 'No especificado';
-        const ubicacionCompleta = sucursal.getUbicacionCompleta ?
-            sucursal.getUbicacionCompleta() :
-            `${sucursal.direccion}, ${sucursal.ciudad}, ${sucursal.estado}`;
-
         await Swal.fire({
             icon: 'success',
             title: '¡Sucursal actualizada!',
+            text: 'Los cambios se han guardado correctamente',
             confirmButtonText: 'Ir a Sucursales',
             background: 'var(--color-bg-secondary)',
             color: 'var(--color-text-primary)'
