@@ -1,5 +1,5 @@
 // =============================================
-// estadisticas.js - VERSIÓN FINAL CON FILTROS FUNCIONALES
+// estadisticas.js - VERSIÓN FINAL CON FILTROS FUNCIONALES Y PDF GENERATOR
 // =============================================
 
 // =============================================
@@ -13,6 +13,7 @@ let incidenciasFiltradas = [];
 let sucursalesCache = [];
 let categoriasCache = [];
 let charts = {};
+let authToken = null;
 
 // Filtros activos
 let filtrosActivos = {
@@ -35,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         mostrarLoadingInicial();
 
         await inicializarEstadisticasManager();
+        await obtenerTokenAuth();
 
         // Configurar filtros PRIMERO
         configurarFiltros();
@@ -53,6 +55,31 @@ document.addEventListener('DOMContentLoaded', async function () {
         mostrarError('Error al cargar la página: ' + error.message);
     }
 });
+
+// =============================================
+// OBTENER TOKEN DE AUTENTICACIÓN
+// =============================================
+async function obtenerTokenAuth() {
+    try {
+        if (window.firebase) {
+            const user = firebase.auth().currentUser;
+            if (user) {
+                authToken = await user.getIdToken();
+            }
+        }
+        if (!authToken) {
+            const token = localStorage.getItem('firebaseToken') ||
+                localStorage.getItem('authToken') ||
+                localStorage.getItem('token');
+            if (token) {
+                authToken = token;
+            }
+        }
+    } catch (error) {
+        console.warn('Error obteniendo token:', error);
+        authToken = null;
+    }
+}
 
 // =============================================
 // MOSTRAR MENSAJE DE ESPERA
@@ -1174,16 +1201,73 @@ function obtenerNombreCategoria(categoriaId) {
 }
 
 // =============================================
-// GENERAR REPORTE PDF
+// GENERAR REPORTE PDF - VERSIÓN CORREGIDA
 // =============================================
-function generarReportePDF() {
-    Swal.fire({
-        icon: 'info',
-        title: 'Generando PDF',
-        text: 'Esta función estará disponible en la próxima actualización',
-        timer: 2000,
-        showConfirmButton: false
-    });
+async function generarReportePDF() {
+    try {
+        if (!incidenciasFiltradas || incidenciasFiltradas.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sin datos',
+                text: 'No hay incidencias para generar el reporte estadístico.'
+            });
+            return;
+        }
+
+        // Mostrar loading
+        Swal.fire({
+            title: 'Preparando datos...',
+            text: 'Generando reporte estadístico',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Procesar datos para las gráficas
+        const datos = procesarDatosGraficas(incidenciasFiltradas);
+
+        // Agregar métricas al objeto datos
+        datos.metricas = {
+            total: incidenciasFiltradas.length,
+            pendientes: incidenciasFiltradas.filter(i => i.estado === 'pendiente').length,
+            finalizadas: incidenciasFiltradas.filter(i => i.estado === 'finalizada').length,
+            criticas: incidenciasFiltradas.filter(i => i.nivelRiesgo === 'critico').length,
+            altas: incidenciasFiltradas.filter(i => i.nivelRiesgo === 'alto').length,
+            medias: incidenciasFiltradas.filter(i => i.nivelRiesgo === 'medio').length,
+            bajas: incidenciasFiltradas.filter(i => i.nivelRiesgo === 'bajo').length
+        };
+
+        Swal.close();
+
+        // Importar el generador de estadísticas
+        const { generadorPDFEstadisticas } = await import('/components/pdf-estadisticas-generator.js');
+
+        // Configurar el generador
+        generadorPDFEstadisticas.configurar({
+            organizacionActual,
+            sucursalesCache,
+            categoriasCache,
+            usuariosCache: [], // Si no tienes usuariosCache en estadísticas, pasa array vacío
+            authToken
+        });
+
+        // Generar PDF
+        await generadorPDFEstadisticas.generarReporte(datos, {
+            mostrarAlerta: true,
+            fechaInicio: filtrosActivos.fechaInicio,
+            fechaFin: filtrosActivos.fechaFin,
+            filtrosAplicados: filtrosActivos
+        });
+
+    } catch (error) {
+        console.error('Error generando PDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el reporte PDF: ' + error.message
+        });
+    }
 }
 
 // =============================================

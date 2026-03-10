@@ -34,21 +34,28 @@ async function inicializarIncidenciaManager() {
         const { IncidenciaManager } = await import('/clases/incidencia.js');
         incidenciaManager = new IncidenciaManager();
 
-        await cargarSucursales();
-        await cargarCategorias();
-        await cargarSubcategorias();
-        await cargarUsuarios();
+        // Cargar datos en paralelo
+        await Promise.all([
+            cargarSucursales().catch(() => { }),
+            cargarCategorias().catch(() => { }),
+            cargarSubcategorias().catch(() => { }),
+            cargarUsuarios().catch(() => { })
+        ]);
+
+        // Cargar incidencias
         await cargarIncidencias();
 
-        // Configurar generador IPH con datos de caché
-        generadorIPH.configurar({
-            organizacionActual,
-            sucursalesCache,
-            categoriasCache,
-            subcategoriasCache,
-            usuariosCache,
-            authToken
-        });
+        // Configurar generador IPH
+        if (generadorIPH && typeof generadorIPH.configurar === 'function') {
+            generadorIPH.configurar({
+                organizacionActual,
+                sucursalesCache,
+                categoriasCache,
+                subcategoriasCache,
+                usuariosCache,
+                authToken
+            });
+        }
 
         configurarEventListeners();
         agregarBotonIPHMultiple();
@@ -78,7 +85,6 @@ async function obtenerTokenAuth() {
             }
         }
     } catch (error) {
-        console.warn('Error obteniendo token:', error);
         authToken = null;
     }
 }
@@ -126,7 +132,6 @@ async function cargarSucursales() {
             }
         }
     } catch (error) {
-        console.error('Error cargando sucursales:', error);
         sucursalesCache = [];
     }
 }
@@ -137,31 +142,59 @@ async function cargarCategorias() {
         const categoriaManager = new CategoriaManager();
         categoriasCache = await categoriaManager.obtenerTodasCategorias();
     } catch (error) {
-        console.error('Error cargando categorías:', error);
         categoriasCache = [];
     }
 }
 
 async function cargarSubcategorias() {
     try {
-        const { SubcategoriaManager } = await import('/clases/subcategoria.js');
+        const modulo = await import('/clases/subcategoria.js').catch(() => null);
+        if (!modulo) {
+            subcategoriasCache = [];
+            return;
+        }
+
+        const SubcategoriaManager = modulo.SubcategoriaManager || modulo.default;
+        if (!SubcategoriaManager) {
+            subcategoriasCache = [];
+            return;
+        }
+
         const subcategoriaManager = new SubcategoriaManager();
-        subcategoriasCache = await subcategoriaManager.obtenerTodasSubcategorias();
+
+        if (organizacionActual?.camelCase) {
+            subcategoriasCache = await subcategoriaManager.obtenerSubcategoriasPorOrganizacion?.(organizacionActual.camelCase) || [];
+        } else {
+            subcategoriasCache = await subcategoriaManager.obtenerTodasSubcategorias?.() || [];
+        }
     } catch (error) {
-        console.error('Error cargando subcategorías:', error);
         subcategoriasCache = [];
     }
 }
 
 async function cargarUsuarios() {
     try {
-        const { UsuarioManager } = await import('/clases/user.js');
+        const modulo = await import('/clases/user.js').catch(() => null);
+        if (!modulo) {
+            usuariosCache = [];
+            return;
+        }
+
+        const UsuarioManager = modulo.UsuarioManager || modulo.default || modulo;
+
+        if (typeof UsuarioManager !== 'function') {
+            usuariosCache = [];
+            return;
+        }
+
         const usuarioManager = new UsuarioManager();
-        if (organizacionActual.camelCase) {
+
+        if (organizacionActual.camelCase && typeof usuarioManager.obtenerUsuariosPorOrganizacion === 'function') {
             usuariosCache = await usuarioManager.obtenerUsuariosPorOrganizacion(organizacionActual.camelCase);
+        } else {
+            usuariosCache = [];
         }
     } catch (error) {
-        console.error('Error cargando usuarios:', error);
         usuariosCache = [];
     }
 }
@@ -183,18 +216,22 @@ function configurarEventListeners() {
 // FUNCIONES DE FILTRADO
 // =============================================
 function aplicarFiltros() {
-    filtrosActivos.estado = document.getElementById('filtroEstado').value;
-    filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo').value;
-    filtrosActivos.sucursalId = document.getElementById('filtroSucursal').value;
+    filtrosActivos.estado = document.getElementById('filtroEstado')?.value || 'todos';
+    filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo')?.value || 'todos';
+    filtrosActivos.sucursalId = document.getElementById('filtroSucursal')?.value || 'todos';
 
     paginaActual = 1;
     renderizarIncidencias();
 }
 
 function limpiarFiltros() {
-    document.getElementById('filtroEstado').value = 'todos';
-    document.getElementById('filtroRiesgo').value = 'todos';
-    document.getElementById('filtroSucursal').value = 'todos';
+    const filtroEstado = document.getElementById('filtroEstado');
+    const filtroRiesgo = document.getElementById('filtroRiesgo');
+    const filtroSucursal = document.getElementById('filtroSucursal');
+
+    if (filtroEstado) filtroEstado.value = 'todos';
+    if (filtroRiesgo) filtroRiesgo.value = 'todos';
+    if (filtroSucursal) filtroSucursal.value = 'todos';
 
     filtrosActivos = {
         estado: 'todos',
@@ -246,7 +283,9 @@ window.generarIPH = async function (incidenciaId, event) {
             throw new Error('Incidencia no encontrada');
         }
 
-        await generadorIPH.generarIPH(incidencia);
+        if (generadorIPH && typeof generadorIPH.generarIPH === 'function') {
+            await generadorIPH.generarIPH(incidencia);
+        }
     } catch (error) {
         console.error('Error al generar IPH:', error);
         Swal.fire({
@@ -259,8 +298,7 @@ window.generarIPH = async function (incidenciaId, event) {
 
 window.generarIPHMultiple = async function () {
     try {
-        // Por ahora, como no hay checkboxes, generamos para todas las visibles
-        const incidenciasVisibles = incidenciasCache.slice(0, 5); // Limitar a 5
+        const incidenciasVisibles = incidenciasCache.slice(0, 5);
 
         if (incidenciasVisibles.length === 0) {
             Swal.fire({
@@ -283,7 +321,9 @@ window.generarIPHMultiple = async function () {
 
         if (!confirm.isConfirmed) return;
 
-        await generadorIPH.generarIPHMultiple(incidenciasVisibles);
+        if (generadorIPH && typeof generadorIPH.generarIPHMultiple === 'function') {
+            await generadorIPH.generarIPHMultiple(incidenciasVisibles);
+        }
 
     } catch (error) {
         console.error('Error generando IPHs múltiples:', error);
@@ -306,6 +346,8 @@ async function cargarIncidencias() {
 
     try {
         const tbody = document.getElementById('tablaIncidenciasBody');
+        if (!tbody) return;
+
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;">Cargando incidencias...</td></tr>';
 
         incidenciasCache = await incidenciaManager.getIncidenciasByOrganizacion(organizacionActual.camelCase);
