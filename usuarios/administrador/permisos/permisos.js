@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         const usuarioCargado = cargarUsuarioDesdeStorage();
 
         if (!usuarioCargado) {
-            console.error('❌ No hay administrador autenticado');
             showNoAdminMessage();
             return;
         }
@@ -61,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         setupEvents();
 
     } catch (error) {
-        console.error('❌ Error inicializando:', error);
+
         showError(error.message || 'Error al cargar la página');
     }
 });
@@ -95,7 +94,6 @@ function cargarUsuarioDesdeStorage() {
                 timestamp: new Date().toISOString()
             }));
 
-            console.log('✅ Usuario cargado desde userData:', adminActual);
             return true;
         }
 
@@ -112,14 +110,13 @@ function cargarUsuarioDesdeStorage() {
                 rol: adminData.rol || 'administrador',
                 correoElectronico: adminData.correoElectronico || ''
             };
-            console.log('✅ Usuario cargado desde adminInfo:', adminActual);
+
             return true;
         }
 
-        console.warn('No se encontraron datos de usuario en localStorage');
         return false;
     } catch (error) {
-        console.error('Error cargando usuario:', error);
+
         return false;
     }
 }
@@ -128,7 +125,6 @@ function cargarUsuarioDesdeStorage() {
 async function loadAreas() {
     try {
         if (!adminActual?.organizacionCamelCase) {
-            console.warn('No hay organización definida para cargar áreas');
             return;
         }
 
@@ -140,7 +136,6 @@ async function loadAreas() {
                 cargos: area.cargos || {}
             });
         });
-        console.log(`✅ Cargadas ${areas.length} áreas`);
     } catch (error) {
         console.error('Error cargando áreas:', error);
     }
@@ -322,8 +317,6 @@ async function loadPermisos() {
             adminActual.organizacionCamelCase
         );
 
-        console.log(`📊 Cargados ${todosLosPermisos.length} permisos desde Firebase`);
-
         // Enriquecer permisos con nombres de área y cargo
         todosLosPermisos = todosLosPermisos.map(permiso => {
             const area = areasCache.get(permiso.areaId);
@@ -356,8 +349,6 @@ async function loadPermisos() {
         renderizarConPaginacion();
 
     } catch (error) {
-        console.error('❌ Error cargando permisos:', error);
-
         // Si es error por falta de datos, mostrar empty state
         if (error.message.includes('organización')) {
             showEmptyState();

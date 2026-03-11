@@ -32,7 +32,6 @@ class EditarPermisoController {
             const usuarioCargado = this._cargarUsuario();
 
             if (!usuarioCargado) {
-                console.warn('No hay sesión activa, redirigiendo al login...');
                 this._redirigirAlLogin();
                 return;
             }
@@ -51,8 +50,6 @@ class EditarPermisoController {
 
             // 6. Configurar organización automática
             this._configurarOrganizacion();
-
-            console.log('✅ Inicialización completada');
 
         } catch (error) {
             console.error('Error inicializando:', error);
@@ -76,7 +73,6 @@ class EditarPermisoController {
                         this._generarCamelCase(adminData.organizacion),
                     correo: adminData.correoElectronico || adminData.correo || ''
                 };
-                console.log('✅ Usuario cargado desde adminInfo:', this.usuarioActual);
                 return true;
             }
 
@@ -92,7 +88,6 @@ class EditarPermisoController {
                         this._generarCamelCase(userData.organizacion || userData.empresa),
                     correo: userData.correo || userData.email || ''
                 };
-                console.log('✅ Usuario cargado desde userData:', this.usuarioActual);
                 return true;
             }
 
@@ -108,7 +103,6 @@ class EditarPermisoController {
                         this._generarCamelCase(user.organizacion),
                     correo: user.correoElectronico || user.correo || ''
                 };
-                console.log('✅ Usuario cargado desde userManager:', this.usuarioActual);
 
                 // Guardar en localStorage para futuras cargas
                 localStorage.setItem('adminInfo', JSON.stringify({
@@ -137,12 +131,10 @@ class EditarPermisoController {
                         this._generarCamelCase(permisoData.organizacion),
                     correo: ''
                 };
-                console.log('✅ Usuario cargado desde selectedPermiso:', this.usuarioActual);
                 return true;
             }
 
             // Si no hay nada, redirigir al login
-            console.warn('⚠️ No se encontró información de usuario');
             return false;
 
         } catch (error) {
@@ -170,7 +162,6 @@ class EditarPermisoController {
             this.permisoManager = new PermisoManager();
             this.areaManager = new AreaManager();
 
-            console.log('✅ Managers cargados correctamente');
         } catch (error) {
             console.error('❌ Error cargando managers:', error);
             throw new Error('No se pudieron cargar los módulos necesarios. Verifica la consola.');
@@ -187,8 +178,6 @@ class EditarPermisoController {
             this.areas = await this.areaManager.getAreasByOrganizacion(
                 this.usuarioActual.organizacionCamelCase
             );
-
-            console.log(`✅ Cargadas ${this.areas.length} áreas`);
 
         } catch (error) {
             console.error('❌ Error cargando áreas:', error);
@@ -207,7 +196,6 @@ class EditarPermisoController {
                 permisoData = JSON.parse(selectedPermiso);
                 if (permisoData.id === this.permisoId) {
                     this.permisoActual = permisoData;
-                    console.log('✅ Permiso cargado desde localStorage:', this.permisoActual);
                 }
             }
 
@@ -221,7 +209,6 @@ class EditarPermisoController {
                 if (!this.permisoActual) {
                     throw new Error('Permiso no encontrado');
                 }
-                console.log('✅ Permiso cargado desde Firebase:', this.permisoActual);
             }
 
             // NO mostramos el ID del permiso - Eliminamos el código que mostraba el ID
@@ -431,8 +418,6 @@ class EditarPermisoController {
             // Obtener permisos seleccionados
             const nuevosPermisos = this._obtenerPermisosSeleccionados();
 
-            console.log('📝 Actualizando permiso:', this.permisoActual.id, nuevosPermisos);
-
             // Actualizar permiso usando el manager
             const permisoActualizado = await this.permisoManager.actualizarPermiso(
                 this.permisoActual.id,
@@ -440,8 +425,6 @@ class EditarPermisoController {
                 this.usuarioActual.id || this.usuarioActual.uid,
                 this.usuarioActual.organizacionCamelCase
             );
-
-            console.log('✅ Permiso actualizado en Firebase:', permisoActualizado);
 
             // Limpiar localStorage
             localStorage.removeItem('selectedPermiso');

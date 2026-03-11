@@ -4,7 +4,7 @@ class NavbarComplete {
         this.isAdminDropdownOpen = false;
         this.currentUser = null;
         this.userRole = null;
-        this.init();      
+        this.init();
     }
 
     // Inicializa el navbar evitando duplicados
@@ -13,7 +13,7 @@ class NavbarComplete {
             return;
         }
 
-        window.NavbarCompleteLoaded = true; 
+        window.NavbarCompleteLoaded = true;
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setup());
@@ -26,8 +26,8 @@ class NavbarComplete {
     async setup() {
         try {
             this.removeOriginalNavbar();
-            this.createNavbar(); 
-            this.setupFunctionalities(); 
+            this.createNavbar();
+            this.setupFunctionalities();
             this.loadUserDataFromLocalStorage();
             this.updateNavbarWithUserData();
         } catch (error) {
@@ -38,13 +38,13 @@ class NavbarComplete {
     // Remueve el navbar original si existe
     removeOriginalNavbar() {
         const originalHeader = document.getElementById('main-header');
-        originalHeader?.remove(); 
+        originalHeader?.remove();
     }
 
     // Crea el navbar completo
     createNavbar() {
-        this.addStyles();   
-        this.insertHTML();       
+        this.addStyles();
+        this.insertHTML();
         this.adjustBodyPadding();
     }
 
@@ -919,20 +919,20 @@ class NavbarComplete {
     loadUserDataFromLocalStorage() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            
+
             if (!isLoggedIn) {
                 console.warn('⚠️ No hay sesión activa en localStorage');
                 return false;
             }
-            
+
             const userDataString = localStorage.getItem('userData');
-            
+
             if (userDataString) {
                 const userData = JSON.parse(userDataString);
-                
+
                 let fotoUsuario = null;
                 let fotoOrganizacion = null;
-                
+
                 if (userData.fotoUsuario && userData.fotoUsuario.length > 10) {
                     fotoUsuario = userData.fotoUsuario;
                 } else {
@@ -941,7 +941,7 @@ class NavbarComplete {
                         fotoUsuario = userFotoKey;
                     }
                 }
-                
+
                 if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) {
                     fotoOrganizacion = userData.fotoOrganizacion;
                 } else {
@@ -950,7 +950,7 @@ class NavbarComplete {
                         fotoOrganizacion = orgLogoKey;
                     }
                 }
-                
+
                 this.currentUser = {
                     id: userData.id || localStorage.getItem('userId'),
                     uid: userData.id,
@@ -966,12 +966,12 @@ class NavbarComplete {
                     verificado: userData.verificado || true,
                     ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
                 };
-                
+
                 // ✅ CORREGIDO: Guardar el rol
                 this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
                 return true;
             }
-            
+
             this.currentUser = {
                 id: localStorage.getItem('userId'),
                 correoElectronico: localStorage.getItem('userEmail'),
@@ -983,15 +983,15 @@ class NavbarComplete {
                 fotoUsuario: localStorage.getItem('userFoto') || null,
                 fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
             };
-            
+
             if (this.currentUser.nombreCompleto && this.currentUser.rol) {
                 this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
                 return true;
             }
-            
+
             console.warn('⚠️ No se encontraron datos de usuario en localStorage');
             return false;
-            
+
         } catch (error) {
             console.error('❌ Error al cargar usuario desde localStorage:', error);
             return false;
@@ -1005,12 +1005,12 @@ class NavbarComplete {
             const userRole = document.getElementById('userRole');
             const userEmail = document.getElementById('userEmail');
             const userOrganization = document.getElementById('userOrganization');
-            
+
             if (userName) userName.textContent = 'No autenticado';
             if (userRole) userRole.textContent = 'Visitante';
             if (userEmail) userEmail.textContent = 'Inicia sesión para continuar';
             if (userOrganization) userOrganization.textContent = '';
-            
+
             return;
         }
 
@@ -1025,7 +1025,7 @@ class NavbarComplete {
         const orgTextLogo = document.getElementById('orgTextLogo');
         const orgLogoLink = document.getElementById('orgLogoLink');
         const orgLogoContainer = document.getElementById('orgLogoContainer');
-        
+
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
 
         if (this.currentUser.fotoOrganizacion && this.currentUser.fotoOrganizacion.length > 10) {
@@ -1034,8 +1034,8 @@ class NavbarComplete {
             organizationLogoImg.style.display = 'block';
             orgTextLogo.style.display = 'none';
             organizationLogoImg.title = this.currentUser.organizacion;
-            
-            
+
+
             organizationLogoImg.onload = () => {
             };
             organizationLogoImg.onerror = (e) => {
@@ -1053,12 +1053,12 @@ class NavbarComplete {
     showOrgTextLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
-        
+
         if (!organizationLogoImg || !orgTextLogo) return;
-        
+
         organizationLogoImg.style.display = 'none';
         orgTextLogo.style.display = 'flex';
-        
+
         const orgName = this.currentUser?.organizacion || 'Organización';
         const initials = orgName
             .split(' ')
@@ -1066,7 +1066,7 @@ class NavbarComplete {
             .join('')
             .toUpperCase()
             .substring(0, 3);
-        
+
         orgTextLogo.textContent = initials;
         orgTextLogo.title = orgName;
     }
@@ -1091,15 +1091,15 @@ class NavbarComplete {
 
         const userProfileImg = document.getElementById('userProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
-        
+
         if (userProfileImg && profilePlaceholder) {
             if (this.currentUser.fotoUsuario && this.currentUser.fotoUsuario.length > 10) {
                 userProfileImg.src = this.currentUser.fotoUsuario;
                 userProfileImg.style.display = 'block';
                 profilePlaceholder.style.display = 'none';
                 userProfileImg.alt = `Foto de ${this.currentUser.nombreCompleto}`;
-                
-                
+
+
                 userProfileImg.onload = () => {
                 };
                 userProfileImg.onerror = (e) => {
@@ -1116,12 +1116,12 @@ class NavbarComplete {
     showProfilePlaceholder() {
         const userProfileImg = document.getElementById('userProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
-        
+
         if (!userProfileImg || !profilePlaceholder) return;
-        
+
         userProfileImg.style.display = 'none';
         profilePlaceholder.style.display = 'flex';
-        
+
         const placeholderText = profilePlaceholder.querySelector('span');
         if (placeholderText && this.currentUser?.nombreCompleto) {
             const initials = this.currentUser.nombreCompleto
@@ -1150,7 +1150,7 @@ class NavbarComplete {
 
     // Configura todas las funcionalidades
     setupFunctionalities() {
-        this.setupMenu();  
+        this.setupMenu();
         this.setupScroll();
         this.loadFontAwesome();
         this.setupUserDropdown();
@@ -1173,7 +1173,7 @@ class NavbarComplete {
             hamburgerBtn.classList.toggle('active', this.isMenuOpen);
             overlay.classList.toggle('active', this.isMenuOpen);
             document.body.classList.toggle('menu-open', this.isMenuOpen);
-            
+
             if (!this.isMenuOpen && this.isAdminDropdownOpen) {
                 this.toggleUserDropdown(false);
             }
@@ -1186,7 +1186,7 @@ class NavbarComplete {
                 hamburgerBtn.classList.remove('active');
                 overlay.classList.remove('active');
                 document.body.classList.remove('menu-open');
-                
+
                 if (this.isAdminDropdownOpen) {
                     this.toggleUserDropdown(false);
                 }
@@ -1195,7 +1195,7 @@ class NavbarComplete {
 
         hamburgerBtn.addEventListener('click', toggleMenu);
         overlay.addEventListener('click', closeMenu);
-        
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isMenuOpen) closeMenu();
         });
@@ -1223,8 +1223,8 @@ class NavbarComplete {
         });
 
         document.addEventListener('click', (e) => {
-            if (!dropdownBtn.contains(e.target) && 
-                !dropdownOptions.contains(e.target) && 
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
                 this.isAdminDropdownOpen) {
                 this.toggleUserDropdown(false);
             }
@@ -1240,15 +1240,15 @@ class NavbarComplete {
     // Configura el cierre de sesión
     setupLogout() {
         const logoutOption = document.getElementById('logoutOption');
-        
+
         if (!logoutOption) return;
 
         logoutOption.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const confirmLogout = await this.showLogoutConfirmation();
-            
+
             if (confirmLogout) {
                 await this.performLogout();
             }
@@ -1281,12 +1281,12 @@ class NavbarComplete {
 
     // Realiza el cierre de sesión COMPLETO
     async performLogout() {
-        
+
         try {
             this.clearAllStorage();
             await this.showLogoutSuccessMessage();
             this.redirectToLogin();
-            
+
         } catch (error) {
             console.error('❌ Error al cerrar sesión:', error);
             this.clearAllStorage();
@@ -1314,7 +1314,7 @@ class NavbarComplete {
                 const cookie = cookies[i];
                 const eqPos = cookie.indexOf('=');
                 const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-                
+
                 if (name.includes('session') || name.includes('auth') || name.includes('firebase')) {
                     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
                 }
@@ -1328,11 +1328,11 @@ class NavbarComplete {
     async clearIndexedDB() {
         try {
             const databases = ['firebaseLocalStorageDb', 'firestore', 'centinela-db'];
-            
+
             for (const dbName of databases) {
                 try {
                     await indexedDB.deleteDatabase(dbName);
-                } catch (e) {}
+                } catch (e) { }
             }
         } catch (error) {
             console.warn('⚠️ Error al limpiar indexedDB:', error);
@@ -1364,7 +1364,7 @@ class NavbarComplete {
     toggleUserDropdown(show) {
         const dropdownBtn = document.getElementById('userDropdownBtn');
         const dropdownOptions = document.getElementById('userDropdownOptions');
-        
+
         if (dropdownBtn && dropdownOptions) {
             dropdownBtn.classList.toggle('active', show);
             dropdownOptions.classList.toggle('active', show);
