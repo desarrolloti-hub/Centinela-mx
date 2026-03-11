@@ -180,111 +180,73 @@
                 </div>
             </div>
 
-            <!-- PANEL DERECHO -->
-            <div class="side right">
-                <!-- SECCIÓN GRÁFICAS Y MAPAS -->
-                <div class="section-container">
-                    <div class="section-header">
-                        <h2 class="section-title"><i class="fa-solid fa-chart-simple"></i> GRÁFICAS Y MAPAS</h2>
-                        <p class="section-subtitle">Visualización de datos y ubicaciones</p>
+
+            <!-- Estadísticas -->
+            <div class="dashboard-card" data-modulo="incidencias">
+                <div class="card-icon cyan">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <div class="card-text">
+                    <h3>Estadísticas</h3>
+                    <p>Reportes y análisis generales</p>
+                </div>
+                <div class="card-arrow">→</div>
+            </div>
+            </div>
+            </div>
+
+
+
+            <div class="cards-grid">
+                <!-- Tipos de Incidencia -->
+                <div class="dashboard-card" data-modulo="categorias">
+                    <div class="card-icon blue">
+                        <i class="fa-solid fa-list-check"></i>
                     </div>
-
-                    <div class="cards-grid">
-                        <!-- Gráficas de Incidencias -->
-                        <div class="dashboard-card" data-modulo="incidencias">
-                            <div class="card-icon blue">
-                                <i class="fa-solid fa-chart-line"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Gráficas de Incidencias</h3>
-                                <p>Visualizar estadísticas de incidencias</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Mapa -->
-                        <div class="dashboard-card" data-modulo="sucursales">
-                            <div class="card-icon yellow">
-                                <i class="fa-solid fa-map-location-dot"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Mapa</h3>
-                                <p>Ver ubicaciones en tiempo real</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Estadísticas -->
-                        <div class="dashboard-card" data-modulo="incidencias">
-                            <div class="card-icon cyan">
-                                <i class="fa-solid fa-chart-pie"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Estadísticas</h3>
-                                <p>Reportes y análisis generales</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
+                    <div class="card-text">
+                        <h3>Tipos de Incidencia</h3>
+                        <p>Configurar categorías de incidencias</p>
                     </div>
+                    <div class="card-arrow">→</div>
                 </div>
 
-                <!-- SECCIÓN ADMINISTRACIÓN -->
-                <div class="section-container">
-                    <div class="section-header">
-                        <h2 class="section-title"><i class="fa-solid fa-gear"></i> ADMINISTRACIÓN</h2>
-                        <p class="section-subtitle">Configuración y gestión del sistema</p>
+                <!-- Roles y Permisos -->
+                <div class="dashboard-card" data-modulo="permisos" data-requiere-admin="true">
+                    <div class="card-icon cyan">
+                        <i class="fa-solid fa-user-gear"></i>
                     </div>
-
-                    <div class="cards-grid">
-                        <!-- Tipos de Incidencia -->
-                        <div class="dashboard-card" data-modulo="categorias">
-                            <div class="card-icon blue">
-                                <i class="fa-solid fa-list-check"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Tipos de Incidencia</h3>
-                                <p>Configurar categorías de incidencias</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Roles y Permisos -->
-                        <div class="dashboard-card" data-modulo="permisos" data-requiere-admin="true">
-                            <div class="card-icon cyan">
-                                <i class="fa-solid fa-user-gear"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Roles y Permisos</h3>
-                                <p>Gestionar permisos de usuario</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Backup del Sistema -->
-                        <div class="dashboard-card" data-modulo="admin" data-requiere-admin="true">
-                            <div class="card-icon yellow">
-                                <i class="fa-solid fa-database"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Backup del Sistema</h3>
-                                <p>Copias de seguridad y recuperación</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Configuración General -->
-                        <div class="dashboard-card" data-modulo="admin" data-requiere-admin="true">
-                            <div class="card-icon purple">
-                                <i class="fa-solid fa-sliders"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Configuración General</h3>
-                                <p>Ajustes generales del sistema</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
+                    <div class="card-text">
+                        <h3>Roles y Permisos</h3>
+                        <p>Gestionar permisos de usuario</p>
                     </div>
+                    <div class="card-arrow">→</div>
                 </div>
+
+                <!-- Backup del Sistema -->
+                <div class="dashboard-card" data-modulo="admin" data-requiere-admin="true">
+                    <div class="card-icon yellow">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div class="card-text">
+                        <h3>Backup del Sistema</h3>
+                        <p>Copias de seguridad y recuperación</p>
+                    </div>
+                    <div class="card-arrow">→</div>
+                </div>
+
+                <!-- Configuración General -->
+                <div class="dashboard-card" data-modulo="admin" data-requiere-admin="true">
+                    <div class="card-icon purple">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+                    <div class="card-text">
+                        <h3>Configuración General</h3>
+                        <p>Ajustes generales del sistema</p>
+                    </div>
+                    <div class="card-arrow">→</div>
+                </div>
+            </div>
+            </div>
             </div>
         </section>
     </main>

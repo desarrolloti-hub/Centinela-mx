@@ -313,6 +313,7 @@ body {
 }
 
 .section-container {
+
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-medium);
     padding: var(--spacing-md, 0.75rem);
@@ -323,6 +324,7 @@ body {
 
 .section-container:hover {
     border-color: var(--color-accent-primary);
+
 }
 
 .section-header {
@@ -374,10 +376,11 @@ body {
     border-radius: var(--border-radius-medium);
     transition: var(--transition-default);
     cursor: pointer;
+
     backdrop-filter: blur(8px);
 }
 
-/* Hover general para tarjetas (EXCEPTO Nueva Incidencia) */
+/* Hover general para tarjetas */
 .dashboard-card:not(#card-nueva-incidencia):hover {
     border-color: var(--color-accent-primary);
     background: var(--color-hover);
@@ -479,8 +482,8 @@ body {
     }
 
     .dashboard-card {
-        height: 100px !important;
-        min-height: 100px !important;
+
+        min-height: 90px !important;
     }
 
     .kpi-row-6 {

@@ -1,9 +1,15 @@
+// navbarColaborador.js - VERSIÓN CON LA MISMA LÓGICA QUE PANEL CONTROL
+// UBICACIÓN: /components/navbarColaborador.js
+
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
         this.isAdminDropdownOpen = false;
+        this.isHerramientasDropdownOpen = false;
         this.currentUser = null;
         this.userRole = null;
+        this.permisos = null;
+        this.permisoManager = null;
         this.init();
     }
 
@@ -28,10 +34,24 @@ class NavbarComplete {
             this.removeOriginalNavbar();
             this.createNavbar();
             this.setupFunctionalities();
+
+            // 1. Cargar datos del usuario desde localStorage
             this.loadUserDataFromLocalStorage();
+
+            // 2. IMPORTAR PermisoManager (igual que en panelControl.js)
+            await this.importPermisoManager();
+
+            // 3. OBTENER PERMISOS REALES DESDE FIREBASE (igual que panelControl.js)
+            await this.obtenerPermisosReales();
+
+            // 4. Actualizar navbar con datos del usuario
             this.updateNavbarWithUserData();
+
+            // 5. APLICAR FILTROS DE PERMISOS
+            this.filterMenuByPermissions();
+
         } catch (error) {
-            console.error('❌ Error:', error);
+            console.error('❌ Error en navbar:', error);
         }
     }
 
@@ -41,6 +61,218 @@ class NavbarComplete {
         originalHeader?.remove();
     }
 
+    // IMPORTAR PermisoManager (igual que en panelControl.js)
+    async importPermisoManager() {
+        try {
+            const { PermisoManager } = await import('/clases/permiso.js');
+            this.permisoManager = new PermisoManager();
+
+            // Establecer la organización del usuario en el permisoManager
+            if (this.currentUser?.organizacionCamelCase) {
+                this.permisoManager.organizacionCamelCase = this.currentUser.organizacionCamelCase;
+            }
+            console.log('✅ PermisoManager importado en navbar');
+        } catch (error) {
+            console.warn('⚠️ Error importando PermisoManager en navbar:', error);
+        }
+    }
+
+    // OBTENER PERMISOS REALES DESDE FIREBASE (IGUAL QUE EN panelControl.js)
+    async obtenerPermisosReales() {
+        try {
+            // Si es administrador o master, todos los permisos
+            if (this.userRole === 'administrador' || this.userRole === 'master') {
+                console.log('👑 Navbar: Usuario administrador - todos los permisos');
+                this.permisos = {
+                    areas: true,
+                    categorias: true,
+                    sucursales: true,
+                    regiones: true,
+                    incidencias: true,
+                    usuarios: true,
+                    permisos: true,
+                    admin: true
+                };
+                return;
+            }
+
+            // Verificar si el usuario tiene área y cargo asignados
+            if (!this.currentUser?.areaId || !this.currentUser?.cargoId) {
+                console.log('ℹ️ Navbar: Usuario sin área o cargo asignado - solo incidencias por defecto');
+                this.permisos = {
+                    areas: false,
+                    categorias: false,
+                    sucursales: false,
+                    regiones: false,
+                    incidencias: true,
+                    usuarios: false,
+                    permisos: false,
+                    admin: false
+                };
+                return;
+            }
+
+            console.log('🔍 Navbar: Buscando permisos para:', {
+                areaId: this.currentUser.areaId,
+                cargoId: this.currentUser.cargoId,
+                organizacion: this.currentUser.organizacionCamelCase
+            });
+
+            // Buscar permiso específico en Firebase usando el PermisoManager
+            if (this.permisoManager) {
+                try {
+                    const permiso = await this.permisoManager.obtenerPorCargoYArea(
+                        this.currentUser.cargoId,
+                        this.currentUser.areaId,
+                        this.currentUser.organizacionCamelCase
+                    );
+
+                    if (permiso) {
+                        this.permisos = {
+                            areas: permiso.puedeAcceder('areas'),
+                            categorias: permiso.puedeAcceder('categorias'),
+                            sucursales: permiso.puedeAcceder('sucursales'),
+                            regiones: permiso.puedeAcceder('regiones'),
+                            incidencias: permiso.puedeAcceder('incidencias'),
+                            usuarios: false,
+                            permisos: false,
+                            admin: false
+                        };
+                        console.log('✅ Navbar: Permisos encontrados en Firebase:', this.permisos);
+                        return;
+                    } else {
+                        console.log('ℹ️ Navbar: No se encontró permiso configurado para esta área y cargo');
+                    }
+                } catch (error) {
+                    console.warn('Error consultando permisos en Firebase:', error);
+                }
+            }
+
+            // Si no hay permisos configurados, solo incidencias
+            console.log('ℹ️ Navbar: Usando permisos por defecto - solo incidencias');
+            this.permisos = {
+                areas: false,
+                categorias: false,
+                sucursales: false,
+                regiones: false,
+                incidencias: true,
+                usuarios: false,
+                permisos: false,
+                admin: false
+            };
+
+        } catch (error) {
+            console.error('Error en obtenerPermisosReales:', error);
+            this.permisos = {
+                areas: false,
+                categorias: false,
+                sucursales: false,
+                regiones: false,
+                incidencias: true,
+                usuarios: false,
+                permisos: false,
+                admin: false
+            };
+        }
+    }
+
+    // FILTRAR MENÚ POR PERMISOS
+    filterMenuByPermissions() {
+        if (!this.permisos) {
+            console.warn('⚠️ No hay permisos para filtrar el menú');
+            return;
+        }
+
+        console.log('🎯 Navbar: Aplicando filtros de permisos:', this.permisos);
+
+        // Elementos del menú (ÁREAS, CATEGORÍAS, SUCURSALES, REGIONES, INCIDENCIAS)
+        const menuItems = [
+            {
+                id: 'areasBtn',
+                modulo: 'areas',
+                elemento: document.getElementById('areasBtn'),
+                texto: 'Áreas'
+            },
+            {
+                id: 'categoriasBtn',
+                modulo: 'categorias',
+                elemento: document.getElementById('categoriasBtn'),
+                texto: 'Categorías'
+            },
+            {
+                id: 'sucursalesBtn',
+                modulo: 'sucursales',
+                elemento: document.getElementById('sucursalesBtn'),
+                texto: 'Sucursales'
+            },
+            {
+                id: 'regionesBtn',
+                modulo: 'regiones',
+                elemento: document.getElementById('regionesBtn'),
+                texto: 'Regiones'
+            },
+            {
+                id: 'incidenciasBtn',
+                modulo: 'incidencias',
+                elemento: document.getElementById('incidenciasBtn'),
+                texto: 'Incidencias'
+            }
+        ];
+
+        let itemsVisibles = 0;
+        const itemsVisiblesList = [];
+
+        menuItems.forEach(item => {
+            if (!item.elemento) return;
+
+            // Verificar permiso (IGUAL QUE EN panelControl.js)
+            const debeMostrarse = this.verificarPermiso(item.modulo);
+
+            if (debeMostrarse) {
+                item.elemento.style.display = 'flex';
+                itemsVisibles++;
+                itemsVisiblesList.push(item.texto);
+                console.log(`✅ Mostrando ${item.id} (permiso: ${item.modulo})`);
+            } else {
+                item.elemento.style.display = 'none';
+                console.log(`❌ Ocultando ${item.id} (sin permiso: ${item.modulo})`);
+            }
+        });
+
+        console.log(`📊 Navbar: Elementos visibles: ${itemsVisibles} - ${itemsVisiblesList.join(', ')}`);
+
+        // Verificar si la sección completa debe mostrarse
+        this.checkEmptySections(itemsVisibles);
+    }
+
+    // VERIFICAR PERMISO (IGUAL QUE EN panelControl.js)
+    verificarPermiso(modulo) {
+        // Admin ve todo
+        if (this.userRole === 'administrador' || this.userRole === 'master') {
+            return true;
+        }
+
+        // Verificar permiso específico
+        if (modulo && this.permisos) {
+            return this.permisos[modulo] === true;
+        }
+
+        return false;
+    }
+
+    // Verificar secciones vacías
+    checkEmptySections(itemsVisibles) {
+        const navSection = document.querySelector('.nav-section');
+        if (!navSection) return;
+
+        if (itemsVisibles === 0) {
+            navSection.style.display = 'none';
+            console.log('👻 Navbar: Ocultando sección (vacía)');
+        } else {
+            navSection.style.display = 'block';
+        }
+    }
+
     // Crea el navbar completo
     createNavbar() {
         this.addStyles();
@@ -48,12 +280,12 @@ class NavbarComplete {
         this.adjustBodyPadding();
     }
 
-    // Agrega todos los estilos CSS necesarios
+    // Agrega todos los estilos CSS (MANTIENES TU CSS EXISTENTE)
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
         const styles = /*css*/`
-            /* Navbar fijo en la parte superior */
+            /* (AQUI VA TODO TU CSS EXISTENTE - LO DEJAS IGUAL) */
             #complete-navbar {
                 position: fixed;
                 top: 0;
@@ -66,13 +298,11 @@ class NavbarComplete {
                 font-family: var(--font-family-primary);
             }
             
-            /* Efecto al hacer scroll */
             #complete-navbar.scrolled {
                 background-color: var(--navbar-scrolled-bg);
                 box-shadow: var(--navbar-scrolled-shadow);
             }
             
-            /* Sección superior */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
@@ -85,7 +315,6 @@ class NavbarComplete {
                 box-sizing: border-box;
             }
             
-            /* Contenedor izquierdo para el logo */
             .navbar-left-container {
                 display: flex;
                 align-items: center;
@@ -95,7 +324,6 @@ class NavbarComplete {
                 margin-right: auto;
             }
             
-            /* Logo del sistema */
             .navbar-logo-link {
                 display: flex;
                 align-items: center;
@@ -105,7 +333,6 @@ class NavbarComplete {
                 flex: 0 0 auto;
             }
 
-            /* Contenedor para logo circular */
             .logo-circle-container {
                 width: 50px;
                 height: 50px;
@@ -120,7 +347,6 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
 
-            /* Todos los logos en círculo perfecto */
             .navbar-logo-img {
                 width: 100%;
                 height: 100%;
@@ -129,13 +355,11 @@ class NavbarComplete {
                 display: block;
             }
 
-            /* Efecto hover en el logo */
             .navbar-logo-link:hover .logo-circle-container {
                 transform: scale(1.05);
                 border-color: var(--color-accent-secondary);
             }
             
-            /* BARRA SEPARADORA ENTRE LOGOS */
             .logo-separator {
                 width: 2px;
                 height: 45px;
@@ -151,7 +375,6 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
-            /* Logo de organización cuando es texto */
             .org-text-logo {
                 display: none;
                 align-items: center;
@@ -168,7 +391,6 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
-            /* Título "CENTINELA" centrado */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -187,7 +409,6 @@ class NavbarComplete {
                 width: max-content;
             }
             
-            /* Contenedor derecho para el botón hamburguesa */
             .navbar-right-container {
                 display: flex;
                 align-items: center;
@@ -196,7 +417,6 @@ class NavbarComplete {
                 margin-left: auto;
             }
             
-            /* Botón hamburguesa */
             .navbar-hamburger-btn {
                 display: flex;
                 flex-direction: column;
@@ -214,7 +434,6 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
-            /* Líneas del botón hamburguesa */
             .hamburger-line {
                 display: block;
                 width: 25px;
@@ -225,7 +444,6 @@ class NavbarComplete {
                 transition: var(--transition-default);
             }
             
-            /* Animación a "X" cuando está activo */
             .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
                 transform: rotate(45deg) translate(6.3px, 6.3px);
             }
@@ -238,7 +456,6 @@ class NavbarComplete {
                 transform: rotate(-45deg) translate(6.3px, -6.3px);
             }
             
-            /* Menú lateral */
             .navbar-main-menu {
                 position: fixed;
                 top: 0;
@@ -258,14 +475,12 @@ class NavbarComplete {
                 opacity: 0;
             }
             
-            /* Cuando el menú está activo (visible) */
             .navbar-main-menu.active {
                 right: 0;
                 visibility: visible;
                 opacity: 1;
             }
             
-            /* Sección superior del menú: Perfil del usuario */
             .admin-profile-section {
                 padding: 30px 25px 20px;
                 background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
@@ -275,7 +490,6 @@ class NavbarComplete {
                 position: relative;
             }
             
-            /* Contenedor para la foto de perfil con lápiz */
             .profile-photo-container {
                 position: relative;
                 width: 120px;
@@ -284,7 +498,6 @@ class NavbarComplete {
                 display: inline-block;
             }
             
-            /* Círculo de imagen del usuario */
             .admin-profile-circle {
                 width: 100%;
                 height: 100%;
@@ -304,7 +517,6 @@ class NavbarComplete {
                 object-fit: cover;
             }
 
-            /* Placeholder para foto cuando no hay imagen */
             .profile-placeholder {
                 width: 100%;
                 height: 100%;
@@ -322,7 +534,6 @@ class NavbarComplete {
                 font-weight: bold;
             }
             
-            /* Ícono de lápiz para editar */
             .edit-profile-icon {
                 position: absolute;
                 bottom: 5px;
@@ -353,7 +564,6 @@ class NavbarComplete {
                 font-size: 14px;
             }
             
-            /* Información del usuario */
             .admin-info {
                 margin-bottom: 20px;
             }
@@ -387,7 +597,103 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* Sección de navegación */
+            .herramientas-dropdown-btn {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 14px 16px;
+                background-color: var(--color-bg-primary);
+                border: 2px solid var(--color-border-medium);
+                border-radius: var(--border-radius-medium);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text-primary);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+                font-family: 'Orbitron', sans-serif;
+                margin-bottom: 15px;
+            }
+            
+            .herramientas-dropdown-btn:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateY(-2px);
+                box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+            }
+            
+            .herramientas-dropdown-btn:active {
+                transform: translateY(0);
+            }
+            
+            .herramientas-dropdown-btn i {
+                transition: transform 0.3s ease;
+                font-size: 14px;
+            }
+            
+            .herramientas-dropdown-btn.active i {
+                transform: rotate(180deg);
+            }
+            
+            .herramientas-dropdown-options {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 20px;
+                padding: 15px;
+                background-color: var(--color-bg-tertiary);
+                border-radius: var(--border-radius-medium);
+                border: 1px solid var(--color-border-light);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .herramientas-dropdown-options.active {
+                max-height: 500px;
+                opacity: 1;
+                overflow: visible;
+            }
+            
+            .herramientas-dropdown-option {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 15px;
+                background-color: var(--color-bg-primary);
+                border: 1px solid var(--color-border-light);
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                color: var(--color-text-primary);
+                font-weight: 500;
+                font-family: 'Orbitron', sans-serif;
+                word-break: break-word;
+            }
+            
+            .herramientas-dropdown-option:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateX(5px);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            }
+            
+            .herramientas-dropdown-option i {
+                width: 20px;
+                text-align: center;
+                font-size: 16px;
+                color: var(--color-accent-primary);
+                flex-shrink: 0;
+            }
+            
+            .herramientas-dropdown-option span {
+                flex: 1;
+                white-space: normal;
+                word-break: break-word;
+            }
+            
             .nav-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -404,53 +710,6 @@ class NavbarComplete {
                 font-family: 'Orbitron', sans-serif;
             }
             
-            .nav-items-container {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-            }
-            
-            .nav-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 10px 15px;
-                border-radius: var(--border-radius-small);
-                transition: var(--transition-default);
-                cursor: pointer;
-                text-decoration: none;
-                color: var(--color-text-primary);
-            }
-            
-            .nav-item:hover {
-                background-color: var(--color-bg-secondary);
-            }
-            
-            .nav-item i {
-                width: 20px;
-                text-align: center;
-                font-size: 16px;
-            }
-            
-            .nav-item-text {
-                font-size: 15px;
-                flex-grow: 1;
-                font-family: 'Orbitron', sans-serif;
-            }
-            
-            .nav-item-percentage {
-                font-size: 14px;
-                font-weight: 600;
-                color: var(--color-accent-primary);
-                font-family: 'Orbitron', sans-serif;
-                background-color: var(--color-bg-tertiary);
-                padding: 2px 8px;
-                border-radius: 12px;
-                min-width: 20px;
-                text-align: center;
-            }
-            
-            /* Sección de espacios vacíos */
             .menu-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -469,14 +728,12 @@ class NavbarComplete {
                 cursor: default;
             }
             
-            /* Sección de opciones de usuario */
             .admin-options-section {
                 padding: 20px 25px;
                 border-top: 1px solid var(--color-border-light);
                 margin-top: auto;
             }
             
-            /* Botón desplegable */
             .admin-dropdown-btn {
                 display: flex;
                 align-items: center;
@@ -514,7 +771,6 @@ class NavbarComplete {
                 transform: rotate(180deg);
             }
             
-            /* Contenedor de opciones expandido */
             .admin-dropdown-options {
                 display: flex;
                 flex-direction: column;
@@ -551,6 +807,7 @@ class NavbarComplete {
                 color: var(--color-text-primary);
                 font-weight: 500;
                 font-family: 'Orbitron', sans-serif;
+                word-break: break-word;
             }
             
             .admin-dropdown-option:hover {
@@ -564,9 +821,15 @@ class NavbarComplete {
                 text-align: center;
                 font-size: 16px;
                 color: var(--color-accent-primary);
+                flex-shrink: 0;
             }
             
-            /* Opción especial para cerrar sesión */
+            .admin-dropdown-option span {
+                flex: 1;
+                white-space: normal;
+                word-break: break-word;
+            }
+            
             .logout-option {
                 background: linear-gradient(135deg, #ff6b6b, #ff5252);
                 border-color: #ff5252;
@@ -582,7 +845,6 @@ class NavbarComplete {
                 color: white;
             }
             
-            /* Overlay para cerrar el menú */
             .navbar-mobile-overlay {
                 position: fixed;
                 top: 0;
@@ -601,7 +863,6 @@ class NavbarComplete {
                 opacity: 1;
             }
             
-            /* Responsive para tablet */
             @media (max-width: 992px) {
                 .navbar-main-menu {
                     width: 85%;
@@ -629,9 +890,25 @@ class NavbarComplete {
                 body.menu-open {
                     overflow: hidden;
                 }
+                
+                .herramientas-dropdown-option {
+                    padding: 12px 12px;
+                    gap: 10px;
+                }
+                
+                .herramientas-dropdown-option i {
+                    font-size: 14px;
+                }
+                
+                .herramientas-dropdown-option span {
+                    font-size: 14px;
+                }
+
+                .herramientas-dropdown-options.active {
+                    max-height: 500px;
+                }
             }
             
-            /* Responsive para móvil */
             @media (max-width: 768px) {
                 .navbar-top-section {
                     padding: 5px 15px;
@@ -679,6 +956,11 @@ class NavbarComplete {
                     padding: 12px 14px;
                     font-size: 15px;
                 }
+
+                .herramientas-dropdown-btn {
+                    padding: 12px 14px;
+                    font-size: 15px;
+                }
                 
                 .navbar-hamburger-btn {
                     width: 36px;
@@ -689,9 +971,48 @@ class NavbarComplete {
                     width: 22px;
                     height: 2.5px;
                 }
+                
+                .admin-dropdown-options {
+                    padding: 12px;
+                }
+                
+                .admin-dropdown-options.active {
+                    max-height: 550px;
+                }
+
+                .herramientas-dropdown-options {
+                    padding: 12px;
+                }
+                
+                .herramientas-dropdown-options.active {
+                    max-height: 500px;
+                }
+                
+                .admin-dropdown-option {
+                    padding: 14px 12px;
+                    gap: 12px;
+                }
+                
+                .admin-dropdown-option i {
+                    font-size: 16px;
+                    width: 24px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 15px;
+                    line-height: 1.4;
+                }
+
+                .herramientas-dropdown-option {
+                    padding: 14px 12px;
+                    gap: 12px;
+                }
+                
+                .nav-section-title {
+                    font-size: 15px;
+                }
             }
             
-            /* Para pantallas muy pequeñas */
             @media (max-width: 480px) {
                 .navbar-top-section {
                     padding: 5px 10px;
@@ -727,9 +1048,20 @@ class NavbarComplete {
                     width: 20px;
                     height: 2px;
                 }
+                
+                .admin-dropdown-option {
+                    padding: 12px 10px;
+                }
+                
+                .admin-dropdown-option span {
+                    font-size: 14px;
+                }
+
+                .herramientas-dropdown-option {
+                    padding: 12px 10px;
+                }
             }
             
-            /* Para pantallas extra grandes */
             @media (min-width: 1600px) {
                 .navbar-top-section {
                     padding: 5px 40px;
@@ -828,32 +1160,49 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- SECCIÓN DE MENÚ - Mis Herramientas -->
+                <!-- SECCIÓN DE MÓDULOS (ÁREAS, CATEGORÍAS, SUCURSALES, REGIONES, INCIDENCIAS) -->
                 <div class="nav-section">
                     <div class="nav-section-title">
-                        <i class="fa-solid fa-briefcase"></i>
-                        <span>Mis Herramientas</span>
+                        <i class="fa-solid fa-cubes"></i>
+                        <span>Módulos del Sistema</span>
                     </div>
-                    <div class="nav-items-container">
-                        <a href="/users/colaborador/mis-tareas/mis-tareas.html" class="nav-item" id="misTareasBtn">
-                            <i class="fa-solid fa-check-circle"></i>
-                            <span class="nav-item-text">Mis Tareas</span>
-                            <span class="nav-item-percentage" id="tareasPendientes">0</span>
+                    
+                    <!-- Botón desplegable -->
+                    <button class="herramientas-dropdown-btn" id="herramientasDropdownBtn">
+                        <span>Accesos Rápidos</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    
+                    <!-- Contenedor de opciones -->
+                    <div class="herramientas-dropdown-options" id="herramientasDropdownOptions">
+                        <!-- ÁREAS -->
+                        <a href="/usuarios/colaboradores/areas/areas.html" class="herramientas-dropdown-option" id="areasBtn">
+                            <i class="fa-solid fa-map"></i>
+                            <span>Áreas</span>
                         </a>
-                        <a href="/users/colaborador/proyectos/proyectos.html" class="nav-item" id="proyectosBtn">
-                            <i class="fa-solid fa-project-diagram"></i>
-                            <span class="nav-item-text">Proyectos</span>
-                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+
+                        <!-- CATEGORÍAS -->
+                        <a href="/usuarios/colaboradores/categorias/categorias.html" class="herramientas-dropdown-option" id="categoriasBtn">
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Categorías</span>
                         </a>
-                        <a href="/users/colaborador/calendario/calendario.html" class="nav-item" id="calendarioBtn">
-                            <i class="fa-solid fa-calendar"></i>
-                            <span class="nav-item-text">Calendario</span>
-                            <i class="fa-solid fa-arrow-right" style="color: var(--color-accent-primary);"></i>
+
+                        <!-- SUCURSALES -->
+                        <a href="/usuarios/colaboradores/sucursales/sucursales.html" class="herramientas-dropdown-option" id="sucursalesBtn">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Sucursales</span>
                         </a>
-                        <a href="/users/colaborador/notificaciones/notificaciones.html" class="nav-item" id="notificacionesBtn">
-                            <i class="fa-solid fa-bell"></i>
-                            <span class="nav-item-text">Notificaciones</span>
-                            <span class="nav-item-percentage" id="notificacionesNoLeidas">0</span>
+
+                        <!-- REGIONES -->
+                        <a href="/usuarios/colaboradores/regiones/regiones.html" class="herramientas-dropdown-option" id="regionesBtn">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>Regiones</span>
+                        </a>
+
+                        <!-- INCIDENCIAS -->
+                        <a href="/usuarios/colaboradores/incidencias/incidencias.html" class="herramientas-dropdown-option" id="incidenciasBtn">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Incidencias</span>
                         </a>
                     </div>
                 </div>
@@ -915,7 +1264,7 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // ✅ CORREGIDO: Carga los datos del usuario desde localStorage usando ROL
+    // Carga los datos del usuario desde localStorage
     loadUserDataFromLocalStorage() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -956,32 +1305,43 @@ class NavbarComplete {
                     uid: userData.id,
                     correoElectronico: userData.email || localStorage.getItem('userEmail'),
                     nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'),
-                    // ✅ CORREGIDO: Usar 'rol' en lugar de 'cargo'
                     rol: userData.rol || localStorage.getItem('userRole'),
                     organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
                     organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
                     fotoUsuario: fotoUsuario,
                     fotoOrganizacion: fotoOrganizacion,
+                    // ✅ CARGAR ÁREA Y CARGO
+                    areaId: userData.areaAsignadaId || '',
+                    cargoId: userData.cargoId || '',
                     status: userData.status || 'activo',
                     verificado: userData.verificado || true,
                     ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
                 };
 
-                // ✅ CORREGIDO: Guardar el rol
                 this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
+
+                console.log('✅ Usuario cargado en navbar:', {
+                    nombre: this.currentUser.nombreCompleto,
+                    areaId: this.currentUser.areaId,
+                    cargoId: this.currentUser.cargoId,
+                    rol: this.currentUser.rol
+                });
+
                 return true;
             }
 
+            // Fallback a claves individuales
             this.currentUser = {
                 id: localStorage.getItem('userId'),
                 correoElectronico: localStorage.getItem('userEmail'),
                 nombreCompleto: localStorage.getItem('userNombre'),
-                // ✅ CORREGIDO: Usar 'rol' en lugar de 'cargo'
                 rol: localStorage.getItem('userRole'),
                 organizacion: localStorage.getItem('userOrganizacion'),
                 organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
                 fotoUsuario: localStorage.getItem('userFoto') || null,
-                fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
+                fotoOrganizacion: localStorage.getItem('organizacionLogo') || null,
+                areaId: localStorage.getItem('userAreaId') || '',
+                cargoId: localStorage.getItem('userCargoId') || ''
             };
 
             if (this.currentUser.nombreCompleto && this.currentUser.rol) {
@@ -998,7 +1358,7 @@ class NavbarComplete {
         }
     }
 
-    // ✅ CORREGIDO: Actualiza el navbar con los datos del usuario
+    // Actualiza el navbar con los datos del usuario
     updateNavbarWithUserData() {
         if (!this.currentUser) {
             const userName = document.getElementById('userName');
@@ -1035,9 +1395,6 @@ class NavbarComplete {
             orgTextLogo.style.display = 'none';
             organizationLogoImg.title = this.currentUser.organizacion;
 
-
-            organizationLogoImg.onload = () => {
-            };
             organizationLogoImg.onerror = (e) => {
                 console.error('❌ Error al cargar logo de organización:', e);
                 this.showOrgTextLogo();
@@ -1071,14 +1428,13 @@ class NavbarComplete {
         orgTextLogo.title = orgName;
     }
 
-    // ✅ CORREGIDO: Actualiza la información del usuario mostrando el rol
+    // Actualiza la información del usuario
     updateUserMenuInfo() {
         const userName = document.getElementById('userName');
         if (userName) userName.textContent = this.currentUser.nombreCompleto || 'Usuario';
 
         const userRole = document.getElementById('userRole');
         if (userRole) {
-            // ✅ CORREGIDO: Mostrar el rol capitalizado
             const rol = this.currentUser.rol || 'colaborador';
             userRole.textContent = rol.charAt(0).toUpperCase() + rol.slice(1).toLowerCase();
         }
@@ -1099,9 +1455,6 @@ class NavbarComplete {
                 profilePlaceholder.style.display = 'none';
                 userProfileImg.alt = `Foto de ${this.currentUser.nombreCompleto}`;
 
-
-                userProfileImg.onload = () => {
-                };
                 userProfileImg.onerror = (e) => {
                     console.error('❌ Error al cargar foto de perfil:', e);
                     this.showProfilePlaceholder();
@@ -1142,18 +1495,13 @@ class NavbarComplete {
         }
     }
 
-    // Capitaliza primera letra (ya no se usa pero se mantiene por compatibilidad)
-    capitalizeFirst(string) {
-        if (!string) return '';
-        return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
-    }
-
     // Configura todas las funcionalidades
     setupFunctionalities() {
         this.setupMenu();
         this.setupScroll();
         this.loadFontAwesome();
         this.setupUserDropdown();
+        this.setupHerramientasDropdown();
         this.loadOrbitronFont();
         this.setupLogout();
     }
@@ -1174,8 +1522,13 @@ class NavbarComplete {
             overlay.classList.toggle('active', this.isMenuOpen);
             document.body.classList.toggle('menu-open', this.isMenuOpen);
 
-            if (!this.isMenuOpen && this.isAdminDropdownOpen) {
-                this.toggleUserDropdown(false);
+            if (!this.isMenuOpen) {
+                if (this.isAdminDropdownOpen) {
+                    this.toggleUserDropdown(false);
+                }
+                if (this.isHerramientasDropdownOpen) {
+                    this.toggleHerramientasDropdown(false);
+                }
             }
         };
 
@@ -1190,6 +1543,9 @@ class NavbarComplete {
                 if (this.isAdminDropdownOpen) {
                     this.toggleUserDropdown(false);
                 }
+                if (this.isHerramientasDropdownOpen) {
+                    this.toggleHerramientasDropdown(false);
+                }
             }
         };
 
@@ -1202,6 +1558,47 @@ class NavbarComplete {
 
         window.addEventListener('resize', () => {
             if (window.innerWidth > 992 && this.isMenuOpen) closeMenu();
+        });
+    }
+
+    // Configura el dropdown de herramientas
+    setupHerramientasDropdown() {
+        const dropdownBtn = document.getElementById('herramientasDropdownBtn');
+        const dropdownOptions = document.getElementById('herramientasDropdownOptions');
+
+        if (!dropdownBtn || !dropdownOptions) return;
+
+        const toggleDropdown = () => {
+            this.isHerramientasDropdownOpen = !this.isHerramientasDropdownOpen;
+            this.toggleHerramientasDropdown(this.isHerramientasDropdownOpen);
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isHerramientasDropdownOpen) {
+                this.toggleHerramientasDropdown(false);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isHerramientasDropdownOpen) {
+                this.toggleHerramientasDropdown(false);
+            }
+        });
+
+        const options = dropdownOptions.querySelectorAll('.herramientas-dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.toggleHerramientasDropdown(false);
+                }, 100);
+            });
         });
     }
 
@@ -1281,7 +1678,6 @@ class NavbarComplete {
 
     // Realiza el cierre de sesión COMPLETO
     async performLogout() {
-
         try {
             this.clearAllStorage();
             await this.showLogoutSuccessMessage();
@@ -1360,7 +1756,7 @@ class NavbarComplete {
         window.location.href = loginUrl;
     }
 
-    // Alterna la visibilidad del dropdown
+    // Alterna la visibilidad del dropdown de usuario
     toggleUserDropdown(show) {
         const dropdownBtn = document.getElementById('userDropdownBtn');
         const dropdownOptions = document.getElementById('userDropdownOptions');
@@ -1369,6 +1765,18 @@ class NavbarComplete {
             dropdownBtn.classList.toggle('active', show);
             dropdownOptions.classList.toggle('active', show);
             this.isAdminDropdownOpen = show;
+        }
+    }
+
+    // Alterna la visibilidad del dropdown de herramientas
+    toggleHerramientasDropdown(show) {
+        const dropdownBtn = document.getElementById('herramientasDropdownBtn');
+        const dropdownOptions = document.getElementById('herramientasDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isHerramientasDropdownOpen = show;
         }
     }
 
