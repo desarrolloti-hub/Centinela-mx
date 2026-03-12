@@ -3,16 +3,13 @@
 // Control total de altura por JavaScript
 // =============================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔄 Inicializando sistema de tarjetas...');
-    
+document.addEventListener('DOMContentLoaded', function() {    
     const cards = document.querySelectorAll('.plan-card');
     const COMPACT_HEIGHT = 180;  // Altura compacta
     const EXPANDED_HEIGHT = 1050; // Altura expandida (850px)
     
     // Configurar cada tarjeta
     cards.forEach((card, index) => {
-        console.log(`📦 Configurando tarjeta ${index + 1}`);
         
         const compactView = card.querySelector('.plan-compact-view');
         const expandedView = card.querySelector('.plan-expanded-view');
@@ -26,7 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
         void card.offsetHeight;
         
         const measuredCompactHeight = compactView.offsetHeight;
-        console.log(`   📏 Altura compacta medida: ${measuredCompactHeight}px`);
         
         // Guardar altura real
         card.dataset.compactHeight = measuredCompactHeight;
@@ -43,7 +39,6 @@ document.addEventListener('DOMContentLoaded', function() {
         expandedView.style.position = 'absolute';
         
         const measuredExpandedHeight = expandedView.scrollHeight;
-        console.log(`   📏 Altura expandida medida: ${measuredExpandedHeight}px`);
         
         // Restaurar estado
         expandedView.style.display = 'none';
@@ -52,20 +47,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // 4. EVENTO CLIC
         card.addEventListener('click', function(e) {
             if (e.target.closest('.order-btn')) {
-                console.log(`   🎯 Clic en botón, ignorando`);
                 return;
             }
             
             e.preventDefault();
             e.stopPropagation();
-            
-            console.log(`   🖱️ Tarjeta ${index + 1} clickeada`);
-            
+                        
             if (this.classList.contains('expanded')) {
-                console.log(`   📉 Cerrando...`);
                 closeCard(this);
             } else {
-                console.log(`   📈 Abriendo a ${EXPANDED_HEIGHT}px...`);
+                openCard(this);
                 openCard(this);
             }
         });
@@ -92,7 +83,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 expanded.style.opacity = '1';
                 cardElement.classList.add('expanded');
-                console.log(`   ✅ Expandida a ${EXPANDED_HEIGHT}px`);
             }, 10);
         }
         
@@ -113,7 +103,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 expanded.style.display = 'none';
                 compact.style.opacity = '1';
                 cardElement.classList.remove('expanded');
-                console.log(`   ✅ Colapsada a ${compactHeight}px`);
             }, 400);
         }
     });

@@ -50,7 +50,6 @@ class FCMInitializer {
             this.loadLocalState();
             
             this.isInitialized = true;
-            console.log('✅ FCMInitializer listo');
             
         } catch (error) {
             console.error('❌ Error inicializando FCM:', error);
@@ -68,25 +67,20 @@ class FCMInitializer {
             const registrations = await navigator.serviceWorker.getRegistrations();
             for (let reg of registrations) {
                 if (reg.active && reg.active.scriptURL.includes('firebase-messaging-sw')) {
-                    console.log('✓ Service Worker ya estaba registrado');
                     this.swRegistration = reg;
                     return reg;
                 }
             }
 
-            console.log('📦 Registrando Service Worker...');
             this.swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
                 scope: '/'
             });
-            
-            console.log('✅ Service Worker registrado');
-            
+                        
             if (this.swRegistration.installing) {
                 await new Promise((resolve) => {
                     const worker = this.swRegistration.installing;
                     worker.addEventListener('statechange', () => {
                         if (worker.state === 'activated') {
-                            console.log('✓ Service Worker activado');
                             resolve();
                         }
                     });
@@ -103,13 +97,10 @@ class FCMInitializer {
 
     loadLocalState() {
         const savedState = localStorage.getItem(`fcm_enabled_${this.deviceId}`);
-        this.notificationsEnabled = savedState === 'true';
-        console.log('📱 Estado cargado:', this.notificationsEnabled ? 'Activado' : 'Desactivado');
-    }
+        this.notificationsEnabled = savedState === 'true';    }
 
     setupForegroundListener() {
         onMessage(this.messaging, (payload) => {
-            console.log('📨 Mensaje en primer plano:', payload);
             const event = new CustomEvent('fcmMensaje', { detail: payload });
             document.dispatchEvent(event);
             
@@ -132,9 +123,7 @@ class FCMInitializer {
             await this.registerServiceWorker();
         }
 
-        try {
-            console.log('🔑 Solicitando token FCM...');
-            
+        try {            
             const token = await getToken(this.messaging, {
                 vapidKey: VAPID_KEY,
                 serviceWorkerRegistration: this.swRegistration
@@ -144,7 +133,6 @@ class FCMInitializer {
                 throw new Error('No se pudo obtener el token');
             }
 
-            console.log('✅ Token FCM obtenido:', token.substring(0, 30) + '...');
             this.currentToken = token;
             
             // Guardar en Firestore usando los métodos de UserManager
@@ -177,7 +165,6 @@ class FCMInitializer {
                 await this.registerServiceWorker();
             }
 
-            console.log('🔔 Solicitando permiso de notificaciones...');
             const permission = await Notification.requestPermission();
             
             if (permission !== 'granted') {
@@ -186,7 +173,6 @@ class FCMInitializer {
                 throw new Error('Permiso denegado por el usuario');
             }
 
-            console.log('✅ Permiso concedido');
             
             await this.getTokenAndSave();
             
@@ -222,7 +208,6 @@ class FCMInitializer {
             }
         }
         
-        console.log('🔕 Notificaciones desactivadas');
     }
 
     isEnabled() {
