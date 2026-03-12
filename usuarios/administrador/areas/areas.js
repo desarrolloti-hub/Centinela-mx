@@ -1,13 +1,12 @@
-// areas.js - VERSIÓN CORREGIDA
-// - No permite eliminar áreas con cargos
-// - Sin redirección al login (auth será componente posterior)
+// areas.js - VERSIÓN COMPLETA CORREGIDA
+// - Inactiva cargos individualmente
+// - Inactiva área solo si no tiene cargos activos
+// - Registra todas las actividades en historial
 
 window.appDebug = {
     estado: 'iniciando',
     controller: null
 };
-
-;
 
 let Area, AreaManager;
 
@@ -69,10 +68,10 @@ class AreasController {
         this.areas = []; // Áreas filtradas para mostrar
         this.filaExpandida = null;
 
-        // Cargar datos del usuario desde localStorage sin redirección al login
+        // Cargar datos del usuario desde localStorage
         this.userManager = this.cargarUsuarioDesdeStorage();
 
-        // Si no hay usuario, usar valores por defecto (no redirigir)
+        // Si no hay usuario, usar valores por defecto
         if (!this.userManager || !this.userManager.currentUser) {
             this.userManager = {
                 currentUser: {
@@ -97,7 +96,6 @@ class AreasController {
         try {
             let userData = null;
 
-            // Intentar cargar desde adminInfo
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -117,7 +115,6 @@ class AreasController {
                 };
             }
 
-            // Si no hay adminInfo, intentar con userData
             if (!userData) {
                 const storedUserData = localStorage.getItem('userData');
                 if (storedUserData) {
@@ -126,12 +123,10 @@ class AreasController {
                 }
             }
 
-            // Si aún no hay datos, retornar null
             if (!userData) {
                 return null;
             }
 
-            // Asegurar campos requeridos
             if (!userData.id) userData.id = `user_${Date.now()}`;
             if (!userData.organizacion) userData.organizacion = 'Sin organización';
             if (!userData.organizacionCamelCase) {
@@ -164,11 +159,9 @@ class AreasController {
         const container = document.querySelector('.card');
         if (!container) return;
 
-        // Verificar si ya existe el contenedor de búsqueda
         let filtrosContainer = document.querySelector('.filtros-container');
 
         if (!filtrosContainer) {
-            // Crear el contenedor de búsqueda igual que en categorías
             filtrosContainer = document.createElement('div');
             filtrosContainer.className = 'filtros-container';
             filtrosContainer.innerHTML = `
@@ -192,11 +185,9 @@ class AreasController {
                 </div>
             `;
 
-            // Insertar antes de la tarjeta
             container.parentNode.insertBefore(filtrosContainer, container);
         }
 
-        // Configurar event listeners
         const inputBuscar = document.getElementById('buscarArea');
         const btnBuscar = document.getElementById('btnBuscarArea');
         const btnLimpiar = document.getElementById('btnLimpiarBusquedaArea');
@@ -218,7 +209,6 @@ class AreasController {
             });
         }
 
-        // Búsqueda en tiempo real con debounce
         if (inputBuscar) {
             let timeoutId;
             inputBuscar.addEventListener('input', (e) => {
@@ -245,10 +235,8 @@ class AreasController {
         if (!todasLasAreas.length) {
             this.areas = [];
         } else if (!terminoBusqueda || terminoBusqueda.length < 2) {
-            // Si no hay término de búsqueda, mostrar todas
             this.areas = [...todasLasAreas];
         } else {
-            // Filtrar en memoria
             const terminoLower = terminoBusqueda.toLowerCase();
             this.areas = todasLasAreas.filter(area =>
                 (area.nombreArea && area.nombreArea.toLowerCase().includes(terminoLower)) ||
@@ -265,8 +253,6 @@ class AreasController {
     irPagina(pagina) {
         paginaActual = pagina;
         this.actualizarTablaConPaginacion();
-
-        // Scroll suave hacia arriba
         document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -304,7 +290,6 @@ class AreasController {
         const totalItems = this.areas.length;
         const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
 
-        // Ajustar página actual si está fuera de rango
         if (paginaActual > totalPaginas && totalPaginas > 0) {
             paginaActual = totalPaginas;
         }
@@ -313,7 +298,6 @@ class AreasController {
         const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
         const areasPagina = this.areas.slice(inicio, fin);
 
-        // Actualizar información de paginación
         const paginationInfo = document.getElementById('paginationInfo');
         if (paginationInfo) {
             if (totalItems === 0) {
@@ -323,7 +307,6 @@ class AreasController {
             }
         }
 
-        // Mostrar/ocultar contenedor de paginación
         const paginacionContainer = document.querySelector('.pagination-container');
         if (paginacionContainer) {
             paginacionContainer.style.display = totalItems > ITEMS_POR_PAGINA ? 'flex' : 'none';
@@ -332,7 +315,7 @@ class AreasController {
         if (totalItems === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="8" class="text-center py-5">
                         <div style="text-align:center; padding:40px;">
                             <i class="fas fa-search" style="font-size: 48px; color: rgba(255,255,255,0.3); margin-bottom: 16px;"></i>
                             <h5 style="color:white;">No se encontraron áreas</h5>
@@ -365,7 +348,6 @@ class AreasController {
     // MÉTODOS PRINCIPALES
     // =============================================
     init() {
-        // No validar sesión, solo cargar áreas
         this.actualizarBadgeEmpresa();
         this.configurarBusqueda();
         this.inicializarEventos();
@@ -412,12 +394,10 @@ class AreasController {
             this.mostrarCargando();
 
             const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
-            todasLasAreas = await this.areaManager.getAreasByOrganizacion(organizacionCamelCase);
+            todasLasAreas = await this.areaManager.getAreasByOrganizacion(organizacionCamelCase, this.userManager.currentUser);
 
-            // Ordenar alfabéticamente
             todasLasAreas.sort((a, b) => (a.nombreArea || '').localeCompare(b.nombreArea || ''));
 
-            // Inicializar áreas filtradas
             this.areas = [...todasLasAreas];
 
             this.actualizarTablaConPaginacion();
@@ -456,12 +436,11 @@ class AreasController {
     }
 
     mostrarCargosDesplegables(areaId, filaReferencia) {
-        // Buscar el área en todasLasAreas para obtener datos actualizados
         const area = todasLasAreas.find(a => a.id === areaId);
         if (!area) return;
 
         const cargos = area.getCargosAsArray();
-        const cantidad = area.getCantidadCargos();
+        const cantidad = area.getCantidadCargosTotal();
 
         const filaCargos = document.createElement('tr');
         filaCargos.id = `cargos-${areaId}`;
@@ -469,11 +448,10 @@ class AreasController {
         filaCargos.style.display = 'table-row';
 
         const celda = document.createElement('td');
-        celda.colSpan = 7;
+        celda.colSpan = 8;
         celda.style.padding = '0';
         celda.style.borderTop = 'none';
 
-        // Botón de agregar con el MISMO ESTILO que btn-nueva-area
         const botonAgregarHTML = `
             <button class="btn-nueva-area" style="min-width: auto; padding: 8px 16px !important;" onclick="window.appDebug.controller.irACrearCargo('${area.id}', event)">
                 <i class="fas fa-plus"></i> Agregar Cargo
@@ -508,9 +486,14 @@ class AreasController {
                     ? cargo.nombre.substring(0, 15) + '...'
                     : cargo.nombre || 'Sin nombre';
 
+                const estadoCargo = cargo.estado || 'activo';
+                const estadoBadge = estadoCargo === 'activo' 
+                    ? '<span class="badge-activo" style="font-size:0.7rem; padding:3px 8px;"><i class="fas fa-check-circle"></i> Activo</span>'
+                    : '<span class="badge-inactivo" style="font-size:0.7rem; padding:3px 8px;"><i class="fas fa-pause-circle"></i> Inactivo</span>';
+
                 cargosHTML += `
                     <tr>
-                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">${index + 1}</td>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem; width: 40px;">${index + 1}</td>
                         <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
                             <div style="display: flex; align-items: center; flex-wrap: nowrap; gap: 8px;">
                                 <span style="max-width:120px; color: white;" title="${this.escapeHTML(cargo.nombre || '')}">${this.escapeHTML(nombreTruncado)}</span>
@@ -519,7 +502,10 @@ class AreasController {
                         <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
                             <span style="max-width:200px; word-break: break-word; white-space: normal; line-height: 1.4; color: var(--color-text-dim);" title="${this.escapeHTML(cargo.descripcion || '')}">${this.escapeHTML(descripcionTruncada) || '-'}</span>
                         </td>
-                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem;">
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem; width: 100px;">
+                            ${estadoBadge}
+                        </td>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--color-text-secondary); vertical-align: middle; font-size: 0.85rem; width: 150px;">
                             <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                                 <button class="btn" onclick="window.appDebug.controller.verDetallesCargo('${area.id}', '${cargo.id}', event)" title="Ver detalles">
                                     <i class="fas fa-eye"></i>
@@ -527,9 +513,14 @@ class AreasController {
                                 <button class="btn btn-warning" onclick="window.appDebug.controller.irAEditarCargo('${area.id}', '${cargo.id}', event)" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-danger" onclick="window.appDebug.controller.eliminarCargo('${area.id}', '${cargo.id}', event)" title="Eliminar">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                ${estadoCargo === 'activo' 
+                                    ? `<button class="btn btn-danger" onclick="window.appDebug.controller.inactivarCargo('${area.id}', '${cargo.id}', event)" title="Inactivar">
+                                        <i class="fas fa-pause-circle"></i>
+                                       </button>`
+                                    : `<button class="btn btn-success" onclick="window.appDebug.controller.reactivarCargo('${area.id}', '${cargo.id}', event)" title="Reactivar">
+                                        <i class="fas fa-play-circle"></i>
+                                       </button>`
+                                }
                             </div>
                         </td>
                     </tr>
@@ -542,6 +533,9 @@ class AreasController {
                         <h6 style="color: var(--color-text-primary); font-size: 1rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);">
                             <i class="fas fa-list-ul"></i>
                             Cargos de <span style="color:#2f8cff;">"${this.escapeHTML(area.nombreArea)}"</span>
+                            <span style="font-size:0.8rem; color: var(--color-text-dim); margin-left:10px;">
+                                (${area.getCantidadCargosActivos()} activos de ${cantidad})
+                            </span>
                         </h6>
                         ${botonAgregarHTML}
                     </div>
@@ -550,9 +544,10 @@ class AreasController {
                             <thead>
                                 <tr>
                                     <th style="width: 40px; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">#</th>
-                                    <th style="width: 25%; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Nombre</th>
+                                    <th style="width: 20%; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Nombre</th>
                                     <th style="width: 35%; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Descripción</th>
-                                    <th style="width: 110px; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Acciones</th>
+                                    <th style="width: 100px; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Estado</th>
+                                    <th style="width: 150px; padding: 12px; text-align: left; color: var(--color-text-dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; font-family: 'Orbitron', sans-serif;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -571,7 +566,6 @@ class AreasController {
     verDetallesCargo(areaId, cargoId, event) {
         event?.stopPropagation();
 
-        // Buscar en todasLasAreas
         const area = todasLasAreas.find(a => a.id === areaId);
         if (!area) return;
 
@@ -597,6 +591,17 @@ class AreasController {
                         </h4>
                         <p style="color: var(--color-text-secondary); margin: 0;">${this.escapeHTML(cargo.descripcion) || 'No hay descripción disponible.'}</p>
                     </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
+                            <i class="fas fa-info-circle" style="margin-right: 8px;"></i>ESTADO
+                        </h4>
+                        <p style="color: var(--color-text-secondary); margin: 0;">
+                            ${cargo.estado === 'activo' 
+                                ? '<span class="badge-activo"><i class="fas fa-check-circle"></i> Activo</span>' 
+                                : '<span class="badge-inactivo"><i class="fas fa-pause-circle"></i> Inactivo</span>'}
+                        </p>
+                    </div>
                 </div>
             `,
             icon: null,
@@ -608,10 +613,9 @@ class AreasController {
         });
     }
 
-    async eliminarCargo(areaId, cargoId, event) {
+    async inactivarCargo(areaId, cargoId, event) {
         event?.stopPropagation();
 
-        // Buscar en todasLasAreas
         const area = todasLasAreas.find(a => a.id === areaId);
         if (!area) {
             Swal.fire({
@@ -635,18 +639,18 @@ class AreasController {
         }
 
         const result = await Swal.fire({
-            title: '¿Eliminar cargo?',
+            title: '¿Inactivar cargo?',
             html: `
                 <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
                     <strong style="color: #ff4d4d;">"${this.escapeHTML(cargo.nombre || 'Sin nombre')}"</strong>
                 </p>
                 <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
-                    Esta acción no se puede deshacer.
+                    El cargo dejará de estar disponible, pero los datos se conservan.
                 </p>
             `,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'ELIMINAR',
+            confirmButtonText: 'INACTIVAR',
             cancelButtonText: 'CANCELAR',
             reverseButtons: false,
             focusCancel: true
@@ -654,31 +658,26 @@ class AreasController {
 
         if (result.isConfirmed) {
             try {
-                if (area.eliminarCargo) {
-                    area.eliminarCargo(cargoId);
-                }
-
-                await this.areaManager.actualizarArea(areaId, {
-                    nombreArea: area.nombreArea,
-                    descripcion: area.descripcion,
-                    estado: area.estado,
-                    cargos: area.cargos
-                });
+                await this.areaManager.inactivarCargo(
+                    areaId,
+                    cargoId,
+                    this.userManager.currentUser.id,
+                    this.userManager.currentUser.organizacionCamelCase,
+                    this.userManager.currentUser
+                );
 
                 await Swal.fire({
                     icon: 'success',
-                    title: 'Eliminado',
-                    text: `"${cargo.nombre}" ha sido eliminado.`,
+                    title: 'Inactivado',
+                    text: `"${cargo.nombre}" ha sido inactivado.`,
                     timer: 1500,
                     showConfirmButton: false
                 });
 
-                // Actualizar en todasLasAreas
-                const areaActualizada = await this.areaManager.obtenerAreaPorId(areaId);
+                const areaActualizada = await this.areaManager.getAreaById(areaId, this.userManager.currentUser.organizacionCamelCase);
                 const index = todasLasAreas.findIndex(a => a.id === areaId);
                 if (index !== -1) todasLasAreas[index] = areaActualizada;
 
-                // Actualizar también en this.areas si está presente
                 const indexFiltrado = this.areas.findIndex(a => a.id === areaId);
                 if (indexFiltrado !== -1) this.areas[indexFiltrado] = areaActualizada;
 
@@ -688,13 +687,105 @@ class AreasController {
                     this.filaExpandida = null;
                 }
 
-                // Actualizar el badge de cargos en la fila principal
                 const filaArea = document.getElementById(`fila-${areaId}`);
                 if (filaArea) {
-                    const cantidadCargos = areaActualizada.getCantidadCargos();
+                    const cantidadActivos = areaActualizada.getCantidadCargosActivos();
                     const badge = filaArea.querySelector('.cargo-count-badge');
                     if (badge) {
-                        badge.innerHTML = `${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}`;
+                        badge.innerHTML = `${cantidadActivos} ${cantidadActivos === 1 ? 'cargo activo' : 'cargos activos'}`;
+                    }
+                }
+
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message
+                });
+            }
+        }
+    }
+
+    async reactivarCargo(areaId, cargoId, event) {
+        event?.stopPropagation();
+
+        const area = todasLasAreas.find(a => a.id === areaId);
+        if (!area) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Área no encontrada'
+            });
+            return;
+        }
+
+        const cargos = area.getCargosAsArray();
+        const cargo = cargos.find(c => c.id === cargoId);
+
+        if (!cargo) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Cargo no encontrado'
+            });
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: '¿Reactivar cargo?',
+            html: `
+                <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
+                    <strong style="color: #28a745;">"${this.escapeHTML(cargo.nombre || 'Sin nombre')}"</strong>
+                </p>
+                <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
+                    El cargo volverá a estar disponible.
+                </p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'REACTIVAR',
+            cancelButtonText: 'CANCELAR',
+            reverseButtons: false,
+            focusCancel: true
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await this.areaManager.reactivarCargo(
+                    areaId,
+                    cargoId,
+                    this.userManager.currentUser.id,
+                    this.userManager.currentUser.organizacionCamelCase,
+                    this.userManager.currentUser
+                );
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Reactivado',
+                    text: `"${cargo.nombre}" ha sido reactivado.`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+                const areaActualizada = await this.areaManager.getAreaById(areaId, this.userManager.currentUser.organizacionCamelCase);
+                const index = todasLasAreas.findIndex(a => a.id === areaId);
+                if (index !== -1) todasLasAreas[index] = areaActualizada;
+
+                const indexFiltrado = this.areas.findIndex(a => a.id === areaId);
+                if (indexFiltrado !== -1) this.areas[indexFiltrado] = areaActualizada;
+
+                const filaCargos = document.getElementById(`cargos-${areaId}`);
+                if (filaCargos) {
+                    filaCargos.remove();
+                    this.filaExpandida = null;
+                }
+
+                const filaArea = document.getElementById(`fila-${areaId}`);
+                if (filaArea) {
+                    const cantidadActivos = areaActualizada.getCantidadCargosActivos();
+                    const badge = filaArea.querySelector('.cargo-count-badge');
+                    if (badge) {
+                        badge.innerHTML = `${cantidadActivos} ${cantidadActivos === 1 ? 'cargo activo' : 'cargos activos'}`;
                     }
                 }
 
@@ -709,10 +800,9 @@ class AreasController {
     }
 
     // =============================================
-    // ELIMINACIÓN DE ÁREA - CORREGIDA: NO PERMITIR SI TIENE CARGOS
+    // INACTIVAR ÁREA
     // =============================================
-    solicitarEliminacion(areaId) {
-        // Buscar el área en todasLasAreas
+    solicitarInactivacion(areaId) {
         const area = todasLasAreas.find(a => a.id === areaId);
         if (!area) {
             Swal.fire({
@@ -723,19 +813,18 @@ class AreasController {
             return;
         }
 
-        const cantidadCargos = area.getCantidadCargos();
+        const cargosActivos = area.getCantidadCargosActivos();
 
-        // VERIFICAR SI TIENE CARGOS - NO PERMITIR ELIMINACIÓN
-        if (cantidadCargos > 0) {
+        if (cargosActivos > 0) {
             Swal.fire({
                 icon: 'warning',
-                title: 'No se puede eliminar',
+                title: 'No se puede inactivar',
                 html: `
                     <p style="color: var(--color-text-primary); margin: 10px 0;">
-                        El área <strong style="color: #ffcc00;">"${this.escapeHTML(area.nombreArea)}"</strong> tiene <strong style="color: #ff4d4d;">${cantidadCargos} cargo(s)</strong> asignados.
+                        El área <strong style="color: #ffcc00;">"${this.escapeHTML(area.nombreArea)}"</strong> tiene <strong style="color: #ff4d4d;">${cargosActivos} cargo(s) activo(s)</strong>.
                     </p>
                     <p style="color: var(--color-text-dim); font-size: 0.9rem; margin-top: 15px;">
-                        Debes eliminar todos los cargos antes de poder eliminar el área.
+                        Debes inactivar todos los cargos antes de poder inactivar el área.
                     </p>
                 `,
                 confirmButtonText: 'ENTENDIDO',
@@ -744,39 +833,43 @@ class AreasController {
             return;
         }
 
-        // Si no tiene cargos, proceder con la confirmación normal
         Swal.fire({
-            title: '¿Eliminar área?',
+            title: '¿Inactivar área?',
             html: `
                 <p style="color: var(--color-text-primary); margin: 10px 0; font-size: 1.1rem;">
                     <strong style="color: #ff4d4d;">"${this.escapeHTML(area.nombreArea)}"</strong>
                 </p>
                 <p style="color: var(--color-text-dim); font-size: 0.8rem; margin-top: 15px;">
-                    Esta acción no se puede deshacer.
+                    El área dejará de estar visible en el sistema, pero los datos se conservan.
                 </p>
             `,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'ELIMINAR',
+            confirmButtonText: 'INACTIVAR',
             cancelButtonText: 'CANCELAR',
             reverseButtons: false,
             focusCancel: true
         }).then((result) => {
             if (result.isConfirmed) {
-                this.eliminarArea(areaId);
+                this.inactivarArea(areaId);
             }
         });
     }
 
-    async eliminarArea(areaId) {
+    async inactivarArea(areaId) {
         try {
             const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
-            await this.areaManager.eliminarArea(areaId, this.userManager.currentUser.id, organizacionCamelCase);
+            await this.areaManager.inactivarArea(
+                areaId, 
+                this.userManager.currentUser.id, 
+                organizacionCamelCase,
+                this.userManager.currentUser
+            );
 
             Swal.fire({
                 icon: 'success',
-                title: 'Eliminado',
-                text: 'El área fue eliminada correctamente',
+                title: 'Inactivada',
+                text: 'El área fue inactivada correctamente',
                 timer: 2000,
                 showConfirmButton: false
             });
@@ -786,7 +879,7 @@ class AreasController {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'No se pudo eliminar el área'
+                text: error.message || 'No se pudo inactivar el área'
             });
         }
     }
@@ -799,8 +892,8 @@ class AreasController {
             case 'editar':
                 this.irAEditarArea(areaId);
                 break;
-            case 'eliminar':
-                this.solicitarEliminacion(areaId);
+            case 'inactivar':
+                this.solicitarInactivacion(areaId);
                 break;
         }
     }
@@ -820,14 +913,14 @@ class AreasController {
 
     async verDetalles(areaId) {
         try {
-            // Buscar en todasLasAreas
             const area = todasLasAreas.find(a => a.id === areaId);
             if (!area) {
                 this.mostrarError('Área no encontrada');
                 return;
             }
 
-            const cantidadCargos = area.getCantidadCargos();
+            const cargosActivos = area.getCantidadCargosActivos();
+            const cargosTotal = area.getCantidadCargosTotal();
             const nombreAreaTruncado = this.truncarTexto(area.nombreArea, 25);
 
             Swal.fire({
@@ -843,9 +936,11 @@ class AreasController {
                         
                         <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--color-border-light);">
                             <h4 style="color: var(--color-accent-primary); margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase;">
-                                <i class="fas fa-briefcase" style="margin-right: 8px;"></i>CARGOS (${cantidadCargos})
+                                <i class="fas fa-briefcase" style="margin-right: 8px;"></i>CARGOS
                             </h4>
-                            <p style="color: var(--color-text-secondary);">${cantidadCargos === 0 ? 'No hay cargos asignados' : `Esta área tiene ${cantidadCargos} cargo${cantidadCargos !== 1 ? 's' : ''}`}</p>
+                            <p style="color: var(--color-text-secondary);">
+                                ${cargosActivos} activos de ${cargosTotal} totales
+                            </p>
                         </div>
                         
                         <div>
@@ -894,7 +989,8 @@ class AreasController {
             fila.classList.add('expanded');
         }
 
-        const cantidadCargos = area.getCantidadCargos();
+        const cargosActivos = area.getCantidadCargosActivos();
+        const cargosTotal = area.getCantidadCargosTotal();
 
         fila.innerHTML = `
             <td class="text-center" style="width:50px;" data-label="">
@@ -912,7 +1008,7 @@ class AreasController {
             <td data-label="Organización">${this.escapeHTML(area.organizacionCamelCase || this.userManager.currentUser.organizacion)}</td>
             <td data-label="Cargos">
                 <span class="cargo-count-badge">
-                    ${cantidadCargos} ${cantidadCargos === 1 ? 'cargo' : 'cargos'}
+                    ${cargosActivos} ${cargosActivos === 1 ? 'activo' : 'activos'} / ${cargosTotal} total
                 </span>
             </td>
             <td data-label="Estado">${area.getEstadoBadge ? area.getEstadoBadge() : '<span class="badge-activo">Activa</span>'}</td>
@@ -925,9 +1021,14 @@ class AreasController {
                     <button class="btn btn-warning" data-action="editar" data-id="${area.id}" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-danger" data-action="eliminar" data-id="${area.id}" title="Eliminar">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    ${area.estado === 'activa' 
+                        ? `<button class="btn btn-danger" data-action="inactivar" data-id="${area.id}" title="Inactivar">
+                            <i class="fas fa-pause-circle"></i>
+                           </button>`
+                        : `<button class="btn btn-success" data-action="reactivar" data-id="${area.id}" title="Reactivar">
+                            <i class="fas fa-play-circle"></i>
+                           </button>`
+                    }
                 </div>
             </td>
         `;
@@ -969,7 +1070,7 @@ class AreasController {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="8" class="text-center py-5">
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Cargando...</span>
                         </div>

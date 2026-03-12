@@ -1,6 +1,5 @@
-// region.js - MODIFICADO PARA VALIDAR SUCURSALES ANTES DE ELIMINAR
+// region.js - VERSIÓN CORREGIDA CON REGISTRO DE ACTIVIDADES
 
-// ==================== IMPORTS ====================
 import { db } from '/config/firebase-config.js';
 import {
     collection,
@@ -13,11 +12,9 @@ import {
     serverTimestamp,
     query,
     where,
-    orderBy,
-    Timestamp
+    orderBy
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
-// ==================== CLASE REGION ====================
 class Region {
     constructor(id, data) {
         this.id = id;
@@ -104,13 +101,23 @@ class Region {
     }
 }
 
-// ==================== CLASE REGIONMANAGER ====================
 class RegionManager {
     constructor() {
         this.regiones = [];
+        this.historialManager = null;
     }
 
-    // ========== MÉTODOS CRUD BÁSICOS ==========
+    async _getHistorialManager() {
+        if (!this.historialManager) {
+            try {
+                const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+                this.historialManager = new HistorialUsuarioManager();
+            } catch (error) {
+                console.error('Error inicializando historialManager:', error);
+            }
+        }
+        return this.historialManager;
+    }
 
     async createRegion(regionData, organizacionCamelCase, creadorInfo) {
         try {
@@ -148,6 +155,25 @@ class RegionManager {
 
             this.regiones.unshift(nuevaRegion);
 
+            // ✅ REGISTRO EN HISTORIAL
+            const historial = await this._getHistorialManager();
+            if (historial) {
+                await historial.registrarActividad({
+                    usuario: creadorInfo,
+                    tipo: 'crear',
+                    modulo: 'regiones',
+                    descripcion: historial.generarDescripcion('crear', 'regiones', {
+                        nombre: regionData.nombre,
+                        color: regionData.color
+                    }),
+                    detalles: {
+                        regionId: docRef.id,
+                        nombre: regionData.nombre,
+                        color: regionData.color || '#0A2540'
+                    }
+                });
+            }
+
             return {
                 id: docRef.id,
                 region: nuevaRegion,
@@ -160,7 +186,7 @@ class RegionManager {
         }
     }
 
-    async getRegionesByOrganizacion(organizacionCamelCase) {
+    async getRegionesByOrganizacion(organizacionCamelCase, usuarioActual = null) {
         try {
             const coleccionRegiones = `regiones_${organizacionCamelCase}`;
             const regionesRef = collection(db, coleccionRegiones);
@@ -179,6 +205,21 @@ class RegionManager {
             });
 
             this.regiones = regiones;
+
+            // ✅ REGISTRO EN HISTORIAL (solo lectura)
+            if (usuarioActual) {
+                const historial = await this._getHistorialManager();
+                if (historial) {
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'leer',
+                        modulo: 'regiones',
+                        descripcion: `Consultó lista de regiones (${regiones.length} regiones)`,
+                        detalles: { total: regiones.length }
+                    });
+                }
+            }
+
             return regiones;
 
         } catch (error) {
@@ -224,8 +265,11 @@ class RegionManager {
             const coleccionRegiones = `regiones_${organizacionCamelCase}`;
             const regionRef = doc(db, coleccionRegiones, id);
 
+            const regionActual = await this.getRegionById(id, organizacionCamelCase);
+            const nombreOriginal = regionActual ? regionActual.nombre : '';
+            const colorOriginal = regionActual ? regionActual.color : '';
+
             if (data.nombre) {
-                const regionActual = await this.getRegionById(id, organizacionCamelCase);
                 if (regionActual && regionActual.nombre !== data.nombre) {
                     const existe = await this.existeRegionPorNombre(data.nombre, organizacionCamelCase);
                     if (existe) {
@@ -237,7 +281,7 @@ class RegionManager {
             const updateData = {
                 ...data,
                 fechaActualizacion: serverTimestamp(),
-                actualizadoPor: actualizadoPor || 'sistema'
+                actualizadoPor: actualizadoPor?.id || 'sistema'
             };
 
             await updateDoc(regionRef, updateData);
@@ -248,7 +292,40 @@ class RegionManager {
                     this.regiones[index][key] = data[key];
                 });
                 this.regiones[index].fechaActualizacion = new Date();
-                this.regiones[index].actualizadoPor = actualizadoPor || 'sistema';
+                this.regiones[index].actualizadoPor = actualizadoPor?.id || 'sistema';
+            }
+
+            // ✅ REGISTRO EN HISTORIAL
+            if (actualizadoPor) {
+                const historial = await this._getHistorialManager();
+                if (historial) {
+                    const cambios = [];
+                    if (nombreOriginal !== data.nombre) {
+                        cambios.push(`nombre: "${nombreOriginal}" → "${data.nombre}"`);
+                    }
+                    if (colorOriginal !== data.color) {
+                        cambios.push(`color: ${colorOriginal} → ${data.color}`);
+                    }
+
+                    await historial.registrarActividad({
+                        usuario: actualizadoPor,
+                        tipo: 'editar',
+                        modulo: 'regiones',
+                        descripcion: historial.generarDescripcion('editar', 'regiones', {
+                            nombre: data.nombre || nombreOriginal,
+                            nombreOriginal,
+                            cambios: cambios.join(', ')
+                        }),
+                        detalles: {
+                            regionId: id,
+                            nombre: data.nombre || nombreOriginal,
+                            nombreOriginal,
+                            color: data.color || colorOriginal,
+                            colorOriginal,
+                            cambios
+                        }
+                    });
+                }
             }
 
             return true;
@@ -259,12 +336,6 @@ class RegionManager {
         }
     }
 
-    /**
-     * Verifica si una región está siendo utilizada por alguna sucursal
-     * @param {string} regionId - ID de la región
-     * @param {string} organizacionCamelCase - Nombre de la organización
-     * @returns {Promise<boolean>} True si tiene sucursales asociadas
-     */
     async regionTieneSucursales(regionId, organizacionCamelCase) {
         try {
             const coleccionSucursales = `sucursales_${organizacionCamelCase}`;
@@ -272,7 +343,7 @@ class RegionManager {
             
             const q = query(
                 sucursalesRef,
-                where("ubicacion.regionId", "==", regionId)
+                where("regionId", "==", regionId)
             );
 
             const snapshot = await getDocs(q);
@@ -280,17 +351,10 @@ class RegionManager {
 
         } catch (error) {
             console.error("Error verificando sucursales de la región:", error);
-            // Si hay error, asumimos que no tiene sucursales para no bloquear la eliminación
             return false;
         }
     }
 
-    /**
-     * Obtiene las sucursales que están usando una región
-     * @param {string} regionId - ID de la región
-     * @param {string} organizacionCamelCase - Nombre de la organización
-     * @returns {Promise<Array>} Lista de sucursales que usan la región
-     */
     async getSucursalesDeRegion(regionId, organizacionCamelCase) {
         try {
             const coleccionSucursales = `sucursales_${organizacionCamelCase}`;
@@ -298,7 +362,7 @@ class RegionManager {
             
             const q = query(
                 sucursalesRef,
-                where("ubicacion.regionId", "==", regionId)
+                where("regionId", "==", regionId)
             );
 
             const snapshot = await getDocs(q);
@@ -321,15 +385,12 @@ class RegionManager {
         }
     }
 
-    /**
-     * Elimina permanentemente una región (con validación de sucursales)
-     * @param {string} id - ID de la región
-     * @param {string} organizacionCamelCase - Nombre de la organización
-     * @returns {Promise<boolean>} True si se eliminó correctamente
-     */
-    async deleteRegion(id, organizacionCamelCase) {
+    async deleteRegion(id, organizacionCamelCase, usuarioActual = null) {
         try {
-            // Verificar si la región tiene sucursales asociadas
+            const region = await this.getRegionById(id, organizacionCamelCase);
+            const nombreRegion = region ? region.nombre : 'Región desconocida';
+            const colorRegion = region ? region.color : '';
+
             const tieneSucursales = await this.regionTieneSucursales(id, organizacionCamelCase);
             
             if (tieneSucursales) {
@@ -350,6 +411,26 @@ class RegionManager {
             const index = this.regiones.findIndex(r => r.id === id);
             if (index !== -1) {
                 this.regiones.splice(index, 1);
+            }
+
+            // ✅ REGISTRO EN HISTORIAL
+            if (usuarioActual) {
+                const historial = await this._getHistorialManager();
+                if (historial) {
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'eliminar',
+                        modulo: 'regiones',
+                        descripcion: historial.generarDescripcion('eliminar', 'regiones', {
+                            nombre: nombreRegion
+                        }),
+                        detalles: {
+                            regionId: id,
+                            nombre: nombreRegion,
+                            color: colorRegion
+                        }
+                    });
+                }
             }
 
             return true;
@@ -403,5 +484,4 @@ class RegionManager {
     }
 }
 
-// ==================== EXPORTS ====================
 export { Region, RegionManager };

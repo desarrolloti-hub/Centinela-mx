@@ -1,13 +1,9 @@
-// crearIncidencias.js - VERSIÓN CON EDITOR DE IMAGEN COMPONENTE
+// crearIncidencias.js - VERSIÓN CON HISTORIAL DE ACTIVIDADES
 
-// LÍMITES DE CARACTERES
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
 };
 
-// =============================================
-// CLASE PRINCIPAL - CrearIncidenciaController
-// =============================================
 class CrearIncidenciaController {
     constructor() {
         this.incidenciaManager = null;
@@ -16,15 +12,26 @@ class CrearIncidenciaController {
         this.categorias = [];
         this.subcategoriasCache = {};
         this.categoriaSeleccionada = null;
-        this.imagenesSeleccionadas = []; // Array de objetos { file, preview, comentario, elementos, edited }
+        this.imagenesSeleccionadas = [];
         this.imageEditorModal = null;
         this.loadingOverlay = null;
         this.flatpickrInstance = null;
+        this.historialManager = null;
 
         this._init();
     }
 
-    // ========== INICIALIZACIÓN ==========
+    async _initHistorialManager() {
+        if (!this.historialManager) {
+            try {
+                const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+                this.historialManager = new HistorialUsuarioManager();
+            } catch (error) {
+                console.error('Error inicializando historialManager:', error);
+            }
+        }
+        return this.historialManager;
+    }
 
     async _init() {
         try {
@@ -41,7 +48,6 @@ class CrearIncidenciaController {
             this._configurarEventos();
             this._inicializarValidaciones();
             
-            // Inicializar el editor de imágenes componente
             this.imageEditorModal = new window.ImageEditorModal();
 
         } catch (error) {
@@ -68,7 +74,6 @@ class CrearIncidenciaController {
         }
     }
 
-    // ========== INICIALIZAR FLATPICKR - CON LÍMITE DE FECHA ACTUAL ==========
     _inicializarDateTimePicker() {
         const fechaInput = document.getElementById('fechaHoraIncidencia');
         if (fechaInput && typeof flatpickr !== 'undefined') {
@@ -101,7 +106,6 @@ class CrearIncidenciaController {
                         }
                     }
                 });
-                console.log('Flatpickr inicializado correctamente con límite de fecha actual');
             } catch (error) {
                 console.error('Error inicializando Flatpickr:', error);
                 fechaInput.type = 'datetime-local';
@@ -126,8 +130,6 @@ class CrearIncidenciaController {
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
-    // ========== CARGA DE DATOS ==========
-
     async _cargarDatosRelacionados() {
         try {
             await this._cargarSucursales();
@@ -144,7 +146,8 @@ class CrearIncidenciaController {
             const sucursalManager = new SucursalManager();
 
             this.sucursales = await sucursalManager.getSucursalesByOrganizacion(
-                this.usuarioActual.organizacionCamelCase
+                this.usuarioActual.organizacionCamelCase,
+                this.usuarioActual
             );
 
         } catch (error) {
@@ -158,15 +161,13 @@ class CrearIncidenciaController {
             const { CategoriaManager } = await import('/clases/categoria.js');
             const categoriaManager = new CategoriaManager();
 
-            this.categorias = await categoriaManager.obtenerTodasCategorias();
+            this.categorias = await categoriaManager.obtenerTodasCategorias(this.usuarioActual);
 
         } catch (error) {
             console.error('Error cargando categorías:', error);
             throw error;
         }
     }
-
-    // ========== CARGA DE USUARIO ==========
 
     _cargarUsuario() {
         try {
@@ -180,7 +181,8 @@ class CrearIncidenciaController {
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || ''
+                    correo: adminData.correoElectronico || '',
+                    email: adminData.correoElectronico || ''
                 };
                 return;
             }
@@ -205,7 +207,8 @@ class CrearIncidenciaController {
                 nombreCompleto: 'Administrador',
                 organizacion: 'Mi Organización',
                 organizacionCamelCase: 'miOrganizacion',
-                correo: 'admin@centinela.com'
+                correo: 'admin@centinela.com',
+                email: 'admin@centinela.com'
             };
 
         } catch (error) {
@@ -223,8 +226,6 @@ class CrearIncidenciaController {
             .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
             .replace(/[^a-zA-Z0-9]/g, '');
     }
-
-    // ========== VALIDACIONES ==========
 
     _inicializarValidaciones() {
         const detallesInput = document.getElementById('detallesIncidencia');
@@ -269,8 +270,6 @@ class CrearIncidenciaController {
         }
     }
 
-    // ========== CONFIGURACIÓN DE EVENTOS ==========
-
     _configurarEventos() {
         try {
             document.getElementById('btnVolverLista')?.addEventListener('click', () => this._volverALista());
@@ -305,8 +304,6 @@ class CrearIncidenciaController {
             console.error('Error configurando eventos:', error);
         }
     }
-
-    // ========== SUGERENCIAS EN TIEMPO REAL ==========
 
     _configurarSugerencias() {
         const inputSucursal = document.getElementById('sucursalIncidencia');
@@ -494,8 +491,6 @@ class CrearIncidenciaController {
         this._cargarSubcategorias(id);
     }
 
-    // ========== SUBCATEGORÍAS ==========
-
     async _cargarSubcategorias(categoriaId) {
         const selectSubcategoria = document.getElementById('subcategoriaIncidencia');
         if (!selectSubcategoria) return;
@@ -584,8 +579,6 @@ class CrearIncidenciaController {
             selectSubcategoria.disabled = true;
         }
     }
-
-    // ========== IMÁGENES ==========
 
     _procesarImagenes(files) {
         if (!files || files.length === 0) return;
@@ -715,8 +708,6 @@ class CrearIncidenciaController {
             }
         });
     }
-
-    // ========== VALIDACIÓN Y GUARDADO ==========
 
     _validarYGuardar() {
         const sucursalInput = document.getElementById('sucursalIncidencia');
@@ -882,8 +873,6 @@ class CrearIncidenciaController {
         }
     }
 
-    // ========== NAVEGACIÓN ==========
-
     _volverALista() {
         this.imagenesSeleccionadas.forEach(img => {
             if (img.preview) {
@@ -924,8 +913,6 @@ class CrearIncidenciaController {
         });
     }
 
-    // ========== UTILIDADES ==========
-
     _mostrarError(mensaje) {
         this._mostrarNotificacion(mensaje, 'error');
     }
@@ -934,7 +921,7 @@ class CrearIncidenciaController {
         Swal.fire({
             title: tipo === 'success' ? 'Éxito' :
                 tipo === 'error' ? 'Error' :
-                    tipo === 'warning' ? 'Advertencia' : 'Información',
+                tipo === 'warning' ? 'Advertencia' : 'Información',
             text: mensaje,
             icon: tipo,
             timer: duracion,
@@ -977,9 +964,6 @@ class CrearIncidenciaController {
     }
 }
 
-// =============================================
-// INICIALIZACIÓN
-// =============================================
 document.addEventListener('DOMContentLoaded', () => {
     window.crearIncidenciaDebug = { controller: new CrearIncidenciaController() };
 });

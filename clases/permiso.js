@@ -1,5 +1,4 @@
-// permiso.js - VERSIÓN COMPLETA CON CONEXIÓN A FIREBASE
-// UBICACIÓN: /clases/permiso.js
+// permiso.js - VERSIÓN COMPLETA CON HISTORIAL DE ACTIVIDADES
 
 import {
     collection,
@@ -22,7 +21,6 @@ class Permiso {
         this.areaId = data.areaId || '';
         this.cargoId = data.cargoId || '';
 
-        // PERMISOS - Controlan visibilidad en el dashboard
         this.permisos = data.permisos || {
             areas: false,
             categorias: false,
@@ -31,17 +29,13 @@ class Permiso {
             incidencias: false
         };
 
-        // Metadatos de organización
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.actualizadoPor = data.actualizadoPor || '';
 
-        // Fechas
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
     }
-
-    // ========== MÉTODOS DE UTILIDAD ==========
 
     _convertirFecha(fecha) {
         if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
@@ -63,52 +57,27 @@ class Permiso {
         }
     }
 
-    // ========== MÉTODOS DE VERIFICACIÓN ==========
-
-    /**
-     * Verifica si tiene acceso a un módulo específico
-     * @param {string} modulo - Nombre del módulo (areas, categorias, sucursales, regiones, incidencias)
-     * @returns {boolean} - true si tiene acceso, false si no
-     */
     puedeAcceder(modulo) {
         return this.permisos[modulo] || false;
     }
 
-    /**
-     * Obtiene todos los permisos
-     * @returns {Object} - Objeto con todos los permisos
-     */
     obtenerTodosLosPermisos() {
         return this.permisos;
     }
 
-    /**
-     * Obtiene solo los módulos a los que tiene acceso (true)
-     * @returns {Array} - Array con los nombres de los módulos activos
-     */
     obtenerModulosActivos() {
         return Object.entries(this.permisos)
             .filter(([_, valor]) => valor === true)
             .map(([modulo]) => modulo);
     }
 
-    /**
-     * Cuenta cuántos módulos tiene activos
-     * @returns {number} - Número de módulos con acceso true
-     */
     contarModulosActivos() {
         return this.obtenerModulosActivos().length;
     }
 
-    /**
-     * Verifica si tiene acceso al menos a un módulo
-     * @returns {boolean} - true si tiene al menos un módulo activo
-     */
     tieneAlgunModulo() {
         return this.contarModulosActivos() > 0;
     }
-
-    // ========== MÉTODOS ESPECÍFICOS POR MÓDULO ==========
 
     puedeAccederAreas() {
         return this.puedeAcceder('areas');
@@ -130,11 +99,6 @@ class Permiso {
         return this.puedeAcceder('incidencias');
     }
 
-    // ========== MÉTODOS DE FIRESTORE ==========
-
-    /**
-     * Prepara datos para Firestore (sin campos innecesarios)
-     */
     toFirestore() {
         return {
             areaId: this.areaId,
@@ -147,9 +111,6 @@ class Permiso {
         };
     }
 
-    /**
-     * Para enviar a Firestore con serverTimestamp (CREACIÓN)
-     */
     toFirestoreCreate(usuarioId) {
         return {
             areaId: this.areaId,
@@ -163,9 +124,6 @@ class Permiso {
         };
     }
 
-    /**
-     * Para actualizar en Firestore
-     */
     toFirestoreUpdate(usuarioId) {
         return {
             permisos: this.permisos,
@@ -174,10 +132,6 @@ class Permiso {
         };
     }
 
-    /**
-     * Prepara los datos para mostrar en la UI
-     * @returns {Object} - Datos formateados para la interfaz
-     */
     toUI() {
         return {
             id: this.id,
@@ -194,10 +148,6 @@ class Permiso {
         };
     }
 
-    /**
-     * Devuelve una representación en string del permiso
-     * @returns {string} - Descripción del permiso
-     */
     toString() {
         const modulos = this.obtenerModulosActivos();
         if (modulos.length === 0) {
@@ -207,25 +157,30 @@ class Permiso {
     }
 }
 
-// =============================================
-// PERMISO MANAGER CON FIREBASE
-// =============================================
-
 class PermisoManager {
     constructor() {
         this.permisos = [];
         this.organizacionNombre = null;
         this.organizacionCamelCase = null;
+        this.historialManager = null;
 
-        // Cargar datos de organización al instanciar
         this._cargarDatosOrganizacion();
     }
 
-    // ========== MÉTODOS PRIVADOS ==========
+    async _initHistorialManager() {
+        if (!this.historialManager) {
+            try {
+                const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+                this.historialManager = new HistorialUsuarioManager();
+            } catch (error) {
+                console.error('Error inicializando historialManager:', error);
+            }
+        }
+        return this.historialManager;
+    }
 
     _cargarDatosOrganizacion() {
         try {
-            // Intentar obtener de adminInfo
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -235,7 +190,6 @@ class PermisoManager {
                 return;
             }
 
-            // Intentar obtener de userData
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             this.organizacionNombre = userData.organizacion || userData.empresa || 'Sin organización';
             this.organizacionCamelCase = userData.organizacionCamelCase ||
@@ -258,25 +212,13 @@ class PermisoManager {
             .replace(/[^a-zA-Z0-9]/g, '');
     }
 
-    /**
-     * Genera nombre de colección dinámico (igual que en categorias)
-     */
     _getCollectionName(organizacionOverride = null) {
         const orgId = organizacionOverride || this.organizacionCamelCase || 'sinOrganizacion';
         return `permisos_${orgId}`;
     }
 
-    // ========== MÉTODOS CRUD CON FIREBASE ==========
-
-    /**
-     * Crea un nuevo permiso - USA addDoc (ID GENERADO POR FIREBASE)
-     * @param {Object} permisoData - Datos del permiso
-     * @param {Object} userManager - Información del usuario actual
-     * @returns {Promise<Permiso>} - Permiso creado
-     */
     async crearPermiso(permisoData, userManager) {
         try {
-            // Validar datos mínimos
             if (!permisoData.areaId) {
                 throw new Error('El área es requerida');
             }
@@ -284,7 +226,6 @@ class PermisoManager {
                 throw new Error('El cargo es requerido');
             }
 
-            // Asegurar que tenemos datos de organización
             if (!this.organizacionCamelCase) {
                 this._cargarDatosOrganizacion();
             }
@@ -298,7 +239,6 @@ class PermisoManager {
             const organizacion = usuarioActual.organizacionCamelCase;
             const collectionName = this._getCollectionName(organizacion);
 
-            // Verificar si ya existe un permiso para esta área y cargo
             const existe = await this.verificarExistente(
                 permisoData.areaId,
                 permisoData.cargoId,
@@ -309,29 +249,45 @@ class PermisoManager {
                 throw new Error('Ya existe un permiso configurado para esta área y cargo');
             }
 
-            // Datos para Firestore - SOLO CAMPOS NECESARIOS
+            // Obtener nombres para el historial
+            let areaNombre = 'Desconocida';
+            let cargoNombre = 'Desconocido';
+            try {
+                const { AreaManager } = await import('/clases/area.js');
+                const areaManager = new AreaManager();
+                const area = await areaManager.getAreaById(permisoData.areaId, organizacion);
+                if (area) {
+                    areaNombre = area.nombreArea;
+                    const cargos = area.getCargosAsArray();
+                    const cargo = cargos.find(c => c.id === permisoData.cargoId);
+                    cargoNombre = cargo ? cargo.nombre : 'Desconocido';
+                }
+            } catch (e) {
+                console.warn('No se pudo obtener nombres de área/cargo:', e);
+            }
+
+            const permisosIniciales = permisoData.permisos || {
+                areas: false,
+                categorias: false,
+                sucursales: false,
+                regiones: false,
+                incidencias: false
+            };
+
             const permisoFirestoreData = {
                 areaId: permisoData.areaId,
                 cargoId: permisoData.cargoId,
-                permisos: permisoData.permisos || {
-                    areas: false,
-                    categorias: false,
-                    sucursales: false,
-                    regiones: false,
-                    incidencias: false
-                },
+                permisos: permisosIniciales,
                 creadoPor: usuarioActual.id || usuarioActual.uid || 'sistema',
                 actualizadoPor: usuarioActual.id || usuarioActual.uid || 'sistema',
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp()
             };
 
-            // Guardar en Firestore CON addDoc (ID AUTOMÁTICO)
             const permisosCollection = collection(db, collectionName);
             const docRef = await addDoc(permisosCollection, permisoFirestoreData);
             const permisoId = docRef.id;
 
-            // Crear instancia para retornar
             const nuevoPermiso = new Permiso(permisoId, {
                 ...permisoFirestoreData,
                 fechaCreacion: new Date(),
@@ -341,8 +297,31 @@ class PermisoManager {
                 actualizadoPor: usuarioActual.id || usuarioActual.uid
             });
 
-            // Agregar a memoria
             this.permisos.unshift(nuevoPermiso);
+
+            // 🔥 REGISTRO EN HISTORIAL
+            const historial = await this._initHistorialManager();
+            if (historial) {
+                const modulosActivos = Object.entries(permisosIniciales)
+                    .filter(([_, valor]) => valor === true)
+                    .map(([modulo]) => modulo);
+
+                await historial.registrarActividad({
+                    usuario: usuarioActual,
+                    tipo: 'crear',
+                    modulo: 'permisos',
+                    descripcion: `Configuró permisos para ${cargoNombre} en área ${areaNombre} (${modulosActivos.length} módulos)`,
+                    detalles: {
+                        permisoId,
+                        areaId: permisoData.areaId,
+                        areaNombre,
+                        cargoId: permisoData.cargoId,
+                        cargoNombre,
+                        permisos: permisosIniciales,
+                        modulosActivos
+                    }
+                });
+            }
 
             return nuevoPermiso;
 
@@ -352,12 +331,7 @@ class PermisoManager {
         }
     }
 
-    /**
-     * Obtiene todos los permisos de una organización
-     * @param {string} organizacion - Nombre de la organización
-     * @returns {Promise<Array>} - Array de permisos
-     */
-    async obtenerPorOrganizacion(organizacion) {
+    async obtenerPorOrganizacion(organizacion, usuarioActual = null) {
         try {
             const orgId = organizacion || this.organizacionCamelCase;
 
@@ -385,9 +359,22 @@ class PermisoManager {
                 }
             });
 
-            // Ordenar por fecha
             permisos.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
             this.permisos = permisos;
+
+            // 🔥 REGISTRO EN HISTORIAL (solo lectura)
+            if (usuarioActual) {
+                const historial = await this._initHistorialManager();
+                if (historial) {
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'leer',
+                        modulo: 'permisos',
+                        descripcion: `Consultó lista de permisos (${permisos.length} configuraciones)`,
+                        detalles: { total: permisos.length }
+                    });
+                }
+            }
 
             return permisos;
 
@@ -397,11 +384,6 @@ class PermisoManager {
         }
     }
 
-    /**
-     * Obtiene un permiso por ID
-     * @param {string} id - ID del permiso
-     * @returns {Promise<Permiso|null>} - Permiso encontrado o null
-     */
     async obtenerPorId(id, organizacionOverride = null) {
         const orgId = organizacionOverride || this.organizacionCamelCase;
 
@@ -409,7 +391,6 @@ class PermisoManager {
             return null;
         }
 
-        // Buscar en memoria primero
         const permisoInMemory = this.permisos.find(p => p.id === id);
         if (permisoInMemory) return permisoInMemory;
 
@@ -437,11 +418,6 @@ class PermisoManager {
         }
     }
 
-    /**
-     * Obtiene permisos por área
-     * @param {string} areaId - ID del área
-     * @returns {Promise<Array>} - Array de permisos
-     */
     async obtenerPorArea(areaId, organizacionOverride = null) {
         try {
             const orgId = organizacionOverride || this.organizacionCamelCase;
@@ -477,12 +453,6 @@ class PermisoManager {
         }
     }
 
-    /**
-     * Obtiene permiso por cargo y área específicos
-     * @param {string} cargoId - ID del cargo
-     * @param {string} areaId - ID del área
-     * @returns {Promise<Permiso|null>} - Permiso encontrado o null
-     */
     async obtenerPorCargoYArea(cargoId, areaId, organizacionOverride = null) {
         try {
             const orgId = organizacionOverride || this.organizacionCamelCase;
@@ -514,19 +484,15 @@ class PermisoManager {
         }
     }
 
-    /**
-     * Actualiza un permiso existente
-     * @param {string} id - ID del permiso
-     * @param {Object} nuevosPermisos - Nuevos permisos
-     * @param {string} usuarioId - ID del usuario que actualiza
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<Permiso|null>} - Permiso actualizado o null
-     */
-    async actualizarPermiso(id, nuevosPermisos, usuarioId, organizacionCamelCase) {
+    async actualizarPermiso(id, nuevosPermisos, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
                 throw new Error('Se requiere organización para actualizar permiso');
             }
+
+            // Obtener datos actuales antes de actualizar
+            const permisoActual = await this.obtenerPorId(id, organizacionCamelCase);
+            const permisosAnteriores = permisoActual ? permisoActual.permisos : {};
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const permisoRef = doc(db, collectionName, id);
@@ -539,12 +505,44 @@ class PermisoManager {
 
             await updateDoc(permisoRef, datosActualizados);
 
-            // Actualizar en memoria
             const permisoIndex = this.permisos.findIndex(p => p.id === id);
             if (permisoIndex !== -1) {
                 this.permisos[permisoIndex].permisos = nuevosPermisos;
                 this.permisos[permisoIndex].fechaActualizacion = new Date();
                 this.permisos[permisoIndex].actualizadoPor = usuarioId;
+            }
+
+            // 🔥 REGISTRO EN HISTORIAL
+            if (usuarioActual) {
+                const historial = await this._initHistorialManager();
+                if (historial) {
+                    const cambios = [];
+                    const modulosActivosAntes = Object.entries(permisosAnteriores)
+                        .filter(([_, valor]) => valor === true)
+                        .map(([modulo]) => modulo);
+                    const modulosActivosAhora = Object.entries(nuevosPermisos)
+                        .filter(([_, valor]) => valor === true)
+                        .map(([modulo]) => modulo);
+
+                    if (modulosActivosAntes.join(',') !== modulosActivosAhora.join(',')) {
+                        cambios.push(`módulos: [${modulosActivosAntes.join(', ')}] → [${modulosActivosAhora.join(', ')}]`);
+                    }
+
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'editar',
+                        modulo: 'permisos',
+                        descripcion: `Actualizó configuración de permisos (${modulosActivosAhora.length} módulos activos)`,
+                        detalles: {
+                            permisoId: id,
+                            permisosAnteriores,
+                            permisosNuevos: nuevosPermisos,
+                            modulosActivosAntes,
+                            modulosActivosAhora,
+                            cambios
+                        }
+                    });
+                }
             }
 
             return await this.obtenerPorId(id, organizacionCamelCase);
@@ -555,12 +553,7 @@ class PermisoManager {
         }
     }
 
-    /**
-     * Elimina un permiso
-     * @param {string} id - ID del permiso
-     * @returns {Promise<boolean>} - true si se eliminó, false si no
-     */
-    async eliminarPermiso(id, organizacionOverride = null) {
+    async eliminarPermiso(id, usuarioActual = null, organizacionOverride = null) {
         try {
             const orgId = organizacionOverride || this.organizacionCamelCase;
 
@@ -568,15 +561,35 @@ class PermisoManager {
                 throw new Error('Se requiere ID de organización');
             }
 
+            // Obtener datos antes de eliminar
+            const permiso = await this.obtenerPorId(id, orgId);
+            const modulosActivos = permiso ? permiso.obtenerModulosActivos() : [];
+
             const collectionName = this._getCollectionName(orgId);
             const permisoRef = doc(db, collectionName, id);
 
             await deleteDoc(permisoRef);
 
-            // Eliminar de memoria
             const permisoIndex = this.permisos.findIndex(p => p.id === id);
             if (permisoIndex !== -1) {
                 this.permisos.splice(permisoIndex, 1);
+            }
+
+            // 🔥 REGISTRO EN HISTORIAL
+            if (usuarioActual) {
+                const historial = await this._initHistorialManager();
+                if (historial) {
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'eliminar',
+                        modulo: 'permisos',
+                        descripcion: `Eliminó configuración de permisos (${modulosActivos.length} módulos)`,
+                        detalles: {
+                            permisoId: id,
+                            modulosActivos
+                        }
+                    });
+                }
             }
 
             return true;
@@ -587,12 +600,6 @@ class PermisoManager {
         }
     }
 
-    /**
-     * Verifica si existe un permiso para un cargo y área
-     * @param {string} areaId - ID del área
-     * @param {string} cargoId - ID del cargo
-     * @returns {Promise<boolean>} - true si existe, false si no
-     */
     async verificarExistente(areaId, cargoId, organizacionOverride = null) {
         try {
             const orgId = organizacionOverride || this.organizacionCamelCase;
@@ -617,16 +624,10 @@ class PermisoManager {
         }
     }
 
-    /**
-     * Carga todos los permisos
-     */
     async cargarTodosPermisos() {
         return await this.obtenerPorOrganizacion(this.organizacionCamelCase);
     }
 
-    /**
-     * Obtiene todos los permisos (desde caché o Firestore)
-     */
     async obtenerTodos() {
         if (this.permisos.length === 0) {
             return await this.cargarTodosPermisos();
@@ -634,10 +635,6 @@ class PermisoManager {
         return this.permisos;
     }
 
-    /**
-     * Obtiene estadísticas de permisos
-     * @returns {Promise<Object>} - Estadísticas
-     */
     async obtenerEstadisticas() {
         const permisos = await this.obtenerTodos();
         const total = permisos.length;
@@ -666,7 +663,4 @@ class PermisoManager {
     }
 }
 
-// =============================================
-// EXPORTACIONES
-// =============================================
 export { Permiso, PermisoManager };

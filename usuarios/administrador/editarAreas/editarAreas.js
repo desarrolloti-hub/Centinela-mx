@@ -1,4 +1,4 @@
-// editarAreas.js - VERSIÓN CON VALIDACIONES DE CARACTERES Y MENSAJES SIMPLIFICADOS
+// editarAreas.js - VERSIÓN CORREGIDA CON REGISTRO EN HISTORIAL
 // SweetAlerts sin estilos personalizados
 
 window.editarAreaDebug = {
@@ -736,11 +736,15 @@ class EditarAreaController {
                 throw new Error('No hay área para actualizar');
             }
             
+            this.mostrarCargando('Guardando cambios...');
+            
+            // ✅ CORREGIDO: PASAR usuarioActual para que registre en historial
             await this.areaManager.actualizarArea(
                 this.areaActual.id,
                 datosActualizados,
                 this.userManager.currentUser.id,
-                this.userManager.currentUser.organizacionCamelCase
+                this.userManager.currentUser.organizacionCamelCase,
+                this.userManager.currentUser // ← ESTE ES EL PARÁMETRO QUE FALTABA
             );
             
             this.ocultarCargando();
@@ -760,7 +764,8 @@ class EditarAreaController {
             
         } catch (error) {
             this.ocultarCargando();
-            this.mostrarError('Error actualizando área');
+            console.error('Error guardando:', error);
+            this.mostrarError('Error actualizando área: ' + error.message);
         }
     }
     
@@ -785,6 +790,35 @@ class EditarAreaController {
         }
     }
     
+    mostrarCargando(mensaje = 'Guardando...') {
+        if (this.loadingOverlay) this.ocultarCargando();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            flex-direction: column;
+        `;
+
+        overlay.innerHTML = `
+            <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">${mensaje}</span>
+            </div>
+            <div class="text-light fs-5">${mensaje}</div>
+        `;
+
+        document.body.appendChild(overlay);
+        this.loadingOverlay = overlay;
+    }
     
     ocultarCargando() {
         if (this.loadingOverlay?.parentNode) {

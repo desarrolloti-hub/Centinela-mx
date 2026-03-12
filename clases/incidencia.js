@@ -1,5 +1,3 @@
-// incidencia.js - VERSIÓN CORREGIDA (FECHA DE SEGUIMIENTO Y VALIDACIÓN)
-
 import {
     collection,
     doc,
@@ -25,55 +23,41 @@ import {
 
 import { db, storage } from '/config/firebase-config.js';
 
-// ============================================
-// CLASE INCIDENCIA (MODELO)
-// ============================================
 class Incidencia {
-    // ===== CONSTRUCTOR =====
     constructor(id, data) {
         this.id = id;
 
-        // ===== IDs para acceder a información relacionada =====
         this.sucursalId = data.sucursalId || '';
         this.reportadoPorId = data.reportadoPorId || '';
         this.categoriaId = data.categoriaId || '';
         this.subcategoriaId = data.subcategoriaId || '';
 
-        // ===== FECHAS =====
         this.fechaInicio = data.fechaInicio ? this._convertirFecha(data.fechaInicio) : new Date();
         this.fechaFinalizacion = data.fechaFinalizacion ? this._convertirFecha(data.fechaFinalizacion) : null;
 
-        // ===== NIVEL DE RIESGO =====
         this.nivelRiesgo = data.nivelRiesgo || 'bajo';
 
-        // ===== ESTADO =====
         this.estado = data.estado || 'pendiente';
 
-        // ===== DESCRIPCIÓN =====
         this.detalles = data.detalles || '';
 
-        // ===== IMÁGENES =====
-        this.imagenes = data.imagenes || []; // Array de URLs o objetos { url, comentario }
+        this.imagenes = data.imagenes || [];
 
-        // ===== SEGUIMIENTO (MAP) =====
         this.seguimiento = {};
         if (data.seguimiento) {
             this.seguimiento = JSON.parse(JSON.stringify(data.seguimiento));
         }
 
-        // ===== METADATOS =====
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.creadoPorNombre = data.creadoPorNombre || '';
         this.actualizadoPor = data.actualizadoPor || '';
         this.actualizadoPorNombre = data.actualizadoPorNombre || '';
 
-        // ===== FECHAS DE AUDITORÍA =====
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
     }
 
-    // ===== MÉTODOS PRIVADOS =====
     _convertirFecha(fecha) {
         if (!fecha) return null;
         if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
@@ -132,7 +116,6 @@ class Incidencia {
         return errores;
     }
 
-    // ===== MÉTODOS DE RUTAS DE STORAGE =====
     getRutaStorageBase() {
         return `incidencias_${this.organizacionCamelCase}/${this.id}`;
     }
@@ -145,7 +128,6 @@ class Incidencia {
         return `${this.getRutaStorageBase()}/seguimiento`;
     }
 
-    // ===== MÉTODOS DE SEGUIMIENTO =====
     agregarSeguimiento(usuarioId, usuarioNombre, descripcion, evidencias = [], fecha = new Date()) {
         const seguimientoCount = Object.keys(this.seguimiento).length;
         const seguimientoId = `SEG${seguimientoCount + 1}`;
@@ -154,7 +136,7 @@ class Incidencia {
             usuarioId,
             usuarioNombre,
             descripcion,
-            evidencias, // Array de objetos { url, comentario }
+            evidencias,
             fecha: fecha
         };
 
@@ -173,7 +155,7 @@ class Incidencia {
             seguimientosArray.sort((a, b) => {
                 const fechaA = a.fecha ? new Date(a.fecha) : 0;
                 const fechaB = b.fecha ? new Date(b.fecha) : 0;
-                return fechaA - fechaB; // Orden ascendente (más antiguo primero)
+                return fechaA - fechaB;
             });
         }
         return seguimientosArray;
@@ -189,7 +171,6 @@ class Incidencia {
         return seguimientos.length > 0 ? seguimientos[0] : null;
     }
 
-    // ===== MÉTODOS DE FORMATEO =====
     getNivelRiesgoTexto() {
         const niveles = {
             'bajo': 'Bajo',
@@ -230,7 +211,6 @@ class Incidencia {
     getFechaFinalizacionFormateada() { return this._formatearFecha(this.fechaFinalizacion) || 'No finalizada'; }
     getFechaCreacionFormateada() { return this._formatearFecha(this.fechaCreacion); }
 
-    // ===== MÉTODO TOJSON =====
     toJSON() {
         return {
             id: this.id,
@@ -282,12 +262,22 @@ class Incidencia {
     }
 }
 
-// ============================================
-// CLASE INCIDENCIA MANAGER (CONTROLADOR)
-// ============================================
 class IncidenciaManager {
     constructor() {
         this.incidencias = [];
+        this.historialManager = null;
+    }
+
+    async _initHistorialManager() {
+        if (!this.historialManager) {
+            try {
+                const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+                this.historialManager = new HistorialUsuarioManager();
+            } catch (error) {
+                console.error('Error inicializando historialManager:', error);
+            }
+        }
+        return this.historialManager;
     }
 
     _getCollectionName(organizacionCamelCase) {
@@ -301,11 +291,6 @@ class IncidenciaManager {
         return `INC-${fecha}-${hora}`;
     }
 
-    // ===== MÉTODOS DE STORAGE =====
-
-    /**
-     * Sube un archivo a Firebase Storage
-     */
     async subirArchivo(file, rutaCompleta, onProgress = null) {
         try {
             const storageRef = ref(storage, rutaCompleta);
@@ -352,9 +337,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Elimina un archivo de Storage
-     */
     async eliminarArchivo(urlODirectorio) {
         try {
             const storageRef = ref(storage, urlODirectorio);
@@ -366,9 +348,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Elimina todos los archivos de una carpeta en Storage
-     */
     async eliminarCarpetaStorage(rutaCarpeta) {
         try {
             const folderRef = ref(storage, rutaCarpeta);
@@ -394,11 +373,6 @@ class IncidenciaManager {
         }
     }
 
-    // ===== MÉTODOS CRUD PRINCIPALES =====
-
-    /**
-     * Crear una nueva incidencia
-     */
     async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
             if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
@@ -412,7 +386,6 @@ class IncidenciaManager {
             const incidenciaId = this._generarIdIncidencia(organizacion);
             const incidenciaRef = doc(incidenciasCollection, incidenciaId);
 
-            // Subir archivos y guardar con sus comentarios
             let imagenesUrls = [];
             if (archivos.length > 0) {
                 for (let i = 0; i < archivos.length; i++) {
@@ -425,7 +398,6 @@ class IncidenciaManager {
 
                     const resultado = await this.subirArchivo(file, rutaStorage);
 
-                    // Guardar URL y comentario juntos
                     imagenesUrls.push({
                         url: resultado.url,
                         comentario: comentario
@@ -433,7 +405,6 @@ class IncidenciaManager {
                 }
             }
 
-            // Usar la fecha seleccionada por el usuario
             const fechaInicio = data.fechaInicio || new Date();
 
             const incidenciaData = {
@@ -447,7 +418,7 @@ class IncidenciaManager {
                 estado: 'pendiente',
                 detalles: data.detalles?.trim() || '',
                 imagenes: imagenesUrls,
-                seguimiento: {}, // Vacío - sin seguimiento automático
+                seguimiento: {},
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorNombre: usuarioActual.nombreCompleto || '',
@@ -466,6 +437,25 @@ class IncidenciaManager {
             });
 
             this.incidencias.unshift(nuevaIncidencia);
+
+            // 🔥 REGISTRO EN HISTORIAL
+            const historial = await this._initHistorialManager();
+            if (historial) {
+                await historial.registrarActividad({
+                    usuario: usuarioActual,
+                    tipo: 'crear',
+                    modulo: 'incidencias',
+                    descripcion: `Creó incidencia ${incidenciaId} - ${data.detalles?.substring(0, 50)}...`,
+                    detalles: {
+                        incidenciaId,
+                        sucursalId: data.sucursalId,
+                        categoriaId: data.categoriaId,
+                        nivelRiesgo: data.nivelRiesgo,
+                        totalImagenes: imagenesUrls.length
+                    }
+                });
+            }
+
             return nuevaIncidencia;
 
         } catch (error) {
@@ -474,9 +464,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Obtener incidencia por ID
-     */
     async getIncidenciaById(incidenciaId, organizacionCamelCase) {
         if (!organizacionCamelCase) return null;
 
@@ -502,10 +489,7 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Listar incidencias por organización
-     */
-    async getIncidenciasByOrganizacion(organizacionCamelCase, filtros = {}) {
+    async getIncidenciasByOrganizacion(organizacionCamelCase, filtros = {}, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) return [];
 
@@ -541,6 +525,21 @@ class IncidenciaManager {
             });
 
             this.incidencias = incidencias;
+
+            // 🔥 REGISTRO EN HISTORIAL (solo lectura)
+            if (usuarioActual) {
+                const historial = await this._initHistorialManager();
+                if (historial) {
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'leer',
+                        modulo: 'incidencias',
+                        descripcion: `Consultó lista de incidencias (${incidencias.length} incidencias)`,
+                        detalles: { total: incidencias.length, filtros }
+                    });
+                }
+            }
+
             return incidencias;
 
         } catch (error) {
@@ -549,10 +548,7 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Actualizar incidencia
-     */
-    async actualizarIncidencia(incidenciaId, nuevosDatos, usuarioId, organizacionCamelCase) {
+    async actualizarIncidencia(incidenciaId, nuevosDatos, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
                 throw new Error('Se requiere organización para actualizar incidencia');
@@ -565,6 +561,8 @@ class IncidenciaManager {
             if (!incidenciaSnap.exists()) {
                 throw new Error(`Incidencia con ID ${incidenciaId} no encontrada`);
             }
+
+            const datosActuales = incidenciaSnap.data();
 
             const datosActualizados = {
                 ...nuevosDatos,
@@ -590,6 +588,32 @@ class IncidenciaManager {
                 incidenciaActual.actualizadoPor = usuarioId;
             }
 
+            // 🔥 REGISTRO EN HISTORIAL
+            if (usuarioActual) {
+                const historial = await this._initHistorialManager();
+                if (historial) {
+                    const cambios = [];
+                    if (datosActuales.estado !== nuevosDatos.estado) {
+                        cambios.push(`estado: ${datosActuales.estado} → ${nuevosDatos.estado}`);
+                    }
+                    if (datosActuales.nivelRiesgo !== nuevosDatos.nivelRiesgo) {
+                        cambios.push(`riesgo: ${datosActuales.nivelRiesgo} → ${nuevosDatos.nivelRiesgo}`);
+                    }
+
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'editar',
+                        modulo: 'incidencias',
+                        descripcion: `Actualizó incidencia ${incidenciaId} (${cambios.join(', ') || 'sin cambios'})`,
+                        detalles: {
+                            incidenciaId,
+                            cambios,
+                            datosActualizados: nuevosDatos
+                        }
+                    });
+                }
+            }
+
             return await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
 
         } catch (error) {
@@ -598,10 +622,7 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Agregar seguimiento con evidencias - USA LA FECHA SELECCIONADA
-     */
-    async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase, evidenciasConComentarios = [], fechaSeleccionada) {
+    async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase, evidenciasConComentarios = [], fechaSeleccionada, usuarioActual = null) {
         try {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
             if (!incidencia) {
@@ -630,7 +651,6 @@ class IncidenciaManager {
                 }
             }
 
-            // CORRECCIÓN: Usar la fecha seleccionada por el usuario
             const fechaSeguimiento = fechaSeleccionada || new Date();
 
             const nuevoSeguimiento = {
@@ -638,7 +658,7 @@ class IncidenciaManager {
                 usuarioNombre,
                 descripcion,
                 evidencias: evidenciasUrls,
-                fecha: fechaSeguimiento // ← AHORA USA LA FECHA DEL FORMULARIO
+                fecha: fechaSeguimiento
             };
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
@@ -664,6 +684,24 @@ class IncidenciaManager {
                 this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
             }
 
+            // 🔥 REGISTRO EN HISTORIAL
+            if (usuarioActual) {
+                const historial = await this._initHistorialManager();
+                if (historial) {
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'crear',
+                        modulo: 'incidencias',
+                        descripcion: `Agregó seguimiento a incidencia ${incidenciaId}`,
+                        detalles: {
+                            incidenciaId,
+                            seguimientoId,
+                            totalEvidencias: evidenciasUrls.length
+                        }
+                    });
+                }
+            }
+
             return seguimientoId;
 
         } catch (error) {
@@ -672,10 +710,7 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Finalizar incidencia - SIN SEGUIMIENTO AUTOMÁTICO
-     */
-    async finalizarIncidencia(incidenciaId, usuarioId, usuarioNombre, organizacionCamelCase) {
+    async finalizarIncidencia(incidenciaId, usuarioId, usuarioNombre, organizacionCamelCase, usuarioActual = null) {
         try {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
             if (!incidencia) {
@@ -708,6 +743,24 @@ class IncidenciaManager {
                 this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
             }
 
+            // 🔥 REGISTRO EN HISTORIAL
+            if (usuarioActual) {
+                const historial = await this._initHistorialManager();
+                if (historial) {
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'editar',
+                        modulo: 'incidencias',
+                        descripcion: `Finalizó incidencia ${incidenciaId}`,
+                        detalles: {
+                            incidenciaId,
+                            estadoAnterior: 'pendiente',
+                            estadoNuevo: 'finalizada'
+                        }
+                    });
+                }
+            }
+
             return true;
 
         } catch (error) {
@@ -716,16 +769,14 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Eliminar incidencia
-     */
-    async eliminarIncidencia(incidenciaId, usuarioId, organizacionCamelCase, eliminarArchivos = true) {
+    async eliminarIncidencia(incidenciaId, usuarioId, organizacionCamelCase, eliminarArchivos = true, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
                 throw new Error('Se requiere organización para eliminar incidencia');
             }
 
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
+            const detallesIncidencia = incidencia ? incidencia.detalles : '';
 
             if (eliminarArchivos && incidencia) {
                 const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}`;
@@ -741,6 +792,23 @@ class IncidenciaManager {
                 this.incidencias.splice(incidenciaIndex, 1);
             }
 
+            // 🔥 REGISTRO EN HISTORIAL
+            if (usuarioActual) {
+                const historial = await this._initHistorialManager();
+                if (historial) {
+                    await historial.registrarActividad({
+                        usuario: usuarioActual,
+                        tipo: 'eliminar',
+                        modulo: 'incidencias',
+                        descripcion: `Eliminó incidencia ${incidenciaId}`,
+                        detalles: {
+                            incidenciaId,
+                            detalles: detallesIncidencia?.substring(0, 100)
+                        }
+                    });
+                }
+            }
+
             return true;
 
         } catch (error) {
@@ -748,8 +816,6 @@ class IncidenciaManager {
             throw error;
         }
     }
-
-    // ===== MÉTODOS DE CONSULTA =====
 
     async getIncidenciasPorSucursal(sucursalId, organizacionCamelCase) {
         return await this.getIncidenciasByOrganizacion(organizacionCamelCase, { sucursalId });
@@ -786,9 +852,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Verificar si existe una incidencia
-     */
     async verificarIncidenciaExistente(incidenciaId, organizacionCamelCase) {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
@@ -801,13 +864,9 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Limpiar caché de memoria
-     */
     limpiarCache() {
         this.incidencias = [];
     }
 }
 
-// ===== EXPORT =====
 export { Incidencia, IncidenciaManager };
