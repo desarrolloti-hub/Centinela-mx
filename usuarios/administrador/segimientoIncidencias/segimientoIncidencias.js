@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN CON EDITOR DE IMAGEN COMPONENTE
+
 
 // =============================================
 // VARIABLES GLOBALES
@@ -864,6 +864,7 @@ async function guardarSeguimiento(datos) {
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
+        // ✅ PASAR usuarioActual PARA REGISTRAR EN HISTORIAL
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
@@ -872,7 +873,8 @@ async function guardarSeguimiento(datos) {
             archivos,
             usuarioActual.organizacionCamelCase,
             datos.evidencias,
-            datos.fecha
+            datos.fecha,
+            usuarioActual // ← ESTE ES EL PARÁMETRO PARA HISTORIAL
         );
 
         if (datos.nuevoEstado !== incidenciaActual.estado) {
@@ -880,7 +882,8 @@ async function guardarSeguimiento(datos) {
                 incidenciaActual.id,
                 { estado: datos.nuevoEstado },
                 usuarioActual.id,
-                usuarioActual.organizacionCamelCase
+                usuarioActual.organizacionCamelCase,
+                usuarioActual // ← TAMBIÉN PASAR PARA HISTORIAL
             );
         }
 

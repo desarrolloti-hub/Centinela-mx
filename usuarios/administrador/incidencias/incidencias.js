@@ -1,7 +1,7 @@
 import { generadorIPH } from '/components/iph-generator.js';
 
 // =============================================
-// VARIABLES GLOBALES incidencias
+// VARIABLES GLOBALES
 // =============================================
 let incidenciaManager = null;
 let organizacionActual = null;
@@ -22,6 +22,47 @@ let filtrosActivos = {
     nivelRiesgo: 'todos',
     sucursalId: 'todos'
 };
+
+// =============================================
+// FUNCIÓN PARA OBTENER USUARIO ACTUAL DESDE LOCALSTORAGE
+// =============================================
+function obtenerUsuarioActual() {
+    try {
+        // Intentar desde adminInfo
+        const adminInfo = localStorage.getItem('adminInfo');
+        if (adminInfo) {
+            const adminData = JSON.parse(adminInfo);
+            return {
+                id: adminData.id || adminData.uid,
+                uid: adminData.uid || adminData.id,
+                nombreCompleto: adminData.nombreCompleto || 'Administrador',
+                organizacion: adminData.organizacion,
+                organizacionCamelCase: adminData.organizacionCamelCase,
+                correo: adminData.correoElectronico || '',
+                email: adminData.correoElectronico || ''
+            };
+        }
+        
+        // Intentar desde userData
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa,
+                organizacionCamelCase: userData.organizacionCamelCase,
+                correo: userData.correo || userData.email || '',
+                email: userData.correo || userData.email || ''
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error obteniendo usuario actual:', error);
+        return null;
+    }
+}
 
 // =============================================
 // INICIALIZACIÓN
@@ -91,6 +132,17 @@ async function obtenerTokenAuth() {
 
 async function obtenerDatosOrganizacion() {
     try {
+        // Primero intentar con usuario actual de localStorage
+        const usuario = obtenerUsuarioActual();
+        if (usuario) {
+            organizacionActual = {
+                nombre: usuario.organizacion || 'Mi Empresa',
+                camelCase: usuario.organizacionCamelCase || ''
+            };
+            return;
+        }
+
+        // Si no, intentar con window.userManager
         if (window.userManager && window.userManager.currentUser) {
             const user = window.userManager.currentUser;
             organizacionActual = {
@@ -336,7 +388,7 @@ window.generarIPHMultiple = async function () {
 };
 
 // =============================================
-// CARGAR INCIDENCIAS
+// CARGAR INCIDENCIAS (CORREGIDO)
 // =============================================
 async function cargarIncidencias() {
     if (!incidenciaManager || !organizacionActual.camelCase) {
@@ -350,7 +402,18 @@ async function cargarIncidencias() {
 
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;">Cargando incidencias...</td></tr>';
 
-        incidenciasCache = await incidenciaManager.getIncidenciasByOrganizacion(organizacionActual.camelCase);
+        // ✅ Obtener usuario actual desde localStorage
+        const usuarioActual = obtenerUsuarioActual();
+
+        console.log('📤 Cargando incidencias, usuario:', usuarioActual ? usuarioActual.nombreCompleto : 'NO HAY USUARIO');
+
+        incidenciasCache = await incidenciaManager.getIncidenciasByOrganizacion(
+            organizacionActual.camelCase, 
+            {}, 
+            usuarioActual // ← PASAR USUARIO PARA REGISTRAR LECTURA
+        );
+
+        console.log('📥 Incidencias cargadas:', incidenciasCache.length);
 
         if (!incidenciasCache || incidenciasCache.length === 0) {
             tbody.innerHTML = `

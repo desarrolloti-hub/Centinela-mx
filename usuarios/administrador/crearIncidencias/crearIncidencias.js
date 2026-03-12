@@ -1,4 +1,4 @@
-// crearIncidencias.js - VERSIÓN CON HISTORIAL DE ACTIVIDADES
+
 
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
@@ -21,6 +21,10 @@ class CrearIncidenciaController {
         this._init();
     }
 
+    /**
+     * Inicializa el manager de historial
+     * @returns {Promise<HistorialUsuarioManager>}
+     */
     async _initHistorialManager() {
         if (!this.historialManager) {
             try {
@@ -33,6 +37,9 @@ class CrearIncidenciaController {
         return this.historialManager;
     }
 
+    /**
+     * Inicialización principal
+     */
     async _init() {
         try {
             this._cargarUsuario();
@@ -57,6 +64,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Inicializa el manager de incidencias
+     */
     async _inicializarManager() {
         try {
             const { IncidenciaManager } = await import('/clases/incidencia.js');
@@ -67,6 +77,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Configura el campo de organización
+     */
     _configurarOrganizacion() {
         const orgInput = document.getElementById('organization');
         if (orgInput) {
@@ -74,6 +87,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Inicializa el selector de fecha y hora
+     */
     _inicializarDateTimePicker() {
         const fechaInput = document.getElementById('fechaHoraIncidencia');
         if (fechaInput && typeof flatpickr !== 'undefined') {
@@ -121,6 +137,11 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Formatea fecha para input datetime-local
+     * @param {Date} fecha - Fecha a formatear
+     * @returns {string} - Fecha formateada
+     */
     _formatearFechaParaInput(fecha) {
         const year = fecha.getFullYear();
         const month = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -130,6 +151,9 @@ class CrearIncidenciaController {
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
+    /**
+     * Carga sucursales y categorías
+     */
     async _cargarDatosRelacionados() {
         try {
             await this._cargarSucursales();
@@ -140,6 +164,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Carga las sucursales de la organización
+     */
     async _cargarSucursales() {
         try {
             const { SucursalManager } = await import('/clases/sucursal.js');
@@ -156,6 +183,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Carga las categorías
+     */
     async _cargarCategorias() {
         try {
             const { CategoriaManager } = await import('/clases/categoria.js');
@@ -169,6 +199,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Carga el usuario actual desde localStorage
+     */
     _cargarUsuario() {
         try {
             const adminInfo = localStorage.getItem('adminInfo');
@@ -217,6 +250,11 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Genera camelCase a partir de un texto
+     * @param {string} texto - Texto a convertir
+     * @returns {string} - Texto en camelCase
+     */
     _generarCamelCase(texto) {
         if (!texto || typeof texto !== 'string') return 'sinOrganizacion';
         return texto
@@ -227,6 +265,9 @@ class CrearIncidenciaController {
             .replace(/[^a-zA-Z0-9]/g, '');
     }
 
+    /**
+     * Inicializa validaciones de formulario
+     */
     _inicializarValidaciones() {
         const detallesInput = document.getElementById('detallesIncidencia');
         if (detallesInput) {
@@ -244,6 +285,12 @@ class CrearIncidenciaController {
         this._actualizarContador('detallesIncidencia', 'contadorCaracteres', LIMITES.DETALLES_INCIDENCIA);
     }
 
+    /**
+     * Actualiza el contador de caracteres
+     * @param {string} inputId - ID del input
+     * @param {string} counterId - ID del contador
+     * @param {number} limite - Límite de caracteres
+     */
     _actualizarContador(inputId, counterId, limite) {
         const input = document.getElementById(inputId);
         const counter = document.getElementById(counterId);
@@ -262,6 +309,12 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Valida la longitud de un campo
+     * @param {HTMLElement} campo - Elemento del campo
+     * @param {number} limite - Límite de caracteres
+     * @param {string} nombreCampo - Nombre del campo para mensaje
+     */
     _validarLongitudCampo(campo, limite, nombreCampo) {
         const longitud = campo.value.length;
         if (longitud > limite) {
@@ -270,6 +323,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Configura los event listeners
+     */
     _configurarEventos() {
         try {
             document.getElementById('btnVolverLista')?.addEventListener('click', () => this._volverALista());
@@ -305,6 +361,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Configura el sistema de sugerencias en tiempo real
+     */
     _configurarSugerencias() {
         const inputSucursal = document.getElementById('sucursalIncidencia');
         const inputCategoria = document.getElementById('categoriaIncidencia');
@@ -346,6 +405,10 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Muestra sugerencias de sucursales
+     * @param {string} termino - Término de búsqueda
+     */
     _mostrarSugerenciasSucursal(termino) {
         const contenedor = document.getElementById('sugerenciasSucursal');
         if (!contenedor) return;
@@ -408,6 +471,10 @@ class CrearIncidenciaController {
         });
     }
 
+    /**
+     * Muestra sugerencias de categorías
+     * @param {string} termino - Término de búsqueda
+     */
     _mostrarSugerenciasCategoria(termino) {
         const contenedor = document.getElementById('sugerenciasCategoria');
         if (!contenedor) return;
@@ -471,6 +538,11 @@ class CrearIncidenciaController {
         });
     }
 
+    /**
+     * Selecciona una sucursal
+     * @param {string} id - ID de la sucursal
+     * @param {string} nombre - Nombre de la sucursal
+     */
     _seleccionarSucursal(id, nombre) {
         const input = document.getElementById('sucursalIncidencia');
         input.value = nombre;
@@ -480,6 +552,11 @@ class CrearIncidenciaController {
         document.getElementById('sugerenciasSucursal').innerHTML = '';
     }
 
+    /**
+     * Selecciona una categoría
+     * @param {string} id - ID de la categoría
+     * @param {string} nombre - Nombre de la categoría
+     */
     _seleccionarCategoria(id, nombre) {
         const input = document.getElementById('categoriaIncidencia');
         input.value = nombre;
@@ -491,6 +568,10 @@ class CrearIncidenciaController {
         this._cargarSubcategorias(id);
     }
 
+    /**
+     * Carga las subcategorías de una categoría
+     * @param {string} categoriaId - ID de la categoría
+     */
     async _cargarSubcategorias(categoriaId) {
         const selectSubcategoria = document.getElementById('subcategoriaIncidencia');
         if (!selectSubcategoria) return;
@@ -580,6 +661,10 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Procesa las imágenes seleccionadas
+     * @param {FileList} files - Archivos seleccionados
+     */
     _procesarImagenes(files) {
         if (!files || files.length === 0) return;
 
@@ -608,6 +693,9 @@ class CrearIncidenciaController {
         document.getElementById('inputImagenes').value = '';
     }
 
+    /**
+     * Actualiza la vista previa de imágenes
+     */
     _actualizarVistaPreviaImagenes() {
         const container = document.getElementById('imagenesPreview');
         const countSpan = document.getElementById('imagenesCount');
@@ -664,6 +752,10 @@ class CrearIncidenciaController {
         });
     }
 
+    /**
+     * Abre el editor de imágenes
+     * @param {number} index - Índice de la imagen
+     */
     _editarImagen(index) {
         if (this.imageEditorModal && this.imagenesSeleccionadas[index]) {
             const img = this.imagenesSeleccionadas[index];
@@ -688,6 +780,10 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Elimina una imagen
+     * @param {number} index - Índice de la imagen
+     */
     _eliminarImagen(index) {
         Swal.fire({
             title: '¿Eliminar imagen?',
@@ -709,6 +805,9 @@ class CrearIncidenciaController {
         });
     }
 
+    /**
+     * Valida el formulario antes de guardar
+     */
     _validarYGuardar() {
         const sucursalInput = document.getElementById('sucursalIncidencia');
         const categoriaInput = document.getElementById('categoriaIncidencia');
@@ -799,6 +898,10 @@ class CrearIncidenciaController {
         });
     }
 
+    /**
+     * Confirma la creación de la incidencia
+     * @param {Object} datos - Datos de la incidencia
+     */
     async _confirmarYGuardar(datos) {
         const confirmResult = await Swal.fire({
             title: '¿Crear incidencia?',
@@ -816,6 +919,10 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Guarda la incidencia en Firestore
+     * @param {Object} datos - Datos de la incidencia
+     */
     async _guardarIncidencia(datos) {
         const btnCrear = document.getElementById('btnCrearIncidencia');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
@@ -873,6 +980,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Vuelve a la lista de incidencias
+     */
     _volverALista() {
         this.imagenesSeleccionadas.forEach(img => {
             if (img.preview) {
@@ -882,6 +992,9 @@ class CrearIncidenciaController {
         window.location.href = '/usuarios/administrador/incidencias/incidencias.html';
     }
 
+    /**
+     * Cancela la creación
+     */
     _cancelarCreacion() {
         Swal.fire({
             title: '¿Cancelar?',
@@ -902,6 +1015,9 @@ class CrearIncidenciaController {
         });
     }
 
+    /**
+     * Redirige al login
+     */
     _redirigirAlLogin() {
         Swal.fire({
             icon: 'error',
@@ -913,10 +1029,20 @@ class CrearIncidenciaController {
         });
     }
 
+    /**
+     * Muestra un error
+     * @param {string} mensaje - Mensaje de error
+     */
     _mostrarError(mensaje) {
         this._mostrarNotificacion(mensaje, 'error');
     }
 
+    /**
+     * Muestra una notificación
+     * @param {string} mensaje - Mensaje
+     * @param {string} tipo - Tipo de notificación
+     * @param {number} duracion - Duración en ms
+     */
     _mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
         Swal.fire({
             title: tipo === 'success' ? 'Éxito' :
@@ -930,6 +1056,11 @@ class CrearIncidenciaController {
         });
     }
 
+    /**
+     * Escapa HTML para prevenir XSS
+     * @param {string} text - Texto a escapar
+     * @returns {string} - Texto escapado
+     */
     _escapeHTML(text) {
         if (!text) return '';
         return String(text)
@@ -940,6 +1071,10 @@ class CrearIncidenciaController {
             .replace(/'/g, '&#039;');
     }
 
+    /**
+     * Muestra un overlay de carga
+     * @param {string} mensaje - Mensaje a mostrar
+     */
     _mostrarCargando(mensaje = 'Guardando...') {
         if (this.loadingOverlay) {
             this.loadingOverlay.remove();
@@ -956,6 +1091,9 @@ class CrearIncidenciaController {
         this.loadingOverlay = overlay;
     }
 
+    /**
+     * Oculta el overlay de carga
+     */
     _ocultarCargando() {
         if (this.loadingOverlay) {
             this.loadingOverlay.remove();
@@ -964,6 +1102,7 @@ class CrearIncidenciaController {
     }
 }
 
+// Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     window.crearIncidenciaDebug = { controller: new CrearIncidenciaController() };
 });
