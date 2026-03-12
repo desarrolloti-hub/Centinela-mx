@@ -25,7 +25,6 @@ class CrearPermisoController {
             const usuarioCargado = this._cargarUsuario();
 
             if (!usuarioCargado) {
-                console.warn('No hay sesión activa, redirigiendo al login...');
                 this._redirigirAlLogin();
                 return;
             }
@@ -42,10 +41,7 @@ class CrearPermisoController {
             // 5. Configurar organización automática
             this._configurarOrganizacion();
 
-            console.log('✅ Inicialización completada');
-
         } catch (error) {
-            console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
         }
     }
@@ -66,7 +62,6 @@ class CrearPermisoController {
                         this._generarCamelCase(adminData.organizacion),
                     correo: adminData.correoElectronico || adminData.correo || ''
                 };
-                console.log('✅ Usuario cargado desde adminInfo:', this.usuarioActual);
                 return true;
             }
 
@@ -82,7 +77,6 @@ class CrearPermisoController {
                         this._generarCamelCase(userData.organizacion || userData.empresa),
                     correo: userData.correo || userData.email || ''
                 };
-                console.log('✅ Usuario cargado desde userData:', this.usuarioActual);
                 return true;
             }
 
@@ -98,7 +92,6 @@ class CrearPermisoController {
                         this._generarCamelCase(user.organizacion),
                     correo: user.correoElectronico || user.correo || ''
                 };
-                console.log('✅ Usuario cargado desde userManager:', this.usuarioActual);
 
                 // Guardar en localStorage para futuras cargas
                 localStorage.setItem('adminInfo', JSON.stringify({
@@ -115,11 +108,9 @@ class CrearPermisoController {
             }
 
             // Si no hay nada, redirigir al login
-            console.warn('⚠️ No se encontró información de usuario');
             return false;
 
         } catch (error) {
-            console.error('Error cargando usuario:', error);
             return false;
         }
     }
@@ -144,9 +135,7 @@ class CrearPermisoController {
             this.permisoManager = new PermisoManager();
             this.areaManager = new AreaManager();
 
-            console.log('✅ Managers cargados correctamente');
         } catch (error) {
-            console.error('❌ Error cargando managers:', error);
             throw new Error('No se pudieron cargar los módulos necesarios. Verifica la consola.');
         }
     }
@@ -167,13 +156,10 @@ class CrearPermisoController {
                 this.usuarioActual.organizacionCamelCase
             );
 
-            console.log(`✅ Cargadas ${this.areas.length} áreas`);
-
             // Llenar select de áreas
             this._llenarSelectAreas();
 
         } catch (error) {
-            console.error('❌ Error cargando áreas:', error);
             const areaSelect = document.getElementById('areaSelect');
             if (areaSelect) {
                 areaSelect.innerHTML = '<option value="" disabled selected>-- Error cargando áreas --</option>';
@@ -301,7 +287,7 @@ class CrearPermisoController {
             this._configurarAccionesRapidas();
 
         } catch (error) {
-            console.error('Error configurando eventos:', error);
+            // Silenciar error
         }
     }
 
@@ -461,7 +447,6 @@ class CrearPermisoController {
             this._guardarPermiso(areaId, cargoId, permisos);
 
         } catch (error) {
-            console.error('Error verificando permiso existente:', error);
             this._mostrarError('Error al verificar permiso existente');
         }
     }
@@ -503,15 +488,11 @@ class CrearPermisoController {
             const area = this.areas.find(a => a.id === areaId);
             const cargoNombre = this._getCargoNombre(areaId, cargoId);
 
-            console.log('📝 Creando permiso:', permisoData);
-
             // Crear permiso usando el manager (AHORA GUARDA EN FIREBASE)
             const nuevoPermiso = await this.permisoManager.crearPermiso(
                 permisoData,
                 userManager
             );
-
-            console.log('✅ Permiso creado en Firebase:', nuevoPermiso);
 
             // Obtener lista de módulos activos para mostrar
             const modulosActivos = Object.entries(permisos)
@@ -557,7 +538,6 @@ class CrearPermisoController {
             this._volverALista();
 
         } catch (error) {
-            console.error('❌ Error guardando permiso:', error);
             Swal.close();
 
             let mensajeError = error.message || 'No se pudo crear el permiso';
