@@ -16,7 +16,7 @@ let Area, AreaManager;
 const LIMITES = {
     NOMBRE_AREA: 50,
     DESCRIPCION_AREA: 500,
-    NOMBRE_CARGO: 50,
+    NOMBRE_CARGO: 20, // Cambiado a 20 caracteres
     DESCRIPCION_CARGO: 200
 };
 
@@ -522,10 +522,10 @@ class CrearAreaController {
                                        value="${this.escapeHTML(cargo.nombre)}"
                                        placeholder="Ej: Gerente, Analista, Coordinador"
                                        maxlength="${LIMITES.NOMBRE_CARGO}"
-                                       oninput="window.crearAreaDebug.controller.actualizarCargo('${cargo.id}', 'nombre', this.value)">
+                                       oninput="window.crearAreaDebug.controller.actualizarCargo('${cargo.id}', 'nombre', this.value); window.crearAreaDebug.controller.actualizarContadorCargo('${cargo.id}', 'nombre')">
                             </div>
                             <div class="char-limit-info">
-                                <span class="char-counter">${cargo.nombre?.length || 0}/${LIMITES.NOMBRE_CARGO}</span>
+                                <span class="char-counter" id="contador_cargo_nombre_${cargo.id}">${cargo.nombre?.length || 0}/${LIMITES.NOMBRE_CARGO}</span>
                             </div>
                         </div>
                         <div style="width: 50%; padding: 0 10px; box-sizing: border-box;">
@@ -536,10 +536,10 @@ class CrearAreaController {
                                        value="${this.escapeHTML(cargo.descripcion)}"
                                        placeholder="Responsabilidades principales"
                                        maxlength="${LIMITES.DESCRIPCION_CARGO}"
-                                       oninput="window.crearAreaDebug.controller.actualizarCargo('${cargo.id}', 'descripcion', this.value)">
+                                       oninput="window.crearAreaDebug.controller.actualizarCargo('${cargo.id}', 'descripcion', this.value); window.crearAreaDebug.controller.actualizarContadorCargo('${cargo.id}', 'descripcion')">
                             </div>
                             <div class="char-limit-info">
-                                <span class="char-counter">${cargo.descripcion?.length || 0}/${LIMITES.DESCRIPCION_CARGO}</span>
+                                <span class="char-counter" id="contador_cargo_descripcion_${cargo.id}">${cargo.descripcion?.length || 0}/${LIMITES.DESCRIPCION_CARGO}</span>
                             </div>
                         </div>
                     </div>
@@ -548,6 +548,18 @@ class CrearAreaController {
         });
 
         cargosList.innerHTML = html;
+    }
+
+    // Nueva función para actualizar los contadores de caracteres de los cargos
+    actualizarContadorCargo(cargoId, campo) {
+        const cargo = this.cargos.find(c => c.id === cargoId);
+        if (cargo) {
+            const contador = document.getElementById(`contador_cargo_${campo}_${cargoId}`);
+            if (contador) {
+                const valor = cargo[campo === 'nombre' ? 'nombre' : 'descripcion'] || '';
+                contador.textContent = `${valor.length}/${campo === 'nombre' ? LIMITES.NOMBRE_CARGO : LIMITES.DESCRIPCION_CARGO}`;
+            }
+        }
     }
 
     actualizarCargo(cargoId, campo, valor) {
@@ -563,6 +575,9 @@ class CrearAreaController {
                 this.mostrarNotificacion(`La descripción no puede exceder ${LIMITES.DESCRIPCION_CARGO} caracteres`, 'warning', 3000);
             }
             cargo[campo] = valor;
+
+            // Actualizar el contador
+            this.actualizarContadorCargo(cargoId, campo);
         }
     }
 
