@@ -71,8 +71,6 @@ class PanelControlManager {
     // ============================================
     async cargarTodasLasEstadisticas() {
         try {
-            console.log('📊 Iniciando carga de estadísticas del panel...');
-
             // Mostrar indicador de carga
             this._mostrarCargando();
 
@@ -80,7 +78,6 @@ class PanelControlManager {
             await this._esperarAutenticacion();
 
             if (!this.userManager.currentUser) {
-                console.error('❌ No hay usuario autenticado');
                 this._mostrarError('No se pudo autenticar al usuario');
                 this._redirigirAlLogin();
                 return;
@@ -91,14 +88,10 @@ class PanelControlManager {
             this.usuarioActualId = usuario.id;
 
             if (!this.organizacionActual) {
-                console.error('❌ Usuario no tiene organización asignada');
                 this._mostrarError('El usuario no tiene una organización asignada');
                 this._redirigirAlLogin();
                 return;
             }
-
-            console.log(`✅ Usuario autenticado: ${usuario.nombreCompleto} (ID: ${this.usuarioActualId})`);
-            console.log(`🏢 Organización: ${this.organizacionActual}`);
 
             // Configurar eventos de clic para las tarjetas KPI (EXCEPTO CARGOS)
             this._configurarNavegacionKPI();
@@ -120,19 +113,13 @@ class PanelControlManager {
             // Actualizar la interfaz
             this._actualizarUI();
 
-            console.log('✅ Estadísticas cargadas:', this.estadisticas);
-
         } catch (error) {
-            console.error('❌ Error cargando estadísticas:', error);
             this._mostrarError('Error al cargar los datos: ' + error.message);
         }
     }
 
     // ========== CONFIGURAR NAVEGACIÓN KPI (EXCEPTO CARGOS) ==========
     _configurarNavegacionKPI() {
-        console.log('🔗 Configurando navegación de tarjetas KPI...');
-        console.log('🚫 Tarjeta de CARGOS no será cliqueable');
-
         // Asignar evento de clic a cada tarjeta KPI (SOLO las que tienen URL)
         Object.keys(this.tarjetas).forEach(key => {
             const tarjeta = this.tarjetas[key];
@@ -144,29 +131,23 @@ class PanelControlManager {
                     e.preventDefault();
                     this._navegarA(key);
                 });
-                console.log(`✅ Tarjeta ${key} configurada como cliqueable`);
             } else if (tarjeta && key === 'cargos') {
                 // Para cargos, asegurar que NO sea cliqueable
                 tarjeta.style.cursor = 'default';
-                console.log(`🚫 Tarjeta ${key} NO es cliqueable`);
             }
         });
     }
 
     // ========== CONFIGURAR NAVEGACIÓN REGISTRO (2 TARJETAS) ==========
     _configurarNavegacionRegistro() {
-        console.log('📝 Configurando navegación de tarjetas de registro...');
-
         // Tarjeta: Nueva Incidencia
         const cardNuevaIncidencia = document.getElementById('card-nueva-incidencia');
         if (cardNuevaIncidencia) {
             cardNuevaIncidencia.style.cursor = 'pointer';
             cardNuevaIncidencia.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('👉 Navegando a: /usuarios/administrador/crearIncidencias/crearIncidencias.html');
                 window.location.href = '/usuarios/administrador/crearIncidencias/crearIncidencias.html';
             });
-            console.log('✅ Tarjeta Nueva Incidencia configurada');
         }
 
         // Tarjeta: Nuevo Usuario
@@ -175,22 +156,17 @@ class PanelControlManager {
             cardNuevoUsuario.style.cursor = 'pointer';
             cardNuevoUsuario.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('👉 Navegando a: /usuarios/administrador/crearUsuarios/crearUsuarios.html');
                 window.location.href = '/usuarios/administrador/crearUsuarios/crearUsuarios.html';
             });
-            console.log('✅ Tarjeta Nuevo Usuario configurada');
         }
     }
 
     // ========== MÉTODO DE NAVEGACIÓN ==========
     _navegarA(destino) {
-        console.log(`👉 Navegando a: ${this.urls[destino]}`);
-
         // Verificar si existe la URL
         if (this.urls[destino]) {
             window.location.href = this.urls[destino];
         } else {
-            console.error(`❌ URL no encontrada para: ${destino}`);
             this._mostrarNotificacion('No se encontró la página de destino', 'error');
         }
     }
@@ -234,18 +210,13 @@ class PanelControlManager {
      */
     async _cargarIncidencias() {
         try {
-            console.log('📋 Cargando incidencias...');
-
             const incidencias = await this.incidenciaManager.getIncidenciasByOrganizacion(
                 this.organizacionActual
             );
 
             this.estadisticas.incidencias = incidencias.length;
 
-            console.log(`✅ Incidencias cargadas: ${this.estadisticas.incidencias}`);
-
         } catch (error) {
-            console.error('❌ Error cargando incidencias:', error);
             this.estadisticas.incidencias = 0;
         }
     }
@@ -255,18 +226,13 @@ class PanelControlManager {
      */
     async _cargarRegiones() {
         try {
-            console.log('🗺️ Cargando regiones...');
-
             const regiones = await this.regionManager.getRegionesByOrganizacion(
                 this.organizacionActual
             );
 
             this.estadisticas.regiones = regiones.length;
 
-            console.log(`✅ Regiones cargadas: ${this.estadisticas.regiones}`);
-
         } catch (error) {
-            console.error('❌ Error cargando regiones:', error);
             this.estadisticas.regiones = 0;
         }
     }
@@ -276,18 +242,13 @@ class PanelControlManager {
      */
     async _cargarSucursales() {
         try {
-            console.log('🏢 Cargando sucursales...');
-
             const sucursales = await this.sucursalManager.getSucursalesByOrganizacion(
                 this.organizacionActual
             );
 
             this.estadisticas.sucursales = sucursales.length;
 
-            console.log(`✅ Sucursales cargadas: ${this.estadisticas.sucursales}`);
-
         } catch (error) {
-            console.error('❌ Error cargando sucursales:', error);
             this.estadisticas.sucursales = 0;
         }
     }
@@ -297,8 +258,6 @@ class PanelControlManager {
      */
     async _cargarAreasYCargos() {
         try {
-            console.log('📁 Cargando áreas y cargos...');
-
             const areas = await this.areaManager.getAreasByOrganizacion(
                 this.organizacionActual
             );
@@ -313,11 +272,7 @@ class PanelControlManager {
 
             this.estadisticas.cargos = totalCargos;
 
-            console.log(`✅ Áreas cargadas: ${this.estadisticas.areas}`);
-            console.log(`✅ Cargos totales: ${this.estadisticas.cargos}`);
-
         } catch (error) {
-            console.error('❌ Error cargando áreas y cargos:', error);
             this.estadisticas.areas = 0;
             this.estadisticas.cargos = 0;
         }
@@ -328,8 +283,6 @@ class PanelControlManager {
      */
     async _cargarUsuarios() {
         try {
-            console.log('👥 Cargando usuarios (excluyendo al actual)...');
-
             let totalUsuarios = 0;
 
             // ===== CONTAR ADMINISTRADORES DE LA ORGANIZACIÓN ACTUAL =====
@@ -346,7 +299,6 @@ class PanelControlManager {
             ).length;
 
             totalUsuarios += adminsExcluyendoActual;
-            console.log(`📊 Administradores de ${this.organizacionActual} (excluyendo actual): ${adminsExcluyendoActual}`);
 
             // ===== CONTAR COLABORADORES DE LA ORGANIZACIÓN ACTUAL =====
             const colaboradores = await this.userManager.getColaboradoresByOrganizacion(
@@ -355,14 +307,10 @@ class PanelControlManager {
             );
 
             totalUsuarios += colaboradores.length;
-            console.log(`📊 Colaboradores de ${this.organizacionActual}: ${colaboradores.length}`);
 
             this.estadisticas.usuarios = totalUsuarios;
 
-            console.log(`✅ Usuarios totales en ${this.organizacionActual} (excluyendo al actual): ${this.estadisticas.usuarios}`);
-
         } catch (error) {
-            console.error('❌ Error cargando usuarios:', error);
             this.estadisticas.usuarios = 0;
         }
     }
@@ -371,8 +319,6 @@ class PanelControlManager {
      * Actualiza los números en las tarjetas KPI
      */
     _actualizarUI() {
-        console.log('🔄 Actualizando interfaz con datos reales...');
-
         // Actualizar cada elemento si existe
         if (this.elementos.incidencias) {
             this.elementos.incidencias.textContent = this.estadisticas.incidencias;
@@ -397,8 +343,6 @@ class PanelControlManager {
         if (this.elementos.usuarios) {
             this.elementos.usuarios.textContent = this.estadisticas.usuarios;
         }
-
-        console.log('✅ Actualización de UI completada');
     }
 
     // ========== UTILIDADES ==========
@@ -430,8 +374,6 @@ class PanelControlManager {
                 background: '#1a1a1a',
                 color: '#fff'
             });
-        } else {
-            console.error('Error:', mensaje);
         }
     }
 
@@ -439,7 +381,6 @@ class PanelControlManager {
      * Refresca todas las estadísticas
      */
     async refrescarEstadisticas() {
-        console.log('🔄 Refrescando estadísticas...');
         await this.cargarTodasLasEstadisticas();
     }
 }
@@ -456,11 +397,8 @@ window.panelManager = panelManager;
 
 // Función para inicializar el panel cuando el DOM esté listo
 async function inicializarPanel() {
-    console.log('🚀 Inicializando Panel de Control...');
-
     // Verificar que SweetAlert2 esté cargado
     if (typeof Swal === 'undefined') {
-        console.error('❌ SweetAlert2 no está cargado.');
         return;
     }
 
@@ -472,7 +410,6 @@ async function inicializarPanel() {
 
     // Configurar refresco automático cada 5 minutos
     setInterval(() => {
-        console.log('🔄 Refrescando automáticamente...');
         panelManager.refrescarEstadisticas();
     }, 5 * 60 * 1000);
 }
