@@ -1,4 +1,5 @@
 // bitacoraActividades.js - Controlador de la bitácora de actividades
+// AHORA USA obtenerActividadesPorUsuarioYFecha para mostrar SOLO las del usuario actual
 
 class BitacoraController {
     constructor() {
@@ -175,7 +176,9 @@ class BitacoraController {
         this._mostrarCargando('Cargando actividades...');
 
         try {
-            this.actividades = await this.historialManager.obtenerActividadesPorFecha(
+            // ✅ CORREGIDO: Usar obtenerActividadesPorUsuarioYFecha en lugar de obtenerActividadesPorFecha
+            this.actividades = await this.historialManager.obtenerActividadesPorUsuarioYFecha(
+                this.usuarioActual.id,
                 fecha,
                 this.usuarioActual.organizacionCamelCase
             );
