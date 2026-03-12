@@ -1,8 +1,3 @@
-// areas.js - VERSIÓN COMPLETA CORREGIDA
-// - Inactiva cargos individualmente
-// - Inactiva área solo si no tiene cargos activos
-// - Registra todas las actividades en historial
-
 window.appDebug = {
     estado: 'iniciando',
     controller: null
@@ -55,7 +50,6 @@ function inicializarController() {
         const app = new AreasController();
         window.appDebug.controller = app;
         app.init();
-        console.log('Áreas: Inicializado correctamente');
     } catch (error) {
         console.error('[Error]', error.message);
         mostrarErrorInterfaz(error.message);

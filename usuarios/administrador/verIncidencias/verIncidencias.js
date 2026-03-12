@@ -1,6 +1,3 @@
-// verIncidencias.js - VERSIÓN CORREGIDA (MISMO DISEÑO QUE SEGUIMIENTO)
-// Visualización de incidencias con el mismo estilo que seguimiento
-
 // =============================================
 // VARIABLES GLOBALES
 // =============================================
@@ -15,6 +12,28 @@ let imageViewerModal = null;
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
 };
+
+// =============================================
+// FUNCIÓN PARA CONVERTIR FECHAS DE FIRESTORE
+// =============================================
+function convertirFechaFirestore(fecha) {
+    if (!fecha) return null;
+    
+    if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
+        return new Date(fecha.seconds * 1000);
+    }
+    
+    try {
+        const date = new Date(fecha);
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    } catch (e) {
+        console.error('Error convirtiendo fecha:', e);
+    }
+    
+    return null;
+}
 
 // =============================================
 // INICIALIZACIÓN
@@ -46,6 +65,9 @@ async function inicializarVerIncidencia() {
         configurarEventos();
         inicializarModal();
 
+        // ✅ REGISTRO EN HISTORIAL - VER DETALLES DE INCIDENCIA
+        await registrarLecturaIncidencia();
+
         console.log('Vista de incidencia inicializada correctamente');
 
     } catch (error) {
@@ -65,6 +87,46 @@ async function inicializarVerIncidencia() {
                 </div>
             `;
         }
+    }
+}
+
+/**
+ * Registra en historial que el usuario está viendo los detalles de una incidencia
+ */
+async function registrarLecturaIncidencia() {
+    try {
+        if (!incidenciaManager) return;
+        
+        // Obtener el historial manager desde incidenciaManager
+        const historial = await incidenciaManager._getHistorialManager();
+        if (historial && usuarioActual && incidenciaActual) {
+            
+            // Obtener nombres para una descripción más detallada
+            const sucursal = sucursalesMap.get(incidenciaActual.sucursalId);
+            const categoria = categoriasMap.get(incidenciaActual.categoriaId);
+            
+            const sucursalNombre = sucursal ? sucursal.nombre : 'desconocida';
+            const categoriaNombre = categoria ? categoria.nombre : 'desconocida';
+            
+            await historial.registrarActividad({
+                usuario: usuarioActual,
+                tipo: 'leer',
+                modulo: 'incidencias',
+                descripcion: `Consultó detalles de incidencia ${incidenciaActual.id} - ${categoriaNombre} en ${sucursalNombre}`,
+                detalles: {
+                    incidenciaId: incidenciaActual.id,
+                    sucursalId: incidenciaActual.sucursalId,
+                    sucursalNombre: sucursalNombre,
+                    categoriaId: incidenciaActual.categoriaId,
+                    categoriaNombre: categoriaNombre,
+                    nivelRiesgo: incidenciaActual.nivelRiesgo,
+                    estado: incidenciaActual.estado
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error registrando lectura de incidencia:', error);
+        // No interrumpimos la carga si falla el registro
     }
 }
 
