@@ -1,8 +1,5 @@
 // bitacoraActividades.js - Controlador de la bitácora de actividades
 
-// =============================================
-// CLASE PRINCIPAL - BitacoraController
-// =============================================
 class BitacoraController {
     constructor() {
         this.historialManager = null;
@@ -11,11 +8,10 @@ class BitacoraController {
         this.fechaSeleccionada = new Date();
         this.flatpickrInstance = null;
         this.loadingOverlay = null;
+        this.generadorPDF = null;
 
         this._init();
     }
-
-    // ========== INICIALIZACIÓN ==========
 
     async _init() {
         try {
@@ -26,6 +22,7 @@ class BitacoraController {
             }
 
             await this._inicializarManager();
+            await this._inicializarGeneradorPDF();
             this._inicializarCalendario();
             this._configurarEventos();
             await this._cargarActividades(this.fechaSeleccionada);
@@ -47,9 +44,26 @@ class BitacoraController {
         }
     }
 
+    async _inicializarGeneradorPDF() {
+        try {
+            const { generadorBitacoraPDF } = await import('/components/generadorPDFBitacora.js');
+            this.generadorPDF = generadorBitacoraPDF;
+
+            this.generadorPDF.configurar({
+                usuarioActual: this.usuarioActual,
+                organizacionActual: {
+                    nombre: this.usuarioActual.organizacion
+                },
+                organizacionNombre: this.usuarioActual.organizacion,
+                authToken: localStorage.getItem('authToken')
+            });
+        } catch (error) {
+            console.error('Error inicializando generador PDF:', error);
+        }
+    }
+
     _cargarUsuario() {
         try {
-            // Intentar cargar desde adminInfo (administradores)
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -65,7 +79,6 @@ class BitacoraController {
                 return;
             }
 
-            // Intentar cargar desde userData (colaboradores)
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             if (userData && Object.keys(userData).length > 0) {
                 this.usuarioActual = {
@@ -80,7 +93,6 @@ class BitacoraController {
                 return;
             }
 
-            // Si no hay datos, usar valores por defecto (para pruebas)
             console.warn('No se encontraron datos de usuario, usando valores por defecto');
             this.usuarioActual = {
                 id: `usuario_${Date.now()}`,
@@ -107,8 +119,6 @@ class BitacoraController {
             .replace(/[^a-zA-Z0-9]/g, '');
     }
 
-    // ========== INICIALIZAR CALENDARIO (SIN HORA) ==========
-
     _inicializarCalendario() {
         const calendarioInput = document.getElementById('calendario');
         if (calendarioInput && typeof flatpickr !== 'undefined') {
@@ -127,7 +137,6 @@ class BitacoraController {
                         }
                     }
                 });
-                console.log('Flatpickr inicializado correctamente');
             } catch (error) {
                 console.error('Error inicializando Flatpickr:', error);
                 calendarioInput.type = 'date';
@@ -161,8 +170,6 @@ class BitacoraController {
             spanFecha.textContent = esHoy ? 'Hoy' : this._formatearFechaLegible(this.fechaSeleccionada);
         }
     }
-
-    // ========== CARGA DE ACTIVIDADES ==========
 
     async _cargarActividades(fecha) {
         this._mostrarCargando('Cargando actividades...');
@@ -231,7 +238,6 @@ class BitacoraController {
                                 <span class="usuario-nombre">${this._escapeHTML(uiData.usuario.nombre)}</span>
                                 <span class="usuario-correo">(${this._escapeHTML(uiData.usuario.correo)})</span>
                             </div>
-                            ${this._renderizarDetallesAdicionales(uiData.detalles)}
                         </div>
                     </div>
                 </div>
@@ -257,23 +263,6 @@ class BitacoraController {
         return iconos[modulo] || 'fa-circle';
     }
 
-    _renderizarDetallesAdicionales(detalles) {
-        if (!detalles || Object.keys(detalles).length === 0) return '';
-
-        let html = '<div class="actividad-detalles">';
-
-        if (detalles.ip) {
-            html += `<span><i class="fas fa-network-wired"></i> ${detalles.ip}</span>`;
-        }
-
-        if (detalles.navegador) {
-            html += `<span><i class="fas fa-globe"></i> ${detalles.navegador}</span>`;
-        }
-
-        html += '</div>';
-        return html;
-    }
-
     _actualizarContador() {
         const spanTotal = document.getElementById('totalActividades');
         if (spanTotal) {
@@ -282,7 +271,28 @@ class BitacoraController {
         }
     }
 
-    // ========== CONFIGURACIÓN DE EVENTOS ==========
+    async generarPDF() {
+        if (!this.actividades || this.actividades.length === 0) {
+            this._mostrarError('No hay actividades para generar el PDF');
+            return;
+        }
+
+        if (!this.generadorPDF) {
+            this._mostrarError('El generador de PDF no está disponible');
+            return;
+        }
+
+        try {
+            await this.generadorPDF.generarBitacoraPDF(
+                this.actividades,
+                this.fechaSeleccionada,
+                { mostrarAlerta: true }
+            );
+        } catch (error) {
+            console.error('Error generando PDF:', error);
+            this._mostrarError('Error al generar el PDF: ' + error.message);
+        }
+    }
 
     _configurarEventos() {
         try {
@@ -308,41 +318,55 @@ class BitacoraController {
                 this._cargarActividades(this.fechaSeleccionada);
             });
 
+            const btnPDF = document.getElementById('btnGenerarPDF');
+            if (btnPDF) {
+                btnPDF.addEventListener('click', () => this.generarPDF());
+            }
+
         } catch (error) {
             console.error('Error configurando eventos:', error);
         }
     }
-
-    // ========== NAVEGACIÓN ==========
 
     _redirigirAlLogin() {
         Swal.fire({
             icon: 'error',
             title: 'Sesión no válida',
             text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
+            confirmButtonText: 'Ir al login',
+            background: '#1a1a1a',
+            color: '#fff',
+            confirmButtonColor: '#00cfff'
         }).then(() => {
             window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
-
-    // ========== UTILIDADES ==========
 
     _mostrarError(mensaje) {
         this._mostrarNotificacion(mensaje, 'error');
     }
 
     _mostrarNotificacion(mensaje, tipo = 'info', duracion = 5000) {
-        Swal.fire({
+        const config = {
             title: tipo === 'success' ? 'Éxito' :
                 tipo === 'error' ? 'Error' :
-                tipo === 'warning' ? 'Advertencia' : 'Información',
+                    tipo === 'warning' ? 'Advertencia' : 'Información',
             text: mensaje,
             icon: tipo,
             timer: duracion,
             timerProgressBar: true,
-            showConfirmButton: false
-        });
+            showConfirmButton: false,
+            background: '#1a1a1a',
+            color: '#fff'
+        };
+
+        if (tipo === 'error') {
+            config.showConfirmButton = true;
+            config.confirmButtonColor = '#00cfff';
+            config.timer = undefined;
+        }
+
+        Swal.fire(config);
     }
 
     _escapeHTML(text) {
@@ -379,9 +403,6 @@ class BitacoraController {
     }
 }
 
-// =============================================
-// INICIALIZACIÓN
-// =============================================
 document.addEventListener('DOMContentLoaded', () => {
     window.bitacoraDebug = { controller: new BitacoraController() };
 });
