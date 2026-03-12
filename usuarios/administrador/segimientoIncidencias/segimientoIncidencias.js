@@ -71,7 +71,6 @@ function configurarCollapsible() {
 // =============================================
 async function inicializarSeguimiento() {
     try {
-        console.log('Inicializando seguimiento de incidencia...');
 
         const urlParams = new URLSearchParams(window.location.search);
         const incidenciaId = urlParams.get('id');
@@ -101,7 +100,6 @@ async function inicializarSeguimiento() {
         // Inicializar el editor de imágenes componente
         imageEditorModal = new window.ImageEditorModal();
 
-        console.log('Seguimiento inicializado correctamente');
 
     } catch (error) {
         console.error('Error inicializando:', error);
