@@ -806,7 +806,6 @@ class UserManager {
                 this.currentUser.dispositivos = dispositivosActualizados;
             }
 
-            console.log(`✅ Dispositivo ${dispositivo.deviceId} guardado/actualizado para usuario ${userId}`);
             return true;
 
         } catch (error) {
@@ -861,7 +860,6 @@ class UserManager {
                 this.currentUser.dispositivos = dispositivosActualizados;
             }
 
-            console.log(`🔕 Dispositivo ${deviceId} deshabilitado.`);
             return true;
 
         } catch (error) {
@@ -916,7 +914,6 @@ class UserManager {
                 this.currentUser.dispositivos = dispositivosActualizados;
             }
 
-            console.log(`🔔 Dispositivo ${deviceId} habilitado.`);
             return true;
 
         } catch (error) {
@@ -969,7 +966,6 @@ class UserManager {
                 this.currentUser.dispositivos = dispositivosActualizados;
             }
 
-            console.log(`🗑️ Dispositivo ${deviceId} eliminado.`);
             return true;
 
         } catch (error) {
@@ -1059,7 +1055,6 @@ class UserManager {
      */
     async enviarCorreoRecuperacion(email) {
         try {
-            console.log('📧 Enviando correo de recuperación a:', email);
 
             const actionCodeSettings = {
                 url: window.location.origin + '/verifyEmail.html',
@@ -1067,8 +1062,6 @@ class UserManager {
             };
 
             await sendPasswordResetEmail(auth, email, actionCodeSettings);
-
-            console.log('✅ Correo de recuperación enviado exitosamente');
 
             return {
                 success: true,
@@ -1783,7 +1776,6 @@ class UserManager {
         try {
             await signOut(auth);
             // No es necesario limpiar this.currentUser aquí porque onAuthStateChanged lo hará.
-            console.log('Sesión cerrada correctamente');
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
             throw error;

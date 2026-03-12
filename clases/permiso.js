@@ -344,7 +344,6 @@ class PermisoManager {
             // Agregar a memoria
             this.permisos.unshift(nuevoPermiso);
 
-            console.log('✅ Permiso creado en Firebase:', nuevoPermiso);
             return nuevoPermiso;
 
         } catch (error) {

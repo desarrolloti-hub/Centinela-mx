@@ -247,7 +247,6 @@ class ParticleSystem {
             // Guardar en localStorage para futuras cargas rápidas
             this.saveToLocalStorage(themeId);
 
-            console.log('🗄️ Tema sincronizado con BD');
             return true;
 
         } catch (error) {
