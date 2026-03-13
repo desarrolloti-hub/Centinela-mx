@@ -903,182 +903,210 @@ class NavbarComplete {
 
     // Inserta la estructura HTML del navbar
     insertHTML() {
-        const navbar = document.createElement('header');
-        navbar.id = 'complete-navbar';
-        navbar.innerHTML = /*html*/`
-            <!-- Sección superior con logo, título y botón hamburguesa -->
-            <div class="navbar-top-section">
-                <div class="navbar-left-container">
-                    <!-- Logo del sistema Centinela -->
-                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link">
-                        <div class="logo-circle-container">
-                            <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
-                        </div>
-                    </a>
+    const navbar = document.createElement('header');
+    navbar.id = 'complete-navbar';
+    navbar.innerHTML = /*html*/`
+        <!-- Sección superior con logo, título y botón hamburguesa -->
+        <div class="navbar-top-section">
+            <div class="navbar-left-container">
+                <!-- Logo del sistema Centinela -->
+                <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link">
+                    <div class="logo-circle-container">
+                        <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
+                    </div>
+                </a>
 
-                    <!-- BARRA SEPARADORA ENTRE LOGOS -->
-                    <div class="logo-separator"></div>
+                <!-- BARRA SEPARADORA ENTRE LOGOS -->
+                <div class="logo-separator"></div>
 
-                    <!-- Logo de la organización -->
-                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
-                        <div class="logo-circle-container" id="orgLogoContainer">
-                            <img src="/assets/images/logo.png" alt="Logo Organización" 
-                                 class="navbar-logo-img" id="orgLogoImg">
-                            <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                <!-- Logo de la organización -->
+                <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
+                    <div class="logo-circle-container" id="orgLogoContainer">
+                        <img src="/assets/images/logo.png" alt="Logo Organización" 
+                             class="navbar-logo-img" id="orgLogoImg">
+                        <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Título centrado -->
+            <h1 class="navbar-title">CENTINELA</h1>
+
+            <div class="navbar-right-container">
+                <!-- Botón hamburguesa -->
+                <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Overlay para cerrar menú -->
+        <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
+
+        <!-- Menú lateral -->
+        <div class="navbar-main-menu" id="navbarMainMenu">
+
+            <!-- Sección superior: Perfil del administrador -->
+            <div class="admin-profile-section">
+                <!-- Contenedor para la foto con ícono de lápiz -->
+                <div class="profile-photo-container">
+                    <!-- Círculo con imagen del administrador -->
+                    <div class="admin-profile-circle">
+                        <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
+                        <div class="profile-placeholder" id="profilePlaceholder" style="display: none;">
+                            <i class="fas fa-user"></i>
+                            <span>Admin</span>
                         </div>
+                    </div>
+                    <!-- Ícono de lápiz para editar -->
+                    <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
+                        <i class="fas fa-pencil-alt"></i>
                     </a>
                 </div>
 
-                <!-- Título centrado -->
-                <h1 class="navbar-title">CENTINELA</h1>
-
-                <div class="navbar-right-container">
-                    <!-- Botón hamburguesa -->
-                    <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
-                        <span class="hamburger-line"></span>
-                        <span class="hamburger-line"></span>
-                        <span class="hamburger-line"></span>
-                    </button>
+                <!-- Información del administrador -->
+                <div class="admin-info">
+                    <div class="admin-name" id="adminName">Cargando...</div>
+                    <div class="admin-role">Administrador</div>
+                    <div class="admin-email" id="adminEmail">cargando@email.com</div>
+                    <div class="admin-organization" id="adminOrganization"></div>
                 </div>
             </div>
 
-            <!-- Overlay para cerrar menú -->
-            <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
+            <!-- ========================================= -->
+            <!-- SECCIÓN 1: GESTIONAR (Áreas, Categorías, Sucursales, Regiones, Permisos, Usuarios) -->
+            <!-- ========================================= -->
+            <div class="nav-section">
+                <!-- Botón desplegable de Gestionar -->
+                <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
+                    <span>Gestionar</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
 
-            <!-- Menú lateral -->
-            <div class="navbar-main-menu" id="navbarMainMenu">
+                <!-- Contenedor de opciones expandido -->
+                <div class="administracion-dropdown-options" id="administracionDropdownOptions">
+                    <!-- ÁREAS -->
+                    <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-map"></i>
+                        <span>Áreas</span>
+                    </a>
 
-                <!-- Sección superior: Perfil del administrador -->
-                <div class="admin-profile-section">
-                    <!-- Contenedor para la foto con ícono de lápiz -->
-                    <div class="profile-photo-container">
-                        <!-- Círculo con imagen del administrador -->
-                        <div class="admin-profile-circle">
-                            <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
-                            <div class="profile-placeholder" id="profilePlaceholder" style="display: none;">
-                                <i class="fas fa-user"></i>
-                                <span>Admin</span>
-                            </div>
-                        </div>
-                        <!-- Ícono de lápiz para editar -->
-                        <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
-                            <i class="fas fa-pencil-alt"></i>
-                        </a>
-                    </div>
+                    <!-- CATEGORIAS -->
+                    <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-tags"></i>
+                        <span>Categorías</span>
+                    </a>
 
-                    <!-- Información del administrador -->
-                    <div class="admin-info">
-                        <div class="admin-name" id="adminName">Cargando...</div>
-                        <div class="admin-role">Administrador</div>
-                        <div class="admin-email" id="adminEmail">cargando@email.com</div>
-                        <div class="admin-organization" id="adminOrganization"></div>
-                    </div>
-                </div>
+                    <!-- SUCURSALES -->
+                    <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-store"></i>
+                        <span>Sucursales</span>
+                    </a>
 
-                <!-- ========================================= -->
-                <!-- SECCIÓN 1: GESTIONAR (Áreas, Categorías, Sucursales, Regiones, Permisos, Usuarios) -->
-                <!-- ========================================= -->
-                <div class="nav-section">
-                    <!-- Botón desplegable de Gestionar -->
-                    <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
-                        <span>Gestionar</span>
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </button>
+                    <!-- REGIONES -->
+                    <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span>Regiones</span>
+                    </a>
 
-                    <!-- Contenedor de opciones expandido -->
-                    <div class="administracion-dropdown-options" id="administracionDropdownOptions">
-                        <!-- ÁREAS -->
-                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-map"></i>
-                            <span>Áreas</span>
-                        </a>
+                    <!-- PERMISOS -->
+                    <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>Permisos</span>
+                    </a>
 
-                        <!-- CATEGORIAS -->
-                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-tags"></i>
-                            <span>Categorías</span>
-                        </a>
-
-                        <!-- SUCURSALES -->
-                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-store"></i>
-                            <span>Sucursales</span>
-                        </a>
-
-                        <!-- REGIONES -->
-                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-location-dot"></i>
-                            <span>Regiones</span>
-                        </a>
-
-                        <!-- PERMISOS -->
-                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-lock"></i>
-                            <span>Permisos</span>
-                        </a>
-
-                        <!-- USUARIOS -->
-                        <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-users-gear"></i>
-                            <span>Usuarios</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- ========================================= -->
-                <!-- SECCIÓN 2: INCIDENCIAS (CON DROPDOWN) -->
-                <!-- ========================================= -->
-                <div class="nav-section">
-                    <!-- Botón desplegable de Incidencias -->
-                    <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
-                        <span>Incidencias</span>
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </button>
-
-                    <!-- Contenedor de opciones expandido -->
-                    <div class="administracion-dropdown-options" id="incidenciasDropdownOptions">
-                        <!-- LISTA DE INCIDENCIAS -->
-                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-list"></i>
-                            <span>Lista de Incidencias</span>
-                        </a>
-
-                        <!-- CREAR INCIDENCIA -->
-                        <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-plus-circle"></i>
-                            <span>Crear Incidencia</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- ========================================= -->
-                <!-- SECCIÓN 3: CONFIGURACIÓN -->
-                <!-- ========================================= -->
-                <div class="admin-options-section">
-                    <button class="admin-dropdown-btn" id="adminDropdownBtn">
-                        <span>Configuración</span>
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </button>
-
-                    <div class="admin-dropdown-options" id="adminDropdownOptions">
-                        <!-- Personalización de colores -->
-                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
-                            <i class="fa-solid fa-palette"></i>
-                            <span>Personalización</span>
-                        </a>
-
-                        <!-- Cerrar Sesión -->
-                        <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                            <span>Cerrar Sesión</span>
-                        </a>
-                    </div>
+                    <!-- USUARIOS -->
+                    <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span>Usuarios</span>
+                    </a>
                 </div>
             </div>
-        `;
 
-        document.body.prepend(navbar);
-    }
+            <!-- ========================================= -->
+            <!-- SECCIÓN 2: INCIDENCIAS (CON DROPDOWN) -->
+            <!-- ========================================= -->
+            <div class="nav-section">
+                <!-- Botón desplegable de Incidencias -->
+                <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
+                    <span>Incidencias</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+
+                <!-- Contenedor de opciones expandido -->
+                <div class="administracion-dropdown-options" id="incidenciasDropdownOptions">
+                    <!-- LISTA DE INCIDENCIAS -->
+                    <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-list"></i>
+                        <span>Lista de Incidencias</span>
+                    </a>
+
+                    <!-- CREAR INCIDENCIA -->
+                    <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-plus-circle"></i>
+                        <span>Crear Incidencia</span>
+                    </a>
+
+                    <!-- SEGUIMIENTO INCIDENCIA -->
+                    <a href="/usuarios/administrador/segimientoIncidencias/segimientoIncidencias.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-history"></i>
+                        <span>Seguimiento</span>
+                    </a>
+
+                    <!-- VER INCIDENCIA -->
+                    <a href="/usuarios/administrador/verIncidencias/verIncidencias.html" class="administracion-dropdown-option">
+                        <i class="fa-solid fa-eye"></i>
+                        <span>Ver Incidencia</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- ========================================= -->
+            <!-- SECCIÓN 3: BITÁCORA (NUEVA) -->
+            <!-- ========================================= -->
+            <div class="nav-section">
+                <div class="nav-section-title">
+                    <i class="fa-solid fa-book"></i>
+                    <span>Bitácora</span>
+                </div>
+
+                <!-- BITÁCORA DE ACTIVIDADES -->
+                <a href="/usuarios/administrador/bitacoraActividades/bitacoraActividades.html" class="admin-dropdown-option" style="width: 100%;">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Bitácora de Actividades</span>
+                </a>
+            </div>
+
+            <!-- ========================================= -->
+            <!-- SECCIÓN 4: CONFIGURACIÓN -->
+            <!-- ========================================= -->
+            <div class="admin-options-section">
+                <button class="admin-dropdown-btn" id="adminDropdownBtn">
+                    <span>Configuración</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+
+                <div class="admin-dropdown-options" id="adminDropdownOptions">
+                    <!-- Personalización de colores -->
+                    <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
+                        <i class="fa-solid fa-palette"></i>
+                        <span>Personalización</span>
+                    </a>
+
+                    <!-- Cerrar Sesión -->
+                    <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Cerrar Sesión</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.prepend(navbar);
+}
 
     // Ajusta el padding del body
     adjustBodyPadding() {

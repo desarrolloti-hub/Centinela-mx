@@ -345,7 +345,6 @@ body {
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-medium);
     padding: 15px 20px;
-    display: flex;
     align-items: flex-start;
     gap: 15px;
     transition: all 0.3s ease;

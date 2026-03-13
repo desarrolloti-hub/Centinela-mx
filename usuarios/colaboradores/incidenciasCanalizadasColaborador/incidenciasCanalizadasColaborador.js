@@ -1,3 +1,6 @@
+// incidenciasCanalizadasColaborador.js - VERSIÓN COMPLETA
+// Muestra las incidencias canalizadas al área del usuario actual
+
 import { generadorIPH } from '/components/iph-generator.js';
 
 // =============================================
@@ -113,27 +116,24 @@ async function inicializarIncidenciaManager() {
 }
 
 // =============================================
-// OBTENER ÁREA DEL USUARIO ACTUAL
+// OBTENER ÁREA DEL USUARIO ACTUAL (CORREGIDO)
 // =============================================
 async function obtenerAreaUsuario() {
     try {
         console.log('🔍 Obteniendo área del usuario...');
 
-        // Intentar obtener del userManager
-        if (window.userManager && window.userManager.currentUser) {
-            const user = window.userManager.currentUser;
-            console.log('Usuario desde userManager:', user);
+        // Leer del localStorage userData (campo correcto: areaAsignadaId)
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        
+        // Buscar en diferentes posibles nombres de campo
+        areaActual.id = userData.areaAsignadaId || userData.areaId || userData.area || userData.departamento || null;
+        areaActual.nombre = userData.areaAsignadaNombre || userData.areaNombre || formatearNombreArea(areaActual.id);
 
-            areaActual.id = user.area || user.areaId || user.departamento || null;
-            areaActual.nombre = user.areaNombre || user.departamentoNombre || formatearNombreArea(areaActual.id);
-        }
-        // Si no, del localStorage
-        else {
-            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        // Si no se encuentra en userData, buscar en adminInfo
+        if (!areaActual.id) {
             const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
-
-            areaActual.id = userData.area || adminInfo.area || userData.departamento || null;
-            areaActual.nombre = userData.areaNombre || adminInfo.areaNombre || formatearNombreArea(areaActual.id);
+            areaActual.id = adminInfo.areaAsignadaId || adminInfo.areaId || adminInfo.area || null;
+            areaActual.nombre = adminInfo.areaAsignadaNombre || adminInfo.areaNombre || formatearNombreArea(areaActual.id);
         }
 
         // Si no hay área, mostrar mensaje pero permitir continuar
@@ -376,7 +376,7 @@ async function cargarIncidenciasCanalizadas() {
         // Obtener todas las incidencias de la organización
         const todasIncidencias = await incidenciaManager.getIncidenciasByOrganizacion(organizacionActual.camelCase);
 
-        // Filtrar solo las que están canalizadas al área actual usando el nuevo sistema de canalizaciones
+        // Filtrar solo las que están canalizadas al área actual
         incidenciasCache = filtrarPorAreaCanalizada(todasIncidencias);
 
         if (!incidenciasCache || incidenciasCache.length === 0) {
@@ -406,7 +406,7 @@ async function cargarIncidenciasCanalizadas() {
 }
 
 // =============================================
-// FUNCIÓN MODIFICADA PARA FILTRAR POR ÁREA CANALIZADA
+// FUNCIÓN PARA FILTRAR POR ÁREA CANALIZADA
 // =============================================
 function filtrarPorAreaCanalizada(incidencias) {
     if (!incidencias || !Array.isArray(incidencias)) return [];
@@ -414,12 +414,12 @@ function filtrarPorAreaCanalizada(incidencias) {
     // Si el usuario no tiene área específica, mostrar todas las canalizadas
     if (areaActual.id === 'todas' || !areaActual.id) {
         return incidencias.filter(inc => {
-            // Verificar si tiene canalizaciones usando el nuevo campo
+            // Verificar si tiene canalizaciones
             return inc.canalizaciones && Object.keys(inc.canalizaciones).length > 0;
         });
     }
 
-    // Filtrar por área específica usando el nuevo sistema de canalizaciones
+    // Filtrar por área específica
     return incidencias.filter(inc => {
         // Verificar si tiene canalizaciones
         if (!inc.canalizaciones) return false;
@@ -782,7 +782,7 @@ window.generarIPH = async function (incidenciaId, event) {
     }
 };
 
-// Función para mostrar detalles de canalización (mejorada)
+// Función para mostrar detalles de canalización
 function mostrarDetallesCanalizacion(incidenciaId, event) {
     event?.stopPropagation();
 
