@@ -1,3 +1,9 @@
+// verIncidencias.js - VERSIÓN MODIFICADA CON VISUALIZADORES
+// Muestra los detalles de la incidencia usando modales para imágenes y PDF
+
+import '/components/visualizadorImagen.js';
+import '/components/visualizadorPDF.js';
+
 // =============================================
 // VARIABLES GLOBALES
 // =============================================
@@ -6,9 +12,7 @@ let usuarioActual = null;
 let incidenciaActual = null;
 let sucursalesMap = new Map();
 let categoriasMap = new Map();
-let imageViewerModal = null;
 
-// LÍMITES DE CARACTERES
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
 };
@@ -62,10 +66,9 @@ async function inicializarVerIncidencia() {
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
+        mostrarPDF();
         configurarEventos();
-        inicializarModal();
 
-        // ✅ REGISTRO EN HISTORIAL - VER DETALLES DE INCIDENCIA
         await registrarLecturaIncidencia();
 
         console.log('Vista de incidencia inicializada correctamente');
@@ -90,18 +93,29 @@ async function inicializarVerIncidencia() {
     }
 }
 
-/**
- * Registra en historial que el usuario está viendo los detalles de una incidencia
- */
+function mostrarPDF() {
+    const pdfContainer = document.getElementById('pdfContainer');
+    if (!pdfContainer || !incidenciaActual) return;
+
+    if (incidenciaActual.pdfUrl) {
+        pdfContainer.innerHTML = `
+            <button class="btn-pdf" onclick="window.visualizadorPDF.abrir('${incidenciaActual.pdfUrl}', 'Incidencia ${incidenciaActual.id}')">
+                <i class="fas fa-file-pdf"></i> Ver PDF de Incidencia
+            </button>
+        `;
+        pdfContainer.style.display = 'block';
+    } else {
+        pdfContainer.style.display = 'none';
+    }
+}
+
 async function registrarLecturaIncidencia() {
     try {
         if (!incidenciaManager) return;
         
-        // Obtener el historial manager desde incidenciaManager
         const historial = await incidenciaManager._getHistorialManager();
         if (historial && usuarioActual && incidenciaActual) {
             
-            // Obtener nombres para una descripción más detallada
             const sucursal = sucursalesMap.get(incidenciaActual.sucursalId);
             const categoria = categoriasMap.get(incidenciaActual.categoriaId);
             
@@ -126,7 +140,6 @@ async function registrarLecturaIncidencia() {
         }
     } catch (error) {
         console.error('Error registrando lectura de incidencia:', error);
-        // No interrumpimos la carga si falla el registro
     }
 }
 
@@ -359,7 +372,7 @@ function formatearFechaCompacta(fecha) {
 }
 
 // =============================================
-// MOSTRAR EVIDENCIAS ORIGINALES
+// MOSTRAR EVIDENCIAS ORIGINALES (MODIFICADO PARA USAR VISUALIZADOR)
 // =============================================
 function mostrarEvidenciasOriginales() {
     const container = document.getElementById('galeriaOriginal');
@@ -389,10 +402,10 @@ function mostrarEvidenciasOriginales() {
         const comentario = typeof img === 'object' && img.comentario ? img.comentario : '';
         
         html += `
-            <div class="gallery-item" ${comentario ? `title="${escapeHTML(comentario)}"` : ''}>
-                <img src="${url}" alt="Evidencia ${index + 1}" loading="lazy" onclick="window.open('${url}', '_blank')">
+            <div class="gallery-item" data-index="${index}" data-url="${url}" data-comentario="${escapeHTML(comentario)}">
+                <img src="${url}" alt="Evidencia ${index + 1}" loading="lazy">
                 <div class="gallery-overlay">
-                    <button type="button" class="gallery-btn" onclick="window.open('${url}', '_blank')">
+                    <button type="button" class="gallery-btn" onclick="event.stopPropagation(); window.visualizadorImagen.abrir(Array.from(document.querySelectorAll('.gallery-item')).map(item => ({url: item.dataset.url, comentario: item.dataset.comentario})), ${index})">
                         <i class="fas fa-search-plus"></i>
                     </button>
                 </div>
@@ -405,7 +418,7 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO (VERSIÓN LIMPIA)
+// MOSTRAR HISTORIAL DE SEGUIMIENTO (MODIFICADO PARA USAR VISUALIZADOR)
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
@@ -471,7 +484,7 @@ function mostrarHistorialSeguimiento() {
                 const comentario = typeof ev === 'object' && ev.comentario ? ev.comentario : '';
                 
                 html += `
-                            <div class="timeline-simple-evidencia" onclick="window.open('${url}', '_blank')">
+                            <div class="timeline-simple-evidencia" onclick="window.visualizadorImagen.abrir([{url: '${url}', comentario: '${escapeHTML(comentario)}'}], 0)">
                                 <img src="${url}" alt="Evidencia ${evIndex + 1}" loading="lazy">
                                 ${comentario ? `<div class="timeline-simple-evidencia-comentario" title="${escapeHTML(comentario)}">${escapeHTML(comentario.substring(0, 30))}${comentario.length > 30 ? '...' : ''}</div>` : ''}
                             </div>
@@ -504,35 +517,6 @@ function configurarEventos() {
     } catch (error) {
         console.error('Error configurando eventos:', error);
     }
-}
-
-// =============================================
-// MODAL VISUALIZADOR DE IMAGEN
-// =============================================
-function inicializarModal() {
-    const modal = document.getElementById('imageViewerModal');
-    const closeBtn = document.getElementById('btnCerrarModal');
-
-    if (!modal || !closeBtn) return;
-
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-    });
-
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.style.display === 'block') {
-            modal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-    });
 }
 
 // =============================================

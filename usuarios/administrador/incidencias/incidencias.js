@@ -1,4 +1,8 @@
+// incidencias.js - VERSIÓN MODIFICADA
+// Cambiar generarIPH por verPDF (abre el PDF del storage)
+
 import { generadorIPH } from '/components/iph-generator.js';
+import '/components/visualizadorPDF.js'; // Importar visualizador
 
 // =============================================
 // VARIABLES GLOBALES
@@ -86,7 +90,7 @@ async function inicializarIncidenciaManager() {
         // Cargar incidencias
         await cargarIncidencias();
 
-        // Configurar generador IPH
+        // Configurar generador IPH (para generación manual si es necesaria)
         if (generadorIPH && typeof generadorIPH.configurar === 'function') {
             generadorIPH.configurar({
                 organizacionActual,
@@ -326,7 +330,8 @@ window.seguimientoIncidencia = function (incidenciaId, event) {
     window.location.href = `/usuarios/administrador/segimientoIncidencias/segimientoIncidencias.html?id=${incidenciaId}`;
 };
 
-window.generarIPH = async function (incidenciaId, event) {
+// ✅ NUEVA FUNCIÓN: Ver PDF en lugar de generar IPH
+window.verPDF = async function (incidenciaId, event) {
     event?.stopPropagation();
 
     try {
@@ -335,18 +340,44 @@ window.generarIPH = async function (incidenciaId, event) {
             throw new Error('Incidencia no encontrada');
         }
 
-        if (generadorIPH && typeof generadorIPH.generarIPH === 'function') {
-            await generadorIPH.generarIPH(incidencia);
+        if (incidencia.pdfUrl) {
+            // Usar el visualizador de PDF
+            window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
+        } else {
+            Swal.fire({
+                icon: 'info',
+                title: 'PDF no disponible',
+                text: 'Esta incidencia aún no tiene un PDF generado. Se generará automáticamente en breve.'
+            });
+            
+            // Opcional: Generar el PDF si no existe
+            if (generadorIPH && typeof generadorIPH.generarIPH === 'function') {
+                const confirm = await Swal.fire({
+                    title: '¿Generar PDF?',
+                    text: '¿Deseas generar el PDF ahora?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'SÍ, GENERAR',
+                    cancelButtonText: 'CANCELAR'
+                });
+                
+                if (confirm.isConfirmed) {
+                    await generadorIPH.generarIPH(incidencia);
+                }
+            }
         }
     } catch (error) {
-        console.error('Error al generar IPH:', error);
+        console.error('Error al abrir PDF:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'No se pudo generar el IPH: ' + error.message
+            text: 'No se pudo abrir el PDF: ' + error.message
         });
     }
 };
+
+// Mantener generarIPH para compatibilidad (pero ahora redirige a verPDF)
+window.generarIPH = window.verPDF;
 
 window.generarIPHMultiple = async function () {
     try {
@@ -388,7 +419,7 @@ window.generarIPHMultiple = async function () {
 };
 
 // =============================================
-// CARGAR INCIDENCIAS (CORREGIDO)
+// CARGAR INCIDENCIAS
 // =============================================
 async function cargarIncidencias() {
     if (!incidenciaManager || !organizacionActual.camelCase) {
@@ -545,7 +576,7 @@ function crearFilaIncidencia(incidencia, tbody) {
                 <button type="button" class="btn" data-action="ver" data-id="${incidencia.id}" title="Ver detalles">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button type="button" class="btn" data-action="iph" data-id="${incidencia.id}" title="Generar IPH">
+                <button type="button" class="btn" data-action="pdf" data-id="${incidencia.id}" title="Ver PDF">
                     <i class="fas fa-file-pdf" style="color: #c0392b;"></i>
                 </button>
                 <button type="button" class="btn btn-success" data-action="seguimiento" data-id="${incidencia.id}" title="Seguimiento">
@@ -564,7 +595,7 @@ function crearFilaIncidencia(incidencia, tbody) {
                 const action = btn.dataset.action;
                 const id = btn.dataset.id;
                 if (action === 'ver') window.verDetallesIncidencia(id, e);
-                else if (action === 'iph') window.generarIPH(id, e);
+                else if (action === 'pdf') window.verPDF(id, e);
                 else if (action === 'seguimiento') window.seguimientoIncidencia(id, e);
             });
         });

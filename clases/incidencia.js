@@ -1,4 +1,4 @@
-
+// incidencia.js - SOLO LA CLASE, SIN LÓGICA DE GENERACIÓN DE PDF
 
 import {
     collection,
@@ -25,58 +25,33 @@ import {
 
 import { db, storage } from '/config/firebase-config.js';
 
-/**
- * Clase Incidencia - Representa una incidencia en el sistema
- */
 class Incidencia {
     constructor(id, data) {
         this.id = id;
-
-        // IDs para acceder a información relacionada
         this.sucursalId = data.sucursalId || '';
         this.reportadoPorId = data.reportadoPorId || '';
         this.categoriaId = data.categoriaId || '';
         this.subcategoriaId = data.subcategoriaId || '';
-
-        // Fechas
         this.fechaInicio = data.fechaInicio ? this._convertirFecha(data.fechaInicio) : new Date();
         this.fechaFinalizacion = data.fechaFinalizacion ? this._convertirFecha(data.fechaFinalizacion) : null;
-
-        // Nivel de riesgo
         this.nivelRiesgo = data.nivelRiesgo || 'bajo';
-
-        // Estado
         this.estado = data.estado || 'pendiente';
-
-        // Descripción
         this.detalles = data.detalles || '';
-
-        // Imágenes
         this.imagenes = data.imagenes || [];
-
-        // Seguimiento (MAP)
+        this.pdfUrl = data.pdfUrl || '';
         this.seguimiento = {};
         if (data.seguimiento) {
             this.seguimiento = JSON.parse(JSON.stringify(data.seguimiento));
         }
-
-        // Metadatos
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.creadoPorNombre = data.creadoPorNombre || '';
         this.actualizadoPor = data.actualizadoPor || '';
         this.actualizadoPorNombre = data.actualizadoPorNombre || '';
-
-        // Fechas de auditoría
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
     }
 
-    /**
-     * Convierte diferentes formatos de fecha a objeto Date
-     * @param {any} fecha - Fecha en cualquier formato
-     * @returns {Date|null} - Objeto Date o null
-     */
     _convertirFecha(fecha) {
         if (!fecha) return null;
         if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
@@ -91,11 +66,6 @@ class Incidencia {
         return null;
     }
 
-    /**
-     * Formatea una fecha para mostrar en UI
-     * @param {Date} fecha - Fecha a formatear
-     * @returns {string} - Fecha formateada
-     */
     _formatearFecha(fecha) {
         if (!fecha) return 'No disponible';
         try {
@@ -109,74 +79,22 @@ class Incidencia {
         }
     }
 
-    /**
-     * Valida los datos de la incidencia
-     * @returns {Array} - Array de errores
-     */
-    _validarDatos() {
-        const errores = [];
-
-        if (!this.sucursalId) {
-            errores.push('La sucursal es obligatoria');
-        }
-
-        if (!this.reportadoPorId) {
-            errores.push('El reportante es obligatorio');
-        }
-
-        if (!this.categoriaId) {
-            errores.push('La categoría es obligatoria');
-        }
-
-        if (!this.nivelRiesgo) {
-            errores.push('El nivel de riesgo es obligatorio');
-        } else {
-            const riesgosValidos = ['bajo', 'medio', 'alto', 'critico'];
-            if (!riesgosValidos.includes(this.nivelRiesgo)) {
-                errores.push('Nivel de riesgo no válido');
-            }
-        }
-
-        if (!this.detalles?.trim()) {
-            errores.push('Los detalles son obligatorios');
-        }
-
-        return errores;
-    }
-
-    /**
-     * Obtiene la ruta base en Storage para esta incidencia
-     * @returns {string} - Ruta base
-     */
     getRutaStorageBase() {
         return `incidencias_${this.organizacionCamelCase}/${this.id}`;
     }
 
-    /**
-     * Obtiene la ruta para imágenes en Storage
-     * @returns {string} - Ruta de imágenes
-     */
     getRutaImagenes() {
         return `${this.getRutaStorageBase()}/imagenes`;
     }
 
-    /**
-     * Obtiene la ruta para seguimiento en Storage
-     * @returns {string} - Ruta de seguimiento
-     */
     getRutaSeguimiento() {
         return `${this.getRutaStorageBase()}/seguimiento`;
     }
 
-    /**
-     * Agrega un nuevo seguimiento a la incidencia
-     * @param {string} usuarioId - ID del usuario
-     * @param {string} usuarioNombre - Nombre del usuario
-     * @param {string} descripcion - Descripción del seguimiento
-     * @param {Array} evidencias - Array de evidencias
-     * @param {Date} fecha - Fecha del seguimiento
-     * @returns {string} - ID del seguimiento creado
-     */
+    getRutaPDF() {
+        return `${this.getRutaStorageBase()}/pdf/incidencia_${this.id}.pdf`;
+    }
+
     agregarSeguimiento(usuarioId, usuarioNombre, descripcion, evidencias = [], fecha = new Date()) {
         const seguimientoCount = Object.keys(this.seguimiento).length;
         const seguimientoId = `SEG${seguimientoCount + 1}`;
@@ -192,10 +110,6 @@ class Incidencia {
         return seguimientoId;
     }
 
-    /**
-     * Obtiene los seguimientos como array ordenado
-     * @returns {Array} - Array de seguimientos
-     */
     getSeguimientosArray() {
         const seguimientosArray = [];
         if (this.seguimiento) {
@@ -214,28 +128,16 @@ class Incidencia {
         return seguimientosArray;
     }
 
-    /**
-     * Obtiene el último seguimiento
-     * @returns {Object|null} - Último seguimiento o null
-     */
     getUltimoSeguimiento() {
         const seguimientos = this.getSeguimientosArray();
         return seguimientos.length > 0 ? seguimientos[seguimientos.length - 1] : null;
     }
 
-    /**
-     * Obtiene el primer seguimiento
-     * @returns {Object|null} - Primer seguimiento o null
-     */
     getPrimerSeguimiento() {
         const seguimientos = this.getSeguimientosArray();
         return seguimientos.length > 0 ? seguimientos[0] : null;
     }
 
-    /**
-     * Obtiene el texto del nivel de riesgo
-     * @returns {string} - Texto del riesgo
-     */
     getNivelRiesgoTexto() {
         const niveles = {
             'bajo': 'Bajo',
@@ -246,10 +148,6 @@ class Incidencia {
         return niveles[this.nivelRiesgo] || 'Bajo';
     }
 
-    /**
-     * Obtiene el color del nivel de riesgo
-     * @returns {string} - Color en hexadecimal
-     */
     getNivelRiesgoColor() {
         const colores = {
             'bajo': '#28a745',
@@ -260,10 +158,6 @@ class Incidencia {
         return colores[this.nivelRiesgo] || '#28a745';
     }
 
-    /**
-     * Obtiene el texto del estado
-     * @returns {string} - Texto del estado
-     */
     getEstadoTexto() {
         const estados = {
             'pendiente': 'Pendiente',
@@ -272,10 +166,6 @@ class Incidencia {
         return estados[this.estado] || 'Pendiente';
     }
 
-    /**
-     * Obtiene el color del estado
-     * @returns {string} - Color en hexadecimal
-     */
     getEstadoColor() {
         const colores = {
             'pendiente': '#ffc107',
@@ -284,34 +174,18 @@ class Incidencia {
         return colores[this.estado] || '#ffc107';
     }
 
-    /**
-     * Obtiene fecha de inicio formateada
-     * @returns {string} - Fecha formateada
-     */
     getFechaInicioFormateada() { 
         return this._formatearFecha(this.fechaInicio); 
     }
 
-    /**
-     * Obtiene fecha de finalización formateada
-     * @returns {string} - Fecha formateada
-     */
     getFechaFinalizacionFormateada() { 
         return this._formatearFecha(this.fechaFinalizacion) || 'No finalizada'; 
     }
 
-    /**
-     * Obtiene fecha de creación formateada
-     * @returns {string} - Fecha formateada
-     */
     getFechaCreacionFormateada() { 
         return this._formatearFecha(this.fechaCreacion); 
     }
 
-    /**
-     * Convierte la incidencia a JSON
-     * @returns {Object} - Objeto JSON
-     */
     toJSON() {
         return {
             id: this.id,
@@ -325,6 +199,7 @@ class Incidencia {
             estado: this.estado,
             detalles: this.detalles,
             imagenes: this.imagenes,
+            pdfUrl: this.pdfUrl,
             seguimiento: this.seguimiento,
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
@@ -336,10 +211,6 @@ class Incidencia {
         };
     }
 
-    /**
-     * Prepara los datos para mostrar en UI
-     * @returns {Object} - Datos formateados para UI
-     */
     toUI() {
         return {
             id: this.id,
@@ -357,6 +228,7 @@ class Incidencia {
             estadoColor: this.getEstadoColor(),
             detalles: this.detalles,
             imagenes: this.imagenes,
+            pdfUrl: this.pdfUrl,
             totalSeguimientos: this.getSeguimientosArray().length,
             ultimoSeguimiento: this.getUltimoSeguimiento(),
             organizacionCamelCase: this.organizacionCamelCase,
@@ -367,19 +239,12 @@ class Incidencia {
     }
 }
 
-/**
- * Clase IncidenciaManager - Gestiona las operaciones CRUD de incidencias
- */
 class IncidenciaManager {
     constructor() {
         this.incidencias = [];
         this.historialManager = null;
     }
 
-    /**
-     * Inicializa y obtiene el manager de historial
-     * @returns {Promise<HistorialUsuarioManager>} - Instancia del historial manager
-     */
     async _getHistorialManager() {
         if (!this.historialManager) {
             try {
@@ -392,20 +257,10 @@ class IncidenciaManager {
         return this.historialManager;
     }
 
-    /**
-     * Obtiene el nombre de la colección según la organización
-     * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
-     * @returns {string} - Nombre de la colección
-     */
     _getCollectionName(organizacionCamelCase) {
         return `incidencias_${organizacionCamelCase}`;
     }
 
-    /**
-     * Genera un ID único para la incidencia
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {string} - ID generado
-     */
     _generarIdIncidencia(organizacionCamelCase) {
         const now = new Date();
         const fecha = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -413,13 +268,6 @@ class IncidenciaManager {
         return `INC-${fecha}-${hora}`;
     }
 
-    /**
-     * Sube un archivo a Firebase Storage
-     * @param {File} file - Archivo a subir
-     * @param {string} rutaCompleta - Ruta completa en Storage
-     * @param {Function} onProgress - Callback de progreso
-     * @returns {Promise<Object>} - Resultado de la subida
-     */
     async subirArchivo(file, rutaCompleta, onProgress = null) {
         try {
             const storageRef = ref(storage, rutaCompleta);
@@ -466,11 +314,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Elimina un archivo de Storage
-     * @param {string} urlODirectorio - URL o ruta del archivo
-     * @returns {Promise<boolean>} - True si se eliminó correctamente
-     */
     async eliminarArchivo(urlODirectorio) {
         try {
             const storageRef = ref(storage, urlODirectorio);
@@ -482,11 +325,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Elimina una carpeta completa de Storage
-     * @param {string} rutaCarpeta - Ruta de la carpeta
-     * @returns {Promise<boolean>} - True si se eliminó correctamente
-     */
     async eliminarCarpetaStorage(rutaCarpeta) {
         try {
             const folderRef = ref(storage, rutaCarpeta);
@@ -512,14 +350,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Crea una nueva incidencia
-     * @param {Object} data - Datos de la incidencia
-     * @param {Object} usuarioActual - Usuario que crea
-     * @param {Array} archivos - Archivos de imagen
-     * @param {Array} imagenesConDatos - Datos de las imágenes
-     * @returns {Promise<Incidencia>} - Incidencia creada
-     */
     async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
             if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
@@ -533,7 +363,6 @@ class IncidenciaManager {
             const incidenciaId = this._generarIdIncidencia(organizacion);
             const incidenciaRef = doc(incidenciasCollection, incidenciaId);
 
-            // Subir imágenes
             let imagenesUrls = [];
             if (archivos.length > 0) {
                 for (let i = 0; i < archivos.length; i++) {
@@ -566,6 +395,7 @@ class IncidenciaManager {
                 estado: 'pendiente',
                 detalles: data.detalles?.trim() || '',
                 imagenes: imagenesUrls,
+                pdfUrl: '',
                 seguimiento: {},
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
@@ -586,7 +416,6 @@ class IncidenciaManager {
 
             this.incidencias.unshift(nuevaIncidencia);
 
-            // ✅ REGISTRO EN HISTORIAL - CREAR INCIDENCIA
             const historial = await this._getHistorialManager();
             if (historial) {
                 await historial.registrarActividad({
@@ -612,16 +441,9 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Obtiene una incidencia por su ID
-     * @param {string} incidenciaId - ID de la incidencia
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<Incidencia|null>} - Incidencia encontrada o null
-     */
     async getIncidenciaById(incidenciaId, organizacionCamelCase) {
         if (!organizacionCamelCase) return null;
 
-        // Buscar en memoria primero
         const incidenciaInMemory = this.incidencias.find(inc => inc.id === incidenciaId);
         if (incidenciaInMemory) return incidenciaInMemory;
 
@@ -644,13 +466,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Obtiene todas las incidencias de una organización
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} filtros - Filtros a aplicar
-     * @param {Object} usuarioActual - Usuario que consulta (para historial)
-     * @returns {Promise<Array<Incidencia>>} - Lista de incidencias
-     */
     async getIncidenciasByOrganizacion(organizacionCamelCase, filtros = {}, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) return [];
@@ -688,7 +503,6 @@ class IncidenciaManager {
 
             this.incidencias = incidencias;
 
-            // ✅ REGISTRO EN HISTORIAL - CONSULTAR LISTA
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -710,15 +524,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Actualiza una incidencia existente
-     * @param {string} incidenciaId - ID de la incidencia
-     * @param {Object} nuevosDatos - Nuevos datos
-     * @param {string} usuarioId - ID del usuario que actualiza
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<Incidencia>} - Incidencia actualizada
-     */
     async actualizarIncidencia(incidenciaId, nuevosDatos, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
@@ -747,7 +552,6 @@ class IncidenciaManager {
 
             await updateDoc(incidenciaRef, datosActualizados);
 
-            // Actualizar caché en memoria
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 const incidenciaActual = this.incidencias[incidenciaIndex];
@@ -760,7 +564,6 @@ class IncidenciaManager {
                 incidenciaActual.actualizadoPor = usuarioId;
             }
 
-            // ✅ REGISTRO EN HISTORIAL - EDITAR INCIDENCIA
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -794,19 +597,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Agrega un seguimiento a una incidencia
-     * @param {string} incidenciaId - ID de la incidencia
-     * @param {string} usuarioId - ID del usuario
-     * @param {string} usuarioNombre - Nombre del usuario
-     * @param {string} descripcion - Descripción del seguimiento
-     * @param {Array} archivos - Archivos de evidencia
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Array} evidenciasConComentarios - Evidencias con comentarios
-     * @param {Date} fechaSeleccionada - Fecha del seguimiento
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<string>} - ID del seguimiento creado
-     */
     async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase, evidenciasConComentarios = [], fechaSeleccionada, usuarioActual = null) {
         try {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
@@ -817,7 +607,6 @@ class IncidenciaManager {
             const seguimientoCount = Object.keys(incidencia.seguimiento || {}).length;
             const seguimientoId = `SEG${seguimientoCount + 1}`;
 
-            // Subir evidencias
             const evidenciasUrls = [];
             if (archivos.length > 0) {
                 for (let i = 0; i < archivos.length; i++) {
@@ -862,7 +651,6 @@ class IncidenciaManager {
                 actualizadoPorNombre: usuarioNombre
             });
 
-            // Actualizar caché en memoria
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 this.incidencias[incidenciaIndex].seguimiento = seguimientoActualizado;
@@ -871,7 +659,6 @@ class IncidenciaManager {
                 this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
             }
 
-            // ✅ REGISTRO EN HISTORIAL - AGREGAR SEGUIMIENTO
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -897,15 +684,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Finaliza una incidencia
-     * @param {string} incidenciaId - ID de la incidencia
-     * @param {string} usuarioId - ID del usuario
-     * @param {string} usuarioNombre - Nombre del usuario
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<boolean>} - True si se finalizó correctamente
-     */
     async finalizarIncidencia(incidenciaId, usuarioId, usuarioNombre, organizacionCamelCase, usuarioActual = null) {
         try {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
@@ -930,7 +708,6 @@ class IncidenciaManager {
                 actualizadoPorNombre: usuarioNombre
             });
 
-            // Actualizar caché en memoria
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 this.incidencias[incidenciaIndex].estado = 'finalizada';
@@ -940,7 +717,6 @@ class IncidenciaManager {
                 this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
             }
 
-            // ✅ REGISTRO EN HISTORIAL - FINALIZAR INCIDENCIA
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -966,15 +742,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Elimina una incidencia
-     * @param {string} incidenciaId - ID de la incidencia
-     * @param {string} usuarioId - ID del usuario que elimina
-     * @param {string} organizacionCamelCase - Organización
-     * @param {boolean} eliminarArchivos - Si se deben eliminar los archivos
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<boolean>} - True si se eliminó correctamente
-     */
     async eliminarIncidencia(incidenciaId, usuarioId, organizacionCamelCase, eliminarArchivos = true, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
@@ -984,7 +751,6 @@ class IncidenciaManager {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
             const detallesIncidencia = incidencia ? incidencia.detalles : '';
 
-            // Eliminar archivos de Storage si se solicita
             if (eliminarArchivos && incidencia) {
                 const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}`;
                 await this.eliminarCarpetaStorage(rutaStorage);
@@ -994,13 +760,11 @@ class IncidenciaManager {
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             await deleteDoc(incidenciaRef);
 
-            // Eliminar de caché en memoria
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
             if (incidenciaIndex !== -1) {
                 this.incidencias.splice(incidenciaIndex, 1);
             }
 
-            // ✅ REGISTRO EN HISTORIAL - ELIMINAR INCIDENCIA
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -1025,41 +789,18 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Obtiene incidencias por sucursal
-     * @param {string} sucursalId - ID de la sucursal
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<Array<Incidencia>>} - Lista de incidencias
-     */
     async getIncidenciasPorSucursal(sucursalId, organizacionCamelCase) {
         return await this.getIncidenciasByOrganizacion(organizacionCamelCase, { sucursalId });
     }
 
-    /**
-     * Obtiene incidencias por estado
-     * @param {string} estado - Estado de la incidencia
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<Array<Incidencia>>} - Lista de incidencias
-     */
     async getIncidenciasPorEstado(estado, organizacionCamelCase) {
         return await this.getIncidenciasByOrganizacion(organizacionCamelCase, { estado });
     }
 
-    /**
-     * Obtiene incidencias por nivel de riesgo
-     * @param {string} nivelRiesgo - Nivel de riesgo
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<Array<Incidencia>>} - Lista de incidencias
-     */
     async getIncidenciasPorRiesgo(nivelRiesgo, organizacionCamelCase) {
         return await this.getIncidenciasByOrganizacion(organizacionCamelCase, { nivelRiesgo });
     }
 
-    /**
-     * Obtiene estadísticas de incidencias
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<Object>} - Estadísticas
-     */
     async getEstadisticas(organizacionCamelCase) {
         try {
             const incidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase);
@@ -1075,7 +816,8 @@ class IncidenciaManager {
                     critico: incidencias.filter(i => i.nivelRiesgo === 'critico').length
                 },
                 conImagenes: incidencias.filter(i => (i.imagenes || []).length > 0).length,
-                totalSeguimientos: incidencias.reduce((acc, i) => acc + i.getSeguimientosArray().length, 0)
+                totalSeguimientos: incidencias.reduce((acc, i) => acc + i.getSeguimientosArray().length, 0),
+                conPDF: incidencias.filter(i => i.pdfUrl).length
             };
         } catch (error) {
             console.error('Error obteniendo estadísticas:', error);
@@ -1083,12 +825,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Verifica si existe una incidencia
-     * @param {string} incidenciaId - ID de la incidencia
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<boolean>} - True si existe
-     */
     async verificarIncidenciaExistente(incidenciaId, organizacionCamelCase) {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
@@ -1101,9 +837,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * Limpia la caché de incidencias
-     */
     limpiarCache() {
         this.incidencias = [];
     }
