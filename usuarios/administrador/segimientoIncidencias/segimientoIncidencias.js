@@ -1,4 +1,6 @@
+// seguimientoIncidencia.js - VERSIÓN FINAL CON ESPERA DE PDF
 
+import '/components/visualizadorImagen.js';
 
 // =============================================
 // VARIABLES GLOBALES
@@ -8,7 +10,7 @@ let usuarioActual = null;
 let incidenciaActual = null;
 let sucursalesMap = new Map();
 let categoriasMap = new Map();
-let evidenciasSeleccionadas = []; // Array de objetos { file, preview, comentario, elementos, edited }
+let evidenciasSeleccionadas = [];
 let fechaIncidencia = null;
 let fechaMinima = null;
 let fechaMaxima = null;
@@ -16,7 +18,6 @@ let fechaUltimoSeguimiento = null;
 let imageEditorModal = null;
 let historialCollapsed = false;
 
-// LÍMITES DE CARACTERES
 const LIMITES = {
     DESCRIPCION_SEGUIMIENTO: 500
 };
@@ -71,7 +72,6 @@ function configurarCollapsible() {
 // =============================================
 async function inicializarSeguimiento() {
     try {
-
         const urlParams = new URLSearchParams(window.location.search);
         const incidenciaId = urlParams.get('id');
 
@@ -97,9 +97,7 @@ async function inicializarSeguimiento() {
         inicializarValidaciones();
         configurarCollapsible();
 
-        // Inicializar el editor de imágenes componente
         imageEditorModal = new window.ImageEditorModal();
-
 
     } catch (error) {
         console.error('Error inicializando:', error);
@@ -428,7 +426,7 @@ function formatearFechaCompacta(fecha) {
 }
 
 // =============================================
-// MOSTRAR EVIDENCIAS ORIGINALES
+// MOSTRAR EVIDENCIAS ORIGINALES (MODIFICADO)
 // =============================================
 function mostrarEvidenciasOriginales() {
     const container = document.getElementById('galeriaOriginal');
@@ -458,10 +456,10 @@ function mostrarEvidenciasOriginales() {
         const comentario = typeof img === 'object' && img.comentario ? img.comentario : '';
         
         html += `
-            <div class="gallery-item" ${comentario ? `title="${escapeHTML(comentario)}"` : ''}>
-                <img src="${url}" alt="Evidencia ${index + 1}" loading="lazy" onclick="window.open('${url}', '_blank')">
+            <div class="gallery-item" data-index="${index}" data-url="${url}" data-comentario="${escapeHTML(comentario)}">
+                <img src="${url}" alt="Evidencia ${index + 1}" loading="lazy">
                 <div class="gallery-overlay">
-                    <button type="button" class="gallery-btn" onclick="window.open('${url}', '_blank')">
+                    <button type="button" class="gallery-btn" onclick="event.stopPropagation(); window.visualizadorImagen.abrir(Array.from(document.querySelectorAll('.gallery-item')).map(item => ({url: item.dataset.url, comentario: item.dataset.comentario})), ${index})">
                         <i class="fas fa-search-plus"></i>
                     </button>
                 </div>
@@ -474,7 +472,7 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO (VERSIÓN SIMPLE - SIN PUNTOS)
+// MOSTRAR HISTORIAL DE SEGUIMIENTO (MODIFICADO)
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
@@ -545,7 +543,7 @@ function mostrarHistorialSeguimiento() {
                 const comentario = typeof ev === 'object' && ev.comentario ? ev.comentario : '';
                 
                 html += `
-                            <div class="timeline-simple-evidencia" onclick="window.open('${url}', '_blank')">
+                            <div class="timeline-simple-evidencia" onclick="window.visualizadorImagen.abrir([{url: '${url}', comentario: '${escapeHTML(comentario)}'}], 0)">
                                 <img src="${url}" alt="Evidencia ${evIndex + 1}" loading="lazy">
                                 ${comentario ? `<div class="timeline-simple-evidencia-comentario" title="${escapeHTML(comentario)}">${escapeHTML(comentario.substring(0, 30))}${comentario.length > 30 ? '...' : ''}</div>` : ''}
                             </div>
@@ -850,6 +848,73 @@ async function confirmarYGuardar(datos) {
     }
 }
 
+/**
+ * Genera y sube el PDF después de guardar el seguimiento
+ */
+async function _generarYSubirPDF() {
+    try {
+        console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
+        
+        // Cargar sucursales y categorías para el generador
+        const sucursalesArray = Array.from(sucursalesMap.values());
+        const categoriasArray = Array.from(categoriasMap.values());
+        
+        // Importar generador IPH
+        const { generadorIPH } = await import('/components/iph-generator.js');
+        
+        // Configurar generador
+        generadorIPH.configurar({
+            organizacionActual: {
+                nombre: usuarioActual.organizacion,
+                camelCase: usuarioActual.organizacionCamelCase
+            },
+            sucursalesCache: sucursalesArray,
+            categoriasCache: categoriasArray,
+            authToken: localStorage.getItem('authToken')
+        });
+        
+        // Generar PDF y obtener BLOB
+        const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, { 
+            mostrarAlerta: false,
+            returnBlob: true
+        });
+        
+        if (!pdfBlob || pdfBlob.size === 0) {
+            throw new Error('El PDF generado está vacío');
+        }
+        
+        // Crear archivo
+        const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
+        
+        // Subir a Storage
+        const rutaPDF = incidenciaActual.getRutaPDF();
+        
+        const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
+        
+        // Actualizar la incidencia con la URL del PDF
+        const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+        const { db } = await import('/config/firebase-config.js');
+        
+        const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
+        const incidenciaRef = doc(db, collectionName, incidenciaActual.id);
+        
+        await updateDoc(incidenciaRef, {
+            pdfUrl: resultado.url,
+            fechaActualizacion: serverTimestamp()
+        });
+        
+        // Actualizar el objeto en memoria
+        incidenciaActual.pdfUrl = resultado.url;
+        
+        console.log('✅ PDF actualizado exitosamente:', resultado.url);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error actualizando PDF:', error);
+        return false;
+    }
+}
+
 async function guardarSeguimiento(datos) {
     const btnGuardar = document.getElementById('btnGuardarSeguimiento');
     const originalHTML = btnGuardar ? btnGuardar.innerHTML : '<i class="fas fa-save me-2"></i>Guardar Seguimiento';
@@ -860,11 +925,21 @@ async function guardarSeguimiento(datos) {
             btnGuardar.disabled = true;
         }
 
-        mostrarCargando('Guardando seguimiento y subiendo evidencias...');
+        // Mostrar loading mientras se guarda TODO (seguimiento + PDF)
+        Swal.fire({
+            title: 'Guardando seguimiento...',
+            text: 'Por favor espere, esto puede tomar unos segundos.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
-        // ✅ PASAR usuarioActual PARA REGISTRAR EN HISTORIAL
+        // 1. Guardar el seguimiento
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
@@ -874,7 +949,7 @@ async function guardarSeguimiento(datos) {
             usuarioActual.organizacionCamelCase,
             datos.evidencias,
             datos.fecha,
-            usuarioActual // ← ESTE ES EL PARÁMETRO PARA HISTORIAL
+            usuarioActual
         );
 
         if (datos.nuevoEstado !== incidenciaActual.estado) {
@@ -883,7 +958,7 @@ async function guardarSeguimiento(datos) {
                 { estado: datos.nuevoEstado },
                 usuarioActual.id,
                 usuarioActual.organizacionCamelCase,
-                usuarioActual // ← TAMBIÉN PASAR PARA HISTORIAL
+                usuarioActual
             );
         }
 
@@ -891,38 +966,44 @@ async function guardarSeguimiento(datos) {
             if (ev.preview) URL.revokeObjectURL(ev.preview);
         });
         evidenciasSeleccionadas = [];
-        actualizarVistaPreviaEvidencias();
 
+        // 2. Recargar la incidencia para tener los datos actualizados
         await cargarIncidencia(incidenciaActual.id);
 
+        // 3. Generar y subir el PDF (ahora mismo, no en timeout)
+        const pdfGenerado = await _generarYSubirPDF();
+
+        // 4. Actualizar la vista
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
 
         document.getElementById('descripcionSeguimiento').value = '';
         actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
-
         configurarFechaSeguimiento();
 
-        ocultarCargando();
+        // 5. Cerrar loading
+        Swal.close();
 
+        // 6. Mostrar mensaje de éxito
         await Swal.fire({
             icon: 'success',
             title: '¡Seguimiento guardado!',
-            text: 'El seguimiento se ha agregado correctamente',
-            timer: 2000,
-            showConfirmButton: false
+            text: pdfGenerado ? 'El seguimiento y el PDF se han actualizado correctamente.' : 'El seguimiento se guardó pero hubo un problema con el PDF.',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#28a745'
         });
 
     } catch (error) {
         console.error('Error guardando seguimiento:', error);
-        ocultarCargando();
+        Swal.close();
         mostrarError(error.message || 'No se pudo guardar el seguimiento');
     } finally {
         if (btnGuardar) {
             btnGuardar.innerHTML = originalHTML;
             btnGuardar.disabled = false;
         }
+        ocultarCargando();
     }
 }
 

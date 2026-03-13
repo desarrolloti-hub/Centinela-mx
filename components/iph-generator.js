@@ -21,7 +21,7 @@ export const coloresIPH = {
 // =============================================
 class IPHGenerator extends PDFBaseGenerator {
     constructor() {
-        super(); // Llama al constructor de la clase base
+        super();
 
         // Propiedades específicas de IPH
         this.sucursalesCache = [];
@@ -46,16 +46,9 @@ class IPHGenerator extends PDFBaseGenerator {
         if (config.organizacionActual) this.organizacionActual = config.organizacionActual;
         if (config.sucursalesCache) this.sucursalesCache = config.sucursalesCache;
         if (config.categoriasCache) this.categoriasCache = config.categoriasCache;
-        if (config.subcategoriasCache) {
-            this.subcategoriasCache = config.subcategoriasCache;
-            ;
-        }
-        if (config.usuariosCache) {
-            this.usuariosCache = config.usuariosCache;
-            ;
-        }
+        if (config.subcategoriasCache) this.subcategoriasCache = config.subcategoriasCache;
+        if (config.usuariosCache) this.usuariosCache = config.usuariosCache;
         if (config.authToken) this.authToken = config.authToken;
-
     }
 
     obtenerNombreSucursal(sucursalId) {
@@ -252,7 +245,12 @@ class IPHGenerator extends PDFBaseGenerator {
 
     async generarIPH(incidencia, opciones = {}) {
         try {
-            const { mostrarAlerta = true, tituloAlerta = 'Generando Informe...', onProgress = null } = opciones;
+            const { 
+                mostrarAlerta = true, 
+                tituloAlerta = 'Generando Informe...', 
+                onProgress = null,
+                returnBlob = false  // NUEVA OPCIÓN
+            } = opciones;
 
             if (mostrarAlerta) {
                 Swal.fire({
@@ -283,6 +281,11 @@ class IPHGenerator extends PDFBaseGenerator {
             if (mostrarAlerta) {
                 Swal.close();
                 await this.mostrarOpcionesDescarga(pdf, nombreArchivo);
+            }
+
+            // ✅ SI returnBlob ES true, DEVOLVER EL BLOB
+            if (returnBlob) {
+                return pdf.output('blob');
             }
 
             return pdf;
@@ -340,7 +343,6 @@ class IPHGenerator extends PDFBaseGenerator {
         const anchoContenido = anchoPagina - (margen * 2);
         let yPos = this.alturaEncabezado + 5;
 
-        // Usar el encabezado base (cambiar dibujarEncabezadoFijo por dibujarEncabezadoBase)
         this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', incidencia.id);
 
         // IDENTIFICACIÓN
@@ -425,7 +427,7 @@ class IPHGenerator extends PDFBaseGenerator {
 
         if (nombreReportadoPor !== 'No especificado' || cargoReportadoPor) {
             if (!this.verificarEspacio(pdf, yPos, this.alturasContenedores.reportadoPor + 5)) {
-                this.dibujarPiePagina(pdf); // Cambiar dibujarPiePaginaFijo por dibujarPiePagina
+                this.dibujarPiePagina(pdf);
                 pdf.addPage();
                 this.paginaActualReal++;
                 this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
@@ -744,7 +746,7 @@ class IPHGenerator extends PDFBaseGenerator {
             pdf.text(lineasAviso[i], margen + 2, yPos + 8 + (i * 3));
         }
 
-        this.dibujarPiePagina(pdf); // Cambiar dibujarPiePaginaFijo por dibujarPiePagina
+        this.dibujarPiePagina(pdf);
     }
 
     async procesarImagenConProxy(pdf, imagen, x, y, ancho, alto, xComentario, anchoComentario, numero, esEvidencia, onProgress) {

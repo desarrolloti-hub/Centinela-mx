@@ -1,6 +1,3 @@
-// historialUsuario.js - VERSIÓN OPTIMIZADA CORREGIDA
-// Un documento por día y por usuario con MAP de actividades
-
 import {
     collection,
     doc,
@@ -229,6 +226,12 @@ class HistorialUsuarioManager {
         }
     }
 
+    /**
+     * Obtiene actividades de TODOS los usuarios para una fecha específica
+     * @param {Date} fecha - Fecha a consultar
+     * @param {string} organizacionCamelCase - Organización
+     * @returns {Promise<Array<Actividad>>} - Actividades de todos los usuarios
+     */
     async obtenerActividadesPorFecha(fecha, organizacionCamelCase) {
         try {
             if (!organizacionCamelCase) return [];
@@ -273,6 +276,53 @@ class HistorialUsuarioManager {
 
         } catch (error) {
             console.error('Error en obtenerActividadesPorFecha:', error);
+            return [];
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Obtiene actividades SOLO de un usuario específico para una fecha
+     * @param {string} usuarioId - ID del usuario
+     * @param {Date} fecha - Fecha a consultar
+     * @param {string} organizacionCamelCase - Organización
+     * @returns {Promise<Array<Actividad>>} - Actividades del usuario
+     */
+    async obtenerActividadesPorUsuarioYFecha(usuarioId, fecha, organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase || !usuarioId) return [];
+
+            const docId = this._generarDocumentId(usuarioId, fecha);
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const docRef = doc(db, collectionName, docId);
+
+            const docSnap = await getDoc(docRef);
+            
+            if (!docSnap.exists()) {
+                return [];
+            }
+
+            const data = docSnap.data();
+            const actividadesMap = data.actividades || {};
+            const actividades = [];
+
+            Object.entries(actividadesMap).forEach(([actId, actData]) => {
+                try {
+                    actividades.push(new Actividad(actId, {
+                        ...actData,
+                        organizacionCamelCase
+                    }));
+                } catch (error) {
+                    console.error('Error procesando actividad:', error);
+                }
+            });
+
+            // Ordenar por fecha (más reciente primero)
+            actividades.sort((a, b) => b.fecha - a.fecha);
+
+            return actividades;
+
+        } catch (error) {
+            console.error('Error en obtenerActividadesPorUsuarioYFecha:', error);
             return [];
         }
     }
