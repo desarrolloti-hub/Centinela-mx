@@ -1,3 +1,5 @@
+import { generadorIPH } from '/components/iph-generator.js';
+
 // =============================================
 // VARIABLES GLOBALES - Incidencias Canalizadas
 // =============================================
@@ -70,15 +72,8 @@ async function inicializarIncidenciaManager() {
         await obtenerTokenAuth();
         await obtenerAreaUsuario();
 
-        // CORREGIDO: Importar IncidenciaManager desde la ruta correcta
-        try {
-            const { IncidenciaManager } = await import('/clases/incidencia/incidencia.js');
-            incidenciaManager = new IncidenciaManager();
-        } catch (e) {
-            console.log('Intentando ruta alternativa...');
-            const { IncidenciaManager } = await import('/clases/incidencia.js');
-            incidenciaManager = new IncidenciaManager();
-        }
+        const { IncidenciaManager } = await import('/clases/incidencia.js');
+        incidenciaManager = new IncidenciaManager();
 
         // Cargar datos en paralelo
         await Promise.all([
@@ -90,8 +85,8 @@ async function inicializarIncidenciaManager() {
         await procesarSubcategoriasDesdeCategorias();
         await cargarIncidenciasCanalizadas();
 
-        // CORREGIDO: Verificar si generadorIPH existe antes de usarlo
-        if (typeof generadorIPH !== 'undefined' && generadorIPH && typeof generadorIPH.configurar === 'function') {
+        // Configurar generador IPH
+        if (generadorIPH && typeof generadorIPH.configurar === 'function') {
             generadorIPH.configurar({
                 organizacionActual,
                 sucursalesCache,
@@ -239,16 +234,7 @@ async function obtenerDatosOrganizacion() {
 
 async function cargarSucursales() {
     try {
-        // CORREGIDO: Importar SucursalManager con ruta flexible
-        let SucursalManager;
-        try {
-            const modulo = await import('/clases/sucursal/sucursal.js');
-            SucursalManager = modulo.SucursalManager;
-        } catch (e) {
-            const modulo = await import('/clases/sucursal.js');
-            SucursalManager = modulo.SucursalManager;
-        }
-
+        const { SucursalManager } = await import('/clases/sucursal.js');
         const sucursalManager = new SucursalManager();
 
         if (organizacionActual.camelCase) {
@@ -273,16 +259,7 @@ async function cargarSucursales() {
 
 async function cargarCategorias() {
     try {
-        // CORREGIDO: Importar CategoriaManager con ruta flexible
-        let CategoriaManager;
-        try {
-            const modulo = await import('/clases/categoria/categoria.js');
-            CategoriaManager = modulo.CategoriaManager;
-        } catch (e) {
-            const modulo = await import('/clases/categoria.js');
-            CategoriaManager = modulo.CategoriaManager;
-        }
-
+        const { CategoriaManager } = await import('/clases/categoria.js');
         const categoriaManager = new CategoriaManager();
         categoriasCache = await categoriaManager.obtenerTodasCategorias();
     } catch (error) {
@@ -355,20 +332,13 @@ async function procesarSubcategoriasDesdeCategorias() {
 
 async function cargarUsuarios() {
     try {
-        // CORREGIDO: Importar UsuarioManager con ruta flexible
-        let UsuarioManager;
-        try {
-            const modulo = await import('/clases/user/user.js');
-            UsuarioManager = modulo.UsuarioManager || modulo.default;
-        } catch (e) {
-            try {
-                const modulo = await import('/clases/usuario.js');
-                UsuarioManager = modulo.UsuarioManager || modulo.default;
-            } catch (e2) {
-                const modulo = await import('/clases/user.js');
-                UsuarioManager = modulo.UsuarioManager || modulo.default;
-            }
+        const modulo = await import('/clases/user.js').catch(() => null);
+        if (!modulo) {
+            usuariosCache = [];
+            return;
         }
+
+        const UsuarioManager = modulo.UsuarioManager || modulo.default || modulo;
 
         if (typeof UsuarioManager !== 'function') {
             usuariosCache = [];
@@ -605,9 +575,23 @@ window.irPagina = function (pagina) {
 };
 
 function actualizarEstadisticas() {
-    // CORREGIDO: Eliminadas referencias a elementos que ya no existen
-    // Estos elementos ya no están en el HTML (los stats del banner)
-    console.log(`Total incidencias canalizadas: ${incidenciasCache.length}`);
+    const totalEl = document.getElementById('totalIncidencias');
+    const pendientesEl = document.getElementById('pendientesArea');
+    const enProcesoEl = document.getElementById('enProcesoArea');
+
+    if (totalEl) {
+        totalEl.textContent = incidenciasCache.length;
+    }
+
+    if (pendientesEl) {
+        const pendientes = incidenciasCache.filter(inc => inc.estado === 'pendiente').length;
+        pendientesEl.textContent = pendientes;
+    }
+
+    if (enProcesoEl) {
+        const enProceso = incidenciasCache.filter(inc => inc.estado === 'en_proceso').length;
+        enProcesoEl.textContent = enProceso;
+    }
 }
 
 // =============================================
@@ -746,16 +730,8 @@ window.generarIPH = async function (incidenciaId, event) {
             throw new Error('Incidencia no encontrada');
         }
 
-        // CORREGIDO: Verificar si generadorIPH existe
-        if (typeof generadorIPH !== 'undefined' && generadorIPH && typeof generadorIPH.generarIPH === 'function') {
+        if (generadorIPH && typeof generadorIPH.generarIPH === 'function') {
             await generadorIPH.generarIPH(incidencia);
-        } else {
-            console.warn('Generador IPH no disponible');
-            Swal.fire({
-                icon: 'warning',
-                title: 'Función no disponible',
-                text: 'El generador de IPH no está disponible en este momento'
-            });
         }
     } catch (error) {
         console.error('Error al generar IPH:', error);

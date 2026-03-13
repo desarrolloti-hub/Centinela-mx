@@ -984,8 +984,13 @@ class NavbarComplete {
                         <span>Gestionar</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
+<<<<<<< HEAD
 
                     <!-- Contenedor de opciones expandido -->
+=======
+                    
+                    <!-- Contenedor de opciones expandido con los botones (Áreas, Categorías, Sucursales, Regiones, Incidencias, Estadísticas, Permisos, Incidencias Canalizadas) -->
+>>>>>>> 0c21bd8d3fb24ffd9412656ffe3b5f26c46d99b8
                     <div class="administracion-dropdown-options" id="administracionDropdownOptions">
                         <!-- ÁREAS -->
                         <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
@@ -1011,8 +1016,31 @@ class NavbarComplete {
                             <span>Regiones</span>
                         </a>
 
+<<<<<<< HEAD
                         <!-- PERMISOS -->
                         <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
+=======
+                        <!-- Botón para INCIDENCIAS -->
+                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option" id="incidenciasBtn">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Incidencias</span>
+                        </a>
+
+                        <!-- Botón para INCIDENCIAS CANALIZADAS (NUEVO) -->
+                        <a href="/usuarios/administrador/incidenciasCanalizadas/incidenciasCanalizadas.html" class="administracion-dropdown-option" id="incidenciasCanalizadasBtn">
+                            <i class="fa-solid fa-check-circle"></i>
+                            <span>Incidencias Canalizadas</span>
+                        </a>
+
+                        <!-- Botón para ESTADÍSTICAS -->
+                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option" id="estadisticasBtn">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Estadísticas</span>
+                        </a>
+
+                        <!-- Botón para PERMISOS -->
+                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option" id="permisosBtn">
+>>>>>>> 0c21bd8d3fb24ffd9412656ffe3b5f26c46d99b8
                             <i class="fa-solid fa-lock"></i>
                             <span>Permisos</span>
                         </a>
