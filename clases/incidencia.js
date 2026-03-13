@@ -43,6 +43,13 @@ class Incidencia {
         if (data.seguimiento) {
             this.seguimiento = JSON.parse(JSON.stringify(data.seguimiento));
         }
+
+        // === NUEVOS CAMPOS PARA CANALIZACIÓN ===
+        this.canalizaciones = data.canalizaciones || {}; // Objeto con áreas destino
+        this.canalizacionActiva = data.canalizacionActiva || null; // ID del área actualmente activa
+        this.esMultiCanalizada = data.esMultiCanalizada || false; // Si fue canalizada a múltiples áreas
+        // ========================================
+
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.creadoPorNombre = data.creadoPorNombre || '';
@@ -78,6 +85,164 @@ class Incidencia {
             return 'Fecha inválida';
         }
     }
+
+    // =============================================
+    // NUEVOS MÉTODOS PARA GESTIONAR CANALIZACIONES
+    // =============================================
+
+    /**
+     * Agrega una canalización a un área específica
+     * @param {string} areaId - ID del área destino
+     * @param {string} areaNombre - Nombre del área destino
+     * @param {string} usuarioId - ID del usuario que canaliza
+     * @param {string} usuarioNombre - Nombre del usuario que canaliza
+     * @param {string} motivo - Motivo de la canalización
+     * @returns {string} - ID de la canalización
+     */
+    agregarCanalizacion(areaId, areaNombre, usuarioId, usuarioNombre, motivo = '') {
+        const canalizacionId = `CAN${Date.now()}_${areaId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+        if (!this.canalizaciones) {
+            this.canalizaciones = {};
+        }
+
+        this.canalizaciones[canalizacionId] = {
+            areaId,
+            areaNombre,
+            canalizadoPor: usuarioId,
+            canalizadoPorNombre: usuarioNombre,
+            motivo: motivo || 'Atención requerida',
+            fechaCanalizacion: new Date(),
+            estado: 'pendiente', // pendiente, recibida, finalizada
+            seguimientos: []
+        };
+
+        // Si no hay canalización activa, establecer esta como activa
+        if (!this.canalizacionActiva) {
+            this.canalizacionActiva = areaId;
+        }
+
+        // Marcar como multi-canalizada si hay más de una
+        const totalCanalizaciones = Object.keys(this.canalizaciones).length;
+        if (totalCanalizaciones > 1) {
+            this.esMultiCanalizada = true;
+        }
+
+        return canalizacionId;
+    }
+
+    /**
+     * Agrega múltiples canalizaciones a la vez
+     * @param {Array} areas - Array de objetos {areaId, areaNombre, motivo}
+     * @param {string} usuarioId - ID del usuario que canaliza
+     * @param {string} usuarioNombre - Nombre del usuario que canaliza
+     * @returns {Array} - Array de IDs de canalizaciones creadas
+     */
+    agregarMultiplesCanalizaciones(areas, usuarioId, usuarioNombre) {
+        if (!areas || areas.length === 0) return [];
+
+        const idsCreados = [];
+
+        areas.forEach(area => {
+            if (area.areaId && area.areaNombre) {
+                const id = this.agregarCanalizacion(
+                    area.areaId,
+                    area.areaNombre,
+                    usuarioId,
+                    usuarioNombre,
+                    area.motivo || ''
+                );
+                idsCreados.push(id);
+            }
+        });
+
+        return idsCreados;
+    }
+
+    /**
+     * Obtiene todas las canalizaciones como array
+     * @returns {Array} - Array de canalizaciones
+     */
+    getCanalizacionesArray() {
+        const canalizacionesArray = [];
+        if (this.canalizaciones) {
+            Object.keys(this.canalizaciones).forEach(id => {
+                canalizacionesArray.push({
+                    id,
+                    ...this.canalizaciones[id]
+                });
+            });
+
+            // Ordenar por fecha (más reciente primero)
+            canalizacionesArray.sort((a, b) => {
+                const fechaA = a.fechaCanalizacion ? new Date(a.fechaCanalizacion) : 0;
+                const fechaB = b.fechaCanalizacion ? new Date(b.fechaCanalizacion) : 0;
+                return fechaB - fechaA;
+            });
+        }
+        return canalizacionesArray;
+    }
+
+    /**
+     * Verifica si la incidencia está canalizada a un área específica
+     * @param {string} areaId - ID del área a verificar
+     * @returns {boolean} - True si está canalizada a esa área
+     */
+    estaCanalizadaA(areaId) {
+        if (!this.canalizaciones) return false;
+
+        return Object.values(this.canalizaciones).some(c => c.areaId === areaId);
+    }
+
+    /**
+     * Obtiene las áreas a las que está canalizada la incidencia
+     * @returns {Array} - Array de objetos {areaId, areaNombre, estado}
+     */
+    getAreasCanalizadas() {
+        const areas = [];
+        if (this.canalizaciones) {
+            Object.values(this.canalizaciones).forEach(c => {
+                areas.push({
+                    areaId: c.areaId,
+                    areaNombre: c.areaNombre,
+                    estado: c.estado,
+                    fechaCanalizacion: c.fechaCanalizacion
+                });
+            });
+        }
+        return areas;
+    }
+
+    /**
+     * Actualiza el estado de una canalización
+     * @param {string} areaId - ID del área
+     * @param {string} nuevoEstado - Nuevo estado (recibida, finalizada, etc.)
+     * @returns {boolean} - True si se actualizó correctamente
+     */
+    actualizarEstadoCanalizacion(areaId, nuevoEstado) {
+        if (!this.canalizaciones) return false;
+
+        let actualizado = false;
+
+        Object.keys(this.canalizaciones).forEach(id => {
+            if (this.canalizaciones[id].areaId === areaId) {
+                this.canalizaciones[id].estado = nuevoEstado;
+
+                // Si el estado es "recibida", activar esta área si no hay otra activa
+                if (nuevoEstado === 'recibida' && !this.canalizacionActiva) {
+                    this.canalizacionActiva = areaId;
+                }
+
+                actualizado = true;
+            }
+        });
+
+        return actualizado;
+    }
+
+    // =============================================
+    // MÉTODOS EXISTENTES (SIN MODIFICACIONES)
+    // =============================================
 
     getRutaStorageBase() {
         return `incidencias_${this.organizacionCamelCase}/${this.id}`;
@@ -174,16 +339,16 @@ class Incidencia {
         return colores[this.estado] || '#ffc107';
     }
 
-    getFechaInicioFormateada() { 
-        return this._formatearFecha(this.fechaInicio); 
+    getFechaInicioFormateada() {
+        return this._formatearFecha(this.fechaInicio);
     }
 
-    getFechaFinalizacionFormateada() { 
-        return this._formatearFecha(this.fechaFinalizacion) || 'No finalizada'; 
+    getFechaFinalizacionFormateada() {
+        return this._formatearFecha(this.fechaFinalizacion) || 'No finalizada';
     }
 
-    getFechaCreacionFormateada() { 
-        return this._formatearFecha(this.fechaCreacion); 
+    getFechaCreacionFormateada() {
+        return this._formatearFecha(this.fechaCreacion);
     }
 
     toJSON() {
@@ -201,6 +366,10 @@ class Incidencia {
             imagenes: this.imagenes,
             pdfUrl: this.pdfUrl,
             seguimiento: this.seguimiento,
+            // Nuevos campos de canalización
+            canalizaciones: this.canalizaciones,
+            canalizacionActiva: this.canalizacionActiva,
+            esMultiCanalizada: this.esMultiCanalizada,
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -231,6 +400,12 @@ class Incidencia {
             pdfUrl: this.pdfUrl,
             totalSeguimientos: this.getSeguimientosArray().length,
             ultimoSeguimiento: this.getUltimoSeguimiento(),
+            // Nuevos campos de canalización para UI
+            canalizaciones: this.getCanalizacionesArray(),
+            totalCanalizaciones: this.getCanalizacionesArray().length,
+            areasCanalizadas: this.getAreasCanalizadas(),
+            esMultiCanalizada: this.esMultiCanalizada,
+            canalizacionActiva: this.canalizacionActiva,
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -350,6 +525,9 @@ class IncidenciaManager {
         }
     }
 
+    // =============================================
+    // MÉTODO MODIFICADO PARA CREAR INCIDENCIA CON CANALIZACIONES
+    // =============================================
     async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
             if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
@@ -384,6 +562,39 @@ class IncidenciaManager {
 
             const fechaInicio = data.fechaInicio || new Date();
 
+            // =============================================
+            // NUEVO: Procesar canalizaciones si existen
+            // =============================================
+            let canalizaciones = {};
+            let canalizacionActiva = null;
+            let esMultiCanalizada = false;
+
+            if (data.canalizaciones && Array.isArray(data.canalizaciones) && data.canalizaciones.length > 0) {
+                data.canalizaciones.forEach((canal, index) => {
+                    if (canal.areaId && canal.areaNombre) {
+                        const canalId = `CAN${Date.now()}_${index}_${canal.areaId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+                        canalizaciones[canalId] = {
+                            areaId: canal.areaId,
+                            areaNombre: canal.areaNombre,
+                            canalizadoPor: usuarioActual.id,
+                            canalizadoPorNombre: usuarioActual.nombreCompleto || '',
+                            motivo: canal.motivo || 'Atención requerida',
+                            fechaCanalizacion: new Date(),
+                            estado: 'pendiente',
+                            seguimientos: []
+                        };
+
+                        // Establecer la primera como activa
+                        if (index === 0) {
+                            canalizacionActiva = canal.areaId;
+                        }
+                    }
+                });
+
+                esMultiCanalizada = Object.keys(canalizaciones).length > 1;
+            }
+
             const incidenciaData = {
                 sucursalId: data.sucursalId,
                 reportadoPorId: data.reportadoPorId || usuarioActual.id,
@@ -397,6 +608,10 @@ class IncidenciaManager {
                 imagenes: imagenesUrls,
                 pdfUrl: '',
                 seguimiento: {},
+                // Nuevos campos de canalización
+                canalizaciones: canalizaciones,
+                canalizacionActiva: canalizacionActiva,
+                esMultiCanalizada: esMultiCanalizada,
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorNombre: usuarioActual.nombreCompleto || '',
@@ -416,19 +631,27 @@ class IncidenciaManager {
 
             this.incidencias.unshift(nuevaIncidencia);
 
+            // Registrar en historial
             const historial = await this._getHistorialManager();
             if (historial) {
+                const totalCanalizaciones = Object.keys(canalizaciones).length;
+                const descripcionCanalizacion = totalCanalizaciones > 0
+                    ? ` - Canalizada a ${totalCanalizaciones} área(s)`
+                    : '';
+
                 await historial.registrarActividad({
                     usuario: usuarioActual,
                     tipo: 'crear',
                     modulo: 'incidencias',
-                    descripcion: `Creó incidencia ${incidenciaId} - ${data.detalles?.substring(0, 50)}...`,
+                    descripcion: `Creó incidencia ${incidenciaId}${descripcionCanalizacion} - ${data.detalles?.substring(0, 50)}...`,
                     detalles: {
                         incidenciaId,
                         sucursalId: data.sucursalId,
                         categoriaId: data.categoriaId,
                         nivelRiesgo: data.nivelRiesgo,
-                        totalImagenes: imagenesUrls.length
+                        totalImagenes: imagenesUrls.length,
+                        totalCanalizaciones: totalCanalizaciones,
+                        canalizaciones: Object.values(canalizaciones).map(c => c.areaNombre)
                     }
                 });
             }
@@ -520,6 +743,24 @@ class IncidenciaManager {
 
         } catch (error) {
             console.error('Error listando incidencias:', error);
+            return [];
+        }
+    }
+
+    // Método auxiliar para filtrar incidencias por área canalizada
+    async getIncidenciasPorAreaCanalizada(organizacionCamelCase, areaId, filtros = {}) {
+        try {
+            const todasIncidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase, filtros);
+
+            return todasIncidencias.filter(inc => {
+                // Verificar si está canalizada al área especificada
+                if (!inc.canalizaciones) return false;
+
+                return Object.values(inc.canalizaciones).some(c => c.areaId === areaId);
+            });
+
+        } catch (error) {
+            console.error('Error filtrando incidencias por área:', error);
             return [];
         }
     }
@@ -805,6 +1046,10 @@ class IncidenciaManager {
         try {
             const incidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase);
 
+            // Contar incidencias canalizadas
+            const incidenciasCanalizadas = incidencias.filter(i => i.canalizaciones && Object.keys(i.canalizaciones).length > 0);
+            const incidenciasMultiCanalizadas = incidencias.filter(i => i.esMultiCanalizada);
+
             return {
                 total: incidencias.length,
                 pendientes: incidencias.filter(i => i.estado === 'pendiente').length,
@@ -817,7 +1062,11 @@ class IncidenciaManager {
                 },
                 conImagenes: incidencias.filter(i => (i.imagenes || []).length > 0).length,
                 totalSeguimientos: incidencias.reduce((acc, i) => acc + i.getSeguimientosArray().length, 0),
-                conPDF: incidencias.filter(i => i.pdfUrl).length
+                conPDF: incidencias.filter(i => i.pdfUrl).length,
+                // Nuevas estadísticas de canalización
+                canalizadas: incidenciasCanalizadas.length,
+                multiCanalizadas: incidenciasMultiCanalizadas.length,
+                totalCanalizaciones: incidencias.reduce((acc, i) => acc + (i.canalizaciones ? Object.keys(i.canalizaciones).length : 0), 0)
             };
         } catch (error) {
             console.error('Error obteniendo estadísticas:', error);

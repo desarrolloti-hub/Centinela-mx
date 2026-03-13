@@ -1,4 +1,4 @@
-// crearIncidencias.js - VERSIÓN FINAL
+// crearIncidencias.js - VERSIÓN CON BUSCADOR DE ÁREAS (SIN MODAL DE MOTIVO)
 
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
@@ -17,6 +17,15 @@ class CrearIncidenciaController {
         this.loadingOverlay = null;
         this.flatpickrInstance = null;
         this.historialManager = null;
+
+        // =============================================
+        // PROPIEDADES PARA CANALIZACIONES
+        // =============================================
+        this.areas = []; // Todas las áreas disponibles
+        this.areasSeleccionadas = []; // Áreas seleccionadas para canalizar (múltiples)
+        this.AreaManager = null; // Manager de áreas
+        this._datosPendientes = null; // Datos temporales para después de agregar áreas
+        // =============================================
 
         this._init();
     }
@@ -43,11 +52,17 @@ class CrearIncidenciaController {
 
             await this._inicializarManager();
             await this._cargarDatosRelacionados();
+
+            // =============================================
+            // Cargar áreas disponibles
+            // =============================================
+            await this._cargarAreas();
+
             this._configurarOrganizacion();
             this._inicializarDateTimePicker();
             this._configurarEventos();
             this._inicializarValidaciones();
-            
+
             this.imageEditorModal = new window.ImageEditorModal();
 
         } catch (error) {
@@ -165,6 +180,30 @@ class CrearIncidenciaController {
         } catch (error) {
             console.error('Error cargando categorías:', error);
             throw error;
+        }
+    }
+
+    // =============================================
+    // Cargar áreas disponibles
+    // =============================================
+    async _cargarAreas() {
+        try {
+            const { AreaManager } = await import('/clases/area.js');
+            this.AreaManager = new AreaManager();
+
+            if (this.usuarioActual && this.usuarioActual.organizacionCamelCase) {
+                const areasObtenidas = await this.AreaManager.getAreasByOrganizacion(
+                    this.usuarioActual.organizacionCamelCase
+                );
+
+                // Filtrar solo áreas activas
+                this.areas = areasObtenidas.filter(area => area.estado === 'activa');
+
+                console.log('✅ Áreas cargadas:', this.areas.length);
+            }
+        } catch (error) {
+            console.error('Error cargando áreas:', error);
+            this.areas = [];
         }
     }
 
@@ -298,10 +337,221 @@ class CrearIncidenciaController {
             });
 
             this._configurarSugerencias();
+            this._configurarSugerenciasAreas();
 
         } catch (error) {
             console.error('Error configurando eventos:', error);
         }
+    }
+
+    // =============================================
+    // Configurar sugerencias para áreas (buscador)
+    // =============================================
+    _configurarSugerenciasAreas() {
+        const inputArea = document.getElementById('areaIncidencia');
+
+        if (inputArea) {
+            inputArea.addEventListener('input', (e) => {
+                this._mostrarSugerenciasArea(e.target.value);
+            });
+
+            inputArea.addEventListener('blur', () => {
+                setTimeout(() => {
+                    document.getElementById('sugerenciasArea').innerHTML = '';
+                }, 200);
+            });
+
+            inputArea.addEventListener('focus', (e) => {
+                if (e.target.value.length > 0) {
+                    this._mostrarSugerenciasArea(e.target.value);
+                }
+            });
+        }
+    }
+
+    // =============================================
+    // Mostrar sugerencias de áreas
+    // =============================================
+    _mostrarSugerenciasArea(termino) {
+        const contenedor = document.getElementById('sugerenciasArea');
+        if (!contenedor) return;
+
+        const terminoLower = termino.toLowerCase().trim();
+
+        if (terminoLower.length === 0) {
+            contenedor.innerHTML = '';
+            return;
+        }
+
+        // Filtrar áreas que coincidan con el término y que no estén ya seleccionadas
+        const sugerencias = this.areas.filter(area => {
+            const yaSeleccionada = this.areasSeleccionadas.some(a => a.id === area.id);
+            return !yaSeleccionada && area.nombreArea.toLowerCase().includes(terminoLower);
+        }).slice(0, 8);
+
+        if (sugerencias.length === 0) {
+            contenedor.innerHTML = `
+                <div class="sugerencias-lista">
+                    <div class="sugerencia-vacia">
+                        <i class="fas fa-layer-group"></i>
+                        <p>No se encontraron áreas disponibles</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="sugerencias-lista">';
+        sugerencias.forEach(area => {
+            html += `
+                <div class="sugerencia-item" 
+                     data-id="${area.id}" 
+                     data-nombre="${area.nombreArea}">
+                    <div class="sugerencia-icono">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="sugerencia-info">
+                        <div class="sugerencia-nombre">${this._escapeHTML(area.nombreArea)}</div>
+                        <div class="sugerencia-detalle">
+                            <i class="fas fa-users"></i>
+                            ${area.getCantidadCargosActivos ? area.getCantidadCargosActivos() + ' cargos' : 'Área disponible'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        contenedor.innerHTML = html;
+
+        contenedor.querySelectorAll('.sugerencia-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.dataset.id;
+                const nombre = item.dataset.nombre;
+                this._seleccionarArea(id, nombre);
+            });
+        });
+    }
+
+    // =============================================
+    // Seleccionar área (SIN MODAL - selección directa)
+    // =============================================
+    _seleccionarArea(id, nombre) {
+        const area = this.areas.find(a => a.id === id);
+        if (!area) return;
+
+        // Limpiar el input de búsqueda
+        const inputArea = document.getElementById('areaIncidencia');
+        if (inputArea) {
+            inputArea.value = '';
+        }
+
+        // Agregar área directamente a la lista (sin motivo)
+        this.areasSeleccionadas.push({
+            id: area.id,
+            nombre: area.nombreArea,
+            motivo: '', // Sin motivo
+            areaObj: area
+        });
+
+        this._actualizarListaAreasSeleccionadas();
+
+        // =============================================
+        // Preguntar si quiere agregar otra área
+        // =============================================
+        Swal.fire({
+            title: '¿Agregar otra área?',
+            text: '¿Deseas agregar otra área destino?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, agregar otra',
+            cancelButtonText: 'No, continuar',
+            confirmButtonColor: 'var(--color-accent-primary)'
+        }).then((resp) => {
+            if (resp.isConfirmed) {
+                // Mantener el foco en el buscador para agregar otra
+                document.getElementById('areaIncidencia')?.focus();
+            } else {
+                // Si hay datos pendientes, continuar con la creación
+                if (this._datosPendientes) {
+                    this._confirmarYGuardar({
+                        ...this._datosPendientes,
+                        canalizaciones: this.areasSeleccionadas
+                    });
+                    this._datosPendientes = null;
+                }
+            }
+        });
+    }
+
+    // =============================================
+    // Actualizar lista visual de áreas seleccionadas
+    // =============================================
+    _actualizarListaAreasSeleccionadas() {
+        const container = document.getElementById('areasSeleccionadasContainer');
+        const noAreasMessage = document.getElementById('noAreasMessage');
+
+        if (!container) return;
+
+        if (this.areasSeleccionadas.length === 0) {
+            if (noAreasMessage) {
+                noAreasMessage.style.display = 'flex';
+            }
+            return;
+        }
+
+        if (noAreasMessage) {
+            noAreasMessage.style.display = 'none';
+        }
+
+        let html = '<div class="areas-grid">';
+
+        this.areasSeleccionadas.forEach((area, index) => {
+            html += `
+                <div class="area-item" data-index="${index}">
+                    <div class="area-header">
+                        <i class="fas fa-layer-group"></i>
+                        <span class="area-nombre">${this._escapeHTML(area.nombre)}</span>
+                        <button type="button" class="area-remove" data-index="${index}" title="Quitar área">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+
+        container.innerHTML = html;
+
+        // Agregar event listeners a los botones de eliminar
+        container.querySelectorAll('.area-remove').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(btn.dataset.index);
+                this._quitarArea(index);
+            });
+        });
+    }
+
+    // =============================================
+    // Quitar área seleccionada
+    // =============================================
+    _quitarArea(index) {
+        Swal.fire({
+            title: '¿Quitar área?',
+            text: 'Esta área ya no recibirá la canalización',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, quitar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc3545'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.areasSeleccionadas.splice(index, 1);
+                this._actualizarListaAreasSeleccionadas();
+            }
+        });
     }
 
     _configurarSugerencias() {
@@ -786,7 +1036,10 @@ class CrearIncidenciaController {
         const subcategoriaSelect = document.getElementById('subcategoriaIncidencia');
         const subcategoriaId = subcategoriaSelect.value;
 
-        this._confirmarYGuardar({
+        // =============================================
+        // Preparar datos para guardar
+        // =============================================
+        const datos = {
             sucursalId,
             categoriaId,
             subcategoriaId: subcategoriaId || '',
@@ -794,104 +1047,49 @@ class CrearIncidenciaController {
             estado,
             fechaHora,
             detalles,
-            imagenes: this.imagenesSeleccionadas
-        });
+            imagenes: this.imagenesSeleccionadas,
+            canalizaciones: this.areasSeleccionadas
+        };
+
+        // Si no hay áreas seleccionadas, preguntar si quiere agregar
+        if (this.areasSeleccionadas.length === 0) {
+            this._preguntarAgregarAreas(datos);
+        } else {
+            this._confirmarYGuardar(datos);
+        }
     }
 
-    async _confirmarYGuardar(datos) {
-        const confirmResult = await Swal.fire({
-            title: '¿Crear incidencia?',
-            text: 'Revise que todos los datos sean correctos',
+    // =============================================
+    // Preguntar si quiere agregar áreas
+    // =============================================
+    _preguntarAgregarAreas(datos) {
+        Swal.fire({
+            title: '¿Canalizar a áreas?',
+            text: '¿Deseas canalizar esta incidencia a una o más áreas?',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'CREAR INCIDENCIA',
-            cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#28a745',
-            reverseButtons: false
+            confirmButtonText: 'Sí, agregar áreas',
+            cancelButtonText: 'No, crear sin canalizar',
+            confirmButtonColor: 'var(--color-accent-primary)'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Guardar datos temporales y enfocar el buscador de áreas
+                this._datosPendientes = datos;
+                document.getElementById('areaIncidencia')?.focus();
+                this._mostrarNotificacion('Escribe y selecciona un área para canalizar', 'info', 3000);
+            } else {
+                // Continuar sin áreas
+                this._confirmarYGuardar({
+                    ...datos,
+                    canalizaciones: []
+                });
+            }
         });
-
-        if (confirmResult.isConfirmed) {
-            await this._guardarIncidencia(datos);
-        }
     }
 
-    /**
-     * Genera y sube el PDF automáticamente después de crear la incidencia
-     */
-    async _generarYSubirPDF(incidencia) {
-        try {
-            console.log('📄 Iniciando generación automática de PDF para:', incidencia.id);
-            
-            // Importar generador IPH
-            const { generadorIPH } = await import('/components/iph-generator.js');
-            
-            // Configurar generador con los datos necesarios
-            generadorIPH.configurar({
-                organizacionActual: {
-                    nombre: this.usuarioActual.organizacion,
-                    camelCase: this.usuarioActual.organizacionCamelCase
-                },
-                sucursalesCache: this.sucursales,
-                categoriasCache: this.categorias,
-                authToken: localStorage.getItem('authToken')
-            });
-            
-            // ✅ ESPERAR UN MOMENTO PARA QUE LA INCIDENCIA ESTÉ COMPLETAMENTE GUARDADA
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            // Recargar la incidencia para tener todos los datos actualizados
-            const incidenciaActualizada = await this.incidenciaManager.getIncidenciaById(
-                incidencia.id,
-                this.usuarioActual.organizacionCamelCase
-            );
-            
-            if (!incidenciaActualizada) {
-                throw new Error('No se pudo recargar la incidencia');
-            }
-            
-            // Generar PDF y obtener BLOB directamente
-            const pdfBlob = await generadorIPH.generarIPH(incidenciaActualizada, { 
-                mostrarAlerta: false,
-                returnBlob: true
-            });
-            
-            if (!pdfBlob || pdfBlob.size === 0) {
-                throw new Error('El PDF generado está vacío');
-            }
-            
-            console.log(`📦 PDF generado: ${pdfBlob.size} bytes`);
-            
-            // Crear archivo
-            const pdfFile = new File([pdfBlob], `incidencia_${incidencia.id}.pdf`, { type: 'application/pdf' });
-            
-            // Subir a Storage
-            const rutaPDF = incidencia.getRutaPDF();
-            console.log('📤 Subiendo a:', rutaPDF);
-            
-            const resultado = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-            
-            // Actualizar la incidencia con la URL del PDF
-            const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-            const { db } = await import('/config/firebase-config.js');
-            
-            const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
-            const incidenciaRef = doc(db, collectionName, incidencia.id);
-            
-            await updateDoc(incidenciaRef, {
-                pdfUrl: resultado.url,
-                fechaActualizacion: serverTimestamp()
-            });
-            
-            console.log('✅ PDF subido exitosamente:', resultado.url);
-            
-            return true;
-            
-        } catch (error) {
-            console.error('❌ Error generando PDF automático:', error);
-            return false;
-        }
-    }
-
+    // =============================================
+    // Guardar incidencia con canalizaciones
+    // =============================================
     async _guardarIncidencia(datos) {
         const btnCrear = document.getElementById('btnCrearIncidencia');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
@@ -902,7 +1100,6 @@ class CrearIncidenciaController {
                 btnCrear.disabled = true;
             }
 
-            // Mostrar loading mientras se guarda TODO (incidencia + PDF)
             Swal.fire({
                 title: 'Creando incidencia...',
                 text: 'Por favor espere, esto puede tomar unos segundos.',
@@ -924,12 +1121,20 @@ class CrearIncidenciaController {
                 estado: datos.estado,
                 fechaInicio: fechaObj,
                 detalles: datos.detalles,
-                reportadoPorId: this.usuarioActual.id
+                reportadoPorId: this.usuarioActual.id,
+                // =============================================
+                // Agregar canalizaciones si existen
+                // =============================================
+                canalizaciones: datos.canalizaciones ? datos.canalizaciones.map(c => ({
+                    areaId: c.id,
+                    areaNombre: c.nombre,
+                    motivo: c.motivo || ''
+                })) : []
             };
 
             const archivos = datos.imagenes.map(img => img.file);
 
-            // 1. Crear la incidencia
+            // Crear la incidencia
             const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
                 incidenciaData,
                 this.usuarioActual,
@@ -937,22 +1142,27 @@ class CrearIncidenciaController {
                 datos.imagenes
             );
 
-            // 2. Generar y subir el PDF (ahora mismo, no en timeout)
+            // Generar PDF
             const pdfGenerado = await this._generarYSubirPDF(nuevaIncidencia);
 
-            // 3. Cerrar loading
             Swal.close();
 
-            // 4. Mostrar mensaje de éxito con botón para ir a la lista
+            // Mensaje de éxito con info de canalizaciones
+            const totalCanalizaciones = datos.canalizaciones ? datos.canalizaciones.length : 0;
+            const mensajeCanalizacion = totalCanalizaciones > 0
+                ? `Canalizada a ${totalCanalizaciones} área(s).`
+                : 'No se canalizó a ninguna área.';
+
             await Swal.fire({
                 icon: 'success',
                 title: '¡Incidencia creada!',
-                text: pdfGenerado ? 'La incidencia y su PDF se han guardado correctamente.' : 'La incidencia se creó pero hubo un problema con el PDF.',
+                text: pdfGenerado
+                    ? `La incidencia y su PDF se han guardado correctamente. ${mensajeCanalizacion}`
+                    : `La incidencia se creó pero hubo un problema con el PDF. ${mensajeCanalizacion}`,
                 confirmButtonText: 'Ver incidencias',
                 confirmButtonColor: '#28a745'
             });
 
-            // 5. Redirigir a la lista cuando el usuario haga clic en el botón
             this._volverALista();
 
         } catch (error) {
@@ -964,6 +1174,89 @@ class CrearIncidenciaController {
                 btnCrear.innerHTML = originalHTML;
                 btnCrear.disabled = false;
             }
+        }
+    }
+
+    async _generarYSubirPDF(incidencia) {
+        try {
+            console.log('📄 Iniciando generación automática de PDF para:', incidencia.id);
+
+            const { generadorIPH } = await import('/components/iph-generator.js');
+
+            generadorIPH.configurar({
+                organizacionActual: {
+                    nombre: this.usuarioActual.organizacion,
+                    camelCase: this.usuarioActual.organizacionCamelCase
+                },
+                sucursalesCache: this.sucursales,
+                categoriasCache: this.categorias,
+                authToken: localStorage.getItem('authToken')
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            const incidenciaActualizada = await this.incidenciaManager.getIncidenciaById(
+                incidencia.id,
+                this.usuarioActual.organizacionCamelCase
+            );
+
+            if (!incidenciaActualizada) {
+                throw new Error('No se pudo recargar la incidencia');
+            }
+
+            const pdfBlob = await generadorIPH.generarIPH(incidenciaActualizada, {
+                mostrarAlerta: false,
+                returnBlob: true
+            });
+
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('El PDF generado está vacío');
+            }
+
+            console.log(`📦 PDF generado: ${pdfBlob.size} bytes`);
+
+            const pdfFile = new File([pdfBlob], `incidencia_${incidencia.id}.pdf`, { type: 'application/pdf' });
+
+            const rutaPDF = incidencia.getRutaPDF();
+            console.log('📤 Subiendo a:', rutaPDF);
+
+            const resultado = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
+
+            const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+            const { db } = await import('/config/firebase-config.js');
+
+            const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
+            const incidenciaRef = doc(db, collectionName, incidencia.id);
+
+            await updateDoc(incidenciaRef, {
+                pdfUrl: resultado.url,
+                fechaActualizacion: serverTimestamp()
+            });
+
+            console.log('✅ PDF subido exitosamente:', resultado.url);
+
+            return true;
+
+        } catch (error) {
+            console.error('❌ Error generando PDF automático:', error);
+            return false;
+        }
+    }
+
+    async _confirmarYGuardar(datos) {
+        const confirmResult = await Swal.fire({
+            title: '¿Crear incidencia?',
+            text: 'Revise que todos los datos sean correctos',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'CREAR INCIDENCIA',
+            cancelButtonText: 'CANCELAR',
+            confirmButtonColor: '#28a745',
+            reverseButtons: false
+        });
+
+        if (confirmResult.isConfirmed) {
+            await this._guardarIncidencia(datos);
         }
     }
 
@@ -1015,7 +1308,7 @@ class CrearIncidenciaController {
         Swal.fire({
             title: tipo === 'success' ? 'Éxito' :
                 tipo === 'error' ? 'Error' :
-                tipo === 'warning' ? 'Advertencia' : 'Información',
+                    tipo === 'warning' ? 'Advertencia' : 'Información',
             text: mensaje,
             icon: tipo,
             timer: duracion,

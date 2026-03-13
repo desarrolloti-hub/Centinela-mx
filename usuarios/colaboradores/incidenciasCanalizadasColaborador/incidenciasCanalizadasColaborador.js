@@ -376,7 +376,7 @@ async function cargarIncidenciasCanalizadas() {
         // Obtener todas las incidencias de la organización
         const todasIncidencias = await incidenciaManager.getIncidenciasByOrganizacion(organizacionActual.camelCase);
 
-        // Filtrar solo las que están canalizadas al área actual
+        // Filtrar solo las que están canalizadas al área actual usando el nuevo sistema de canalizaciones
         incidenciasCache = filtrarPorAreaCanalizada(todasIncidencias);
 
         if (!incidenciasCache || incidenciasCache.length === 0) {
@@ -405,29 +405,29 @@ async function cargarIncidenciasCanalizadas() {
     }
 }
 
-// Función para filtrar incidencias por área canalizada
+// =============================================
+// FUNCIÓN MODIFICADA PARA FILTRAR POR ÁREA CANALIZADA
+// =============================================
 function filtrarPorAreaCanalizada(incidencias) {
     if (!incidencias || !Array.isArray(incidencias)) return [];
 
     // Si el usuario no tiene área específica, mostrar todas las canalizadas
     if (areaActual.id === 'todas' || !areaActual.id) {
-        return incidencias.filter(inc => inc.areaDestino || inc.areaCanalizada);
+        return incidencias.filter(inc => {
+            // Verificar si tiene canalizaciones usando el nuevo campo
+            return inc.canalizaciones && Object.keys(inc.canalizaciones).length > 0;
+        });
     }
 
-    // Filtrar por área específica
+    // Filtrar por área específica usando el nuevo sistema de canalizaciones
     return incidencias.filter(inc => {
-        // Buscar en diferentes campos donde podría estar el área destino
-        const areaDestino = inc.areaDestino ||
-            inc.areaCanalizada ||
-            inc.departamentoDestino ||
-            inc.areaAsignada;
+        // Verificar si tiene canalizaciones
+        if (!inc.canalizaciones) return false;
 
-        // Comparar con el área actual (case insensitive)
-        if (areaDestino) {
-            return areaDestino.toLowerCase() === areaActual.id.toLowerCase();
-        }
-
-        return false;
+        // Buscar si alguna canalización corresponde al área actual
+        return Object.values(inc.canalizaciones).some(canal => {
+            return canal.areaId && canal.areaId.toLowerCase() === areaActual.id.toLowerCase();
+        });
     });
 }
 
@@ -524,8 +524,9 @@ function renderizarIncidencias() {
 
     // Ordenar por fecha de canalización (más reciente primero)
     incidenciasFiltradas.sort((a, b) => {
-        const fechaA = a.fechaCanalizacion || a.fechaCreacion || a.fechaInicio;
-        const fechaB = b.fechaCanalizacion || b.fechaCreacion || b.fechaInicio;
+        // Obtener la fecha de canalización más reciente de cada incidencia
+        const fechaA = obtenerFechaCanalizacionMasReciente(a);
+        const fechaB = obtenerFechaCanalizacionMasReciente(b);
         return new Date(fechaB) - new Date(fechaA);
     });
 
@@ -549,6 +550,18 @@ function renderizarIncidencias() {
 
     renderizarPaginacion(totalPaginas);
     actualizarEstadisticas();
+}
+
+// Función auxiliar para obtener la fecha de canalización más reciente
+function obtenerFechaCanalizacionMasReciente(incidencia) {
+    if (!incidencia.canalizaciones || Object.keys(incidencia.canalizaciones).length === 0) {
+        return incidencia.fechaCreacion || incidencia.fechaInicio || new Date(0);
+    }
+
+    const fechas = Object.values(incidencia.canalizaciones)
+        .map(c => c.fechaCanalizacion ? new Date(c.fechaCanalizacion) : new Date(0));
+
+    return new Date(Math.max(...fechas));
 }
 
 function renderizarPaginacion(totalPaginas) {
@@ -607,24 +620,42 @@ function crearFilaIncidencia(incidencia, tbody) {
     const riesgoColor = incidencia.getNivelRiesgoColor ? incidencia.getNivelRiesgoColor() : '';
     const estadoTexto = incidencia.getEstadoTexto ? incidencia.getEstadoTexto() : incidencia.estado;
 
-    // Formatear fecha de canalización
-    const fechaCanalizacion = incidencia.fechaCanalizacion || incidencia.fechaCreacion || incidencia.fechaInicio;
+    // Obtener la canalización específica para esta área
+    const canalizacionArea = obtenerCanalizacionParaArea(incidencia);
+
+    // Formatear fecha de canalización específica o usar la más reciente
     let fechaFormateada = 'N/A';
     let horaFormateada = '';
 
-    if (fechaCanalizacion) {
-        const fecha = fechaCanalizacion.toDate ? fechaCanalizacion.toDate() : new Date(fechaCanalizacion);
+    if (canalizacionArea && canalizacionArea.fechaCanalizacion) {
+        const fecha = new Date(canalizacionArea.fechaCanalizacion);
         fechaFormateada = fecha.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
         horaFormateada = fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    } else {
+        const fecha = incidencia.fechaCreacion || incidencia.fechaInicio;
+        if (fecha) {
+            const fechaObj = fecha.toDate ? fecha.toDate() : new Date(fecha);
+            fechaFormateada = fechaObj.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            horaFormateada = fechaObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        }
     }
 
     // Obtener origen (quién canalizó)
-    const origen = incidencia.usuarioCanalizo || incidencia.creadoPor || 'Sistema';
-    const nombreOrigen = obtenerNombreUsuario(origen);
+    let nombreOrigen = 'Sistema';
+    if (canalizacionArea && canalizacionArea.canalizadoPorNombre) {
+        nombreOrigen = canalizacionArea.canalizadoPorNombre;
+    } else {
+        nombreOrigen = obtenerNombreUsuario(incidencia.creadoPor);
+    }
+
+    // Indicador de multi-canalización
+    const multiCanalizada = incidencia.esMultiCanalizada ?
+        '<span class="origen-badge" style="margin-left: 5px;" title="Canalizada a múltiples áreas"><i class="fas fa-layer-group"></i></span>' : '';
 
     tr.innerHTML = `
         <td data-label="ID / Folio">
             <span class="incidencia-id" title="${incidencia.id}">${incidencia.id.substring(0, 8)}...</span>
+            ${multiCanalizada}
         </td>
         <td data-label="Sucursal">
             <div style="display: flex; align-items: center;">
@@ -708,6 +739,14 @@ function crearFilaIncidencia(incidencia, tbody) {
     }, 50);
 }
 
+// Función auxiliar para obtener la canalización específica para el área actual
+function obtenerCanalizacionParaArea(incidencia) {
+    if (!incidencia.canalizaciones || areaActual.id === 'todas') return null;
+
+    const canalizaciones = Object.values(incidencia.canalizaciones);
+    return canalizaciones.find(c => c.areaId && c.areaId.toLowerCase() === areaActual.id.toLowerCase());
+}
+
 // =============================================
 // FUNCIONES DE ACCIÓN
 // =============================================
@@ -743,7 +782,7 @@ window.generarIPH = async function (incidenciaId, event) {
     }
 };
 
-// Función para mostrar detalles de canalización
+// Función para mostrar detalles de canalización (mejorada)
 function mostrarDetallesCanalizacion(incidenciaId, event) {
     event?.stopPropagation();
 
@@ -755,35 +794,43 @@ function mostrarDetallesCanalizacion(incidenciaId, event) {
 
     if (!modal || !modalBody) return;
 
-    const fechaCanalizacion = incidencia.fechaCanalizacion || incidencia.fechaCreacion;
-    const fecha = fechaCanalizacion ? new Date(fechaCanalizacion).toLocaleString('es-MX') : 'Fecha no disponible';
+    // Obtener todas las canalizaciones
+    const canalizaciones = incidencia.getCanalizacionesArray ?
+        incidencia.getCanalizacionesArray() :
+        Object.values(incidencia.canalizaciones || {});
 
-    const origen = incidencia.usuarioCanalizo || incidencia.creadoPor || 'Sistema';
-    const nombreOrigen = obtenerNombreUsuario(origen);
-    const cargoOrigen = obtenerCargoUsuario(origen);
+    let timelineHtml = '';
+
+    if (canalizaciones.length === 0) {
+        timelineHtml = '<p style="text-align:center; color: var(--color-text-dim);">No hay información de canalización disponible</p>';
+    } else {
+        canalizaciones.forEach((canal, index) => {
+            const esActual = canal.areaId && canal.areaId.toLowerCase() === areaActual.id.toLowerCase();
+            const fecha = canal.fechaCanalizacion ? new Date(canal.fechaCanalizacion).toLocaleString('es-MX') : 'Fecha no disponible';
+
+            timelineHtml += `
+                <div class="timeline-item ${esActual ? 'destino' : 'origen'}" style="${esActual ? 'border-left-color: var(--color-accent-primary);' : ''}">
+                    <div class="timeline-content">
+                        <h6><i class="fas ${esActual ? 'fa-map-pin' : 'fa-paper-plane'}"></i> ${esActual ? 'Tu área' : canal.areaNombre}</h6>
+                        <p><strong>Canalizado por:</strong> ${canal.canalizadoPorNombre || 'Sistema'}</p>
+                        <p><strong>Fecha:</strong> ${fecha}</p>
+                        <p><strong>Motivo:</strong> ${canal.motivo || 'Atención requerida'}</p>
+                        <p><strong>Estado:</strong> <span class="estado-badge ${canal.estado || 'pendiente'}" style="display:inline-block; padding:2px 8px; font-size:0.7rem;">${canal.estado || 'pendiente'}</span></p>
+                    </div>
+                </div>
+            `;
+        });
+    }
 
     modalBody.innerHTML = `
-        <div class="canalizacion-timeline">
-            <div class="timeline-item origen">
-                <div class="timeline-content">
-                    <h6><i class="fas fa-paper-plane"></i> Origen de la canalización</h6>
-                    <p><strong>Usuario:</strong> ${nombreOrigen}</p>
-                    <p><strong>Cargo:</strong> ${cargoOrigen || 'No especificado'}</p>
-                    <p><strong>Fecha:</strong> ${fecha}</p>
-                </div>
-            </div>
-            <div class="timeline-item destino">
-                <div class="timeline-content">
-                    <h6><i class="fas fa-map-pin"></i> Destino</h6>
-                    <p><strong>Área:</strong> ${areaActual.nombre}</p>
-                    <p><strong>Motivo:</strong> ${incidencia.motivoCanalizacion || 'Atención requerida'}</p>
-                </div>
-            </div>
+        <div class="canalizacion-timeline" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+            ${timelineHtml}
         </div>
-        <div class="asignacion-info">
+        <div class="asignacion-info" style="margin-top: 20px;">
             <p><strong>ID Incidencia:</strong> ${incidencia.id}</p>
             <p><strong>Prioridad:</strong> <span class="riesgo-badge ${incidencia.nivelRiesgo}" style="display:inline-block;">${incidencia.nivelRiesgo}</span></p>
             <p><strong>Estado actual:</strong> <span class="estado-badge ${incidencia.estado}" style="display:inline-block;">${incidencia.estado}</span></p>
+            ${incidencia.esMultiCanalizada ? '<p><span class="origen-badge"><i class="fas fa-layer-group"></i> Canalizada a múltiples áreas</span></p>' : ''}
         </div>
     `;
 
