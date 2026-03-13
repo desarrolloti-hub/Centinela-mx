@@ -2,7 +2,8 @@ class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
         this.isAdminDropdownOpen = false;
-        this.isAdministracionDropdownOpen = false; // Nuevo estado para el dropdown de Administración
+        this.isAdministracionDropdownOpen = false; // Estado para el dropdown de Gestionar
+        this.isIncidenciasDropdownOpen = false;    // Estado para el dropdown de Incidencias
         this.currentAdmin = null;
         this.userManager = null;
         this.init();
@@ -395,7 +396,7 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* Estilos para el botón desplegable de Administración */
+            /* Estilos para el botón desplegable de Gestionar */
             .administracion-dropdown-btn {
                 display: flex;
                 align-items: center;
@@ -434,13 +435,12 @@ class NavbarComplete {
                 transform: rotate(180deg);
             }
             
-            /* Contenedor de opciones de Administración expandido */
+            /* Contenedor de opciones de Gestionar expandido */
             .administracion-dropdown-options {
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
-                margin-bottom: 20px;
-                padding: 15px;
+                padding: 5px;
                 background-color: var(--color-bg-tertiary);
                 border-radius: var(--border-radius-medium);
                 border: 1px solid var(--color-border-light);
@@ -496,7 +496,7 @@ class NavbarComplete {
             
             /* Sección de navegación */
             .nav-section {
-                padding: 20px 25px;
+                padding: 10px 15px;
                 border-bottom: 1px solid var(--color-border-light);
             }
             
@@ -530,14 +530,14 @@ class NavbarComplete {
                 cursor: default;
             }
             
-            /* Sección de opciones de administración (al final) */
+            /* Sección de opciones de configuración (al final) */
             .admin-options-section {
                 padding: 20px 25px;
                 border-top: 1px solid var(--color-border-light);
                 margin-top: auto;
             }
             
-            /* Botón desplegable de administración */
+            /* Botón desplegable de configuración */
             .admin-dropdown-btn {
                 display: flex;
                 align-items: center;
@@ -915,10 +915,10 @@ class NavbarComplete {
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                         </div>
                     </a>
-                    
+
                     <!-- BARRA SEPARADORA ENTRE LOGOS -->
                     <div class="logo-separator"></div>
-                    
+
                     <!-- Logo de la organización -->
                     <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
@@ -928,10 +928,10 @@ class NavbarComplete {
                         </div>
                     </a>
                 </div>
-                
+
                 <!-- Título centrado -->
                 <h1 class="navbar-title">CENTINELA</h1>
-                
+
                 <div class="navbar-right-container">
                     <!-- Botón hamburguesa -->
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
@@ -941,13 +941,13 @@ class NavbarComplete {
                     </button>
                 </div>
             </div>
-            
+
             <!-- Overlay para cerrar menú -->
             <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
-            
+
             <!-- Menú lateral -->
             <div class="navbar-main-menu" id="navbarMainMenu">
-                
+
                 <!-- Sección superior: Perfil del administrador -->
                 <div class="admin-profile-section">
                     <!-- Contenedor para la foto con ícono de lápiz -->
@@ -965,7 +965,7 @@ class NavbarComplete {
                             <i class="fas fa-pencil-alt"></i>
                         </a>
                     </div>
-                    
+
                     <!-- Información del administrador -->
                     <div class="admin-info">
                         <div class="admin-name" id="adminName">Cargando...</div>
@@ -974,100 +974,100 @@ class NavbarComplete {
                         <div class="admin-organization" id="adminOrganization"></div>
                     </div>
                 </div>
-                
-                <!-- SECCIÓN DE ADMINISTRACIÓN CON BOTÓN DESPLEGABLE -->
+
+                <!-- ========================================= -->
+                <!-- SECCIÓN 1: GESTIONAR (Áreas, Categorías, Sucursales, Regiones, Permisos, Usuarios) -->
+                <!-- ========================================= -->
                 <div class="nav-section">
-                    <div class="nav-section-title">
-                        <i class="fa-solid fa-gear"></i>
-                        <span>Administración</span>
-                    </div>
-                    
-                    <!-- Botón desplegable de Administración -->
+                    <!-- Botón desplegable de Gestionar -->
                     <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
                         <span>Gestionar</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
-                    
-                    <!-- Contenedor de opciones expandido con los botones (Áreas, Categorías, Sucursales, Regiones, Incidencias, Estadísticas, Permisos, Incidencias Canalizadas) -->
+
+                    <!-- Contenedor de opciones expandido -->
                     <div class="administracion-dropdown-options" id="administracionDropdownOptions">
-                        <!-- Botón para ÁREAS -->
-                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option" id="areasBtn">
+                        <!-- ÁREAS -->
+                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-map"></i>
                             <span>Áreas</span>
                         </a>
 
-                        <!-- Botón para CATEGORIAS -->
-                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option" id="categoriasBtn">
+                        <!-- CATEGORIAS -->
+                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-tags"></i>
                             <span>Categorías</span>
                         </a>
 
-                        <!-- Botón para SUCURSALES -->
-                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option" id="sucursalesBtn">
+                        <!-- SUCURSALES -->
+                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-store"></i>
                             <span>Sucursales</span>
                         </a>
 
-                        <!-- Botón para REGIONES -->
-                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option" id="regionesBtn">
+                        <!-- REGIONES -->
+                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-location-dot"></i>
                             <span>Regiones</span>
                         </a>
 
-                        <!-- Botón para INCIDENCIAS -->
-                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option" id="incidenciasBtn">
-                            <i class="fa-solid fa-exclamation-triangle"></i>
-                            <span>Incidencias</span>
-                        </a>
-
-                        <!-- Botón para INCIDENCIAS CANALIZADAS (NUEVO) -->
-                        <a href="/usuarios/administrador/incidenciasCanalizadas/incidenciasCanalizadas.html" class="administracion-dropdown-option" id="incidenciasCanalizadasBtn">
-                            <i class="fa-solid fa-check-circle"></i>
-                            <span>Incidencias Canalizadas</span>
-                        </a>
-
-                        <!-- Botón para ESTADÍSTICAS -->
-                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option" id="estadisticasBtn">
-                            <i class="fa-solid fa-chart-pie"></i>
-                            <span>Estadísticas</span>
-                        </a>
-
-                        <!-- Botón para PERMISOS -->
-                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option" id="permisosBtn">
+                        <!-- PERMISOS -->
+                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-lock"></i>
                             <span>Permisos</span>
                         </a>
 
-                        <!-- Botón para PRUEBAS NOTIFICACIONES -->
-                        <a href="/usuarios/administrador/pruebasNotificaciones/pruebasNotificaciones.html" class="administracion-dropdown-option" id="pruebasBtn">
-                            <i class="fa-solid fa-bell"></i>
-                            <span>Pruebas Notificaciones</span>
+                        <!-- USUARIOS -->
+                        <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-users-gear"></i>
+                            <span>Usuarios</span>
                         </a>
                     </div>
                 </div>
-                
-                <!-- Sección de espacios vacíos -->
-                <div class="menu-section">
-                    <div class="empty-menu-item"></div>
-                </div>
-                
-                <!-- Sección de opciones de administración -->
-                <div class="admin-options-section">
-                    <button class="admin-dropdown-btn" id="adminDropdownBtn">
-                        <span>Opciones de Administración</span>
+
+                <!-- ========================================= -->
+                <!-- SECCIÓN 2: INCIDENCIAS (CON DROPDOWN) -->
+                <!-- ========================================= -->
+                <div class="nav-section">
+                    <!-- Botón desplegable de Incidencias -->
+                    <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
+                        <span>Incidencias</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
-                    
+
+                    <!-- Contenedor de opciones expandido -->
+                    <div class="administracion-dropdown-options" id="incidenciasDropdownOptions">
+                        <!-- LISTA DE INCIDENCIAS -->
+                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-list"></i>
+                            <span>Lista de Incidencias</span>
+                        </a>
+
+                        <!-- CREAR INCIDENCIA -->
+                        <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Crear Incidencia</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ========================================= -->
+                <!-- SECCIÓN 3: CONFIGURACIÓN -->
+                <!-- ========================================= -->
+                <div class="admin-options-section">
+                    <button class="admin-dropdown-btn" id="adminDropdownBtn">
+                        <span>Configuración</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
                     <div class="admin-dropdown-options" id="adminDropdownOptions">
-                        <a href="/usuarios/administrador/usuarios/usuarios.html" class="admin-dropdown-option">
-                            <i class="fa-solid fa-users-gear"></i>
-                            <span>Gestionar Usuarios</span>
-                        </a>
-                        <!-- Botón de Personalización de colores -->
-                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option" id="themeManagerBtn">
+                        <!-- Personalización de colores -->
+                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-palette"></i>
-                            <span>Personalización de colores</span>
+                            <span>Personalización</span>
                         </a>
+
+                        <!-- Cerrar Sesión -->
                         <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
                             <i class="fa-solid fa-right-from-bracket"></i>
                             <span>Cerrar Sesión</span>
@@ -1403,7 +1403,8 @@ class NavbarComplete {
         this.setupScroll();
         this.loadFontAwesome();
         this.setupAdminDropdown();
-        this.setupAdministracionDropdown(); // Método para el dropdown de Administración
+        this.setupAdministracionDropdown(); // Para Gestionar
+        this.setupIncidenciasDropdown();    // Para Incidencias (CORREGIDO: ahora se llama)
         this.loadOrbitronFont();
         this.setupLogout();
     }
@@ -1432,6 +1433,9 @@ class NavbarComplete {
                 if (this.isAdministracionDropdownOpen) {
                     this.toggleAdministracionDropdown(false);
                 }
+                if (this.isIncidenciasDropdownOpen) {
+                    this.toggleIncidenciasDropdown(false);
+                }
             }
         };
 
@@ -1449,6 +1453,9 @@ class NavbarComplete {
                 if (this.isAdministracionDropdownOpen) {
                     this.toggleAdministracionDropdown(false);
                 }
+                if (this.isIncidenciasDropdownOpen) {
+                    this.toggleIncidenciasDropdown(false);
+                }
             }
         };
 
@@ -1464,7 +1471,7 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de Administración (con todos los botones)
+    // Configura el dropdown de Gestionar
     setupAdministracionDropdown() {
         const dropdownBtn = document.getElementById('administracionDropdownBtn');
         const dropdownOptions = document.getElementById('administracionDropdownOptions');
@@ -1510,7 +1517,51 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de administración (opciones generales)
+    // Configura el dropdown de Incidencias (NUEVO)
+    setupIncidenciasDropdown() {
+        const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
+        const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
+
+        if (!dropdownBtn || !dropdownOptions) return;
+
+        const toggleDropdown = () => {
+            this.isIncidenciasDropdownOpen = !this.isIncidenciasDropdownOpen;
+            this.toggleIncidenciasDropdown(this.isIncidenciasDropdownOpen);
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
+            }
+        });
+
+        // Cerrar dropdown al presionar Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
+            }
+        });
+
+        // Cerrar dropdown al navegar
+        const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.toggleIncidenciasDropdown(false);
+                }, 100);
+            });
+        });
+    }
+
+    // Configura el dropdown de configuración
     setupAdminDropdown() {
         const dropdownBtn = document.getElementById('adminDropdownBtn');
         const dropdownOptions = document.getElementById('adminDropdownOptions');
@@ -1731,7 +1782,7 @@ class NavbarComplete {
         }, 1000);
     }
 
-    // Alterna la visibilidad del dropdown de administración general
+    // Alterna la visibilidad del dropdown de configuración
     toggleAdminDropdown(show) {
         const dropdownBtn = document.getElementById('adminDropdownBtn');
         const dropdownOptions = document.getElementById('adminDropdownOptions');
@@ -1743,7 +1794,7 @@ class NavbarComplete {
         }
     }
 
-    // Alterna la visibilidad del dropdown de Administración (nuevo)
+    // Alterna la visibilidad del dropdown de Gestionar
     toggleAdministracionDropdown(show) {
         const dropdownBtn = document.getElementById('administracionDropdownBtn');
         const dropdownOptions = document.getElementById('administracionDropdownOptions');
@@ -1752,6 +1803,18 @@ class NavbarComplete {
             dropdownBtn.classList.toggle('active', show);
             dropdownOptions.classList.toggle('active', show);
             this.isAdministracionDropdownOpen = show;
+        }
+    }
+
+    // Alterna la visibilidad del dropdown de Incidencias (NUEVO)
+    toggleIncidenciasDropdown(show) {
+        const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
+        const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isIncidenciasDropdownOpen = show;
         }
     }
 
