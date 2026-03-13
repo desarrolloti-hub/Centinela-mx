@@ -1,7 +1,9 @@
-// incidenciasCanalizadasColaborador.js - VERSIÓN COMPLETA
+// incidenciasCanalizadasColaborador.js - VERSIÓN COMPLETA CORREGIDA
 // Muestra las incidencias canalizadas al área del usuario actual
+// PDF: Abre desde storage (NO genera nuevo)
 
 import { generadorIPH } from '/components/iph-generator.js';
+import '/components/visualizadorPDF.js'; // Importar visualizador de PDF
 
 // =============================================
 // VARIABLES GLOBALES - Incidencias Canalizadas
@@ -88,7 +90,7 @@ async function inicializarIncidenciaManager() {
         await procesarSubcategoriasDesdeCategorias();
         await cargarIncidenciasCanalizadas();
 
-        // Configurar generador IPH
+        // Configurar generador IPH (para generación manual si es necesaria)
         if (generadorIPH && typeof generadorIPH.configurar === 'function') {
             generadorIPH.configurar({
                 organizacionActual,
@@ -116,13 +118,13 @@ async function inicializarIncidenciaManager() {
 }
 
 // =============================================
-// OBTENER ÁREA DEL USUARIO ACTUAL (CORREGIDO)
+// OBTENER ÁREA DEL USUARIO ACTUAL
 // =============================================
 async function obtenerAreaUsuario() {
     try {
         console.log('🔍 Obteniendo área del usuario...');
 
-        // Leer del localStorage userData (campo correcto: areaAsignadaId)
+        // Leer del localStorage userData
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         
         // Buscar en diferentes posibles nombres de campo
@@ -608,6 +610,38 @@ function actualizarEstadisticas() {
 }
 
 // =============================================
+// FUNCIÓN PARA VER PDF DESDE STORAGE
+// =============================================
+window.verPDF = async function (incidenciaId, event) {
+    event?.stopPropagation();
+
+    try {
+        const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
+        if (!incidencia) {
+            throw new Error('Incidencia no encontrada');
+        }
+
+        if (incidencia.pdfUrl) {
+            // Usar el visualizador de PDF
+            window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
+        } else {
+            Swal.fire({
+                icon: 'info',
+                title: 'PDF no disponible',
+                text: 'Esta incidencia aún no tiene un PDF generado.'
+            });
+        }
+    } catch (error) {
+        console.error('Error al abrir PDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo abrir el PDF: ' + error.message
+        });
+    }
+};
+
+// =============================================
 // FUNCIÓN PARA CREAR FILA DE INCIDENCIA
 // =============================================
 function crearFilaIncidencia(incidencia, tbody) {
@@ -703,7 +737,7 @@ function crearFilaIncidencia(incidencia, tbody) {
                 <button type="button" class="btn" data-action="detalles-canalizacion" data-id="${incidencia.id}" title="Detalles de canalización">
                     <i class="fas fa-directions"></i>
                 </button>
-                <button type="button" class="btn" data-action="iph" data-id="${incidencia.id}" title="Generar IPH">
+                <button type="button" class="btn" data-action="pdf" data-id="${incidencia.id}" title="Ver PDF">
                     <i class="fas fa-file-pdf" style="color: #c0392b;"></i>
                 </button>
             </div>
@@ -730,8 +764,8 @@ function crearFilaIncidencia(incidencia, tbody) {
                     case 'detalles-canalizacion':
                         mostrarDetallesCanalizacion(id, e);
                         break;
-                    case 'iph':
-                        window.generarIPH(id, e);
+                    case 'pdf':
+                        window.verPDF(id, e);
                         break;
                 }
             });
@@ -758,28 +792,6 @@ window.verDetallesIncidencia = function (incidenciaId, event) {
 window.seguimientoIncidencia = function (incidenciaId, event) {
     event?.stopPropagation();
     window.location.href = `/usuarios/administrador/segimientoIncidencias/segimientoIncidencias.html?id=${incidenciaId}`;
-};
-
-window.generarIPH = async function (incidenciaId, event) {
-    event?.stopPropagation();
-
-    try {
-        const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
-        if (!incidencia) {
-            throw new Error('Incidencia no encontrada');
-        }
-
-        if (generadorIPH && typeof generadorIPH.generarIPH === 'function') {
-            await generadorIPH.generarIPH(incidencia);
-        }
-    } catch (error) {
-        console.error('Error al generar IPH:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudo generar el IPH: ' + error.message
-        });
-    }
 };
 
 // Función para mostrar detalles de canalización
@@ -948,3 +960,4 @@ document.addEventListener('DOMContentLoaded', async function () {
 // Exponer funciones globales necesarias
 window.refrescarIncidencias = refrescarIncidencias;
 window.mostrarDetallesCanalizacion = mostrarDetallesCanalizacion;
+window.verPDF = verPDF;

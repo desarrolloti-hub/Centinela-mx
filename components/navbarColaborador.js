@@ -1,5 +1,5 @@
-// navbarColaborador.js - VERSIÓN CON LA MISMA LÓGICA QUE PANEL CONTROL
-// UBICACIÓN: /components/navbarColaborador.js
+// [file name]: navbarColaborador.js
+// [file path]: /components/navbarColaborador.js
 
 class NavbarComplete {
     constructor() {
@@ -10,10 +10,13 @@ class NavbarComplete {
         this.userRole = null;
         this.permisos = null;
         this.permisoManager = null;
+        this.notificacionManager = null;
+        this.notificacionesNoLeidas = 0;
+        this.notificaciones = [];
+        this.dropdownNotificacionesAbierto = false;
         this.init();
     }
 
-    // Inicializa el navbar evitando duplicados
     init() {
         if (window.NavbarCompleteLoaded) {
             return;
@@ -28,288 +31,206 @@ class NavbarComplete {
         }
     }
 
-    // Configuración principal del navbar
     async setup() {
         try {
             this.removeOriginalNavbar();
             this.createNavbar();
             this.setupFunctionalities();
 
-            // 1. Cargar datos del usuario desde localStorage
             this.loadUserDataFromLocalStorage();
-
-            // 2. IMPORTAR PermisoManager (igual que en panelControl.js)
             await this.importPermisoManager();
-
-            // 3. OBTENER PERMISOS REALES DESDE FIREBASE (igual que panelControl.js)
             await this.obtenerPermisosReales();
-
-            // 4. Actualizar navbar con datos del usuario
             this.updateNavbarWithUserData();
-
-            // 5. APLICAR FILTROS DE PERMISOS (PERO SIEMPRE MOSTRAR INCIDENCIAS CANALIZADAS)
             this.filterMenuByPermissions();
+
+            await this._initNotificacionManager();
+            await this._cargarNotificaciones();
+            this._iniciarListenerNotificaciones();
 
         } catch (error) {
             console.error('❌ Error en navbar:', error);
         }
     }
 
-    // Remueve el navbar original si existe
+    async _initNotificacionManager() {
+        try {
+            const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
+            this.notificacionManager = new NotificacionAreaManager();
+        } catch (error) {
+            console.error('Error inicializando notificacionManager:', error);
+        }
+    }
+
+    async _cargarNotificaciones() {
+        if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
+            return;
+        }
+
+        try {
+            this.notificacionesNoLeidas = await this.notificacionManager.obtenerConteoNoLeidas(
+                this.currentUser.id,
+                this.currentUser.organizacionCamelCase
+            );
+
+            this.notificaciones = await this.notificacionManager.obtenerNotificaciones(
+                this.currentUser.id,
+                this.currentUser.organizacionCamelCase,
+                true,
+                10
+            );
+
+            this._actualizarBadgeNotificaciones();
+            this._renderizarNotificaciones();
+
+        } catch (error) {
+            console.error('Error cargando notificaciones:', error);
+        }
+    }
+
+    _iniciarListenerNotificaciones() {
+        if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
+            return;
+        }
+
+        setInterval(() => {
+            this._cargarNotificaciones();
+        }, 30000);
+    }
+
+    _actualizarBadgeNotificaciones() {
+        const badge = document.getElementById('notificacionesBadge');
+        if (!badge) return;
+
+        if (this.notificacionesNoLeidas > 0) {
+            badge.textContent = this.notificacionesNoLeidas > 99 ? '99+' : this.notificacionesNoLeidas;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    _renderizarNotificaciones() {
+        const container = document.getElementById('notificacionesLista');
+        if (!container) return;
+
+        if (this.notificaciones.length === 0) {
+            container.innerHTML = `
+                <div class="notificaciones-vacia">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>No hay notificaciones nuevas</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        this.notificaciones.forEach(notif => {
+            const notifUI = notif.toUI();
+            html += `
+                <div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
+                    <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
+                        <i class="fas ${notifUI.icono}"></i>
+                    </div>
+                    <div class="notificacion-contenido">
+                        <div class="notificacion-titulo">${notifUI.titulo}</div>
+                        <div class="notificacion-mensaje">${notifUI.mensaje}</div>
+                        <div class="notificacion-detalles">
+                            ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${notifUI.sucursalNombre}</span>` : ''}
+                            ${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}
+                        </div>
+                        <div class="notificacion-tiempo">${notifUI.tiempoRelativo}</div>
+                    </div>
+                    <div class="notificacion-estado ${notifUI.leida ? 'leida' : 'no-leida'}"></div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        container.querySelectorAll('.notificacion-item').forEach(item => {
+            item.addEventListener('click', async (e) => {
+                const id = item.dataset.id;
+                const url = item.dataset.url;
+                
+                if (this.notificacionManager) {
+                    await this.notificacionManager.marcarComoLeida(
+                        this.currentUser.id,
+                        id,
+                        this.currentUser.organizacionCamelCase
+                    );
+                }
+                
+                if (url) {
+                    window.location.href = url;
+                }
+            });
+        });
+    }
+
+    async _marcarTodasLeidas() {
+        if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
+            return;
+        }
+
+        try {
+            await this.notificacionManager.marcarTodasComoLeidas(
+                this.currentUser.id,
+                this.currentUser.organizacionCamelCase
+            );
+            
+            this.notificacionesNoLeidas = 0;
+            this.notificaciones = [];
+            this._actualizarBadgeNotificaciones();
+            this._renderizarNotificaciones();
+            
+        } catch (error) {
+            console.error('Error marcando todas como leídas:', error);
+        }
+    }
+
+    _configurarNotificacionesDropdown() {
+        const notificacionesBtn = document.getElementById('notificacionesBtn');
+        const notificacionesDropdown = document.getElementById('notificacionesDropdown');
+        const marcarTodasBtn = document.getElementById('marcarTodasBtn');
+
+        if (!notificacionesBtn || !notificacionesDropdown) return;
+
+        notificacionesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.dropdownNotificacionesAbierto = !this.dropdownNotificacionesAbierto;
+            notificacionesDropdown.classList.toggle('active', this.dropdownNotificacionesAbierto);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!notificacionesBtn.contains(e.target) && !notificacionesDropdown.contains(e.target)) {
+                this.dropdownNotificacionesAbierto = false;
+                notificacionesDropdown.classList.remove('active');
+            }
+        });
+
+        if (marcarTodasBtn) {
+            marcarTodasBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._marcarTodasLeidas();
+            });
+        }
+    }
+
     removeOriginalNavbar() {
         const originalHeader = document.getElementById('main-header');
         originalHeader?.remove();
     }
 
-    // IMPORTAR PermisoManager (igual que en panelControl.js)
-    async importPermisoManager() {
-        try {
-            const { PermisoManager } = await import('/clases/permiso.js');
-            this.permisoManager = new PermisoManager();
-
-            // Establecer la organización del usuario en el permisoManager
-            if (this.currentUser?.organizacionCamelCase) {
-                this.permisoManager.organizacionCamelCase = this.currentUser.organizacionCamelCase;
-            }
-            console.log('✅ PermisoManager importado en navbar');
-        } catch (error) {
-            console.warn('⚠️ Error importando PermisoManager en navbar:', error);
-        }
-    }
-
-    // OBTENER PERMISOS REALES DESDE FIREBASE (IGUAL QUE EN panelControl.js)
-    async obtenerPermisosReales() {
-        try {
-            // Si es administrador o master, todos los permisos
-            if (this.userRole === 'administrador' || this.userRole === 'master') {
-                console.log('👑 Navbar: Usuario administrador - todos los permisos');
-                this.permisos = {
-                    areas: true,
-                    categorias: true,
-                    sucursales: true,
-                    regiones: true,
-                    incidencias: true,
-                    incidenciasCanalizadas: true, // SIEMPRE TRUE PARA ADMIN
-                    usuarios: true,
-                    permisos: true,
-                    admin: true
-                };
-                return;
-            }
-
-            // Verificar si el usuario tiene área y cargo asignados
-            if (!this.currentUser?.areaId || !this.currentUser?.cargoId) {
-                console.log('ℹ️ Navbar: Usuario sin área o cargo asignado - solo incidencias por defecto');
-                this.permisos = {
-                    areas: false,
-                    categorias: false,
-                    sucursales: false,
-                    regiones: false,
-                    incidencias: true,
-                    incidenciasCanalizadas: true, // SIEMPRE TRUE PARA COLABORADORES
-                    usuarios: false,
-                    permisos: false,
-                    admin: false
-                };
-                return;
-            }
-
-            console.log('🔍 Navbar: Buscando permisos para:', {
-                areaId: this.currentUser.areaId,
-                cargoId: this.currentUser.cargoId,
-                organizacion: this.currentUser.organizacionCamelCase
-            });
-
-            // Buscar permiso específico en Firebase usando el PermisoManager
-            if (this.permisoManager) {
-                try {
-                    const permiso = await this.permisoManager.obtenerPorCargoYArea(
-                        this.currentUser.cargoId,
-                        this.currentUser.areaId,
-                        this.currentUser.organizacionCamelCase
-                    );
-
-                    if (permiso) {
-                        this.permisos = {
-                            areas: permiso.puedeAcceder('areas'),
-                            categorias: permiso.puedeAcceder('categorias'),
-                            sucursales: permiso.puedeAcceder('sucursales'),
-                            regiones: permiso.puedeAcceder('regiones'),
-                            incidencias: permiso.puedeAcceder('incidencias'),
-                            incidenciasCanalizadas: true, // SIEMPRE TRUE independientemente del permiso
-                            usuarios: false,
-                            permisos: false,
-                            admin: false
-                        };
-                        console.log('✅ Navbar: Permisos encontrados en Firebase:', this.permisos);
-                        return;
-                    } else {
-                        console.log('ℹ️ Navbar: No se encontró permiso configurado para esta área y cargo');
-                    }
-                } catch (error) {
-                    console.warn('Error consultando permisos en Firebase:', error);
-                }
-            }
-
-            // Si no hay permisos configurados, solo incidencias
-            console.log('ℹ️ Navbar: Usando permisos por defecto - solo incidencias');
-            this.permisos = {
-                areas: false,
-                categorias: false,
-                sucursales: false,
-                regiones: false,
-                incidencias: true,
-                incidenciasCanalizadas: true, // SIEMPRE TRUE
-                usuarios: false,
-                permisos: false,
-                admin: false
-            };
-
-        } catch (error) {
-            console.error('Error en obtenerPermisosReales:', error);
-            this.permisos = {
-                areas: false,
-                categorias: false,
-                sucursales: false,
-                regiones: false,
-                incidencias: true,
-                incidenciasCanalizadas: true, // SIEMPRE TRUE incluso en error
-                usuarios: false,
-                permisos: false,
-                admin: false
-            };
-        }
-    }
-
-    // FILTRAR MENÚ POR PERMISOS
-    filterMenuByPermissions() {
-        if (!this.permisos) {
-            console.warn('⚠️ No hay permisos para filtrar el menú');
-            return;
-        }
-
-        console.log('🎯 Navbar: Aplicando filtros de permisos:', this.permisos);
-
-        // Elementos del menú (ÁREAS, CATEGORÍAS, SUCURSALES, REGIONES, INCIDENCIAS, INCIDENCIAS CANALIZADAS)
-        const menuItems = [
-            {
-                id: 'areasBtn',
-                modulo: 'areas',
-                elemento: document.getElementById('areasBtn'),
-                texto: 'Áreas',
-                siempreVisible: false
-            },
-            {
-                id: 'categoriasBtn',
-                modulo: 'categorias',
-                elemento: document.getElementById('categoriasBtn'),
-                texto: 'Categorías',
-                siempreVisible: false
-            },
-            {
-                id: 'sucursalesBtn',
-                modulo: 'sucursales',
-                elemento: document.getElementById('sucursalesBtn'),
-                texto: 'Sucursales',
-                siempreVisible: false
-            },
-            {
-                id: 'regionesBtn',
-                modulo: 'regiones',
-                elemento: document.getElementById('regionesBtn'),
-                texto: 'Regiones',
-                siempreVisible: false
-            },
-            {
-                id: 'incidenciasBtn',
-                modulo: 'incidencias',
-                elemento: document.getElementById('incidenciasBtn'),
-                texto: 'Incidencias',
-                siempreVisible: false
-            },
-            {
-                id: 'incidenciasCanalizadasBtn',
-                modulo: 'incidenciasCanalizadas',
-                elemento: document.getElementById('incidenciasCanalizadasBtn'),
-                texto: 'Incidencias Canalizadas',
-                siempreVisible: true // ESTE SIEMPRE SE VA A MOSTRAR
-            }
-        ];
-
-        let itemsVisibles = 0;
-        const itemsVisiblesList = [];
-
-        menuItems.forEach(item => {
-            if (!item.elemento) return;
-
-            // Verificar si debe mostrarse (si es siempreVisible O tiene permiso)
-            let debeMostrarse = false;
-
-            if (item.siempreVisible) {
-                debeMostrarse = true;
-                console.log(`🔵 ${item.id} es SIEMPRE VISIBLE`);
-            } else {
-                debeMostrarse = this.verificarPermiso(item.modulo);
-            }
-
-            if (debeMostrarse) {
-                item.elemento.style.display = 'flex';
-                itemsVisibles++;
-                itemsVisiblesList.push(item.texto);
-                console.log(`✅ Mostrando ${item.id} (${item.siempreVisible ? 'siempre visible' : 'permiso: ' + item.modulo})`);
-            } else {
-                item.elemento.style.display = 'none';
-                console.log(`❌ Ocultando ${item.id} (sin permiso: ${item.modulo})`);
-            }
-        });
-
-        console.log(`📊 Navbar: Elementos visibles: ${itemsVisibles} - ${itemsVisiblesList.join(', ')}`);
-
-        // Verificar si la sección completa debe mostrarse
-        this.checkEmptySections(itemsVisibles);
-    }
-
-    // VERIFICAR PERMISO (IGUAL QUE EN panelControl.js)
-    verificarPermiso(modulo) {
-        // Admin ve todo
-        if (this.userRole === 'administrador' || this.userRole === 'master') {
-            return true;
-        }
-
-        // Verificar permiso específico
-        if (modulo && this.permisos) {
-            return this.permisos[modulo] === true;
-        }
-
-        return false;
-    }
-
-    // Verificar secciones vacías
-    checkEmptySections(itemsVisibles) {
-        const navSection = document.querySelector('.nav-section');
-        if (!navSection) return;
-
-        if (itemsVisibles === 0) {
-            navSection.style.display = 'none';
-            console.log('👻 Navbar: Ocultando sección (vacía)');
-        } else {
-            navSection.style.display = 'block';
-        }
-    }
-
-    // Crea el navbar completo
     createNavbar() {
         this.addStyles();
         this.insertHTML();
         this.adjustBodyPadding();
     }
 
-    // Agrega todos los estilos CSS (MANTIENES TU CSS EXISTENTE)
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
         const styles = /*css*/`
-            /* (AQUI VA TODO TU CSS EXISTENTE - LO DEJAS IGUAL) */
             #complete-navbar {
                 position: fixed;
                 top: 0;
@@ -439,6 +360,222 @@ class NavbarComplete {
                 justify-content: flex-end;
                 flex: 0 0 auto;
                 margin-left: auto;
+                gap: 15px;
+            }
+
+            .navbar-notificaciones-container {
+                position: relative;
+            }
+            
+            .navbar-notificaciones-btn {
+                background: none;
+                border: none;
+                color: var(--navbar-text);
+                font-size: 20px;
+                cursor: pointer;
+                position: relative;
+                padding: 8px;
+                border-radius: 50%;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .navbar-notificaciones-btn:hover {
+                background-color: var(--color-bg-secondary);
+                transform: scale(1.1);
+            }
+            
+            .notificaciones-badge {
+                position: absolute;
+                top: 0;
+                right: 0;
+                background-color: #dc3545;
+                color: white;
+                font-size: 11px;
+                font-weight: bold;
+                min-width: 18px;
+                height: 18px;
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 4px;
+                border: 2px solid var(--navbar-bg);
+            }
+            
+            .notificaciones-dropdown {
+                position: absolute;
+                top: 100%;
+                right: 0;
+                width: 350px;
+                background-color: var(--color-bg-primary);
+                border-radius: var(--border-radius-medium);
+                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+                border: 1px solid var(--color-border-light);
+                z-index: 1004;
+                display: none;
+                margin-top: 10px;
+            }
+            
+            .notificaciones-dropdown.active {
+                display: block;
+            }
+            
+            .notificaciones-header {
+                padding: 15px;
+                border-bottom: 1px solid var(--color-border-light);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .notificaciones-header h3 {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text-primary);
+            }
+            
+            .notificaciones-marcar-todas {
+                background: none;
+                border: none;
+                color: var(--color-accent-primary);
+                font-size: 12px;
+                cursor: pointer;
+                padding: 5px 10px;
+                border-radius: var(--border-radius-small);
+                transition: all 0.3s ease;
+            }
+            
+            .notificaciones-marcar-todas:hover {
+                background-color: var(--color-bg-secondary);
+            }
+            
+            .notificaciones-lista {
+                max-height: 400px;
+                overflow-y: auto;
+                padding: 10px;
+            }
+            
+            .notificacion-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 12px;
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                border: 1px solid transparent;
+                margin-bottom: 5px;
+            }
+            
+            .notificacion-item:hover {
+                background-color: var(--color-bg-secondary);
+                border-color: var(--color-border-light);
+                transform: translateX(-2px);
+            }
+            
+            .notificacion-icono {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                flex-shrink: 0;
+            }
+            
+            .notificacion-contenido {
+                flex: 1;
+            }
+            
+            .notificacion-titulo {
+                font-weight: 600;
+                font-size: 14px;
+                color: var(--color-text-primary);
+                margin-bottom: 4px;
+            }
+            
+            .notificacion-mensaje {
+                font-size: 13px;
+                color: var(--color-text-secondary);
+                margin-bottom: 4px;
+                line-height: 1.4;
+            }
+            
+            .notificacion-detalles {
+                display: flex;
+                gap: 10px;
+                font-size: 11px;
+                color: var(--color-text-tertiary);
+                margin-bottom: 4px;
+                flex-wrap: wrap;
+            }
+            
+            .notificacion-detalles span {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            
+            .riesgo-bajo { color: #28a745; }
+            .riesgo-medio { color: #ffc107; }
+            .riesgo-alto { color: #fd7e14; }
+            .riesgo-critico { color: #dc3545; }
+            
+            .notificacion-tiempo {
+                font-size: 10px;
+                color: var(--color-text-tertiary);
+            }
+            
+            .notificacion-estado {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                margin-top: 5px;
+            }
+            
+            .notificacion-estado.no-leida {
+                background-color: #007bff;
+                box-shadow: 0 0 5px #007bff;
+            }
+            
+            .notificacion-estado.leida {
+                background-color: transparent;
+            }
+            
+            .notificaciones-vacia,
+            .notificaciones-cargando {
+                padding: 30px;
+                text-align: center;
+                color: var(--color-text-secondary);
+            }
+            
+            .notificaciones-vacia i,
+            .notificaciones-cargando i {
+                font-size: 40px;
+                margin-bottom: 10px;
+                opacity: 0.5;
+            }
+            
+            .notificaciones-footer {
+                padding: 12px 15px;
+                border-top: 1px solid var(--color-border-light);
+                text-align: center;
+            }
+            
+            .notificaciones-footer a {
+                color: var(--color-accent-primary);
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 500;
+            }
+            
+            .notificaciones-footer a:hover {
+                text-decoration: underline;
             }
             
             .navbar-hamburger-btn {
@@ -497,6 +634,7 @@ class NavbarComplete {
                 box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
                 visibility: hidden;
                 opacity: 0;
+                overflow-x: hidden;
             }
             
             .navbar-main-menu.active {
@@ -696,6 +834,7 @@ class NavbarComplete {
                 font-weight: 500;
                 font-family: 'Orbitron', sans-serif;
                 word-break: break-word;
+                white-space: normal;
             }
             
             .herramientas-dropdown-option:hover {
@@ -721,6 +860,9 @@ class NavbarComplete {
             .nav-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
+                overflow-x: hidden;
+                max-width: 100%;
+                box-sizing: border-box;
             }
             
             .nav-section-title {
@@ -809,6 +951,7 @@ class NavbarComplete {
                 overflow: hidden;
                 opacity: 0;
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                overflow-x: hidden;
             }
             
             .admin-dropdown-options.active {
@@ -832,6 +975,9 @@ class NavbarComplete {
                 font-weight: 500;
                 font-family: 'Orbitron', sans-serif;
                 word-break: break-word;
+                white-space: normal;
+                max-width: 100%;
+                box-sizing: border-box;
             }
             
             .admin-dropdown-option:hover {
@@ -852,6 +998,7 @@ class NavbarComplete {
                 flex: 1;
                 white-space: normal;
                 word-break: break-word;
+                line-height: 1.4;
             }
             
             .logout-option {
@@ -930,6 +1077,11 @@ class NavbarComplete {
 
                 .herramientas-dropdown-options.active {
                     max-height: 500px;
+                }
+                
+                .notificaciones-dropdown {
+                    width: 300px;
+                    right: -50px;
                 }
             }
             
@@ -1035,6 +1187,11 @@ class NavbarComplete {
                 .nav-section-title {
                     font-size: 15px;
                 }
+                
+                .notificaciones-dropdown {
+                    width: 280px;
+                    right: -70px;
+                }
             }
             
             @media (max-width: 480px) {
@@ -1084,6 +1241,11 @@ class NavbarComplete {
                 .herramientas-dropdown-option {
                     padding: 12px 10px;
                 }
+                
+                .notificaciones-dropdown {
+                    width: 260px;
+                    right: -80px;
+                }
             }
             
             @media (min-width: 1600px) {
@@ -1114,25 +1276,20 @@ class NavbarComplete {
         document.head.appendChild(styleElement);
     }
 
-    // Inserta la estructura HTML del navbar
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
         navbar.innerHTML = `
-            <!-- Sección superior con logo, título y botón hamburguesa -->
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
-                    <!-- Logo del sistema Centinela -->
                     <a href="/usuarios/colaboradores/panelControl/panelControl.html" class="navbar-logo-link">
                         <div class="logo-circle-container">
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                         </div>
                     </a>
                     
-                    <!-- BARRA SEPARADORA ENTRE LOGOS -->
                     <div class="logo-separator"></div>
                     
-                    <!-- Logo de la organización -->
                     <a href="/usuarios/colaboradores/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
                             <img src="/assets/images/logo.png" alt="Logo Organización" 
@@ -1142,11 +1299,33 @@ class NavbarComplete {
                     </a>
                 </div>
                 
-                <!-- Título CENTRADO -->
                 <h1 class="navbar-title">CENTINELA</h1>
                 
                 <div class="navbar-right-container">
-                    <!-- Botón hamburguesa -->
+                    <div class="navbar-notificaciones-container">
+                        <button class="navbar-notificaciones-btn" id="notificacionesBtn">
+                            <i class="fas fa-bell"></i>
+                            <span class="notificaciones-badge" id="notificacionesBadge" style="display: none;">0</span>
+                        </button>
+                        <div class="notificaciones-dropdown" id="notificacionesDropdown">
+                            <div class="notificaciones-header">
+                                <h3>Notificaciones</h3>
+                                <button class="notificaciones-marcar-todas" id="marcarTodasBtn">
+                                    <i class="fas fa-check-double"></i> Marcar todas
+                                </button>
+                            </div>
+                            <div class="notificaciones-lista" id="notificacionesLista">
+                                <div class="notificaciones-cargando">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <p>Cargando notificaciones...</p>
+                                </div>
+                            </div>
+                            <div class="notificaciones-footer">
+                                <a href="/usuarios/colaboradores/notificaciones/notificaciones.html">Ver todas</a>
+                            </div>
+                        </div>
+                    </div>
+
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
                         <span class="hamburger-line"></span>
                         <span class="hamburger-line"></span>
@@ -1155,13 +1334,10 @@ class NavbarComplete {
                 </div>
             </div>
             
-            <!-- Overlay para cerrar menú en móvil -->
             <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
             
-            <!-- Menú lateral -->
             <div class="navbar-main-menu" id="navbarMainMenu">
                 
-                <!-- Sección superior: Perfil del usuario -->
                 <div class="admin-profile-section">
                     <div class="profile-photo-container">
                         <div class="admin-profile-circle">
@@ -1184,52 +1360,43 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- SECCIÓN DE MÓDULOS DEL SISTEMA -->
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <i class="fa-solid fa-cubes"></i>
                         <span>Módulos del Sistema</span>
                     </div>
                     
-                    <!-- Botón desplegable de ACCESOS RÁPIDOS -->
                     <button class="herramientas-dropdown-btn" id="herramientasDropdownBtn">
                         <span>Accesos Rápidos</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
                     
-                    <!-- Contenedor de opciones (todos los módulos) -->
                     <div class="herramientas-dropdown-options" id="herramientasDropdownOptions">
-                        <!-- ÁREAS -->
                         <a href="/usuarios/colaboradores/areas/areas.html" class="herramientas-dropdown-option" id="areasBtn">
                             <i class="fa-solid fa-map"></i>
                             <span>Áreas</span>
                         </a>
 
-                        <!-- CATEGORÍAS -->
                         <a href="/usuarios/colaboradores/categorias/categorias.html" class="herramientas-dropdown-option" id="categoriasBtn">
                             <i class="fa-solid fa-tags"></i>
                             <span>Categorías</span>
                         </a>
 
-                        <!-- SUCURSALES -->
                         <a href="/usuarios/colaboradores/sucursales/sucursales.html" class="herramientas-dropdown-option" id="sucursalesBtn">
                             <i class="fa-solid fa-store"></i>
                             <span>Sucursales</span>
                         </a>
 
-                        <!-- REGIONES -->
                         <a href="/usuarios/colaboradores/regiones/regiones.html" class="herramientas-dropdown-option" id="regionesBtn">
                             <i class="fa-solid fa-location-dot"></i>
                             <span>Regiones</span>
                         </a>
 
-                        <!-- INCIDENCIAS -->
                         <a href="/usuarios/colaboradores/incidencias/incidencias.html" class="herramientas-dropdown-option" id="incidenciasBtn">
                             <i class="fa-solid fa-exclamation-triangle"></i>
                             <span>Incidencias</span>
                         </a>
 
-                        <!-- INCIDENCIAS CANALIZADAS (SIEMPRE VISIBLE) -->
                         <a href="/usuarios/colaboradores/incidenciasCanalizadasColaborador/incidenciasCanalizadasColaborador.html" class="herramientas-dropdown-option" id="incidenciasCanalizadasBtn">
                             <i class="fa-solid fa-check-circle"></i>
                             <span>Incidencias Canalizadas</span>
@@ -1237,7 +1404,6 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- Sección de espacios vacíos -->
                 <div class="menu-section">
                     <div class="empty-menu-item"></div>
                     <div class="empty-menu-item"></div>
@@ -1247,7 +1413,6 @@ class NavbarComplete {
                     <div class="empty-menu-item"></div>
                 </div>
                 
-                <!-- Sección de opciones de usuario -->
                 <div class="admin-options-section">
                     <button class="admin-dropdown-btn" id="userDropdownBtn">
                         <span>Opciones de Colaborador</span>
@@ -1279,7 +1444,6 @@ class NavbarComplete {
         document.body.prepend(navbar);
     }
 
-    // Ajusta el padding del body
     adjustBodyPadding() {
         const navbar = document.getElementById('complete-navbar');
         if (!navbar) return;
@@ -1294,13 +1458,11 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // Carga los datos del usuario desde localStorage
     loadUserDataFromLocalStorage() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
 
             if (!isLoggedIn) {
-                console.warn('⚠️ No hay sesión activa en localStorage');
                 return false;
             }
 
@@ -1340,7 +1502,6 @@ class NavbarComplete {
                     organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
                     fotoUsuario: fotoUsuario,
                     fotoOrganizacion: fotoOrganizacion,
-                    // ✅ CARGAR ÁREA Y CARGO
                     areaId: userData.areaAsignadaId || '',
                     cargoId: userData.cargoId || '',
                     status: userData.status || 'activo',
@@ -1350,17 +1511,9 @@ class NavbarComplete {
 
                 this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
 
-                console.log('✅ Usuario cargado en navbar:', {
-                    nombre: this.currentUser.nombreCompleto,
-                    areaId: this.currentUser.areaId,
-                    cargoId: this.currentUser.cargoId,
-                    rol: this.currentUser.rol
-                });
-
                 return true;
             }
 
-            // Fallback a claves individuales
             this.currentUser = {
                 id: localStorage.getItem('userId'),
                 correoElectronico: localStorage.getItem('userEmail'),
@@ -1379,7 +1532,6 @@ class NavbarComplete {
                 return true;
             }
 
-            console.warn('⚠️ No se encontraron datos de usuario en localStorage');
             return false;
 
         } catch (error) {
@@ -1388,7 +1540,203 @@ class NavbarComplete {
         }
     }
 
-    // Actualiza el navbar con los datos del usuario
+    async importPermisoManager() {
+        try {
+            const { PermisoManager } = await import('/clases/permiso.js');
+            this.permisoManager = new PermisoManager();
+
+            if (this.currentUser?.organizacionCamelCase) {
+                this.permisoManager.organizacionCamelCase = this.currentUser.organizacionCamelCase;
+            }
+        } catch (error) {
+            console.warn('⚠️ Error importando PermisoManager en navbar:', error);
+        }
+    }
+
+    async obtenerPermisosReales() {
+        try {
+            if (this.userRole === 'administrador' || this.userRole === 'master') {
+                this.permisos = {
+                    areas: true,
+                    categorias: true,
+                    sucursales: true,
+                    regiones: true,
+                    incidencias: true,
+                    incidenciasCanalizadas: true,
+                    usuarios: true,
+                    permisos: true,
+                    admin: true
+                };
+                return;
+            }
+
+            if (!this.currentUser?.areaId || !this.currentUser?.cargoId) {
+                this.permisos = {
+                    areas: false,
+                    categorias: false,
+                    sucursales: false,
+                    regiones: false,
+                    incidencias: true,
+                    incidenciasCanalizadas: true,
+                    usuarios: false,
+                    permisos: false,
+                    admin: false
+                };
+                return;
+            }
+
+            if (this.permisoManager) {
+                try {
+                    const permiso = await this.permisoManager.obtenerPorCargoYArea(
+                        this.currentUser.cargoId,
+                        this.currentUser.areaId,
+                        this.currentUser.organizacionCamelCase
+                    );
+
+                    if (permiso) {
+                        this.permisos = {
+                            areas: permiso.puedeAcceder('areas'),
+                            categorias: permiso.puedeAcceder('categorias'),
+                            sucursales: permiso.puedeAcceder('sucursales'),
+                            regiones: permiso.puedeAcceder('regiones'),
+                            incidencias: permiso.puedeAcceder('incidencias'),
+                            incidenciasCanalizadas: true,
+                            usuarios: false,
+                            permisos: false,
+                            admin: false
+                        };
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('Error consultando permisos en Firebase:', error);
+                }
+            }
+
+            this.permisos = {
+                areas: false,
+                categorias: false,
+                sucursales: false,
+                regiones: false,
+                incidencias: true,
+                incidenciasCanalizadas: true,
+                usuarios: false,
+                permisos: false,
+                admin: false
+            };
+
+        } catch (error) {
+            console.error('Error en obtenerPermisosReales:', error);
+            this.permisos = {
+                areas: false,
+                categorias: false,
+                sucursales: false,
+                regiones: false,
+                incidencias: true,
+                incidenciasCanalizadas: true,
+                usuarios: false,
+                permisos: false,
+                admin: false
+            };
+        }
+    }
+
+    filterMenuByPermissions() {
+        if (!this.permisos) {
+            return;
+        }
+
+        const menuItems = [
+            {
+                id: 'areasBtn',
+                modulo: 'areas',
+                elemento: document.getElementById('areasBtn'),
+                texto: 'Áreas',
+                siempreVisible: false
+            },
+            {
+                id: 'categoriasBtn',
+                modulo: 'categorias',
+                elemento: document.getElementById('categoriasBtn'),
+                texto: 'Categorías',
+                siempreVisible: false
+            },
+            {
+                id: 'sucursalesBtn',
+                modulo: 'sucursales',
+                elemento: document.getElementById('sucursalesBtn'),
+                texto: 'Sucursales',
+                siempreVisible: false
+            },
+            {
+                id: 'regionesBtn',
+                modulo: 'regiones',
+                elemento: document.getElementById('regionesBtn'),
+                texto: 'Regiones',
+                siempreVisible: false
+            },
+            {
+                id: 'incidenciasBtn',
+                modulo: 'incidencias',
+                elemento: document.getElementById('incidenciasBtn'),
+                texto: 'Incidencias',
+                siempreVisible: false
+            },
+            {
+                id: 'incidenciasCanalizadasBtn',
+                modulo: 'incidenciasCanalizadas',
+                elemento: document.getElementById('incidenciasCanalizadasBtn'),
+                texto: 'Incidencias Canalizadas',
+                siempreVisible: true
+            }
+        ];
+
+        let itemsVisibles = 0;
+
+        menuItems.forEach(item => {
+            if (!item.elemento) return;
+
+            let debeMostrarse = false;
+
+            if (item.siempreVisible) {
+                debeMostrarse = true;
+            } else {
+                debeMostrarse = this.verificarPermiso(item.modulo);
+            }
+
+            if (debeMostrarse) {
+                item.elemento.style.display = 'flex';
+                itemsVisibles++;
+            } else {
+                item.elemento.style.display = 'none';
+            }
+        });
+
+        this.checkEmptySections(itemsVisibles);
+    }
+
+    verificarPermiso(modulo) {
+        if (this.userRole === 'administrador' || this.userRole === 'master') {
+            return true;
+        }
+
+        if (modulo && this.permisos) {
+            return this.permisos[modulo] === true;
+        }
+
+        return false;
+    }
+
+    checkEmptySections(itemsVisibles) {
+        const navSection = document.querySelector('.nav-section');
+        if (!navSection) return;
+
+        if (itemsVisibles === 0) {
+            navSection.style.display = 'none';
+        } else {
+            navSection.style.display = 'block';
+        }
+    }
+
     updateNavbarWithUserData() {
         if (!this.currentUser) {
             const userName = document.getElementById('userName');
@@ -1409,7 +1757,6 @@ class NavbarComplete {
         this.setupEditProfileLink();
     }
 
-    // Actualiza el logo de la organización
     updateOrganizationLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
@@ -1426,7 +1773,6 @@ class NavbarComplete {
             organizationLogoImg.title = this.currentUser.organizacion;
 
             organizationLogoImg.onerror = (e) => {
-                console.error('❌ Error al cargar logo de organización:', e);
                 this.showOrgTextLogo();
             };
         } else {
@@ -1436,7 +1782,6 @@ class NavbarComplete {
         orgLogoLink.href = '/usuarios/colaboradores/panelControl/panelControl.html';
     }
 
-    // Muestra iniciales cuando no hay logo
     showOrgTextLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
@@ -1458,7 +1803,6 @@ class NavbarComplete {
         orgTextLogo.title = orgName;
     }
 
-    // Actualiza la información del usuario
     updateUserMenuInfo() {
         const userName = document.getElementById('userName');
         if (userName) userName.textContent = this.currentUser.nombreCompleto || 'Usuario';
@@ -1486,7 +1830,6 @@ class NavbarComplete {
                 userProfileImg.alt = `Foto de ${this.currentUser.nombreCompleto}`;
 
                 userProfileImg.onerror = (e) => {
-                    console.error('❌ Error al cargar foto de perfil:', e);
                     this.showProfilePlaceholder();
                 };
             } else {
@@ -1495,7 +1838,6 @@ class NavbarComplete {
         }
     }
 
-    // Muestra placeholder cuando no hay foto
     showProfilePlaceholder() {
         const userProfileImg = document.getElementById('userProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
@@ -1517,7 +1859,6 @@ class NavbarComplete {
         }
     }
 
-    // Configura el enlace de edición de perfil
     setupEditProfileLink() {
         const editProfileIcon = document.getElementById('editProfileIcon');
         if (editProfileIcon) {
@@ -1525,7 +1866,6 @@ class NavbarComplete {
         }
     }
 
-    // Configura todas las funcionalidades
     setupFunctionalities() {
         this.setupMenu();
         this.setupScroll();
@@ -1534,9 +1874,9 @@ class NavbarComplete {
         this.setupHerramientasDropdown();
         this.loadOrbitronFont();
         this.setupLogout();
+        this._configurarNotificacionesDropdown();
     }
 
-    // Configura el menú hamburguesa
     setupMenu() {
         const hamburgerBtn = document.getElementById('navbarHamburger');
         const mainMenu = document.getElementById('navbarMainMenu');
@@ -1591,7 +1931,6 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de herramientas
     setupHerramientasDropdown() {
         const dropdownBtn = document.getElementById('herramientasDropdownBtn');
         const dropdownOptions = document.getElementById('herramientasDropdownOptions');
@@ -1632,7 +1971,6 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de usuario
     setupUserDropdown() {
         const dropdownBtn = document.getElementById('userDropdownBtn');
         const dropdownOptions = document.getElementById('userDropdownOptions');
@@ -1664,7 +2002,6 @@ class NavbarComplete {
         });
     }
 
-    // Configura el cierre de sesión
     setupLogout() {
         const logoutOption = document.getElementById('logoutOption');
 
@@ -1682,7 +2019,6 @@ class NavbarComplete {
         });
     }
 
-    // Muestra confirmación para cerrar sesión
     async showLogoutConfirmation() {
         return new Promise((resolve) => {
             if (typeof Swal !== 'undefined') {
@@ -1706,7 +2042,6 @@ class NavbarComplete {
         });
     }
 
-    // Realiza el cierre de sesión COMPLETO
     async performLogout() {
         try {
             this.clearAllStorage();
@@ -1720,7 +2055,6 @@ class NavbarComplete {
         }
     }
 
-    // Limpia TODO el almacenamiento
     clearAllStorage() {
         try {
             localStorage.clear();
@@ -1732,7 +2066,6 @@ class NavbarComplete {
         }
     }
 
-    // Limpia cookies de sesión
     clearSessionCookies() {
         try {
             const cookies = document.cookie.split(';');
@@ -1750,7 +2083,6 @@ class NavbarComplete {
         }
     }
 
-    // Limpia indexedDB
     async clearIndexedDB() {
         try {
             const databases = ['firebaseLocalStorageDb', 'firestore', 'centinela-db'];
@@ -1765,7 +2097,6 @@ class NavbarComplete {
         }
     }
 
-    // Muestra mensaje de éxito al cerrar sesión
     async showLogoutSuccessMessage() {
         if (typeof Swal !== 'undefined') {
             await Swal.fire({
@@ -1779,14 +2110,12 @@ class NavbarComplete {
         }
     }
 
-    // Redirige al login
     redirectToLogin() {
         const timestamp = new Date().getTime();
         const loginUrl = `/usuarios/visitantes/inicioSesion/inicioSesion.html?logout=true&timestamp=${timestamp}&nocache=1`;
         window.location.href = loginUrl;
     }
 
-    // Alterna la visibilidad del dropdown de usuario
     toggleUserDropdown(show) {
         const dropdownBtn = document.getElementById('userDropdownBtn');
         const dropdownOptions = document.getElementById('userDropdownOptions');
@@ -1798,7 +2127,6 @@ class NavbarComplete {
         }
     }
 
-    // Alterna la visibilidad del dropdown de herramientas
     toggleHerramientasDropdown(show) {
         const dropdownBtn = document.getElementById('herramientasDropdownBtn');
         const dropdownOptions = document.getElementById('herramientasDropdownOptions');
@@ -1810,7 +2138,6 @@ class NavbarComplete {
         }
     }
 
-    // Configura efecto al hacer scroll
     setupScroll() {
         const navbar = document.getElementById('complete-navbar');
         if (!navbar) return;
@@ -1820,7 +2147,6 @@ class NavbarComplete {
         });
     }
 
-    // Carga Font Awesome
     loadFontAwesome() {
         if (!document.querySelector('link[href*="font-awesome"]')) {
             const faLink = document.createElement('link');
@@ -1830,7 +2156,6 @@ class NavbarComplete {
         }
     }
 
-    // Carga la fuente Orbitron
     loadOrbitronFont() {
         if (!document.querySelector('link[href*="orbitron"]')) {
             const orbitronLink = document.createElement('link');
@@ -1841,5 +2166,4 @@ class NavbarComplete {
     }
 }
 
-// Inicialización automática
 new NavbarComplete();

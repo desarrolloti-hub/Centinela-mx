@@ -1,15 +1,21 @@
+// [file name]: navbarAdministrador.js
+// [file path]: /components/navbarAdministrador.js
+
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
         this.isAdminDropdownOpen = false;
-        this.isAdministracionDropdownOpen = false; // Estado para el dropdown de Gestionar
-        this.isIncidenciasDropdownOpen = false;    // Estado para el dropdown de Incidencias
+        this.isAdministracionDropdownOpen = false;
+        this.isIncidenciasDropdownOpen = false;
         this.currentAdmin = null;
         this.userManager = null;
+        this.notificacionManager = null;
+        this.notificacionesNoLeidas = 0;
+        this.notificaciones = [];
+        this.dropdownNotificacionesAbierto = false;
         this.init();
     }
 
-    // Inicializa el navbar evitando duplicados
     init() {
         if (window.NavbarCompleteLoaded) {
             return;
@@ -17,7 +23,6 @@ class NavbarComplete {
 
         window.NavbarCompleteLoaded = true;
 
-        // Esperar a que el DOM esté listo
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setup());
         } else {
@@ -25,44 +30,204 @@ class NavbarComplete {
         }
     }
 
-    // Configuración principal del navbar
     async setup() {
         try {
             this.removeOriginalNavbar();
             this.createNavbar();
             this.setupFunctionalities();
 
-            // PRIMERO: Cargar desde localStorage (inmediato)
             this.loadAdminDataFromLocalStorage();
             this.updateNavbarWithAdminData();
 
-            // SEGUNDO: Cargar desde Firebase para actualizar (si hay cambios)
             await this.loadAdminDataFromFirebase();
+            await this._initNotificacionManager();
+            await this._cargarNotificaciones();
+            this._iniciarListenerNotificaciones();
 
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
         }
     }
 
-    // Remueve el navbar original si existe
+    async _initNotificacionManager() {
+        try {
+            const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
+            this.notificacionManager = new NotificacionAreaManager();
+        } catch (error) {
+            console.error('Error inicializando notificacionManager:', error);
+        }
+    }
+
+    async _cargarNotificaciones() {
+        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
+            return;
+        }
+
+        try {
+            this.notificacionesNoLeidas = await this.notificacionManager.obtenerConteoNoLeidas(
+                this.currentAdmin.id,
+                this.currentAdmin.organizacionCamelCase
+            );
+
+            this.notificaciones = await this.notificacionManager.obtenerNotificaciones(
+                this.currentAdmin.id,
+                this.currentAdmin.organizacionCamelCase,
+                true,
+                10
+            );
+
+            this._actualizarBadgeNotificaciones();
+            this._renderizarNotificaciones();
+
+        } catch (error) {
+            console.error('Error cargando notificaciones:', error);
+        }
+    }
+
+    _iniciarListenerNotificaciones() {
+        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
+            return;
+        }
+
+        setInterval(() => {
+            this._cargarNotificaciones();
+        }, 30000);
+    }
+
+    _actualizarBadgeNotificaciones() {
+        const badge = document.getElementById('notificacionesBadge');
+        if (!badge) return;
+
+        if (this.notificacionesNoLeidas > 0) {
+            badge.textContent = this.notificacionesNoLeidas > 99 ? '99+' : this.notificacionesNoLeidas;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    _renderizarNotificaciones() {
+        const container = document.getElementById('notificacionesLista');
+        if (!container) return;
+
+        if (this.notificaciones.length === 0) {
+            container.innerHTML = `
+                <div class="notificaciones-vacia">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>No hay notificaciones nuevas</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        this.notificaciones.forEach(notif => {
+            const notifUI = notif.toUI();
+            html += `
+                <div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
+                    <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
+                        <i class="fas ${notifUI.icono}"></i>
+                    </div>
+                    <div class="notificacion-contenido">
+                        <div class="notificacion-titulo">${notifUI.titulo}</div>
+                        <div class="notificacion-mensaje">${notifUI.mensaje}</div>
+                        <div class="notificacion-detalles">
+                            ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${notifUI.sucursalNombre}</span>` : ''}
+                            ${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}
+                        </div>
+                        <div class="notificacion-tiempo">${notifUI.tiempoRelativo}</div>
+                    </div>
+                    <div class="notificacion-estado ${notifUI.leida ? 'leida' : 'no-leida'}"></div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        container.querySelectorAll('.notificacion-item').forEach(item => {
+            item.addEventListener('click', async (e) => {
+                const id = item.dataset.id;
+                const url = item.dataset.url;
+                
+                if (this.notificacionManager) {
+                    await this.notificacionManager.marcarComoLeida(
+                        this.currentAdmin.id,
+                        id,
+                        this.currentAdmin.organizacionCamelCase
+                    );
+                }
+                
+                if (url) {
+                    window.location.href = url;
+                }
+            });
+        });
+    }
+
+    async _marcarTodasLeidas() {
+        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
+            return;
+        }
+
+        try {
+            await this.notificacionManager.marcarTodasComoLeidas(
+                this.currentAdmin.id,
+                this.currentAdmin.organizacionCamelCase
+            );
+            
+            this.notificacionesNoLeidas = 0;
+            this.notificaciones = [];
+            this._actualizarBadgeNotificaciones();
+            this._renderizarNotificaciones();
+            
+        } catch (error) {
+            console.error('Error marcando todas como leídas:', error);
+        }
+    }
+
+    _configurarNotificacionesDropdown() {
+        const notificacionesBtn = document.getElementById('notificacionesBtn');
+        const notificacionesDropdown = document.getElementById('notificacionesDropdown');
+        const marcarTodasBtn = document.getElementById('marcarTodasBtn');
+
+        if (!notificacionesBtn || !notificacionesDropdown) return;
+
+        notificacionesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.dropdownNotificacionesAbierto = !this.dropdownNotificacionesAbierto;
+            notificacionesDropdown.classList.toggle('active', this.dropdownNotificacionesAbierto);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!notificacionesBtn.contains(e.target) && !notificacionesDropdown.contains(e.target)) {
+                this.dropdownNotificacionesAbierto = false;
+                notificacionesDropdown.classList.remove('active');
+            }
+        });
+
+        if (marcarTodasBtn) {
+            marcarTodasBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._marcarTodasLeidas();
+            });
+        }
+    }
+
     removeOriginalNavbar() {
         const originalHeader = document.getElementById('main-header');
         originalHeader?.remove();
     }
 
-    // Crea el navbar completo
     createNavbar() {
         this.addStyles();
         this.insertHTML();
         this.adjustBodyPadding();
     }
 
-    // Agrega todos los estilos CSS necesarios
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
         const styles = /*css*/`
-            /* Navbar fijo en la parte superior */
             #complete-navbar {
                 position: fixed;
                 top: 0;
@@ -75,13 +240,11 @@ class NavbarComplete {
                 font-family: var(--font-family-primary);
             }
             
-            /* Efecto al hacer scroll */
             #complete-navbar.scrolled {
                 background-color: var(--navbar-scrolled-bg);
                 box-shadow: var(--navbar-scrolled-shadow);
             }
             
-            /* Sección superior: Logo | Título | Botón hamburguesa */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
@@ -94,7 +257,6 @@ class NavbarComplete {
                 box-sizing: border-box;
             }
             
-            /* Contenedor izquierdo para el logo */
             .navbar-left-container {
                 display: flex;
                 align-items: center;
@@ -104,7 +266,6 @@ class NavbarComplete {
                 margin-right: auto;
             }
             
-            /* Logo del sistema */
             .navbar-logo-link {
                 display: flex;
                 align-items: center;
@@ -114,7 +275,6 @@ class NavbarComplete {
                 flex: 0 0 auto;
             }
 
-            /* Contenedor para logo circular */
             .logo-circle-container {
                 width: 50px;
                 height: 50px;
@@ -129,7 +289,6 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
 
-            /* Todos los logos en círculo perfecto */
             .navbar-logo-img {
                 width: 100%;
                 height: 100%;
@@ -138,13 +297,11 @@ class NavbarComplete {
                 display: block;
             }
 
-            /* Efecto hover en el logo */
             .navbar-logo-link:hover .logo-circle-container {
                 transform: scale(1.05);
                 border-color: var(--color-accent-secondary);
             }
             
-            /* BARRA SEPARADORA ENTRE LOGOS */
             .logo-separator {
                 width: 2px;
                 height: 45px;
@@ -160,7 +317,6 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
-            /* Logo de organización cuando es texto */
             .org-text-logo {
                 display: none;
                 align-items: center;
@@ -177,7 +333,6 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
-            /* Título "CENTINELA" centrado */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -196,16 +351,230 @@ class NavbarComplete {
                 width: max-content;
             }
             
-            /* Contenedor derecho para el botón hamburguesa */
             .navbar-right-container {
                 display: flex;
                 align-items: center;
                 justify-content: flex-end;
                 flex: 0 0 auto;
                 margin-left: auto;
+                gap: 15px;
+            }
+
+            .navbar-notificaciones-container {
+                position: relative;
             }
             
-            /* Botón hamburguesa */
+            .navbar-notificaciones-btn {
+                background: none;
+                border: none;
+                color: var(--navbar-text);
+                font-size: 20px;
+                cursor: pointer;
+                position: relative;
+                padding: 8px;
+                border-radius: 50%;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .navbar-notificaciones-btn:hover {
+                background-color: var(--color-bg-secondary);
+                transform: scale(1.1);
+            }
+            
+            .notificaciones-badge {
+                position: absolute;
+                top: 0;
+                right: 0;
+                background-color: #dc3545;
+                color: white;
+                font-size: 11px;
+                font-weight: bold;
+                min-width: 18px;
+                height: 18px;
+                border-radius: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 4px;
+                border: 2px solid var(--navbar-bg);
+            }
+            
+            .notificaciones-dropdown {
+                position: absolute;
+                top: 100%;
+                right: 0;
+                width: 350px;
+                background-color: var(--color-bg-primary);
+                border-radius: var(--border-radius-medium);
+                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+                border: 1px solid var(--color-border-light);
+                z-index: 1004;
+                display: none;
+                margin-top: 10px;
+            }
+            
+            .notificaciones-dropdown.active {
+                display: block;
+            }
+            
+            .notificaciones-header {
+                padding: 15px;
+                border-bottom: 1px solid var(--color-border-light);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .notificaciones-header h3 {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text-primary);
+            }
+            
+            .notificaciones-marcar-todas {
+                background: none;
+                border: none;
+                color: var(--color-accent-primary);
+                font-size: 12px;
+                cursor: pointer;
+                padding: 5px 10px;
+                border-radius: var(--border-radius-small);
+                transition: all 0.3s ease;
+            }
+            
+            .notificaciones-marcar-todas:hover {
+                background-color: var(--color-bg-secondary);
+            }
+            
+            .notificaciones-lista {
+                max-height: 400px;
+                overflow-y: auto;
+                padding: 10px;
+            }
+            
+            .notificacion-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 12px;
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                border: 1px solid transparent;
+                margin-bottom: 5px;
+            }
+            
+            .notificacion-item:hover {
+                background-color: var(--color-bg-secondary);
+                border-color: var(--color-border-light);
+                transform: translateX(-2px);
+            }
+            
+            .notificacion-icono {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                flex-shrink: 0;
+            }
+            
+            .notificacion-contenido {
+                flex: 1;
+            }
+            
+            .notificacion-titulo {
+                font-weight: 600;
+                font-size: 14px;
+                color: var(--color-text-primary);
+                margin-bottom: 4px;
+            }
+            
+            .notificacion-mensaje {
+                font-size: 13px;
+                color: var(--color-text-secondary);
+                margin-bottom: 4px;
+                line-height: 1.4;
+            }
+            
+            .notificacion-detalles {
+                display: flex;
+                gap: 10px;
+                font-size: 11px;
+                color: var(--color-text-tertiary);
+                margin-bottom: 4px;
+                flex-wrap: wrap;
+            }
+            
+            .notificacion-detalles span {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            
+            .riesgo-bajo { color: #28a745; }
+            .riesgo-medio { color: #ffc107; }
+            .riesgo-alto { color: #fd7e14; }
+            .riesgo-critico { color: #dc3545; }
+            
+            .notificacion-tiempo {
+                font-size: 10px;
+                color: var(--color-text-tertiary);
+            }
+            
+            .notificacion-estado {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                margin-top: 5px;
+            }
+            
+            .notificacion-estado.no-leida {
+                background-color: #007bff;
+                box-shadow: 0 0 5px #007bff;
+            }
+            
+            .notificacion-estado.leida {
+                background-color: transparent;
+            }
+            
+            .notificaciones-vacia,
+            .notificaciones-cargando {
+                padding: 30px;
+                text-align: center;
+                color: var(--color-text-secondary);
+            }
+            
+            .notificaciones-vacia i,
+            .notificaciones-cargando i {
+                font-size: 40px;
+                margin-bottom: 10px;
+                opacity: 0.5;
+            }
+            
+            .notificaciones-footer {
+                padding: 12px 15px;
+                border-top: 1px solid var(--color-border-light);
+                text-align: center;
+            }
+            
+            .notificaciones-footer a {
+                color: var(--color-accent-primary);
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 500;
+            }
+            
+            .notificaciones-footer a:hover {
+                text-decoration: underline;
+            }
+            
             .navbar-hamburger-btn {
                 display: flex;
                 flex-direction: column;
@@ -223,7 +592,6 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
-            /* Líneas del botón hamburguesa */
             .hamburger-line {
                 display: block;
                 width: 25px;
@@ -234,7 +602,6 @@ class NavbarComplete {
                 transition: var(--transition-default);
             }
             
-            /* Animación a "X" cuando está activo */
             .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
                 transform: rotate(45deg) translate(6.3px, 6.3px);
             }
@@ -247,7 +614,6 @@ class NavbarComplete {
                 transform: rotate(-45deg) translate(6.3px, -6.3px);
             }
             
-            /* Menú lateral */
             .navbar-main-menu {
                 position: fixed;
                 top: 0;
@@ -265,16 +631,15 @@ class NavbarComplete {
                 box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
                 visibility: hidden;
                 opacity: 0;
+                overflow-x: hidden;
             }
             
-            /* Cuando el menú está activo (visible) */
             .navbar-main-menu.active {
                 right: 0;
                 visibility: visible;
                 opacity: 1;
             }
             
-            /* Sección superior del menú: Perfil del administrador */
             .admin-profile-section {
                 padding: 30px 25px 20px;
                 background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
@@ -284,7 +649,6 @@ class NavbarComplete {
                 position: relative;
             }
             
-            /* Contenedor para la foto de perfil con lápiz */
             .profile-photo-container {
                 position: relative;
                 width: 120px;
@@ -293,7 +657,6 @@ class NavbarComplete {
                 display: inline-block;
             }
             
-            /* Círculo de imagen del administrador */
             .admin-profile-circle {
                 width: 100%;
                 height: 100%;
@@ -313,7 +676,6 @@ class NavbarComplete {
                 object-fit: cover;
             }
 
-            /* Placeholder para foto cuando no hay imagen */
             .profile-placeholder {
                 width: 100%;
                 height: 100%;
@@ -331,7 +693,6 @@ class NavbarComplete {
                 font-weight: bold;
             }
             
-            /* Ícono de lápiz para editar */
             .edit-profile-icon {
                 position: absolute;
                 bottom: 5px;
@@ -362,7 +723,6 @@ class NavbarComplete {
                 font-size: 14px;
             }
             
-            /* Información del administrador */
             .admin-info {
                 margin-bottom: 20px;
             }
@@ -396,7 +756,6 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* Estilos para el botón desplegable de Gestionar */
             .administracion-dropdown-btn {
                 display: flex;
                 align-items: center;
@@ -435,7 +794,6 @@ class NavbarComplete {
                 transform: rotate(180deg);
             }
             
-            /* Contenedor de opciones de Gestionar expandido */
             .administracion-dropdown-options {
                 display: flex;
                 flex-direction: column;
@@ -472,6 +830,7 @@ class NavbarComplete {
                 font-weight: 500;
                 font-family: 'Orbitron', sans-serif;
                 word-break: break-word;
+                white-space: normal;
             }
             
             .administracion-dropdown-option:hover {
@@ -494,10 +853,12 @@ class NavbarComplete {
                 word-break: break-word;
             }
             
-            /* Sección de navegación */
             .nav-section {
                 padding: 10px 15px;
                 border-bottom: 1px solid var(--color-border-light);
+                overflow-x: hidden;
+                max-width: 100%;
+                box-sizing: border-box;
             }
             
             .nav-section-title {
@@ -511,7 +872,6 @@ class NavbarComplete {
                 font-family: 'Orbitron', sans-serif;
             }
             
-            /* Sección de espacios vacíos */
             .menu-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -530,14 +890,12 @@ class NavbarComplete {
                 cursor: default;
             }
             
-            /* Sección de opciones de configuración (al final) */
             .admin-options-section {
                 padding: 20px 25px;
                 border-top: 1px solid var(--color-border-light);
                 margin-top: auto;
             }
             
-            /* Botón desplegable de configuración */
             .admin-dropdown-btn {
                 display: flex;
                 align-items: center;
@@ -575,7 +933,6 @@ class NavbarComplete {
                 transform: rotate(180deg);
             }
             
-            /* Contenedor de opciones expandido */
             .admin-dropdown-options {
                 display: flex;
                 flex-direction: column;
@@ -590,6 +947,7 @@ class NavbarComplete {
                 overflow: hidden;
                 opacity: 0;
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                overflow-x: hidden;
             }
             
             .admin-dropdown-options.active {
@@ -613,6 +971,9 @@ class NavbarComplete {
                 font-weight: 500;
                 font-family: 'Orbitron', sans-serif;
                 word-break: break-word;
+                white-space: normal;
+                max-width: 100%;
+                box-sizing: border-box;
             }
             
             .admin-dropdown-option:hover {
@@ -633,9 +994,9 @@ class NavbarComplete {
                 flex: 1;
                 white-space: normal;
                 word-break: break-word;
+                line-height: 1.4;
             }
             
-            /* Opción especial para cerrar sesión */
             .logout-option {
                 background: linear-gradient(135deg, #ff6b6b, #ff5252);
                 border-color: #ff5252;
@@ -651,7 +1012,6 @@ class NavbarComplete {
                 color: white;
             }
             
-            /* Overlay para cerrar el menú */
             .navbar-mobile-overlay {
                 position: fixed;
                 top: 0;
@@ -670,7 +1030,6 @@ class NavbarComplete {
                 opacity: 1;
             }
             
-            /* Responsive para tablet */
             @media (max-width: 992px) {
                 .navbar-main-menu {
                     width: 85%;
@@ -715,9 +1074,13 @@ class NavbarComplete {
                 .administracion-dropdown-options.active {
                     max-height: 500px;
                 }
+                
+                .notificaciones-dropdown {
+                    width: 300px;
+                    right: -50px;
+                }
             }
             
-            /* Responsive para móvil */
             @media (max-width: 768px) {
                 .navbar-top-section {
                     padding: 5px 15px;
@@ -820,9 +1183,13 @@ class NavbarComplete {
                 .nav-section-title {
                     font-size: 15px;
                 }
+                
+                .notificaciones-dropdown {
+                    width: 280px;
+                    right: -70px;
+                }
             }
             
-            /* Para pantallas muy pequeñas */
             @media (max-width: 480px) {
                 .navbar-top-section {
                     padding: 5px 10px;
@@ -870,9 +1237,13 @@ class NavbarComplete {
                 .administracion-dropdown-option {
                     padding: 12px 10px;
                 }
+                
+                .notificaciones-dropdown {
+                    width: 260px;
+                    right: -80px;
+                }
             }
             
-            /* Para pantallas extra grandes */
             @media (min-width: 1600px) {
                 .navbar-top-section {
                     padding: 5px 40px;
@@ -901,214 +1272,194 @@ class NavbarComplete {
         document.head.appendChild(styleElement);
     }
 
-    // Inserta la estructura HTML del navbar
     insertHTML() {
-    const navbar = document.createElement('header');
-    navbar.id = 'complete-navbar';
-    navbar.innerHTML = /*html*/`
-        <!-- Sección superior con logo, título y botón hamburguesa -->
-        <div class="navbar-top-section">
-            <div class="navbar-left-container">
-                <!-- Logo del sistema Centinela -->
-                <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link">
-                    <div class="logo-circle-container">
-                        <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
-                    </div>
-                </a>
+        const navbar = document.createElement('header');
+        navbar.id = 'complete-navbar';
+        navbar.innerHTML = /*html*/`
+            <div class="navbar-top-section">
+                <div class="navbar-left-container">
+                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link">
+                        <div class="logo-circle-container">
+                            <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
+                        </div>
+                    </a>
 
-                <!-- BARRA SEPARADORA ENTRE LOGOS -->
-                <div class="logo-separator"></div>
+                    <div class="logo-separator"></div>
 
-                <!-- Logo de la organización -->
-                <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
-                    <div class="logo-circle-container" id="orgLogoContainer">
-                        <img src="/assets/images/logo.png" alt="Logo Organización" 
-                             class="navbar-logo-img" id="orgLogoImg">
-                        <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
-                    </div>
-                </a>
-            </div>
+                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
+                        <div class="logo-circle-container" id="orgLogoContainer">
+                            <img src="/assets/images/logo.png" alt="Logo Organización" 
+                                 class="navbar-logo-img" id="orgLogoImg">
+                            <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                        </div>
+                    </a>
+                </div>
 
-            <!-- Título centrado -->
-            <h1 class="navbar-title">CENTINELA</h1>
+                <h1 class="navbar-title">CENTINELA</h1>
 
-            <div class="navbar-right-container">
-                <!-- Botón hamburguesa -->
-                <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Overlay para cerrar menú -->
-        <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
-
-        <!-- Menú lateral -->
-        <div class="navbar-main-menu" id="navbarMainMenu">
-
-            <!-- Sección superior: Perfil del administrador -->
-            <div class="admin-profile-section">
-                <!-- Contenedor para la foto con ícono de lápiz -->
-                <div class="profile-photo-container">
-                    <!-- Círculo con imagen del administrador -->
-                    <div class="admin-profile-circle">
-                        <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
-                        <div class="profile-placeholder" id="profilePlaceholder" style="display: none;">
-                            <i class="fas fa-user"></i>
-                            <span>Admin</span>
+                <div class="navbar-right-container">
+                    <div class="navbar-notificaciones-container">
+                        <button class="navbar-notificaciones-btn" id="notificacionesBtn">
+                            <i class="fas fa-bell"></i>
+                            <span class="notificaciones-badge" id="notificacionesBadge" style="display: none;">0</span>
+                        </button>
+                        <div class="notificaciones-dropdown" id="notificacionesDropdown">
+                            <div class="notificaciones-header">
+                                <h3>Notificaciones</h3>
+                                <button class="notificaciones-marcar-todas" id="marcarTodasBtn">
+                                    <i class="fas fa-check-double"></i> Marcar todas
+                                </button>
+                            </div>
+                            <div class="notificaciones-lista" id="notificacionesLista">
+                                <div class="notificaciones-cargando">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <p>Cargando notificaciones...</p>
+                                </div>
+                            </div>
+                            <div class="notificaciones-footer">
+                                <a href="/usuarios/administrador/notificaciones/notificaciones.html">Ver todas</a>
+                            </div>
                         </div>
                     </div>
-                    <!-- Ícono de lápiz para editar -->
-                    <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
-                        <i class="fas fa-pencil-alt"></i>
-                    </a>
-                </div>
 
-                <!-- Información del administrador -->
-                <div class="admin-info">
-                    <div class="admin-name" id="adminName">Cargando...</div>
-                    <div class="admin-role">Administrador</div>
-                    <div class="admin-email" id="adminEmail">cargando@email.com</div>
-                    <div class="admin-organization" id="adminOrganization"></div>
+                    <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                    </button>
                 </div>
             </div>
 
-            <!-- ========================================= -->
-            <!-- SECCIÓN 1: GESTIONAR (Áreas, Categorías, Sucursales, Regiones, Permisos, Usuarios) -->
-            <!-- ========================================= -->
-            <div class="nav-section">
-                <!-- Botón desplegable de Gestionar -->
-                <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
-                    <span>Gestionar</span>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
+            <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
 
-                <!-- Contenedor de opciones expandido -->
-                <div class="administracion-dropdown-options" id="administracionDropdownOptions">
-                    <!-- ÁREAS -->
-                    <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-map"></i>
-                        <span>Áreas</span>
-                    </a>
+            <div class="navbar-main-menu" id="navbarMainMenu">
 
-                    <!-- CATEGORIAS -->
-                    <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-tags"></i>
-                        <span>Categorías</span>
-                    </a>
+                <div class="admin-profile-section">
+                    <div class="profile-photo-container">
+                        <div class="admin-profile-circle">
+                            <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
+                            <div class="profile-placeholder" id="profilePlaceholder" style="display: none;">
+                                <i class="fas fa-user"></i>
+                                <span>Admin</span>
+                            </div>
+                        </div>
+                        <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
+                            <i class="fas fa-pencil-alt"></i>
+                        </a>
+                    </div>
 
-                    <!-- SUCURSALES -->
-                    <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-store"></i>
-                        <span>Sucursales</span>
-                    </a>
-
-                    <!-- REGIONES -->
-                    <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-location-dot"></i>
-                        <span>Regiones</span>
-                    </a>
-
-                    <!-- PERMISOS -->
-                    <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-lock"></i>
-                        <span>Permisos</span>
-                    </a>
-
-                    <!-- USUARIOS -->
-                    <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-users-gear"></i>
-                        <span>Usuarios</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- ========================================= -->
-            <!-- SECCIÓN 2: INCIDENCIAS (CON DROPDOWN) -->
-            <!-- ========================================= -->
-            <div class="nav-section">
-                <!-- Botón desplegable de Incidencias -->
-                <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
-                    <span>Incidencias</span>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
-
-                <!-- Contenedor de opciones expandido -->
-                <div class="administracion-dropdown-options" id="incidenciasDropdownOptions">
-                    <!-- LISTA DE INCIDENCIAS -->
-                    <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-list"></i>
-                        <span>Lista de Incidencias</span>
-                    </a>
-
-                    <!-- CREAR INCIDENCIA -->
-                    <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-plus-circle"></i>
-                        <span>Crear Incidencia</span>
-                    </a>
-
-                    <!-- SEGUIMIENTO INCIDENCIA -->
-                    <a href="/usuarios/administrador/segimientoIncidencias/segimientoIncidencias.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-history"></i>
-                        <span>Seguimiento</span>
-                    </a>
-
-                    <!-- VER INCIDENCIA -->
-                    <a href="/usuarios/administrador/verIncidencias/verIncidencias.html" class="administracion-dropdown-option">
-                        <i class="fa-solid fa-eye"></i>
-                        <span>Ver Incidencia</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- ========================================= -->
-            <!-- SECCIÓN 3: BITÁCORA (NUEVA) -->
-            <!-- ========================================= -->
-            <div class="nav-section">
-                <div class="nav-section-title">
-                    <i class="fa-solid fa-book"></i>
-                    <span>Bitácora</span>
+                    <div class="admin-info">
+                        <div class="admin-name" id="adminName">Cargando...</div>
+                        <div class="admin-role">Administrador</div>
+                        <div class="admin-email" id="adminEmail">cargando@email.com</div>
+                        <div class="admin-organization" id="adminOrganization"></div>
+                    </div>
                 </div>
 
-                <!-- BITÁCORA DE ACTIVIDADES -->
-                <a href="/usuarios/administrador/bitacoraActividades/bitacoraActividades.html" class="admin-dropdown-option" style="width: 100%;">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span>Bitácora de Actividades</span>
-                </a>
-            </div>
+                <div class="nav-section">
+                    <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
+                        <span>Gestionar</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
 
-            <!-- ========================================= -->
-            <!-- SECCIÓN 4: CONFIGURACIÓN -->
-            <!-- ========================================= -->
-            <div class="admin-options-section">
-                <button class="admin-dropdown-btn" id="adminDropdownBtn">
-                    <span>Configuración</span>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
+                    <div class="administracion-dropdown-options" id="administracionDropdownOptions">
+                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-map"></i>
+                            <span>Áreas</span>
+                        </a>
 
-                <div class="admin-dropdown-options" id="adminDropdownOptions">
-                    <!-- Personalización de colores -->
-                    <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
-                        <i class="fa-solid fa-palette"></i>
-                        <span>Personalización</span>
-                    </a>
+                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Categorías</span>
+                        </a>
 
-                    <!-- Cerrar Sesión -->
-                    <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Cerrar Sesión</span>
+                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Sucursales</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>Regiones</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-lock"></i>
+                            <span>Permisos</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-users-gear"></i>
+                            <span>Usuarios</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
+                        <span>Incidencias</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="administracion-dropdown-options" id="incidenciasDropdownOptions">
+                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-list"></i>
+                            <span>Lista de Incidencias</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Crear Incidencia</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/segimientoIncidencias/segimientoIncidencias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-history"></i>
+                            <span>Seguimiento</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/verIncidencias/verIncidencias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-eye"></i>
+                            <span>Ver Incidencia</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Bitácora</span>
+                    </div>
+
+                    <a href="/usuarios/administrador/bitacoraActividades/bitacoraActividades.html" class="admin-dropdown-option" style="width: 100%;">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Bitácora de Actividades</span>
                     </a>
                 </div>
+
+                <div class="admin-options-section">
+                    <button class="admin-dropdown-btn" id="adminDropdownBtn">
+                        <span>Configuración</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="admin-dropdown-options" id="adminDropdownOptions">
+                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
+                            <i class="fa-solid fa-palette"></i>
+                            <span>Personalización</span>
+                        </a>
+
+                        <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
+                    </div>
+                </div>
             </div>
-        </div>
-    `;
+        `;
 
-    document.body.prepend(navbar);
-}
+        document.body.prepend(navbar);
+    }
 
-    // Ajusta el padding del body
     adjustBodyPadding() {
         const navbar = document.getElementById('complete-navbar');
         if (!navbar) return;
@@ -1123,7 +1474,6 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
-    // CARGA DESDE LOCALSTORAGE (inmediata)
     loadAdminDataFromLocalStorage() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -1198,20 +1548,16 @@ class NavbarComplete {
         }
     }
 
-    // CARGA DESDE FIREBASE (actualización)
     async loadAdminDataFromFirebase() {
         try {
-            // Importar UserManager dinámicamente
             const { UserManager } = await import('/clases/user.js');
             this.userManager = new UserManager();
 
-            // Esperar un poco a que UserManager cargue
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             if (this.userManager.currentUser) {
                 const firebaseUser = this.userManager.currentUser;
 
-                // Verificar si hubo cambios comparando con localStorage
                 let needsUpdate = false;
 
                 if (!this.currentAdmin) {
@@ -1232,23 +1578,17 @@ class NavbarComplete {
                         rol: firebaseUser.rol
                     };
 
-                    // Actualizar el navbar con los nuevos datos
                     this.updateNavbarWithAdminData();
-
-                    // Actualizar localStorage para futuras cargas
                     this.updateLocalStorageFromFirebase(firebaseUser);
                 }
             }
 
         } catch (error) {
-            // Silencioso - no interrumpir la experiencia del usuario
         }
     }
 
-    // Actualiza localStorage con datos de Firebase
     updateLocalStorageFromFirebase(userData) {
         try {
-            // Actualizar userData
             const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
             const updatedUserData = {
                 ...currentUserData,
@@ -1268,7 +1608,6 @@ class NavbarComplete {
 
             localStorage.setItem('userData', JSON.stringify(updatedUserData));
 
-            // Actualizar claves individuales
             if (userData.fotoUsuario) localStorage.setItem('userFoto', userData.fotoUsuario);
             if (userData.fotoOrganizacion) localStorage.setItem('organizacionLogo', userData.fotoOrganizacion);
             if (userData.nombreCompleto) localStorage.setItem('userNombre', userData.nombreCompleto);
@@ -1278,14 +1617,11 @@ class NavbarComplete {
             if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
 
         } catch (error) {
-            // Silencioso
         }
     }
 
-    // Actualiza el navbar con los datos del administrador
     updateNavbarWithAdminData() {
         if (!this.currentAdmin) {
-            // Mostrar valores por defecto si no hay datos
             const adminName = document.getElementById('adminName');
             const adminEmail = document.getElementById('adminEmail');
             const adminOrganization = document.getElementById('adminOrganization');
@@ -1297,23 +1633,14 @@ class NavbarComplete {
             return;
         }
 
-        // 1. Actualizar segundo logo (logo de la organización)
         this.updateOrganizationLogo();
-
-        // 2. Actualizar información en el menú desplegable
         this.updateAdminMenuInfo();
-
-        // 3. Configurar eventos para los botones nuevos
         this.setupAdminButtons();
     }
 
-    // Configura los eventos para los botones de administración
     setupAdminButtons() {
-        // Los botones ahora son enlaces con href, no necesitan eventos adicionales
-        // pero mantenemos el método por si se necesita agregar funcionalidad extra
     }
 
-    // Actualiza el segundo logo con el logo de la organización
     updateOrganizationLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
@@ -1322,30 +1649,22 @@ class NavbarComplete {
 
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
 
-        // Si tiene logo de organización
         if (this.currentAdmin?.fotoOrganizacion && this.currentAdmin.fotoOrganizacion.length > 10) {
             organizationLogoImg.src = this.currentAdmin.fotoOrganizacion;
             organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion || 'Organización'}`;
             organizationLogoImg.style.display = 'block';
             orgTextLogo.style.display = 'none';
-
-            // Añadir tooltip y atributos
             organizationLogoImg.title = this.currentAdmin.organizacion || 'Organización';
             organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion || '');
         } else {
-            // Mostrar texto en lugar de imagen
             this.showOrgTextLogo();
         }
 
-        // Actualizar el enlace del logo para redirigir al dashboard
         orgLogoLink.href = '/usuarios/administrador/panelControl/panelControl.html';
-
-        // Asegurar que el contenedor sea un círculo perfecto
         orgLogoContainer.style.borderRadius = '50%';
         orgLogoContainer.style.overflow = 'hidden';
     }
 
-    // Muestra iniciales cuando no hay logo
     showOrgTextLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
@@ -1367,27 +1686,22 @@ class NavbarComplete {
         orgTextLogo.title = orgName;
     }
 
-    // Actualiza la información del administrador en el menú
     updateAdminMenuInfo() {
-        // Nombre del administrador
         const adminName = document.getElementById('adminName');
         if (adminName) {
             adminName.textContent = this.currentAdmin?.nombreCompleto || 'Administrador';
         }
 
-        // Email del administrador
         const adminEmail = document.getElementById('adminEmail');
         if (adminEmail) {
             adminEmail.textContent = this.currentAdmin?.correoElectronico || 'No especificado';
         }
 
-        // Organización del administrador
         const adminOrganization = document.getElementById('adminOrganization');
         if (adminOrganization) {
             adminOrganization.textContent = this.currentAdmin?.organizacion || 'Sin organización';
         }
 
-        // Foto de perfil del administrador
         const adminProfileImg = document.getElementById('adminProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
 
@@ -1403,7 +1717,6 @@ class NavbarComplete {
         }
     }
 
-    // Muestra placeholder cuando no hay foto
     showProfilePlaceholder() {
         const adminProfileImg = document.getElementById('adminProfileImg');
         const profilePlaceholder = document.getElementById('profilePlaceholder');
@@ -1425,19 +1738,18 @@ class NavbarComplete {
         }
     }
 
-    // Configura todas las funcionalidades
     setupFunctionalities() {
         this.setupMenu();
         this.setupScroll();
         this.loadFontAwesome();
         this.setupAdminDropdown();
-        this.setupAdministracionDropdown(); // Para Gestionar
-        this.setupIncidenciasDropdown();    // Para Incidencias (CORREGIDO: ahora se llama)
+        this.setupAdministracionDropdown();
+        this.setupIncidenciasDropdown();
         this.loadOrbitronFont();
         this.setupLogout();
+        this._configurarNotificacionesDropdown();
     }
 
-    // Configura el menú hamburguesa
     setupMenu() {
         const hamburgerBtn = document.getElementById('navbarHamburger');
         const mainMenu = document.getElementById('navbarMainMenu');
@@ -1453,7 +1765,6 @@ class NavbarComplete {
             overlay.classList.toggle('active', this.isMenuOpen);
             document.body.classList.toggle('menu-open', this.isMenuOpen);
 
-            // Cerrar dropdowns si está abierto
             if (!this.isMenuOpen) {
                 if (this.isAdminDropdownOpen) {
                     this.toggleAdminDropdown(false);
@@ -1499,7 +1810,6 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de Gestionar
     setupAdministracionDropdown() {
         const dropdownBtn = document.getElementById('administracionDropdownBtn');
         const dropdownOptions = document.getElementById('administracionDropdownOptions');
@@ -1516,7 +1826,6 @@ class NavbarComplete {
             toggleDropdown();
         });
 
-        // Cerrar dropdown al hacer clic fuera
         document.addEventListener('click', (e) => {
             if (!dropdownBtn.contains(e.target) &&
                 !dropdownOptions.contains(e.target) &&
@@ -1525,19 +1834,15 @@ class NavbarComplete {
             }
         });
 
-        // Cerrar dropdown al presionar Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isAdministracionDropdownOpen) {
                 this.toggleAdministracionDropdown(false);
             }
         });
 
-        // Evitar que los clics en las opciones cierren el menú principal
         const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
         options.forEach(option => {
-            option.addEventListener('click', (e) => {
-                // No detener propagación para permitir la navegación
-                // Pero cerrar el dropdown después de la navegación
+            option.addEventListener('click', () => {
                 setTimeout(() => {
                     this.toggleAdministracionDropdown(false);
                 }, 100);
@@ -1545,7 +1850,6 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de Incidencias (NUEVO)
     setupIncidenciasDropdown() {
         const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
         const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
@@ -1562,7 +1866,6 @@ class NavbarComplete {
             toggleDropdown();
         });
 
-        // Cerrar dropdown al hacer clic fuera
         document.addEventListener('click', (e) => {
             if (!dropdownBtn.contains(e.target) &&
                 !dropdownOptions.contains(e.target) &&
@@ -1571,14 +1874,12 @@ class NavbarComplete {
             }
         });
 
-        // Cerrar dropdown al presionar Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isIncidenciasDropdownOpen) {
                 this.toggleIncidenciasDropdown(false);
             }
         });
 
-        // Cerrar dropdown al navegar
         const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
         options.forEach(option => {
             option.addEventListener('click', () => {
@@ -1589,7 +1890,6 @@ class NavbarComplete {
         });
     }
 
-    // Configura el dropdown de configuración
     setupAdminDropdown() {
         const dropdownBtn = document.getElementById('adminDropdownBtn');
         const dropdownOptions = document.getElementById('adminDropdownOptions');
@@ -1606,7 +1906,6 @@ class NavbarComplete {
             toggleDropdown();
         });
 
-        // Cerrar dropdown al hacer clic fuera
         document.addEventListener('click', (e) => {
             if (!dropdownBtn.contains(e.target) &&
                 !dropdownOptions.contains(e.target) &&
@@ -1615,7 +1914,6 @@ class NavbarComplete {
             }
         });
 
-        // Cerrar dropdown al presionar Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isAdminDropdownOpen) {
                 this.toggleAdminDropdown(false);
@@ -1623,7 +1921,6 @@ class NavbarComplete {
         });
     }
 
-    // Configura la funcionalidad de cerrar sesión
     setupLogout() {
         const logoutOption = document.getElementById('logoutOption');
 
@@ -1633,7 +1930,6 @@ class NavbarComplete {
             e.preventDefault();
             e.stopPropagation();
 
-            // Confirmar cierre de sesión
             const confirmLogout = await this.showLogoutConfirmation();
 
             if (confirmLogout) {
@@ -1642,10 +1938,8 @@ class NavbarComplete {
         });
     }
 
-    // Muestra confirmación para cerrar sesión
     async showLogoutConfirmation() {
         return new Promise((resolve) => {
-            // Usar SweetAlert2 para confirmación
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     title: '¿Cerrar sesión?',
@@ -1658,53 +1952,41 @@ class NavbarComplete {
                     resolve(result.isConfirmed);
                 });
             } else {
-                // Fallback si SweetAlert2 no está disponible
                 const confirmed = confirm('¿Estás seguro de que deseas cerrar sesión?');
                 resolve(confirmed);
             }
         });
     }
 
-    // Realiza el cierre de sesión COMPLETO
     async performLogout() {
         try {
-            // 1. Cerrar sesión en Firebase si UserManager está disponible
             if (this.userManager && typeof this.userManager.logout === 'function') {
                 await this.userManager.logout();
             } else {
-                // Intentar cerrar sesión directamente si firebase está disponible
                 await this.signOutFirebaseDirectly();
             }
 
-            // 2. Limpiar TODOS los datos de almacenamiento local
             this.clearAllStorage();
 
-            // 3. Mostrar mensaje de éxito
             await this.showLogoutSuccessMessage();
 
-            // 4. Redirigir a la página de login con parámetros para evitar caché
             this.redirectToLogin();
 
         } catch (error) {
-            // Aún así limpiar almacenamiento y redirigir
             this.clearAllStorage();
             this.redirectToLogin();
         }
     }
 
-    // Intenta cerrar sesión en Firebase directamente
     async signOutFirebaseDirectly() {
         try {
-            // Método 1: Si firebase está disponible globalmente
             if (typeof firebase !== 'undefined' && firebase.auth) {
                 await firebase.auth().signOut();
                 return;
             }
 
-            // Método 2: Intentar con la importación dinámica
             const { getAuth, signOut } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js');
 
-            // Buscar cualquier app de Firebase inicializada
             const firebaseApps = typeof firebase !== 'undefined' ? firebase.apps : [];
             if (firebaseApps && firebaseApps.length > 0) {
                 const auth = getAuth(firebaseApps[0]);
@@ -1712,31 +1994,20 @@ class NavbarComplete {
             }
 
         } catch (error) {
-            // Silencioso - continuar de todos modos
         }
     }
 
-    // Limpia TODOS los datos de almacenamiento
     clearAllStorage() {
         try {
-            // Limpiar localStorage completamente
             localStorage.clear();
-
-            // Limpiar sessionStorage
             sessionStorage.clear();
-
-            // Limpiar cookies relacionadas con sesión
             this.clearSessionCookies();
-
-            // Limpiar indexedDB si es necesario
             this.clearIndexedDB();
 
         } catch (error) {
-            // Silencioso
         }
     }
 
-    // Limpia cookies de sesión
     clearSessionCookies() {
         try {
             const cookies = document.cookie.split(';');
@@ -1745,35 +2016,28 @@ class NavbarComplete {
                 const eqPos = cookie.indexOf('=');
                 const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
 
-                // Eliminar cookies relacionadas con sesión o auth
                 if (name.includes('session') || name.includes('auth') || name.includes('firebase')) {
                     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
                 }
             }
         } catch (error) {
-            // Silencioso
         }
     }
 
-    // Limpia indexedDB si existe
     async clearIndexedDB() {
         try {
-            // Lista de bases de datos que podrían contener datos de sesión
             const databases = ['firebaseLocalStorageDb', 'firestore', 'centinela-db'];
 
             for (const dbName of databases) {
                 try {
                     await indexedDB.deleteDatabase(dbName);
                 } catch (e) {
-                    // La base de datos podría no existir, continuar
                 }
             }
         } catch (error) {
-            // Silencioso
         }
     }
 
-    // Muestra mensaje de éxito al cerrar sesión
     async showLogoutSuccessMessage() {
         if (typeof Swal !== 'undefined') {
             await Swal.fire({
@@ -1788,29 +2052,20 @@ class NavbarComplete {
                 }
             });
         } else {
-            // Fallback simple
             alert('Sesión cerrada exitosamente. Redirigiendo...');
         }
     }
 
-    // Redirige a la página de login
     redirectToLogin() {
-        // Agregar timestamp para evitar caché
         const timestamp = new Date().getTime();
-
-        // Redirigir con parámetros para forzar cierre de sesión completo
         const loginUrl = `/usuarios/visitantes/inicioSesion/inicioSesion.html?logout=true&timestamp=${timestamp}&nocache=1`;
-
-        // Forzar recarga completa
         window.location.href = loginUrl;
 
-        // Doble seguridad: forzar recarga si no redirige en 1 segundo
         setTimeout(() => {
             window.location.replace(loginUrl);
         }, 1000);
     }
 
-    // Alterna la visibilidad del dropdown de configuración
     toggleAdminDropdown(show) {
         const dropdownBtn = document.getElementById('adminDropdownBtn');
         const dropdownOptions = document.getElementById('adminDropdownOptions');
@@ -1822,7 +2077,6 @@ class NavbarComplete {
         }
     }
 
-    // Alterna la visibilidad del dropdown de Gestionar
     toggleAdministracionDropdown(show) {
         const dropdownBtn = document.getElementById('administracionDropdownBtn');
         const dropdownOptions = document.getElementById('administracionDropdownOptions');
@@ -1834,7 +2088,6 @@ class NavbarComplete {
         }
     }
 
-    // Alterna la visibilidad del dropdown de Incidencias (NUEVO)
     toggleIncidenciasDropdown(show) {
         const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
         const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
@@ -1846,7 +2099,6 @@ class NavbarComplete {
         }
     }
 
-    // Configura efecto visual al hacer scroll
     setupScroll() {
         const navbar = document.getElementById('complete-navbar');
         if (!navbar) return;
@@ -1856,7 +2108,6 @@ class NavbarComplete {
         });
     }
 
-    // Carga Font Awesome
     loadFontAwesome() {
         if (!document.querySelector('link[href*="font-awesome"]')) {
             const faLink = document.createElement('link');
@@ -1866,7 +2117,6 @@ class NavbarComplete {
         }
     }
 
-    // Carga la fuente Orbitron desde Google Fonts
     loadOrbitronFont() {
         if (!document.querySelector('link[href*="orbitron"]')) {
             const orbitronLink = document.createElement('link');
@@ -1877,5 +2127,4 @@ class NavbarComplete {
     }
 }
 
-// Inicializa automáticamente al cargar la página
 new NavbarComplete();

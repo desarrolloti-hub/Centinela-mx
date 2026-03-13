@@ -1,4 +1,5 @@
-// crearIncidencias.js - VERSIÓN SIN ÁREA EN FORMULARIO (SOLO ALERTAS)
+// [file name]: crearIncidencias.js
+// [file path]: /usuarios/administrador/crearIncidencias/crearIncidencias.js
 
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
@@ -17,13 +18,9 @@ class CrearIncidenciaController {
         this.loadingOverlay = null;
         this.flatpickrInstance = null;
         this.historialManager = null;
-
-        // =============================================
-        // PROPIEDADES PARA CANALIZACIONES (solo para alertas)
-        // =============================================
-        this.areas = []; // Todas las áreas disponibles
-        this.AreaManager = null; // Manager de áreas
-        // =============================================
+        this.areas = [];
+        this.AreaManager = null;
+        this.notificacionManager = null;
 
         this._init();
     }
@@ -40,6 +37,18 @@ class CrearIncidenciaController {
         return this.historialManager;
     }
 
+    async _initNotificacionManager() {
+        if (!this.notificacionManager) {
+            try {
+                const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
+                this.notificacionManager = new NotificacionAreaManager();
+            } catch (error) {
+                console.error('Error inicializando notificacionManager:', error);
+            }
+        }
+        return this.notificacionManager;
+    }
+
     async _init() {
         try {
             this._cargarUsuario();
@@ -50,11 +59,8 @@ class CrearIncidenciaController {
 
             await this._inicializarManager();
             await this._cargarDatosRelacionados();
-
-            // =============================================
-            // Cargar áreas disponibles (para las alertas)
-            // =============================================
             await this._cargarAreas();
+            await this._initNotificacionManager();
 
             this._configurarOrganizacion();
             this._inicializarDateTimePicker();
@@ -181,9 +187,6 @@ class CrearIncidenciaController {
         }
     }
 
-    // =============================================
-    // Cargar áreas disponibles (para las alertas)
-    // =============================================
     async _cargarAreas() {
         try {
             const { AreaManager } = await import('/clases/area.js');
@@ -194,9 +197,7 @@ class CrearIncidenciaController {
                     this.usuarioActual.organizacionCamelCase
                 );
 
-                // Filtrar solo áreas activas
                 this.areas = areasObtenidas.filter(area => area.estado === 'activa');
-
                 console.log('✅ Áreas cargadas:', this.areas.length);
             }
         } catch (error) {
@@ -823,9 +824,6 @@ class CrearIncidenciaController {
         const subcategoriaSelect = document.getElementById('subcategoriaIncidencia');
         const subcategoriaId = subcategoriaSelect.value;
 
-        // =============================================
-        // Preparar datos para guardar (SIN ÁREA)
-        // =============================================
         const datos = {
             sucursalId,
             categoriaId,
@@ -866,10 +864,7 @@ class CrearIncidenciaController {
         }
     }
 
-    // =============================================
-    // Canalizar a áreas después de crear la incidencia
-    // =============================================
-    async _canalizarAreas(incidenciaId) {
+    async _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
         let continuar = true;
         let areasCanalizadas = [];
 
@@ -881,7 +876,6 @@ class CrearIncidenciaController {
                     : `Áreas actuales: ${areasCanalizadas.map(a => a.nombre).join(', ')}\n\nSelecciona otra área (o cancela para terminar)`,
                 input: 'select',
                 inputOptions: this.areas.reduce((opts, area) => {
-                    // No mostrar áreas ya seleccionadas
                     if (!areasCanalizadas.some(a => a.id === area.id)) {
                         opts[area.id] = area.nombreArea;
                     }
@@ -900,7 +894,6 @@ class CrearIncidenciaController {
             });
 
             if (!isConfirmed) {
-                // Usuario canceló o finalizó
                 continuar = false;
                 break;
             }
@@ -913,7 +906,6 @@ class CrearIncidenciaController {
                         nombre: area.nombreArea
                     });
 
-                    // Guardar la canalización en Firestore
                     try {
                         const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
                         const { db } = await import('/config/firebase-config.js');
@@ -952,7 +944,49 @@ class CrearIncidenciaController {
             }
         }
 
+        if (areasCanalizadas.length > 0) {
+            await this._enviarNotificacionesCanalizacion(areasCanalizadas, incidenciaId, incidenciaTitulo);
+        }
+
         return areasCanalizadas;
+    }
+
+    async _enviarNotificacionesCanalizacion(areas, incidenciaId, incidenciaTitulo) {
+        try {
+            const notificacionManager = await this._initNotificacionManager();
+            
+            if (!notificacionManager) {
+                console.error('No se pudo inicializar notificacionManager');
+                return;
+            }
+
+            const sucursalInput = document.getElementById('sucursalIncidencia');
+            const categoriaInput = document.getElementById('categoriaIncidencia');
+            const riesgoSelect = document.getElementById('nivelRiesgo');
+
+            const resultado = await notificacionManager.notificarMultiplesAreas({
+                areas: areas,
+                incidenciaId: incidenciaId,
+                incidenciaTitulo: incidenciaTitulo || 'Incidencia',
+                sucursalId: sucursalInput?.dataset.selectedId || '',
+                sucursalNombre: sucursalInput?.value || '',
+                categoriaId: categoriaInput?.dataset.selectedId || '',
+                categoriaNombre: categoriaInput?.value || '',
+                nivelRiesgo: riesgoSelect?.value || 'medio',
+                tipo: 'canalizacion',
+                prioridad: riesgoSelect?.value || 'normal',
+                remitenteId: this.usuarioActual.id,
+                remitenteNombre: this.usuarioActual.nombreCompleto,
+                organizacionCamelCase: this.usuarioActual.organizacionCamelCase
+            });
+
+            if (resultado.success) {
+                console.log(`✅ Notificaciones enviadas: ${resultado.totalUsuarios} usuarios notificados`);
+            }
+
+        } catch (error) {
+            console.error('Error en _enviarNotificacionesCanalizacion:', error);
+        }
     }
 
     async _guardarIncidencia(datos) {
@@ -987,12 +1021,10 @@ class CrearIncidenciaController {
                 fechaInicio: fechaObj,
                 detalles: datos.detalles,
                 reportadoPorId: this.usuarioActual.id
-                // SIN canalizaciones aquí
             };
 
             const archivos = datos.imagenes.map(img => img.file);
 
-            // Crear la incidencia
             const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
                 incidenciaData,
                 this.usuarioActual,
@@ -1000,14 +1032,10 @@ class CrearIncidenciaController {
                 datos.imagenes
             );
 
-            // Generar PDF
             const pdfGenerado = await this._generarYSubirPDF(nuevaIncidencia);
 
             Swal.close();
 
-            // =============================================
-            // PREGUNTAR SI QUIERE CANALIZAR A ÁREAS
-            // =============================================
             const quiereCanalizar = await Swal.fire({
                 icon: 'question',
                 title: '¿Canalizar esta incidencia?',
@@ -1021,10 +1049,9 @@ class CrearIncidenciaController {
             let areasCanalizadas = [];
 
             if (quiereCanalizar.isConfirmed) {
-                areasCanalizadas = await this._canalizarAreas(nuevaIncidencia.id);
+                areasCanalizadas = await this._canalizarAreas(nuevaIncidencia.id, datos.detalles.substring(0, 50));
             }
 
-            // Mensaje final
             const totalCanalizaciones = areasCanalizadas.length;
             const mensajeCanalizacion = totalCanalizaciones > 0
                 ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
@@ -1111,7 +1138,6 @@ class CrearIncidenciaController {
             });
 
             console.log('✅ PDF subido exitosamente:', resultado.url);
-
             return true;
 
         } catch (error) {
@@ -1211,7 +1237,6 @@ class CrearIncidenciaController {
     }
 }
 
-// Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     window.crearIncidenciaDebug = { controller: new CrearIncidenciaController() };
 });
