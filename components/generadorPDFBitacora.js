@@ -1,6 +1,6 @@
 /**
  * GENERADOR PDF BITÁCORA - Sistema Centinela
- * VERSIÓN: 1.2 - OPTIMIZADO: Más rápido, un solo botón
+ * VERSIÓN: 1.8 - ORDEN ASCENDENTE: 8am, 9am, 10am, 11am, 12pm...
  */
 
 import { PDFBaseGenerator, coloresBase } from './pdf-base-generator.js';
@@ -69,7 +69,6 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
         try {
             const { mostrarAlerta = true } = opciones;
 
-            // Mostrar solo un loading simple y rápido
             if (mostrarAlerta) {
                 Swal.fire({
                     title: 'Generando PDF...',
@@ -81,7 +80,6 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
                 });
             }
 
-            // Cargar librerías en paralelo
             await Promise.all([
                 this.cargarLibrerias(),
                 this.cargarLogoCentinela(),
@@ -91,17 +89,14 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
             this.actividades = actividades;
             this.fechaSeleccionada = fecha;
 
-            // Crear PDF
             const pdf = new this.jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
                 format: 'a4'
             });
 
-            // Generar contenido
             this._generarBitacoraDia(pdf, actividades, fecha);
 
-            // Nombre del archivo
             const fechaStr = this._formatearFechaArchivo(fecha);
             const nombreArchivo = `bitacora_${fechaStr}.pdf`;
 
@@ -138,7 +133,6 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
         this.paginaActualReal = 1;
         this.totalPaginas = Math.max(1, Math.ceil(actividades.length / 25));
 
-        // Encabezado
         const fechaFormateada = fecha.toLocaleDateString('es-MX', {
             weekday: 'long',
             year: 'numeric',
@@ -177,7 +171,6 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
         pdf.text(`Total: ${actividades.length} actividad(es)`, margen + 5, yPos);
         yPos += 12;
 
-        // Tabla de actividades
         if (actividades.length === 0) {
             pdf.setFont('helvetica', 'italic');
             pdf.setFontSize(this.fonts.normal);
@@ -187,22 +180,37 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
             this._dibujarTablaActividades(pdf, actividades, margen, yPos, anchoContenido);
         }
 
-        // Pie de página
         this.dibujarPiePagina(pdf);
+    }
+
+    _truncarDescripcion(texto, maxLength = 40) {
+        if (!texto) return '';
+        const textoStr = String(texto);
+        if (textoStr.length <= maxLength) return textoStr;
+        return textoStr.substring(0, maxLength - 3) + '...';
     }
 
     _dibujarTablaActividades(pdf, actividades, margen, yInicio, anchoContenido) {
         const headers = [['Hora', 'Módulo', 'Tipo', 'Usuario', 'Descripción']];
         const columnWidths = [18, 25, 22, 35, anchoContenido - 100];
 
-        const body = actividades.map(act => {
+        // ORDENAR ACTIVIDADES: ASCENDENTE (más temprano primero)
+        // 8:00 AM, 9:00 AM, 10:00 AM, 11:00 AM, 12:00 PM...
+        const actividadesOrdenadas = [...actividades].sort((a, b) => {
+            const fechaA = a.fecha ? (a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha)) : new Date(0);
+            const fechaB = b.fecha ? (b.fecha.toDate ? b.fecha.toDate() : new Date(b.fecha)) : new Date(0);
+            return fechaA - fechaB; // ASCENDENTE: más temprano primero
+        });
+
+        const body = actividadesOrdenadas.map(act => {
             const uiData = act.toUI ? act.toUI() : this._extraerUIData(act);
+
             return [
                 uiData.hora || '--:--',
                 uiData.modulo || 'N/A',
                 uiData.tipo || 'N/A',
                 uiData.usuario?.nombre || 'Desconocido',
-                uiData.descripcion || 'Sin descripción'
+                this._truncarDescripcion(uiData.descripcion, 40)
             ];
         });
 
@@ -217,27 +225,30 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
                 cellPadding: 3,
                 lineColor: [200, 200, 200],
                 lineWidth: 0.1,
-                overflow: 'linebreak',
+                cellWidth: 'wrap',
+                minCellHeight: 8,
                 valign: 'middle'
             },
             headStyles: {
-                fillColor: [0, 207, 255],
-                textColor: [0, 0, 0],
+                fillColor: [41, 98, 255], // Azul brillante
+                textColor: [255, 255, 255], // Blanco
                 fontStyle: 'bold',
                 fontSize: 9,
-                halign: 'center'
+                halign: 'center',
+                valign: 'middle'
             },
             columnStyles: {
                 0: { cellWidth: columnWidths[0], halign: 'center' },
-                1: { cellWidth: columnWidths[1] },
+                1: { cellWidth: columnWidths[1], halign: 'left' },
                 2: { cellWidth: columnWidths[2], halign: 'center' },
-                3: { cellWidth: columnWidths[3] },
-                4: { cellWidth: columnWidths[4] }
+                3: { cellWidth: columnWidths[3], halign: 'left' },
+                4: { cellWidth: columnWidths[4], halign: 'left' }
             },
             alternateRowStyles: {
                 fillColor: [245, 245, 245]
             },
             margin: { left: margen, right: margen },
+            tableWidth: 'auto',
             didDrawPage: (data) => {
                 this.paginaActualReal = data.pageNumber;
             }
@@ -265,7 +276,7 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
             return fechaObj.toLocaleTimeString('es-MX', {
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12: false
+                hour12: true // Para que muestre AM/PM
             });
         } catch {
             return '--:--';
@@ -286,5 +297,6 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
     }
 }
 
+// EXPORTACIÓN
 export const generadorBitacoraPDF = new GeneradorPDFBitacora();
 export default generadorBitacoraPDF;

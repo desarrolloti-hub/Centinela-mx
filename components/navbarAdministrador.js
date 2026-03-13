@@ -988,7 +988,7 @@ class NavbarComplete {
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
                     
-                    <!-- Contenedor de opciones expandido con los botones (Áreas, Categorías, Sucursales, Regiones, Incidencias, Estadísticas, Permisos) -->
+                    <!-- Contenedor de opciones expandido con los botones (Áreas, Categorías, Sucursales, Regiones, Incidencias, Estadísticas, Permisos, Incidencias Canalizadas) -->
                     <div class="administracion-dropdown-options" id="administracionDropdownOptions">
                         <!-- Botón para ÁREAS -->
                         <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option" id="areasBtn">
@@ -1020,13 +1020,19 @@ class NavbarComplete {
                             <span>Incidencias</span>
                         </a>
 
+                        <!-- Botón para INCIDENCIAS CANALIZADAS (NUEVO) -->
+                        <a href="/usuarios/administrador/incidenciasCanalizadas/incidenciasCanalizadas.html" class="administracion-dropdown-option" id="incidenciasCanalizadasBtn">
+                            <i class="fa-solid fa-check-circle"></i>
+                            <span>Incidencias Canalizadas</span>
+                        </a>
+
                         <!-- Botón para ESTADÍSTICAS -->
                         <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option" id="estadisticasBtn">
                             <i class="fa-solid fa-chart-pie"></i>
                             <span>Estadísticas</span>
                         </a>
 
-                        <!-- Botón para PERMISOS (NUEVO) -->
+                        <!-- Botón para PERMISOS -->
                         <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option" id="permisosBtn">
                             <i class="fa-solid fa-lock"></i>
                             <span>Permisos</span>

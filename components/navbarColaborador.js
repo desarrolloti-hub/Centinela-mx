@@ -47,7 +47,7 @@ class NavbarComplete {
             // 4. Actualizar navbar con datos del usuario
             this.updateNavbarWithUserData();
 
-            // 5. APLICAR FILTROS DE PERMISOS
+            // 5. APLICAR FILTROS DE PERMISOS (PERO SIEMPRE MOSTRAR INCIDENCIAS CANALIZADAS)
             this.filterMenuByPermissions();
 
         } catch (error) {
@@ -89,6 +89,7 @@ class NavbarComplete {
                     sucursales: true,
                     regiones: true,
                     incidencias: true,
+                    incidenciasCanalizadas: true, // SIEMPRE TRUE PARA ADMIN
                     usuarios: true,
                     permisos: true,
                     admin: true
@@ -105,6 +106,7 @@ class NavbarComplete {
                     sucursales: false,
                     regiones: false,
                     incidencias: true,
+                    incidenciasCanalizadas: true, // SIEMPRE TRUE PARA COLABORADORES
                     usuarios: false,
                     permisos: false,
                     admin: false
@@ -134,6 +136,7 @@ class NavbarComplete {
                             sucursales: permiso.puedeAcceder('sucursales'),
                             regiones: permiso.puedeAcceder('regiones'),
                             incidencias: permiso.puedeAcceder('incidencias'),
+                            incidenciasCanalizadas: true, // SIEMPRE TRUE independientemente del permiso
                             usuarios: false,
                             permisos: false,
                             admin: false
@@ -156,6 +159,7 @@ class NavbarComplete {
                 sucursales: false,
                 regiones: false,
                 incidencias: true,
+                incidenciasCanalizadas: true, // SIEMPRE TRUE
                 usuarios: false,
                 permisos: false,
                 admin: false
@@ -169,6 +173,7 @@ class NavbarComplete {
                 sucursales: false,
                 regiones: false,
                 incidencias: true,
+                incidenciasCanalizadas: true, // SIEMPRE TRUE incluso en error
                 usuarios: false,
                 permisos: false,
                 admin: false
@@ -185,37 +190,49 @@ class NavbarComplete {
 
         console.log('🎯 Navbar: Aplicando filtros de permisos:', this.permisos);
 
-        // Elementos del menú (ÁREAS, CATEGORÍAS, SUCURSALES, REGIONES, INCIDENCIAS)
+        // Elementos del menú (ÁREAS, CATEGORÍAS, SUCURSALES, REGIONES, INCIDENCIAS, INCIDENCIAS CANALIZADAS)
         const menuItems = [
             {
                 id: 'areasBtn',
                 modulo: 'areas',
                 elemento: document.getElementById('areasBtn'),
-                texto: 'Áreas'
+                texto: 'Áreas',
+                siempreVisible: false
             },
             {
                 id: 'categoriasBtn',
                 modulo: 'categorias',
                 elemento: document.getElementById('categoriasBtn'),
-                texto: 'Categorías'
+                texto: 'Categorías',
+                siempreVisible: false
             },
             {
                 id: 'sucursalesBtn',
                 modulo: 'sucursales',
                 elemento: document.getElementById('sucursalesBtn'),
-                texto: 'Sucursales'
+                texto: 'Sucursales',
+                siempreVisible: false
             },
             {
                 id: 'regionesBtn',
                 modulo: 'regiones',
                 elemento: document.getElementById('regionesBtn'),
-                texto: 'Regiones'
+                texto: 'Regiones',
+                siempreVisible: false
             },
             {
                 id: 'incidenciasBtn',
                 modulo: 'incidencias',
                 elemento: document.getElementById('incidenciasBtn'),
-                texto: 'Incidencias'
+                texto: 'Incidencias',
+                siempreVisible: false
+            },
+            {
+                id: 'incidenciasCanalizadasBtn',
+                modulo: 'incidenciasCanalizadas',
+                elemento: document.getElementById('incidenciasCanalizadasBtn'),
+                texto: 'Incidencias Canalizadas',
+                siempreVisible: true // ESTE SIEMPRE SE VA A MOSTRAR
             }
         ];
 
@@ -225,14 +242,21 @@ class NavbarComplete {
         menuItems.forEach(item => {
             if (!item.elemento) return;
 
-            // Verificar permiso (IGUAL QUE EN panelControl.js)
-            const debeMostrarse = this.verificarPermiso(item.modulo);
+            // Verificar si debe mostrarse (si es siempreVisible O tiene permiso)
+            let debeMostrarse = false;
+
+            if (item.siempreVisible) {
+                debeMostrarse = true;
+                console.log(`🔵 ${item.id} es SIEMPRE VISIBLE`);
+            } else {
+                debeMostrarse = this.verificarPermiso(item.modulo);
+            }
 
             if (debeMostrarse) {
                 item.elemento.style.display = 'flex';
                 itemsVisibles++;
                 itemsVisiblesList.push(item.texto);
-                console.log(`✅ Mostrando ${item.id} (permiso: ${item.modulo})`);
+                console.log(`✅ Mostrando ${item.id} (${item.siempreVisible ? 'siempre visible' : 'permiso: ' + item.modulo})`);
             } else {
                 item.elemento.style.display = 'none';
                 console.log(`❌ Ocultando ${item.id} (sin permiso: ${item.modulo})`);
@@ -1160,20 +1184,20 @@ class NavbarComplete {
                     </div>
                 </div>
                 
-                <!-- SECCIÓN DE MÓDULOS (ÁREAS, CATEGORÍAS, SUCURSALES, REGIONES, INCIDENCIAS) -->
+                <!-- SECCIÓN DE MÓDULOS DEL SISTEMA -->
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <i class="fa-solid fa-cubes"></i>
                         <span>Módulos del Sistema</span>
                     </div>
                     
-                    <!-- Botón desplegable -->
+                    <!-- Botón desplegable de ACCESOS RÁPIDOS -->
                     <button class="herramientas-dropdown-btn" id="herramientasDropdownBtn">
                         <span>Accesos Rápidos</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
                     
-                    <!-- Contenedor de opciones -->
+                    <!-- Contenedor de opciones (todos los módulos) -->
                     <div class="herramientas-dropdown-options" id="herramientasDropdownOptions">
                         <!-- ÁREAS -->
                         <a href="/usuarios/colaboradores/areas/areas.html" class="herramientas-dropdown-option" id="areasBtn">
@@ -1203,6 +1227,12 @@ class NavbarComplete {
                         <a href="/usuarios/colaboradores/incidencias/incidencias.html" class="herramientas-dropdown-option" id="incidenciasBtn">
                             <i class="fa-solid fa-exclamation-triangle"></i>
                             <span>Incidencias</span>
+                        </a>
+
+                        <!-- INCIDENCIAS CANALIZADAS (SIEMPRE VISIBLE) -->
+                        <a href="/usuarios/colaboradores/incidenciasCanalizadasColaborador/incidenciasCanalizadasColaborador.html" class="herramientas-dropdown-option" id="incidenciasCanalizadasBtn">
+                            <i class="fa-solid fa-check-circle"></i>
+                            <span>Incidencias Canalizadas</span>
                         </a>
                     </div>
                 </div>
