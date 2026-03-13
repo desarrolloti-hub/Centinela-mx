@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN CORREGIDA CON VISUALIZADOR DE IMÁGENES
+// seguimientoIncidencia.js - VERSIÓN FINAL CON ESPERA DE PDF
 
 import '/components/visualizadorImagen.js';
 
@@ -907,9 +907,11 @@ async function _generarYSubirPDF() {
         incidenciaActual.pdfUrl = resultado.url;
         
         console.log('✅ PDF actualizado exitosamente:', resultado.url);
+        return true;
         
     } catch (error) {
         console.error('❌ Error actualizando PDF:', error);
+        return false;
     }
 }
 
@@ -923,10 +925,21 @@ async function guardarSeguimiento(datos) {
             btnGuardar.disabled = true;
         }
 
-        mostrarCargando('Guardando seguimiento y subiendo evidencias...');
+        // Mostrar loading mientras se guarda TODO (seguimiento + PDF)
+        Swal.fire({
+            title: 'Guardando seguimiento...',
+            text: 'Por favor espere, esto puede tomar unos segundos.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
+        // 1. Guardar el seguimiento
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
@@ -953,43 +966,44 @@ async function guardarSeguimiento(datos) {
             if (ev.preview) URL.revokeObjectURL(ev.preview);
         });
         evidenciasSeleccionadas = [];
-        actualizarVistaPreviaEvidencias();
 
+        // 2. Recargar la incidencia para tener los datos actualizados
         await cargarIncidencia(incidenciaActual.id);
 
+        // 3. Generar y subir el PDF (ahora mismo, no en timeout)
+        const pdfGenerado = await _generarYSubirPDF();
+
+        // 4. Actualizar la vista
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
 
         document.getElementById('descripcionSeguimiento').value = '';
         actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
-
         configurarFechaSeguimiento();
 
-        ocultarCargando();
+        // 5. Cerrar loading
+        Swal.close();
 
-        // ✅ GENERAR PDF EN SEGUNDO PLANO DESPUÉS DEL SEGUIMIENTO
-        setTimeout(() => {
-            _generarYSubirPDF();
-        }, 2000);
-
+        // 6. Mostrar mensaje de éxito
         await Swal.fire({
             icon: 'success',
             title: '¡Seguimiento guardado!',
-            text: 'El seguimiento se ha agregado correctamente. El PDF se está actualizando.',
-            timer: 2000,
-            showConfirmButton: false
+            text: pdfGenerado ? 'El seguimiento y el PDF se han actualizado correctamente.' : 'El seguimiento se guardó pero hubo un problema con el PDF.',
+            confirmButtonText: 'Aceptar',
+            confirmButtonColor: '#28a745'
         });
 
     } catch (error) {
         console.error('Error guardando seguimiento:', error);
-        ocultarCargando();
+        Swal.close();
         mostrarError(error.message || 'No se pudo guardar el seguimiento');
     } finally {
         if (btnGuardar) {
             btnGuardar.innerHTML = originalHTML;
             btnGuardar.disabled = false;
         }
+        ocultarCargando();
     }
 }
 
