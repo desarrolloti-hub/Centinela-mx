@@ -54,7 +54,6 @@ async function getLastVisitedUrl() {
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {
                 const url = request.result || '/';
-                console.log('[SW] 📌 Última URL recuperada:', url);
                 resolve(url);
             };
         });
@@ -75,7 +74,6 @@ async function saveLastVisitedUrl(url) {
             
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {
-                console.log('[SW] 💾 URL guardada:', url);
                 resolve();
             };
         });
@@ -119,7 +117,6 @@ self.addEventListener('message', (event) => {
 
 // Manejador para mensajes en segundo plano
 messaging.onBackgroundMessage(function(payload) {
-  console.log('[SW] 📨 Mensaje en segundo plano:', payload);
   
   const notificationTitle = payload.notification?.title || 'Centinela-MX';
   const notificationOptions = {
@@ -138,9 +135,7 @@ messaging.onBackgroundMessage(function(payload) {
 });
 
 // Manejar clic en la notificación
-self.addEventListener('notificationclick', async function(event) {
-  console.log('[SW] 🔔 Notificación clickeada:', event);
-  
+self.addEventListener('notificationclick', async function(event) {  
   event.notification.close();
   
   const data = event.notification.data;
@@ -165,7 +160,6 @@ self.addEventListener('notificationclick', async function(event) {
     url = lastUrl;
   }
   
-  console.log('[SW] 🔗 Navegando a:', url);
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
@@ -182,12 +176,10 @@ self.addEventListener('notificationclick', async function(event) {
 
 // Evento de instalación
 self.addEventListener('install', function(event) {
-  console.log('[SW] ✅ Service Worker instalado');
   self.skipWaiting();
 });
 
 // Evento de activación
 self.addEventListener('activate', function(event) {
-  console.log('[SW] ✅ Service Worker activado');
   return self.clients.claim();
 });
