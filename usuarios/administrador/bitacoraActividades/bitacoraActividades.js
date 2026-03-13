@@ -1,6 +1,3 @@
-// bitacoraActividades.js - Controlador de la bitácora de actividades
-// AHORA USA obtenerActividadesPorUsuarioYFecha para mostrar SOLO las del usuario actual
-
 class BitacoraController {
     constructor() {
         this.historialManager = null;

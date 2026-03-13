@@ -1,7 +1,3 @@
-// historialUsuario.js - VERSIÓN CORREGIDA
-// Un documento por día y por usuario con MAP de actividades
-// AHORA FILTRA CORRECTAMENTE POR USUARIO
-
 import {
     collection,
     doc,
