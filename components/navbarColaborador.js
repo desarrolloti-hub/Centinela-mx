@@ -67,17 +67,58 @@ class NavbarComplete {
         }
 
         try {
-            this.notificacionesNoLeidas = await this.notificacionManager.obtenerConteoNoLeidas(
-                this.currentUser.id,
-                this.currentUser.organizacionCamelCase
-            );
+            console.log('🔍 Usuario actual:', {
+                id: this.currentUser.id,
+                areaId: this.currentUser.areaId,
+                organizacion: this.currentUser.organizacionCamelCase
+            });
 
-            this.notificaciones = await this.notificacionManager.obtenerNotificaciones(
+            // Obtener TODAS las notificaciones del usuario (sin filtrar)
+            const todasNotificaciones = await this.notificacionManager.obtenerNotificaciones(
                 this.currentUser.id,
                 this.currentUser.organizacionCamelCase,
-                true,
-                10
+                false, // todas
+                20
             );
+
+            console.log('📬 Notificaciones sin filtrar:', todasNotificaciones.length);
+
+            // El usuario tiene areaAsignadaId
+            const areaUsuario = this.currentUser.areaId;
+
+            if (!areaUsuario) {
+                console.log('ℹ️ Usuario sin área asignada');
+                this.notificaciones = [];
+                this.notificacionesNoLeidas = 0;
+            } else {
+                // Filtrar SOLO las notificaciones que incluyen el área del usuario
+                this.notificaciones = todasNotificaciones.filter(notif => {
+                    // Verificar por areasIds (array de IDs)
+                    if (notif.areasIds && Array.isArray(notif.areasIds) && notif.areasIds.length > 0) {
+                        const pertenece = notif.areasIds.includes(areaUsuario);
+                        if (pertenece) {
+                            console.log(`✅ Notificación ${notif.id} es para área ${areaUsuario}`);
+                        }
+                        return pertenece;
+                    }
+
+                    // Fallback: verificar areasDestino
+                    if (notif.areasDestino && Array.isArray(notif.areasDestino)) {
+                        const pertenece = notif.areasDestino.some(area => area.id === areaUsuario);
+                        if (pertenece) {
+                            console.log(`✅ Notificación ${notif.id} es para área ${areaUsuario} (por areasDestino)`);
+                        }
+                        return pertenece;
+                    }
+
+                    return false;
+                });
+
+                // Calcular no leídas
+                this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
+            }
+
+            console.log(`📬 Notificaciones filtradas: ${this.notificaciones.length} (${this.notificacionesNoLeidas} no leídas)`);
 
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
@@ -124,7 +165,7 @@ class NavbarComplete {
         }
 
         let html = '';
-        this.notificaciones.forEach(notif => {
+        this.notificaciones.slice(0, 5).forEach(notif => {
             const notifUI = notif.toUI();
             html += `
                 <div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
@@ -145,6 +186,14 @@ class NavbarComplete {
             `;
         });
 
+        if (this.notificaciones.length > 5) {
+            html += `
+                <div class="notificaciones-ver-mas">
+                    <a href="/usuarios/colaboradores/notificaciones/notificaciones.html">Ver ${this.notificaciones.length - 5} más</a>
+                </div>
+            `;
+        }
+
         container.innerHTML = html;
 
         container.querySelectorAll('.notificacion-item').forEach(item => {
@@ -158,6 +207,16 @@ class NavbarComplete {
                         id,
                         this.currentUser.organizacionCamelCase
                     );
+                    
+                    // Actualizar contador local
+                    this.notificacionesNoLeidas = Math.max(0, this.notificacionesNoLeidas - 1);
+                    this._actualizarBadgeNotificaciones();
+                    
+                    // Marcar como leída en la UI
+                    const notifIndex = this.notificaciones.findIndex(n => n.id === id);
+                    if (notifIndex !== -1) {
+                        this.notificaciones[notifIndex].leida = true;
+                    }
                 }
                 
                 if (url) {
@@ -179,7 +238,7 @@ class NavbarComplete {
             );
             
             this.notificacionesNoLeidas = 0;
-            this.notificaciones = [];
+            this.notificaciones.forEach(n => n.leida = true);
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
             
@@ -561,20 +620,20 @@ class NavbarComplete {
                 opacity: 0.5;
             }
             
-            .notificaciones-footer {
+            .notificaciones-footer, .notificaciones-ver-mas {
                 padding: 12px 15px;
                 border-top: 1px solid var(--color-border-light);
                 text-align: center;
             }
             
-            .notificaciones-footer a {
+            .notificaciones-footer a, .notificaciones-ver-mas a {
                 color: var(--color-accent-primary);
                 text-decoration: none;
                 font-size: 13px;
                 font-weight: 500;
             }
             
-            .notificaciones-footer a:hover {
+            .notificaciones-footer a:hover, .notificaciones-ver-mas a:hover {
                 text-decoration: underline;
             }
             
@@ -1502,14 +1561,21 @@ class NavbarComplete {
                     organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
                     fotoUsuario: fotoUsuario,
                     fotoOrganizacion: fotoOrganizacion,
-                    areaId: userData.areaAsignadaId || '',
-                    cargoId: userData.cargoId || '',
+                    areaId: userData.areaAsignadaId || userData.areaId || localStorage.getItem('userAreaId') || '',
+                    cargoId: userData.cargoId || localStorage.getItem('userCargoId') || '',
                     status: userData.status || 'activo',
                     verificado: userData.verificado || true,
                     ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
                 };
 
                 this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
+                
+                console.log('✅ Usuario cargado en navbar:', {
+                    nombre: this.currentUser.nombreCompleto,
+                    areaId: this.currentUser.areaId,
+                    cargoId: this.currentUser.cargoId,
+                    rol: this.currentUser.rol
+                });
 
                 return true;
             }
@@ -1938,6 +2004,11 @@ class NavbarComplete {
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
+            // Cerrar el otro dropdown si está abierto
+            if (this.isAdminDropdownOpen) {
+                this.toggleUserDropdown(false);
+            }
+            
             this.isHerramientasDropdownOpen = !this.isHerramientasDropdownOpen;
             this.toggleHerramientasDropdown(this.isHerramientasDropdownOpen);
         };
@@ -1978,6 +2049,11 @@ class NavbarComplete {
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
+            // Cerrar el otro dropdown si está abierto
+            if (this.isHerramientasDropdownOpen) {
+                this.toggleHerramientasDropdown(false);
+            }
+            
             this.isAdminDropdownOpen = !this.isAdminDropdownOpen;
             this.toggleUserDropdown(this.isAdminDropdownOpen);
         };

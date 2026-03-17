@@ -1,3 +1,6 @@
+// [file name]: notificacionArea.js
+// [file path]: /clases/notificacionArea.js
+
 import {
     collection,
     doc,
@@ -11,8 +14,6 @@ import {
     limit,
     serverTimestamp,
     Timestamp,
-    arrayUnion,
-    arrayRemove,
     increment,
     writeBatch
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
@@ -41,6 +42,7 @@ class NotificacionArea {
         
         // Áreas destino
         this.areasDestino = data.areasDestino || [];
+        this.areasIds = data.areasIds || (data.areasDestino ? data.areasDestino.map(a => a.id) : []);
         
         // Estadísticas
         this.totalUsuarios = data.totalUsuarios || 0;
@@ -127,6 +129,7 @@ class NotificacionArea {
             sucursalNombre: this.sucursalNombre,
             nivelRiesgo: this.nivelRiesgo,
             areasDestino: this.areasDestino,
+            areasIds: this.areasIds,
             totalUsuarios: this.totalUsuarios,
             leidas: this.leidas,
             remitenteNombre: this.remitenteNombre,
@@ -143,6 +146,7 @@ class NotificacionAreaManager {
         this.usuarioActual = null;
         this.cacheUsuariosPorArea = new Map();
         this.cacheTiempo = 5 * 60 * 1000;
+        this.functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
         this._initUsuario();
     }
 
@@ -177,67 +181,169 @@ class NotificacionAreaManager {
         return `not_${timestamp}_${random}`;
     }
 
-    async _getUsuariosPorAreas(areasIds, organizacionCamelCase, forceRefresh = false) {
+    /**
+     * Obtiene TODOS los usuarios de un área específica
+     */
+    async _getUsuariosPorAreaId(areaId, organizacionCamelCase) {
         try {
-            if (!areasIds || areasIds.length === 0) return {};
+            if (!areaId) return [];
 
-            const cacheKey = `${organizacionCamelCase}_${areasIds.sort().join('_')}`;
-            const ahora = Date.now();
-
-            if (!forceRefresh && this.cacheUsuariosPorArea.has(cacheKey)) {
-                const cache = this.cacheUsuariosPorArea.get(cacheKey);
-                if (ahora - cache.timestamp < this.cacheTiempo) {
-                    return cache.data;
-                }
-            }
-
+            console.log(`🔍 Buscando usuarios con areaAsignadaId = ${areaId}`);
+            
             const { collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
             
-            const usuariosPorArea = {};
             const collectionName = `users_${organizacionCamelCase}`;
             const usersCollection = collection(db, collectionName);
-
-            for (let i = 0; i < areasIds.length; i += 10) {
-                const batch = areasIds.slice(i, i + 10);
+            
+            const q = query(
+                usersCollection,
+                where("areaAsignadaId", "==", areaId),
+                where("status", "==", true)
+            );
+            
+            const snapshot = await getDocs(q);
+            const usuarios = [];
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                console.log(`✅ Usuario encontrado: ${data.nombreCompleto}`);
                 
-                const q = query(
-                    usersCollection,
-                    where("areaAsignadaId", "in", batch),
-                    where("status", "==", "activo")
-                );
-                
-                const snapshot = await getDocs(q);
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const areaId = data.areaAsignadaId;
-                    
-                    if (!usuariosPorArea[areaId]) {
-                        usuariosPorArea[areaId] = [];
-                    }
-                    
-                    usuariosPorArea[areaId].push({
-                        id: doc.id,
-                        nombreCompleto: data.nombreCompleto || data.nombre || 'Usuario',
-                        correo: data.email || data.correo || '',
-                        cargo: data.cargo || data.rol || 'Colaborador'
-                    });
+                usuarios.push({
+                    id: doc.id,
+                    nombreCompleto: data.nombreCompleto || 'Usuario',
+                    correo: data.correoElectronico || '',
+                    dispositivos: data.dispositivos || [],
+                    areaAsignadaId: data.areaAsignadaId
                 });
-            }
-
-            this.cacheUsuariosPorArea.set(cacheKey, {
-                data: usuariosPorArea,
-                timestamp: ahora
             });
 
-            return usuariosPorArea;
+            console.log(`✅ Total usuarios en área ${areaId}: ${usuarios.length}`);
+            return usuarios;
 
         } catch (error) {
-            console.error('Error en _getUsuariosPorAreas:', error);
-            return {};
+            console.error('Error en _getUsuariosPorAreaId:', error);
+            return [];
         }
     }
 
+    /**
+     * Obtiene usuarios de múltiples áreas
+     */
+    async _getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase) {
+        try {
+            if (!areasIds || areasIds.length === 0) return [];
+
+            const todosUsuarios = [];
+            
+            for (const areaId of areasIds) {
+                const usuariosArea = await this._getUsuariosPorAreaId(areaId, organizacionCamelCase);
+                todosUsuarios.push(...usuariosArea);
+            }
+
+            // Eliminar duplicados
+            const usuariosUnicos = [];
+            const idsVistos = new Set();
+            
+            for (const usuario of todosUsuarios) {
+                if (!idsVistos.has(usuario.id)) {
+                    idsVistos.add(usuario.id);
+                    usuariosUnicos.push(usuario);
+                }
+            }
+
+            console.log(`✅ Total usuarios únicos: ${usuariosUnicos.length}`);
+            return usuariosUnicos;
+
+        } catch (error) {
+            console.error('Error en _getUsuariosPorMultiplesAreas:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Enviar notificaciones push a usuarios - VERSIÓN CORREGIDA
+     */
+    async _enviarNotificacionesPush(usuarios, notificacionData) {
+        try {
+            console.log(`📱 Enviando notificaciones push a ${usuarios.length} usuarios...`);
+            
+            let enviados = 0;
+            let fallidos = 0;
+            
+            for (const usuario of usuarios) {
+                if (!usuario.dispositivos || !Array.isArray(usuario.dispositivos) || usuario.dispositivos.length === 0) {
+                    console.log(`⚠️ Usuario ${usuario.id} no tiene dispositivos`);
+                    continue;
+                }
+
+                // Filtrar dispositivos activos
+                const dispositivosActivos = usuario.dispositivos.filter(d => d.enabled === true);
+                
+                for (const dispositivo of dispositivosActivos) {
+                    if (!dispositivo.token) continue;
+                    
+                    try {
+                        console.log(`📤 Enviando push a ${usuario.id} - token: ${dispositivo.token.substring(0, 20)}...`);
+                        
+                        const response = await fetch(this.functionUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                userId: usuario.id,
+                                userType: 'colaborador',
+                                organizacionCamelCase: notificacionData.organizacionCamelCase,
+                                title: notificacionData.titulo,
+                                body: notificacionData.mensaje,
+                                url: notificacionData.urlDestino,
+                                senderToken: notificacionData.remitenteId,
+                                data: {
+                                    incidenciaId: notificacionData.incidenciaId,
+                                    tipo: notificacionData.tipo,
+                                    nivelRiesgo: notificacionData.nivelRiesgo,
+                                    notificacionId: notificacionData.id
+                                }
+                            })
+                        });
+
+                        const result = await response.json();
+                        
+                        if (response.ok && result.success) {
+                            enviados++;
+                            console.log(`✅ Push enviado a ${usuario.id}`);
+                        } else {
+                            fallidos++;
+                            console.log(`❌ Error push a ${usuario.id}:`, result);
+                        }
+
+                    } catch (error) {
+                        fallidos++;
+                        console.error(`❌ Error enviando push a ${usuario.id}:`, error);
+                    }
+
+                    await new Promise(r => setTimeout(r, 100));
+                }
+            }
+
+            console.log(`📊 Push: ${enviados} enviados, ${fallidos} fallidos`);
+
+            return {
+                success: enviados > 0,
+                enviados: enviados,
+                fallidos: fallidos,
+                total: usuarios.length
+            };
+
+        } catch (error) {
+            console.error('❌ Error en _enviarNotificacionesPush:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Método principal: Notificar a múltiples áreas
+     */
     async notificarMultiplesAreas({
         areas = [],
         incidenciaId,
@@ -253,11 +359,12 @@ class NotificacionAreaManager {
         prioridad = 'normal',
         remitenteId = null,
         remitenteNombre = null,
-        organizacionCamelCase
+        organizacionCamelCase,
+        enviarPush = true
     }) {
         try {
             if (!organizacionCamelCase) {
-                console.error('❌ Error: organizacionCamelCase es requerido');
+                console.error('❌ Error: organizacionCamelCase requerido');
                 return { success: false, error: 'organizacionCamelCase requerido' };
             }
 
@@ -266,7 +373,7 @@ class NotificacionAreaManager {
             }
 
             if (!incidenciaId) {
-                console.error('❌ Error: incidenciaId es requerido');
+                console.error('❌ Error: incidenciaId requerido');
                 return { success: false, error: 'incidenciaId requerido' };
             }
 
@@ -280,22 +387,23 @@ class NotificacionAreaManager {
                 }
             }
 
+            // Obtener IDs de las áreas
             const areasIds = areas.map(a => a.id);
-            const usuariosPorArea = await this._getUsuariosPorAreas(areasIds, organizacionCamelCase);
-            
-            let totalUsuarios = 0;
-            Object.values(usuariosPorArea).forEach(usuarios => {
-                totalUsuarios += usuarios.length;
-            });
+            console.log('📋 Áreas a notificar:', areasIds);
 
+            // Obtener TODOS los usuarios de esas áreas
+            const usuarios = await this._getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase);
+            console.log(`👥 Usuarios encontrados: ${usuarios.length}`);
+
+            // Crear mensaje
             const titulo = `📢 Incidencia canalizada`;
             let mensajeFinal = mensaje;
             
             if (!mensajeFinal) {
                 if (areas.length === 1) {
-                    mensajeFinal = `Se te ha canalizado una incidencia al área: ${areas[0].nombre}`;
+                    mensajeFinal = `Nueva incidencia canalizada al área: ${areas[0].nombre}`;
                 } else {
-                    mensajeFinal = `Se te ha canalizado una incidencia a ${areas.length} áreas`;
+                    mensajeFinal = `Nueva incidencia canalizada a ${areas.length} áreas`;
                 }
                 if (incidenciaTitulo) {
                     mensajeFinal = `${incidenciaTitulo}`;
@@ -303,17 +411,14 @@ class NotificacionAreaManager {
             }
 
             const urlDestino = `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
-
             const notificacionId = this._generarNotificacionId();
+
+            // Guardar en Firestore (UNA SOLA NOTIFICACIÓN GLOBAL)
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const notificacionRef = doc(db, collectionName, notificacionId);
 
-            const usuariosPorAreaIds = {};
-            Object.keys(usuariosPorArea).forEach(areaId => {
-                usuariosPorAreaIds[areaId] = usuariosPorArea[areaId].map(u => u.id);
-            });
-
             const notificacionData = {
+                id: notificacionId,
                 titulo: titulo,
                 mensaje: mensajeFinal,
                 tipo: tipo,
@@ -332,8 +437,9 @@ class NotificacionAreaManager {
                 nivelRiesgo: nivelRiesgo,
                 
                 areasDestino: areas.map(a => ({ id: a.id, nombre: a.nombre })),
+                areasIds: areasIds,
                 
-                totalUsuarios: totalUsuarios,
+                totalUsuarios: usuarios.length,
                 leidas: 0,
                 
                 detalles: detalles,
@@ -342,20 +448,27 @@ class NotificacionAreaManager {
                 
                 urlDestino: urlDestino,
                 
-                usuariosPorArea: usuariosPorAreaIds,
-                areasIds: areasIds,
-                
                 fechaCreacion: serverTimestamp()
             };
 
             await setDoc(notificacionRef, notificacionData);
-            await this._crearIndicesUsuarios(notificacionId, usuariosPorArea, organizacionCamelCase);
+            console.log(`✅ Notificación guardada: ${notificacionId}`);
+
+            // Crear índices para cada usuario
+            await this._crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase);
+
+            // ENVIAR NOTIFICACIONES PUSH
+            let pushResult = null;
+            if (enviarPush && usuarios.length > 0) {
+                pushResult = await this._enviarNotificacionesPush(usuarios, notificacionData);
+            }
 
             return {
                 success: true,
                 notificacionId: notificacionId,
-                totalUsuarios: totalUsuarios,
-                areas: areas.length
+                totalUsuarios: usuarios.length,
+                areas: areas.length,
+                push: pushResult
             };
 
         } catch (error) {
@@ -364,36 +477,44 @@ class NotificacionAreaManager {
         }
     }
 
-    async _crearIndicesUsuarios(notificacionId, usuariosPorArea, organizacionCamelCase) {
+    /**
+     * Crear índices para cada usuario
+     */
+    async _crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase) {
         try {
+            if (!usuarios || usuarios.length === 0) return;
+
             const batch = writeBatch(db);
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             let operaciones = 0;
 
-            Object.keys(usuariosPorArea).forEach(areaId => {
-                const usuarios = usuariosPorArea[areaId];
+            for (const usuario of usuarios) {
+                const userNotifRef = doc(db, userNotifCollectionName, usuario.id);
                 
-                usuarios.forEach(usuario => {
-                    const userNotifRef = doc(db, userNotifCollectionName, usuario.id);
-                    
-                    batch.set(userNotifRef, {
-                        notificaciones: {
-                            [notificacionId]: {
-                                leida: false,
-                                fechaRecepcion: serverTimestamp(),
-                                fechaLectura: null
-                            }
-                        },
-                        ultimaActualizacion: serverTimestamp(),
-                        totalPendientes: increment(1)
-                    }, { merge: true });
+                batch.set(userNotifRef, {
+                    notificaciones: {
+                        [notificacionId]: {
+                            leida: false,
+                            fechaRecepcion: serverTimestamp(),
+                            fechaLectura: null
+                        }
+                    },
+                    ultimaActualizacion: serverTimestamp(),
+                    totalPendientes: increment(1)
+                }, { merge: true });
 
-                    operaciones++;
-                });
-            });
+                operaciones++;
+
+                if (operaciones >= 400) {
+                    await batch.commit();
+                    console.log(`✅ Lote de ${operaciones} índices guardado`);
+                    operaciones = 0;
+                }
+            }
 
             if (operaciones > 0) {
                 await batch.commit();
+                console.log(`✅ Último lote de ${operaciones} índices guardado`);
             }
 
         } catch (error) {
@@ -401,6 +522,9 @@ class NotificacionAreaManager {
         }
     }
 
+    /**
+     * Obtener notificaciones de un usuario
+     */
     async obtenerNotificaciones(usuarioId, organizacionCamelCase, soloNoLeidas = false, limite = 50) {
         try {
             if (!organizacionCamelCase || !usuarioId) return [];
@@ -408,6 +532,7 @@ class NotificacionAreaManager {
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
 
+            // Obtener índices del usuario
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
             const userNotifSnap = await getDoc(userNotifRef);
 
@@ -463,6 +588,9 @@ class NotificacionAreaManager {
         }
     }
 
+    /**
+     * Obtener conteo de no leídas
+     */
     async obtenerConteoNoLeidas(usuarioId, organizacionCamelCase) {
         try {
             if (!organizacionCamelCase || !usuarioId) return 0;
@@ -484,6 +612,9 @@ class NotificacionAreaManager {
         }
     }
 
+    /**
+     * Marcar notificación como leída
+     */
     async marcarComoLeida(usuarioId, notificacionId, organizacionCamelCase) {
         try {
             if (!organizacionCamelCase || !usuarioId || !notificacionId) return false;
@@ -512,6 +643,9 @@ class NotificacionAreaManager {
         }
     }
 
+    /**
+     * Marcar todas como leídas
+     */
     async marcarTodasComoLeidas(usuarioId, organizacionCamelCase) {
         try {
             if (!organizacionCamelCase || !usuarioId) return false;
