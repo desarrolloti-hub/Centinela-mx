@@ -1,5 +1,6 @@
 // panelControl.js - Cargador de datos reales para el Panel de Control
 // Versión con 6 tarjetas - SIN ANIMACIONES PARPADEANTES
+// CORREGIDO: getCantidadCargos() → getCantidadCargosTotal()
 
 import { UserManager } from '/clases/user.js';
 import { IncidenciaManager } from '/clases/incidencia.js';
@@ -255,6 +256,7 @@ class PanelControlManager {
 
     /**
      * Carga el total de áreas y la suma de todos los cargos
+     * CORREGIDO: getCantidadCargos() → getCantidadCargosTotal()
      */
     async _cargarAreasYCargos() {
         try {
@@ -267,7 +269,7 @@ class PanelControlManager {
             // Calcular total de cargos sumando los cargos de cada área
             let totalCargos = 0;
             areas.forEach(area => {
-                totalCargos += area.getCantidadCargos();
+                totalCargos += area.getCantidadCargosTotal(); // ← CORREGIDO AQUÍ
             });
 
             this.estadisticas.cargos = totalCargos;
