@@ -4,8 +4,9 @@
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
-        this.isAdminDropdownOpen = false;
-        this.isHerramientasDropdownOpen = false;
+        this.isGestionarDropdownOpen = false;
+        this.isIncidenciasDropdownOpen = false;
+        this.isConfiguracionDropdownOpen = false;
         this.currentUser = null;
         this.userRole = null;
         this.permisos = null;
@@ -684,7 +685,7 @@ class NavbarComplete {
                 height: 100vh;
                 background-color: var(--navbar-scrolled-bg);
                 margin: 0;
-                padding: 0;
+                padding: 0 0 30px 0;
                 display: flex;
                 flex-direction: column;
                 transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -694,6 +695,14 @@ class NavbarComplete {
                 visibility: hidden;
                 opacity: 0;
                 overflow-x: hidden;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            .navbar-main-menu::-webkit-scrollbar {
+                display: none;
+                width: 0;
+                background: transparent;
             }
             
             .navbar-main-menu.active {
@@ -818,7 +827,34 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            .herramientas-dropdown-btn {
+            /* ===== ESTILOS PARA DROPDOWNS ===== */
+            .nav-section {
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--color-border-light);
+                overflow-x: hidden;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .nav-section:last-of-type {
+                border-bottom: none;
+            }
+            
+            .nav-section-title {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 15px;
+                color: var(--color-text-secondary);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-family: 'Orbitron', sans-serif;
+            }
+            
+            /* Botones principales de dropdown */
+            .gestionar-dropdown-btn,
+            .incidencias-dropdown-btn,
+            .configuracion-dropdown-btn {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -837,48 +873,60 @@ class NavbarComplete {
                 margin-bottom: 15px;
             }
             
-            .herramientas-dropdown-btn:hover {
+            .gestionar-dropdown-btn:hover,
+            .incidencias-dropdown-btn:hover,
+            .configuracion-dropdown-btn:hover {
                 background-color: var(--color-bg-secondary);
                 transform: translateY(-2px);
                 box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
             }
             
-            .herramientas-dropdown-btn:active {
-                transform: translateY(0);
-            }
-            
-            .herramientas-dropdown-btn i {
+            .gestionar-dropdown-btn i,
+            .incidencias-dropdown-btn i,
+            .configuracion-dropdown-btn i {
                 transition: transform 0.3s ease;
                 font-size: 14px;
             }
             
-            .herramientas-dropdown-btn.active i {
+            .gestionar-dropdown-btn.active i,
+            .incidencias-dropdown-btn.active i,
+            .configuracion-dropdown-btn.active i {
                 transform: rotate(180deg);
             }
             
-            .herramientas-dropdown-options {
-                display: flex;
+            /* Contenedor de opciones */
+            .gestionar-dropdown-options,
+            .incidencias-dropdown-options,
+            .configuracion-dropdown-options {
+                display: none;
                 flex-direction: column;
                 gap: 10px;
-                margin-bottom: 20px;
                 padding: 15px;
                 background-color: var(--color-bg-tertiary);
                 border-radius: var(--border-radius-medium);
                 border: 1px solid var(--color-border-light);
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                max-height: 0;
-                overflow: hidden;
-                opacity: 0;
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                margin-bottom: 0;
+                width: 100%;
+                box-sizing: border-box;
             }
             
-            .herramientas-dropdown-options.active {
-                max-height: 500px;
+            .gestionar-dropdown-options.active,
+            .incidencias-dropdown-options.active,
+            .configuracion-dropdown-options.active {
+                display: flex;
                 opacity: 1;
                 overflow: visible;
+                margin-bottom: 15px;
+                position: static;
+                height: auto;
+                flex-direction: column;
             }
             
-            .herramientas-dropdown-option {
+            /* Opciones individuales */
+            .gestionar-dropdown-option,
+            .incidencias-dropdown-option,
+            .configuracion-dropdown-option {
                 display: flex;
                 align-items: center;
                 gap: 12px;
@@ -894,15 +942,21 @@ class NavbarComplete {
                 font-family: 'Orbitron', sans-serif;
                 word-break: break-word;
                 white-space: normal;
+                width: 100%;
+                box-sizing: border-box;
             }
             
-            .herramientas-dropdown-option:hover {
+            .gestionar-dropdown-option:hover,
+            .incidencias-dropdown-option:hover,
+            .configuracion-dropdown-option:hover {
                 background-color: var(--color-bg-secondary);
                 transform: translateX(5px);
                 box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
             }
             
-            .herramientas-dropdown-option i {
+            .gestionar-dropdown-option i,
+            .incidencias-dropdown-option i,
+            .configuracion-dropdown-option i {
                 width: 20px;
                 text-align: center;
                 font-size: 16px;
@@ -910,31 +964,32 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
-            .herramientas-dropdown-option span {
+            .gestionar-dropdown-option span,
+            .incidencias-dropdown-option span,
+            .configuracion-dropdown-option span {
                 flex: 1;
                 white-space: normal;
                 word-break: break-word;
+                line-height: 1.4;
             }
             
-            .nav-section {
-                padding: 20px 25px;
-                border-bottom: 1px solid var(--color-border-light);
-                overflow-x: hidden;
-                max-width: 100%;
-                box-sizing: border-box;
+            /* Opción especial para cerrar sesión */
+            .logout-option {
+                background: linear-gradient(135deg, #ff6b6b, #ff5252);
+                border-color: #ff5252;
+                color: white;
             }
             
-            .nav-section-title {
-                font-size: 16px;
-                font-weight: 600;
-                margin-bottom: 15px;
-                color: var(--color-text-secondary);
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-family: 'Orbitron', sans-serif;
+            .logout-option:hover {
+                background: linear-gradient(135deg, #ff5252, #ff3838);
+                border-color: #ff3838;
             }
             
+            .logout-option i {
+                color: white;
+            }
+            
+            /* Sección de espacios vacíos */
             .menu-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -953,126 +1008,12 @@ class NavbarComplete {
                 cursor: default;
             }
             
-            .admin-options-section {
+            /* Sección de opciones al final */
+            .configuracion-options-section {
                 padding: 20px 25px;
                 border-top: 1px solid var(--color-border-light);
-                margin-top: auto;
-            }
-            
-            .admin-dropdown-btn {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                width: 100%;
-                padding: 14px 16px;
-                background-color: var(--color-bg-primary);
-                border: 2px solid var(--color-border-medium);
-                border-radius: var(--border-radius-medium);
-                cursor: pointer;
-                transition: all 0.3s ease;
-                font-size: 16px;
-                font-weight: 600;
-                color: var(--color-text-primary);
-                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-                font-family: 'Orbitron', sans-serif;
-            }
-            
-            .admin-dropdown-btn:hover {
-                background-color: var(--color-bg-secondary);
-                transform: translateY(-2px);
-                box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
-            }
-            
-            .admin-dropdown-btn:active {
-                transform: translateY(0);
-            }
-            
-            .admin-dropdown-btn i {
-                transition: transform 0.3s ease;
-                font-size: 14px;
-            }
-            
-            .admin-dropdown-btn.active i {
-                transform: rotate(180deg);
-            }
-            
-            .admin-dropdown-options {
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 15px;
-                padding: 15px;
-                background-color: var(--color-bg-tertiary);
-                border-radius: var(--border-radius-medium);
-                border: 1px solid var(--color-border-light);
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                max-height: 0;
-                overflow: hidden;
-                opacity: 0;
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                overflow-x: hidden;
-            }
-            
-            .admin-dropdown-options.active {
-                max-height: 350px;
-                opacity: 1;
-                overflow: visible;
-            }
-            
-            .admin-dropdown-option {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px 15px;
-                background-color: var(--color-bg-primary);
-                border: 1px solid var(--color-border-light);
-                border-radius: var(--border-radius-small);
-                cursor: pointer;
-                transition: all 0.3s ease;
-                text-decoration: none;
-                color: var(--color-text-primary);
-                font-weight: 500;
-                font-family: 'Orbitron', sans-serif;
-                word-break: break-word;
-                white-space: normal;
-                max-width: 100%;
-                box-sizing: border-box;
-            }
-            
-            .admin-dropdown-option:hover {
-                background-color: var(--color-bg-secondary);
-                transform: translateX(5px);
-                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-            }
-            
-            .admin-dropdown-option i {
-                width: 20px;
-                text-align: center;
-                font-size: 16px;
-                color: var(--color-accent-primary);
+                margin-top: 0;
                 flex-shrink: 0;
-            }
-            
-            .admin-dropdown-option span {
-                flex: 1;
-                white-space: normal;
-                word-break: break-word;
-                line-height: 1.4;
-            }
-            
-            .logout-option {
-                background: linear-gradient(135deg, #ff6b6b, #ff5252);
-                border-color: #ff5252;
-                color: white;
-            }
-            
-            .logout-option:hover {
-                background: linear-gradient(135deg, #ff5252, #ff3838);
-                border-color: #ff3838;
-            }
-            
-            .logout-option i {
-                color: white;
             }
             
             .navbar-mobile-overlay {
@@ -1091,6 +1032,37 @@ class NavbarComplete {
             .navbar-mobile-overlay.active {
                 display: block;
                 opacity: 1;
+            }
+            
+            /* FORZAR QUE LOS DROPDOWNS NO TENGAN SCROLL */
+            .nav-section {
+                flex-shrink: 0;
+                overflow: visible !important;
+            }
+
+            .gestionar-dropdown-options,
+            .incidencias-dropdown-options,
+            .configuracion-dropdown-options {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            .gestionar-dropdown-options.active,
+            .incidencias-dropdown-options.active,
+            .configuracion-dropdown-options.active {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            /* ASEGURAR QUE SOLO EL MENÚ PRINCIPAL TENGA SCROLL */
+            .navbar-main-menu {
+                overflow-y: auto !important;
+            }
+
+            .navbar-main-menu * {
+                overflow-y: visible !important;
             }
             
             @media (max-width: 992px) {
@@ -1119,23 +1091,6 @@ class NavbarComplete {
 
                 body.menu-open {
                     overflow: hidden;
-                }
-                
-                .herramientas-dropdown-option {
-                    padding: 12px 12px;
-                    gap: 10px;
-                }
-                
-                .herramientas-dropdown-option i {
-                    font-size: 14px;
-                }
-                
-                .herramientas-dropdown-option span {
-                    font-size: 14px;
-                }
-
-                .herramientas-dropdown-options.active {
-                    max-height: 500px;
                 }
                 
                 .notificaciones-dropdown {
@@ -1187,12 +1142,9 @@ class NavbarComplete {
                     height: 30px;
                 }
                 
-                .admin-dropdown-btn {
-                    padding: 12px 14px;
-                    font-size: 15px;
-                }
-
-                .herramientas-dropdown-btn {
+                .gestionar-dropdown-btn,
+                .incidencias-dropdown-btn,
+                .configuracion-dropdown-btn {
                     padding: 12px 14px;
                     font-size: 15px;
                 }
@@ -1207,40 +1159,37 @@ class NavbarComplete {
                     height: 2.5px;
                 }
                 
-                .admin-dropdown-options {
+                .gestionar-dropdown-options,
+                .incidencias-dropdown-options,
+                .configuracion-dropdown-options {
                     padding: 12px;
                 }
                 
-                .admin-dropdown-options.active {
-                    max-height: 550px;
-                }
-
-                .herramientas-dropdown-options {
-                    padding: 12px;
+                .gestionar-dropdown-options.active,
+                .incidencias-dropdown-options.active,
+                .configuracion-dropdown-options.active {
+                    max-height: 1500px;
                 }
                 
-                .herramientas-dropdown-options.active {
-                    max-height: 500px;
-                }
-                
-                .admin-dropdown-option {
+                .gestionar-dropdown-option,
+                .incidencias-dropdown-option,
+                .configuracion-dropdown-option {
                     padding: 14px 12px;
                     gap: 12px;
                 }
                 
-                .admin-dropdown-option i {
+                .gestionar-dropdown-option i,
+                .incidencias-dropdown-option i,
+                .configuracion-dropdown-option i {
                     font-size: 16px;
                     width: 24px;
                 }
                 
-                .admin-dropdown-option span {
+                .gestionar-dropdown-option span,
+                .incidencias-dropdown-option span,
+                .configuracion-dropdown-option span {
                     font-size: 15px;
                     line-height: 1.4;
-                }
-
-                .herramientas-dropdown-option {
-                    padding: 14px 12px;
-                    gap: 12px;
                 }
                 
                 .nav-section-title {
@@ -1289,16 +1238,16 @@ class NavbarComplete {
                     height: 2px;
                 }
                 
-                .admin-dropdown-option {
+                .gestionar-dropdown-option,
+                .incidencias-dropdown-option,
+                .configuracion-dropdown-option {
                     padding: 12px 10px;
                 }
                 
-                .admin-dropdown-option span {
+                .gestionar-dropdown-option span,
+                .incidencias-dropdown-option span,
+                .configuracion-dropdown-option span {
                     font-size: 14px;
-                }
-
-                .herramientas-dropdown-option {
-                    padding: 12px 10px;
                 }
                 
                 .notificaciones-dropdown {
@@ -1338,7 +1287,7 @@ class NavbarComplete {
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
-        navbar.innerHTML = `
+        navbar.innerHTML = /*html*/`
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
                     <a href="/usuarios/colaboradores/panelControl/panelControl.html" class="navbar-logo-link">
@@ -1346,9 +1295,9 @@ class NavbarComplete {
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                         </div>
                     </a>
-                    
+
                     <div class="logo-separator"></div>
-                    
+
                     <a href="/usuarios/colaboradores/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
                             <img src="/assets/images/logo.png" alt="Logo Organización" 
@@ -1357,9 +1306,9 @@ class NavbarComplete {
                         </div>
                     </a>
                 </div>
-                
+
                 <h1 class="navbar-title">CENTINELA</h1>
-                
+
                 <div class="navbar-right-container">
                     <div class="navbar-notificaciones-container">
                         <button class="navbar-notificaciones-btn" id="notificacionesBtn">
@@ -1392,11 +1341,11 @@ class NavbarComplete {
                     </button>
                 </div>
             </div>
-            
+
             <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
-            
+
             <div class="navbar-main-menu" id="navbarMainMenu">
-                
+
                 <div class="admin-profile-section">
                     <div class="profile-photo-container">
                         <div class="admin-profile-circle">
@@ -1406,11 +1355,11 @@ class NavbarComplete {
                                 <span>Usuario</span>
                             </div>
                         </div>
-                        <a href="/users/colaborador/perfil/perfil.html" class="edit-profile-icon" id="editProfileIcon">
+                        <a href="/usuarios/colaboradores/perfil/perfil.html" class="edit-profile-icon" id="editProfileIcon">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
                     </div>
-                    
+
                     <div class="admin-info">
                         <div class="admin-name" id="userName">Cargando...</div>
                         <div class="admin-role" id="userRole">Colaborador</div>
@@ -1418,80 +1367,95 @@ class NavbarComplete {
                         <div class="admin-organization" id="userOrganization"></div>
                     </div>
                 </div>
-                
+
                 <div class="nav-section">
-                    <div class="nav-section-title">
-                        <i class="fa-solid fa-cubes"></i>
-                        <span>Módulos del Sistema</span>
-                    </div>
-                    
-                    <button class="herramientas-dropdown-btn" id="herramientasDropdownBtn">
-                        <span>Accesos Rápidos</span>
+                    <button class="gestionar-dropdown-btn" id="gestionarDropdownBtn">
+                        <span>Gestionar</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
-                    
-                    <div class="herramientas-dropdown-options" id="herramientasDropdownOptions">
-                        <a href="/usuarios/colaboradores/areas/areas.html" class="herramientas-dropdown-option" id="areasBtn">
+
+                    <div class="gestionar-dropdown-options" id="gestionarDropdownOptions">
+                        <a href="/usuarios/colaboradores/areas/areas.html" class="gestionar-dropdown-option" id="areasBtn">
                             <i class="fa-solid fa-map"></i>
                             <span>Áreas</span>
                         </a>
 
-                        <a href="/usuarios/colaboradores/categorias/categorias.html" class="herramientas-dropdown-option" id="categoriasBtn">
+                        <a href="/usuarios/colaboradores/categorias/categorias.html" class="gestionar-dropdown-option" id="categoriasBtn">
                             <i class="fa-solid fa-tags"></i>
                             <span>Categorías</span>
                         </a>
 
-                        <a href="/usuarios/colaboradores/sucursales/sucursales.html" class="herramientas-dropdown-option" id="sucursalesBtn">
+                        <a href="/usuarios/colaboradores/sucursales/sucursales.html" class="gestionar-dropdown-option" id="sucursalesBtn">
                             <i class="fa-solid fa-store"></i>
                             <span>Sucursales</span>
                         </a>
 
-                        <a href="/usuarios/colaboradores/regiones/regiones.html" class="herramientas-dropdown-option" id="regionesBtn">
+                        <a href="/usuarios/colaboradores/regiones/regiones.html" class="gestionar-dropdown-option" id="regionesBtn">
                             <i class="fa-solid fa-location-dot"></i>
                             <span>Regiones</span>
                         </a>
+                    </div>
+                </div>
 
-                        <a href="/usuarios/colaboradores/incidencias/incidencias.html" class="herramientas-dropdown-option" id="incidenciasBtn">
-                            <i class="fa-solid fa-exclamation-triangle"></i>
-                            <span>Incidencias</span>
+                <div class="nav-section">
+                    <button class="incidencias-dropdown-btn" id="incidenciasDropdownBtn">
+                        <span>Incidencias</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="incidencias-dropdown-options" id="incidenciasDropdownOptions">
+                        <a href="/usuarios/colaboradores/incidencias/incidencias.html" class="incidencias-dropdown-option" id="incidenciasBtn">
+                            <i class="fa-solid fa-list"></i>
+                            <span>Lista de Incidencias</span>
                         </a>
 
-                        <a href="/usuarios/colaboradores/incidenciasCanalizadasColaborador/incidenciasCanalizadasColaborador.html" class="herramientas-dropdown-option" id="incidenciasCanalizadasBtn">
+                        <a href="/usuarios/colaboradores/crearIncidencias/crearIncidencias.html" class="incidencias-dropdown-option" id="crearIncidenciasBtn">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Crear Incidencia</span>
+                        </a>
+
+                        <a href="/usuarios/colaboradores/incidenciasCanalizadasColaborador/incidenciasCanalizadasColaborador.html" class="incidencias-dropdown-option" id="incidenciasCanalizadasBtn">
                             <i class="fa-solid fa-check-circle"></i>
                             <span>Incidencias Canalizadas</span>
                         </a>
                     </div>
                 </div>
-                
-                <div class="menu-section">
-                    <div class="empty-menu-item"></div>
-                    <div class="empty-menu-item"></div>
-                    <div class="empty-menu-item"></div>
-                    <div class="empty-menu-item"></div>
-                    <div class="empty-menu-item"></div>
-                    <div class="empty-menu-item"></div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Bitácora</span>
+                    </div>
+
+                    <a href="/usuarios/colaboradores/bitacoraActividades/bitacoraActividades.html" class="gestionar-dropdown-option" style="width: 100%;">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Bitácora de Actividades</span>
+                    </a>
                 </div>
-                
-                <div class="admin-options-section">
-                    <button class="admin-dropdown-btn" id="userDropdownBtn">
-                        <span>Opciones de Colaborador</span>
+
+                <div class="configuracion-options-section">
+                    <button class="configuracion-dropdown-btn" id="configuracionDropdownBtn">
+                        <span>Configuración</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
-                    
-                    <div class="admin-dropdown-options" id="userDropdownOptions">
-                        <a href="/users/colaborador/perfil/perfil.html" class="admin-dropdown-option">
+
+                    <div class="configuracion-dropdown-options" id="configuracionDropdownOptions">
+                        <a href="/usuarios/colaboradores/perfil/perfil.html" class="configuracion-dropdown-option">
                             <i class="fa-solid fa-user-pen"></i>
                             <span>Editar Perfil</span>
                         </a>
-                        <a href="/users/colaborador/configuracion/configuracion.html" class="admin-dropdown-option">
+
+                        <a href="/usuarios/colaboradores/configuracion/configuracion.html" class="configuracion-dropdown-option">
                             <i class="fa-solid fa-sliders-h"></i>
                             <span>Preferencias</span>
                         </a>
-                        <a href="/users/colaborador/ayuda/ayuda.html" class="admin-dropdown-option">
+
+                        <a href="/usuarios/colaboradores/ayuda/ayuda.html" class="configuracion-dropdown-option">
                             <i class="fa-solid fa-circle-question"></i>
                             <span>Ayuda</span>
                         </a>
-                        <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
+
+                        <a href="#" class="configuracion-dropdown-option logout-option" id="logoutOption">
                             <i class="fa-solid fa-right-from-bracket"></i>
                             <span>Cerrar Sesión</span>
                         </a>
@@ -1628,10 +1592,13 @@ class NavbarComplete {
                     sucursales: true,
                     regiones: true,
                     incidencias: true,
+                    crearIncidencias: true,
                     incidenciasCanalizadas: true,
-                    usuarios: true,
-                    permisos: true,
-                    admin: true
+                    verIncidencias: true,
+                    bitacora: true,
+                    perfil: true,
+                    configuracion: true,
+                    ayuda: true
                 };
                 return;
             }
@@ -1643,10 +1610,13 @@ class NavbarComplete {
                     sucursales: false,
                     regiones: false,
                     incidencias: true,
+                    crearIncidencias: true,
                     incidenciasCanalizadas: true,
-                    usuarios: false,
-                    permisos: false,
-                    admin: false
+                    verIncidencias: true,
+                    bitacora: true,
+                    perfil: true,
+                    configuracion: true,
+                    ayuda: true
                 };
                 return;
             }
@@ -1665,11 +1635,14 @@ class NavbarComplete {
                             categorias: permiso.puedeAcceder('categorias'),
                             sucursales: permiso.puedeAcceder('sucursales'),
                             regiones: permiso.puedeAcceder('regiones'),
-                            incidencias: permiso.puedeAcceder('incidencias'),
+                            incidencias: permiso.puedeAcceder('incidencias') || true,
+                            crearIncidencias: true,
                             incidenciasCanalizadas: true,
-                            usuarios: false,
-                            permisos: false,
-                            admin: false
+                            verIncidencias: true,
+                            bitacora: true,
+                            perfil: true,
+                            configuracion: true,
+                            ayuda: true
                         };
                         return;
                     }
@@ -1684,10 +1657,13 @@ class NavbarComplete {
                 sucursales: false,
                 regiones: false,
                 incidencias: true,
+                crearIncidencias: true,
                 incidenciasCanalizadas: true,
-                usuarios: false,
-                permisos: false,
-                admin: false
+                verIncidencias: true,
+                bitacora: true,
+                perfil: true,
+                configuracion: true,
+                ayuda: true
             };
 
         } catch (error) {
@@ -1698,10 +1674,13 @@ class NavbarComplete {
                 sucursales: false,
                 regiones: false,
                 incidencias: true,
+                crearIncidencias: true,
                 incidenciasCanalizadas: true,
-                usuarios: false,
-                permisos: false,
-                admin: false
+                verIncidencias: true,
+                bitacora: true,
+                perfil: true,
+                configuracion: true,
+                ayuda: true
             };
         }
     }
@@ -1745,13 +1724,27 @@ class NavbarComplete {
                 modulo: 'incidencias',
                 elemento: document.getElementById('incidenciasBtn'),
                 texto: 'Incidencias',
-                siempreVisible: false
+                siempreVisible: true
+            },
+            {
+                id: 'crearIncidenciasBtn',
+                modulo: 'crearIncidencias',
+                elemento: document.getElementById('crearIncidenciasBtn'),
+                texto: 'Crear Incidencia',
+                siempreVisible: true
             },
             {
                 id: 'incidenciasCanalizadasBtn',
                 modulo: 'incidenciasCanalizadas',
                 elemento: document.getElementById('incidenciasCanalizadasBtn'),
                 texto: 'Incidencias Canalizadas',
+                siempreVisible: true
+            },
+            {
+                id: 'verIncidenciasBtn',
+                modulo: 'verIncidencias',
+                elemento: document.getElementById('verIncidenciasBtn'),
+                texto: 'Ver Incidencia',
                 siempreVisible: true
             }
         ];
@@ -1820,7 +1813,6 @@ class NavbarComplete {
 
         this.updateOrganizationLogo();
         this.updateUserMenuInfo();
-        this.setupEditProfileLink();
     }
 
     updateOrganizationLogo() {
@@ -1837,10 +1829,6 @@ class NavbarComplete {
             organizationLogoImg.style.display = 'block';
             orgTextLogo.style.display = 'none';
             organizationLogoImg.title = this.currentUser.organizacion;
-
-            organizationLogoImg.onerror = (e) => {
-                this.showOrgTextLogo();
-            };
         } else {
             this.showOrgTextLogo();
         }
@@ -1894,10 +1882,6 @@ class NavbarComplete {
                 userProfileImg.style.display = 'block';
                 profilePlaceholder.style.display = 'none';
                 userProfileImg.alt = `Foto de ${this.currentUser.nombreCompleto}`;
-
-                userProfileImg.onerror = (e) => {
-                    this.showProfilePlaceholder();
-                };
             } else {
                 this.showProfilePlaceholder();
             }
@@ -1925,19 +1909,13 @@ class NavbarComplete {
         }
     }
 
-    setupEditProfileLink() {
-        const editProfileIcon = document.getElementById('editProfileIcon');
-        if (editProfileIcon) {
-            editProfileIcon.href = '/users/colaborador/perfil/perfil.html';
-        }
-    }
-
     setupFunctionalities() {
         this.setupMenu();
         this.setupScroll();
         this.loadFontAwesome();
-        this.setupUserDropdown();
-        this.setupHerramientasDropdown();
+        this.setupGestionarDropdown();
+        this.setupIncidenciasDropdown();
+        this.setupConfiguracionDropdown();
         this.loadOrbitronFont();
         this.setupLogout();
         this._configurarNotificacionesDropdown();
@@ -1959,11 +1937,14 @@ class NavbarComplete {
             document.body.classList.toggle('menu-open', this.isMenuOpen);
 
             if (!this.isMenuOpen) {
-                if (this.isAdminDropdownOpen) {
-                    this.toggleUserDropdown(false);
+                if (this.isGestionarDropdownOpen) {
+                    this.toggleGestionarDropdown(false);
                 }
-                if (this.isHerramientasDropdownOpen) {
-                    this.toggleHerramientasDropdown(false);
+                if (this.isIncidenciasDropdownOpen) {
+                    this.toggleIncidenciasDropdown(false);
+                }
+                if (this.isConfiguracionDropdownOpen) {
+                    this.toggleConfiguracionDropdown(false);
                 }
             }
         };
@@ -1976,11 +1957,14 @@ class NavbarComplete {
                 overlay.classList.remove('active');
                 document.body.classList.remove('menu-open');
 
-                if (this.isAdminDropdownOpen) {
-                    this.toggleUserDropdown(false);
+                if (this.isGestionarDropdownOpen) {
+                    this.toggleGestionarDropdown(false);
                 }
-                if (this.isHerramientasDropdownOpen) {
-                    this.toggleHerramientasDropdown(false);
+                if (this.isIncidenciasDropdownOpen) {
+                    this.toggleIncidenciasDropdown(false);
+                }
+                if (this.isConfiguracionDropdownOpen) {
+                    this.toggleConfiguracionDropdown(false);
                 }
             }
         };
@@ -1997,20 +1981,23 @@ class NavbarComplete {
         });
     }
 
-    setupHerramientasDropdown() {
-        const dropdownBtn = document.getElementById('herramientasDropdownBtn');
-        const dropdownOptions = document.getElementById('herramientasDropdownOptions');
+    setupGestionarDropdown() {
+        const dropdownBtn = document.getElementById('gestionarDropdownBtn');
+        const dropdownOptions = document.getElementById('gestionarDropdownOptions');
 
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
-            // Cerrar el otro dropdown si está abierto
-            if (this.isAdminDropdownOpen) {
-                this.toggleUserDropdown(false);
+            // Cerrar los otros dropdowns
+            if (this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
+            }
+            if (this.isConfiguracionDropdownOpen) {
+                this.toggleConfiguracionDropdown(false);
             }
             
-            this.isHerramientasDropdownOpen = !this.isHerramientasDropdownOpen;
-            this.toggleHerramientasDropdown(this.isHerramientasDropdownOpen);
+            this.isGestionarDropdownOpen = !this.isGestionarDropdownOpen;
+            this.toggleGestionarDropdown(this.isGestionarDropdownOpen);
         };
 
         dropdownBtn.addEventListener('click', (e) => {
@@ -2021,41 +2008,44 @@ class NavbarComplete {
         document.addEventListener('click', (e) => {
             if (!dropdownBtn.contains(e.target) &&
                 !dropdownOptions.contains(e.target) &&
-                this.isHerramientasDropdownOpen) {
-                this.toggleHerramientasDropdown(false);
+                this.isGestionarDropdownOpen) {
+                this.toggleGestionarDropdown(false);
             }
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isHerramientasDropdownOpen) {
-                this.toggleHerramientasDropdown(false);
+            if (e.key === 'Escape' && this.isGestionarDropdownOpen) {
+                this.toggleGestionarDropdown(false);
             }
         });
 
-        const options = dropdownOptions.querySelectorAll('.herramientas-dropdown-option');
+        const options = dropdownOptions.querySelectorAll('.gestionar-dropdown-option');
         options.forEach(option => {
             option.addEventListener('click', () => {
                 setTimeout(() => {
-                    this.toggleHerramientasDropdown(false);
+                    this.toggleGestionarDropdown(false);
                 }, 100);
             });
         });
     }
 
-    setupUserDropdown() {
-        const dropdownBtn = document.getElementById('userDropdownBtn');
-        const dropdownOptions = document.getElementById('userDropdownOptions');
+    setupIncidenciasDropdown() {
+        const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
+        const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
 
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
-            // Cerrar el otro dropdown si está abierto
-            if (this.isHerramientasDropdownOpen) {
-                this.toggleHerramientasDropdown(false);
+            // Cerrar los otros dropdowns
+            if (this.isGestionarDropdownOpen) {
+                this.toggleGestionarDropdown(false);
+            }
+            if (this.isConfiguracionDropdownOpen) {
+                this.toggleConfiguracionDropdown(false);
             }
             
-            this.isAdminDropdownOpen = !this.isAdminDropdownOpen;
-            this.toggleUserDropdown(this.isAdminDropdownOpen);
+            this.isIncidenciasDropdownOpen = !this.isIncidenciasDropdownOpen;
+            this.toggleIncidenciasDropdown(this.isIncidenciasDropdownOpen);
         };
 
         dropdownBtn.addEventListener('click', (e) => {
@@ -2066,15 +2056,72 @@ class NavbarComplete {
         document.addEventListener('click', (e) => {
             if (!dropdownBtn.contains(e.target) &&
                 !dropdownOptions.contains(e.target) &&
-                this.isAdminDropdownOpen) {
-                this.toggleUserDropdown(false);
+                this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
             }
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isAdminDropdownOpen) {
-                this.toggleUserDropdown(false);
+            if (e.key === 'Escape' && this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
             }
+        });
+
+        const options = dropdownOptions.querySelectorAll('.incidencias-dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.toggleIncidenciasDropdown(false);
+                }, 100);
+            });
+        });
+    }
+
+    setupConfiguracionDropdown() {
+        const dropdownBtn = document.getElementById('configuracionDropdownBtn');
+        const dropdownOptions = document.getElementById('configuracionDropdownOptions');
+
+        if (!dropdownBtn || !dropdownOptions) return;
+
+        const toggleDropdown = () => {
+            // Cerrar los otros dropdowns
+            if (this.isGestionarDropdownOpen) {
+                this.toggleGestionarDropdown(false);
+            }
+            if (this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
+            }
+            
+            this.isConfiguracionDropdownOpen = !this.isConfiguracionDropdownOpen;
+            this.toggleConfiguracionDropdown(this.isConfiguracionDropdownOpen);
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isConfiguracionDropdownOpen) {
+                this.toggleConfiguracionDropdown(false);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isConfiguracionDropdownOpen) {
+                this.toggleConfiguracionDropdown(false);
+            }
+        });
+
+        const options = dropdownOptions.querySelectorAll('.configuracion-dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.toggleConfiguracionDropdown(false);
+                }, 100);
+            });
         });
     }
 
@@ -2192,25 +2239,36 @@ class NavbarComplete {
         window.location.href = loginUrl;
     }
 
-    toggleUserDropdown(show) {
-        const dropdownBtn = document.getElementById('userDropdownBtn');
-        const dropdownOptions = document.getElementById('userDropdownOptions');
+    toggleGestionarDropdown(show) {
+        const dropdownBtn = document.getElementById('gestionarDropdownBtn');
+        const dropdownOptions = document.getElementById('gestionarDropdownOptions');
 
         if (dropdownBtn && dropdownOptions) {
             dropdownBtn.classList.toggle('active', show);
             dropdownOptions.classList.toggle('active', show);
-            this.isAdminDropdownOpen = show;
+            this.isGestionarDropdownOpen = show;
         }
     }
 
-    toggleHerramientasDropdown(show) {
-        const dropdownBtn = document.getElementById('herramientasDropdownBtn');
-        const dropdownOptions = document.getElementById('herramientasDropdownOptions');
+    toggleIncidenciasDropdown(show) {
+        const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
+        const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
 
         if (dropdownBtn && dropdownOptions) {
             dropdownBtn.classList.toggle('active', show);
             dropdownOptions.classList.toggle('active', show);
-            this.isHerramientasDropdownOpen = show;
+            this.isIncidenciasDropdownOpen = show;
+        }
+    }
+
+    toggleConfiguracionDropdown(show) {
+        const dropdownBtn = document.getElementById('configuracionDropdownBtn');
+        const dropdownOptions = document.getElementById('configuracionDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isConfiguracionDropdownOpen = show;
         }
     }
 

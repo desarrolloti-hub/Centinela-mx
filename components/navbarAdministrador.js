@@ -1370,16 +1370,6 @@ class NavbarComplete {
                             <i class="fa-solid fa-plus-circle"></i>
                             <span>Crear Incidencia</span>
                         </a>
-
-                        <a href="/usuarios/administrador/segimientoIncidencias/segimientoIncidencias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-history"></i>
-                            <span>Seguimiento</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/verIncidencias/verIncidencias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-eye"></i>
-                            <span>Ver Incidencia</span>
-                        </a>
                     </div>
                 </div>
 
