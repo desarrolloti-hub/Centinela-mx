@@ -152,7 +152,7 @@ class NotificacionAreaManager {
     constructor() {
         console.log('📋 NotificacionAreaManager inicializado');
         this.usuarioActual = null;
-        this.functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
+        this.functionUrl = 'https://sendpushnotification-5orj5w7mha-uc.a.run.app';
         this._initUsuario();
     }
 
