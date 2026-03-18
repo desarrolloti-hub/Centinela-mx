@@ -299,7 +299,7 @@ body {
 }
 
 /* =============================================
-   SECCIÓN REGISTRO - 2 TARJETAS
+   SECCIÓN REGISTRO - 2 TARJETAS (VERSIÓN COMPACTA Y PEGADAS A LA IZQUIERDA)
    ============================================= */
 .center-row {
     display: flex;
@@ -313,7 +313,6 @@ body {
 }
 
 .section-container {
-
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-medium);
     padding: var(--spacing-md, 0.75rem);
@@ -324,7 +323,6 @@ body {
 
 .section-container:hover {
     border-color: var(--color-accent-primary);
-
 }
 
 .section-header {
@@ -354,33 +352,45 @@ body {
     color: var(--color-text-secondary);
 }
 
-/* Grid para 2 tarjetas */
+/* Grid para 2 tarjetas - AHORA PEGADAS A LA IZQUIERDA */
 .cards-grid-2 {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
     gap: 1rem !important;
     margin-top: var(--spacing-sm, 0.5rem);
+    justify-content: flex-start !important;
+    /* Alinear a la izquierda */
+    align-items: center;
 }
 
-/* Tarjetas base */
+/* Tarjetas base - VERSIÓN COMPACTA Y SIN ANCHO MÁXIMO FIJO */
 .dashboard-card {
     display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: flex-start !important;
-    height: 120px !important;
-    min-height: 120px !important;
-    padding: 1rem !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    height: 70px !important;
+    min-height: 70px !important;
+    width: auto !important;
+    /* Ancho automático según contenido */
+    min-width: 200px !important;
+    /* Ancho mínimo */
+    max-width: 280px !important;
+    /* Ancho máximo */
+    padding: 0.5rem 0.75rem !important;
     position: relative;
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-medium);
     transition: var(--transition-default);
     cursor: pointer;
-
     backdrop-filter: blur(8px);
+    gap: 0.5rem;
+    flex-shrink: 0;
+    /* Evitar que se encojan */
 }
 
-/* Hover general para tarjetas */
+/* Hover general para tarjetas (excluyendo la de nueva incidencia) */
 .dashboard-card:not(#card-nueva-incidencia):hover {
     border-color: var(--color-accent-primary);
     background: var(--color-hover);
@@ -397,22 +407,22 @@ body {
     transform: translateX(3px);
 }
 
-/* Iconos */
+/* Iconos más pequeños */
 .card-icon {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    border-radius: var(--border-radius-small);
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 0 !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    margin-bottom: 0.6rem !important;
+    border-radius: var(--border-radius-small);
     transition: var(--transition-default);
     box-shadow: none !important;
 }
 
-/* Colores de iconos usando las variables que ya están en personalization.css */
+/* Colores de iconos */
 .card-icon.blue {
     color: #2f8cff;
 }
@@ -429,17 +439,18 @@ body {
     color: #b16bff;
 }
 
-/* Texto */
+/* Texto truncado para no desbordar */
 .card-text {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
 }
 
 .card-text h3 {
     font-family: var(--font-family-primary);
-    font-size: 0.85rem;
+    font-size: 0.7rem !important;
     color: var(--color-text-primary);
-    margin-bottom: 0.125rem;
+    margin-bottom: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap;
@@ -449,41 +460,64 @@ body {
 }
 
 .card-text p {
-    font-size: 0.7rem;
+    font-size: 0.55rem !important;
     color: var(--color-text-secondary);
-    line-height: 1.2;
+    margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.2;
 }
 
-/* Flecha */
+/* Flecha más pequeña */
 .card-arrow {
-    position: absolute;
-    right: 1rem;
-    top: 1rem;
-    font-size: 1rem;
+    position: static !important;
+    font-size: 0.8rem !important;
+    margin-left: 0.25rem;
     color: var(--color-text-secondary);
     transition: var(--transition-default);
 }
 
 /* =============================================
-   RESPONSIVE - SE MANTIENE IGUAL
+   RESPONSIVE - VERSIÓN COMPACTA PEGADA A LA IZQUIERDA
    ============================================= */
-@media (max-width: 900px) {
+@media (max-width: 600px) {
     .cards-grid-2 {
-        grid-template-columns: repeat(2, 1fr) !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        /* Alinear a la izquierda también en móviles */
+        gap: 0.75rem !important;
+    }
+
+    .dashboard-card {
+        width: 100% !important;
+        max-width: 300px !important;
+        height: 65px !important;
+        min-height: 65px !important;
     }
 }
 
 @media (max-width: 500px) {
-    .cards-grid-2 {
-        grid-template-columns: 1fr !important;
+    .dashboard-card {
+        max-width: 280px !important;
+        height: 60px !important;
+        min-height: 60px !important;
+        padding: 0.4rem 0.6rem !important;
+        gap: 0.4rem;
     }
 
-    .dashboard-card {
+    .card-icon {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.8rem !important;
+    }
 
-        min-height: 90px !important;
+    .card-text h3 {
+        font-size: 0.65rem !important;
+    }
+
+    .card-text p {
+        font-size: 0.5rem !important;
     }
 
     .kpi-row-6 {

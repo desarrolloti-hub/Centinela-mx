@@ -130,132 +130,18 @@
             </div>
         </div>
 
-        <!-- ========== SECCIONES ADICIONALES ========== -->
-        <section class="center-row" style="margin-top: 40px;">
-            <!-- PANEL IZQUIERDO - REGISTRO -->
-            <div class="side left">
-                <div class="section-container">
-                    <div class="section-header">
-                        <h2 class="section-title"><i class="fa-solid fa-pen-to-square"></i> REGISTRO</h2>
-                        <p class="section-subtitle">Gestión de registros del sistema</p>
-                    </div>
-
-                    <div class="cards-grid">
-                        <!-- Registro de Accesos -->
-                        <div class="dashboard-card" data-modulo="incidencias">
-                            <div class="card-icon blue">
-                                <i class="fa-solid fa-door-open"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Registro de Accesos</h3>
-                                <p>Ver historial de accesos al sistema</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Nueva Incidencia -->
-                        <div class="dashboard-card" data-modulo="incidencias">
-                            <div class="card-icon cyan">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Nueva Incidencia</h3>
-                                <p>Crear nuevo reporte de incidencia</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Nuevo Usuario -->
-                        <div class="dashboard-card" data-modulo="usuarios" data-requiere-admin="true">
-                            <div class="card-icon purple">
-                                <i class="fa-solid fa-user-plus"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Nuevo Usuario</h3>
-                                <p>Crear nueva cuenta de usuario</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Estadísticas -->
-            <div class="dashboard-card" data-modulo="incidencias">
-                <div class="card-icon cyan">
-                    <i class="fa-solid fa-chart-pie"></i>
-                </div>
-                <div class="card-text">
-                    <h3>Estadísticas</h3>
-                    <p>Reportes y análisis generales</p>
-                </div>
-                <div class="card-arrow">→</div>
-            </div>
-            </div>
-            </div>
-
-
-
-            <div class="cards-grid">
-                <!-- Tipos de Incidencia -->
-                <div class="dashboard-card" data-modulo="categorias">
-                    <div class="card-icon blue">
-                        <i class="fa-solid fa-list-check"></i>
-                    </div>
-                    <div class="card-text">
-                        <h3>Tipos de Incidencia</h3>
-                        <p>Configurar categorías de incidencias</p>
-                    </div>
-                    <div class="card-arrow">→</div>
-                </div>
-
-                <!-- Roles y Permisos -->
-                <div class="dashboard-card" data-modulo="permisos" data-requiere-admin="true">
-                    <div class="card-icon cyan">
-                        <i class="fa-solid fa-user-gear"></i>
-                    </div>
-                    <div class="card-text">
-                        <h3>Roles y Permisos</h3>
-                        <p>Gestionar permisos de usuario</p>
-                    </div>
-                    <div class="card-arrow">→</div>
-                </div>
-
-                <!-- Backup del Sistema -->
-                <div class="dashboard-card" data-modulo="admin" data-requiere-admin="true">
-                    <div class="card-icon yellow">
-                        <i class="fa-solid fa-database"></i>
-                    </div>
-                    <div class="card-text">
-                        <h3>Backup del Sistema</h3>
-                        <p>Copias de seguridad y recuperación</p>
-                    </div>
-                    <div class="card-arrow">→</div>
-                </div>
-
-                <!-- Configuración General -->
-                <div class="dashboard-card" data-modulo="admin" data-requiere-admin="true">
-                    <div class="card-icon purple">
-                        <i class="fa-solid fa-sliders"></i>
-                    </div>
-                    <div class="card-text">
-                        <h3>Configuración General</h3>
-                        <p>Ajustes generales del sistema</p>
-                    </div>
-                    <div class="card-arrow">→</div>
-                </div>
-            </div>
-            </div>
-            </div>
+        </div>
+        </div>
+        </div>
+        </div>
         </section>
     </main>
 
     <!-- COMPONENTES -->
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <script src="/components/navbarColaborador.js"></script>
-    <script src="/components/footerColaborador.js"></script>
+    <script src="/components/navbarColaborador.js"></script> <!-- ← CAMBIADO -->
+    <script src="/components/footerColaborador.js"></script> <!-- ← CAMBIADO -->
     <script type="module" src="panelControl.js"></script>
 </body>
 
