@@ -28,7 +28,6 @@ class BitacoraController {
         } catch (error) {
             console.error('Error inicializando bitácora:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
-            this._redirigirAlLogin();
         }
     }
 
@@ -297,7 +296,7 @@ class BitacoraController {
     _configurarEventos() {
         try {
             document.getElementById('btnVolverDashboard')?.addEventListener('click', () => {
-                window.location.href = '/usuarios/administrador/panelControl/panelControl.html';
+                window.location.href = '../panelControl/panelControl.html';
             });
 
             document.getElementById('btnRefrescar')?.addEventListener('click', () => {
@@ -326,20 +325,6 @@ class BitacoraController {
         } catch (error) {
             console.error('Error configurando eventos:', error);
         }
-    }
-
-    _redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión no válida',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login',
-            background: '#1a1a1a',
-            color: '#fff',
-            confirmButtonColor: '#00cfff'
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
-        });
     }
 
     _mostrarError(mensaje) {
