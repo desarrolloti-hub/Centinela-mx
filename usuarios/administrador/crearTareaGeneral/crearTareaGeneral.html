@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Tarea General - Sistema Centinela</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="crearTareaGeneral.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- SEO Básico -->
+    <meta name="description" content="Crear tarea general - Sistema Centinela">
+    <meta name="author" content="Centinela-MX">
+    <link rel="canonical" href="https://centinela-mx.web.app/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://centinela-mx.web.app">
+    <meta property="og:title" content="Centinela-MX | Crear Tarea General">
+    <meta property="og:description" content="Crea tareas visibles para toda la organización">
+    <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+    <meta property="og:site_name" content="Centinela-MX">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Centinela-MX | Tareas Generales">
+    <meta name="twitter:description" content="Sistema de tareas para toda la organización">
+    <meta name="twitter:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+</head>
+
+<body>
+    <canvas id="particle-canvas"></canvas>
+    <br>
+
+    <!-- Contenedor principal -->
+    <div class="custom-container">
+        <!-- Header -->
+        <div class="header-section">
+            <div class="header-content">
+                <h1 class="main-title">
+                    <i class="fas fa-globe"></i>
+                    Crear Tarea General
+                </h1>
+                <div class="header-description-text">
+                    "Crea checklists visibles para todos los miembros de la organización"
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- FORMULARIO: CREAR TAREA GENERAL -->
+        <!-- ============================================= -->
+        <div class="form-row">
+            <div class="full-width">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-edit"></i>Nueva Tarea General</h5>
+                        <button id="btnVolverLista" class="btn-volver">
+                            <i class="fas fa-arrow-left"></i>Volver a la lista
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <form id="formTareaGeneral">
+                            <!-- Grid de 2 columnas -->
+                            <div class="form-grid">
+                                <!-- Información Básica -->
+                                <div class="full-width">
+                                    <h6 class="section-title"><i class="fas fa-info-circle"></i>Información de la Tarea
+                                    </h6>
+                                </div>
+
+                                <!-- Organización (solo lectura) -->
+                                <div class="full-width">
+                                    <label for="organization" class="form-label">Organización</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-building"></i></span>
+                                        <input type="text" class="form-control" id="organization" readonly>
+                                    </div>
+                                    <div class="form-help-text">Organización a la que pertenece la tarea</div>
+                                </div>
+
+                                <!-- Nombre de la actividad -->
+                                <div class="full-width">
+                                    <label for="nombreActividad" class="form-label">Nombre de la actividad *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-clipboard-list"></i></span>
+                                        <input type="text" class="form-control" id="nombreActividad"
+                                            placeholder="Ej: Políticas de seguridad" required maxlength="100">
+                                    </div>
+                                    <div class="char-limit-info">
+                                        <span class="char-counter" id="nombreCounter">0/100</span>
+                                    </div>
+                                </div>
+
+                                <!-- Descripción -->
+                                <div class="full-width">
+                                    <label for="descripcion" class="form-label">Descripción</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-align-left"></i></span>
+                                        <textarea class="form-control" id="descripcion" rows="3"
+                                            placeholder="Describe el propósito de esta tarea general..."
+                                            maxlength="500"></textarea>
+                                    </div>
+                                    <div class="char-limit-info">
+                                        <span class="char-counter" id="descripcionCounter">0/500</span>
+                                    </div>
+                                </div>
+
+                                <!-- Items del Checklist -->
+                                <div class="full-width">
+                                    <h6 class="section-title" style="margin-top: 10px;">
+                                        <i class="fas fa-check-circle"></i>Items del Checklist
+                                    </h6>
+                                </div>
+
+                                <!-- Agregar items -->
+                                <div class="full-width">
+                                    <div class="items-container">
+                                        <div class="items-header">
+                                            <span>Agrega los items a completar:</span>
+                                            <button type="button" class="btn-add-item" id="btnAgregarItem">
+                                                <i class="fas fa-plus"></i> Agregar Item
+                                            </button>
+                                        </div>
+
+                                        <!-- Lista de items dinámicos -->
+                                        <div id="itemsList" class="items-list">
+                                            <!-- Los items se agregarán aquí dinámicamente -->
+                                            <div class="item-placeholder" id="itemsPlaceholder">
+                                                <i class="fas fa-list"></i>
+                                                <p>No hay items agregados. Haz clic en "Agregar Item" para comenzar.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-help-text">
+                                            Agrega los pasos o tareas específicas que deben completarse
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Información de Visibilidad -->
+                                <div class="full-width">
+                                    <div class="visibility-info">
+                                        <i class="fas fa-eye"></i>
+                                        <div class="visibility-text">
+                                            <strong>Visibilidad: Toda la organización</strong>
+                                            <p>Esta tarea será visible para todos los usuarios de la organización,
+                                                incluyendo administradores y colaboradores de todas las áreas.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                        <!-- Mensaje informativo -->
+                        <div class="alert alert-info" style="margin-top: 20px;">
+                            <i class="fas fa-info-circle"></i>
+                            Todos los usuarios de la organización podrán ver y marcar items de esta tarea.
+                            Solo el creador puede editar o eliminar la tarea.
+                        </div>
+
+                        <!-- BOTONES DE ACCIÓN -->
+                        <div class="action-buttons-container">
+                            <button type="button" class="btn btn-success" id="crearTareaBtn">
+                                <i class="fas fa-check"></i>Crear Tarea General
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="cancelarBtn">
+                                <i class="fas fa-times"></i>Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <br>
+
+    <!-- Scripts -->
+    <script type="module" src="/components/cargadorTemas.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script src="/components/navbarAdministrador.js"></script>
+    <script src="/components/footerAdministrador.js"></script>
+    <script type="module" src="crearTareaGeneral.js"></script>
+</body>
+
+</html>
