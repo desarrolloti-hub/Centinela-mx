@@ -35,16 +35,16 @@
     },
 
     {
-      "collectionGroup": "colaboradores_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "colaboradores",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "correoElectronico", "order": "ASCENDING" },
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "colaboradores_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "colaboradores",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
@@ -52,8 +52,8 @@
       ]
     },
     {
-      "collectionGroup": "colaboradores_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "colaboradores",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "areaAsignadaId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
@@ -61,24 +61,24 @@
       ]
     },
     {
-      "collectionGroup": "colaboradores_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "colaboradores",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "areaAsignadaId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "colaboradores_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "colaboradores",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "colaboradores_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "colaboradores",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
@@ -86,24 +86,24 @@
     },
 
     {
-      "collectionGroup": "areas_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "areas",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "nombreArea", "order": "ASCENDING" },
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "areas_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "areas",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "estado", "order": "ASCENDING" },
         { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "areas_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "areas",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "responsable", "order": "ASCENDING" },
         { "fieldPath": "estado", "order": "ASCENDING" },
@@ -111,8 +111,8 @@
       ]
     },
     {
-      "collectionGroup": "areas_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "areas",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "estado", "order": "ASCENDING" },
@@ -120,8 +120,8 @@
       ]
     },
     {
-      "collectionGroup": "areas_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "areas",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
@@ -129,23 +129,23 @@
     },
 
     {
-      "collectionGroup": "incidencias_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "incidencias",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "incidencias_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "incidencias",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "incidencias_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "incidencias",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "estado", "order": "ASCENDING" },
@@ -153,8 +153,8 @@
       ]
     },
     {
-      "collectionGroup": "incidencias_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "incidencias",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "sucursalId", "order": "ASCENDING" },
@@ -162,8 +162,8 @@
       ]
     },
     {
-      "collectionGroup": "incidencias_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "incidencias",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "nivelRiesgo", "order": "ASCENDING" },
@@ -172,31 +172,31 @@
     },
 
     {
-      "collectionGroup": "notificaciones_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "notificaciones",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "fecha", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "notificaciones_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "notificaciones",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "organizacionCamelCase", "order": "ASCENDING" },
         { "fieldPath": "fecha", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "notificaciones_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "notificaciones",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "areasIds", "order": "ASCENDING" },
         { "fieldPath": "fecha", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "notificaciones_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "notificaciones",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "incidenciaId", "order": "ASCENDING" },
         { "fieldPath": "fecha", "order": "DESCENDING" }
@@ -204,15 +204,15 @@
     },
 
     {
-      "collectionGroup": "usuarios_notificaciones_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "usuarios_notificaciones",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "totalPendientes", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "usuarios_notificaciones_{organizacionCamelCase}",
-      "queryScope": "COLLECTION",
+      "collectionGroup": "usuarios_notificaciones",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
         { "fieldPath": "ultimaActualizacion", "order": "DESCENDING" }
       ]
