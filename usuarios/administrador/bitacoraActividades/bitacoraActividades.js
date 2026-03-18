@@ -297,7 +297,7 @@ class BitacoraController {
     _configurarEventos() {
         try {
             document.getElementById('btnVolverDashboard')?.addEventListener('click', () => {
-                window.location.href = '/usuarios/administrador/dashboard/dashboard.html';
+                window.location.href = '/usuarios/administrador/panelControl/panelControl.html';
             });
 
             document.getElementById('btnRefrescar')?.addEventListener('click', () => {
