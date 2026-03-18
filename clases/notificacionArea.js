@@ -152,7 +152,8 @@ class NotificacionAreaManager {
     constructor() {
         console.log('📋 NotificacionAreaManager inicializado');
         this.usuarioActual = null;
-        this.functionUrl = 'https://sendpushnotification-5orj5w7mha-uc.a.run.app';
+        this.functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
+        this.functionUrlV2 = 'https://sendpushnotification-5orj5w7mha-uc.a.run.app';
         this._initUsuario();
     }
 
@@ -283,73 +284,85 @@ class NotificacionAreaManager {
     /**
      * Enviar notificaciones push a usuarios - VERSIÓN OPTIMIZADA
      */
-    async _enviarNotificacionesPush(usuarios, notificacionData) {
-        try {
-            console.log(`📱 Enviando notificaciones push a ${usuarios.length} usuarios...`);
-            
-            let enviados = 0;
-            let fallidos = 0;
-            const tokensUnicos = new Set();
-            
-            // Recolectar todos los tokens únicos
-            for (const usuario of usuarios) {
+async _enviarNotificacionesPush(usuarios, notificacionData) {
+    try {
+        console.log(`📱 Enviando notificaciones push a ${usuarios.length} usuarios...`);
+        
+        let enviados = 0;
+        let fallidos = 0;
+
+        // Enviar UNA solicitud por CADA USUARIO (no por token)
+        for (const usuario of usuarios) {
+            try {
+                // Obtener tokens del usuario
                 const tokens = this._extraerTokensActivos(usuario.dispositivos);
-                tokens.forEach(token => tokensUnicos.add(token));
-            }
-
-            const tokensArray = Array.from(tokensUnicos);
-            console.log(`📱 Tokens únicos a enviar: ${tokensArray.length}`);
-
-            // Enviar a cada token
-            for (const token of tokensArray) {
-                try {
-                    const response = await fetch(this.functionUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            token: token, // Enviar token directamente
-                            userId: notificacionData.remitenteId || 'sistema',
-                            userType: 'colaborador',
-                            organizacionCamelCase: notificacionData.organizacionCamelCase,
-                            title: notificacionData.titulo,
-                            body: notificacionData.mensaje,
-                            url: notificacionData.urlDestino,
-                            senderToken: notificacionData.remitenteId || 'sistema',
-                            data: {
-                                incidenciaId: notificacionData.incidenciaId,
-                                tipo: notificacionData.tipo,
-                                nivelRiesgo: notificacionData.nivelRiesgo,
-                                notificacionId: notificacionData.id,
-                                areasIds: notificacionData.areasIds
-                            }
-                        })
-                    });
-
-                    const result = await response.json();
-                    
-                    if (response.ok && result.success) {
-                        enviados++;
-                    } else {
-                        fallidos++;
-                    }
-
-                } catch (error) {
-                    fallidos++;
-                    console.error(`❌ Error push a token:`, error);
+                
+                if (tokens.length === 0) {
+                    console.log(`⚠️ Usuario ${usuario.id} sin tokens activos`);
+                    continue;
                 }
 
-                // Pequeña pausa para no saturar
-                await new Promise(r => setTimeout(r, 50));
+                // Enviar SOLICITUD ÚNICA para este usuario con TODOS sus tokens
+                const payload = {
+                    userId: usuario.id,                    // ← IGUAL que pruebas
+                    userType: 'colaborador',               // ← IGUAL que pruebas
+                    organizacionCamelCase: notificacionData.organizacionCamelCase,
+                    title: notificacionData.titulo,
+                    body: notificacionData.mensaje,
+                    url: notificacionData.urlDestino,
+                    senderToken: notificacionData.remitenteId || 'sistema',
+                    tokens: tokens,                         // ← Array de tokens del usuario
+                    data: {
+                        incidenciaId: notificacionData.incidenciaId,
+                        tipo: notificacionData.tipo,
+                        nivelRiesgo: notificacionData.nivelRiesgo,
+                        notificacionId: notificacionData.id,
+                        areasIds: notificacionData.areasIds
+                    }
+                };
+                
+                // Intentar con URL primaria
+                let response = await fetch(this.functionUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // Si falla, intentar con v2
+                if (!response.ok && this.functionUrlV2) {
+                    console.log('🔄 Fallback a URL v2');
+                    response = await fetch(this.functionUrlV2, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+                
+                if (response.ok) {
+                    enviados++;
+                    console.log(`✅ Push enviado a usuario ${usuario.id} (${tokens.length} tokens)`);
+                } else {
+                    fallidos++;
+                    console.log(`❌ Error ${response.status} para usuario ${usuario.id}`);
+                }
+
+            } catch (error) {
+                fallidos++;
+                console.error(`❌ Error con usuario ${usuario.id}:`, error.message);
             }
 
-            console.log(`📊 Push: ${enviados} enviados, ${fallidos} fallidos`);
-            return { success: enviados > 0, enviados, fallidos, total: tokensArray.length };
-
-        } catch (error) {
-            console.error('❌ Error en _enviarNotificacionesPush:', error);
-            return { success: false, error: error.message };
+            // Pequeña pausa entre usuarios
+            await new Promise(r => setTimeout(r, 100));
         }
+
+        console.log(`📊 Push: ${enviados}/${usuarios.length} usuarios notificados`);
+        return { success: enviados > 0, enviados, fallidos, total: usuarios.length };
+
+    } catch (error) {
+        console.error('❌ Error en _enviarNotificacionesPush:', error);
+        return { success: false, error: error.message };
     }
+}
 
     /**
      * MÉTODO PRINCIPAL: Notificar a múltiples áreas
