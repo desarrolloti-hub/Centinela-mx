@@ -187,21 +187,6 @@
         { "fieldPath": "incidenciaId", "order": "ASCENDING" },
         { "fieldPath": "fecha", "order": "DESCENDING" }
       ]
-    },
-
-    {
-      "collectionGroup": "usuarios_notificaciones",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "totalPendientes", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "usuarios_notificaciones",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "ultimaActualizacion", "order": "DESCENDING" }
-      ]
     }
   ],
   "fieldOverrides": []
