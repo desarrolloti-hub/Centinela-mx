@@ -164,14 +164,7 @@
       ]
     },
 
-    {
-      "collectionGroup": "notificaciones",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "fecha", "order": "DESCENDING" }
-      ]
-    },
-    {
+     {
       "collectionGroup": "notificaciones",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
