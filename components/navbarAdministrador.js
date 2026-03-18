@@ -635,10 +635,12 @@ class NavbarComplete {
                 top: 0;
                 right: -100%;
                 width: 25%;
-                height: 100vh;
+                /* CAMBIADO: height: 100vh a min-height: 100vh */
+                min-height: 100vh;
+                height: auto;
                 background-color: var(--navbar-scrolled-bg);
                 margin: 0;
-                padding: 0;
+                padding: 0 0 30px 0; /* Padding inferior para mejor scroll */
                 display: flex;
                 flex-direction: column;
                 transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -772,7 +774,7 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* ===== ESTILOS CORREGIDOS PARA DROPDOWNS - SIN LÍMITE DE ALTURA ===== */
+            /* ===== ESTILOS CORREGIDOS PARA DROPDOWNS ===== */
             .nav-section {
                 padding: 10px 15px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -853,14 +855,13 @@ class NavbarComplete {
                 margin-bottom: 0;
                 width: 100%;
                 box-sizing: border-box;
-                /* ELIMINADO: overflow-y: auto y max-height fijo */
             }
             
             .administracion-dropdown-options.active,
             .admin-dropdown-options.active {
                 max-height: 2000px; /* Valor alto para permitir expansión completa */
                 opacity: 1;
-                overflow: visible; /* Cambiado de 'auto' a 'visible' */
+                overflow: visible;
                 margin-bottom: 15px;
             }
             
@@ -1070,7 +1071,7 @@ class NavbarComplete {
                 
                 .admin-dropdown-options.active,
                 .administracion-dropdown-options.active {
-                    max-height: 1500px; /* Ajustado para móviles */
+                    max-height: 1500px;
                 }
                 
                 .admin-dropdown-option,

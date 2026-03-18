@@ -15,7 +15,8 @@ import {
     serverTimestamp,
     Timestamp,
     increment,
-    writeBatch
+    writeBatch,
+    deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
@@ -40,9 +41,9 @@ class NotificacionArea {
         this.categoriaNombre = data.categoriaNombre || '';
         this.nivelRiesgo = data.nivelRiesgo || '';
         
-        // Áreas destino
+        // Áreas destino - IMPORTANTE: array de IDs de áreas
+        this.areasIds = data.areasIds || [];
         this.areasDestino = data.areasDestino || [];
-        this.areasIds = data.areasIds || (data.areasDestino ? data.areasDestino.map(a => a.id) : []);
         
         // Estadísticas
         this.totalUsuarios = data.totalUsuarios || 0;
@@ -51,7 +52,7 @@ class NotificacionArea {
         // URLs
         this.urlDestino = data.urlDestino || '';
         
-        // Metadatos adicionales
+        // Metadatos
         this.detalles = data.detalles || {};
         this.prioridad = data.prioridad || 'normal';
         this.icono = data.icono || 'fa-bell';
@@ -128,8 +129,8 @@ class NotificacionArea {
             incidenciaTitulo: this.incidenciaTitulo,
             sucursalNombre: this.sucursalNombre,
             nivelRiesgo: this.nivelRiesgo,
-            areasDestino: this.areasDestino,
             areasIds: this.areasIds,
+            areasDestino: this.areasDestino,
             totalUsuarios: this.totalUsuarios,
             leidas: this.leidas,
             remitenteNombre: this.remitenteNombre,
@@ -144,8 +145,6 @@ class NotificacionAreaManager {
     constructor() {
         console.log('📋 NotificacionAreaManager inicializado');
         this.usuarioActual = null;
-        this.cacheUsuariosPorArea = new Map();
-        this.cacheTiempo = 5 * 60 * 1000;
         this.functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
         this._initUsuario();
     }
@@ -189,8 +188,6 @@ class NotificacionAreaManager {
             if (!areaId) return [];
 
             console.log(`🔍 Buscando usuarios con areaAsignadaId = ${areaId}`);
-            
-            const { collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
             
             const collectionName = `users_${organizacionCamelCase}`;
             const usersCollection = collection(db, collectionName);
@@ -437,7 +434,7 @@ class NotificacionAreaManager {
                 nivelRiesgo: nivelRiesgo,
                 
                 areasDestino: areas.map(a => ({ id: a.id, nombre: a.nombre })),
-                areasIds: areasIds,
+                areasIds: areasIds, // ESTO ES CRÍTICO - Array de IDs
                 
                 totalUsuarios: usuarios.length,
                 leidas: 0,
