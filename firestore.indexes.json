@@ -128,14 +128,7 @@
       ]
     },
 
-    {
-      "collectionGroup": "incidencias",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "fechaCreacion", "order": "DESCENDING" }
-      ]
-    },
-    {
+     {
       "collectionGroup": "incidencias",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
