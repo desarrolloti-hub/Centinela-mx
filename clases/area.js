@@ -1,4 +1,4 @@
-// area.js - VERSIÓN CORREGIDA CON ESTADO EN CARGOS
+// area.js - VERSIÓN COMPLETA CON ÍNDICES Y NOTIFICACIONES
 
 import { 
     collection, 
@@ -11,7 +11,9 @@ import {
     query, 
     where, 
     serverTimestamp,
-    addDoc
+    addDoc,
+    orderBy,
+    Timestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
@@ -46,11 +48,6 @@ class Area {
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
     }
 
-    /**
-     * Convierte diferentes formatos de fecha a objeto Date
-     * @param {any} fecha - Fecha en cualquier formato
-     * @returns {Date} - Objeto Date
-     */
     _convertirFecha(fecha) {
         if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
         if (fecha instanceof Date) return fecha;
@@ -58,11 +55,6 @@ class Area {
         return new Date();
     }
     
-    /**
-     * Formatea una fecha para mostrar en UI
-     * @param {Date} date - Fecha a formatear
-     * @returns {string} - Fecha formateada
-     */
     _formatearFecha(date) {
         if (!date) return 'No disponible';
         try {
@@ -76,35 +68,19 @@ class Area {
         }
     }
 
-    /**
-     * Obtiene la cantidad de cargos activos del área
-     * @returns {number} - Número de cargos activos
-     */
     getCantidadCargosActivos() { 
         if (!this.cargos) return 0;
         return Object.values(this.cargos).filter(cargo => cargo.estado !== 'inactivo').length;
     }
     
-    /**
-     * Obtiene la cantidad total de cargos (incluyendo inactivos)
-     * @returns {number} - Número total de cargos
-     */
     getCantidadCargosTotal() { 
         return Object.keys(this.cargos || {}).length; 
     }
     
-    /**
-     * Verifica si el área tiene cargos activos
-     * @returns {boolean} - True si tiene al menos un cargo activo
-     */
     tieneCargosActivos() {
         return this.getCantidadCargosActivos() > 0;
     }
     
-    /**
-     * Obtiene los cargos como array para facilitar su uso en UI
-     * @returns {Array} - Array de cargos
-     */
     getCargosAsArray() {
         const cargosArray = [];
         if (this.cargos) {
@@ -118,26 +94,14 @@ class Area {
         return cargosArray;
     }
     
-    /**
-     * Obtiene fecha de creación formateada
-     * @returns {string} - Fecha formateada
-     */
     getFechaCreacionFormateada() { 
         return this._formatearFecha(this.fechaCreacion); 
     }
     
-    /**
-     * Obtiene fecha de actualización formateada
-     * @returns {string} - Fecha formateada
-     */
     getFechaActualizacionFormateada() { 
         return this._formatearFecha(this.fechaActualizacion); 
     }
 
-    /**
-     * Obtiene el badge de estado para mostrar en UI
-     * @returns {string} - HTML del badge
-     */
     getEstadoBadge() {
         if (this.estado === 'activa') {
             return '<span class="badge-activo"><i class="fas fa-check-circle"></i> Activa</span>';
@@ -146,10 +110,6 @@ class Area {
         }
     }
 
-    /**
-     * Prepara los datos para guardar en Firestore
-     * @returns {Object} - Datos para Firestore
-     */
     toFirestore() {
         return {
             nombreArea: this.nombreArea,
@@ -167,10 +127,6 @@ class Area {
         };
     }
 
-    /**
-     * Prepara los datos para mostrar en la UI
-     * @returns {Object} - Datos formateados para UI
-     */
     toUI() {
         return {
             id: this.id,
@@ -200,21 +156,13 @@ class AreaManager {
     constructor() {
         this.areas = [];
         this.historialManager = null;
+        this.notificacionManager = null;
     }
 
-    /**
-     * Obtiene el nombre de la colección según la organización
-     * @param {string} organizacionCamelCase - Nombre de la organización en camelCase
-     * @returns {string} - Nombre de la colección
-     */
     _getCollectionName(organizacionCamelCase) {
         return `areas_${organizacionCamelCase}`;
     }
     
-    /**
-     * Inicializa y obtiene el manager de historial
-     * @returns {Promise<HistorialUsuarioManager>} - Instancia del historial manager
-     */
     async _getHistorialManager() {
         if (!this.historialManager) {
             try {
@@ -227,10 +175,18 @@ class AreaManager {
         return this.historialManager;
     }
     
-    /**
-     * Genera un ID simulado de Firebase para cargos
-     * @returns {string} - ID generado
-     */
+    async _getNotificacionManager() {
+        if (!this.notificacionManager) {
+            try {
+                const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
+                this.notificacionManager = new NotificacionAreaManager();
+            } catch (error) {
+                console.error('Error inicializando notificacionManager:', error);
+            }
+        }
+        return this.notificacionManager;
+    }
+    
     _generarIdFirebase() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let id = '';
@@ -240,12 +196,6 @@ class AreaManager {
         return id;
     }
     
-    /**
-     * Crea una nueva área
-     * @param {Object} areaData - Datos del área
-     * @param {Object} userManager - Manager del usuario actual
-     * @returns {Promise<Area>} - Área creada
-     */
     async crearArea(areaData, userManager) {
         try {
             const usuarioActual = userManager.currentUser;
@@ -257,11 +207,11 @@ class AreaManager {
             const organizacion = usuarioActual.organizacionCamelCase;
             const collectionName = this._getCollectionName(organizacion);
             
-            // Verificar si ya existe un área con el mismo nombre
+            // Verificar si ya existe un área con el mismo nombre (usa índice)
             const existe = await this.verificarAreaExistente(areaData.nombreArea, organizacion);
             if (existe) throw new Error('Ya existe un área con ese nombre');
             
-            // Generar IDs de Firebase para los cargos (todos activos por defecto)
+            // Generar IDs de Firebase para los cargos
             const cargosConIdsFirebase = {};
             
             if (areaData.cargos && typeof areaData.cargos === 'object') {
@@ -271,14 +221,13 @@ class AreaManager {
                     cargosConIdsFirebase[cargoId] = {
                         nombre: cargo.nombre || '',
                         descripcion: cargo.descripcion || '',
-                        estado: 'activo' // ← NUEVO: estado del cargo
+                        estado: 'activo'
                     };
                 });
             }
             
             const areasCollection = collection(db, collectionName);
             
-            // Datos para Firestore
             const areaFirestoreData = {
                 nombreArea: areaData.nombreArea,
                 descripcion: areaData.descripcion || '',
@@ -304,7 +253,7 @@ class AreaManager {
             
             this.areas.unshift(nuevaArea);
 
-            // ✅ REGISTRO EN HISTORIAL - CREAR ÁREA
+            // Registro en historial
             const historial = await this._getHistorialManager();
             if (historial) {
                 await historial.registrarActividad({
@@ -332,15 +281,6 @@ class AreaManager {
         }
     }
     
-    /**
-     * Actualiza un área existente
-     * @param {string} areaId - ID del área
-     * @param {Object} nuevosDatos - Nuevos datos del área
-     * @param {string} usuarioId - ID del usuario que actualiza
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<Area>} - Área actualizada
-     */
     async actualizarArea(areaId, nuevosDatos, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
@@ -357,25 +297,21 @@ class AreaManager {
             
             const datosActuales = areaSnap.data();
             
-            // Procesar cargos actualizados
             let cargosActualizados = {};
             
             if (nuevosDatos.cargos) {
-                // Mantener cargos existentes
                 if (datosActuales.cargos) {
                     Object.keys(datosActuales.cargos).forEach(id => {
                         cargosActualizados[id] = datosActuales.cargos[id];
                     });
                 }
                 
-                // Procesar nuevos cargos
                 Object.keys(nuevosDatos.cargos).forEach(key => {
                     const cargo = nuevosDatos.cargos[key];
                     
                     let cargoId = key;
                     let cargoExiste = false;
                     
-                    // Buscar si el cargo ya existe por nombre
                     if (datosActuales.cargos) {
                         Object.keys(datosActuales.cargos).forEach(existingId => {
                             if (datosActuales.cargos[existingId].nombre === cargo.nombre) {
@@ -385,21 +321,18 @@ class AreaManager {
                         });
                     }
                     
-                    // Si es nuevo, generar ID y poner estado activo
                     if (!cargoExiste && !datosActuales.cargos?.[key]) {
                         cargoId = this._generarIdFirebase();
                         cargosActualizados[cargoId] = {
                             nombre: cargo.nombre || '',
                             descripcion: cargo.descripcion || '',
-                            estado: 'activo' // ← NUEVO: estado por defecto
+                            estado: 'activo'
                         };
                     } else {
-                        // Si existe, actualizar pero mantener su estado
                         cargosActualizados[cargoId] = {
                             ...cargosActualizados[cargoId],
                             nombre: cargo.nombre || '',
                             descripcion: cargo.descripcion || ''
-                            // estado se mantiene
                         };
                     }
                 });
@@ -419,7 +352,6 @@ class AreaManager {
             
             await updateDoc(areaRef, datosActualizados);
             
-            // Actualizar caché en memoria
             const areaIndex = this.areas.findIndex(a => a.id === areaId);
             if (areaIndex !== -1) {
                 const areaActual = this.areas[areaIndex];
@@ -432,7 +364,6 @@ class AreaManager {
                 areaActual.actualizadoPor = usuarioId;
             }
 
-            // ✅ REGISTRO EN HISTORIAL - EDITAR ÁREA
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -473,19 +404,34 @@ class AreaManager {
     }
 
     /**
-     * Obtiene todas las áreas de una organización
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} usuarioActual - Usuario que consulta (para historial)
-     * @returns {Promise<Array<Area>>} - Lista de áreas
+     * Obtiene todas las áreas de una organización con ordenamiento por fecha
      */
-    async getAreasByOrganizacion(organizacionCamelCase, usuarioActual = null) {
+    async getAreasByOrganizacion(organizacionCamelCase, soloActivas = false, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) return [];
             
             const collectionName = this._getCollectionName(organizacionCamelCase);
-            
             const areasCollection = collection(db, collectionName);
-            const areasSnapshot = await getDocs(areasCollection);
+            
+            let areasQuery;
+            if (soloActivas) {
+                // Usar índice: organizacionCamelCase + estado + fechaCreacion
+                areasQuery = query(
+                    areasCollection,
+                    where("organizacionCamelCase", "==", organizacionCamelCase),
+                    where("estado", "==", "activa"),
+                    orderBy("fechaCreacion", "desc")
+                );
+            } else {
+                // Usar índice: organizacionCamelCase + fechaCreacion
+                areasQuery = query(
+                    areasCollection,
+                    where("organizacionCamelCase", "==", organizacionCamelCase),
+                    orderBy("fechaCreacion", "desc")
+                );
+            }
+            
+            const areasSnapshot = await getDocs(areasQuery);
             const areas = [];
             
             areasSnapshot.forEach(doc => {
@@ -498,10 +444,8 @@ class AreaManager {
                 }
             });
             
-            areas.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
             this.areas = areas;
 
-            // ✅ REGISTRO EN HISTORIAL - CONSULTAR LISTA (solo lectura)
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -524,15 +468,40 @@ class AreaManager {
     }
 
     /**
-     * Obtiene un área por su ID
-     * @param {string} areaId - ID del área
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<Area|null>} - Área encontrada o null
+     * Obtiene áreas por responsable (usuario)
      */
+    async getAreasByResponsable(responsableId, organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase || !responsableId) return [];
+            
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            
+            // Usar índice: responsable + estado + fechaCreacion
+            const q = query(
+                collection(db, collectionName),
+                where("responsable", "==", responsableId),
+                where("estado", "==", "activa"),
+                orderBy("fechaCreacion", "desc")
+            );
+            
+            const snapshot = await getDocs(q);
+            const areas = [];
+            
+            snapshot.forEach(doc => {
+                areas.push(new Area(doc.id, doc.data()));
+            });
+            
+            return areas;
+
+        } catch (error) {
+            console.error('Error obteniendo áreas por responsable:', error);
+            return [];
+        }
+    }
+
     async getAreaById(areaId, organizacionCamelCase) {
         if (!organizacionCamelCase) return null;
         
-        // Buscar en memoria primero
         const areaInMemory = this.areas.find(area => area.id === areaId);
         if (areaInMemory) return areaInMemory;
         
@@ -555,15 +524,6 @@ class AreaManager {
         }
     }
     
-    /**
-     * Inactiva un cargo específico dentro de un área
-     * @param {string} areaId - ID del área
-     * @param {string} cargoId - ID del cargo
-     * @param {string} usuarioId - ID del usuario que inactiva
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<boolean>} - True si se inactivó correctamente
-     */
     async inactivarCargo(areaId, cargoId, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
@@ -587,7 +547,6 @@ class AreaManager {
             
             const nombreCargo = cargos[cargoId].nombre;
             
-            // Inactivar el cargo
             cargos[cargoId] = {
                 ...cargos[cargoId],
                 estado: 'inactivo'
@@ -599,7 +558,6 @@ class AreaManager {
                 actualizadoPor: usuarioId
             });
             
-            // ✅ REGISTRO EN HISTORIAL - INACTIVAR CARGO
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -627,15 +585,6 @@ class AreaManager {
         }
     }
 
-    /**
-     * Reactiva un cargo específico dentro de un área
-     * @param {string} areaId - ID del área
-     * @param {string} cargoId - ID del cargo
-     * @param {string} usuarioId - ID del usuario que reactiva
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<boolean>} - True si se reactivó correctamente
-     */
     async reactivarCargo(areaId, cargoId, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
@@ -659,7 +608,6 @@ class AreaManager {
             
             const nombreCargo = cargos[cargoId].nombre;
             
-            // Reactivar el cargo
             cargos[cargoId] = {
                 ...cargos[cargoId],
                 estado: 'activo'
@@ -671,7 +619,6 @@ class AreaManager {
                 actualizadoPor: usuarioId
             });
             
-            // ✅ REGISTRO EN HISTORIAL - REACTIVAR CARGO
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -699,25 +646,15 @@ class AreaManager {
         }
     }
 
-    /**
-     * Inactiva un área (solo si no tiene cargos activos)
-     * @param {string} areaId - ID del área
-     * @param {string} usuarioId - ID del usuario que inactiva
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<boolean>} - True si se inactivó correctamente
-     */
     async inactivarArea(areaId, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
                 throw new Error('Se requiere organización para inactivar área');
             }
             
-            // Obtener datos antes de inactivar
             const area = await this.getAreaById(areaId, organizacionCamelCase);
             const nombreArea = area ? area.nombreArea : 'Área desconocida';
             
-            // Verificar si tiene cargos activos
             if (area && area.tieneCargosActivos()) {
                 throw new Error('No se puede inactivar un área con cargos activos. Debe inactivar todos los cargos primero.');
             }
@@ -731,7 +668,6 @@ class AreaManager {
                 actualizadoPor: usuarioId
             });
             
-            // Actualizar caché en memoria
             const areaIndex = this.areas.findIndex(a => a.id === areaId);
             if (areaIndex !== -1) {
                 this.areas[areaIndex].estado = 'inactiva';
@@ -739,7 +675,6 @@ class AreaManager {
                 this.areas[areaIndex].actualizadoPor = usuarioId;
             }
 
-            // ✅ REGISTRO EN HISTORIAL - INACTIVAR ÁREA
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -765,21 +700,12 @@ class AreaManager {
         }
     }
 
-    /**
-     * Reactiva un área
-     * @param {string} areaId - ID del área
-     * @param {string} usuarioId - ID del usuario que reactiva
-     * @param {string} organizacionCamelCase - Organización
-     * @param {Object} usuarioActual - Usuario que realiza la acción (para historial)
-     * @returns {Promise<boolean>} - True si se reactivó correctamente
-     */
     async reactivarArea(areaId, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
                 throw new Error('Se requiere organización para reactivar área');
             }
             
-            // Obtener datos antes de reactivar
             const area = await this.getAreaById(areaId, organizacionCamelCase);
             const nombreArea = area ? area.nombreArea : 'Área desconocida';
             
@@ -792,7 +718,6 @@ class AreaManager {
                 actualizadoPor: usuarioId
             });
             
-            // Actualizar caché en memoria
             const areaIndex = this.areas.findIndex(a => a.id === areaId);
             if (areaIndex !== -1) {
                 this.areas[areaIndex].estado = 'activa';
@@ -800,7 +725,6 @@ class AreaManager {
                 this.areas[areaIndex].actualizadoPor = usuarioId;
             }
 
-            // ✅ REGISTRO EN HISTORIAL - REACTIVAR ÁREA
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -826,28 +750,59 @@ class AreaManager {
         }
     }
     
-    /**
-     * Verifica si ya existe un área con el mismo nombre
-     * @param {string} nombreArea - Nombre del área
-     * @param {string} organizacionCamelCase - Organización
-     * @returns {Promise<boolean>} - True si ya existe
-     */
     async verificarAreaExistente(nombreArea, organizacionCamelCase) {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
-            const areasCollection = collection(db, collectionName);
             
-            const areasQuery = query(
-                areasCollection,
-                where("nombreArea", "==", nombreArea)
+            // Usar índice: nombreArea + organizacionCamelCase
+            const q = query(
+                collection(db, collectionName),
+                where("nombreArea", "==", nombreArea),
+                where("organizacionCamelCase", "==", organizacionCamelCase)
             );
             
-            const querySnapshot = await getDocs(areasQuery);
+            const querySnapshot = await getDocs(q);
             return !querySnapshot.empty;
             
         } catch (error) {
             console.error('Error verificando área:', error);
             return false;
+        }
+    }
+
+    /**
+     * Obtener estadísticas de áreas por organización
+     */
+    async getEstadisticas(organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase) {
+                return { total: 0, activas: 0, inactivas: 0 };
+            }
+
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const areasCollection = collection(db, collectionName);
+            
+            // Obtener todas las áreas
+            const snapshot = await getDocs(areasCollection);
+            
+            let total = 0;
+            let activas = 0;
+            
+            snapshot.forEach(doc => {
+                total++;
+                const data = doc.data();
+                if (data.estado === 'activa') activas++;
+            });
+            
+            return {
+                total,
+                activas,
+                inactivas: total - activas
+            };
+
+        } catch (error) {
+            console.error('Error obteniendo estadísticas:', error);
+            return { total: 0, activas: 0, inactivas: 0 };
         }
     }
 }

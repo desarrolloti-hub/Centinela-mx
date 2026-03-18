@@ -1,5 +1,4 @@
-// user.js - VERSIÓN COMPLETA CORREGIDA
-// El login SOLO se registra en iniciarSesion, NO en loadCurrentUser
+// user.js - VERSIÓN COMPLETA CON ÍNDICES Y NOTIFICACIONES
 
 import { db, auth } from '/config/firebase-config.js';
 import {
@@ -14,7 +13,9 @@ import {
     query,
     where,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    orderBy,
+    limit
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import {
     createUserWithEmailAndPassword,
@@ -44,9 +45,8 @@ class User {
         this.rol = data.rol || 'colaborador';
 
         this.cargo = data.cargo || null;
-
         this.areaAsignadaId = data.areaAsignadaId || null;
-
+        this.areaAsignadaNombre = data.areaAsignadaNombre || '';
         this.cargoId = data.cargoId || null;
 
         this.dispositivos = data.dispositivos || [];
@@ -218,6 +218,7 @@ class UserManager {
         this.users = [];
         this.currentUser = null;
         this.historialManager = null;
+        this.notificacionManager = null;
 
         auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -240,6 +241,18 @@ class UserManager {
         return this.historialManager;
     }
 
+    async _initNotificacionManager() {
+        if (!this.notificacionManager) {
+            try {
+                const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
+                this.notificacionManager = new NotificacionAreaManager();
+            } catch (error) {
+                console.error('Error inicializando notificacionManager:', error);
+            }
+        }
+        return this.notificacionManager;
+    }
+
     async _obtenerIP() {
         try {
             const response = await fetch('https://api.ipify.org?format=json');
@@ -250,8 +263,7 @@ class UserManager {
         }
     }
 
-    // ========== MÉTODO LOADCURRENTUSER CORREGIDO ==========
-    // ✅ ELIMINADO: Ya no registra login automáticamente
+    // ========== MÉTODO LOADCURRENTUSER ==========
     async loadCurrentUser(userId) {
         try {
             const adminRef = doc(db, "administradores", userId);
@@ -278,9 +290,6 @@ class UserManager {
                 this.users.push(user);
                 this.currentUser = user;
 
-                // ✅ ELIMINADO: No se registra login aquí
-                // El login solo se registra en iniciarSesion
-
                 return user;
             }
 
@@ -288,10 +297,13 @@ class UserManager {
 
             for (const organizacion of todasLasOrganizaciones) {
                 const coleccionColaboradores = `colaboradores_${organizacion.camelCase}`;
+                
+                // Usar índice: idAuth
                 const colabQuery = query(
                     collection(db, coleccionColaboradores),
                     where("idAuth", "==", userId)
                 );
+                
                 const colabSnapshot = await getDocs(colabQuery);
 
                 if (!colabSnapshot.empty) {
@@ -321,8 +333,6 @@ class UserManager {
 
                     this.currentUser = user;
                     this.users.push(user);
-
-                    // ✅ ELIMINADO: No se registra login aquí
 
                     return user;
                 }
@@ -881,6 +891,8 @@ class UserManager {
 
                 if (organizacionCamelCase) {
                     const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
+                    
+                    // Usar índice: status
                     const colabQuery = query(
                         collection(db, coleccionColaboradores),
                         where("status", "==", true)
@@ -1015,6 +1027,7 @@ class UserManager {
 
     async verificarCorreoEnOrganizacion(correo, organizacionCamelCase) {
         try {
+            // Usar índice: correoElectronico + organizacionCamelCase
             const adminQuery = query(
                 collection(db, "administradores"),
                 where("correoElectronico", "==", correo),
@@ -1027,6 +1040,8 @@ class UserManager {
             }
 
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
+            
+            // Usar índice: correoElectronico
             const colabQuery = query(
                 collection(db, coleccionColaboradores),
                 where("correoElectronico", "==", correo)
@@ -1084,6 +1099,7 @@ class UserManager {
         try {
             let total = 0;
 
+            // Usar índice: organizacionCamelCase + status
             const adminQuery = query(
                 collection(db, "administradores"),
                 where("organizacionCamelCase", "==", organizacionCamelCase),
@@ -1093,6 +1109,8 @@ class UserManager {
             total += adminSnapshot.size;
 
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
+            
+            // Usar índice: status
             const colabQuery = query(
                 collection(db, coleccionColaboradores),
                 where("status", "==", true)
@@ -1201,8 +1219,7 @@ class UserManager {
         }
     }
 
-    // ========== MÉTODO INICIARSESION CORREGIDO ==========
-    // ✅ SOLO AQUÍ SE REGISTRA EL LOGIN
+    // ========== MÉTODO INICIARSESION ==========
     async iniciarSesion(email, password) {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -1254,7 +1271,7 @@ class UserManager {
 
             await this.loadCurrentUser(uid);
 
-            // ✅ REGISTRO EN HISTORIAL - SOLO AQUÍ
+            // Registro en historial
             const historial = await this._initHistorialManager();
             if (historial) {
                 await historial.registrarActividad({
@@ -1292,11 +1309,17 @@ class UserManager {
             let colabQuery;
 
             if (incluirInactivos) {
-                colabQuery = query(collection(db, coleccionColaboradores));
-            } else {
+                // Usar índice: fechaCreacion
                 colabQuery = query(
                     collection(db, coleccionColaboradores),
-                    where("status", "==", true)
+                    orderBy("fechaCreacion", "desc")
+                );
+            } else {
+                // Usar índice: status + fechaCreacion
+                colabQuery = query(
+                    collection(db, coleccionColaboradores),
+                    where("status", "==", true),
+                    orderBy("fechaCreacion", "desc")
                 );
             }
 
@@ -1315,6 +1338,52 @@ class UserManager {
 
         } catch (error) {
             console.error("Error obteniendo colaboradores:", error);
+            return [];
+        }
+    }
+
+    /**
+     * Obtener colaboradores por área asignada
+     */
+    async getColaboradoresPorArea(areaId, organizacionCamelCase, soloActivos = true) {
+        try {
+            if (!areaId || !organizacionCamelCase) return [];
+
+            const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
+            
+            let q;
+            if (soloActivos) {
+                // Usar índice: areaAsignadaId + status + fechaCreacion
+                q = query(
+                    collection(db, coleccionColaboradores),
+                    where("areaAsignadaId", "==", areaId),
+                    where("status", "==", true),
+                    orderBy("fechaCreacion", "desc")
+                );
+            } else {
+                // Usar índice: areaAsignadaId + fechaCreacion
+                q = query(
+                    collection(db, coleccionColaboradores),
+                    where("areaAsignadaId", "==", areaId),
+                    orderBy("fechaCreacion", "desc")
+                );
+            }
+
+            const snapshot = await getDocs(q);
+            const colaboradores = [];
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                colaboradores.push(new User(doc.id, {
+                    ...data,
+                    cargo: 'colaborador'
+                }));
+            });
+
+            return colaboradores;
+
+        } catch (error) {
+            console.error("Error obteniendo colaboradores por área:", error);
             return [];
         }
     }
@@ -1355,6 +1424,7 @@ class UserManager {
         try {
             const usuariosInactivos = [];
 
+            // Usar índice: organizacionCamelCase + status
             const adminQuery = query(
                 collection(db, "administradores"),
                 where("organizacionCamelCase", "==", organizacionCamelCase),
@@ -1371,6 +1441,8 @@ class UserManager {
             });
 
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
+            
+            // Usar índice: status
             const colabQuery = query(
                 collection(db, coleccionColaboradores),
                 where("status", "==", false)
@@ -1431,6 +1503,7 @@ class UserManager {
                 const coleccion = `colaboradores_${org.camelCase}`;
 
                 try {
+                    // Usar índice: idAuth
                     const q = query(
                         collection(db, coleccion),
                         where("idAuth", "==", id)

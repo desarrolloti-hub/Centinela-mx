@@ -15,6 +15,7 @@ class NavbarComplete {
         this.notificacionesNoLeidas = 0;
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
+        this.intervalNotificaciones = null;
         this.init();
     }
 
@@ -62,13 +63,16 @@ class NavbarComplete {
         }
     }
 
+    /**
+     * Cargar notificaciones del usuario actual
+     */
     async _cargarNotificaciones() {
         if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
             return;
         }
 
         try {
-            console.log('🔍 Usuario actual:', {
+            console.log('🔍 Cargando notificaciones para usuario:', {
                 id: this.currentUser.id,
                 areaId: this.currentUser.areaId,
                 organizacion: this.currentUser.organizacionCamelCase
@@ -129,12 +133,21 @@ class NavbarComplete {
         }
     }
 
+    /**
+     * Iniciar listener para actualizar notificaciones periódicamente
+     */
     _iniciarListenerNotificaciones() {
         if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
             return;
         }
 
-        setInterval(() => {
+        // Limpiar intervalo anterior si existe
+        if (this.intervalNotificaciones) {
+            clearInterval(this.intervalNotificaciones);
+        }
+
+        // Actualizar cada 30 segundos
+        this.intervalNotificaciones = setInterval(() => {
             this._cargarNotificaciones();
         }, 30000);
     }
@@ -151,6 +164,9 @@ class NavbarComplete {
         }
     }
 
+    /**
+     * Renderizar notificaciones en el dropdown
+     */
     _renderizarNotificaciones() {
         const container = document.getElementById('notificacionesLista');
         if (!container) return;
@@ -167,7 +183,18 @@ class NavbarComplete {
 
         let html = '';
         this.notificaciones.slice(0, 5).forEach(notif => {
-            const notifUI = notif.toUI();
+            const notifUI = notif.toUI ? notif.toUI() : {
+                titulo: notif.titulo,
+                mensaje: notif.mensaje,
+                icono: notif.getIcono ? notif.getIcono() : 'fa-bell',
+                color: notif.getColor ? notif.getColor() : '#007bff',
+                sucursalNombre: notif.sucursalNombre,
+                nivelRiesgo: notif.nivelRiesgo,
+                tiempoRelativo: notif.getTiempoRelativo ? notif.getTiempoRelativo() : '',
+                urlDestino: notif.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
+                leida: notif.leida || false
+            };
+
             html += `
                 <div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
                     <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
@@ -197,12 +224,14 @@ class NavbarComplete {
 
         container.innerHTML = html;
 
+        // Agregar event listeners a los items
         container.querySelectorAll('.notificacion-item').forEach(item => {
             item.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const id = item.dataset.id;
                 const url = item.dataset.url;
                 
-                if (this.notificacionManager) {
+                if (this.notificacionManager && id) {
                     await this.notificacionManager.marcarComoLeida(
                         this.currentUser.id,
                         id,
@@ -218,6 +247,13 @@ class NavbarComplete {
                     if (notifIndex !== -1) {
                         this.notificaciones[notifIndex].leida = true;
                     }
+                    
+                    // Actualizar estilo visual
+                    const estadoDiv = item.querySelector('.notificacion-estado');
+                    if (estadoDiv) {
+                        estadoDiv.classList.remove('no-leida');
+                        estadoDiv.classList.add('leida');
+                    }
                 }
                 
                 if (url) {
@@ -227,6 +263,9 @@ class NavbarComplete {
         });
     }
 
+    /**
+     * Marcar todas las notificaciones como leídas
+     */
     async _marcarTodasLeidas() {
         if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
             return;
@@ -1988,7 +2027,6 @@ class NavbarComplete {
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
             if (this.isIncidenciasDropdownOpen) {
                 this.toggleIncidenciasDropdown(false);
             }
@@ -2036,7 +2074,6 @@ class NavbarComplete {
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
             if (this.isGestionarDropdownOpen) {
                 this.toggleGestionarDropdown(false);
             }
@@ -2084,7 +2121,6 @@ class NavbarComplete {
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
             if (this.isGestionarDropdownOpen) {
                 this.toggleGestionarDropdown(false);
             }
@@ -2167,6 +2203,12 @@ class NavbarComplete {
 
     async performLogout() {
         try {
+            // Limpiar intervalo de notificaciones
+            if (this.intervalNotificaciones) {
+                clearInterval(this.intervalNotificaciones);
+                this.intervalNotificaciones = null;
+            }
+
             this.clearAllStorage();
             await this.showLogoutSuccessMessage();
             this.redirectToLogin();
