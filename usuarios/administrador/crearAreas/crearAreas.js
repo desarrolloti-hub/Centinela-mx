@@ -1,4 +1,4 @@
-// crearAreas.js - VERSIÓN CON VALIDACIONES DE CARACTERES Y MENSAJES SIMPLIFICADOS
+// crearAreas.js - VERSIÓN CORREGIDA CON COLECCIÓN DINÁMICA COMO CATEGORIAS
 // SweetAlerts sin estilos personalizados
 
 // Limpiar consola y mostrar solo "inicializado"
@@ -66,13 +66,20 @@ function inicializarController() {
 
 class CrearAreaController {
     constructor() {
+        // Primero cargar datos de organización desde localStorage como en categoria.js
+        const orgData = this._cargarDatosOrganizacion();
+        
         this.areaManager = new AreaManager();
-        this.userManager = this.cargarUsuarioDesdeStorage();
-
-        if (!this.userManager || !this.userManager.currentUser) {
-            this.redirigirAlLogin();
-            throw new Error('Usuario no autenticado');
-        }
+        
+        // Configurar userManager con los datos de organización
+        this.userManager = {
+            currentUser: {
+                id: orgData.userId || 'admin_temp',
+                nombreCompleto: orgData.nombreUsuario || 'Administrador',
+                organizacion: orgData.organizacionNombre,
+                organizacionCamelCase: orgData.organizacionCamelCase
+            }
+        };
 
         this.areaEnProceso = null;
         this.areaCreadaReciente = null;
@@ -80,56 +87,56 @@ class CrearAreaController {
         this.cargos = [];
     }
 
-    cargarUsuarioDesdeStorage() {
+    /**
+     * Cargar datos de organización desde localStorage (igual que en categoria.js)
+     */
+    _cargarDatosOrganizacion() {
         try {
-            let userData = null;
-
+            // Intentar cargar desde adminInfo (admin)
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-                userData = {
-                    id: adminData.id || `admin_${Date.now()}`,
-                    nombre: adminData.nombreCompleto || 'Administrador',
-                    nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    rol: 'administrador',
-                    organizacion: adminData.organizacion || 'Sin organización',
-                    organizacionCamelCase: adminData.organizacionCamelCase || this.convertirACamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || '',
-                    fotoUsuario: adminData.fotoUsuario,
-                    fotoOrganizacion: adminData.fotoOrganizacion,
-                    esSuperAdmin: adminData.esSuperAdmin || true,
-                    esAdminOrganizacion: adminData.esAdminOrganizacion || true,
-                    timestamp: adminData.timestamp || new Date().toISOString(),
-                    esResponsable: true
+                return {
+                    organizacionNombre: adminData.organizacion || 'Mi Organización',
+                    organizacionCamelCase: adminData.organizacionCamelCase || this._generarCamelCase(adminData.organizacion),
+                    userId: adminData.id,
+                    nombreUsuario: adminData.nombreCompleto
                 };
             }
 
-            if (!userData) {
-                const storedUserData = localStorage.getItem('userData');
-                if (storedUserData) {
-                    userData = JSON.parse(storedUserData);
-                    userData.nombreCompleto = userData.nombreCompleto || userData.nombre || 'Usuario';
-                    userData.esResponsable = false;
-                }
-            }
-
-            if (!userData) {
-                return null;
-            }
-
-            if (!userData.id) userData.id = `user_${Date.now()}`;
-            if (!userData.organizacion) userData.organizacion = 'Sin organización';
-            if (!userData.organizacionCamelCase) {
-                userData.organizacionCamelCase = this.convertirACamelCase(userData.organizacion);
-            }
-            if (!userData.rol) userData.rol = 'colaborador';
-            if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
-
-            return { currentUser: userData };
+            // Intentar cargar desde userData (usuario normal)
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const orgNombre = userData.organizacion || userData.empresa || 'Mi Organización';
+            
+            return {
+                organizacionNombre: orgNombre,
+                organizacionCamelCase: userData.organizacionCamelCase || this._generarCamelCase(orgNombre),
+                userId: userData.id,
+                nombreUsuario: userData.nombreCompleto || userData.nombre || 'Usuario'
+            };
 
         } catch (error) {
-            return null;
+            console.error('Error cargando datos de organización:', error);
+            return {
+                organizacionNombre: 'Mi Organización',
+                organizacionCamelCase: 'miOrganizacion',
+                userId: 'admin_temp',
+                nombreUsuario: 'Administrador'
+            };
         }
+    }
+
+    /**
+     * Generar camelCase a partir de texto (igual que en categoria.js)
+     */
+    _generarCamelCase(texto) {
+        if (!texto || typeof texto !== 'string') return 'miOrganizacion';
+        return texto
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+            .replace(/[^a-zA-Z0-9]/g, '');
     }
 
     async cargarResponsables() {
@@ -139,38 +146,13 @@ class CrearAreaController {
         try {
             responsableSelect.innerHTML = '<option value="">Seleccionar responsable...</option>';
 
-            if (this.userManager.currentUser) {
-                const adminOption = document.createElement('option');
-                adminOption.value = 'admin_fijo';
-                adminOption.text = `${this.userManager.currentUser.nombreCompleto} (Administrador)`;
-                adminOption.selected = true;
-                adminOption.style.fontWeight = 'bold';
-                responsableSelect.appendChild(adminOption);
-            }
-
-            const colaboradores = await this.cargarColaboradoresDesdeSistema();
-            if (colaboradores?.length > 0) {
-                const separator = document.createElement('option');
-                separator.disabled = true;
-                separator.text = '────────── COLABORADORES ──────────';
-                responsableSelect.appendChild(separator);
-
-                colaboradores.forEach(colaborador => {
-                    const option = document.createElement('option');
-                    option.value = colaborador.id || colaborador.userId || `colab_${Date.now()}`;
-
-                    let nombreMostrar = colaborador.nombre || 'Colaborador';
-                    if (colaborador.apellido) {
-                        nombreMostrar += ` ${colaborador.apellido}`;
-                    }
-                    if (colaborador.cargo) {
-                        nombreMostrar += ` (${colaborador.cargo})`;
-                    }
-
-                    option.text = nombreMostrar;
-                    responsableSelect.appendChild(option);
-                });
-            }
+            // Opción del administrador actual
+            const adminOption = document.createElement('option');
+            adminOption.value = 'admin_temp';
+            adminOption.text = `${this.userManager.currentUser.nombreCompleto} (Administrador)`;
+            adminOption.selected = true;
+            adminOption.style.fontWeight = 'bold';
+            responsableSelect.appendChild(adminOption);
 
             const otroSeparator = document.createElement('option');
             otroSeparator.disabled = true;
@@ -187,43 +169,6 @@ class CrearAreaController {
         }
     }
 
-    async cargarColaboradoresDesdeSistema() {
-        try {
-            const orgKey = this.userManager.currentUser.organizacionCamelCase;
-            const colaboradoresStorage = localStorage.getItem(`colaboradores_${orgKey}`);
-
-            if (colaboradoresStorage) {
-                const colaboradores = JSON.parse(colaboradoresStorage);
-                if (colaboradores.length > 0) {
-                    return colaboradores;
-                }
-            }
-
-            if (this.areaManager && typeof this.areaManager.obtenerColaboradoresPorOrganizacion === 'function') {
-                const colaboradoresFB = await this.areaManager.obtenerColaboradoresPorOrganizacion(orgKey);
-
-                if (colaboradoresFB?.length > 0) {
-                    localStorage.setItem(`colaboradores_${orgKey}`, JSON.stringify(colaboradoresFB));
-                    return colaboradoresFB;
-                }
-            }
-
-            const usuariosStorage = localStorage.getItem('usuariosOrganizacion');
-            if (usuariosStorage) {
-                const usuarios = JSON.parse(usuariosStorage);
-                return usuarios.filter(user =>
-                    user.organizacionCamelCase === orgKey &&
-                    user.id !== this.userManager.currentUser.id
-                );
-            }
-
-            return [];
-
-        } catch (error) {
-            return [];
-        }
-    }
-
     init() {
         this.inicializarEventos();
         this.inicializarValidaciones();
@@ -232,6 +177,9 @@ class CrearAreaController {
 
         // Aplicar límites de caracteres a los campos
         this.aplicarLimitesCaracteres();
+        
+        // Mostrar en consola dónde se guardarán los datos (para debugging)
+        console.log(`Los datos se guardarán en: areas_${this.userManager.currentUser.organizacionCamelCase}`);
     }
 
     aplicarLimitesCaracteres() {
@@ -322,7 +270,7 @@ class CrearAreaController {
     }
 
     volverALista() {
-        window.location.href = '/usuarios/administrador/areas/areas.html';
+        window.location.href = '../areas/areas.html';
     }
 
     cancelarCreacion() {
@@ -409,6 +357,7 @@ class CrearAreaController {
 
             const datosArea = this.obtenerDatosFormulario();
 
+            // Verificar si el área ya existe en la colección específica de la organización
             const existe = await this.areaManager.verificarAreaExistente(
                 datosArea.nombreArea,
                 this.userManager.currentUser.organizacionCamelCase
@@ -596,30 +545,9 @@ class CrearAreaController {
             descripcion: document.getElementById('descripcionArea').value.trim(),
             cargos: cargosObject,
             organizacionCamelCase: userOrgCamel,
-            responsable: 'admin_fijo',
+            responsable: 'admin_temp',
             responsableNombre: this.userManager.currentUser.nombreCompleto
         };
-    }
-
-    convertirACamelCase(texto) {
-        if (!texto) return 'sinOrganizacion';
-        return texto
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
-            .replace(/[^a-zA-Z0-9]/g, '');
-    }
-
-    redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión expirada',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
-        });
     }
 
     async confirmarCreacion() {
@@ -630,6 +558,8 @@ class CrearAreaController {
 
             this.mostrarCargando('Creando área...');
 
+            // Asegurarse de que el AreaManager tenga los datos de organización
+            // Pasamos el userManager completo que contiene organizacionCamelCase
             const nuevaArea = await this.areaManager.crearArea(this.areaEnProceso, this.userManager);
 
             this.ocultarCargando();
@@ -640,7 +570,7 @@ class CrearAreaController {
             await Swal.fire({
                 icon: 'success',
                 title: '¡Área creada!',
-                text: 'El área se ha creado correctamente',
+                text: `Área guardada en: areas_${this.userManager.currentUser.organizacionCamelCase}`,
                 timer: 2000,
                 showConfirmButton: false
             });
@@ -664,7 +594,8 @@ class CrearAreaController {
 
         } catch (error) {
             this.ocultarCargando();
-            this.mostrarError('Error creando área');
+            console.error('Error creando área:', error);
+            this.mostrarError('Error creando área: ' + error.message);
         }
     }
 
@@ -678,7 +609,7 @@ class CrearAreaController {
     }
 
     verAreaCreada() {
-        window.location.href = '/usuarios/administrador/areas/areas.html';
+        window.location.href = '../areas/areas.html';
     }
 
     limpiarFormulario() {
@@ -691,7 +622,7 @@ class CrearAreaController {
         const responsableSelect = document.getElementById('responsable');
         if (responsableSelect) {
             for (let i = 0; i < responsableSelect.options.length; i++) {
-                if (responsableSelect.options[i].value === 'admin_fijo') {
+                if (responsableSelect.options[i].value === 'admin_temp') {
                     responsableSelect.selectedIndex = i;
                     break;
                 }

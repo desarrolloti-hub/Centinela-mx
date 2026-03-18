@@ -72,11 +72,7 @@ class NavbarComplete {
         }
 
         try {
-            console.log('🔍 Cargando notificaciones para usuario:', {
-                id: this.currentUser.id,
-                areaId: this.currentUser.areaId,
-                organizacion: this.currentUser.organizacionCamelCase
-            });
+
 
             // Obtener TODAS las notificaciones del usuario (sin filtrar)
             const todasNotificaciones = await this.notificacionManager.obtenerNotificaciones(
@@ -86,13 +82,11 @@ class NavbarComplete {
                 20
             );
 
-            console.log('📬 Notificaciones sin filtrar:', todasNotificaciones.length);
 
             // El usuario tiene areaAsignadaId
             const areaUsuario = this.currentUser.areaId;
 
             if (!areaUsuario) {
-                console.log('ℹ️ Usuario sin área asignada');
                 this.notificaciones = [];
                 this.notificacionesNoLeidas = 0;
             } else {
@@ -102,7 +96,6 @@ class NavbarComplete {
                     if (notif.areasIds && Array.isArray(notif.areasIds) && notif.areasIds.length > 0) {
                         const pertenece = notif.areasIds.includes(areaUsuario);
                         if (pertenece) {
-                            console.log(`✅ Notificación ${notif.id} es para área ${areaUsuario}`);
                         }
                         return pertenece;
                     }
@@ -111,7 +104,6 @@ class NavbarComplete {
                     if (notif.areasDestino && Array.isArray(notif.areasDestino)) {
                         const pertenece = notif.areasDestino.some(area => area.id === areaUsuario);
                         if (pertenece) {
-                            console.log(`✅ Notificación ${notif.id} es para área ${areaUsuario} (por areasDestino)`);
                         }
                         return pertenece;
                     }
@@ -123,7 +115,6 @@ class NavbarComplete {
                 this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
             }
 
-            console.log(`📬 Notificaciones filtradas: ${this.notificaciones.length} (${this.notificacionesNoLeidas} no leídas)`);
 
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
@@ -1572,13 +1563,6 @@ class NavbarComplete {
                 };
 
                 this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
-                
-                console.log('✅ Usuario cargado en navbar:', {
-                    nombre: this.currentUser.nombreCompleto,
-                    areaId: this.currentUser.areaId,
-                    cargoId: this.currentUser.cargoId,
-                    rol: this.currentUser.rol
-                });
 
                 return true;
             }
