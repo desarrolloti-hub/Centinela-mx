@@ -635,12 +635,10 @@ class NavbarComplete {
                 top: 0;
                 right: -100%;
                 width: 25%;
-                /* CAMBIADO: height: 100vh a min-height: 100vh */
-                min-height: 100vh;
-                height: auto;
+                height: 100vh;
                 background-color: var(--navbar-scrolled-bg);
                 margin: 0;
-                padding: 0 0 30px 0; /* Padding inferior para mejor scroll */
+                padding: 0 0 30px 0;
                 display: flex;
                 flex-direction: column;
                 transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -840,7 +838,7 @@ class NavbarComplete {
             /* Contenedor de opciones - SIN LÍMITE DE ALTURA */
             .administracion-dropdown-options,
             .admin-dropdown-options {
-                display: flex;
+                display: none;
                 flex-direction: column;
                 gap: 10px;
                 padding: 15px;
@@ -848,10 +846,6 @@ class NavbarComplete {
                 border-radius: var(--border-radius-medium);
                 border: 1px solid var(--color-border-light);
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                max-height: 0;
-                overflow: hidden;
-                opacity: 0;
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 margin-bottom: 0;
                 width: 100%;
                 box-sizing: border-box;
@@ -859,10 +853,14 @@ class NavbarComplete {
             
             .administracion-dropdown-options.active,
             .admin-dropdown-options.active {
-                max-height: 2000px; /* Valor alto para permitir expansión completa */
+                /* ELIMINA max-height: none */
                 opacity: 1;
                 overflow: visible;
                 margin-bottom: 15px;
+                position: static;
+                height: auto; /* AÑADE ESTO */
+                display: flex; /* AÑADE ESTO */
+                flex-direction: column; /* AÑADE ESTO */
             }
             
             /* Opciones individuales */
@@ -950,7 +948,8 @@ class NavbarComplete {
             .admin-options-section {
                 padding: 20px 25px;
                 border-top: 1px solid var(--color-border-light);
-                margin-top: auto;
+                margin-top: 0;
+                flex-shrink: 0;
             }
             
             .navbar-mobile-overlay {
@@ -1174,6 +1173,56 @@ class NavbarComplete {
                     font-size: 16px;
                 }
             }
+
+            /* FORZAR QUE LOS DROPDOWNS NO TENGAN SCROLL */
+            .nav-section {
+                flex-shrink: 0;
+                overflow: visible !important;
+            }
+
+            .administracion-dropdown-options,
+            .admin-dropdown-options {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            .administracion-dropdown-options.active,
+            .admin-dropdown-options.active {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            /* ELIMINAR CUALQUIER SCROLL INTERNO */
+            *::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .navbar-main-menu::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            /* ASEGURAR QUE SOLO EL MENÚ PRINCIPAL TENGA SCROLL */
+            .navbar-main-menu {
+                overflow-y: auto !important;
+            }
+
+            .navbar-main-menu * {
+                overflow-y: visible !important;
+            }
+
+            /* OCULTAR EL SCROLL VISUALMENTE PERO MANTENER LA FUNCIONALIDAD */
+            .navbar-main-menu {
+                scrollbar-width: none; /* Para Firefox */
+                -ms-overflow-style: none; /* Para IE y Edge */
+            }
+
+            .navbar-main-menu::-webkit-scrollbar {
+                display: none; /* Para Chrome, Safari y Opera */
+                width: 0;
+                background: transparent;
+}
         `;
 
         const styleElement = document.createElement('style');
