@@ -1,4 +1,4 @@
-// incidenciasCanalizadasColaborador.js - VERSIÓN COMPLETA CORREGIDA
+// incidenciasCanalizadasColaborador.js - VERSIÓN COMPLETA CON NOTIFICACIONES
 // Muestra las incidencias canalizadas al área del usuario actual
 // PDF: Abre desde storage (NO genera nuevo)
 
@@ -16,6 +16,7 @@ let categoriasCache = [];
 let subcategoriasCache = [];
 let usuariosCache = [];
 let authToken = null;
+let notificacionManager = null;
 
 // Configuración del área actual (del usuario logueado)
 let areaActual = {
@@ -80,6 +81,9 @@ async function inicializarIncidenciaManager() {
         const { IncidenciaManager } = await import('/clases/incidencia.js');
         incidenciaManager = new IncidenciaManager();
 
+        const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
+        notificacionManager = new NotificacionAreaManager();
+
         // Cargar datos en paralelo
         await Promise.all([
             cargarSucursales().catch(() => { }),
@@ -90,7 +94,7 @@ async function inicializarIncidenciaManager() {
         await procesarSubcategoriasDesdeCategorias();
         await cargarIncidenciasCanalizadas();
 
-        // Configurar generador IPH (para generación manual si es necesaria)
+        // Configurar generador IPH
         if (generadorIPH && typeof generadorIPH.configurar === 'function') {
             generadorIPH.configurar({
                 organizacionActual,
@@ -375,8 +379,11 @@ async function cargarIncidenciasCanalizadas() {
 
         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i> Cargando incidencias canalizadas...</td></tr>';
 
-        // Obtener todas las incidencias de la organización
-        const todasIncidencias = await incidenciaManager.getIncidenciasByOrganizacion(organizacionActual.camelCase);
+        // Obtener todas las incidencias de la organización con ordenamiento
+        const todasIncidencias = await incidenciaManager.getIncidenciasByOrganizacion(
+            organizacionActual.camelCase,
+            { orderByFecha: true }
+        );
 
         // Filtrar solo las que están canalizadas al área actual
         incidenciasCache = filtrarPorAreaCanalizada(todasIncidencias);
@@ -526,7 +533,6 @@ function renderizarIncidencias() {
 
     // Ordenar por fecha de canalización (más reciente primero)
     incidenciasFiltradas.sort((a, b) => {
-        // Obtener la fecha de canalización más reciente de cada incidencia
         const fechaA = obtenerFechaCanalizacionMasReciente(a);
         const fechaB = obtenerFechaCanalizacionMasReciente(b);
         return new Date(fechaB) - new Date(fechaA);
@@ -786,12 +792,12 @@ function obtenerCanalizacionParaArea(incidencia) {
 // =============================================
 window.verDetallesIncidencia = function (incidenciaId, event) {
     event?.stopPropagation();
-    window.location.href = `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
+    window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
 };
 
 window.seguimientoIncidencia = function (incidenciaId, event) {
     event?.stopPropagation();
-    window.location.href = `/usuarios/administrador/segimientoIncidencias/segimientoIncidencias.html?id=${incidenciaId}`;
+    window.location.href = `../seguimientoIncidencias/segimientoIncidencias.html?id=${incidenciaId}`;
 };
 
 // Función para mostrar detalles de canalización

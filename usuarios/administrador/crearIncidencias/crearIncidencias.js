@@ -69,7 +69,6 @@ class CrearIncidenciaController {
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
-            this._redirigirAlLogin();
         }
     }
 
@@ -1205,7 +1204,7 @@ class CrearIncidenciaController {
                 URL.revokeObjectURL(img.preview);
             }
         });
-        window.location.href = '/usuarios/administrador/incidencias/incidencias.html';
+        window.location.href = '../incidencias/incidencias.html';
     }
 
     _cancelarCreacion() {
@@ -1225,17 +1224,6 @@ class CrearIncidenciaController {
                 });
                 this._volverALista();
             }
-        });
-    }
-
-    _redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión no válida',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
 

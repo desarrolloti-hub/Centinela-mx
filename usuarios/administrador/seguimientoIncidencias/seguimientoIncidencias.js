@@ -115,7 +115,7 @@ async function inicializarSeguimiento() {
                     <i class="fas fa-exclamation-triangle"></i>
                     <h4>Error al cargar la incidencia</h4>
                     <p>${error.message}</p>
-                    <button class="btn-volver" onclick="window.location.href='/usuarios/administrador/incidencias/incidencias.html'" style="margin-top: 15px;">
+                    <button class="btn-volver" onclick="window.location.href='../incidencias/incidencias.html'" style="margin-top: 15px;">
                         <i class="fas fa-arrow-left"></i> Volver a la lista
                     </button>
                 </div>
@@ -1226,7 +1226,7 @@ async function guardarSeguimiento(datos) {
 // NAVEGACIÓN
 // =============================================
 function volverALista() {
-    window.location.href = '/usuarios/administrador/incidencias/incidencias.html';
+    window.location.href = '../incidencias/incidencias.html';
 }
 
 function cancelar() {
