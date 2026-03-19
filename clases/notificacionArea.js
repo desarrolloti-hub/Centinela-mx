@@ -16,7 +16,8 @@ import {
     Timestamp,
     increment,
     writeBatch,
-    deleteDoc
+    deleteDoc,
+    arrayUnion
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
@@ -26,7 +27,7 @@ class NotificacionArea {
         this.id = id;
         this.titulo = data.titulo || '';
         this.mensaje = data.mensaje || '';
-        this.tipo = data.tipo || 'canalizacion';
+        this.tipo = data.tipo || 'canalizacion'; // canalizacion, comentario, asignacion, resolucion
         this.fecha = data.fecha ? this._convertirFecha(data.fecha) : new Date();
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.remitenteId = data.remitenteId || '';
@@ -41,13 +42,13 @@ class NotificacionArea {
         this.categoriaNombre = data.categoriaNombre || '';
         this.nivelRiesgo = data.nivelRiesgo || '';
         
-        // Áreas destino - IMPORTANTE: array de IDs de áreas
+        // Áreas destino - ARRAY DE IDs para consultas eficientes
         this.areasIds = data.areasIds || [];
-        this.areasDestino = data.areasDestino || [];
+        this.areasDestino = data.areasDestino || []; // Para mostrar en UI
         
         // Estadísticas
         this.totalUsuarios = data.totalUsuarios || 0;
-        this.leidas = data.leidas || 0;
+        this.leidas = data.leidas || 0; // Contador global
         
         // URLs
         this.urlDestino = data.urlDestino || '';
@@ -57,6 +58,10 @@ class NotificacionArea {
         this.prioridad = data.prioridad || 'normal';
         this.icono = data.icono || 'fa-bell';
         this.color = data.color || '#007bff';
+        
+        // Campos para el usuario específico (se llenan en getNotificacionesUsuario)
+        this.leida = false;
+        this.fechaLectura = null;
     }
 
     _convertirFecha(fecha) {
@@ -133,6 +138,8 @@ class NotificacionArea {
             areasDestino: this.areasDestino,
             totalUsuarios: this.totalUsuarios,
             leidas: this.leidas,
+            leida: this.leida,
+            fechaLectura: this.fechaLectura,
             remitenteNombre: this.remitenteNombre,
             urlDestino: this.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${this.incidenciaId}`,
             prioridad: this.prioridad,
@@ -146,6 +153,7 @@ class NotificacionAreaManager {
         console.log('📋 NotificacionAreaManager inicializado');
         this.usuarioActual = null;
         this.functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
+        this.functionUrlV2 = 'https://sendpushnotification-5orj5w7mha-uc.a.run.app';
         this._initUsuario();
     }
 
@@ -181,21 +189,25 @@ class NotificacionAreaManager {
     }
 
     /**
-     * Obtiene TODOS los usuarios de un área específica
+     * Obtiene TODOS los usuarios activos de un área específica
+     * con índice compuesto para consulta eficiente
      */
     async _getUsuariosPorAreaId(areaId, organizacionCamelCase) {
         try {
             if (!areaId) return [];
 
-            console.log(`🔍 Buscando usuarios con areaAsignadaId = ${areaId}`);
+            console.log(`🔍 Buscando usuarios activos con areaAsignadaId = ${areaId}`);
             
-            const collectionName = `users_${organizacionCamelCase}`;
-            const usersCollection = collection(db, collectionName);
+            // Consultar en colección de colaboradores
+            const colaboradoresCollection = `colaboradores_${organizacionCamelCase}`;
+            const colabRef = collection(db, colaboradoresCollection);
             
+            // Usar índice compuesto: areaAsignadaId + status + fechaCreacion
             const q = query(
-                usersCollection,
+                colabRef,
                 where("areaAsignadaId", "==", areaId),
-                where("status", "==", true)
+                where("status", "==", true),
+                orderBy("fechaCreacion", "desc")
             );
             
             const snapshot = await getDocs(q);
@@ -203,18 +215,17 @@ class NotificacionAreaManager {
             
             snapshot.forEach(doc => {
                 const data = doc.data();
-                console.log(`✅ Usuario encontrado: ${data.nombreCompleto}`);
-                
                 usuarios.push({
                     id: doc.id,
                     nombreCompleto: data.nombreCompleto || 'Usuario',
                     correo: data.correoElectronico || '',
                     dispositivos: data.dispositivos || [],
-                    areaAsignadaId: data.areaAsignadaId
+                    areaAsignadaId: data.areaAsignadaId,
+                    tokensActivos: this._extraerTokensActivos(data.dispositivos)
                 });
             });
 
-            console.log(`✅ Total usuarios en área ${areaId}: ${usuarios.length}`);
+            console.log(`✅ Total usuarios activos en área ${areaId}: ${usuarios.length}`);
             return usuarios;
 
         } catch (error) {
@@ -224,32 +235,45 @@ class NotificacionAreaManager {
     }
 
     /**
-     * Obtiene usuarios de múltiples áreas
+     * Extrae tokens activos del array de dispositivos
+     */
+    _extraerTokensActivos(dispositivos) {
+        if (!dispositivos || !Array.isArray(dispositivos)) return [];
+        return dispositivos
+            .filter(d => d.token && d.enabled !== false)
+            .map(d => d.token);
+    }
+
+    /**
+     * Obtiene usuarios de múltiples áreas (sin duplicados)
      */
     async _getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase) {
         try {
             if (!areasIds || areasIds.length === 0) return [];
 
-            const todosUsuarios = [];
+            console.log(`🔍 Buscando usuarios en ${areasIds.length} áreas...`);
             
-            for (const areaId of areasIds) {
-                const usuariosArea = await this._getUsuariosPorAreaId(areaId, organizacionCamelCase);
-                todosUsuarios.push(...usuariosArea);
-            }
-
-            // Eliminar duplicados
-            const usuariosUnicos = [];
+            const todosUsuarios = [];
             const idsVistos = new Set();
             
-            for (const usuario of todosUsuarios) {
-                if (!idsVistos.has(usuario.id)) {
-                    idsVistos.add(usuario.id);
-                    usuariosUnicos.push(usuario);
+            // Ejecutar consultas en paralelo para mejor rendimiento
+            const promises = areasIds.map(areaId => 
+                this._getUsuariosPorAreaId(areaId, organizacionCamelCase)
+            );
+            
+            const resultados = await Promise.all(promises);
+            
+            for (const usuariosArea of resultados) {
+                for (const usuario of usuariosArea) {
+                    if (!idsVistos.has(usuario.id)) {
+                        idsVistos.add(usuario.id);
+                        todosUsuarios.push(usuario);
+                    }
                 }
             }
 
-            console.log(`✅ Total usuarios únicos: ${usuariosUnicos.length}`);
-            return usuariosUnicos;
+            console.log(`✅ Total usuarios únicos: ${todosUsuarios.length}`);
+            return todosUsuarios;
 
         } catch (error) {
             console.error('Error en _getUsuariosPorMultiplesAreas:', error);
@@ -258,88 +282,90 @@ class NotificacionAreaManager {
     }
 
     /**
-     * Enviar notificaciones push a usuarios - VERSIÓN CORREGIDA
+     * Enviar notificaciones push a usuarios - VERSIÓN OPTIMIZADA
      */
-    async _enviarNotificacionesPush(usuarios, notificacionData) {
-        try {
-            console.log(`📱 Enviando notificaciones push a ${usuarios.length} usuarios...`);
-            
-            let enviados = 0;
-            let fallidos = 0;
-            
-            for (const usuario of usuarios) {
-                if (!usuario.dispositivos || !Array.isArray(usuario.dispositivos) || usuario.dispositivos.length === 0) {
-                    console.log(`⚠️ Usuario ${usuario.id} no tiene dispositivos`);
+async _enviarNotificacionesPush(usuarios, notificacionData) {
+    try {
+        console.log(`📱 Enviando notificaciones push a ${usuarios.length} usuarios...`);
+        
+        let enviados = 0;
+        let fallidos = 0;
+
+        // Enviar UNA solicitud por CADA USUARIO (no por token)
+        for (const usuario of usuarios) {
+            try {
+                // Obtener tokens del usuario
+                const tokens = this._extraerTokensActivos(usuario.dispositivos);
+                
+                if (tokens.length === 0) {
+                    console.log(`⚠️ Usuario ${usuario.id} sin tokens activos`);
                     continue;
                 }
 
-                // Filtrar dispositivos activos
-                const dispositivosActivos = usuario.dispositivos.filter(d => d.enabled === true);
-                
-                for (const dispositivo of dispositivosActivos) {
-                    if (!dispositivo.token) continue;
-                    
-                    try {
-                        console.log(`📤 Enviando push a ${usuario.id} - token: ${dispositivo.token.substring(0, 20)}...`);
-                        
-                        const response = await fetch(this.functionUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                userId: usuario.id,
-                                userType: 'colaborador',
-                                organizacionCamelCase: notificacionData.organizacionCamelCase,
-                                title: notificacionData.titulo,
-                                body: notificacionData.mensaje,
-                                url: notificacionData.urlDestino,
-                                senderToken: notificacionData.remitenteId,
-                                data: {
-                                    incidenciaId: notificacionData.incidenciaId,
-                                    tipo: notificacionData.tipo,
-                                    nivelRiesgo: notificacionData.nivelRiesgo,
-                                    notificacionId: notificacionData.id
-                                }
-                            })
-                        });
-
-                        const result = await response.json();
-                        
-                        if (response.ok && result.success) {
-                            enviados++;
-                            console.log(`✅ Push enviado a ${usuario.id}`);
-                        } else {
-                            fallidos++;
-                            console.log(`❌ Error push a ${usuario.id}:`, result);
-                        }
-
-                    } catch (error) {
-                        fallidos++;
-                        console.error(`❌ Error enviando push a ${usuario.id}:`, error);
+                // Enviar SOLICITUD ÚNICA para este usuario con TODOS sus tokens
+                const payload = {
+                    userId: usuario.id,                    // ← IGUAL que pruebas
+                    userType: 'colaborador',               // ← IGUAL que pruebas
+                    organizacionCamelCase: notificacionData.organizacionCamelCase,
+                    title: notificacionData.titulo,
+                    body: notificacionData.mensaje,
+                    url: notificacionData.urlDestino,
+                    senderToken: notificacionData.remitenteId || 'sistema',
+                    tokens: tokens,                         // ← Array de tokens del usuario
+                    data: {
+                        incidenciaId: notificacionData.incidenciaId,
+                        tipo: notificacionData.tipo,
+                        nivelRiesgo: notificacionData.nivelRiesgo,
+                        notificacionId: notificacionData.id,
+                        areasIds: notificacionData.areasIds
                     }
+                };
+                
+                // Intentar con URL primaria
+                let response = await fetch(this.functionUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-                    await new Promise(r => setTimeout(r, 100));
+                // Si falla, intentar con v2
+                if (!response.ok && this.functionUrlV2) {
+                    console.log('🔄 Fallback a URL v2');
+                    response = await fetch(this.functionUrlV2, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
                 }
+                
+                if (response.ok) {
+                    enviados++;
+                    console.log(`✅ Push enviado a usuario ${usuario.id} (${tokens.length} tokens)`);
+                } else {
+                    fallidos++;
+                    console.log(`❌ Error ${response.status} para usuario ${usuario.id}`);
+                }
+
+            } catch (error) {
+                fallidos++;
+                console.error(`❌ Error con usuario ${usuario.id}:`, error.message);
             }
 
-            console.log(`📊 Push: ${enviados} enviados, ${fallidos} fallidos`);
-
-            return {
-                success: enviados > 0,
-                enviados: enviados,
-                fallidos: fallidos,
-                total: usuarios.length
-            };
-
-        } catch (error) {
-            console.error('❌ Error en _enviarNotificacionesPush:', error);
-            return { success: false, error: error.message };
+            // Pequeña pausa entre usuarios
+            await new Promise(r => setTimeout(r, 100));
         }
+
+        console.log(`📊 Push: ${enviados}/${usuarios.length} usuarios notificados`);
+        return { success: enviados > 0, enviados, fallidos, total: usuarios.length };
+
+    } catch (error) {
+        console.error('❌ Error en _enviarNotificacionesPush:', error);
+        return { success: false, error: error.message };
     }
+}
 
     /**
-     * Método principal: Notificar a múltiples áreas
+     * MÉTODO PRINCIPAL: Notificar a múltiples áreas
      */
     async notificarMultiplesAreas({
         areas = [],
@@ -351,7 +377,7 @@ class NotificacionAreaManager {
         categoriaNombre = '',
         nivelRiesgo = '',
         tipo = 'canalizacion',
-        mensaje = '',
+        mensajePersonalizado = '',
         detalles = {},
         prioridad = 'normal',
         remitenteId = null,
@@ -361,19 +387,18 @@ class NotificacionAreaManager {
     }) {
         try {
             if (!organizacionCamelCase) {
-                console.error('❌ Error: organizacionCamelCase requerido');
                 return { success: false, error: 'organizacionCamelCase requerido' };
             }
 
             if (!areas || areas.length === 0) {
-                return { success: true, notificacionCreada: false };
+                return { success: true, notificacionCreada: false, mensaje: 'Sin áreas para notificar' };
             }
 
             if (!incidenciaId) {
-                console.error('❌ Error: incidenciaId requerido');
                 return { success: false, error: 'incidenciaId requerido' };
             }
 
+            // Determinar remitente
             if (!remitenteId || !remitenteNombre) {
                 if (this.usuarioActual) {
                     remitenteId = this.usuarioActual.id;
@@ -388,36 +413,29 @@ class NotificacionAreaManager {
             const areasIds = areas.map(a => a.id);
             console.log('📋 Áreas a notificar:', areasIds);
 
-            // Obtener TODOS los usuarios de esas áreas
+            // Obtener usuarios de esas áreas
             const usuarios = await this._getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase);
             console.log(`👥 Usuarios encontrados: ${usuarios.length}`);
 
-            // Crear mensaje
-            const titulo = `📢 Incidencia canalizada`;
-            let mensajeFinal = mensaje;
+            // Crear título y mensaje
+            const titulo = this._generarTitulo(tipo, areas, nivelRiesgo);
+            let mensaje = mensajePersonalizado;
             
-            if (!mensajeFinal) {
-                if (areas.length === 1) {
-                    mensajeFinal = `Nueva incidencia canalizada al área: ${areas[0].nombre}`;
-                } else {
-                    mensajeFinal = `Nueva incidencia canalizada a ${areas.length} áreas`;
-                }
-                if (incidenciaTitulo) {
-                    mensajeFinal = `${incidenciaTitulo}`;
-                }
+            if (!mensaje) {
+                mensaje = this._generarMensaje(tipo, areas, incidenciaTitulo, sucursalNombre);
             }
 
             const urlDestino = `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
             const notificacionId = this._generarNotificacionId();
 
-            // Guardar en Firestore (UNA SOLA NOTIFICACIÓN GLOBAL)
+            // Guardar notificación GLOBAL en Firestore
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const notificacionRef = doc(db, collectionName, notificacionId);
 
             const notificacionData = {
                 id: notificacionId,
                 titulo: titulo,
-                mensaje: mensajeFinal,
+                mensaje: mensaje,
                 tipo: tipo,
                 fecha: serverTimestamp(),
                 organizacionCamelCase: organizacionCamelCase,
@@ -434,7 +452,7 @@ class NotificacionAreaManager {
                 nivelRiesgo: nivelRiesgo,
                 
                 areasDestino: areas.map(a => ({ id: a.id, nombre: a.nombre })),
-                areasIds: areasIds, // ESTO ES CRÍTICO - Array de IDs
+                areasIds: areasIds, // ARRAY para consultas eficientes
                 
                 totalUsuarios: usuarios.length,
                 leidas: 0,
@@ -451,8 +469,10 @@ class NotificacionAreaManager {
             await setDoc(notificacionRef, notificacionData);
             console.log(`✅ Notificación guardada: ${notificacionId}`);
 
-            // Crear índices para cada usuario
-            await this._crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase);
+            // Crear índices para cada usuario (estado de lectura)
+            if (usuarios.length > 0) {
+                await this._crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase);
+            }
 
             // ENVIAR NOTIFICACIONES PUSH
             let pushResult = null;
@@ -475,7 +495,40 @@ class NotificacionAreaManager {
     }
 
     /**
-     * Crear índices para cada usuario
+     * Generar título según tipo y áreas
+     */
+    _generarTitulo(tipo, areas, nivelRiesgo) {
+        if (tipo === 'canalizacion') {
+            if (areas.length === 1) {
+                return `📢 Incidencia canalizada a ${areas[0].nombre}`;
+            } else {
+                return `📢 Incidencia canalizada a ${areas.length} áreas`;
+            }
+        }
+        return '📢 Nueva notificación';
+    }
+
+    /**
+     * Generar mensaje descriptivo
+     */
+    _generarMensaje(tipo, areas, incidenciaTitulo, sucursalNombre) {
+        let mensaje = '';
+        
+        if (incidenciaTitulo) {
+            mensaje = incidenciaTitulo;
+        } else {
+            mensaje = 'Se ha canalizado una nueva incidencia';
+        }
+        
+        if (sucursalNombre) {
+            mensaje += ` en ${sucursalNombre}`;
+        }
+        
+        return mensaje;
+    }
+
+    /**
+     * Crear índices para cada usuario (estado de lectura)
      */
     async _crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase) {
         try {
@@ -502,6 +555,7 @@ class NotificacionAreaManager {
 
                 operaciones++;
 
+                // Firestore batch tiene límite de 500 operaciones
                 if (operaciones >= 400) {
                     await batch.commit();
                     console.log(`✅ Lote de ${operaciones} índices guardado`);
@@ -520,7 +574,7 @@ class NotificacionAreaManager {
     }
 
     /**
-     * Obtener notificaciones de un usuario
+     * Obtener notificaciones de un usuario con ordenamiento por fecha
      */
     async obtenerNotificaciones(usuarioId, organizacionCamelCase, soloNoLeidas = false, limite = 50) {
         try {
@@ -546,6 +600,13 @@ class NotificacionAreaManager {
                 notificacionesIds = notificacionesIds.filter(id => !notificacionesMap[id].leida);
             }
 
+            // Ordenar por fecha de recepción (del mapa)
+            notificacionesIds.sort((a, b) => {
+                const fechaA = notificacionesMap[a].fechaRecepcion?.toDate?.() || new Date(0);
+                const fechaB = notificacionesMap[b].fechaRecepcion?.toDate?.() || new Date(0);
+                return fechaB - fechaA;
+            });
+
             notificacionesIds = notificacionesIds.slice(0, limite);
 
             if (notificacionesIds.length === 0) {
@@ -554,12 +615,14 @@ class NotificacionAreaManager {
 
             const notificaciones = [];
 
+            // Obtener notificaciones en lotes de 10 (límite de Firestore para IN)
             for (let i = 0; i < notificacionesIds.length; i += 10) {
                 const batchIds = notificacionesIds.slice(i, i + 10);
                 
                 const q = query(
                     collection(db, notificacionesCollectionName),
-                    where("__name__", "in", batchIds)
+                    where("__name__", "in", batchIds),
+                    orderBy("fecha", "desc") // Ordenar por fecha de creación
                 );
                 
                 const snapshot = await getDocs(q);
@@ -568,15 +631,16 @@ class NotificacionAreaManager {
                     const notifData = doc.data();
                     const userNotifData = notificacionesMap[doc.id] || { leida: false };
                     
-                    notificaciones.push(new NotificacionArea(doc.id, {
+                    const notificacion = new NotificacionArea(doc.id, {
                         ...notifData,
                         leida: userNotifData.leida,
                         fechaLectura: userNotifData.fechaLectura
-                    }));
+                    });
+                    
+                    notificaciones.push(notificacion);
                 });
             }
 
-            notificaciones.sort((a, b) => b.fecha - a.fecha);
             return notificaciones;
 
         } catch (error) {
@@ -586,7 +650,39 @@ class NotificacionAreaManager {
     }
 
     /**
-     * Obtener conteo de no leídas
+     * Obtener notificaciones filtradas por área (para vistas específicas)
+     */
+    async obtenerNotificacionesPorArea(areaId, organizacionCamelCase, limite = 50) {
+        try {
+            if (!organizacionCamelCase || !areaId) return [];
+
+            const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+            
+            // Usar índice compuesto: areasIds + fecha
+            const q = query(
+                collection(db, notificacionesCollectionName),
+                where("areasIds", "array-contains", areaId),
+                orderBy("fecha", "desc"),
+                limit(limite)
+            );
+            
+            const snapshot = await getDocs(q);
+            const notificaciones = [];
+            
+            snapshot.forEach(doc => {
+                notificaciones.push(new NotificacionArea(doc.id, doc.data()));
+            });
+            
+            return notificaciones;
+
+        } catch (error) {
+            console.error('Error en obtenerNotificacionesPorArea:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Obtener conteo de no leídas (desde el documento del usuario)
      */
     async obtenerConteoNoLeidas(usuarioId, organizacionCamelCase) {
         try {
@@ -619,12 +715,14 @@ class NotificacionAreaManager {
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
 
+            // Actualizar estado en el documento del usuario
             await updateDoc(userNotifRef, {
                 [`notificaciones.${notificacionId}.leida`]: true,
                 [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp(),
                 totalPendientes: increment(-1)
             });
 
+            // Incrementar contador global en la notificación
             const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
             const notificacionRef = doc(db, notificacionesCollectionName, notificacionId);
             
@@ -641,7 +739,7 @@ class NotificacionAreaManager {
     }
 
     /**
-     * Marcar todas como leídas
+     * Marcar todas como leídas (para un usuario)
      */
     async marcarTodasComoLeidas(usuarioId, organizacionCamelCase) {
         try {
@@ -659,6 +757,10 @@ class NotificacionAreaManager {
             const notificaciones = userData.notificaciones || {};
             const batch = writeBatch(db);
             
+            // Obtener todas las no leídas para actualizar contadores globales
+            const noLeidasIds = Object.keys(notificaciones).filter(id => !notificaciones[id].leida);
+            
+            // Actualizar cada notificación en el documento del usuario
             Object.keys(notificaciones).forEach(notifId => {
                 if (!notificaciones[notifId].leida) {
                     batch.update(userNotifRef, {
@@ -673,11 +775,60 @@ class NotificacionAreaManager {
             });
 
             await batch.commit();
+
+            // Actualizar contadores globales (en segundo plano, no crítico)
+            if (noLeidasIds.length > 0) {
+                const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+                for (const notifId of noLeidasIds) {
+                    try {
+                        const notifRef = doc(db, notificacionesCollectionName, notifId);
+                        await updateDoc(notifRef, {
+                            leidas: increment(1)
+                        });
+                    } catch (e) {
+                        console.warn(`No se pudo actualizar contador global para ${notifId}`);
+                    }
+                }
+            }
+
             return true;
 
         } catch (error) {
             console.error('Error en marcarTodasComoLeidas:', error);
             return false;
+        }
+    }
+
+    /**
+     * Eliminar notificaciones antiguas (para limpieza)
+     */
+    async limpiarNotificacionesAntiguas(organizacionCamelCase, dias = 30) {
+        try {
+            const fechaLimite = new Date();
+            fechaLimite.setDate(fechaLimite.getDate() - dias);
+            
+            const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+            const q = query(
+                collection(db, notificacionesCollectionName),
+                where("fecha", "<", fechaLimite),
+                limit(100) // Limitar por seguridad
+            );
+            
+            const snapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            
+            snapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            await batch.commit();
+            console.log(`✅ Limpiadas ${snapshot.size} notificaciones antiguas`);
+            
+            return { success: true, eliminadas: snapshot.size };
+
+        } catch (error) {
+            console.error('Error limpiando notificaciones:', error);
+            return { success: false, error: error.message };
         }
     }
 

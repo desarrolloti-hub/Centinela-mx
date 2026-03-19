@@ -1,6 +1,3 @@
-// [file name]: crearIncidencias.js
-// [file path]: /usuarios/administrador/crearIncidencias/crearIncidencias.js
-
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
 };
@@ -194,11 +191,12 @@ class CrearIncidenciaController {
 
             if (this.usuarioActual && this.usuarioActual.organizacionCamelCase) {
                 const areasObtenidas = await this.AreaManager.getAreasByOrganizacion(
-                    this.usuarioActual.organizacionCamelCase
+                    this.usuarioActual.organizacionCamelCase,
+                    true // solo activas
                 );
 
                 this.areas = areasObtenidas.filter(area => area.estado === 'activa');
-                console.log('✅ Áreas cargadas:', this.areas.length);
+                console.log('✅ Áreas activas cargadas:', this.areas.length);
             }
         } catch (error) {
             console.error('Error cargando áreas:', error);
@@ -864,6 +862,9 @@ class CrearIncidenciaController {
         }
     }
 
+    /**
+     * Método mejorado: Canalizar áreas con notificaciones
+     */
     async _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
         let continuar = true;
         let areasCanalizadas = [];
@@ -917,7 +918,7 @@ class CrearIncidenciaController {
                             canalizaciones: arrayUnion({
                                 areaId: area.id,
                                 areaNombre: area.nombreArea,
-                                fecha: new Date(),
+                                fechaCanalizacion: new Date(),
                                 canalizadoPor: this.usuarioActual.id,
                                 canalizadoPorNombre: this.usuarioActual.nombreCompleto,
                                 estado: 'pendiente'
@@ -951,92 +952,95 @@ class CrearIncidenciaController {
         return areasCanalizadas;
     }
 
-    // En crearIncidencias.js, reemplaza el método _enviarNotificacionesCanalizacion:
-
+    /**
+     * Enviar notificaciones a áreas canalizadas - VERSIÓN MEJORADA
+     */
     async _enviarNotificacionesCanalizacion(areas, incidenciaId, incidenciaTitulo) {
-    try {
-        const notificacionManager = await this._initNotificacionManager();
-        
-        if (!notificacionManager) {
-            console.error('No se pudo inicializar notificacionManager');
-            return;
-        }
-    
-        // Obtener datos de la incidencia
-        const sucursalInput = document.getElementById('sucursalIncidencia');
-        const categoriaInput = document.getElementById('categoriaIncidencia');
-        const riesgoSelect = document.getElementById('nivelRiesgo');
-    
-        // Formatear áreas con ID y nombre
-        const areasFormateadas = areas.map(area => ({
-            id: area.id,
-            nombre: area.nombre
-        }));
-    
-        console.log('📨 Enviando notificaciones a áreas:', areasFormateadas);
-    
-        // Mostrar loading
-        Swal.fire({
-            title: 'Enviando notificaciones...',
-            text: 'Notificando a los usuarios de las áreas seleccionadas',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-    
-        const resultado = await notificacionManager.notificarMultiplesAreas({
-            areas: areasFormateadas,
-            incidenciaId: incidenciaId,
-            incidenciaTitulo: incidenciaTitulo || 'Incidencia',
-            sucursalId: sucursalInput?.dataset.selectedId || '',
-            sucursalNombre: sucursalInput?.value || '',
-            categoriaId: categoriaInput?.dataset.selectedId || '',
-            categoriaNombre: categoriaInput?.value || '',
-            nivelRiesgo: riesgoSelect?.value || 'medio',
-            tipo: 'canalizacion',
-            prioridad: riesgoSelect?.value || 'normal',
-            remitenteId: this.usuarioActual.id,
-            remitenteNombre: this.usuarioActual.nombreCompleto,
-            organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
-            enviarPush: true
-        });
-    
-        Swal.close();
-    
-        if (resultado.success) {
-            let mensaje = `✅ ${resultado.totalUsuarios} usuarios notificados en ${resultado.areas} áreas`;
+        try {
+            const notificacionManager = await this._initNotificacionManager();
             
-            if (resultado.push) {
-                mensaje += `<br>📱 Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
+            if (!notificacionManager) {
+                console.error('No se pudo inicializar notificacionManager');
+                return;
             }
-            
-            console.log(mensaje);
-            
+        
+            // Obtener datos de la incidencia
+            const sucursalInput = document.getElementById('sucursalIncidencia');
+            const categoriaInput = document.getElementById('categoriaIncidencia');
+            const riesgoSelect = document.getElementById('nivelRiesgo');
+        
+            // Formatear áreas con ID y nombre
+            const areasFormateadas = areas.map(area => ({
+                id: area.id,
+                nombre: area.nombre
+            }));
+        
+            console.log('📨 Enviando notificaciones a áreas:', areasFormateadas);
+        
+            // Mostrar loading
             Swal.fire({
-                icon: 'success',
-                title: 'Notificaciones enviadas',
-                html: mensaje,
-                timer: 3000,
-                showConfirmButton: false
+                title: 'Enviando notificaciones...',
+                text: 'Notificando a los usuarios de las áreas seleccionadas',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
             });
-        } else {
-            console.error('❌ Error:', resultado.error);
+        
+            // Usar el método mejorado del manager
+            const resultado = await notificacionManager.notificarMultiplesAreas({
+                areas: areasFormateadas,
+                incidenciaId: incidenciaId,
+                incidenciaTitulo: incidenciaTitulo || 'Incidencia',
+                sucursalId: sucursalInput?.dataset.selectedId || '',
+                sucursalNombre: sucursalInput?.value || '',
+                categoriaId: categoriaInput?.dataset.selectedId || '',
+                categoriaNombre: categoriaInput?.value || '',
+                nivelRiesgo: riesgoSelect?.value || 'medio',
+                tipo: 'canalizacion',
+                prioridad: riesgoSelect?.value === 'critico' ? 'urgente' : 'normal',
+                remitenteId: this.usuarioActual.id,
+                remitenteNombre: this.usuarioActual.nombreCompleto,
+                organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
+                enviarPush: true,
+                mensajePersonalizado: `Nueva incidencia canalizada a ${areas.length === 1 ? 'tu área' : 'áreas asignadas'}`
+            });
+        
+            Swal.close();
+        
+            if (resultado.success) {
+                let mensaje = `✅ ${resultado.totalUsuarios} usuarios notificados en ${resultado.areas} áreas`;
+                
+                if (resultado.push && resultado.push.enviados > 0) {
+                    mensaje += `<br>📱 Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
+                }
+                
+                console.log(mensaje);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Notificaciones enviadas',
+                    html: mensaje,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            } else {
+                console.error('❌ Error:', resultado.error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudieron enviar las notificaciones'
+                });
+            }
+        
+        } catch (error) {
+            console.error('Error en _enviarNotificacionesCanalizacion:', error);
+            Swal.close();
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'No se pudieron enviar las notificaciones'
+                text: error.message
             });
         }
-    
-    } catch (error) {
-        console.error('Error en _enviarNotificacionesCanalizacion:', error);
-        Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: error.message
-        });
     }
-}
 
     async _guardarIncidencia(datos) {
         const btnCrear = document.getElementById('btnCrearIncidencia');

@@ -366,21 +366,21 @@ class AreasController {
     }
 
     irACrearArea() {
-        window.location.href = '/usuarios/administrador/crearAreas/crearAreas.html';
+        window.location.href = '../crearAreas/crearAreas.html';
     }
 
     irAEditarArea(areaId) {
-        window.location.href = `/usuarios/administrador/editarAreas/editarAreas.html?id=${areaId}`;
+        window.location.href = `../editarAreas/editarAreas.html?id=${areaId}`;
     }
 
     irAEditarCargo(areaId, cargoId, event) {
         event?.stopPropagation();
-        window.location.href = `/usuarios/administrador/editarAreas/editarAreas.html?id=${areaId}&editarCargo=${cargoId}`;
+        window.location.href = `../editarAreas/editarAreas.html?id=${areaId}&editarCargo=${cargoId}`;
     }
 
     irACrearCargo(areaId, event) {
         event?.stopPropagation();
-        window.location.href = `/usuarios/administrador/editarAreas/editarAreas.html?id=${areaId}&nuevoCargo=true`;
+        window.location.href = `../editarAreas/editarAreas.html?id=${areaId}&nuevoCargo=true`;
     }
 
     async cargarAreas() {

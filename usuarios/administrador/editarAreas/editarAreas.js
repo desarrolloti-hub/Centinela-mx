@@ -1,4 +1,4 @@
-// editarAreas.js - VERSIÓN CORREGIDA CON REGISTRO EN HISTORIAL
+// editarAreas.js - VERSIÓN CORREGIDA CON DATOS REALES DE ORGANIZACIÓN
 // SweetAlerts sin estilos personalizados
 
 window.editarAreaDebug = {
@@ -60,13 +60,20 @@ function iniciarAplicacion() {
 
 class EditarAreaController {
     constructor() {
-        this.areaManager = new AreaManager();
-        this.userManager = this.cargarUsuarioDesdeStorage();
+        // Cargar datos reales de organización desde localStorage
+        const orgData = this._cargarDatosOrganizacion();
         
-        if (!this.userManager || !this.userManager.currentUser) {
-            this.redirigirAlLogin();
-            throw new Error('Usuario no autenticado');
-        }
+        this.areaManager = new AreaManager();
+        
+        // Configurar userManager con los datos reales de organización
+        this.userManager = {
+            currentUser: {
+                id: orgData.userId || 'usuario_temp',
+                nombreCompleto: orgData.nombreUsuario || 'Usuario',
+                organizacion: orgData.organizacionNombre,
+                organizacionCamelCase: orgData.organizacionCamelCase
+            }
+        };
         
         this.areaActual = null;
         this.datosOriginales = null;
@@ -75,55 +82,57 @@ class EditarAreaController {
         this._inputHandler = null;
         this._submitHandler = null;
     }
-    
-    cargarUsuarioDesdeStorage() {
+
+    /**
+     * Cargar datos de organización desde localStorage (igual que en categoria.js)
+     */
+    _cargarDatosOrganizacion() {
         try {
-            let userData = null;
-            
+            // Intentar cargar desde adminInfo (admin)
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-                userData = {
-                    id: adminData.id || `admin_${Date.now()}`,
-                    nombre: adminData.nombreCompleto || 'Administrador',
-                    nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                    rol: 'administrador',
-                    organizacion: adminData.organizacion || 'Sin organización',
-                    organizacionCamelCase: adminData.organizacionCamelCase || this.convertirACamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || '',
-                    fotoUsuario: adminData.fotoUsuario,
-                    fotoOrganizacion: adminData.fotoOrganizacion,
-                    esSuperAdmin: adminData.esSuperAdmin || true,
-                    esAdminOrganizacion: adminData.esAdminOrganizacion || true,
-                    timestamp: adminData.timestamp || new Date().toISOString(),
-                    esResponsable: true
+                return {
+                    organizacionNombre: adminData.organizacion || 'Mi Organización',
+                    organizacionCamelCase: adminData.organizacionCamelCase || this._generarCamelCase(adminData.organizacion),
+                    userId: adminData.id,
+                    nombreUsuario: adminData.nombreCompleto
                 };
             }
+
+            // Intentar cargar desde userData (usuario normal)
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const orgNombre = userData.organizacion || userData.empresa || 'Mi Organización';
             
-            if (!userData) {
-                const storedUserData = localStorage.getItem('userData');
-                if (storedUserData) {
-                    userData = JSON.parse(storedUserData);
-                    userData.nombreCompleto = userData.nombreCompleto || userData.nombre || 'Usuario';
-                    userData.esResponsable = false;
-                }
-            }
-            
-            if (!userData) return null;
-            
-            if (!userData.id) userData.id = `user_${Date.now()}`;
-            if (!userData.organizacion) userData.organizacion = 'Sin organización';
-            if (!userData.organizacionCamelCase) {
-                userData.organizacionCamelCase = this.convertirACamelCase(userData.organizacion);
-            }
-            if (!userData.rol) userData.rol = 'colaborador';
-            if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
-            
-            return { currentUser: userData };
-            
+            return {
+                organizacionNombre: orgNombre,
+                organizacionCamelCase: userData.organizacionCamelCase || this._generarCamelCase(orgNombre),
+                userId: userData.id,
+                nombreUsuario: userData.nombreCompleto || userData.nombre || 'Usuario'
+            };
+
         } catch (error) {
-            return null;
+            console.error('Error cargando datos de organización:', error);
+            return {
+                organizacionNombre: 'Mi Organización',
+                organizacionCamelCase: 'miOrganizacion',
+                userId: 'usuario_temp',
+                nombreUsuario: 'Usuario'
+            };
         }
+    }
+
+    /**
+     * Generar camelCase a partir de texto (igual que en categoria.js)
+     */
+    _generarCamelCase(texto) {
+        if (!texto || typeof texto !== 'string') return 'miOrganizacion';
+        return texto
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+            .replace(/[^a-zA-Z0-9]/g, '');
     }
     
     async cargarResponsables() {
@@ -133,38 +142,13 @@ class EditarAreaController {
         try {
             responsableSelect.innerHTML = '<option value="">Seleccionar responsable...</option>';
             
-            if (this.userManager.currentUser) {
-                const adminOption = document.createElement('option');
-                adminOption.value = 'admin_fijo';
-                adminOption.text = `${this.userManager.currentUser.nombreCompleto} (Administrador)`;
-                adminOption.selected = true;
-                adminOption.style.fontWeight = 'bold';
-                responsableSelect.appendChild(adminOption);
-            }
-            
-            const colaboradores = await this.cargarColaboradoresDesdeSistema();
-            if (colaboradores?.length > 0) {
-                const separator = document.createElement('option');
-                separator.disabled = true;
-                separator.text = '────────── COLABORADORES ──────────';
-                responsableSelect.appendChild(separator);
-                
-                colaboradores.forEach(colaborador => {
-                    const option = document.createElement('option');
-                    option.value = colaborador.id || colaborador.userId || `colab_${Date.now()}`;
-                    
-                    let nombreMostrar = colaborador.nombre || 'Colaborador';
-                    if (colaborador.apellido) {
-                        nombreMostrar += ` ${colaborador.apellido}`;
-                    }
-                    if (colaborador.cargo) {
-                        nombreMostrar += ` (${colaborador.cargo})`;
-                    }
-                    
-                    option.text = nombreMostrar;
-                    responsableSelect.appendChild(option);
-                });
-            }
+            // Opción del administrador actual
+            const adminOption = document.createElement('option');
+            adminOption.value = 'admin_temp';
+            adminOption.text = `${this.userManager.currentUser.nombreCompleto} (Administrador)`;
+            adminOption.selected = true;
+            adminOption.style.fontWeight = 'bold';
+            responsableSelect.appendChild(adminOption);
             
             const otroSeparator = document.createElement('option');
             otroSeparator.disabled = true;
@@ -181,41 +165,6 @@ class EditarAreaController {
         }
     }
     
-    async cargarColaboradoresDesdeSistema() {
-        try {
-            const orgKey = this.userManager.currentUser.organizacionCamelCase;
-            const colaboradoresStorage = localStorage.getItem(`colaboradores_${orgKey}`);
-            
-            if (colaboradoresStorage) {
-                const colaboradores = JSON.parse(colaboradoresStorage);
-                if (colaboradores.length > 0) return colaboradores;
-            }
-            
-            if (this.areaManager && typeof this.areaManager.obtenerColaboradoresPorOrganizacion === 'function') {
-                const colaboradoresFB = await this.areaManager.obtenerColaboradoresPorOrganizacion(orgKey);
-                
-                if (colaboradoresFB?.length > 0) {
-                    localStorage.setItem(`colaboradores_${orgKey}`, JSON.stringify(colaboradoresFB));
-                    return colaboradoresFB;
-                }
-            }
-            
-            const usuariosStorage = localStorage.getItem('usuariosOrganizacion');
-            if (usuariosStorage) {
-                const usuarios = JSON.parse(usuariosStorage);
-                return usuarios.filter(user => 
-                    user.organizacionCamelCase === orgKey && 
-                    user.id !== this.userManager.currentUser.id
-                );
-            }
-            
-            return [];
-            
-        } catch (error) {
-            return [];
-        }
-    }
-    
     init() {
         this.inicializarEventos();
         this.inicializarValidaciones();
@@ -223,6 +172,9 @@ class EditarAreaController {
         this.inicializarGestionCargos();
         this.cargarArea();
         this.aplicarLimitesCaracteres();
+        
+        // Mostrar en consola la colección que se está usando (para debugging)
+        console.log(`📁 Editando área en colección: areas_${this.userManager.currentUser.organizacionCamelCase}`);
     }
     
     aplicarLimitesCaracteres() {
@@ -334,6 +286,8 @@ class EditarAreaController {
                 return;
             }
             
+            console.log(`🔍 Buscando área ${areaId} en colección: areas_${this.userManager.currentUser.organizacionCamelCase}`);
+            
             const area = await this.areaManager.getAreaById(
                 areaId, 
                 this.userManager.currentUser.organizacionCamelCase
@@ -359,6 +313,7 @@ class EditarAreaController {
             
         } catch (error) {
             this.ocultarCargando();
+            console.error('Error cargando área:', error);
             this.mostrarError('Error cargando área');
             setTimeout(() => this.volverALista(), 2000);
         }
@@ -401,7 +356,7 @@ class EditarAreaController {
                 }
             } else {
                 for (let i = 0; i < responsableSelect.options.length; i++) {
-                    if (responsableSelect.options[i].value === 'admin_fijo') {
+                    if (responsableSelect.options[i].value === 'admin_temp') {
                         responsableSelect.selectedIndex = i;
                         break;
                     }
@@ -709,27 +664,6 @@ class EditarAreaController {
         };
     }
     
-    convertirACamelCase(texto) {
-        if (!texto) return 'sinOrganizacion';
-        return texto
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
-            .replace(/[^a-zA-Z0-9]/g, '');
-    }
-    
-    redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión expirada',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
-        });
-    }
-    
     async confirmarGuardado(datosActualizados) {
         try {
             if (!this.areaActual) {
@@ -738,13 +672,14 @@ class EditarAreaController {
             
             this.mostrarCargando('Guardando cambios...');
             
-            // ✅ CORREGIDO: PASAR usuarioActual para que registre en historial
+            console.log(`💾 Guardando cambios en colección: areas_${this.userManager.currentUser.organizacionCamelCase}`);
+            
             await this.areaManager.actualizarArea(
                 this.areaActual.id,
                 datosActualizados,
                 this.userManager.currentUser.id,
                 this.userManager.currentUser.organizacionCamelCase,
-                this.userManager.currentUser // ← ESTE ES EL PARÁMETRO QUE FALTABA
+                this.userManager.currentUser
             );
             
             this.ocultarCargando();
@@ -755,12 +690,12 @@ class EditarAreaController {
             await Swal.fire({
                 icon: 'success',
                 title: '¡Guardado!',
-                text: 'Cambios guardados correctamente',
-                timer: 2000,
+                html: `Cambios guardados correctamente en:<br><strong>areas_${this.userManager.currentUser.organizacionCamelCase}</strong>`,
+                timer: 2500,
                 showConfirmButton: false
             });
             
-            setTimeout(() => this.volverALista(), 2100);
+            setTimeout(() => this.volverALista(), 2600);
             
         } catch (error) {
             this.ocultarCargando();
@@ -770,7 +705,7 @@ class EditarAreaController {
     }
     
     volverALista() {
-        window.location.href = '/usuarios/administrador/areas/areas.html';
+        window.location.href = '../areas/areas.html';
     }
     
     cancelarEdicion() {
