@@ -148,3 +148,50 @@ exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
+//Inicio de API REST para Power Manage Centinela-MX
+// Victor Ramirez Cruz
+const axios = require('axios');
+const cors = require('cors')({origin: true});
+
+// Configuración de la API externa
+const PM_API = "https://cenc5.com/rest_api/14.0";//La documentacion es la 13 pero JCI entrego la 14. NO MUEVAS LA VERSION
+
+/**
+ * Función centralizada para manejar peticiones a Power Manage
+ */
+exports.proxyPowerManage = functions.https.onRequest((req, res) => {
+    return cors(req, res, async () => {
+        // Solo aceptamos POST para el registro
+        if (req.method !== 'POST') {
+            return res.status(405).json({ error: "Método no permitido" });
+        }
+
+        const { action, email, email_code, app_id } = req.body;
+
+        try {
+            if (action === 'solicitarCodigo') {
+                // Paso 1: Generar código y enviar a email
+                const response = await axios.post(`${PM_API}/register`, { email });
+                return res.status(200).json({ success: true, message: "Código enviado" });
+
+            } else if (action === 'completarRegistro') {
+                // Paso 2: Validar código y obtener tokens
+                const response = await axios.post(`${PM_API}/register/complete`, {
+                    email_code,
+                    app_id
+                });
+                // Devolvemos el user_token para que el cliente lo guarde vía la clase CuentaPM
+                return res.status(200).json(response.data);
+            }
+
+            return res.status(400).json({ error: "Acción no reconocida" });
+
+        } catch (error) {
+            console.error("Error en Proxy PM:", error.response?.data || error.message);
+            return res.status(error.response?.status || 500).json(
+                error.response?.data || { error: "Error de conexión con el servidor de alarmas" }
+            );
+        }
+    });
+});

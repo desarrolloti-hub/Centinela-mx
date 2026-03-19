@@ -1,0 +1,47 @@
+@import url('../crearUsuarios.css');
+
+/* Sobreescritura para el layout de 2 pasos */
+.edit-wrapper {
+    grid-template-columns: 350px 1fr;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+}
+
+.edit-left-panel {
+    background: linear-gradient(180deg, var(--color-bg-primary) 0%, rgba(10, 37, 64, 0.95) 100%);
+    border-right: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+/* Efecto Neón para Icono */
+.placeholder-text i {
+    font-size: 4.5rem;
+    color: var(--color-accent-primary);
+    filter: drop-shadow(0 0 15px var(--color-accent-primary));
+}
+
+/* Campo de Código Especial */
+#pmCode {
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    font-weight: 700;
+    text-align: center;
+    font-size: 1.3rem;
+    border: 1px solid var(--color-accent-secondary);
+    background: rgba(0, 255, 255, 0.05);
+}
+
+/* Botones con degradado Centinela */
+.save-btn {
+    background: linear-gradient(135deg, var(--color-accent-primary) 0%, var(--color-accent-secondary) 100%) !important;
+    color: var(--color-text-dark) !important;
+    margin-top: 1.5rem;
+}
+
+#step1, #step2 {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@media (max-width: 850px) {
+    .edit-wrapper {
+        grid-template-columns: 1fr;
+    }
+}

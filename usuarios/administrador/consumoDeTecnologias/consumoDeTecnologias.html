@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consumo Firebase - Operaciones</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="consumoOperaciones.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="admin-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-chart-line"></i>
+                Consumo de Operaciones Firebase
+            </h1>
+            <div class="header-description">
+                Monitorea en tiempo real todas las operaciones realizadas en Firestore, Storage, Cloud Functions y Authentication.
+                Los contadores se acumulan desde que se carga la página.
+            </div>
+        </div>
+
+        <!-- Barra de filtros -->
+        <div class="filtros-container">
+            <div class="filtros-header">
+                <h5><i class="fas fa-filter"></i> Filtrar historial:</h5>
+            </div>
+            <div class="filtros-body">
+                <div class="filtro-grupo">
+                    <label for="filtroServicio">Servicio</label>
+                    <select id="filtroServicio" class="filtro-select">
+                        <option value="todos">Todos los servicios</option>
+                        <option value="firestore">Firestore</option>
+                        <option value="storage">Storage</option>
+                        <option value="functions">Functions</option>
+                        <option value="auth">Auth</option>
+                    </select>
+                </div>
+                <div class="filtro-grupo">
+                    <label for="filtroTipo">Tipo</label>
+                    <select id="filtroTipo" class="filtro-select">
+                        <option value="todos">Todos los tipos</option>
+                        <option value="lectura">Lectura</option>
+                        <option value="escritura">Escritura</option>
+                        <option value="actualizacion">Actualización</option>
+                        <option value="eliminacion">Eliminación</option>
+                        <option value="subida">Subida</option>
+                        <option value="descarga">Descarga</option>
+                        <option value="invocacion">Invocación</option>
+                        <option value="login">Login</option>
+                        <option value="logout">Logout</option>
+                        <option value="registro">Registro</option>
+                    </select>
+                </div>
+                <div class="filtro-acciones">
+                    <button class="btn-buscar" id="btnAplicarFiltros">
+                        <i class="fas fa-search"></i> Aplicar
+                    </button>
+                    <button class="btn-limpiar" id="btnLimpiarFiltros">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
+                    <button class="btn-pdf" id="btnGenerarPDF">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjetas de métricas principales -->
+        <div class="metrics-grid">
+            <!-- Firestore -->
+            <div class="metric-card firestore">
+                <div class="metric-title">
+                    <i class="fas fa-database"></i> Firestore
+                </div>
+                <div class="metric-value" id="metricFirestoreTotal">0</div>
+                <div class="metric-subtitle" id="metricFirestoreDetalle">L:0 / E:0 / U:0 / D:0</div>
+                <i class="fas fa-cloud metric-icon"></i>
+            </div>
+
+            <!-- Storage -->
+            <div class="metric-card storage">
+                <div class="metric-title">
+                    <i class="fas fa-cloud-upload-alt"></i> Storage
+                </div>
+                <div class="metric-value" id="metricStorageTotal">0</div>
+                <div class="metric-subtitle" id="metricStorageDetalle">Sub:0 / Desc:0 / Elim:0</div>
+                <i class="fas fa-archive metric-icon"></i>
+            </div>
+
+            <!-- Functions -->
+            <div class="metric-card functions">
+                <div class="metric-title">
+                    <i class="fas fa-code"></i> Cloud Functions
+                </div>
+                <div class="metric-value" id="metricFunctionsTotal">0</div>
+                <div class="metric-subtitle" id="metricFunctionsDetalle">Invocaciones: 0</div>
+                <i class="fas fa-bolt metric-icon"></i>
+            </div>
+
+            <!-- Auth -->
+            <div class="metric-card auth">
+                <div class="metric-title">
+                    <i class="fas fa-user-lock"></i> Authentication
+                </div>
+                <div class="metric-value" id="metricAuthTotal">0</div>
+                <div class="metric-subtitle" id="metricAuthDetalle">Login:0 / Logout:0 / Reg:0</div>
+                <i class="fas fa-users metric-icon"></i>
+            </div>
+        </div>
+
+        <!-- Gráfica de distribución por servicio -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Distribución de operaciones por servicio</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="graficoDistribucion" style="width: 100%; height: 300px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Gráfica de evolución temporal (opcional) -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line"></i> Evolución de operaciones (últimas 50)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="graficoEvolucion" style="width: 100%; height: 250px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Tabla de últimas operaciones -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Historial de operaciones</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Servicio</th>
+                                <th>Tipo</th>
+                                <th>Detalles</th>
+                                <th>Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaHistorialBody">
+                            <tr><td colspan="4" style="text-align:center;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información de última actualización -->
+        <div class="footer-datetime">
+            <i class="fas fa-sync-alt"></i>
+            Última actualización: <span id="fechaActualizacion">-</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="/components/cargadorTemas.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script src="/components/navbarAdministrador.js"></script>
+    <script src="/components/footerAdministrador.js"></script>
+    <script type="module" src="consumoOperaciones.js"></script>
+</body>
+
+</html>
