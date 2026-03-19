@@ -182,7 +182,7 @@ function mostrarMensajeVacio() {
                 <div style="text-align:center;">
                     <i class="fas fa-tags" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
                     <h5 style="color:white;">No hay categorías</h5>
-                    <a href="/usuarios/administrador/crearCategorias/crearCategorias.html" class="btn-nueva-categoria-header" style="display:inline-flex; margin-top:16px;">
+                    <a href="../crearCategorias/crearCategorias.html" class="btn-nueva-categoria-header" style="display:inline-flex; margin-top:16px;">
                         <i class="fas fa-plus-circle"></i> Crear Categoría
                     </a>
                 </div>
@@ -410,17 +410,17 @@ async function crearFilaCategoria(categoria, tbody) {
 // =============================================
 window.editarCategoria = function (id, event) {
     event?.stopPropagation();
-    window.location.href = `/usuarios/administrador/editarCategorias/editarCategorias.html?id=${id}`;
+    window.location.href = `../editarCategorias/editarCategorias.html?id=${id}`;
 };
 
 window.agregarSubcategoria = function (id, event) {
     event?.stopPropagation();
-    window.location.href = `/usuarios/administrador/editarCategorias/editarCategorias.html?id=${id}&nuevaSubcategoria=true`;
+    window.location.href = `../editarCategorias/editarCategorias.html?id=${id}&nuevaSubcategoria=true`;
 };
 
 window.editarSubcategoria = function (catId, subId, event) {
     event?.stopPropagation();
-    window.location.href = `/usuarios/administrador/editarCategorias/editarCategorias.html?id=${catId}&editarSubcategoria=${subId}`;
+    window.location.href = `../editarCategorias/editarCategorias.html?id=${catId}&editarSubcategoria=${subId}`;
 };
 
 // =============================================

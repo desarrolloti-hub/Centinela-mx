@@ -71,7 +71,6 @@ class CrearCategoriaController {
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
-            this._redirigirAlLogin();
         }
     }
 
@@ -692,7 +691,7 @@ class CrearCategoriaController {
     // ========== NAVEGACIÓN ==========
 
     _volverALista() {
-        window.location.href = '/usuarios/administrador/categorias/categorias.html';
+        window.location.href = '../categorias/categorias.html';
     }
 
     _cancelarCreacion() {
@@ -707,17 +706,6 @@ class CrearCategoriaController {
             if (result.isConfirmed) {
                 this._volverALista();
             }
-        });
-    }
-
-    _redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión no válida',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
 
