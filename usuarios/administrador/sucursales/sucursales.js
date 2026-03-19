@@ -1,6 +1,6 @@
 // ========== VARIABLES GLOBALES ==========
 let sucursalManager = null;
-let adminActual = null;
+let usuarioActual = null;
 
 // Configuración de paginación
 const ITEMS_POR_PAGINA = 10;
@@ -18,22 +18,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Acceder directamente al usuario actual desde window.userManager
-        if (!window.userManager || !window.userManager.currentUser || !window.userManager.currentUser.esAdministrador()) {
-            console.error('❌ No hay administrador autenticado');
-            showNoAdminMessage();
-            return;
+        // Obtener usuario actual (temporal - será reemplazado por componente Auth)
+        usuarioActual = obtenerUsuarioActual();
+        
+        if (!usuarioActual) {
+            console.warn('No hay información de usuario, usando valores por defecto');
+            usuarioActual = {
+                id: `usuario_${Date.now()}`,
+                nombreCompleto: 'Usuario',
+                organizacion: 'Mi Organización',
+                organizacionCamelCase: 'miOrganizacion',
+                correoElectronico: 'usuario@ejemplo.com'
+            };
         }
         
-        adminActual = window.userManager.currentUser;
-        
-        localStorage.setItem('adminInfo', JSON.stringify({
-            id: adminActual.id,
-            nombreCompleto: adminActual.nombreCompleto,
-            organizacion: adminActual.organizacion,
-            organizacionCamelCase: adminActual.organizacionCamelCase,
-            rol: adminActual.rol,
-            correoElectronico: adminActual.correoElectronico,
+        // Guardar info en localStorage para otros componentes (temporal)
+        localStorage.setItem('userInfo', JSON.stringify({
+            id: usuarioActual.id,
+            nombreCompleto: usuarioActual.nombreCompleto,
+            organizacion: usuarioActual.organizacion,
+            organizacionCamelCase: usuarioActual.organizacionCamelCase,
+            correoElectronico: usuarioActual.correoElectronico,
             timestamp: new Date().toISOString()
         }));
         
@@ -46,6 +51,53 @@ document.addEventListener('DOMContentLoaded', async function() {
         showError(error.message || 'Error al cargar la página');
     }
 });
+
+// ========== OBTENER USUARIO ACTUAL (TEMP) ==========
+function obtenerUsuarioActual() {
+    // TODO: Reemplazar con llamado al componente Auth
+    try {
+        // Intentar obtener de localStorage primero
+        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+        if (adminInfo && Object.keys(adminInfo).length > 0) {
+            return {
+                id: adminInfo.id || adminInfo.uid || `admin_${Date.now()}`,
+                nombreCompleto: adminInfo.nombreCompleto || 'Administrador',
+                organizacion: adminInfo.organizacion || 'Mi Organización',
+                organizacionCamelCase: adminInfo.organizacionCamelCase || generarCamelCase(adminInfo.organizacion),
+                correoElectronico: adminInfo.correoElectronico || ''
+            };
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id || `user_${Date.now()}`,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa || 'Mi Organización',
+                organizacionCamelCase: userData.organizacionCamelCase || generarCamelCase(userData.organizacion || userData.empresa),
+                correoElectronico: userData.correo || userData.email || ''
+            };
+        }
+
+        // Si no hay datos, retornar null para usar valores por defecto
+        return null;
+
+    } catch (error) {
+        console.error('Error obteniendo usuario:', error);
+        return null;
+    }
+}
+
+// ========== GENERAR CAMEL CASE (TEMP) ==========
+function generarCamelCase(texto) {
+    if (!texto || typeof texto !== 'string') return 'miOrganizacion';
+    return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+        .replace(/[^a-zA-Z0-9]/g, '');
+}
 
 // ========== CONFIGURAR BÚSQUEDA ==========
 function configurarBusqueda() {
@@ -218,7 +270,7 @@ async function loadBranches() {
         showLoadingState();
         
         todasLasSucursales = await sucursalManager.getSucursalesByOrganizacion(
-            adminActual.organizacionCamelCase
+            usuarioActual.organizacionCamelCase
         );
         
         // Guardar en localStorage con campos directos
@@ -378,7 +430,7 @@ function setupEvents() {
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
-            window.location.href = '/usuarios/administrador/crearSucursales/crearSucursales.html';
+            window.location.href = '../crearSucursales/crearSucursales.html';
         });
     }
     
@@ -411,21 +463,21 @@ async function editBranch(branchId, branchName) {
     const selectedBranch = {
         id: branchId,
         nombre: branchName,
-        organizacion: adminActual.organizacion,
-        organizacionCamelCase: adminActual.organizacionCamelCase,
+        organizacion: usuarioActual.organizacion,
+        organizacionCamelCase: usuarioActual.organizacionCamelCase,
         fechaSeleccion: new Date().toISOString(),
-        admin: adminActual.nombreCompleto
+        usuario: usuarioActual.nombreCompleto
     };
     
     localStorage.setItem('selectedBranch', JSON.stringify(selectedBranch));
     
-    window.location.href = `/usuarios/administrador/editarSucursales/editarSucursales.html?id=${branchId}&org=${adminActual.organizacionCamelCase}`;
+    window.location.href = `../editarSucursales/editarSucursales.html?id=${branchId}&org=${usuarioActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DE LA SUCURSAL ==========
 async function viewBranchDetails(branchId, branchName) {
     try {
-        const sucursal = await sucursalManager.getSucursalById(branchId, adminActual.organizacionCamelCase);
+        const sucursal = await sucursalManager.getSucursalById(branchId, usuarioActual.organizacionCamelCase);
         
         if (!sucursal) {
             throw new Error('Sucursal no encontrada');
@@ -550,7 +602,7 @@ async function deleteBranch(branchId, branchName) {
     });
 
     try {
-        await sucursalManager.eliminarSucursal(branchId, adminActual.organizacionCamelCase);
+        await sucursalManager.eliminarSucursal(branchId, usuarioActual.organizacionCamelCase);
         
         Swal.close();
         
@@ -593,7 +645,7 @@ function showEmptyState() {
             <td colspan="6" class="empty-state">
                 <div class="empty-state-content">
                     <i class="fas fa-store-alt"></i>
-                    <h3>No hay sucursales en ${escapeHTML(adminActual?.organizacion || 'tu organización')}</h3>
+                    <h3>No hay sucursales en ${escapeHTML(usuarioActual?.organizacion || 'tu organización')}</h3>
                     <p>Comienza agregando tu primera sucursal</p>
                     <button class="add-first-btn" id="addFirstBranch">
                         <i class="fas fa-plus-circle"></i> CREAR PRIMERA SUCURSAL
@@ -604,7 +656,7 @@ function showEmptyState() {
     `;
     
     document.getElementById('addFirstBranch')?.addEventListener('click', () => {
-        window.location.href = '/usuarios/administrador/crearSucursales/crearSucursales.html';
+        window.location.href = '../crearSucursales/crearSucursales.html';
     });
 
     // Ocultar paginación
@@ -633,37 +685,6 @@ function showLoadingState() {
 }
 
 // ========== MANEJO DE ERRORES ==========
-function showNoAdminMessage() {
-    const tbody = document.getElementById('branchesTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = /*html*/`
-        <tr>
-            <td colspan="6" class="error-state">
-                <div class="error-content">
-                    <i class="fas fa-user-slash"></i>
-                    <h3>No se detectó sesión activa de administrador</h3>
-                    <p>Para gestionar sucursales, debes iniciar sesión como administrador.</p>
-                    <div class="error-buttons">
-                        <button onclick="window.location.reload()" class="reload-btn">
-                            <i class="fas fa-sync-alt"></i> Recargar
-                        </button>
-                        <button onclick="window.location.href='/usuarios/visitantes/inicioSesion/inicioSesion.html'" class="login-btn">
-                            <i class="fas fa-sign-in-alt"></i> Iniciar sesión
-                        </button>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    `;
-
-    // Ocultar paginación
-    const paginacionContainer = document.querySelector('.pagination-container');
-    if (paginacionContainer) {
-        paginacionContainer.style.display = 'none';
-    }
-}
-
 function showFirebaseError(error) {
     const tbody = document.getElementById('branchesTableBody');
     if (!tbody) return;
