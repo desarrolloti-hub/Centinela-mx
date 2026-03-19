@@ -1,4 +1,4 @@
-// region.js - VERSIÓN CORREGIDA CON REGISTRO DE ACTIVIDADES
+// region.js - CON REGISTRO DE CONSUMO FIREBASE (PERSISTENTE)
 
 import { db } from '/config/firebase-config.js';
 import {
@@ -15,7 +15,10 @@ import {
     orderBy
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
+import consumo from '/clases/consumoFirebase.js';
+
 class Region {
+    // ... (todo igual, sin cambios)
     constructor(id, data) {
         this.id = id;
         this.nombre = data.nombre || '';
@@ -47,40 +50,29 @@ class Region {
         if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
             return new Date(fecha.seconds * 1000);
         }
-        console.warn('Formato de fecha no reconocido:', fecha);
         return null;
     }
 
     getFechaCreacionFormateada(locale = 'es-MX') {
         if (!this.fechaCreacion) return 'No disponible';
-        try {
-            return this.fechaCreacion.toLocaleDateString(locale, {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (error) {
-            console.error('Error formateando fecha de creación:', error);
-            return 'Fecha inválida';
-        }
+        return this.fechaCreacion.toLocaleDateString(locale, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     }
 
     getFechaActualizacionFormateada(locale = 'es-MX') {
         if (!this.fechaActualizacion) return 'No disponible';
-        try {
-            return this.fechaActualizacion.toLocaleDateString(locale, {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (error) {
-            console.error('Error formateando fecha de actualización:', error);
-            return 'Fecha inválida';
-        }
+        return this.fechaActualizacion.toLocaleDateString(locale, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     }
 
     getColor() {
@@ -125,6 +117,9 @@ class RegionManager {
                 throw new Error('El nombre de la región es obligatorio');
             }
 
+            // CONSUMO: lectura para verificar existencia (AHORA CON AWAIT)
+            await consumo.registrarFirestoreLectura(`regiones_${organizacionCamelCase}`, 'verificar nombre');
+            
             const existe = await this.existeRegionPorNombre(regionData.nombre, organizacionCamelCase);
             if (existe) {
                 throw new Error('Ya existe una región con este nombre');
@@ -145,6 +140,9 @@ class RegionManager {
                 fechaActualizacion: serverTimestamp()
             };
 
+            // CONSUMO: escritura (AHORA CON AWAIT)
+            await consumo.registrarFirestoreEscritura(coleccionRegiones, 'nueva región');
+
             const docRef = await addDoc(regionesRef, regionFirestoreData);
 
             const nuevaRegion = new Region(docRef.id, {
@@ -155,7 +153,6 @@ class RegionManager {
 
             this.regiones.unshift(nuevaRegion);
 
-            // ✅ REGISTRO EN HISTORIAL
             const historial = await this._getHistorialManager();
             if (historial) {
                 await historial.registrarActividad({
@@ -196,6 +193,9 @@ class RegionManager {
                 orderBy("fechaCreacion", "desc")
             );
 
+            // CONSUMO: lectura (AHORA CON AWAIT)
+            await consumo.registrarFirestoreLectura(coleccionRegiones, 'lista regiones');
+
             const snapshot = await getDocs(regionesQuery);
             const regiones = [];
 
@@ -206,7 +206,6 @@ class RegionManager {
 
             this.regiones = regiones;
 
-            // ✅ REGISTRO EN HISTORIAL (solo lectura)
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -237,6 +236,10 @@ class RegionManager {
         try {
             const coleccionRegiones = `regiones_${organizacionCamelCase}`;
             const regionRef = doc(db, coleccionRegiones, id);
+
+            // CONSUMO: lectura (AHORA CON AWAIT)
+            await consumo.registrarFirestoreLectura(coleccionRegiones, id);
+
             const regionSnap = await getDoc(regionRef);
 
             if (regionSnap.exists()) {
@@ -271,6 +274,9 @@ class RegionManager {
 
             if (data.nombre) {
                 if (regionActual && regionActual.nombre !== data.nombre) {
+                    // CONSUMO: lectura para verificar nombre (AHORA CON AWAIT)
+                    await consumo.registrarFirestoreLectura(coleccionRegiones, 'verificar nombre');
+                    
                     const existe = await this.existeRegionPorNombre(data.nombre, organizacionCamelCase);
                     if (existe) {
                         throw new Error('Ya existe otra región con este nombre');
@@ -284,6 +290,9 @@ class RegionManager {
                 actualizadoPor: actualizadoPor?.id || 'sistema'
             };
 
+            // CONSUMO: actualización (AHORA CON AWAIT)
+            await consumo.registrarFirestoreActualizacion(coleccionRegiones, id);
+
             await updateDoc(regionRef, updateData);
 
             const index = this.regiones.findIndex(r => r.id === id);
@@ -295,7 +304,6 @@ class RegionManager {
                 this.regiones[index].actualizadoPor = actualizadoPor?.id || 'sistema';
             }
 
-            // ✅ REGISTRO EN HISTORIAL
             if (actualizadoPor) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -346,6 +354,9 @@ class RegionManager {
                 where("regionId", "==", regionId)
             );
 
+            // CONSUMO: lectura (AHORA CON AWAIT)
+            await consumo.registrarFirestoreLectura(coleccionSucursales, 'consulta sucursales por región');
+
             const snapshot = await getDocs(q);
             return !snapshot.empty;
 
@@ -364,6 +375,9 @@ class RegionManager {
                 sucursalesRef,
                 where("regionId", "==", regionId)
             );
+
+            // CONSUMO: lectura (AHORA CON AWAIT)
+            await consumo.registrarFirestoreLectura(coleccionSucursales, 'sucursales de región');
 
             const snapshot = await getDocs(q);
             const sucursales = [];
@@ -406,6 +420,9 @@ class RegionManager {
             const coleccionRegiones = `regiones_${organizacionCamelCase}`;
             const regionRef = doc(db, coleccionRegiones, id);
 
+            // CONSUMO: eliminación (AHORA CON AWAIT)
+            await consumo.registrarFirestoreEliminacion(coleccionRegiones, id);
+
             await deleteDoc(regionRef);
 
             const index = this.regiones.findIndex(r => r.id === id);
@@ -413,7 +430,6 @@ class RegionManager {
                 this.regiones.splice(index, 1);
             }
 
-            // ✅ REGISTRO EN HISTORIAL
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
