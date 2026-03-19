@@ -29,6 +29,9 @@
     <!-- ============================================= -->
         <!-- SECCIÓN DE ACCIONES RÁPIDAS - BANDA DE BOTONES -->
         <!-- ============================================= -->
+        
+
+    <main class="right-layout">
         <section class="center-row" style="margin-top: 2rem;">
             <div class="side full-width">
                 <div class="section-container">
@@ -38,7 +41,6 @@
                     </div>
 
                     <div class="cards-grid-2">
-                        <!-- Tarjeta: Ver Empresas -->
                         <div class="dashboard-card" id="card-ver-empresas" data-action="empresas">
                             <div class="card-icon blue">
                                 <i class="fa-solid fa-building"></i>
@@ -49,51 +51,43 @@
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
-
-                        <!-- Tarjeta: Ver Planes -->
                         <div class="dashboard-card" id="card-ver-planes" data-action="planes">
                             <div class="card-icon yellow">
-                                <i class="fa-solid fa-chart-simple"></i>
+                                <i class="fa-solid fa-cloud"></i>
                             </div>
                             <div class="card-text">
-                                <h3>Ver Planes</h3>
-                                <p>Distribución y precios</p>
+                                <h3>Ver Consumo</h3>
+                                <p>Consulta el uso de tecnologías</p>
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
-
-                        <!-- Tarjeta: Reportes -->
                         <div class="dashboard-card" id="card-reportes" data-action="reportes">
                             <div class="card-icon purple">
-                                <i class="fa-solid fa-file-pdf"></i>
+                                <i class="fa-solid fa-street-view"></i>
                             </div>
                             <div class="card-text">
-                                <h3>Cuentas de monitoreo</h3>
+                                <h3>Cuentas de Monitoreo</h3>
                                 <p>Gestiona cuentas de monitoreo</p>
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
-
-                        <!-- Tarjeta: Configuración -->
                         <div class="dashboard-card" id="card-config" data-action="config">
                             <div class="card-icon cyan">
-                                <i class="fa-solid fa-gear"></i>
+                                <i class="fa-solid fa-globe"></i>
                             </div>
                             <div class="card-text">
-                                <h3></h3>
-                                <p>Ajustes del sistema</p>
+                                <h3>Apartado de Visitantes</h3>
+                                <p>Configura tu apartado de público</p>
                             </div>
                             <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Tarjeta: Respaldos -->
+                        </div>            
                         <div class="dashboard-card" id="card-respaldos" data-action="respaldos">
-                            <div class="card-icon" style="color: #28a745;">
-                                <i class="fa-solid fa-database"></i>
+                            <div class="card-icon">
+                                <i class="fa-solid fa-boxes-stacked"></i>
                             </div>
                             <div class="card-text">
-                                <h3>Respaldos</h3>
-                                <p>Backup del sistema</p>
+                                <h3>Operaciones</h3>
+                                <p>Consulta de</p>
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
@@ -101,8 +95,6 @@
                 </div>
             </div>
         </section>
-
-    <main class="right-layout">
         <!-- SECCIÓN KPI SUPERIOR - 6 TARJETAS CON DATOS GLOBALES -->
         <div class="kpi-section">
             <h2><i class="fa-solid fa-crown"></i> PANEL GLOBAL - SUPERADMIN</h2>
@@ -225,7 +217,7 @@
     <!-- COMPONENTES -->
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <script type="module" src="panelControlGlobal.js"></script>
+    <script type="module" src="./panelAdministrador.js"></script>
 
 </body>
 
