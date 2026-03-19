@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="LuKyYqlG77vrQvMrnp8h" name="Page-1">
-        <mxGraphModel dx="1103" dy="776" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" background="#FFFFFF" math="0" shadow="0">
+        <mxGraphModel dx="509" dy="633" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" background="#FFFFFF" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -116,6 +116,12 @@
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="-0.2" y="-1" as="offset"/>
                     </mxGeometry>
+                </mxCell>
+                <mxCell id="34" value="administradores del sistema" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=1;marginBottom=0;rounded=0;shadow=0;strokeWidth=2;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="830" y="460" width="260" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="35" value=" ATRIBUTOS&#xa;• nombreCompleto: String&#xa;• correoElectronico: String&#xa;• idAuth: String&#xa;• fotoUsuario: String&#xa;• fechaCreacion: Timestamp&#xa;• fechaActualizacion: Timestamp&#xa;• ultimoLogin: Timestamp" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;whiteSpace=wrap;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="34">
+                    <mxGeometry y="30" width="260" height="140" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
