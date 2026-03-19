@@ -46,7 +46,6 @@ class CrearRegionController {
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
-            this._redirigirAlLogin();
         }
     }
 
@@ -325,7 +324,7 @@ class CrearRegionController {
 
     // ========== NAVEGACIÓN ==========
     _volverALista() {
-        window.location.href = '/usuarios/administrador/regiones/regiones.html';
+        window.location.href = '../regiones/regiones.html';
     }
 
     _cancelarCreacion() {
@@ -340,17 +339,6 @@ class CrearRegionController {
             if (result.isConfirmed) {
                 this._volverALista();
             }
-        });
-    }
-
-    _redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión no válida',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
 
