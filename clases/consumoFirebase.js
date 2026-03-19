@@ -1,12 +1,15 @@
 // consumoFirebase.js
-// Clase para contabilizar operaciones de Firebase (lecturas, escrituras, eliminaciones, storage, functions)
+// Clase para contabilizar y PERSISTIR operaciones de Firebase
+// SOLO UN DOCUMENTO por empresa en colección "consumo"
 
 import { db } from '/config/firebase-config.js';
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { doc, setDoc, updateDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 class ConsumoFirebase {
     constructor() {
-        // Contadores acumulados en memoria
+        console.log('🔧 Inicializando ConsumoFirebase (documento único por empresa)...');
+        
+        // Contadores en memoria (para visualización rápida)
         this.contadores = {
             firestore: {
                 lecturas: 0,
@@ -25,50 +28,146 @@ class ConsumoFirebase {
                 invocaciones: 0,
                 total: 0
             },
-            autenticacion: {  // 👈 NOMBRE CORRECTO (no "auth")
+            autenticacion: {
                 iniciosSesion: 0,
                 cierresSesion: 0,
                 registros: 0,
                 total: 0
             },
-            // Totales globales
+            fcm: {
+                notificacionesEnviadas: 0,
+                tokensRegistrados: 0,
+                tokensEliminados: 0,
+                total: 0
+            },
             totalOperaciones: 0,
             ultimaActualizacion: new Date()
         };
 
-        this.historial = []; // Para almacenar eventos recientes
-        this.limiteHistorial = 1000;
+        this.historial = [];
+        this.limiteHistorial = 100;
         this.organizacionCamelCase = null;
+        this.nombreEmpresa = null;
         this._cargarOrganizacion();
+        
+        console.log('✅ ConsumoFirebase inicializado. Empresa:', this.nombreEmpresa || this.organizacionCamelCase);
     }
 
     _cargarOrganizacion() {
+        console.log('📂 Cargando datos de empresa desde localStorage...');
         try {
+            // Intentar obtener nombre real de la empresa
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
                 this.organizacionCamelCase = adminData.organizacionCamelCase;
+                this.nombreEmpresa = adminData.organizacion || adminData.organizacionCamelCase;
+                console.log('📌 Empresa (admin):', this.nombreEmpresa);
                 return;
             }
+            
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             this.organizacionCamelCase = userData.organizacionCamelCase;
+            this.nombreEmpresa = userData.organizacion || userData.organizacionCamelCase;
+            console.log('📌 Empresa (user):', this.nombreEmpresa);
+            
         } catch (error) {
-            console.error('Error cargando organización:', error);
+            console.error('❌ Error cargando organización:', error);
+            this.nombreEmpresa = 'empresa_desconocida';
         }
     }
 
     // Método genérico para registrar cualquier operación
-    registrar(servicio, tipo, detalles = {}) {
-        const timestamp = new Date();
-        const operacion = {
-            servicio,
-            tipo,
-            detalles,
-            timestamp,
-            organizacion: this.organizacionCamelCase
-        };
+    async registrar(servicio, tipo, detalles = {}) {
+        console.log(`📝 REGISTRO: ${servicio} - ${tipo}`, detalles);
+        
+        if (!this.organizacionCamelCase) {
+            console.warn('⚠️ No hay organización definida, no se guarda en Firestore');
+            return;
+        }
 
-        // Actualizar contadores
+        const timestamp = new Date();
+        const idEmpresa = this.organizacionCamelCase;
+        const nombreEmpresa = this.nombreEmpresa || idEmpresa;
+        
+        // 1️⃣ ACTUALIZAR EN FIRESTORE (usando increment)
+        try {
+            const docRef = doc(db, 'consumo', idEmpresa);
+            
+            // Construir la ruta del campo a incrementar según servicio y tipo
+            let campoRuta = '';
+            
+            switch (servicio) {
+                case 'firestore':
+                    if (tipo === 'lectura') campoRuta = 'firestore.lecturas';
+                    else if (tipo === 'escritura') campoRuta = 'firestore.escrituras';
+                    else if (tipo === 'eliminacion') campoRuta = 'firestore.eliminaciones';
+                    else if (tipo === 'actualizacion') campoRuta = 'firestore.actualizaciones';
+                    campoRuta = 'firestore.total'; // También incrementamos el total
+                    break;
+                    
+                case 'storage':
+                    if (tipo === 'subida') campoRuta = 'storage.subidas';
+                    else if (tipo === 'descarga') campoRuta = 'storage.descargas';
+                    else if (tipo === 'eliminacion') campoRuta = 'storage.eliminaciones';
+                    break;
+                    
+                case 'functions':
+                    if (tipo === 'invocacion') campoRuta = 'functions.invocaciones';
+                    break;
+                    
+                case 'auth':
+                    if (tipo === 'login') campoRuta = 'autenticacion.iniciosSesion';
+                    else if (tipo === 'logout') campoRuta = 'autenticacion.cierresSesion';
+                    else if (tipo === 'registro') campoRuta = 'autenticacion.registros';
+                    break;
+                    
+                case 'fcm':
+                    if (tipo === 'notificacion') campoRuta = 'fcm.notificacionesEnviadas';
+                    else if (tipo === 'token_registro') campoRuta = 'fcm.tokensRegistrados';
+                    else if (tipo === 'token_eliminacion') campoRuta = 'fcm.tokensEliminados';
+                    break;
+            }
+
+            // Preparamos los datos para actualizar
+            const updateData = {
+                [`${servicio}.${tipo}`]: increment(1),
+                [`${servicio}.total`]: increment(1),
+                totalOperaciones: increment(1),
+                ultimaActualizacion: serverTimestamp(),
+                nombreEmpresa: nombreEmpresa,
+                ultimaOperacion: {
+                    servicio,
+                    tipo,
+                    detalles,
+                    timestamp: serverTimestamp()
+                }
+            };
+
+            // Usar set con merge para crear el documento si no existe
+            await setDoc(docRef, {
+                [servicio]: {
+                    [tipo]: increment(1),
+                    total: increment(1)
+                },
+                totalOperaciones: increment(1),
+                ultimaActualizacion: serverTimestamp(),
+                nombreEmpresa,
+                ultimaOperacion: {
+                    servicio,
+                    tipo,
+                    detalles,
+                    timestamp: serverTimestamp()
+                }
+            }, { merge: true });
+
+            console.log(`💾 Documento de empresa actualizado en Firestore: ${idEmpresa}`);
+
+        } catch (error) {
+            console.error('❌ Error actualizando documento en Firestore:', error);
+        }
+
+        // 2️⃣ Actualizar contadores en memoria
         switch (servicio) {
             case 'firestore':
                 if (tipo === 'lectura') this.contadores.firestore.lecturas++;
@@ -87,113 +186,152 @@ class ConsumoFirebase {
                 if (tipo === 'invocacion') this.contadores.functions.invocaciones++;
                 this.contadores.functions.total++;
                 break;
-            case 'auth':  // 👈 en los métodos usamos 'auth' para mantener compatibilidad
+            case 'auth':
                 if (tipo === 'login') this.contadores.autenticacion.iniciosSesion++;
                 else if (tipo === 'logout') this.contadores.autenticacion.cierresSesion++;
                 else if (tipo === 'registro') this.contadores.autenticacion.registros++;
                 this.contadores.autenticacion.total++;
                 break;
-            default:
+            case 'fcm':
+                if (tipo === 'notificacion') this.contadores.fcm.notificacionesEnviadas++;
+                else if (tipo === 'token_registro') this.contadores.fcm.tokensRegistrados++;
+                else if (tipo === 'token_eliminacion') this.contadores.fcm.tokensEliminados++;
+                this.contadores.fcm.total++;
                 break;
         }
 
         this.contadores.totalOperaciones++;
         this.contadores.ultimaActualizacion = timestamp;
 
-        // Guardar en historial (circular buffer)
-        this.historial.push(operacion);
+        // 3️⃣ Guardar en historial en memoria
+        this.historial.push({
+            servicio,
+            tipo,
+            detalles,
+            timestamp,
+            organizacion: this.organizacionCamelCase
+        });
+        
         if (this.historial.length > this.limiteHistorial) {
             this.historial.shift();
         }
+        
+        console.log(`✅ Registro completado. Total operaciones: ${this.contadores.totalOperaciones}`);
     }
 
-    // Métodos específicos para cada servicio (para facilitar su uso)
-    registrarFirestoreLectura(coleccion, documento = null) {
-        this.registrar('firestore', 'lectura', { coleccion, documento });
+    // Métodos específicos para Firestore
+    async registrarFirestoreLectura(coleccion, documento = null) {
+        await this.registrar('firestore', 'lectura', { coleccion, documento });
     }
 
-    registrarFirestoreEscritura(coleccion, documento = null) {
-        this.registrar('firestore', 'escritura', { coleccion, documento });
+    async registrarFirestoreEscritura(coleccion, documento = null) {
+        await this.registrar('firestore', 'escritura', { coleccion, documento });
     }
 
-    registrarFirestoreEliminacion(coleccion, documento = null) {
-        this.registrar('firestore', 'eliminacion', { coleccion, documento });
+    async registrarFirestoreEliminacion(coleccion, documento = null) {
+        await this.registrar('firestore', 'eliminacion', { coleccion, documento });
     }
 
-    registrarFirestoreActualizacion(coleccion, documento = null) {
-        this.registrar('firestore', 'actualizacion', { coleccion, documento });
+    async registrarFirestoreActualizacion(coleccion, documento = null) {
+        await this.registrar('firestore', 'actualizacion', { coleccion, documento });
     }
 
-    registrarStorageSubida(ruta, archivo = null) {
-        this.registrar('storage', 'subida', { ruta, archivo });
+    // Métodos para Storage
+    async registrarStorageSubida(ruta, archivo = null) {
+        await this.registrar('storage', 'subida', { ruta, archivo });
     }
 
-    registrarStorageDescarga(ruta) {
-        this.registrar('storage', 'descarga', { ruta });
+    async registrarStorageDescarga(ruta) {
+        await this.registrar('storage', 'descarga', { ruta });
     }
 
-    registrarStorageEliminacion(ruta) {
-        this.registrar('storage', 'eliminacion', { ruta });
+    async registrarStorageEliminacion(ruta) {
+        await this.registrar('storage', 'eliminacion', { ruta });
     }
 
-    registrarFunctionInvocacion(nombreFuncion, parametros = {}) {
-        this.registrar('functions', 'invocacion', { nombreFuncion, parametros });
+    // Métodos para Functions
+    async registrarFunctionInvocacion(nombreFuncion, parametros = {}) {
+        await this.registrar('functions', 'invocacion', { nombreFuncion, parametros });
     }
 
-    registrarAuthLogin(usuarioId) {
-        this.registrar('auth', 'login', { usuarioId });
+    // Métodos para Auth
+    async registrarAuthLogin(usuarioId) {
+        await this.registrar('auth', 'login', { usuarioId });
     }
 
-    registrarAuthLogout(usuarioId) {
-        this.registrar('auth', 'logout', { usuarioId });
+    async registrarAuthLogout(usuarioId) {
+        await this.registrar('auth', 'logout', { usuarioId });
     }
 
-    registrarAuthRegistro(usuarioId) {
-        this.registrar('auth', 'registro', { usuarioId });
+    async registrarAuthRegistro(usuarioId) {
+        await this.registrar('auth', 'registro', { usuarioId });
     }
 
-    // Obtener estadísticas actuales
+    // Métodos para FCM (Firebase Cloud Messaging)
+    async registrarFCMNotificacion(usuarioId, titulo) {
+        await this.registrar('fcm', 'notificacion', { usuarioId, titulo });
+    }
+
+    async registrarFCMTokenRegistro(usuarioId, token) {
+        await this.registrar('fcm', 'token_registro', { usuarioId, token });
+    }
+
+    async registrarFCMTokenEliminacion(usuarioId, token) {
+        await this.registrar('fcm', 'token_eliminacion', { usuarioId, token });
+    }
+
+    // Obtener estadísticas actuales (solo memoria)
     obtenerEstadisticas() {
         return {
             firestore: { ...this.contadores.firestore },
             storage: { ...this.contadores.storage },
             functions: { ...this.contadores.functions },
-            autenticacion: { ...this.contadores.autenticacion }, // 👈 devolvemos autenticacion
+            autenticacion: { ...this.contadores.autenticacion },
+            fcm: { ...this.contadores.fcm },
             totalOperaciones: this.contadores.totalOperaciones,
             ultimaActualizacion: this.contadores.ultimaActualizacion,
-            historial: this.historial.slice(-50) // últimos 50 eventos
+            historial: this.historial.slice(-50)
         };
     }
 
-    // Resetear contadores
+    // Resetear contadores en memoria (no afecta Firestore)
     resetearContadores() {
+        console.log('🔄 Resetando contadores en memoria...');
         this.contadores = {
             firestore: { lecturas: 0, escrituras: 0, eliminaciones: 0, actualizaciones: 0, total: 0 },
             storage: { subidas: 0, descargas: 0, eliminaciones: 0, total: 0 },
             functions: { invocaciones: 0, total: 0 },
             autenticacion: { iniciosSesion: 0, cierresSesion: 0, registros: 0, total: 0 },
+            fcm: { notificacionesEnviadas: 0, tokensRegistrados: 0, tokensEliminados: 0, total: 0 },
             totalOperaciones: 0,
             ultimaActualizacion: new Date()
         };
         this.historial = [];
+        console.log('✅ Contadores en memoria reseteados');
     }
 
-    // Guardar un snapshot de consumo en Firestore (para análisis histórico)
-    async guardarSnapshot() {
-        if (!this.organizacionCamelCase) return;
+    // Obtener datos de Firestore para una empresa específica
+    async obtenerConsumoEmpresa(idEmpresa = null) {
+        const empresaId = idEmpresa || this.organizacionCamelCase;
+        if (!empresaId) return null;
+        
         try {
-            const snapshot = {
-                ...this.contadores,
-                fecha: serverTimestamp(),
-                organizacion: this.organizacionCamelCase
-            };
-            await addDoc(collection(db, `consumo_${this.organizacionCamelCase}`), snapshot);
+            const docRef = doc(db, 'consumo', empresaId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                return docSnap.data();
+            } else {
+                console.log('📭 No hay datos de consumo para esta empresa');
+                return null;
+            }
         } catch (error) {
-            console.error('Error guardando snapshot de consumo:', error);
+            console.error('❌ Error obteniendo consumo de empresa:', error);
+            return null;
         }
     }
 }
 
-// Exportar una instancia única (singleton) para compartir en toda la app
+// Exportar una instancia única (singleton)
 const instanciaConsumo = new ConsumoFirebase();
 export default instanciaConsumo;

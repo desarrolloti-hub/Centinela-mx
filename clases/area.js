@@ -1,4 +1,4 @@
-// area.js - VERSIÓN COMPLETA CON ÍNDICES Y NOTIFICACIONES
+// area.js - VERSIÓN COMPLETA CON ÍNDICES, NOTIFICACIONES Y REGISTRO DE CONSUMO
 
 import { 
     collection, 
@@ -17,6 +17,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
+// [MODIFICACIÓN 1]: Importar la instancia de consumo (igual que en region.js)
+import consumo from '/clases/consumoFirebase.js';
 
 /**
  * Clase Area - Representa un área con sus cargos
@@ -207,7 +209,8 @@ class AreaManager {
             const organizacion = usuarioActual.organizacionCamelCase;
             const collectionName = this._getCollectionName(organizacion);
             
-            // Verificar si ya existe un área con el mismo nombre (usa índice)
+            // [MODIFICACIÓN 2]: Registrar LECTURA antes de verificar existencia (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, 'verificar nombre');
             const existe = await this.verificarAreaExistente(areaData.nombreArea, organizacion);
             if (existe) throw new Error('Ya existe un área con ese nombre');
             
@@ -243,6 +246,8 @@ class AreaManager {
                 fechaActualizacion: serverTimestamp()
             };
             
+            // [MODIFICACIÓN 3]: Registrar ESCRITURA antes de addDoc (igual que en region.js)
+            await consumo.registrarFirestoreEscritura(collectionName, 'nueva área');
             const docRef = await addDoc(areasCollection, areaFirestoreData);
             
             const nuevaArea = new Area(docRef.id, {
@@ -289,6 +294,9 @@ class AreaManager {
             
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const areaRef = doc(db, collectionName, areaId);
+            
+            // [MODIFICACIÓN 4]: Registrar LECTURA antes de getDoc (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, areaId);
             const areaSnap = await getDoc(areaRef);
             
             if (!areaSnap.exists()) {
@@ -350,6 +358,8 @@ class AreaManager {
                 actualizadoPor: usuarioId
             };
             
+            // [MODIFICACIÓN 5]: Registrar ACTUALIZACIÓN antes de updateDoc (igual que en region.js)
+            await consumo.registrarFirestoreActualizacion(collectionName, areaId);
             await updateDoc(areaRef, datosActualizados);
             
             const areaIndex = this.areas.findIndex(a => a.id === areaId);
@@ -431,6 +441,8 @@ class AreaManager {
                 );
             }
             
+            // [MODIFICACIÓN 6]: Registrar LECTURA antes de getDocs (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, 'lista áreas');
             const areasSnapshot = await getDocs(areasQuery);
             const areas = [];
             
@@ -484,6 +496,8 @@ class AreaManager {
                 orderBy("fechaCreacion", "desc")
             );
             
+            // [MODIFICACIÓN 7]: Registrar LECTURA (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, 'áreas por responsable');
             const snapshot = await getDocs(q);
             const areas = [];
             
@@ -508,6 +522,9 @@ class AreaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const areaRef = doc(db, collectionName, areaId);
+            
+            // [MODIFICACIÓN 8]: Registrar LECTURA antes de getDoc (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, areaId);
             const areaSnap = await getDoc(areaRef);
             
             if (areaSnap.exists()) {
@@ -532,6 +549,9 @@ class AreaManager {
             
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const areaRef = doc(db, collectionName, areaId);
+            
+            // [MODIFICACIÓN 9]: Registrar LECTURA antes de getDoc (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, areaId);
             const areaSnap = await getDoc(areaRef);
             
             if (!areaSnap.exists()) {
@@ -552,6 +572,8 @@ class AreaManager {
                 estado: 'inactivo'
             };
             
+            // [MODIFICACIÓN 10]: Registrar ACTUALIZACIÓN antes de updateDoc (igual que en region.js)
+            await consumo.registrarFirestoreActualizacion(collectionName, areaId);
             await updateDoc(areaRef, {
                 cargos: cargos,
                 fechaActualizacion: serverTimestamp(),
@@ -593,6 +615,9 @@ class AreaManager {
             
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const areaRef = doc(db, collectionName, areaId);
+            
+            // [MODIFICACIÓN 11]: Registrar LECTURA antes de getDoc (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, areaId);
             const areaSnap = await getDoc(areaRef);
             
             if (!areaSnap.exists()) {
@@ -613,6 +638,8 @@ class AreaManager {
                 estado: 'activo'
             };
             
+            // [MODIFICACIÓN 12]: Registrar ACTUALIZACIÓN antes de updateDoc (igual que en region.js)
+            await consumo.registrarFirestoreActualizacion(collectionName, areaId);
             await updateDoc(areaRef, {
                 cargos: cargos,
                 fechaActualizacion: serverTimestamp(),
@@ -662,6 +689,8 @@ class AreaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const areaRef = doc(db, collectionName, areaId);
             
+            // [MODIFICACIÓN 13]: Registrar ACTUALIZACIÓN antes de updateDoc (igual que en region.js)
+            await consumo.registrarFirestoreActualizacion(collectionName, areaId);
             await updateDoc(areaRef, {
                 estado: 'inactiva',
                 fechaActualizacion: serverTimestamp(),
@@ -712,6 +741,8 @@ class AreaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const areaRef = doc(db, collectionName, areaId);
             
+            // [MODIFICACIÓN 14]: Registrar ACTUALIZACIÓN antes de updateDoc (igual que en region.js)
+            await consumo.registrarFirestoreActualizacion(collectionName, areaId);
             await updateDoc(areaRef, {
                 estado: 'activa',
                 fechaActualizacion: serverTimestamp(),
@@ -761,6 +792,8 @@ class AreaManager {
                 where("organizacionCamelCase", "==", organizacionCamelCase)
             );
             
+            // [MODIFICACIÓN 15]: Registrar LECTURA (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, 'verificar nombre');
             const querySnapshot = await getDocs(q);
             return !querySnapshot.empty;
             
@@ -782,7 +815,8 @@ class AreaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const areasCollection = collection(db, collectionName);
             
-            // Obtener todas las áreas
+            // [MODIFICACIÓN 16]: Registrar LECTURA (igual que en region.js)
+            await consumo.registrarFirestoreLectura(collectionName, 'estadísticas');
             const snapshot = await getDocs(areasCollection);
             
             let total = 0;
