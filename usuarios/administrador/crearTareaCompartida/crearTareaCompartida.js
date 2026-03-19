@@ -1,14 +1,8 @@
-// crearTareaCompartida.js - VERSIÓN CORREGIDA CON IMPORTACIÓN
-// AHORA IMPORTA CORRECTAMENTE LA CLASE UserManager
+// crearTareaCompartida.js - VERSIÓN MEJORADA CON CHECKLIST Y RECORDATORIOS
+// Integración con la clase Tarea mejorada
 
-// =============================================
-// IMPORTACIONES
-// =============================================
 import { UserManager } from '/clases/user.js';
 
-// =============================================
-// CLASE PRINCIPAL - CrearTareaCompartidaController
-// =============================================
 class CrearTareaCompartidaController {
     constructor() {
         this.tareaManager = null;
@@ -19,11 +13,8 @@ class CrearTareaCompartidaController {
         this.usuarios = [];
         this.usuariosFiltrados = [];
 
-        // Items de la tarea
+        // Items del checklist
         this.items = [];
-
-        // Contadores de items
-        this.itemCounter = 0;
 
         // Inicializar
         this._init();
@@ -32,16 +23,13 @@ class CrearTareaCompartidaController {
     // ========== INICIALIZACIÓN ==========
     async _init() {
         try {
-            console.log('🚀 Inicializando CrearTareaCompartidaController...');
+            console.log('🚀 Inicializando CrearTareaCompartidaController (versión mejorada)...');
 
-            // 1. Inicializar UserManager primero
             this.userManager = new UserManager();
             console.log('✅ UserManager inicializado');
 
-            // 2. Obtener usuario actual
             await this._obtenerUsuarioActual();
 
-            // 3. Si no hay usuario, redirigir
             if (!this.usuarioActual) {
                 this._redirigirAlLogin();
                 return;
@@ -49,20 +37,13 @@ class CrearTareaCompartidaController {
 
             console.log('👤 Usuario actual:', this.usuarioActual.nombreCompleto);
 
-            // 4. Cargar TareaManager
             await this._cargarTareaManager();
-
-            // 5. Cargar usuarios
             await this._cargarUsuarios();
-
-            // 6. Configurar eventos
             this._configurarEventos();
-
-            // 7. Configurar organización automática
             this._configurarOrganizacion();
-
-            // 8. Configurar contadores de caracteres
             this._configurarContadores();
+            this._configurarFechaRecordatorio();
+            this._configurarItemsChecklist();
 
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
@@ -72,7 +53,6 @@ class CrearTareaCompartidaController {
 
     // ========== OBTENER USUARIO ACTUAL ==========
     async _obtenerUsuarioActual() {
-        // Esperar a que UserManager cargue el usuario
         for (let i = 0; i < 30; i++) {
             if (this.userManager.currentUser) {
                 this.usuarioActual = this.userManager.currentUser;
@@ -80,15 +60,12 @@ class CrearTareaCompartidaController {
             }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-
-        // Si no hay usuario en UserManager, intentar con localStorage
         return this._cargarUsuarioLocalStorage();
     }
 
-    // ========== CARGA DE USUARIO DESDE LOCALSTORAGE (FALLBACK) ==========
+    // ========== CARGA DE USUARIO DESDE LOCALSTORAGE ==========
     _cargarUsuarioLocalStorage() {
         try {
-            // Intentar obtener de adminInfo
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -99,13 +76,13 @@ class CrearTareaCompartidaController {
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || adminData.correo || ''
+                    correo: adminData.correoElectronico || adminData.correo || '',
+                    esAdmin: true
                 };
                 console.log('✅ Usuario cargado desde adminInfo');
                 return true;
             }
 
-            // Intentar obtener de userData
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             if (userData && Object.keys(userData).length > 0) {
                 this.usuarioActual = {
@@ -115,13 +92,13 @@ class CrearTareaCompartidaController {
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
                     organizacionCamelCase: userData.organizacionCamelCase ||
                         this._generarCamelCase(userData.organizacion || userData.empresa),
-                    correo: userData.correo || userData.email || ''
+                    correo: userData.correo || userData.email || '',
+                    esAdmin: userData.rol === 'admin'
                 };
                 console.log('✅ Usuario cargado desde userData');
                 return true;
             }
 
-            console.warn('⚠️ No se encontró usuario en localStorage');
             return false;
 
         } catch (error) {
@@ -152,7 +129,7 @@ class CrearTareaCompartidaController {
         }
     }
 
-    // ========== CARGA DE USUARIOS USANDO USERMANAGER ==========
+    // ========== CARGA DE USUARIOS ==========
     async _cargarUsuarios() {
         try {
             const usuariosContainer = document.getElementById('usuariosContainer');
@@ -170,57 +147,28 @@ class CrearTareaCompartidaController {
 
             console.log('📦 Cargando usuarios para organización:', this.usuarioActual.organizacionCamelCase);
 
-            // Usar UserManager para obtener colaboradores
             const colaboradores = await this.userManager.getColaboradoresByOrganizacion(
                 this.usuarioActual.organizacionCamelCase,
-                true // incluir inactivos
+                true
             );
 
-            console.log(`📊 ${colaboradores.length} colaboradores encontrados`);
-
-            // También obtener administradores
             const administradores = await this.userManager.getAdministradores(true);
-            console.log(`📊 ${administradores.length} administradores encontrados`);
 
-            // Filtrar administradores de la misma organización
             const adminsFiltrados = administradores.filter(admin =>
                 admin.organizacionCamelCase === this.usuarioActual.organizacionCamelCase &&
-                admin.id !== this.usuarioActual.id // Excluir al usuario actual
+                admin.id !== this.usuarioActual.id
             );
 
-            console.log(`📊 ${adminsFiltrados.length} administradores filtrados`);
-
-            // Combinar y filtrar
             this.usuarios = [
                 ...colaboradores.filter(u => u.id !== this.usuarioActual.id),
                 ...adminsFiltrados
             ];
 
-            console.log(`✅ Total usuarios disponibles: ${this.usuarios.length}`);
-
             this.usuariosFiltrados = [...this.usuarios];
-
-            // Renderizar usuarios
             this._renderizarUsuarios();
 
         } catch (error) {
             console.error('❌ Error cargando usuarios:', error);
-
-            // Mostrar error en el contenedor
-            const usuariosContainer = document.getElementById('usuariosContainer');
-            if (usuariosContainer) {
-                usuariosContainer.innerHTML = `
-                    <div class="loading-users" style="color: var(--color-danger);">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Error cargando usuarios: ${error.message}</p>
-                        <button class="btn-accion-rapida" onclick="location.reload()">
-                            <i class="fas fa-redo"></i> Reintentar
-                        </button>
-                    </div>
-                `;
-            }
-
-            // Usar datos de ejemplo si falla la carga
             this._cargarUsuariosEjemplo();
         }
     }
@@ -228,7 +176,6 @@ class CrearTareaCompartidaController {
     _cargarUsuariosEjemplo() {
         console.log('📝 Usando datos de ejemplo para usuarios');
 
-        // Datos de ejemplo para desarrollo
         this.usuarios = [
             {
                 id: 'user1',
@@ -263,7 +210,6 @@ class CrearTareaCompartidaController {
         this.usuariosFiltrados = [...this.usuarios];
         this._renderizarUsuarios();
 
-        // Mostrar advertencia
         Swal.fire({
             icon: 'warning',
             title: 'Modo de desarrollo',
@@ -298,19 +244,15 @@ class CrearTareaCompartidaController {
 
             html += `
                 <div class="usuario-item" data-usuario-id="${usuario.id}">
-                    <input type="checkbox" class="usuario-checkbox" id="usuario_${usuario.id}" 
-                           value="${usuario.id}">
-                    <div class="usuario-avatar" style="border-color: ${rolColor};">
-                        ${iniciales}
-                    </div>
+                    <input type="checkbox" class="usuario-checkbox" value="${usuario.id}">
+                    <div class="usuario-avatar" style="border-color: ${rolColor};">${iniciales}</div>
                     <div class="usuario-info">
                         <span class="usuario-nombre">${usuario.nombreCompleto || 'Usuario'}</span>
                         <span class="usuario-correo">${usuario.correoElectronico || usuario.correo || 'Sin correo'}</span>
-                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
                             <span class="usuario-area">${areaNombre}</span>
-                            <span class="usuario-rol" style="color: ${rolColor}; font-size: 11px; font-weight: 600;">
-                                <i class="fas ${usuario.rol === 'administrador' ? 'fa-crown' : 'fa-user'}"></i>
-                                ${rol}
+                            <span class="usuario-rol" style="color: ${rolColor}; font-size: 11px;">
+                                <i class="fas ${usuario.rol === 'administrador' ? 'fa-crown' : 'fa-user'}"></i> ${rol}
                             </span>
                         </div>
                     </div>
@@ -320,10 +262,8 @@ class CrearTareaCompartidaController {
 
         container.innerHTML = html;
 
-        // Agregar eventos a los checkboxes
         container.querySelectorAll('.usuario-item').forEach(item => {
             const checkbox = item.querySelector('.usuario-checkbox');
-
             item.addEventListener('click', (e) => {
                 if (e.target !== checkbox) {
                     checkbox.checked = !checkbox.checked;
@@ -343,12 +283,7 @@ class CrearTareaCompartidaController {
 
     _obtenerIniciales(nombre) {
         if (!nombre) return 'U';
-        return nombre
-            .split(' ')
-            .map(p => p[0])
-            .join('')
-            .toUpperCase()
-            .substring(0, 2);
+        return nombre.split(' ').map(p => p[0]).join('').toUpperCase().substring(0, 2);
     }
 
     _actualizarEstiloUsuario(item, seleccionado) {
@@ -367,7 +302,120 @@ class CrearTareaCompartidaController {
         }
     }
 
-    // ========== CONFIGURACIÓN DE ORGANIZACIÓN ==========
+    // ========== GESTIÓN DE ITEMS DEL CHECKLIST ==========
+    _configurarItemsChecklist() {
+        const btnAgregarItem = document.getElementById('btnAgregarItem');
+        if (btnAgregarItem) {
+            btnAgregarItem.addEventListener('click', () => this._agregarItem());
+        }
+
+        // Inicializar con un item por defecto
+        setTimeout(() => this._agregarItem(), 100);
+    }
+
+    _agregarItem(texto = '') {
+        const itemsList = document.getElementById('itemsList');
+        const placeholder = document.getElementById('itemsPlaceholder');
+
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+
+        const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const itemIndex = this.items.length + 1;
+
+        const itemHTML = `
+            <div class="item-row" data-item-id="${itemId}">
+                <span class="item-number">${itemIndex}</span>
+                <input type="text" class="item-input" placeholder="Escribe un item..." value="${texto}" maxlength="200">
+                <div class="item-actions">
+                    <button type="button" class="btn-item-action delete" title="Eliminar item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        itemsList.insertAdjacentHTML('beforeend', itemHTML);
+
+        const newItem = itemsList.lastElementChild;
+        const input = newItem.querySelector('.item-input');
+        const deleteBtn = newItem.querySelector('.btn-item-action.delete');
+
+        input.addEventListener('input', () => {
+            this._actualizarItemsDesdeDOM();
+        });
+
+        deleteBtn.addEventListener('click', () => {
+            newItem.remove();
+            this._actualizarItemsDesdeDOM();
+            this._reordenarItems();
+
+            if (this.items.length === 0) {
+                const placeholder = document.getElementById('itemsPlaceholder');
+                if (placeholder) {
+                    placeholder.style.display = 'block';
+                }
+            }
+        });
+
+        input.focus();
+        this._actualizarItemsDesdeDOM();
+    }
+
+    _actualizarItemsDesdeDOM() {
+        const itemsList = document.getElementById('itemsList');
+        const itemRows = itemsList.querySelectorAll('.item-row');
+
+        this.items = [];
+
+        itemRows.forEach(row => {
+            const input = row.querySelector('.item-input');
+            const texto = input.value.trim();
+
+            if (texto !== '') {
+                this.items.push(texto);
+            }
+        });
+    }
+
+    _reordenarItems() {
+        const itemsList = document.getElementById('itemsList');
+        const itemRows = itemsList.querySelectorAll('.item-row');
+
+        itemRows.forEach((row, index) => {
+            const numberSpan = row.querySelector('.item-number');
+            numberSpan.textContent = index + 1;
+        });
+    }
+
+    // ========== CONFIGURACIÓN DE FECHA Y RECORDATORIO ==========
+    _configurarFechaRecordatorio() {
+        const fechaInput = document.getElementById('fechaLimite');
+        if (fechaInput) {
+            const hoy = new Date().toISOString().split('T')[0];
+            fechaInput.min = hoy;
+
+            // Establecer fecha por defecto (hoy + 7 días)
+            const fechaDefault = new Date();
+            fechaDefault.setDate(fechaDefault.getDate() + 7);
+            fechaInput.value = fechaDefault.toISOString().split('T')[0];
+        }
+
+        const recordatorioCheck = document.getElementById('tieneRecordatorio');
+        const fechaContainer = document.getElementById('fechaContainer');
+
+        if (recordatorioCheck && fechaContainer) {
+            recordatorioCheck.addEventListener('change', (e) => {
+                fechaContainer.style.opacity = e.target.checked ? '1' : '0.5';
+                if (e.target.checked && fechaInput) {
+                    fechaInput.focus();
+                }
+            });
+        }
+    }
+
+    // ========== CONFIGURACIÓN ==========
     _configurarOrganizacion() {
         const orgInput = document.getElementById('organization');
         if (orgInput && this.usuarioActual) {
@@ -375,7 +423,6 @@ class CrearTareaCompartidaController {
         }
     }
 
-    // ========== CONFIGURACIÓN DE CONTADORES ==========
     _configurarContadores() {
         const nombreInput = document.getElementById('nombreActividad');
         const descripcionInput = document.getElementById('descripcion');
@@ -397,22 +444,18 @@ class CrearTareaCompartidaController {
         }
     }
 
-    // ========== CONFIGURACIÓN DE EVENTOS ==========
     _configurarEventos() {
         try {
-            // Botón Volver a la lista
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
                 btnVolverLista.addEventListener('click', () => this._volverALista());
             }
 
-            // Botón Cancelar
             const btnCancelar = document.getElementById('cancelarBtn');
             if (btnCancelar) {
                 btnCancelar.addEventListener('click', () => this._cancelarCreacion());
             }
 
-            // Botón Crear Tarea
             const btnCrear = document.getElementById('crearTareaBtn');
             if (btnCrear) {
                 btnCrear.addEventListener('click', (e) => {
@@ -421,7 +464,6 @@ class CrearTareaCompartidaController {
                 });
             }
 
-            // Formulario Submit
             const form = document.getElementById('formTareaCompartida');
             if (form) {
                 form.addEventListener('submit', (e) => {
@@ -430,13 +472,6 @@ class CrearTareaCompartidaController {
                 });
             }
 
-            // Botón Agregar Item
-            const btnAgregarItem = document.getElementById('btnAgregarItem');
-            if (btnAgregarItem) {
-                btnAgregarItem.addEventListener('click', () => this._agregarItem());
-            }
-
-            // Búsqueda de usuarios
             const buscarInput = document.getElementById('buscarUsuarios');
             if (buscarInput) {
                 buscarInput.addEventListener('input', (e) => {
@@ -444,7 +479,6 @@ class CrearTareaCompartidaController {
                 });
             }
 
-            // Acciones rápidas usuarios
             const btnSeleccionarTodos = document.getElementById('seleccionarTodosUsuarios');
             const btnDeseleccionarTodos = document.getElementById('deseleccionarTodosUsuarios');
 
@@ -463,84 +497,6 @@ class CrearTareaCompartidaController {
         }
     }
 
-    // ========== GESTIÓN DE ITEMS ==========
-    _agregarItem() {
-        const itemsList = document.getElementById('itemsList');
-        const placeholder = document.getElementById('itemsPlaceholder');
-
-        if (placeholder) {
-            placeholder.style.display = 'none';
-        }
-
-        this.itemCounter++;
-        const itemId = `item_${Date.now()}_${this.itemCounter}`;
-
-        const itemRow = document.createElement('div');
-        itemRow.className = 'item-row';
-        itemRow.dataset.itemId = itemId;
-
-        itemRow.innerHTML = `
-            <div class="item-number">${this.itemCounter}</div>
-            <input type="text" class="item-input" placeholder="Ej: Revisar inventario" maxlength="200">
-            <div class="item-actions">
-                <button type="button" class="btn-item-action delete" title="Eliminar item">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-
-        // Evento para eliminar
-        const deleteBtn = itemRow.querySelector('.delete');
-        deleteBtn.addEventListener('click', () => {
-            itemRow.remove();
-            this._reordenarItems();
-            this._mostrarPlaceholderSiEsNecesario();
-        });
-
-        itemsList.appendChild(itemRow);
-
-        // Enfocar el input
-        const input = itemRow.querySelector('.item-input');
-        setTimeout(() => input.focus(), 100);
-    }
-
-    _reordenarItems() {
-        const items = document.querySelectorAll('.item-row');
-        this.itemCounter = 0;
-
-        items.forEach((item, index) => {
-            this.itemCounter++;
-            const numberDiv = item.querySelector('.item-number');
-            if (numberDiv) {
-                numberDiv.textContent = this.itemCounter;
-            }
-        });
-    }
-
-    _mostrarPlaceholderSiEsNecesario() {
-        const items = document.querySelectorAll('.item-row');
-        const placeholder = document.getElementById('itemsPlaceholder');
-
-        if (placeholder) {
-            placeholder.style.display = items.length === 0 ? 'block' : 'none';
-        }
-    }
-
-    _obtenerItems() {
-        const items = [];
-        const itemRows = document.querySelectorAll('.item-row');
-
-        itemRows.forEach(row => {
-            const input = row.querySelector('.item-input');
-            const texto = input.value.trim();
-            if (texto) {
-                items.push(texto);
-            }
-        });
-
-        return items;
-    }
-
     // ========== GESTIÓN DE USUARIOS ==========
     _filtrarUsuarios(termino) {
         if (!termino.trim()) {
@@ -555,7 +511,6 @@ class CrearTareaCompartidaController {
         }
 
         this._renderizarUsuarios();
-        this._restaurarSeleccion();
     }
 
     _seleccionarTodosUsuarios(seleccionar) {
@@ -570,24 +525,16 @@ class CrearTareaCompartidaController {
         this._actualizarContadorUsuarios();
     }
 
-    _restaurarSeleccion() {
-        this._actualizarContadorUsuarios();
-    }
-
     _obtenerUsuariosSeleccionados() {
         const usuariosIds = [];
-        const checkboxes = document.querySelectorAll('.usuario-checkbox:checked');
-
-        checkboxes.forEach(checkbox => {
+        document.querySelectorAll('.usuario-checkbox:checked').forEach(checkbox => {
             usuariosIds.push(checkbox.value);
         });
-
         return usuariosIds;
     }
 
     // ========== VALIDACIÓN Y GUARDADO ==========
     _validarYGuardar() {
-        // Validar nombre de actividad
         const nombreInput = document.getElementById('nombreActividad');
         const nombre = nombreInput.value.trim();
 
@@ -598,12 +545,16 @@ class CrearTareaCompartidaController {
         }
         nombreInput.classList.remove('is-invalid');
 
-        // Validar que haya al menos un item
-        const items = this._obtenerItems();
-        if (items.length === 0) {
+        // Actualizar items desde DOM
+        this._actualizarItemsDesdeDOM();
+
+        const usuariosSeleccionados = this._obtenerUsuariosSeleccionados();
+        const esPersonal = usuariosSeleccionados.length === 0;
+
+        if (esPersonal && this.items.length === 0) {
             Swal.fire({
                 icon: 'warning',
-                title: 'Sin items',
+                title: 'Tarea vacía',
                 text: 'No has agregado ningún item al checklist. ¿Deseas continuar?',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, continuar',
@@ -614,39 +565,15 @@ class CrearTareaCompartidaController {
                 cancelButtonColor: '#dc3545'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    this._guardarTarea(nombre, items);
+                    this._guardarTarea(nombre, esPersonal, usuariosSeleccionados);
                 }
             });
-            return;
+        } else {
+            this._guardarTarea(nombre, esPersonal, usuariosSeleccionados);
         }
-
-        // Validar que haya al menos un usuario seleccionado
-        const usuariosSeleccionados = this._obtenerUsuariosSeleccionados();
-        if (usuariosSeleccionados.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Sin usuarios',
-                text: 'No has seleccionado ningún usuario para compartir. ¿Deseas crear una tarea personal?',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, crear personal',
-                cancelButtonText: 'Seleccionar usuarios',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: '#2f8cff',
-                cancelButtonColor: '#dc3545'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    this._guardarTarea(nombre, items, true); // true = personal
-                }
-            });
-            return;
-        }
-
-        // Si todo está bien, guardar tarea compartida
-        this._guardarTarea(nombre, items, false, usuariosSeleccionados);
     }
 
-    async _guardarTarea(nombre, items, esPersonal = false, usuariosSeleccionados = []) {
+    async _guardarTarea(nombre, esPersonal = false, usuariosSeleccionados = []) {
         const btnCrear = document.getElementById('crearTareaBtn');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check"></i>Crear Tarea';
 
@@ -658,36 +585,57 @@ class CrearTareaCompartidaController {
 
             const descripcion = document.getElementById('descripcion').value.trim();
 
-            // Crear objeto de datos de la tarea
+            // Obtener fecha límite y recordatorio
+            const fechaLimiteInput = document.getElementById('fechaLimite');
+            const tieneRecordatorioCheck = document.getElementById('tieneRecordatorio');
+
+            let fechaLimite = null;
+            if (tieneRecordatorioCheck?.checked && fechaLimiteInput?.value) {
+                fechaLimite = new Date(fechaLimiteInput.value);
+                fechaLimite.setHours(23, 59, 59, 999); // Fin del día seleccionado
+            }
+
             const tareaData = {
                 nombreActividad: nombre,
                 descripcion: descripcion,
-                items: items,
+                items: this.items, // Array de strings para el checklist
                 tipo: esPersonal ? 'personal' : 'compartida',
-                usuariosCompartidosIds: esPersonal ? [] : usuariosSeleccionados
+                usuariosCompartidosIds: esPersonal ? [] : usuariosSeleccionados,
+                fechaLimite: fechaLimite,
+                tieneRecordatorio: tieneRecordatorioCheck?.checked || false
             };
 
             console.log('📝 Guardando tarea:', tareaData);
 
-            // Usar TareaManager para crear la tarea
             const nuevaTarea = await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
 
             console.log('✅ Tarea creada:', nuevaTarea);
 
+            // Mostrar resumen detallado
+            let resumenHTML = `
+                <div style="text-align: left; color: var(--color-text-primary);">
+                    <p><strong>Tarea:</strong> ${nombre}</p>
+                    <p><strong>Tipo:</strong> ${esPersonal ? 'Personal' : 'Compartida'}</p>
+                    <p><strong>Creado por:</strong> ${this.usuarioActual.nombreCompleto}</p>
+            `;
+
+            if (!esPersonal) {
+                resumenHTML += `<p><strong>Compartida con:</strong> ${usuariosSeleccionados.length} usuario(s)</p>`;
+            }
+
+            if (fechaLimite) {
+                resumenHTML += `<p><strong>Fecha límite:</strong> ${fechaLimite.toLocaleDateString('es-MX')}</p>`;
+            }
+
+            resumenHTML += `<p><strong>Items en checklist:</strong> ${this.items.length}</p>`;
+            resumenHTML += `</div>`;
+
             Swal.close();
 
-            // Mostrar éxito
             await Swal.fire({
                 icon: 'success',
-                title: '¡Tarea creada!',
-                html: `
-                    <div style="text-align: left; color: var(--color-text-primary);">
-                        <p><strong>Tarea:</strong> ${nombre}</p>
-                        <p><strong>Tipo:</strong> ${esPersonal ? 'Personal' : 'Compartida'}</p>
-                        <p><strong>Items:</strong> ${items.length}</p>
-                        ${!esPersonal ? `<p><strong>Compartida con:</strong> ${usuariosSeleccionados.length} usuario(s)</p>` : ''}
-                    </div>
-                `,
+                title: '¡Tarea creada exitosamente!',
+                html: resumenHTML,
                 confirmButtonText: 'Ver tareas',
                 background: 'var(--color-bg-secondary)',
                 color: 'var(--color-text-primary)',
@@ -698,16 +646,7 @@ class CrearTareaCompartidaController {
 
         } catch (error) {
             console.error('❌ Error guardando tarea:', error);
-
-            let mensajeError = error.message || 'No se pudo crear la tarea';
-
-            if (mensajeError.includes('organización')) {
-                mensajeError = 'Error con la organización del usuario';
-            } else if (mensajeError.includes('network')) {
-                mensajeError = 'Error de conexión. Verifica tu internet.';
-            }
-
-            this._mostrarError(mensajeError);
+            this._mostrarError(error.message || 'No se pudo crear la tarea');
         } finally {
             if (btnCrear) {
                 btnCrear.innerHTML = originalHTML;
@@ -716,7 +655,7 @@ class CrearTareaCompartidaController {
         }
     }
 
-    // ========== NAVEGACIÓN ==========
+    // ========== NAVEGACIÓN Y UTILIDADES ==========
     _volverALista() {
         window.location.href = '/usuarios/administrador/tareas/tareas.html';
     }
@@ -754,7 +693,6 @@ class CrearTareaCompartidaController {
         });
     }
 
-    // ========== UTILIDADES ==========
     _mostrarError(mensaje) {
         Swal.fire({
             icon: 'error',
@@ -768,10 +706,7 @@ class CrearTareaCompartidaController {
     }
 }
 
-// =============================================
-// INICIALIZACIÓN
-// =============================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM cargado, iniciando controller...');
+    console.log('📄 DOM cargado, iniciando controller de tarea compartida (versión mejorada)...');
     new CrearTareaCompartidaController();
 });

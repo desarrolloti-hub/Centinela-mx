@@ -1,21 +1,13 @@
-// crearTareaPersonal.js - VERSIÓN SIMPLIFICADA
-// SOLO NOMBRE, DESCRIPCIÓN E ITEMS DEL CHECKLIST
+// crearTareaPersonal.js - VERSIÓN MEJORADA CON CHECKLIST Y RECORDATORIOS
+// TAREAS PERSONALES (VISIBLES SOLO PARA EL CREADOR)
 
-import { TareaManager } from '/clases/tarea.js';
-
-// =============================================
-// CLASE PRINCIPAL - CrearTareaPersonalController
-// =============================================
 class CrearTareaPersonalController {
     constructor() {
         this.tareaManager = null;
         this.usuarioActual = null;
 
-        // Items de la tarea
+        // Items del checklist
         this.items = [];
-
-        // Contadores de items
-        this.itemCounter = 0;
 
         // Inicializar
         this._init();
@@ -24,7 +16,7 @@ class CrearTareaPersonalController {
     // ========== INICIALIZACIÓN ==========
     async _init() {
         try {
-            console.log('🚀 Inicializando CrearTareaPersonalController...');
+            console.log('🚀 Inicializando CrearTareaPersonalController (versión mejorada)...');
 
             // 1. Cargar usuario
             await this._cargarUsuario();
@@ -38,8 +30,7 @@ class CrearTareaPersonalController {
             console.log('👤 Usuario actual:', this.usuarioActual.nombreCompleto);
 
             // 3. Inicializar TareaManager
-            this.tareaManager = new TareaManager();
-            console.log('✅ TareaManager inicializado');
+            await this._cargarTareaManager();
 
             // 4. Configurar eventos
             this._configurarEventos();
@@ -50,16 +41,33 @@ class CrearTareaPersonalController {
             // 6. Configurar contadores de caracteres
             this._configurarContadores();
 
+            // 7. Configurar items del checklist (AHORA SÍ LOS MOSTRAMOS)
+            this._configurarItemsChecklist();
+
+            // 8. Configurar fecha y recordatorio
+            this._configurarFechaRecordatorio();
+
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
         }
     }
 
+    // ========== CARGA DE TAREAMANAGER ==========
+    async _cargarTareaManager() {
+        try {
+            const { TareaManager } = await import('/clases/tarea.js');
+            this.tareaManager = new TareaManager();
+            console.log('✅ TareaManager inicializado');
+        } catch (error) {
+            console.error('Error cargando TareaManager:', error);
+            throw new Error('No se pudo cargar el módulo de tareas');
+        }
+    }
+
     // ========== CARGA DE USUARIO ==========
     async _cargarUsuario() {
         try {
-            // Intentar obtener de adminInfo
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -70,13 +78,13 @@ class CrearTareaPersonalController {
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || adminData.correo || ''
+                    correo: adminData.correoElectronico || adminData.correo || '',
+                    esAdmin: true
                 };
                 console.log('✅ Usuario cargado desde adminInfo');
                 return true;
             }
 
-            // Intentar obtener de userData
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             if (userData && Object.keys(userData).length > 0) {
                 this.usuarioActual = {
@@ -86,7 +94,8 @@ class CrearTareaPersonalController {
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
                     organizacionCamelCase: userData.organizacionCamelCase ||
                         this._generarCamelCase(userData.organizacion || userData.empresa),
-                    correo: userData.correo || userData.email || ''
+                    correo: userData.correo || userData.email || '',
+                    esAdmin: userData.rol === 'admin'
                 };
                 console.log('✅ Usuario cargado desde userData');
                 return true;
@@ -141,22 +150,132 @@ class CrearTareaPersonalController {
         }
     }
 
+    // ========== GESTIÓN DE ITEMS DEL CHECKLIST ==========
+    _configurarItemsChecklist() {
+        const btnAgregarItem = document.getElementById('btnAgregarItem');
+        if (btnAgregarItem) {
+            btnAgregarItem.addEventListener('click', () => this._agregarItem());
+        }
+
+        // Inicializar con un item por defecto
+        setTimeout(() => this._agregarItem(), 100);
+    }
+
+    _agregarItem(texto = '') {
+        const itemsList = document.getElementById('itemsList');
+        const placeholder = document.getElementById('itemsPlaceholder');
+
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+
+        const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const itemIndex = this.items.length + 1;
+
+        const itemHTML = `
+            <div class="item-row" data-item-id="${itemId}">
+                <span class="item-number">${itemIndex}</span>
+                <input type="text" class="item-input" placeholder="Escribe un item..." value="${texto}" maxlength="200">
+                <div class="item-actions">
+                    <button type="button" class="btn-item-action delete" title="Eliminar item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        itemsList.insertAdjacentHTML('beforeend', itemHTML);
+
+        const newItem = itemsList.lastElementChild;
+        const input = newItem.querySelector('.item-input');
+        const deleteBtn = newItem.querySelector('.btn-item-action.delete');
+
+        input.addEventListener('input', () => {
+            this._actualizarItemsDesdeDOM();
+        });
+
+        deleteBtn.addEventListener('click', () => {
+            newItem.remove();
+            this._actualizarItemsDesdeDOM();
+            this._reordenarItems();
+
+            if (this.items.length === 0) {
+                const placeholder = document.getElementById('itemsPlaceholder');
+                if (placeholder) {
+                    placeholder.style.display = 'block';
+                }
+            }
+        });
+
+        input.focus();
+        this._actualizarItemsDesdeDOM();
+    }
+
+    _actualizarItemsDesdeDOM() {
+        const itemsList = document.getElementById('itemsList');
+        const itemRows = itemsList.querySelectorAll('.item-row');
+
+        this.items = [];
+
+        itemRows.forEach(row => {
+            const input = row.querySelector('.item-input');
+            const texto = input.value.trim();
+
+            if (texto !== '') {
+                this.items.push(texto);
+            }
+        });
+    }
+
+    _reordenarItems() {
+        const itemsList = document.getElementById('itemsList');
+        const itemRows = itemsList.querySelectorAll('.item-row');
+
+        itemRows.forEach((row, index) => {
+            const numberSpan = row.querySelector('.item-number');
+            numberSpan.textContent = index + 1;
+        });
+    }
+
+    // ========== CONFIGURACIÓN DE FECHA Y RECORDATORIO ==========
+    _configurarFechaRecordatorio() {
+        const fechaInput = document.getElementById('fechaLimite');
+        if (fechaInput) {
+            const hoy = new Date().toISOString().split('T')[0];
+            fechaInput.min = hoy;
+
+            // Establecer fecha por defecto (hoy + 7 días)
+            const fechaDefault = new Date();
+            fechaDefault.setDate(fechaDefault.getDate() + 7);
+            fechaInput.value = fechaDefault.toISOString().split('T')[0];
+        }
+
+        const recordatorioCheck = document.getElementById('tieneRecordatorio');
+        const fechaContainer = document.getElementById('fechaContainer');
+
+        if (recordatorioCheck && fechaContainer) {
+            recordatorioCheck.addEventListener('change', (e) => {
+                fechaContainer.style.opacity = e.target.checked ? '1' : '0.5';
+                if (e.target.checked && fechaInput) {
+                    fechaInput.focus();
+                }
+            });
+        }
+    }
+
     // ========== CONFIGURACIÓN DE EVENTOS ==========
     _configurarEventos() {
         try {
-            // Botón Volver a la lista
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
                 btnVolverLista.addEventListener('click', () => this._volverALista());
             }
 
-            // Botón Cancelar
             const btnCancelar = document.getElementById('cancelarBtn');
             if (btnCancelar) {
                 btnCancelar.addEventListener('click', () => this._cancelarCreacion());
             }
 
-            // Botón Crear Tarea
             const btnCrear = document.getElementById('crearTareaBtn');
             if (btnCrear) {
                 btnCrear.addEventListener('click', (e) => {
@@ -165,19 +284,12 @@ class CrearTareaPersonalController {
                 });
             }
 
-            // Formulario Submit
             const form = document.getElementById('formTareaPersonal');
             if (form) {
                 form.addEventListener('submit', (e) => {
                     e.preventDefault();
                     this._validarYGuardar();
                 });
-            }
-
-            // Botón Agregar Item
-            const btnAgregarItem = document.getElementById('btnAgregarItem');
-            if (btnAgregarItem) {
-                btnAgregarItem.addEventListener('click', () => this._agregarItem());
             }
 
             console.log('✅ Eventos configurados');
@@ -187,87 +299,8 @@ class CrearTareaPersonalController {
         }
     }
 
-    // ========== GESTIÓN DE ITEMS ==========
-    _agregarItem() {
-        const itemsList = document.getElementById('itemsList');
-        const placeholder = document.getElementById('itemsPlaceholder');
-
-        if (placeholder) {
-            placeholder.style.display = 'none';
-        }
-
-        this.itemCounter++;
-        const itemId = `item_${Date.now()}_${this.itemCounter}`;
-
-        const itemRow = document.createElement('div');
-        itemRow.className = 'item-row';
-        itemRow.dataset.itemId = itemId;
-
-        itemRow.innerHTML = `
-            <div class="item-number">${this.itemCounter}</div>
-            <input type="text" class="item-input" placeholder="Ej: Revisar inventario" maxlength="200">
-            <div class="item-actions">
-                <button type="button" class="btn-item-action delete" title="Eliminar item">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-
-        // Evento para eliminar
-        const deleteBtn = itemRow.querySelector('.delete');
-        deleteBtn.addEventListener('click', () => {
-            itemRow.remove();
-            this._reordenarItems();
-            this._mostrarPlaceholderSiEsNecesario();
-        });
-
-        itemsList.appendChild(itemRow);
-
-        // Enfocar el input
-        const input = itemRow.querySelector('.item-input');
-        setTimeout(() => input.focus(), 100);
-    }
-
-    _reordenarItems() {
-        const items = document.querySelectorAll('.item-row');
-        this.itemCounter = 0;
-
-        items.forEach((item, index) => {
-            this.itemCounter++;
-            const numberDiv = item.querySelector('.item-number');
-            if (numberDiv) {
-                numberDiv.textContent = this.itemCounter;
-            }
-        });
-    }
-
-    _mostrarPlaceholderSiEsNecesario() {
-        const items = document.querySelectorAll('.item-row');
-        const placeholder = document.getElementById('itemsPlaceholder');
-
-        if (placeholder) {
-            placeholder.style.display = items.length === 0 ? 'block' : 'none';
-        }
-    }
-
-    _obtenerItems() {
-        const items = [];
-        const itemRows = document.querySelectorAll('.item-row');
-
-        itemRows.forEach(row => {
-            const input = row.querySelector('.item-input');
-            const texto = input.value.trim();
-            if (texto) {
-                items.push(texto);
-            }
-        });
-
-        return items;
-    }
-
     // ========== VALIDACIÓN Y GUARDADO ==========
     _validarYGuardar() {
-        // Validar nombre de actividad
         const nombreInput = document.getElementById('nombreActividad');
         const nombre = nombreInput.value.trim();
 
@@ -278,12 +311,14 @@ class CrearTareaPersonalController {
         }
         nombreInput.classList.remove('is-invalid');
 
-        // Validar que haya al menos un item
-        const items = this._obtenerItems();
-        if (items.length === 0) {
+        // Actualizar items desde DOM
+        this._actualizarItemsDesdeDOM();
+
+        // Si no hay items, preguntar si desea continuar
+        if (this.items.length === 0) {
             Swal.fire({
                 icon: 'warning',
-                title: 'Sin items',
+                title: 'Tarea sin items',
                 text: 'No has agregado ningún item al checklist. ¿Deseas continuar?',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, continuar',
@@ -294,17 +329,15 @@ class CrearTareaPersonalController {
                 cancelButtonColor: '#dc3545'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    this._guardarTarea(nombre, items);
+                    this._guardarTarea(nombre);
                 }
             });
-            return;
+        } else {
+            this._guardarTarea(nombre);
         }
-
-        // Si todo está bien, guardar tarea
-        this._guardarTarea(nombre, items);
     }
 
-    async _guardarTarea(nombre, items) {
+    async _guardarTarea(nombre) {
         const btnCrear = document.getElementById('crearTareaBtn');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check"></i>Crear Tarea';
 
@@ -315,34 +348,55 @@ class CrearTareaPersonalController {
             }
 
             const descripcion = document.getElementById('descripcion').value.trim();
+            const prioridad = document.getElementById('prioridad')?.value || 'media';
 
-            // Crear objeto de datos de la tarea (solo lo esencial)
+            // Obtener fecha límite y recordatorio
+            const fechaLimiteInput = document.getElementById('fechaLimite');
+            const tieneRecordatorioCheck = document.getElementById('tieneRecordatorio');
+
+            let fechaLimite = null;
+            if (tieneRecordatorioCheck?.checked && fechaLimiteInput?.value) {
+                fechaLimite = new Date(fechaLimiteInput.value);
+                fechaLimite.setHours(23, 59, 59, 999); // Fin del día seleccionado
+            }
+
             const tareaData = {
                 nombreActividad: nombre,
                 descripcion: descripcion,
-                items: items,
-                tipo: 'personal'
+                items: this.items, // Array de strings para el checklist
+                tipo: 'personal',
+                prioridad: prioridad, // Campo adicional
+                fechaLimite: fechaLimite,
+                tieneRecordatorio: tieneRecordatorioCheck?.checked || false
             };
 
             console.log('📝 Guardando tarea personal:', tareaData);
 
-            // Usar TareaManager para crear la tarea
             const nuevaTarea = await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
 
             console.log('✅ Tarea personal creada:', nuevaTarea);
 
+            // Mostrar resumen detallado
+            let resumenHTML = `
+                <div style="text-align: left; color: var(--color-text-primary);">
+                    <p><strong>Tarea:</strong> ${nombre}</p>
+                    <p><strong>Prioridad:</strong> ${this._obtenerTextoPrioridad(prioridad)}</p>
+                    <p><strong>Creado por:</strong> ${this.usuarioActual.nombreCompleto}</p>
+            `;
+
+            if (fechaLimite) {
+                resumenHTML += `<p><strong>Fecha límite:</strong> ${fechaLimite.toLocaleDateString('es-MX')}</p>`;
+            }
+
+            resumenHTML += `<p><strong>Items en checklist:</strong> ${this.items.length}</p>`;
+            resumenHTML += `</div>`;
+
             Swal.close();
 
-            // Mostrar éxito
             await Swal.fire({
                 icon: 'success',
-                title: '¡Tarea creada!',
-                html: `
-                    <div style="text-align: left; color: var(--color-text-primary);">
-                        <p><strong>Tarea:</strong> ${nombre}</p>
-                        <p><strong>Items:</strong> ${items.length}</p>
-                    </div>
-                `,
+                title: '¡Tarea personal creada exitosamente!',
+                html: resumenHTML,
                 confirmButtonText: 'Ver mis tareas',
                 background: 'var(--color-bg-secondary)',
                 color: 'var(--color-text-primary)',
@@ -353,22 +407,23 @@ class CrearTareaPersonalController {
 
         } catch (error) {
             console.error('❌ Error guardando tarea:', error);
-
-            let mensajeError = error.message || 'No se pudo crear la tarea';
-
-            if (mensajeError.includes('organización')) {
-                mensajeError = 'Error con la organización del usuario';
-            } else if (mensajeError.includes('network')) {
-                mensajeError = 'Error de conexión. Verifica tu internet.';
-            }
-
-            this._mostrarError(mensajeError);
+            this._mostrarError(error.message || 'No se pudo crear la tarea');
         } finally {
             if (btnCrear) {
                 btnCrear.innerHTML = originalHTML;
                 btnCrear.disabled = false;
             }
         }
+    }
+
+    _obtenerTextoPrioridad(prioridad) {
+        const prioridades = {
+            'baja': '🔵 Baja',
+            'media': '🟡 Media',
+            'alta': '🔴 Alta',
+            'urgente': '⚡ Urgente'
+        };
+        return prioridades[prioridad] || prioridad;
     }
 
     // ========== NAVEGACIÓN ==========
@@ -409,7 +464,6 @@ class CrearTareaPersonalController {
         });
     }
 
-    // ========== UTILIDADES ==========
     _mostrarError(mensaje) {
         Swal.fire({
             icon: 'error',
@@ -423,10 +477,7 @@ class CrearTareaPersonalController {
     }
 }
 
-// =============================================
-// INICIALIZACIÓN
-// =============================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM cargado, iniciando controller de tarea personal...');
+    console.log('📄 DOM cargado, iniciando controller de tarea personal (versión mejorada)...');
     new CrearTareaPersonalController();
 });

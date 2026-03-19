@@ -1,12 +1,9 @@
-// crearTareaArea.js - VERSIÓN PARA TAREAS POR ÁREA
-// CON SELECCIÓN DE ÁREA Y CARGOS ESPECÍFICOS
+// crearTareaArea.js - VERSIÓN MEJORADA CON NUEVAS FUNCIONALIDADES
+// Integración con la clase Tarea mejorada (recordatorios, nombres, etc.)
 
 import { TareaManager } from '/clases/tarea.js';
 import { AreaManager } from '/clases/area.js';
 
-// =============================================
-// CLASE PRINCIPAL - CrearTareaAreaController
-// =============================================
 class CrearTareaAreaController {
     constructor() {
         this.tareaManager = null;
@@ -24,11 +21,8 @@ class CrearTareaAreaController {
         // Área seleccionada
         this.areaSeleccionada = null;
 
-        // Items de la tarea
+        // Items del checklist
         this.items = [];
-
-        // Contadores de items
-        this.itemCounter = 0;
 
         // Inicializar
         this._init();
@@ -37,12 +31,10 @@ class CrearTareaAreaController {
     // ========== INICIALIZACIÓN ==========
     async _init() {
         try {
-            console.log('🚀 Inicializando CrearTareaAreaController...');
+            console.log('🚀 Inicializando CrearTareaAreaController (versión mejorada)...');
 
-            // 1. Cargar usuario
             await this._cargarUsuario();
 
-            // 2. Si no hay usuario, redirigir
             if (!this.usuarioActual) {
                 this._redirigirAlLogin();
                 return;
@@ -50,22 +42,15 @@ class CrearTareaAreaController {
 
             console.log('👤 Usuario actual:', this.usuarioActual.nombreCompleto);
 
-            // 3. Inicializar TareaManager y AreaManager
             this.tareaManager = new TareaManager();
             this.areaManager = new AreaManager();
             console.log('✅ Managers inicializados');
 
-            // 4. Cargar áreas
             await this._cargarAreas();
-
-            // 5. Configurar eventos
             this._configurarEventos();
-
-            // 6. Configurar organización automática
             this._configurarOrganizacion();
-
-            // 7. Configurar contadores de caracteres
             this._configurarContadores();
+            this._configurarFechaRecordatorio();
 
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
@@ -76,7 +61,6 @@ class CrearTareaAreaController {
     // ========== CARGA DE USUARIO ==========
     async _cargarUsuario() {
         try {
-            // Intentar obtener de adminInfo
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -87,13 +71,13 @@ class CrearTareaAreaController {
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || adminData.correo || ''
+                    correo: adminData.correoElectronico || adminData.correo || '',
+                    esAdmin: true
                 };
                 console.log('✅ Usuario cargado desde adminInfo');
                 return true;
             }
 
-            // Intentar obtener de userData
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             if (userData && Object.keys(userData).length > 0) {
                 this.usuarioActual = {
@@ -103,7 +87,8 @@ class CrearTareaAreaController {
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
                     organizacionCamelCase: userData.organizacionCamelCase ||
                         this._generarCamelCase(userData.organizacion || userData.empresa),
-                    correo: userData.correo || userData.email || ''
+                    correo: userData.correo || userData.email || '',
+                    esAdmin: userData.rol === 'admin'
                 };
                 console.log('✅ Usuario cargado desde userData');
                 return true;
@@ -146,39 +131,16 @@ class CrearTareaAreaController {
 
             console.log('📦 Cargando áreas para organización:', this.usuarioActual.organizacionCamelCase);
 
-            // Usar AreaManager para obtener áreas
             this.areas = await this.areaManager.getAreasByOrganizacion(
                 this.usuarioActual.organizacionCamelCase
             );
 
-            // Filtrar solo áreas activas
             this.areas = this.areas.filter(area => area.estado === 'activa');
-
-            console.log(`✅ ${this.areas.length} áreas activas encontradas`);
-
             this.areasFiltradas = [...this.areas];
-
-            // Renderizar áreas
             this._renderizarAreas();
 
         } catch (error) {
             console.error('❌ Error cargando áreas:', error);
-
-            // Mostrar error en el contenedor
-            const areasContainer = document.getElementById('areasContainer');
-            if (areasContainer) {
-                areasContainer.innerHTML = `
-                    <div class="loading-areas" style="color: var(--color-danger);">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Error cargando áreas: ${error.message}</p>
-                        <button class="btn-accion-rapida" onclick="location.reload()">
-                            <i class="fas fa-redo"></i> Reintentar
-                        </button>
-                    </div>
-                `;
-            }
-
-            // Usar datos de ejemplo si falla la carga
             this._cargarAreasEjemplo();
         }
     }
@@ -186,15 +148,24 @@ class CrearTareaAreaController {
     _cargarAreasEjemplo() {
         console.log('📝 Usando datos de ejemplo para áreas');
 
-        // Datos de ejemplo para desarrollo
         this.areas = [
             {
                 id: 'area1',
                 nombreArea: 'Seguridad',
                 descripcion: 'Área encargada de la seguridad',
                 cargos: {
-                    'cargo1': { nombre: 'Supervisor de Seguridad', descripcion: 'Supervisa operaciones', estado: 'activo' },
-                    'cargo2': { nombre: 'Guardia', descripcion: 'Vigilancia', estado: 'activo' }
+                    'cargo1': {
+                        id: 'cargo1',
+                        nombre: 'Supervisor de Seguridad',
+                        descripcion: 'Supervisa operaciones',
+                        estado: 'activo'
+                    },
+                    'cargo2': {
+                        id: 'cargo2',
+                        nombre: 'Guardia',
+                        descripcion: 'Vigilancia',
+                        estado: 'activo'
+                    }
                 },
                 estado: 'activa'
             },
@@ -203,8 +174,18 @@ class CrearTareaAreaController {
                 nombreArea: 'Operaciones',
                 descripcion: 'Área de operaciones diarias',
                 cargos: {
-                    'cargo3': { nombre: 'Coordinador', descripcion: 'Coordina actividades', estado: 'activo' },
-                    'cargo4': { nombre: 'Operador', descripcion: 'Ejecuta tareas', estado: 'activo' }
+                    'cargo3': {
+                        id: 'cargo3',
+                        nombre: 'Coordinador',
+                        descripcion: 'Coordina actividades',
+                        estado: 'activo'
+                    },
+                    'cargo4': {
+                        id: 'cargo4',
+                        nombre: 'Operador',
+                        descripcion: 'Ejecuta tareas',
+                        estado: 'activo'
+                    }
                 },
                 estado: 'activa'
             },
@@ -213,7 +194,12 @@ class CrearTareaAreaController {
                 nombreArea: 'Mantenimiento',
                 descripcion: 'Mantenimiento general',
                 cargos: {
-                    'cargo5': { nombre: 'Técnico', descripcion: 'Reparaciones', estado: 'activo' }
+                    'cargo5': {
+                        id: 'cargo5',
+                        nombre: 'Técnico',
+                        descripcion: 'Reparaciones',
+                        estado: 'activo'
+                    }
                 },
                 estado: 'activa'
             }
@@ -222,7 +208,6 @@ class CrearTareaAreaController {
         this.areasFiltradas = [...this.areas];
         this._renderizarAreas();
 
-        // Mostrar advertencia
         Swal.fire({
             icon: 'warning',
             title: 'Modo de desarrollo',
@@ -251,15 +236,12 @@ class CrearTareaAreaController {
         let html = '';
         this.areasFiltradas.forEach(area => {
             const iniciales = this._obtenerIniciales(area.nombreArea || 'Área');
-            const totalCargos = area.getCantidadCargosActivos ? area.getCantidadCargosActivos() :
-                (area.cargos ? Object.keys(area.cargos).length : 0);
+            const totalCargos = area.cargos ? Object.keys(area.cargos).length : 0;
 
             html += `
                 <div class="area-item" data-area-id="${area.id}">
                     <input type="radio" class="area-radio" name="areaSeleccionada" value="${area.id}">
-                    <div class="area-icon">
-                        ${iniciales}
-                    </div>
+                    <div class="area-icon">${iniciales}</div>
                     <div class="area-info">
                         <span class="area-nombre">${area.nombreArea || 'Área'}</span>
                         <span class="area-descripcion">${area.descripcion || 'Sin descripción'}</span>
@@ -271,7 +253,6 @@ class CrearTareaAreaController {
 
         container.innerHTML = html;
 
-        // Agregar eventos a los radios
         container.querySelectorAll('.area-item').forEach(item => {
             const radio = item.querySelector('.area-radio');
 
@@ -292,17 +273,98 @@ class CrearTareaAreaController {
 
     _obtenerIniciales(nombre) {
         if (!nombre) return 'A';
-        return nombre
-            .split(' ')
-            .map(p => p[0])
-            .join('')
-            .toUpperCase()
-            .substring(0, 2);
+        return nombre.split(' ').map(p => p[0]).join('').toUpperCase().substring(0, 2);
+    }
+
+    // ========== GESTIÓN DE ITEMS DEL CHECKLIST ==========
+    _configurarItemsChecklist() {
+        const btnAgregarItem = document.getElementById('btnAgregarItem');
+        if (btnAgregarItem) {
+            btnAgregarItem.addEventListener('click', () => this._agregarItem());
+        }
+
+        // Inicializar con un item por defecto
+        this._agregarItem();
+    }
+
+    _agregarItem(texto = '') {
+        const itemsList = document.getElementById('itemsList');
+        const placeholder = document.getElementById('itemsPlaceholder');
+
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+
+        const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const itemIndex = this.items.length + 1;
+
+        const itemHTML = `
+            <div class="item-row" data-item-id="${itemId}">
+                <span class="item-number">${itemIndex}</span>
+                <input type="text" class="item-input" placeholder="Escribe un item..." value="${texto}" maxlength="200">
+                <div class="item-actions">
+                    <button type="button" class="btn-item-action delete" title="Eliminar item">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        itemsList.insertAdjacentHTML('beforeend', itemHTML);
+
+        const newItem = itemsList.lastElementChild;
+        const input = newItem.querySelector('.item-input');
+        const deleteBtn = newItem.querySelector('.btn-item-action.delete');
+
+        input.addEventListener('input', () => {
+            this._actualizarItemsDesdeDOM();
+        });
+
+        deleteBtn.addEventListener('click', () => {
+            newItem.remove();
+            this._actualizarItemsDesdeDOM();
+            this._reordenarItems();
+
+            if (this.items.length === 0) {
+                const placeholder = document.getElementById('itemsPlaceholder');
+                if (placeholder) {
+                    placeholder.style.display = 'block';
+                }
+            }
+        });
+
+        input.focus();
+        this._actualizarItemsDesdeDOM();
+    }
+
+    _actualizarItemsDesdeDOM() {
+        const itemsList = document.getElementById('itemsList');
+        const itemRows = itemsList.querySelectorAll('.item-row');
+
+        this.items = [];
+
+        itemRows.forEach(row => {
+            const input = row.querySelector('.item-input');
+            const texto = input.value.trim();
+
+            if (texto !== '') {
+                this.items.push(texto);
+            }
+        });
+    }
+
+    _reordenarItems() {
+        const itemsList = document.getElementById('itemsList');
+        const itemRows = itemsList.querySelectorAll('.item-row');
+
+        itemRows.forEach((row, index) => {
+            const numberSpan = row.querySelector('.item-number');
+            numberSpan.textContent = index + 1;
+        });
     }
 
     // ========== SELECCIÓN DE ÁREA Y CARGOS ==========
     async _seleccionarArea(areaId) {
-        // Actualizar estilo visual
         document.querySelectorAll('.area-item').forEach(item => {
             if (item.dataset.areaId === areaId) {
                 item.classList.add('seleccionado');
@@ -311,16 +373,13 @@ class CrearTareaAreaController {
             }
         });
 
-        // Guardar área seleccionada
         this.areaSeleccionada = this.areas.find(a => a.id === areaId);
 
-        // Actualizar resumen
         const selectedAreaText = document.getElementById('selectedAreaText');
         if (selectedAreaText && this.areaSeleccionada) {
             selectedAreaText.textContent = `Área: ${this.areaSeleccionada.nombreArea}`;
         }
 
-        // Cargar cargos del área
         await this._cargarCargos(areaId);
     }
 
@@ -329,23 +388,18 @@ class CrearTareaAreaController {
             const area = this.areas.find(a => a.id === areaId);
             if (!area) return;
 
-            // Obtener cargos activos
             let cargos = [];
             if (area.cargos) {
                 if (typeof area.cargos === 'object') {
                     cargos = Object.entries(area.cargos)
                         .filter(([_, cargo]) => cargo.estado !== 'inactivo')
-                        .map(([id, cargo]) => ({
-                            id,
-                            ...cargo
-                        }));
+                        .map(([id, cargo]) => ({ id, ...cargo }));
                 }
             }
 
             this.cargos = cargos;
             this.cargosFiltrados = [...cargos];
 
-            // Mostrar sección de cargos
             const cargosSection = document.getElementById('cargosSection');
             const cargosAcciones = document.getElementById('cargosAcciones');
 
@@ -357,7 +411,6 @@ class CrearTareaAreaController {
                 cargosSection.style.display = 'none';
                 cargosAcciones.style.display = 'none';
 
-                // Ocultar resumen de cargos
                 const selectedCargosText = document.getElementById('selectedCargosText');
                 if (selectedCargosText) {
                     selectedCargosText.style.display = 'none';
@@ -387,10 +440,8 @@ class CrearTareaAreaController {
         this.cargosFiltrados.forEach(cargo => {
             html += `
                 <div class="cargo-item" data-cargo-id="${cargo.id}">
-                    <input type="checkbox" class="cargo-checkbox" id="cargo_${cargo.id}" value="${cargo.id}">
-                    <div class="cargo-icon">
-                        <i class="fas fa-user-tie"></i>
-                    </div>
+                    <input type="checkbox" class="cargo-checkbox" value="${cargo.id}">
+                    <div class="cargo-icon"><i class="fas fa-user-tie"></i></div>
                     <div class="cargo-info">
                         <span class="cargo-nombre">${cargo.nombre || 'Cargo'}</span>
                         <span class="cargo-descripcion">${cargo.descripcion || 'Sin descripción'}</span>
@@ -401,7 +452,6 @@ class CrearTareaAreaController {
 
         container.innerHTML = html;
 
-        // Agregar eventos a los checkboxes
         container.querySelectorAll('.cargo-item').forEach(item => {
             const checkbox = item.querySelector('.cargo-checkbox');
 
@@ -447,16 +497,38 @@ class CrearTareaAreaController {
 
     _obtenerCargosSeleccionados() {
         const cargosIds = [];
-        const checkboxes = document.querySelectorAll('.cargo-checkbox:checked');
-
-        checkboxes.forEach(checkbox => {
+        document.querySelectorAll('.cargo-checkbox:checked').forEach(checkbox => {
             cargosIds.push(checkbox.value);
         });
-
         return cargosIds;
     }
 
-    // ========== CONFIGURACIÓN DE ORGANIZACIÓN ==========
+    // ========== CONFIGURACIÓN DE FECHA Y RECORDATORIO ==========
+    _configurarFechaRecordatorio() {
+        // Establecer fecha mínima como hoy
+        const fechaInput = document.getElementById('fechaLimite');
+        if (fechaInput) {
+            const hoy = new Date().toISOString().split('T')[0];
+            fechaInput.min = hoy;
+
+            // Opcional: establecer fecha por defecto (hoy + 7 días)
+            const fechaDefault = new Date();
+            fechaDefault.setDate(fechaDefault.getDate() + 7);
+            fechaInput.value = fechaDefault.toISOString().split('T')[0];
+        }
+
+        const recordatorioCheck = document.getElementById('tieneRecordatorio');
+        if (recordatorioCheck) {
+            recordatorioCheck.addEventListener('change', (e) => {
+                const fechaContainer = document.getElementById('fechaContainer');
+                if (fechaContainer) {
+                    fechaContainer.style.opacity = e.target.checked ? '1' : '0.5';
+                }
+            });
+        }
+    }
+
+    // ========== CONFIGURACIÓN ==========
     _configurarOrganizacion() {
         const orgInput = document.getElementById('organization');
         if (orgInput && this.usuarioActual) {
@@ -464,7 +536,6 @@ class CrearTareaAreaController {
         }
     }
 
-    // ========== CONFIGURACIÓN DE CONTADORES ==========
     _configurarContadores() {
         const nombreInput = document.getElementById('nombreActividad');
         const descripcionInput = document.getElementById('descripcion');
@@ -486,22 +557,18 @@ class CrearTareaAreaController {
         }
     }
 
-    // ========== CONFIGURACIÓN DE EVENTOS ==========
     _configurarEventos() {
         try {
-            // Botón Volver a la lista
             const btnVolverLista = document.getElementById('btnVolverLista');
             if (btnVolverLista) {
                 btnVolverLista.addEventListener('click', () => this._volverALista());
             }
 
-            // Botón Cancelar
             const btnCancelar = document.getElementById('cancelarBtn');
             if (btnCancelar) {
                 btnCancelar.addEventListener('click', () => this._cancelarCreacion());
             }
 
-            // Botón Crear Tarea
             const btnCrear = document.getElementById('crearTareaBtn');
             if (btnCrear) {
                 btnCrear.addEventListener('click', (e) => {
@@ -510,7 +577,6 @@ class CrearTareaAreaController {
                 });
             }
 
-            // Formulario Submit
             const form = document.getElementById('formTareaArea');
             if (form) {
                 form.addEventListener('submit', (e) => {
@@ -519,13 +585,6 @@ class CrearTareaAreaController {
                 });
             }
 
-            // Botón Agregar Item
-            const btnAgregarItem = document.getElementById('btnAgregarItem');
-            if (btnAgregarItem) {
-                btnAgregarItem.addEventListener('click', () => this._agregarItem());
-            }
-
-            // Búsqueda de áreas
             const buscarInput = document.getElementById('buscarAreas');
             if (buscarInput) {
                 buscarInput.addEventListener('input', (e) => {
@@ -533,7 +592,6 @@ class CrearTareaAreaController {
                 });
             }
 
-            // Acciones rápidas cargos
             const btnSeleccionarTodos = document.getElementById('seleccionarTodosCargos');
             const btnDeseleccionarTodos = document.getElementById('deseleccionarTodosCargos');
 
@@ -544,6 +602,9 @@ class CrearTareaAreaController {
             if (btnDeseleccionarTodos) {
                 btnDeseleccionarTodos.addEventListener('click', () => this._seleccionarTodosCargos(false));
             }
+
+            // Configurar items del checklist
+            this._configurarItemsChecklist();
 
             console.log('✅ Eventos configurados');
 
@@ -566,7 +627,6 @@ class CrearTareaAreaController {
 
         this._renderizarAreas();
 
-        // Restaurar selección si existe
         if (this.areaSeleccionada) {
             const radio = document.querySelector(`.area-radio[value="${this.areaSeleccionada.id}"]`);
             if (radio) {
@@ -588,87 +648,8 @@ class CrearTareaAreaController {
         this._actualizarContadorCargos();
     }
 
-    // ========== GESTIÓN DE ITEMS ==========
-    _agregarItem() {
-        const itemsList = document.getElementById('itemsList');
-        const placeholder = document.getElementById('itemsPlaceholder');
-
-        if (placeholder) {
-            placeholder.style.display = 'none';
-        }
-
-        this.itemCounter++;
-        const itemId = `item_${Date.now()}_${this.itemCounter}`;
-
-        const itemRow = document.createElement('div');
-        itemRow.className = 'item-row';
-        itemRow.dataset.itemId = itemId;
-
-        itemRow.innerHTML = `
-            <div class="item-number">${this.itemCounter}</div>
-            <input type="text" class="item-input" placeholder="Ej: Revisar inventario" maxlength="200">
-            <div class="item-actions">
-                <button type="button" class="btn-item-action delete" title="Eliminar item">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-
-        // Evento para eliminar
-        const deleteBtn = itemRow.querySelector('.delete');
-        deleteBtn.addEventListener('click', () => {
-            itemRow.remove();
-            this._reordenarItems();
-            this._mostrarPlaceholderSiEsNecesario();
-        });
-
-        itemsList.appendChild(itemRow);
-
-        // Enfocar el input
-        const input = itemRow.querySelector('.item-input');
-        setTimeout(() => input.focus(), 100);
-    }
-
-    _reordenarItems() {
-        const items = document.querySelectorAll('.item-row');
-        this.itemCounter = 0;
-
-        items.forEach((item, index) => {
-            this.itemCounter++;
-            const numberDiv = item.querySelector('.item-number');
-            if (numberDiv) {
-                numberDiv.textContent = this.itemCounter;
-            }
-        });
-    }
-
-    _mostrarPlaceholderSiEsNecesario() {
-        const items = document.querySelectorAll('.item-row');
-        const placeholder = document.getElementById('itemsPlaceholder');
-
-        if (placeholder) {
-            placeholder.style.display = items.length === 0 ? 'block' : 'none';
-        }
-    }
-
-    _obtenerItems() {
-        const items = [];
-        const itemRows = document.querySelectorAll('.item-row');
-
-        itemRows.forEach(row => {
-            const input = row.querySelector('.item-input');
-            const texto = input.value.trim();
-            if (texto) {
-                items.push(texto);
-            }
-        });
-
-        return items;
-    }
-
     // ========== VALIDACIÓN Y GUARDADO ==========
     _validarYGuardar() {
-        // Validar nombre de actividad
         const nombreInput = document.getElementById('nombreActividad');
         const nombre = nombreInput.value.trim();
 
@@ -679,39 +660,18 @@ class CrearTareaAreaController {
         }
         nombreInput.classList.remove('is-invalid');
 
-        // Validar que haya al menos un item
-        const items = this._obtenerItems();
-        if (items.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Sin items',
-                text: 'No has agregado ningún item al checklist. ¿Deseas continuar?',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, continuar',
-                cancelButtonText: 'Agregar items',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                confirmButtonColor: '#2f8cff',
-                cancelButtonColor: '#dc3545'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    this._guardarTarea(nombre, items);
-                }
-            });
-            return;
-        }
-
-        // Validar que haya un área seleccionada
         if (!this.areaSeleccionada) {
             this._mostrarError('Debes seleccionar un área');
             return;
         }
 
-        // Si todo está bien, guardar tarea
-        this._guardarTarea(nombre, items);
+        // Actualizar items desde DOM
+        this._actualizarItemsDesdeDOM();
+
+        this._guardarTarea(nombre);
     }
 
-    async _guardarTarea(nombre, items) {
+    async _guardarTarea(nombre) {
         const btnCrear = document.getElementById('crearTareaBtn');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check"></i>Crear Tarea';
 
@@ -724,39 +684,60 @@ class CrearTareaAreaController {
             const descripcion = document.getElementById('descripcion').value.trim();
             const cargosSeleccionados = this._obtenerCargosSeleccionados();
 
-            // Crear objeto de datos de la tarea
+            // Obtener fecha límite y recordatorio
+            const fechaLimiteInput = document.getElementById('fechaLimite');
+            const tieneRecordatorioCheck = document.getElementById('tieneRecordatorio');
+
+            let fechaLimite = null;
+            if (tieneRecordatorioCheck?.checked && fechaLimiteInput?.value) {
+                fechaLimite = new Date(fechaLimiteInput.value);
+                fechaLimite.setHours(23, 59, 59, 999); // Fin del día seleccionado
+            }
+
             const tareaData = {
                 nombreActividad: nombre,
                 descripcion: descripcion,
-                items: items,
+                items: this.items, // Array de strings
                 tipo: 'area',
                 areaId: this.areaSeleccionada.id,
-                cargosIds: cargosSeleccionados.length > 0 ? cargosSeleccionados : []
+                cargosIds: cargosSeleccionados.length > 0 ? cargosSeleccionados : [],
+                fechaLimite: fechaLimite,
+                tieneRecordatorio: tieneRecordatorioCheck?.checked || false
             };
 
-            console.log('📝 Guardando tarea por área:', tareaData);
+            console.log('📝 Guardando tarea por área (mejorada):', tareaData);
 
-            // Usar TareaManager para crear la tarea
             const nuevaTarea = await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
 
             console.log('✅ Tarea por área creada:', nuevaTarea);
 
+            // Mostrar resumen con nueva información
+            let resumenHTML = `
+                <div style="text-align: left; color: var(--color-text-primary);">
+                    <p><strong>Tarea:</strong> ${nombre}</p>
+                    <p><strong>Área:</strong> ${this.areaSeleccionada.nombreArea}</p>
+                    <p><strong>Creado por:</strong> ${this.usuarioActual.nombreCompleto}</p>
+            `;
+
+            if (cargosSeleccionados.length > 0) {
+                resumenHTML += `<p><strong>Cargos específicos:</strong> ${cargosSeleccionados.length}</p>`;
+            } else {
+                resumenHTML += '<p><strong>Todos los cargos del área</strong></p>';
+            }
+
+            if (fechaLimite) {
+                resumenHTML += `<p><strong>Fecha límite:</strong> ${fechaLimite.toLocaleDateString('es-MX')}</p>`;
+            }
+
+            resumenHTML += `<p><strong>Items:</strong> ${this.items.length}</p>`;
+            resumenHTML += `</div>`;
+
             Swal.close();
 
-            // Mostrar éxito
             await Swal.fire({
                 icon: 'success',
-                title: '¡Tarea creada!',
-                html: `
-                    <div style="text-align: left; color: var(--color-text-primary);">
-                        <p><strong>Tarea:</strong> ${nombre}</p>
-                        <p><strong>Área:</strong> ${this.areaSeleccionada.nombreArea}</p>
-                        <p><strong>Items:</strong> ${items.length}</p>
-                        ${cargosSeleccionados.length > 0 ?
-                        `<p><strong>Cargos específicos:</strong> ${cargosSeleccionados.length}</p>` :
-                        '<p><strong>Todos los cargos del área</strong></p>'}
-                    </div>
-                `,
+                title: '¡Tarea creada exitosamente!',
+                html: resumenHTML,
                 confirmButtonText: 'Ver tareas',
                 background: 'var(--color-bg-secondary)',
                 color: 'var(--color-text-primary)',
@@ -767,16 +748,7 @@ class CrearTareaAreaController {
 
         } catch (error) {
             console.error('❌ Error guardando tarea:', error);
-
-            let mensajeError = error.message || 'No se pudo crear la tarea';
-
-            if (mensajeError.includes('organización')) {
-                mensajeError = 'Error con la organización del usuario';
-            } else if (mensajeError.includes('network')) {
-                mensajeError = 'Error de conexión. Verifica tu internet.';
-            }
-
-            this._mostrarError(mensajeError);
+            this._mostrarError(error.message || 'No se pudo crear la tarea');
         } finally {
             if (btnCrear) {
                 btnCrear.innerHTML = originalHTML;
@@ -785,7 +757,7 @@ class CrearTareaAreaController {
         }
     }
 
-    // ========== NAVEGACIÓN ==========
+    // ========== NAVEGACIÓN Y UTILIDADES ==========
     _volverALista() {
         window.location.href = '/usuarios/administrador/tareas/tareas.html';
     }
@@ -823,7 +795,6 @@ class CrearTareaAreaController {
         });
     }
 
-    // ========== UTILIDADES ==========
     _mostrarError(mensaje) {
         Swal.fire({
             icon: 'error',
@@ -837,10 +808,7 @@ class CrearTareaAreaController {
     }
 }
 
-// =============================================
-// INICIALIZACIÓN
-// =============================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM cargado, iniciando controller de tarea por área...');
+    console.log('📄 DOM cargado, iniciando controller de tarea por área (versión mejorada)...');
     new CrearTareaAreaController();
 });

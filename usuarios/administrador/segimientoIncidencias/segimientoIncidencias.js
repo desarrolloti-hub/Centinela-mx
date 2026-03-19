@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN FINAL CON ESPERA DE PDF
+// seguimientoIncidencia.js - VERSIÓN FINAL CORREGIDA CON CANALIZACIONES
 
 import '/components/visualizadorImagen.js';
 
@@ -17,6 +17,9 @@ let fechaMaxima = null;
 let fechaUltimoSeguimiento = null;
 let imageEditorModal = null;
 let historialCollapsed = false;
+let areas = [];
+let areaManager = null;
+let notificacionManager = null;
 
 const LIMITES = {
     DESCRIPCION_SEGUIMIENTO: 500
@@ -27,11 +30,11 @@ const LIMITES = {
 // =============================================
 function convertirFechaFirestore(fecha) {
     if (!fecha) return null;
-    
+
     if (fecha && typeof fecha === 'object' && 'seconds' in fecha) {
         return new Date(fecha.seconds * 1000);
     }
-    
+
     try {
         const date = new Date(fecha);
         if (!isNaN(date.getTime())) {
@@ -40,7 +43,7 @@ function convertirFechaFirestore(fecha) {
     } catch (e) {
         console.error('Error convirtiendo fecha:', e);
     }
-    
+
     return null;
 }
 
@@ -56,7 +59,7 @@ function configurarCollapsible() {
 
     historialHeader.addEventListener('click', () => {
         historialCollapsed = !historialCollapsed;
-        
+
         if (historialCollapsed) {
             historialContent.style.display = 'none';
             historialToggle.style.transform = 'rotate(-90deg)';
@@ -88,7 +91,9 @@ async function inicializarSeguimiento() {
         await inicializarIncidenciaManager();
         await cargarIncidencia(incidenciaId);
         await cargarDatosRelacionados();
-        
+        await cargarAreas();
+        await initNotificacionManager();
+
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
@@ -102,7 +107,7 @@ async function inicializarSeguimiento() {
     } catch (error) {
         console.error('Error inicializando:', error);
         mostrarError('Error al inicializar: ' + error.message);
-        
+
         const container = document.querySelector('.custom-container');
         if (container) {
             container.innerHTML = `
@@ -126,6 +131,37 @@ async function inicializarIncidenciaManager() {
     } catch (error) {
         console.error('Error cargando IncidenciaManager:', error);
         throw error;
+    }
+}
+
+async function initNotificacionManager() {
+    if (!notificacionManager) {
+        try {
+            const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
+            notificacionManager = new NotificacionAreaManager();
+        } catch (error) {
+            console.error('Error inicializando notificacionManager:', error);
+        }
+    }
+    return notificacionManager;
+}
+
+async function cargarAreas() {
+    try {
+        const { AreaManager } = await import('/clases/area.js');
+        areaManager = new AreaManager();
+
+        if (usuarioActual && usuarioActual.organizacionCamelCase) {
+            const areasObtenidas = await areaManager.getAreasByOrganizacion(
+                usuarioActual.organizacionCamelCase
+            );
+
+            areas = areasObtenidas.filter(area => area.estado === 'activa');
+            console.log('✅ Áreas cargadas para seguimiento:', areas.length);
+        }
+    } catch (error) {
+        console.error('Error cargando áreas:', error);
+        areas = [];
     }
 }
 
@@ -201,14 +237,16 @@ async function cargarIncidencia(incidenciaId) {
         }
 
         fechaIncidencia = convertirFechaFirestore(incidenciaActual.fechaInicio) || new Date();
-        
-        const seguimientos = incidenciaActual.getSeguimientosArray();
+
+        const seguimientos = incidenciaActual.getSeguimientosArray ?
+            incidenciaActual.getSeguimientosArray() : [];
+
         if (seguimientos.length > 0) {
             fechaUltimoSeguimiento = convertirFechaFirestore(seguimientos[seguimientos.length - 1].fecha) || fechaIncidencia;
         } else {
             fechaUltimoSeguimiento = fechaIncidencia;
         }
-        
+
         fechaMinima = fechaUltimoSeguimiento;
         fechaMaxima = new Date();
 
@@ -227,7 +265,7 @@ async function cargarDatosRelacionados() {
         const sucursales = await sucursalManager.getSucursalesByOrganizacion(
             usuarioActual.organizacionCamelCase
         );
-        
+
         sucursales.forEach(suc => {
             sucursalesMap.set(suc.id, suc);
         });
@@ -235,7 +273,7 @@ async function cargarDatosRelacionados() {
         const { CategoriaManager } = await import('/clases/categoria.js');
         const categoriaManager = new CategoriaManager();
         const categorias = await categoriaManager.obtenerTodasCategorias();
-        
+
         categorias.forEach(cat => {
             categoriasMap.set(cat.id, cat);
         });
@@ -293,7 +331,7 @@ function formatearFechaParaHelp(fecha) {
     try {
         const date = fecha instanceof Date ? fecha : new Date(fecha);
         if (isNaN(date.getTime())) return 'Fecha inválida';
-        
+
         return date.toLocaleDateString('es-MX', {
             year: 'numeric',
             month: '2-digit',
@@ -352,21 +390,21 @@ function mostrarInfoIncidencia() {
     document.getElementById('infoSubcategoria').textContent = subcategoriaNombre;
 
     const riesgoSpan = document.getElementById('infoRiesgo');
-    const riesgoTexto = incidenciaActual.getNivelRiesgoTexto ? 
+    const riesgoTexto = incidenciaActual.getNivelRiesgoTexto ?
         incidenciaActual.getNivelRiesgoTexto() : incidenciaActual.nivelRiesgo;
-    const riesgoColor = incidenciaActual.getNivelRiesgoColor ? 
+    const riesgoColor = incidenciaActual.getNivelRiesgoColor ?
         incidenciaActual.getNivelRiesgoColor() : obtenerRiesgoColor(incidenciaActual.nivelRiesgo);
-    
+
     riesgoSpan.innerHTML = `<span class="riesgo-badge" style="background: ${riesgoColor}20; color: ${riesgoColor};">${riesgoTexto}</span>`;
 
     const estadoSpan = document.getElementById('infoEstado');
-    const estadoTexto = incidenciaActual.getEstadoTexto ? 
+    const estadoTexto = incidenciaActual.getEstadoTexto ?
         incidenciaActual.getEstadoTexto() : incidenciaActual.estado;
-    const estadoColor = incidenciaActual.getEstadoColor ? 
+    const estadoColor = incidenciaActual.getEstadoColor ?
         incidenciaActual.getEstadoColor() : (incidenciaActual.estado === 'finalizada' ? '#28a745' : '#ffc107');
-    
+
     estadoSpan.innerHTML = `<span class="estado-badge" style="background: ${estadoColor}20; color: ${estadoColor};">${estadoTexto}</span>`;
-    
+
     const estadoSelect = document.getElementById('estadoSeguimiento');
     if (estadoSelect) {
         estadoSelect.value = incidenciaActual.estado;
@@ -394,7 +432,7 @@ function formatearFecha(fecha) {
     try {
         const date = convertirFechaFirestore(fecha);
         if (!date || isNaN(date.getTime())) return 'Fecha inválida';
-        
+
         return date.toLocaleDateString('es-MX', {
             year: 'numeric',
             month: 'long',
@@ -412,7 +450,7 @@ function formatearFechaCompacta(fecha) {
     try {
         const date = convertirFechaFirestore(fecha);
         if (!date || isNaN(date.getTime())) return 'Fecha inválida';
-        
+
         return date.toLocaleDateString('es-MX', {
             day: '2-digit',
             month: '2-digit',
@@ -426,12 +464,12 @@ function formatearFechaCompacta(fecha) {
 }
 
 // =============================================
-// MOSTRAR EVIDENCIAS ORIGINALES (MODIFICADO)
+// MOSTRAR EVIDENCIAS ORIGINALES
 // =============================================
 function mostrarEvidenciasOriginales() {
     const container = document.getElementById('galeriaOriginal');
     const totalSpan = document.getElementById('totalImagenesOriginales');
-    
+
     if (!container) return;
 
     const imagenes = incidenciaActual.imagenes || [];
@@ -454,7 +492,7 @@ function mostrarEvidenciasOriginales() {
     imagenes.forEach((img, index) => {
         const url = typeof img === 'string' ? img : img.url;
         const comentario = typeof img === 'object' && img.comentario ? img.comentario : '';
-        
+
         html += `
             <div class="gallery-item" data-index="${index}" data-url="${url}" data-comentario="${escapeHTML(comentario)}">
                 <img src="${url}" alt="Evidencia ${index + 1}" loading="lazy">
@@ -472,15 +510,15 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO (MODIFICADO)
+// MOSTRAR HISTORIAL DE SEGUIMIENTO - CORREGIDO
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
     const totalSpan = document.getElementById('totalSeguimientos');
-    
+
     if (!container || !incidenciaActual) return;
 
-    const seguimientos = incidenciaActual.getSeguimientosArray ? 
+    const seguimientos = incidenciaActual.getSeguimientosArray ?
         incidenciaActual.getSeguimientosArray() : [];
 
     if (totalSpan) {
@@ -504,11 +542,12 @@ function mostrarHistorialSeguimiento() {
     });
 
     let html = '<div class="timeline-simple">';
+
     seguimientosOrdenados.forEach((seg, index) => {
         const fecha = seg.fecha ? formatearFechaCompacta(seg.fecha) : 'Fecha no disponible';
         const evidencias = seg.evidencias || [];
         const idSeguimiento = seg.id || `SEG-${index + 1}`;
-        
+
         html += `
             <div class="timeline-simple-item">
                 <div class="timeline-simple-content">
@@ -541,7 +580,7 @@ function mostrarHistorialSeguimiento() {
             evidencias.forEach((ev, evIndex) => {
                 const url = typeof ev === 'string' ? ev : ev.url;
                 const comentario = typeof ev === 'object' && ev.comentario ? ev.comentario : '';
-                
+
                 html += `
                             <div class="timeline-simple-evidencia" onclick="window.visualizadorImagen.abrir([{url: '${url}', comentario: '${escapeHTML(comentario)}'}], 0)">
                                 <img src="${url}" alt="Evidencia ${evIndex + 1}" loading="lazy">
@@ -561,8 +600,8 @@ function mostrarHistorialSeguimiento() {
             </div>
         `;
     });
-    html += '</div>';
 
+    html += '</div>';
     container.innerHTML = html;
 }
 
@@ -626,6 +665,9 @@ function procesarEvidencias(files) {
     document.getElementById('inputEvidencias').value = '';
 }
 
+// =============================================
+// ACTUALIZAR VISTA PREVIA DE EVIDENCIAS - CORREGIDO
+// =============================================
 function actualizarVistaPreviaEvidencias() {
     const container = document.getElementById('evidenciasPreview');
     const containerParent = document.getElementById('evidenciasPreviewContainer');
@@ -639,7 +681,7 @@ function actualizarVistaPreviaEvidencias() {
     }
 
     if (containerParent) containerParent.style.display = 'block';
-    
+
     if (countSpan) {
         countSpan.textContent = evidenciasSeleccionadas.length;
     }
@@ -761,7 +803,7 @@ function validarLongitudCampo(campo, limite, nombreCampo) {
 function validarYGuardar() {
     const fechaInput = document.getElementById('fechaSeguimiento');
     let fechaHora = fechaInput.value;
-    
+
     if (!fechaHora) {
         mostrarError('Debe seleccionar fecha y hora');
         fechaInput.focus();
@@ -854,14 +896,14 @@ async function confirmarYGuardar(datos) {
 async function _generarYSubirPDF() {
     try {
         console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
-        
+
         // Cargar sucursales y categorías para el generador
         const sucursalesArray = Array.from(sucursalesMap.values());
         const categoriasArray = Array.from(categoriasMap.values());
-        
+
         // Importar generador IPH
         const { generadorIPH } = await import('/components/iph-generator.js');
-        
+
         // Configurar generador
         generadorIPH.configurar({
             organizacionActual: {
@@ -872,46 +914,193 @@ async function _generarYSubirPDF() {
             categoriasCache: categoriasArray,
             authToken: localStorage.getItem('authToken')
         });
-        
+
         // Generar PDF y obtener BLOB
-        const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, { 
+        const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, {
             mostrarAlerta: false,
             returnBlob: true
         });
-        
+
         if (!pdfBlob || pdfBlob.size === 0) {
             throw new Error('El PDF generado está vacío');
         }
-        
+
         // Crear archivo
         const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
-        
+
         // Subir a Storage
         const rutaPDF = incidenciaActual.getRutaPDF();
-        
+
         const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-        
+
         // Actualizar la incidencia con la URL del PDF
         const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
         const { db } = await import('/config/firebase-config.js');
-        
+
         const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
         const incidenciaRef = doc(db, collectionName, incidenciaActual.id);
-        
+
         await updateDoc(incidenciaRef, {
             pdfUrl: resultado.url,
             fechaActualizacion: serverTimestamp()
         });
-        
+
         // Actualizar el objeto en memoria
         incidenciaActual.pdfUrl = resultado.url;
-        
+
         console.log('✅ PDF actualizado exitosamente:', resultado.url);
         return true;
-        
+
     } catch (error) {
         console.error('❌ Error actualizando PDF:', error);
         return false;
+    }
+}
+
+/**
+ * CANALIZACIÓN - IGUAL QUE EN CREAR INCIDENCIAS
+ */
+async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
+    let continuar = true;
+    let areasCanalizadas = [];
+
+    while (continuar) {
+        // Crear objeto de opciones para el select
+        const inputOptions = {};
+        areas.forEach(area => {
+            if (!areasCanalizadas.some(a => a.id === area.id)) {
+                inputOptions[area.id] = area.nombreArea;
+            }
+        });
+
+        // Si no hay áreas disponibles, salir del bucle
+        if (Object.keys(inputOptions).length === 0) {
+            if (areasCanalizadas.length > 0) {
+                await Swal.fire({
+                    icon: 'info',
+                    title: 'No hay más áreas',
+                    text: 'Todas las áreas disponibles ya han sido canalizadas',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+            continuar = false;
+            break;
+        }
+
+        const { value: areaId, isConfirmed } = await Swal.fire({
+            title: areasCanalizadas.length === 0 ? '¿Canalizar a un área?' : 'Canalizar a otra área',
+            text: areasCanalizadas.length === 0
+                ? 'Selecciona el área a la que deseas canalizar esta incidencia'
+                : `Áreas actuales: ${areasCanalizadas.map(a => a.nombre).join(', ')}`,
+            input: 'select',
+            inputOptions: inputOptions,
+            inputPlaceholder: 'Selecciona un área',
+            showCancelButton: true,
+            confirmButtonText: 'CANALIZAR',
+            cancelButtonText: areasCanalizadas.length === 0 ? 'NO CANALIZAR' : 'FINALIZAR',
+            confirmButtonColor: '#28a745',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Debes seleccionar un área';
+                }
+            }
+        });
+
+        if (!isConfirmed) {
+            continuar = false;
+            break;
+        }
+
+        if (areaId) {
+            const area = areas.find(a => a.id === areaId);
+            if (area) {
+                areasCanalizadas.push({
+                    id: area.id,
+                    nombre: area.nombreArea
+                });
+
+                try {
+                    const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+                    const { db } = await import('/config/firebase-config.js');
+
+                    const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
+                    const incidenciaRef = doc(db, collectionName, incidenciaId);
+
+                    await updateDoc(incidenciaRef, {
+                        canalizaciones: arrayUnion({
+                            areaId: area.id,
+                            areaNombre: area.nombreArea,
+                            fecha: new Date(),
+                            canalizadoPor: usuarioActual.id,
+                            canalizadoPorNombre: usuarioActual.nombreCompleto,
+                            estado: 'pendiente'
+                        })
+                    });
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Área agregada',
+                        text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                } catch (error) {
+                    console.error('Error guardando canalización:', error);
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo canalizar a esta área'
+                    });
+                }
+            }
+        }
+    }
+
+    if (areasCanalizadas.length > 0) {
+        await _enviarNotificacionesCanalizacion(areasCanalizadas, incidenciaId, incidenciaTitulo);
+    }
+
+    return areasCanalizadas;
+}
+
+/**
+ * ENVIAR NOTIFICACIONES - IGUAL QUE EN CREAR INCIDENCIAS
+ */
+async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidenciaTitulo) {
+    try {
+        if (!notificacionManager) {
+            await initNotificacionManager();
+        }
+
+        if (!notificacionManager) {
+            console.error('No se pudo inicializar notificacionManager');
+            return;
+        }
+
+        const resultado = await notificacionManager.notificarMultiplesAreas({
+            areas: areas,
+            incidenciaId: incidenciaId,
+            incidenciaTitulo: incidenciaTitulo || 'Incidencia',
+            sucursalId: incidenciaActual.sucursalId || '',
+            sucursalNombre: sucursalesMap.get(incidenciaActual.sucursalId)?.nombre || '',
+            categoriaId: incidenciaActual.categoriaId || '',
+            categoriaNombre: categoriasMap.get(incidenciaActual.categoriaId)?.nombre || '',
+            nivelRiesgo: incidenciaActual.nivelRiesgo || 'medio',
+            tipo: 'canalizacion',
+            prioridad: incidenciaActual.nivelRiesgo || 'normal',
+            remitenteId: usuarioActual.id,
+            remitenteNombre: usuarioActual.nombreCompleto,
+            organizacionCamelCase: usuarioActual.organizacionCamelCase
+        });
+
+        if (resultado.success) {
+            console.log(`✅ Notificaciones enviadas: ${resultado.totalUsuarios} usuarios notificados`);
+        }
+
+    } catch (error) {
+        console.error('Error en _enviarNotificacionesCanalizacion:', error);
     }
 }
 
@@ -970,10 +1159,35 @@ async function guardarSeguimiento(datos) {
         // 2. Recargar la incidencia para tener los datos actualizados
         await cargarIncidencia(incidenciaActual.id);
 
-        // 3. Generar y subir el PDF (ahora mismo, no en timeout)
+        // 3. Generar y subir el PDF
         const pdfGenerado = await _generarYSubirPDF();
 
-        // 4. Actualizar la vista
+        // 4. Cerrar el loading inicial
+        Swal.close();
+
+        // 5. PREGUNTAR SI QUIERE CANALIZAR - IGUAL QUE EN CREAR INCIDENCIAS
+        const quiereCanalizar = await Swal.fire({
+            icon: 'question',
+            title: '¿Canalizar esta incidencia?',
+            text: '¿Deseas canalizar esta incidencia a alguna área?',
+            showCancelButton: true,
+            confirmButtonText: 'SÍ, CANALIZAR',
+            cancelButtonText: 'NO, FINALIZAR',
+            confirmButtonColor: '#28a745'
+        });
+
+        let areasCanalizadas = [];
+
+        if (quiereCanalizar.isConfirmed) {
+            areasCanalizadas = await _canalizarAreas(incidenciaActual.id, datos.descripcion.substring(0, 50));
+        }
+
+        const totalCanalizaciones = areasCanalizadas.length;
+        const mensajeCanalizacion = totalCanalizaciones > 0
+            ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
+            : 'No se canalizó a ninguna área.';
+
+        // 6. Actualizar la vista
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
@@ -982,14 +1196,15 @@ async function guardarSeguimiento(datos) {
         actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
         configurarFechaSeguimiento();
 
-        // 5. Cerrar loading
-        Swal.close();
-
-        // 6. Mostrar mensaje de éxito
+        // 7. Mostrar mensaje final
         await Swal.fire({
             icon: 'success',
             title: '¡Seguimiento guardado!',
-            text: pdfGenerado ? 'El seguimiento y el PDF se han actualizado correctamente.' : 'El seguimiento se guardó pero hubo un problema con el PDF.',
+            html: `
+                <p>El seguimiento se ha guardado correctamente.</p>
+                <p>${pdfGenerado ? '✅ PDF actualizado' : '⚠️ Hubo un problema con el PDF'}</p>
+                <p>${mensajeCanalizacion}</p>
+            `,
             confirmButtonText: 'Aceptar',
             confirmButtonColor: '#28a745'
         });

@@ -51,7 +51,9 @@
                     Crear Tarea Compartida
                 </h1>
                 <div class="header-description-text">
-                    "Crea checklists colaborativos y compártelos con otros usuarios"
+                    <i class="fas fa-quote-left"></i>
+                    Crea checklists colaborativos y compártelos con otros usuarios
+                    <i class="fas fa-quote-right"></i>
                 </div>
             </div>
         </div>
@@ -94,7 +96,8 @@
                                     <div class="input-group">
                                         <span class="input-group-icon"><i class="fas fa-clipboard-list"></i></span>
                                         <input type="text" class="form-control" id="nombreActividad"
-                                            placeholder="Ej: Revisión de inventario" required maxlength="100">
+                                            placeholder="Ej: Revisión de inventario, Proyecto colaborativo, Informe mensual"
+                                            required maxlength="100">
                                     </div>
                                     <div class="char-limit-info">
                                         <span class="char-counter" id="nombreCounter">0/100</span>
@@ -107,7 +110,7 @@
                                     <div class="input-group">
                                         <span class="input-group-icon"><i class="fas fa-align-left"></i></span>
                                         <textarea class="form-control" id="descripcion" rows="3"
-                                            placeholder="Describe el propósito de esta tarea..."
+                                            placeholder="Describe el propósito de esta tarea, instrucciones adicionales o detalles importantes..."
                                             maxlength="500"></textarea>
                                     </div>
                                     <div class="char-limit-info">
@@ -126,7 +129,7 @@
                                 <div class="full-width">
                                     <div class="items-container">
                                         <div class="items-header">
-                                            <span>Agrega los items a completar:</span>
+                                            <span><i class="fas fa-list"></i> Agrega los items a completar:</span>
                                             <button type="button" class="btn-add-item" id="btnAgregarItem">
                                                 <i class="fas fa-plus"></i> Agregar Item
                                             </button>
@@ -136,20 +139,61 @@
                                         <div id="itemsList" class="items-list">
                                             <!-- Los items se agregarán aquí dinámicamente -->
                                             <div class="item-placeholder" id="itemsPlaceholder">
-                                                <i class="fas fa-list"></i>
+                                                <i class="fas fa-clipboard-list"></i>
                                                 <p>No hay items agregados. Haz clic en "Agregar Item" para comenzar.</p>
+                                                <small style="color: var(--color-text-dim);">Ej: Investigar, Redactar,
+                                                    Revisar, Aprobar</small>
                                             </div>
                                         </div>
 
                                         <div class="form-help-text">
+                                            <i class="fas fa-info-circle"></i>
                                             Agrega los pasos o tareas específicas que deben completarse
                                         </div>
                                     </div>
                                 </div>
 
+                                <!-- ========================================= -->
+                                <!-- NUEVA SECCIÓN: FECHA LÍMITE Y RECORDATORIO -->
+                                <!-- ========================================= -->
+                                <div class="full-width">
+                                    <h6 class="section-title" style="margin-top: 15px;">
+                                        <i class="fas fa-clock"></i>Fecha Límite y Recordatorio
+                                    </h6>
+                                </div>
+
+                                <!-- Checkbox para activar recordatorio -->
+                                <div class="full-width">
+                                    <div
+                                        style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; padding: 10px; background: rgba(47, 140, 255, 0.05); border-radius: var(--border-radius-small);">
+                                        <input type="checkbox" id="tieneRecordatorio"
+                                            style="width: 20px; height: 20px; accent-color: var(--color-accent-primary); cursor: pointer;">
+                                        <label for="tieneRecordatorio"
+                                            style="color: var(--color-text-primary); cursor: pointer; font-weight: 500;">
+                                            <i class="fas fa-bell"
+                                                style="color: var(--color-accent-primary); margin-right: 8px;"></i>
+                                            Activar fecha límite y recordatorio
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Fecha límite (visible condicionalmente) -->
+                                <div class="full-width" id="fechaContainer"
+                                    style="transition: opacity 0.3s ease; opacity: 0.5;">
+                                    <label for="fechaLimite" class="form-label">Fecha límite</label>
+                                    <div class="input-group">
+                                        <span class="input-group-icon"><i class="fas fa-calendar-alt"></i></span>
+                                        <input type="date" class="form-control" id="fechaLimite">
+                                    </div>
+                                    <div class="form-help-text">
+                                        <i class="fas fa-exclamation-triangle" style="color: var(--color-warning);"></i>
+                                        Selecciona la fecha en que esta tarea debe estar completada
+                                    </div>
+                                </div>
+
                                 <!-- Compartir con usuarios -->
                                 <div class="full-width">
-                                    <h6 class="section-title" style="margin-top: 10px;">
+                                    <h6 class="section-title" style="margin-top: 15px;">
                                         <i class="fas fa-share-alt"></i>Compartir con usuarios
                                     </h6>
                                 </div>
@@ -167,14 +211,15 @@
 
                                 <!-- Selector de usuarios -->
                                 <div class="full-width">
-                                    <label class="form-label">Seleccionar usuarios *</label>
+                                    <label class="form-label">Seleccionar usuarios</label>
                                     <div class="usuarios-container" id="usuariosContainer">
                                         <div class="loading-users">
                                             <i class="fas fa-spinner fa-spin"></i> Cargando usuarios...
                                         </div>
                                     </div>
                                     <div class="form-help-text">
-                                        Selecciona los usuarios con quienes compartir esta tarea
+                                        <i class="fas fa-info-circle"></i>
+                                        Selecciona los usuarios con quienes compartir esta tarea (opcional)
                                     </div>
                                 </div>
 
@@ -202,11 +247,26 @@
                             </div>
                         </form>
 
-                        <!-- Mensaje informativo -->
-                        <div class="alert alert-info" style="margin-top: 20px;">
-                            <i class="fas fa-info-circle"></i>
-                            Los usuarios seleccionados podrán ver y marcar items de esta tarea.
-                            Solo el creador puede editar o eliminar la tarea.
+                        <!-- Mensaje informativo mejorado -->
+                        <div class="alert alert-info"
+                            style="margin-top: 25px; background: rgba(47, 140, 255, 0.1); border-left: 4px solid var(--color-accent-primary);">
+                            <div style="display: flex; gap: 15px; align-items: flex-start;">
+                                <i class="fas fa-info-circle"
+                                    style="font-size: 24px; color: var(--color-accent-primary);"></i>
+                                <div>
+                                    <strong
+                                        style="color: var(--color-text-primary); display: block; margin-bottom: 5px;">Información
+                                        importante:</strong>
+                                    <ul style="margin: 0; padding-left: 20px; color: var(--color-text-secondary);">
+                                        <li>Los usuarios seleccionados podrán ver y marcar items de esta tarea</li>
+                                        <li>Si no seleccionas usuarios, la tarea será personal (solo visible para ti)
+                                        </li>
+                                        <li>Solo el creador (tú) puede editar o eliminar la tarea</li>
+                                        <li>Si activas recordatorio, los usuarios verán una alerta cuando se acerque la
+                                            fecha</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- BOTONES DE ACCIÓN -->
