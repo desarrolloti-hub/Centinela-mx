@@ -322,12 +322,12 @@ function filtrarIncidencias(incidencias) {
 // =============================================
 window.verDetallesIncidencia = function (incidenciaId, event) {
     event?.stopPropagation();
-    window.location.href = `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
+    window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
 };
 
 window.seguimientoIncidencia = function (incidenciaId, event) {
     event?.stopPropagation();
-    window.location.href = `/usuarios/administrador/segimientoIncidencias/segimientoIncidencias.html?id=${incidenciaId}`;
+    window.location.href = `../seguimientoIncidencias/seguimientoIncidencias.html?id=${incidenciaId}`;
 };
 
 // ✅ NUEVA FUNCIÓN: Ver PDF en lugar de generar IPH
@@ -454,7 +454,7 @@ async function cargarIncidencias() {
                             <i class="fas fa-exclamation-triangle" style="font-size:48px; color:rgba(255,193,7,0.3); margin-bottom:16px;"></i>
                             <h5 style="color:white;">No hay incidencias registradas</h5>
                             <p style="color: var(--color-text-dim); margin-bottom: 20px;">Comienza registrando la primera incidencia de tu organización.</p>
-                            <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="btn-nueva-incidencia-header" style="display:inline-flex; margin-top:16px;">
+                            <a href="../crearIncidencias/crearIncidencias.html" class="btn-nueva-incidencia-header" style="display:inline-flex; margin-top:16px;">
                                 <i class="fas fa-plus-circle"></i> Crear Incidencia
                             </a>
                         </div>
