@@ -1370,8 +1370,13 @@ class UserManager {
 
                 throw new Error('Tu email no está verificado. Se ha reenviado el correo de verificación.');
             }
-
-            if (user.esAdministrador()) {
+            // Actualizar último login según el tipo de usuario
+            if (user.esMaster()) {
+                await updateDoc(doc(db, "administradoresSistema", uid), {
+                    ultimoLogin: serverTimestamp(),
+                    fechaActualizacion: serverTimestamp()
+                });
+            }else if (user.esAdministrador()) {
                 await updateDoc(doc(db, "administradores", uid), {
                     ultimoLogin: serverTimestamp(),
                     fechaActualizacion: serverTimestamp(),
@@ -1409,7 +1414,11 @@ class UserManager {
             try {
                 localStorage.setItem('theme', user.theme);
                 localStorage.setItem('user-plan', user.plan);
+                localStorage.setItem('user-rol', user.rol);
                 localStorage.setItem('user-verified', user.verificado.toString());
+                if (!user.esMaster()) {
+                    localStorage.setItem('organizacion', user.organizacion);
+                }
             } catch (e) {
                 console.warn('No se pudo guardar datos en localStorage');
             }
@@ -1612,6 +1621,7 @@ class UserManager {
         }
     }
 
+    // ========== MÉTODO GETUSERBYID (ACTUALIZADO CON MASTER) ==========
     async getUserById(id) {
         const userInMemory = this.users.find(user => user.id === id);
         if (userInMemory) {
@@ -1619,6 +1629,33 @@ class UserManager {
         }
 
         try {
+            // 1. Buscar primero en MASTERS (Administradores del Sistema)
+            const masterRef = doc(db, "administradoresSistema", id);
+            const masterSnap = await getDoc(masterRef);
+
+            if (masterSnap.exists()) {
+                const data = masterSnap.data();
+                const user = new User(id, {
+                    ...data,
+                    idAuth: id,
+                    rol: 'master',
+                    organizacion: 'Sistema',
+                    organizacionCamelCase: 'sistema',
+                    cargo: data.cargo || null,
+                    fotoUsuario: data.fotoUsuario || null,
+                    email: data.correoElectronico || data.email,
+                    // Los masters no necesitan verificación forzosa
+                    verificado: true,
+                    emailVerified: auth.currentUser?.emailVerified || false,
+                    status: true // Los masters siempre están activos
+                });
+
+                this.users.push(user);
+                console.log('✅ Master encontrado:', user.correoElectronico);
+                return user;
+            }
+
+            // 2. Si no es Master, buscar en ADMINISTRADORES
             const adminRef = doc(db, "administradores", id);
             const adminSnap = await getDoc(adminRef);
 
@@ -1644,6 +1681,7 @@ class UserManager {
                 return user;
             }
 
+            // 3. Si no es Master ni Admin, buscar en COLABORADORES
             const organizaciones = await this.getTodasLasOrganizaciones();
 
             for (const org of organizaciones) {
@@ -1688,7 +1726,7 @@ class UserManager {
             return null;
 
         } catch (error) {
-            console.error('Error en getUserById:', error);
+            console.error('❌ Error en getUserById:', error);
             return null;
         }
     }

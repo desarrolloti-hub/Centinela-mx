@@ -1,6 +1,6 @@
 // ========== VARIABLES GLOBALES ==========
 let userManager = null;
-let adminActual = null;
+let usuarioActual = null;
 
 // Configuración de paginación
 const ITEMS_POR_PAGINA = 10;
@@ -17,21 +17,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        if (!userManager.currentUser || !userManager.currentUser.esAdministrador()) {
-            console.error('❌ No hay administrador autenticado');
-            showNoAdminMessage();
-            return;
+        // Obtener usuario actual (temporal - será reemplazado por componente Auth)
+        usuarioActual = obtenerUsuarioActual();
+
+        if (!usuarioActual) {
+            console.warn('No hay información de usuario, usando valores por defecto');
+            usuarioActual = {
+                id: `usuario_${Date.now()}`,
+                uid: `usuario_${Date.now()}`,
+                nombreCompleto: 'Usuario',
+                organizacion: 'Mi Organización',
+                organizacionCamelCase: 'miOrganizacion',
+                correoElectronico: 'usuario@ejemplo.com'
+            };
         }
         
-        adminActual = userManager.currentUser;
-        
-        localStorage.setItem('adminInfo', JSON.stringify({
-            id: adminActual.id,
-            nombreCompleto: adminActual.nombreCompleto,
-            organizacion: adminActual.organizacion,
-            organizacionCamelCase: adminActual.organizacionCamelCase,
-            rol: adminActual.rol,
-            correoElectronico: adminActual.correoElectronico,
+        localStorage.setItem('userInfo', JSON.stringify({
+            id: usuarioActual.id,
+            nombreCompleto: usuarioActual.nombreCompleto,
+            organizacion: usuarioActual.organizacion,
+            organizacionCamelCase: usuarioActual.organizacionCamelCase,
+            correoElectronico: usuarioActual.correoElectronico,
             timestamp: new Date().toISOString()
         }));
         
@@ -46,6 +52,54 @@ document.addEventListener('DOMContentLoaded', async function() {
         showError(error.message || 'Error al cargar la página');
     }
 });
+
+// ========== OBTENER USUARIO ACTUAL (TEMP) ==========
+function obtenerUsuarioActual() {
+    // TODO: Reemplazar con llamado al componente Auth
+    try {
+        // Intentar obtener de localStorage primero
+        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+        if (adminInfo && Object.keys(adminInfo).length > 0) {
+            return {
+                id: adminInfo.id || adminInfo.uid || `admin_${Date.now()}`,
+                uid: adminInfo.uid || adminInfo.id,
+                nombreCompleto: adminInfo.nombreCompleto || 'Administrador',
+                organizacion: adminInfo.organizacion || 'Mi Organización',
+                organizacionCamelCase: adminInfo.organizacionCamelCase || generarCamelCase(adminInfo.organizacion),
+                correoElectronico: adminInfo.correoElectronico || ''
+            };
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id || `user_${Date.now()}`,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa || 'Mi Organización',
+                organizacionCamelCase: userData.organizacionCamelCase || generarCamelCase(userData.organizacion || userData.empresa),
+                correoElectronico: userData.correo || userData.email || ''
+            };
+        }
+
+        // Si no hay datos, retornar null para usar valores por defecto
+        return null;
+
+    } catch (error) {
+        console.error('Error obteniendo usuario:', error);
+        return null;
+    }
+}
+
+function generarCamelCase(texto) {
+    if (!texto || typeof texto !== 'string') return 'miOrganizacion';
+    return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+        .replace(/[^a-zA-Z0-9]/g, '');
+}
 
 // ========== CONFIGURAR BÚSQUEDA ==========
 function configurarBusqueda() {
@@ -216,7 +270,7 @@ async function loadCollaborators() {
         showLoadingState();
         
         todosLosColaboradores = await userManager.getColaboradoresByOrganizacion(
-            adminActual.organizacionCamelCase,
+            usuarioActual.organizacionCamelCase,
             true
         );
         
@@ -232,7 +286,7 @@ async function loadCollaborators() {
             }))
         ));
         
-        // Inicializar filtrados
+        // Inicializar filtradas
         colaboradoresFiltrados = [...todosLosColaboradores];
         
         renderizarConPaginacion();
@@ -307,7 +361,7 @@ function setupEvents() {
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
-            window.location.href = '/usuarios/administrador/crearUsuarios/crearUsuarios.html';
+            window.location.href = '../crearUsuarios/crearUsuarios.html';
         });
     }
     
@@ -380,14 +434,14 @@ async function toggleUserStatus(collaboratorId, collaboratorName, enable) {
             await userManager.reactivarUsuario(
                 collaboratorId, 
                 'colaborador', 
-                adminActual.organizacionCamelCase
+                usuarioActual.organizacionCamelCase
             );
         } else {
             await userManager.inactivarUsuario(
                 collaboratorId, 
                 'colaborador', 
-                adminActual.organizacionCamelCase,
-                'Estado cambiado por administrador'
+                usuarioActual.organizacionCamelCase,
+                'Estado cambiado por usuario'
             );
         }
         
@@ -395,7 +449,7 @@ async function toggleUserStatus(collaboratorId, collaboratorName, enable) {
             collaboratorId, 
             { status: enable }, 
             'colaborador', 
-            adminActual.organizacionCamelCase
+            usuarioActual.organizacionCamelCase
         );
         
         Swal.close();
@@ -432,15 +486,15 @@ async function editUser(collaboratorId, collaboratorName) {
     const selectedCollaborator = {
         id: collaboratorId,
         nombreCompleto: collaboratorName,
-        organizacion: adminActual.organizacion,
-        organizacionCamelCase: adminActual.organizacionCamelCase,
+        organizacion: usuarioActual.organizacion,
+        organizacionCamelCase: usuarioActual.organizacionCamelCase,
         fechaSeleccion: new Date().toISOString(),
-        admin: adminActual.nombreCompleto
+        usuario: usuarioActual.nombreCompleto
     };
     
     localStorage.setItem('selectedCollaborator', JSON.stringify(selectedCollaborator));
     
-    window.location.href = `/usuarios/administrador/editarUsuarios/editarUsuarios.html?id=${collaboratorId}&org=${adminActual.organizacionCamelCase}`;
+    window.location.href = `../editarUsuarios/editarUsuarios.html?id=${collaboratorId}&org=${usuarioActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DEL COLABORADOR ==========
@@ -552,7 +606,7 @@ function showEmptyState() {
             <td colspan="5" class="empty-state">
                 <div class="empty-state-content">
                     <i class="fas fa-users"></i>
-                    <h3>No hay colaboradores en ${adminActual?.organizacion || 'tu organización'}</h3>
+                    <h3>No hay colaboradores en ${usuarioActual?.organizacion || 'tu organización'}</h3>
                     <p>Comienza agregando tu primer colaborador</p>
                     <button class="btn-nuevo-colaborador" id="addFirstCollaborator" style="margin-top: 16px;">
                         <i class="fas fa-plus"></i> Agregar Colaborador
@@ -563,7 +617,7 @@ function showEmptyState() {
     `;
     
     document.getElementById('addFirstCollaborator')?.addEventListener('click', () => {
-        window.location.href = '/usuarios/administrador/crearUsuarios/crearUsuarios.html';
+        window.location.href = '../crearUsuarios/crearUsuarios.html';
     });
 
     // Ocultar paginación
@@ -598,37 +652,6 @@ function showLoadingState() {
 }
 
 // ========== MANEJO DE ERRORES ==========
-function showNoAdminMessage() {
-    const tbody = document.getElementById('usersTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="5" class="error-state">
-                <div class="error-content">
-                    <i class="fas fa-user-slash"></i>
-                    <h3>No se detectó sesión activa de administrador</h3>
-                    <p>Para gestionar colaboradores, debes iniciar sesión como administrador.</p>
-                    <div class="error-buttons">
-                        <button onclick="window.location.reload()" class="reload-btn">
-                            <i class="fas fa-sync-alt"></i> Recargar
-                        </button>
-                        <button onclick="window.location.href='/usuarios/visitantes/inicioSesion/inicioSesion.html'" class="login-btn">
-                            <i class="fas fa-sign-in-alt"></i> Iniciar sesión
-                        </button>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    `;
-
-    // Ocultar paginación
-    const paginacionContainer = document.querySelector('.pagination-container');
-    if (paginacionContainer) {
-        paginacionContainer.style.display = 'none';
-    }
-}
-
 function showFirebaseError(error) {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
