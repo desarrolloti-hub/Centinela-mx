@@ -23,26 +23,88 @@ async function initCollaboratorForm() {
     const userManager = new UserManager();
 
     try {
-        // Esperar a que el usuario actual esté disponible
-        await esperarUsuarioActual(userManager);
+        // Obtener usuario actual (temporal - será reemplazado por componente Auth)
+        const usuarioActual = obtenerUsuarioActual();
+
+        if (!usuarioActual) {
+            console.warn('No hay información de usuario, usando valores por defecto');
+            usuarioActual = {
+                id: `usuario_${Date.now()}`,
+                uid: `usuario_${Date.now()}`,
+                nombreCompleto: 'Usuario',
+                organizacion: 'Mi Organización',
+                organizacionCamelCase: 'miOrganizacion',
+                correoElectronico: 'usuario@ejemplo.com',
+                fotoOrganizacion: null,
+                plan: 'gratis'
+            };
+        }
         
-        // Cargar administrador actual
-        const currentAdmin = await cargarAdministradorActual(userManager, elements);
-        if (!currentAdmin) return;
-        
-        // Configurar interfaz con datos del admin
-        actualizarInterfazConAdmin(elements, currentAdmin);
+        // Configurar interfaz con datos del usuario
+        actualizarInterfazConUsuario(elements, usuarioActual);
         
         // Cargar áreas desde Firebase usando AreaManager
-        await cargarAreas(elements, currentAdmin);
+        await cargarAreas(elements, usuarioActual);
         
         // Configurar handlers
-        configurarHandlers(elements, userManager, currentAdmin);
+        configurarHandlers(elements, userManager, usuarioActual);
                 
     } catch (error) {
         console.error('❌ Error inicializando formulario:', error);
         mostrarErrorSistema(error.message);
     }
+}
+
+// ========== OBTENER USUARIO ACTUAL (TEMP) ==========
+function obtenerUsuarioActual() {
+    // TODO: Reemplazar con llamado al componente Auth
+    try {
+        // Intentar obtener de localStorage primero
+        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+        if (adminInfo && Object.keys(adminInfo).length > 0) {
+            return {
+                id: adminInfo.id || adminInfo.uid || `admin_${Date.now()}`,
+                uid: adminInfo.uid || adminInfo.id,
+                nombreCompleto: adminInfo.nombreCompleto || 'Administrador',
+                organizacion: adminInfo.organizacion || 'Mi Organización',
+                organizacionCamelCase: adminInfo.organizacionCamelCase || generarCamelCase(adminInfo.organizacion),
+                correoElectronico: adminInfo.correoElectronico || '',
+                fotoOrganizacion: adminInfo.fotoOrganizacion || null,
+                plan: adminInfo.plan || 'gratis'
+            };
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id || `user_${Date.now()}`,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa || 'Mi Organización',
+                organizacionCamelCase: userData.organizacionCamelCase || generarCamelCase(userData.organizacion || userData.empresa),
+                correoElectronico: userData.correo || userData.email || '',
+                fotoOrganizacion: userData.fotoOrganizacion || null,
+                plan: userData.plan || 'gratis'
+            };
+        }
+
+        // Si no hay datos, retornar null para usar valores por defecto
+        return null;
+
+    } catch (error) {
+        console.error('Error obteniendo usuario:', error);
+        return null;
+    }
+}
+
+function generarCamelCase(texto) {
+    if (!texto || typeof texto !== 'string') return 'miOrganizacion';
+    return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+        .replace(/[^a-zA-Z0-9]/g, '');
 }
 
 // ========== FUNCIONES DE UTILIDAD ==========
@@ -100,78 +162,23 @@ function obtenerElementosDOM() {
     }
 }
 
-// Función para esperar que el usuario actual esté disponible
-async function esperarUsuarioActual(userManager, maxAttempts = 15, delay = 500) {
-    for (let i = 0; i < maxAttempts; i++) {
-        if (userManager.currentUser) {
-            return userManager.currentUser;
-        }
-        await new Promise(resolve => setTimeout(resolve, delay));
-    }
-    throw new Error('No se pudo detectar el usuario actual después de ' + maxAttempts + ' intentos');
-}
-
-async function cargarAdministradorActual(userManager, elements) {
-    try {
-        // Mostrar loader
-        Swal.fire({
-            title: 'Cargando información...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-        
-        // Obtener administrador actual desde UserManager
-        const admin = userManager.currentUser;
-        
-        if (!admin) {
-            throw new Error('No hay sesión activa de administrador');
-        }
-        
-        if (!admin.esAdministrador()) {
-            throw new Error('Solo los administradores pueden crear colaboradores');
-        }
-        
-        if (!admin.organizacion || !admin.organizacionCamelCase) {
-            throw new Error('El administrador no tiene organización configurada');
-        }
-        
-        Swal.close();
-        return admin;
-        
-    } catch (error) {
-        Swal.close();
-        console.error('❌ Error cargando administrador:', error);
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de sesión',
-            text: error.message,
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/users/visitors/login/login.html';
-        });
-        
-        return null;
-    }
-}
-
-function actualizarInterfazConAdmin(elements, admin) {
+function actualizarInterfazConUsuario(elements, usuario) {
     // Actualizar campo de organización (solo lectura)
     if (elements.organization) {
-        elements.organization.value = admin.organizacion;
+        elements.organization.value = usuario.organizacion;
         elements.organization.classList.add('readonly-field');
     }
     
-    // Actualizar nombre del administrador en el subtítulo
+    // Actualizar nombre del usuario en el subtítulo
     if (elements.adminNameSubtitle) {
-        elements.adminNameSubtitle.textContent = `Administrador: ${admin.nombreCompleto} | ${admin.organizacion}`;
+        elements.adminNameSubtitle.textContent = `Usuario: ${usuario.nombreCompleto} | ${usuario.organizacion}`;
     }
     
     // Cargar logo de organización heredado
-    if (admin.fotoOrganizacion && elements.orgCircle && elements.orgPlaceholder && elements.orgImage) {
+    if (usuario.fotoOrganizacion && elements.orgCircle && elements.orgPlaceholder && elements.orgImage) {
         try {
             elements.orgPlaceholder.style.display = 'none';
-            elements.orgImage.src = admin.fotoOrganizacion;
+            elements.orgImage.src = usuario.fotoOrganizacion;
             elements.orgImage.style.display = 'block';
             
             // Deshabilitar interacción con el logo
@@ -182,7 +189,7 @@ function actualizarInterfazConAdmin(elements, admin) {
             
             // Actualizar texto informativo
             if (elements.orgInfoText) {
-                elements.orgInfoText.textContent = 'Logo heredado del administrador. Los colaboradores verán este logo.';
+                elements.orgInfoText.textContent = 'Logo heredado. Los colaboradores verán este logo.';
             }
             
         } catch (error) {
@@ -190,32 +197,32 @@ function actualizarInterfazConAdmin(elements, admin) {
         }
     }
     
-    // Actualizar títulos con información del admin
+    // Actualizar títulos con información del usuario
     if (elements.formMainTitle) {
-        elements.formMainTitle.textContent = `CREAR COLABORADOR PARA ${admin.organizacion.toUpperCase()}`;
+        elements.formMainTitle.textContent = `CREAR COLABORADOR PARA ${usuario.organizacion.toUpperCase()}`;
     }
     
     if (elements.formSubTitle) {
-        elements.formSubTitle.textContent = `Completa los datos para crear un colaborador en ${admin.organizacion}`;
+        elements.formSubTitle.textContent = `Completa los datos para crear un colaborador en ${usuario.organizacion}`;
     }
     
     // Mostrar mensaje informativo
-    mostrarMensajeInfoAdmin(elements.mainMessage, admin);
+    mostrarMensajeInfoUsuario(elements.mainMessage, usuario);
 }
 
-function mostrarMensajeInfoAdmin(element, admin) {
+function mostrarMensajeInfoUsuario(element, usuario) {
     if (!element) return;
     
     element.innerHTML = `
         <div class="message-container info" style="display: block;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                <i class="fas fa-user-shield"></i>
-                <strong>Creando colaborador como administrador</strong>
+                <i class="fas fa-user"></i>
+                <strong>Creando colaborador</strong>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
-                <div><strong>Administrador:</strong> ${admin.nombreCompleto}</div>
-                <div><strong>Organización:</strong> ${admin.organizacion}</div>
-                <div><strong>Plan:</strong> ${admin.plan ? admin.plan.toUpperCase() : 'GRATIS'}</div>
+                <div><strong>Usuario:</strong> ${usuario.nombreCompleto}</div>
+                <div><strong>Organización:</strong> ${usuario.organizacion}</div>
+                <div><strong>Plan:</strong> ${usuario.plan ? usuario.plan.toUpperCase() : 'GRATIS'}</div>
             </div>
             <div style="margin-top: 8px; padding: 8px; background: var(--color-bg-secondary); border-radius: 4px; font-size: 0.8rem;">
                 <i class="fas fa-info-circle" style="margin-right: 5px;"></i>
@@ -228,20 +235,20 @@ function mostrarMensajeInfoAdmin(element, admin) {
 
 // ========== FUNCIONES PARA CARGAR ÁREAS Y CARGOS ==========
 
-async function cargarAreas(elements, admin) {
+async function cargarAreas(elements, usuario) {
     if (!elements.areaSelect) return;
     
     try {
         const areaManager = new AreaManager();
         
-        console.log('🔍 Cargando áreas para organización:', admin.organizacionCamelCase);
+        console.log('🔍 Cargando áreas para organización:', usuario.organizacionCamelCase);
         
         elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
         elements.areaSelect.disabled = true;
         elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
         elements.cargoEnAreaSelect.disabled = true;
         
-        const areas = await areaManager.getAreasByOrganizacion(admin.organizacionCamelCase);
+        const areas = await areaManager.getAreasByOrganizacion(usuario.organizacionCamelCase);
         
         // Guardar las áreas en el elemento select para usarlas después
         elements.areaSelect._areasData = areas;
@@ -267,7 +274,7 @@ async function cargarAreas(elements, admin) {
         Swal.fire({
             icon: 'warning',
             title: 'Error al cargar áreas',
-            text: 'No se pudieron cargar las áreas. Por favor, recarga la página.',
+            text: 'No se pudieron cargar las áreas. Puedes continuar sin asignar área.',
             confirmButtonText: 'ENTENDIDO'
         });
     }
@@ -317,7 +324,7 @@ function cargarCargosPorArea(elements) {
 
 // ========== MANEJO DE IMÁGENES CON SWEETALERT2 ==========
 
-function configurarHandlers(elements, userManager, admin) {
+function configurarHandlers(elements, userManager, usuario) {
     // Foto de perfil
     if (elements.editProfileOverlay && elements.profileInput) {
         elements.editProfileOverlay.addEventListener('click', () => elements.profileInput.click());
@@ -365,7 +372,7 @@ function configurarHandlers(elements, userManager, admin) {
     
     // Botón de registro
     if (elements.registerBtn) {
-        elements.registerBtn.addEventListener('click', (e) => registrarColaborador(e, elements, userManager, admin));
+        elements.registerBtn.addEventListener('click', (e) => registrarColaborador(e, elements, userManager, usuario));
     }
     
     // Botón cancelar
@@ -542,16 +549,6 @@ function validarFormulario(elements) {
         errores.push('Debes seleccionar un rol en el sistema');
     }
     
-    // Validar área seleccionada
-    if (elements.areaSelect && !elements.areaSelect.value) {
-        errores.push('Debes seleccionar un área');
-    }
-    
-    // Validar cargo en el área seleccionado
-    if (elements.cargoEnAreaSelect && !elements.cargoEnAreaSelect.value) {
-        errores.push('Debes seleccionar un cargo en el área');
-    }
-    
     return errores;
 }
 
@@ -571,7 +568,7 @@ function validarContrasena(password) {
 
 // ========== REGISTRO DE COLABORADOR ==========
 
-async function registrarColaborador(event, elements, userManager, admin) {
+async function registrarColaborador(event, elements, userManager, usuario) {
     event.preventDefault();
     
     // Validar formulario
@@ -586,15 +583,17 @@ async function registrarColaborador(event, elements, userManager, admin) {
         return;
     }
     
-    // Obtener datos del área y cargo seleccionados
+    // Obtener datos del área y cargo seleccionados (si existen)
     let areaNombre = 'No asignada';
     let cargoNombre = 'No asignado';
     let cargoDescripcion = '';
     let cargoObjeto = null;
+    let areaId = null;
     
     if (elements.areaSelect && elements.areaSelect.value) {
+        areaId = elements.areaSelect.value;
         const areas = elements.areaSelect._areasData || [];
-        const areaSeleccionada = areas.find(a => a.id === elements.areaSelect.value);
+        const areaSeleccionada = areas.find(a => a.id === areaId);
         if (areaSeleccionada) {
             areaNombre = areaSeleccionada.nombreArea;
         }
@@ -654,18 +653,18 @@ async function registrarColaborador(event, elements, userManager, admin) {
             correoElectronico: elements.correoElectronico.value.trim(),
             fotoUsuario: elements.profileImage.src || null,
             
-            // Campos heredados del administrador
-            organizacion: admin.organizacion,
-            organizacionCamelCase: admin.organizacionCamelCase,
-            fotoOrganizacion: admin.fotoOrganizacion,
-            theme: admin.theme || 'light',
-            plan: admin.plan || 'gratis',
+            // Campos heredados del usuario
+            organizacion: usuario.organizacion,
+            organizacionCamelCase: usuario.organizacionCamelCase,
+            fotoOrganizacion: usuario.fotoOrganizacion,
+            theme: usuario.theme || 'light',
+            plan: usuario.plan || 'gratis',
             
             // Usar el objeto cargo para la información del puesto
             cargo: cargoObjeto,
             
             // Solo el ID del área, no el nombre
-            areaAsignadaId: elements.areaSelect ? elements.areaSelect.value : null,
+            areaAsignadaId: areaId,
             
             // El campo rol es para el nivel de acceso
             rol: elements.rol ? elements.rol.value : 'colaborador',
@@ -674,9 +673,9 @@ async function registrarColaborador(event, elements, userManager, admin) {
             status: true,
             
             // Campos de trazabilidad
-            creadoPor: admin.id,
-            creadoPorEmail: admin.correoElectronico,
-            creadoPorNombre: admin.nombreCompleto,
+            creadoPor: usuario.id,
+            creadoPorEmail: usuario.correoElectronico,
+            creadoPorNombre: usuario.nombreCompleto,
             fechaCreacion: new Date(),
             
             // Permisos básicos
@@ -693,7 +692,7 @@ async function registrarColaborador(event, elements, userManager, admin) {
         const resultado = await userManager.createColaborador(
             colaboradorData,
             elements.contrasena.value,
-            admin.id
+            usuario.id
         );
                 
         // Mostrar éxito
@@ -729,7 +728,7 @@ async function mostrarExitoRegistro(colaboradorData) {
         // Recargar página para nuevo registro
         location.reload();
     } else {
-        window.location.href = '/users/admin/managementUser/managementUser.html';
+        window.location.href = '../usuarios/usuarios.html';
     }
 }
 
@@ -798,17 +797,8 @@ function cancelarRegistro() {
         cancelButtonText: 'CANCELAR'
     }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = '/users/admin/managementUser/managementUser.html';
+            window.location.href = '../usuarios/usuarios.html';
         }
-    });
-}
-
-function mostrarErrorSistema(mensaje) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Error del sistema',
-        text: mensaje || 'Ha ocurrido un error inesperado',
-        confirmButtonText: 'ENTENDIDO'
     });
 }
 

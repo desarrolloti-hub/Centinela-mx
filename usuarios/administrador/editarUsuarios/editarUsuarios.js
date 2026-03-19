@@ -6,9 +6,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         const userManager = new UserManager();
         
-        // Esperar a que el usuario actual esté disponible
-        await esperarUsuarioActual(userManager);
-        
         iniciarEditor(userManager);
         
     } catch (error) {
@@ -24,16 +21,6 @@ let currentPhotoElements = null;
 
 // ==================== FUNCIONES PRINCIPALES ====================
 
-async function esperarUsuarioActual(userManager, maxAttempts = 15, delay = 500) {
-    for (let i = 0; i < maxAttempts; i++) {
-        if (userManager.currentUser) {
-            return userManager.currentUser;
-        }
-        await new Promise(resolve => setTimeout(resolve, delay));
-    }
-    throw new Error('No se pudo detectar el usuario actual');
-}
-
 async function iniciarEditor(userManager) {    
     const collaboratorId = obtenerIdDesdeURL();
     if (!collaboratorId) return;
@@ -42,6 +29,23 @@ async function iniciarEditor(userManager) {
     currentPhotoElements = elements;
     
     try {
+        // Obtener usuario actual (temporal - será reemplazado por componente Auth)
+        const usuarioActual = obtenerUsuarioActual();
+
+        if (!usuarioActual) {
+            console.warn('No hay información de usuario, usando valores por defecto');
+            usuarioActual = {
+                id: `usuario_${Date.now()}`,
+                uid: `usuario_${Date.now()}`,
+                nombreCompleto: 'Usuario',
+                organizacion: 'Mi Organización',
+                organizacionCamelCase: 'miOrganizacion',
+                correoElectronico: 'usuario@ejemplo.com'
+            };
+        }
+        
+        window.usuarioActual = usuarioActual;
+        
         await cargarDatosColaborador(userManager, collaboratorId, elements);
         configurarHandlersBasicos(elements);
         configurarFotoPerfil(elements);
@@ -60,6 +64,54 @@ async function iniciarEditor(userManager) {
     }
 }
 
+// ========== OBTENER USUARIO ACTUAL (TEMP) ==========
+function obtenerUsuarioActual() {
+    // TODO: Reemplazar con llamado al componente Auth
+    try {
+        // Intentar obtener de localStorage primero
+        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+        if (adminInfo && Object.keys(adminInfo).length > 0) {
+            return {
+                id: adminInfo.id || adminInfo.uid || `admin_${Date.now()}`,
+                uid: adminInfo.uid || adminInfo.id,
+                nombreCompleto: adminInfo.nombreCompleto || 'Administrador',
+                organizacion: adminInfo.organizacion || 'Mi Organización',
+                organizacionCamelCase: adminInfo.organizacionCamelCase || generarCamelCase(adminInfo.organizacion),
+                correoElectronico: adminInfo.correoElectronico || ''
+            };
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id || `user_${Date.now()}`,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa || 'Mi Organización',
+                organizacionCamelCase: userData.organizacionCamelCase || generarCamelCase(userData.organizacion || userData.empresa),
+                correoElectronico: userData.correo || userData.email || ''
+            };
+        }
+
+        // Si no hay datos, retornar null para usar valores por defecto
+        return null;
+
+    } catch (error) {
+        console.error('Error obteniendo usuario:', error);
+        return null;
+    }
+}
+
+function generarCamelCase(texto) {
+    if (!texto || typeof texto !== 'string') return 'miOrganizacion';
+    return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+        .replace(/[^a-zA-Z0-9]/g, '');
+}
+
 // ========== FUNCIONES DE UTILIDAD ==========
 
 function obtenerIdDesdeURL() {
@@ -73,7 +125,7 @@ function obtenerIdDesdeURL() {
             text: 'No se especificó el colaborador a editar',
             confirmButtonText: 'Volver'
         }).then(() => {
-            window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
+            window.location.href = '../usuarios/usuarios.html';
         });
         return null;
     }
@@ -146,7 +198,7 @@ function mostrarErrorConfiguracion(error) {
         confirmButtonText: 'Entendido',
         allowOutsideClick: false
     }).then(() => {
-        window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
+        window.location.href = '../usuarios/usuarios.html';
     });
 }
 
@@ -163,11 +215,6 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
         if (!collaborator) {
             Swal.close();
             throw new Error('Colaborador no encontrado');
-        }
-        
-        if (!collaborator.esColaborador()) {
-            Swal.close();
-            throw new Error('El usuario no es un colaborador');
         }
         
         window.currentCollaborator = collaborator;
@@ -190,7 +237,7 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
             text: error.message,
             confirmButtonText: 'Volver'
         }).then(() => {
-            window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
+            window.location.href = '../usuarios/usuarios.html';
         });
         
         throw error;
@@ -340,9 +387,12 @@ async function cargarAreas(userManager, elements) {
     const collaborator = window.currentCollaborator;
     if (!collaborator) return;
     
+    const usuarioActual = window.usuarioActual;
+    if (!usuarioActual) return;
+    
     try {
         const areaManager = new AreaManager();
-        const organizacionCamelCase = userManager.currentUser.organizacionCamelCase;
+        const organizacionCamelCase = usuarioActual.organizacionCamelCase;
                 
         elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
         elements.areaSelect.disabled = true;
@@ -484,7 +534,7 @@ function configurarHandlersBasicos(elements) {
                 cancelButtonText: 'CANCELAR'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
+                    window.location.href = '../usuarios/usuarios.html';
                 }
             });
         });
@@ -584,12 +634,13 @@ async function guardarFotoPerfil(imageBase64, elements) {
     
     try {
         const collaborator = window.currentCollaborator;
+        const usuarioActual = window.usuarioActual;
         
         const success = await userManager.updateUser(
             collaborator.id,
             { fotoUsuario: imageBase64 },
             'colaborador',
-            collaborator.organizacionCamelCase
+            collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase
         );
         
         if (success) {
@@ -634,19 +685,8 @@ function configurarGuardado(elements, userManager) {
             return;
         }
         
-        if (!elements.areaSelect || !elements.areaSelect.value) {
-            mostrarMensaje(elements.mainMessage, 'error', 'Debes seleccionar un área');
-            if (elements.areaSelect) elements.areaSelect.focus();
-            return;
-        }
-        
-        if (!elements.cargoEnAreaSelect || !elements.cargoEnAreaSelect.value) {
-            mostrarMensaje(elements.mainMessage, 'error', 'Debes seleccionar un cargo en el área');
-            if (elements.cargoEnAreaSelect) elements.cargoEnAreaSelect.focus();
-            return;
-        }
-        
         const collaborator = window.currentCollaborator;
+        const usuarioActual = window.usuarioActual;
         
         let areaNombre = 'No asignada';
         let cargoNombre = 'No asignado';
@@ -654,13 +694,13 @@ function configurarGuardado(elements, userManager) {
         let cargoObjeto = null;
         
         const areas = elements.areaSelect._areasData || [];
-        const areaSeleccionada = areas.find(a => a.id === elements.areaSelect.value);
+        const areaSeleccionada = areas.find(a => a.id === elements.areaSelect?.value);
         if (areaSeleccionada) {
             areaNombre = areaSeleccionada.nombreArea;
         }
         
         const cargosData = elements.cargoEnAreaSelect._cargosData || {};
-        const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect.value];
+        const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect?.value];
         if (cargoSeleccionado) {
             cargoNombre = cargoSeleccionado.nombre || 'Cargo sin nombre';
             cargoDescripcion = cargoSeleccionado.descripcion || '';
@@ -707,7 +747,7 @@ function configurarGuardado(elements, userManager) {
                 nombreCompleto: elements.fullName.value.trim(),
                 status: elements.statusInput.value === 'active',
                 cargo: cargoObjeto,
-                areaAsignadaId: elements.areaSelect.value,
+                areaAsignadaId: elements.areaSelect?.value || null,
                 permisosPersonalizados: permisosPersonalizados
             };
             
@@ -715,7 +755,7 @@ function configurarGuardado(elements, userManager) {
                 collaborator.id,
                 updateData,
                 'colaborador',
-                collaborator.organizacionCamelCase
+                collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase
             );
             
             Object.assign(collaborator, updateData);
@@ -881,6 +921,7 @@ function configurarEliminacion(elements, userManager) {
         
         const collaborator = window.currentCollaborator;
         const fullName = elements.fullName.value || collaborator.nombreCompleto;
+        const usuarioActual = window.usuarioActual;
         
         const result = await Swal.fire({
             title: '¿Inhabilitar colaborador?',
@@ -937,7 +978,7 @@ function configurarEliminacion(elements, userManager) {
             await userManager.inactivarUsuario(
                 collaborator.id,
                 'colaborador',
-                collaborator.organizacionCamelCase
+                collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase
             );
             
             elements.statusInput.value = 'inactive';
@@ -961,7 +1002,7 @@ function configurarEliminacion(elements, userManager) {
             });
             
             setTimeout(() => {
-                window.location.href = '/usuarios/administrador/usuarios/usuarios.html';
+                window.location.href = '../usuarios/usuarios.html';
             }, 3000);
             
         } catch (error) {
