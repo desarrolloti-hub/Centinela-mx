@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vinculación Power Manage | Centinela-MX</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="registroPM.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="page-header">
+        <h1><i class="fas fa-network-wired"></i> Configuración de Servidor</h1>
+        <div class="header-description">Gestión de Middleware para cuentas maestras de organizaciones.</div>
+    </div>
+
+    <div class="edit-main-container">
+        <div class="edit-wrapper">
+            <div class="edit-left-panel">
+                <header class="edit-header">
+                    <h1 class="edit-main-title">POWER MANAGE</h1>
+                    <p class="edit-sub-title">API INTERACTIVE 13.0</p>
+                </header>
+
+                <section class="photo-section">
+                    <div class="photo-container">
+                        <div class="profile-circle org-disabled">
+                            <div class="placeholder-text">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>RSI MASTER</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="photo-info">Este proceso genera el User-Token institucional necesario para el monitoreo.</p>
+                </section>
+
+                <footer class="back-btn-container">
+                    <a href="/usuarios/administrador/usuarios/usuarios.html" class="back-btn">
+                        <i class="fas fa-arrow-left"></i> VOLVER A GESTIÓN
+                    </a>
+                </footer>
+            </div>
+
+            <div class="edit-right-panel">
+                <header class="edit-header">
+                    <h1 class="edit-main-title">ALTA TÉCNICA</h1>
+                    <p class="edit-sub-title">Sigue los pasos para vincular la organización.</p>
+                </header>
+
+                <form class="edit-form-container" id="pmRegisterForm">
+                    <div id="step1">
+                        <div class="form-field-group">
+                            <label class="field-label" for="pmEmail">
+                                <i class="fas fa-envelope"></i> EMAIL ORGANIZACIONAL
+                            </label>
+                            <input class="form-input-field" type="email" id="pmEmail" 
+                                   placeholder="ejemplo@organizacion.com" required>
+                        </div>
+                        <button type="button" class="action-btn save-btn" id="btnSendCode">
+                            SOLICITAR CÓDIGO 2FA
+                        </button>
+                    </div>
+
+                    <div id="step2" style="display:none;">
+                        <div class="message-container info">
+                            <i class="fas fa-info-circle"></i> 
+                            Ingresa el código de 12 caracteres enviado al correo anterior.
+                        </div>
+                        <div class="form-field-group">
+                            <label class="field-label" for="pmCode">
+                                <i class="fas fa-key"></i> CÓDIGO RECIBIDO
+                            </label>
+                            <input class="form-input-field" type="text" id="pmCode" 
+                                   placeholder="ABC123XYZ..." maxlength="12">
+                        </div>
+                        <button type="submit" class="action-btn save-btn">
+                            FINALIZAR VINCULACIÓN
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="registroPM.js"></script>
+</body>
+</html>

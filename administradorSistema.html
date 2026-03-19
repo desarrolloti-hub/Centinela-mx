@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Administrador del Sistema (Master)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a2540 0%, #1a3b5c 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #0a2540;
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header h1 i {
+            color: #ff6b35;
+            font-size: 32px;
+        }
+
+        .setup-box {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+        }
+
+        .setup-box i {
+            font-size: 40px;
+            color: #2196f3;
+            margin-bottom: 10px;
+        }
+
+        .setup-box h3 {
+            color: #0d47a1;
+            margin-bottom: 10px;
+        }
+
+        .setup-box p {
+            color: #1565c0;
+            font-size: 14px;
+        }
+
+        .setup-box .status {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #4caf50;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .warning-box i {
+            margin-right: 8px;
+            color: #ffc107;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .password-requirements {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        .password-requirements ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .password-requirements li {
+            color: #6c757d;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .password-requirements li.valid i {
+            color: #28a745;
+        }
+
+        .password-requirements li.invalid i {
+            color: #dc3545;
+        }
+
+        .btn-create {
+            width: 100%;
+            padding: 14px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .btn-create:hover:not(:disabled) {
+            background: #e85a2a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-create:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-box.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            display: block;
+        }
+
+        .result-box.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            display: block;
+        }
+
+        .result-box i {
+            margin-right: 8px;
+        }
+
+        .result-details {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ff6b35;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: #ff6b35;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i class="fas fa-crown"></i>
+                Crear Master
+                <i class="fas fa-crown"></i>
+            </h1>
+            <p>Administrador del Sistema</p>
+        </div>
+
+        <!-- Estado de la colección -->
+        <div id="setupStatus" class="setup-box">
+            <i class="fas fa-cog fa-spin"></i>
+            <h3>Verificando configuración inicial...</h3>
+            <p>Revisando si existe la colección administradoresSistema</p>
+        </div>
+
+        <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>⚠️ Herramienta de Configuración Inicial</strong>
+            Este formulario creará automáticamente la colección "administradoresSistema" si no existe.
+            Úsalo SOLO para el primer administrador.
+        </div>
+
+        <form id="masterForm" style="display: none;">
+            <div class="form-group">
+                <label for="nombreCompleto">
+                    <i class="fas fa-user"></i> Nombre Completo
+                </label>
+                <input type="text" id="nombreCompleto" placeholder="Ej. Admin Sistema" required>
+            </div>
+
+            <div class="form-group">
+                <label for="correoElectronico">
+                    <i class="fas fa-envelope"></i> Correo Electrónico
+                </label>
+                <input type="email" id="correoElectronico" placeholder="admin@sistema.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    <i class="fas fa-lock"></i> Contraseña
+                </label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">
+                    <i class="fas fa-lock"></i> Confirmar Contraseña
+                </label>
+                <input type="password" id="confirmPassword" placeholder="••••••••" required>
+            </div>
+
+            <div class="password-requirements" id="passwordRequirements">
+                <p><i class="fas fa-shield-alt"></i> Requisitos de seguridad:</p>
+                <ul>
+                    <li id="reqLength" class="invalid">
+                        <i class="fas fa-times-circle"></i> Mínimo 6 caracteres
+                    </li>
+                    <li id="reqMatch" class="invalid">
+                        <i class="fas fa-times-circle"></i> Las contraseñas coinciden
+                    </li>
+                </ul>
+            </div>
+
+            <button type="submit" class="btn-create" id="btnCreate" disabled>
+                <i class="fas fa-plus-circle"></i>
+                Crear Administrador del Sistema
+            </button>
+        </form>
+
+        <div id="result" class="result-box">
+            <!-- Resultado dinámico -->
+        </div>
+
+        <div class="footer">
+            <p>⚠️ Guarda bien las credenciales. Esta herramienta creará la colección automáticamente.</p>
+            <p>🔒 <a href="#" onclick="window.close()">Cerrar ventana</a> cuando termines</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+        import { 
+            getAuth, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+        import { 
+            getFirestore,
+            collection,
+            getDocs,
+            doc,
+            setDoc,
+            query,
+            limit
+        } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+        
+        // Importar tus clases
+        import { UserManager } from '/clases/user.js';
+        import { db, auth } from '/config/firebase-config.js';
+
+        // Elementos del DOM
+        const setupStatus = document.getElementById('setupStatus');
+        const form = document.getElementById('masterForm');
+        const nombreInput = document.getElementById('nombreCompleto');
+        const emailInput = document.getElementById('correoElectronico');
+        const passwordInput = document.getElementById('password');
+        const confirmInput = document.getElementById('confirmPassword');
+        const btnCreate = document.getElementById('btnCreate');
+        const resultDiv = document.getElementById('result');
+        const reqLength = document.getElementById('reqLength');
+        const reqMatch = document.getElementById('reqMatch');
+
+        // Función para verificar/crear la colección
+        async function verificarYCrearColeccion() {
+            try {
+                console.log('🔍 Verificando colección administradoresSistema...');
+                
+                // Intentar acceder a la colección
+                const coleccionRef = collection(db, "administradoresSistema");
+                
+                // Hacer una consulta simple para ver si existe
+                const testQuery = query(coleccionRef, limit(1));
+                
+                try {
+                    await getDocs(testQuery);
+                    console.log('✅ Colección administradoresSistema existe');
+                    
+                    setupStatus.innerHTML = `
+                        <i class="fas fa-check-circle" style="color: #4caf50;"></i>
+                        <h3 style="color: #2e7d32;">¡Colección lista!</h3>
+                        <p>La colección administradoresSistema ya existe</p>
+                        <div class="status">✓ LISTO PARA CREAR MASTER</div>
+                    `;
+                    
+                    // Mostrar el formulario
+                    form.style.display = 'block';
+                    
+                } catch (error) {
+                    // Si la colección no existe, Firestore lanzará un error
+                    console.log('⚠️ Colección no existe, creando documento dummy...');
+                    
+                    // Crear un documento dummy para que Firestore cree la colección
+                    const dummyRef = doc(db, "administradoresSistema", "_dummy_");
+                    await setDoc(dummyRef, {
+                        _creado: serverTimestamp(),
+                        _temporal: true
+                    });
+                    
+                    // Eliminar el documento dummy
+                    await deleteDoc(dummyRef);
+                    
+                    console.log('✅ Colección administradoresSistema creada exitosamente');
+                    
+                    setupStatus.innerHTML = `
+                        <i class="fas fa-check-circle" style="color: #4caf50;"></i>
+                        <h3 style="color: #2e7d32;">¡Colección creada!</h3>
+                        <p>Se ha creado automáticamente la colección administradoresSistema</p>
+                        <div class="status">✓ LISTO PARA CREAR MASTER</div>
+                    `;
+                    
+                    // Mostrar el formulario
+                    form.style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('❌ Error con la colección:', error);
+                
+                setupStatus.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="color: #ff9800;"></i>
+                    <h3 style="color: #c62828;">Error de configuración</h3>
+                    <p>${error.message}</p>
+                    <button onclick="location.reload()" style="
+                        margin-top: 15px;
+                        padding: 8px 20px;
+                        background: #ff6b35;
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    ">Reintentar</button>
+                `;
+            }
+        }
+
+        // Validar contraseña
+        function validatePassword() {
+            const password = passwordInput.value;
+            const confirm = confirmInput.value;
+            
+            if (password.length >= 6) {
+                reqLength.className = 'valid';
+                reqLength.innerHTML = '<i class="fas fa-check-circle"></i> Mínimo 6 caracteres ✓';
+            } else {
+                reqLength.className = 'invalid';
+                reqLength.innerHTML = '<i class="fas fa-times-circle"></i> Mínimo 6 caracteres';
+            }
+            
+            if (password && confirm && password === confirm) {
+                reqMatch.className = 'valid';
+                reqMatch.innerHTML = '<i class="fas fa-check-circle"></i> Las contraseñas coinciden ✓';
+            } else {
+                reqMatch.className = 'invalid';
+                reqMatch.innerHTML = '<i class="fas fa-times-circle"></i> Las contraseñas coinciden';
+            }
+            
+            const isValid = password.length >= 6 && password === confirm && password.length > 0;
+            btnCreate.disabled = !isValid;
+        }
+
+        passwordInput.addEventListener('input', validatePassword);
+        confirmInput.addEventListener('input', validatePassword);
+
+        // Manejar envío del formulario
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (btnCreate.disabled) {
+                showResult('Por favor, cumple todos los requisitos de contraseña', 'error');
+                return;
+            }
+
+            btnCreate.disabled = true;
+            btnCreate.innerHTML = '<span class="loader"></span> Creando Master...';
+
+            try {
+                // Cerrar sesión existente
+                try {
+                    await signOut(auth);
+                } catch (signOutError) {
+                    // Ignorar
+                }
+
+                // Crear instancia de UserManager
+                const userManager = new UserManager();
+
+                // Crear el master
+                const resultado = await userManager.createMaster({
+                    nombreCompleto: nombreInput.value.trim(),
+                    correoElectronico: emailInput.value.trim(),
+                    fotoUsuario: ''
+                }, passwordInput.value);
+
+                // Mostrar éxito
+                showResult(`
+                    <i class="fas fa-check-circle"></i> ¡Master creado exitosamente!
+                    <div class="result-details">
+                        <strong>ID:</strong> ${resultado.id}<br>
+                        <strong>Nombre:</strong> ${resultado.user.nombreCompleto}<br>
+                        <strong>Email:</strong> ${resultado.user.correoElectronico}<br>
+                        <strong>Rol:</strong> MASTER<br>
+                        <strong>Colección:</strong> administradoresSistema<br>
+                        <strong>Verificación:</strong> Se envió correo de verificación
+                    </div>
+                    <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                        ⚠️ GUARDA ESTOS DATOS. La colección se ha creado automáticamente.
+                    </p>
+                `, 'success');
+
+                form.reset();
+                
+                // Opción de cerrar
+                setTimeout(() => {
+                    if (confirm('¿Cerrar esta ventana? Guarda los datos mostrados.')) {
+                        window.close();
+                    }
+                }, 10000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                
+                let errorMessage = error.message;
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'El correo electrónico ya está registrado en el sistema.';
+                }
+
+                showResult(`
+                    <i class="fas fa-exclamation-circle"></i> Error al crear master
+                    <div class="result-details">
+                        ${errorMessage}
+                    </div>
+                `, 'error');
+            } finally {
+                btnCreate.innerHTML = '<i class="fas fa-plus-circle"></i> Crear Administrador del Sistema';
+                btnCreate.disabled = false;
+                validatePassword();
+            }
+        });
+
+        function showResult(message, type) {
+            resultDiv.className = `result-box ${type}`;
+            resultDiv.innerHTML = message;
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Iniciar verificación de colección
+        verificarYCrearColeccion();
+        validatePassword();
+    </script>
+</body>
+</html>

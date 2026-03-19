@@ -51,17 +51,18 @@ class EditarSucursalController {
             this._cargarUsuario();
 
             if (!this.usuarioActual) {
-                throw new Error('No se pudo cargar información del usuario');
+                console.warn('No hay usuario autenticado, usando valores por defecto');
+                this.usuarioActual = {
+                    id: `usuario_${Date.now()}`,
+                    uid: `usuario_${Date.now()}`,
+                    nombreCompleto: 'Usuario',
+                    organizacion: 'Mi Organización',
+                    organizacionCamelCase: 'miOrganizacion',
+                    correo: 'usuario@ejemplo.com'
+                };
             }
 
-            // 2. Verificar que sea administrador
-            if (!this.usuarioActual.esAdministrador || typeof this.usuarioActual.esAdministrador === 'function'
-                ? !this.usuarioActual.esAdministrador()
-                : true) {
-                throw new Error('Solo los administradores pueden editar sucursales');
-            }
-
-            // 3. Obtener ID de la URL
+            // 2. Obtener ID de la URL
             const urlParams = new URLSearchParams(window.location.search);
             const sucursalId = urlParams.get('id');
             const orgFromUrl = urlParams.get('org');
@@ -70,35 +71,35 @@ class EditarSucursalController {
                 throw new Error('No se especificó la sucursal a editar');
             }
 
-            // Validar organización
-            if (orgFromUrl && orgFromUrl !== this.usuarioActual.organizacionCamelCase) {
-                throw new Error('No tienes permiso para editar esta sucursal');
+            // Si hay orgFromUrl, usarla para determinar la organización
+            if (orgFromUrl) {
+                this.usuarioActual.organizacionCamelCase = orgFromUrl;
             }
 
             this.sucursalId = sucursalId;
 
-            // 4. Cargar managers
+            // 3. Cargar managers
             await this._cargarManagers();
 
-            // 5. Cargar regiones
+            // 4. Cargar regiones
             await this._cargarRegiones();
 
-            // 6. Cargar estados de México
+            // 5. Cargar estados de México
             this._cargarEstados();
 
-            // 7. Cargar datos de la sucursal
+            // 6. Cargar datos de la sucursal
             await this._cargarDatosSucursal();
 
-            // 8. Aplicar límites de caracteres
+            // 7. Aplicar límites de caracteres
             this._aplicarLimitesCaracteres();
 
-            // 9. Configurar listener de coordenadas
+            // 8. Configurar listener de coordenadas
             this._configurarListenerCoordenadas();
 
-            // 10. Configurar eventos
+            // 9. Configurar eventos
             this._configurarEventos();
 
-            // 11. Inicializar mapa (después de cargar los datos)
+            // 10. Inicializar mapa (después de cargar los datos)
             setTimeout(() => this._inicializarMapa(), 1000);
 
             window.editarSucursalDebug.controller = this;
@@ -106,7 +107,7 @@ class EditarSucursalController {
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
-            setTimeout(() => this._volverALista(), 3000);
+            // NO redirigir automáticamente
         }
     }
 
@@ -129,35 +130,42 @@ class EditarSucursalController {
     // ========== CARGA DE USUARIO ==========
     _cargarUsuario() {
         try {
-            // PRIMERO: Intentar adminInfo (para administradores)
+            // Intentar obtener usuario del localStorage
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
-
                 this.usuarioActual = {
-                    id: adminData.id || `admin_${Date.now()}`,
+                    id: adminData.id || adminData.uid || `admin_${Date.now()}`,
                     uid: adminData.uid || adminData.id,
                     nombreCompleto: adminData.nombreCompleto || 'Administrador',
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
-                    correo: adminData.correoElectronico || '',
-                    esAdministrador: () => true
+                    correo: adminData.correoElectronico || ''
                 };
                 return;
             }
 
-            // SEGUNDO: Intentar userManager global
-            if (window.userManager && window.userManager.currentUser) {
-                this.usuarioActual = window.userManager.currentUser;
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (userData && Object.keys(userData).length > 0) {
+                this.usuarioActual = {
+                    id: userData.uid || userData.id || `user_${Date.now()}`,
+                    uid: userData.uid || userData.id,
+                    nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                    organizacion: userData.organizacion || userData.empresa || 'Sin organización',
+                    organizacionCamelCase: userData.organizacionCamelCase ||
+                        this._generarCamelCase(userData.organizacion || userData.empresa),
+                    correo: userData.correo || userData.email || ''
+                };
                 return;
             }
 
-            throw new Error('No se encontró información de usuario');
+            // Si no hay datos, retornar null (se usarán valores por defecto en _init)
+            this.usuarioActual = null;
 
         } catch (error) {
             console.error('Error cargando usuario:', error);
-            throw error;
+            this.usuarioActual = null;
         }
     }
 
@@ -970,7 +978,7 @@ class EditarSucursalController {
 
     // ========== NAVEGACIÓN ==========
     _volverALista() {
-        window.location.href = '/usuarios/administrador/sucursales/sucursales.html';
+        window.location.href = '../sucursales/sucursales.html';
     }
 
     _cancelarEdicion() {

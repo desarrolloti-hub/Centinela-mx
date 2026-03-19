@@ -1,6 +1,6 @@
 // ========== VARIABLES GLOBALES ==========
 let regionManager = null;
-let adminActual = null;
+let usuarioActual = null;
 
 // Configuración de paginación
 const ITEMS_POR_PAGINA = 10;
@@ -18,22 +18,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Acceder directamente al usuario actual desde window.userManager
-        if (!window.userManager || !window.userManager.currentUser || !window.userManager.currentUser.esAdministrador()) {
-            console.error('❌ No hay administrador autenticado');
-            showNoAdminMessage();
-            return;
+        // Obtener información del usuario actual (temporal - será reemplazado por componente Auth)
+        usuarioActual = obtenerUsuarioActual();
+        
+        if (!usuarioActual) {
+            console.warn('No hay información de usuario, usando valores por defecto');
+            usuarioActual = {
+                id: `usuario_${Date.now()}`,
+                nombreCompleto: 'Usuario',
+                organizacion: 'Mi Organización',
+                organizacionCamelCase: 'miOrganizacion',
+                correoElectronico: 'usuario@ejemplo.com'
+            };
         }
         
-        adminActual = window.userManager.currentUser;
-        
-        localStorage.setItem('adminInfo', JSON.stringify({
-            id: adminActual.id,
-            nombreCompleto: adminActual.nombreCompleto,
-            organizacion: adminActual.organizacion,
-            organizacionCamelCase: adminActual.organizacionCamelCase,
-            rol: adminActual.rol,
-            correoElectronico: adminActual.correoElectronico,
+        // Guardar info en localStorage para otros componentes (temporal)
+        localStorage.setItem('userInfo', JSON.stringify({
+            id: usuarioActual.id,
+            nombreCompleto: usuarioActual.nombreCompleto,
+            organizacion: usuarioActual.organizacion,
+            organizacionCamelCase: usuarioActual.organizacionCamelCase,
+            correoElectronico: usuarioActual.correoElectronico,
             timestamp: new Date().toISOString()
         }));
         
@@ -46,6 +51,42 @@ document.addEventListener('DOMContentLoaded', async function() {
         showError(error.message || 'Error al cargar la página');
     }
 });
+
+// ========== OBTENER USUARIO ACTUAL (TEMP) ==========
+function obtenerUsuarioActual() {
+    // TODO: Reemplazar con llamado al componente Auth
+    try {
+        // Intentar obtener de localStorage primero
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id || `user_${Date.now()}`,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa || 'Mi Organización',
+                organizacionCamelCase: userData.organizacionCamelCase || generarCamelCase(userData.organizacion || userData.empresa),
+                correoElectronico: userData.correo || userData.email || 'usuario@ejemplo.com'
+            };
+        }
+        
+        // Si no hay datos, retornar null para usar valores por defecto
+        return null;
+        
+    } catch (error) {
+        console.error('Error obteniendo usuario:', error);
+        return null;
+    }
+}
+
+// ========== GENERAR CAMEL CASE (TEMP) ==========
+function generarCamelCase(texto) {
+    if (!texto || typeof texto !== 'string') return 'miOrganizacion';
+    return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+        .replace(/[^a-zA-Z0-9]/g, '');
+}
 
 // ========== CONFIGURAR BÚSQUEDA ==========
 function configurarBusqueda() {
@@ -217,7 +258,7 @@ async function loadRegions() {
         showLoadingState();
         
         todasLasRegiones = await regionManager.getRegionesByOrganizacion(
-            adminActual.organizacionCamelCase
+            usuarioActual.organizacionCamelCase
         );
         
         localStorage.setItem('regionesList', JSON.stringify(
@@ -312,15 +353,6 @@ function renderRegionsTable(regiones) {
 
 // ========== CONFIGURAR EVENTOS ==========
 function setupEvents() {
-    // El botón "Agregar Región" ahora es un enlace <a> en el header, pero mantenemos el evento por si acaso
-    const addBtn = document.getElementById('addBtn');
-    if (addBtn) {
-        addBtn.addEventListener('click', (e) => {
-            // No prevenir el default para que el enlace funcione.
-            // window.location.href = '/users/admin/crearRegiones/crearRegiones.html';
-        });
-    }
-    
     const tableBody = document.getElementById('regionsTableBody');
     if (tableBody) {
         tableBody.addEventListener('click', async (e) => {
@@ -350,21 +382,21 @@ async function editRegion(regionId, regionName) {
     const selectedRegion = {
         id: regionId,
         nombre: regionName,
-        organizacion: adminActual.organizacion,
-        organizacionCamelCase: adminActual.organizacionCamelCase,
+        organizacion: usuarioActual.organizacion,
+        organizacionCamelCase: usuarioActual.organizacionCamelCase,
         fechaSeleccion: new Date().toISOString(),
-        admin: adminActual.nombreCompleto
+        usuario: usuarioActual.nombreCompleto
     };
     
     localStorage.setItem('selectedRegion', JSON.stringify(selectedRegion));
     
-    window.location.href = `/usuarios/administrador/editarRegiones/editarRegiones.html?id=${regionId}&org=${adminActual.organizacionCamelCase}`;
+    window.location.href = `../editarRegiones/editarRegiones.html?id=${regionId}&org=${usuarioActual.organizacionCamelCase}`;
 }
 
 // ========== VER DETALLES DE LA REGIÓN ==========
 async function viewRegionDetails(regionId, regionName) {
     try {
-        const region = await regionManager.getRegionById(regionId, adminActual.organizacionCamelCase);
+        const region = await regionManager.getRegionById(regionId, usuarioActual.organizacionCamelCase);
         
         if (!region) {
             throw new Error('Región no encontrada');
@@ -372,7 +404,7 @@ async function viewRegionDetails(regionId, regionName) {
         
         // Asegurarse de que la región tenga organizacionCamelCase
         if (!region.organizacionCamelCase) {
-            region.organizacionCamelCase = adminActual.organizacionCamelCase;
+            region.organizacionCamelCase = usuarioActual.organizacionCamelCase;
         }
         
         showRegionDetails(region, regionName);
@@ -451,7 +483,7 @@ function showRegionDetails(region, regionName) {
         reverseButtons: false,
         focusCancel: true,
         preConfirm: () => {
-            window.location.href = `/usuarios/administrador/editarRegiones/editarRegiones.html?id=${region.id}&org=${region.organizacionCamelCase || ''}`;
+            window.location.href = `../editarRegiones/editarRegiones.html?id=${region.id}&org=${region.organizacionCamelCase || ''}`;
         }
     });
 }
@@ -481,7 +513,7 @@ async function deleteRegion(regionId, regionName) {
     if (!confirmResult.isConfirmed) return;
 
     try {
-        await regionManager.deleteRegion(regionId, adminActual.organizacionCamelCase);
+        await regionManager.deleteRegion(regionId, usuarioActual.organizacionCamelCase);
         
         Swal.close();
         
@@ -556,41 +588,10 @@ function showEmptyState() {
             <td colspan="4" style="text-align:center; padding:60px 20px;">
                 <div style="text-align:center;">
                     <i class="fas fa-map-marked-alt" style="font-size:48px; color:rgba(16,185,129,0.3); margin-bottom:16px;"></i>
-                    <h5 style="color:white;">No hay regiones en ${adminActual?.organizacion || 'tu organización'}</h5>
-                    <a href="/usuarios/administrador/crearRegiones/crearRegiones.html" class="btn-nueva-region-header" style="display:inline-flex; margin-top:16px;">
+                    <h5 style="color:white;">No hay regiones en ${usuarioActual?.organizacion || 'tu organización'}</h5>
+                    <a href="../crearRegiones/crearRegiones.html" class="btn-nueva-region-header" style="display:inline-flex; margin-top:16px;">
                         <i class="fas fa-plus-circle"></i> Crear Primera Región
                     </a>
-                </div>
-            </td>
-        </tr>
-    `;
-
-    // Ocultar paginación
-    const paginacionContainer = document.querySelector('.pagination-container');
-    if (paginacionContainer) {
-        paginacionContainer.style.display = 'none';
-    }
-}
-
-function showNoAdminMessage() {
-    const tbody = document.getElementById('regionsTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = /*html*/ `
-        <tr>
-            <td colspan="4" style="text-align:center; padding:60px 20px;">
-                <div style="text-align:center;">
-                    <i class="fas fa-user-slash" style="font-size:48px; color:#ef4444; margin-bottom:16px;"></i>
-                    <h5 style="color:white;">No se detectó sesión activa de administrador</h5>
-                    <p style="color:var(--color-text-dim);">Para gestionar regiones, debes iniciar sesión como administrador.</p>
-                    <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
-                        <button onclick="window.location.reload()" class="btn" style="padding:8px 16px !important; min-width:auto !important;">
-                            <i class="fas fa-sync-alt"></i> Recargar
-                        </button>
-                        <button onclick="window.location.href='/usuarios/visitantes/inicioSesion/inicioSesion.html'" class="btn btn-warning" style="padding:8px 16px !important; min-width:auto !important;">
-                            <i class="fas fa-sign-in-alt"></i> Iniciar sesión
-                        </button>
-                    </div>
                 </div>
             </td>
         </tr>

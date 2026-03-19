@@ -1,6 +1,3 @@
-// editarRegiones.js - VERSIÓN MEJORADA (BASADA EN CREAR REGIONES)
-
-// LÍMITES DE CARACTERES
 const LIMITES = {
     NOMBRE_REGION: 50
 };
@@ -21,14 +18,7 @@ class EditarRegionController {
     // ========== INICIALIZACIÓN ==========
     async _init() {
         try {
-            // 1. Cargar usuario
-            await this._cargarUsuario();
-
-            if (!this.usuarioActual) {
-                throw new Error('No se pudo cargar información del usuario');
-            }
-
-            // 2. Obtener ID de la URL
+            // 1. Obtener ID de la URL
             const urlParams = new URLSearchParams(window.location.search);
             const regionId = urlParams.get('id');
             const orgCamelCase = urlParams.get('org');
@@ -37,9 +27,18 @@ class EditarRegionController {
                 throw new Error('No se especificó la región a editar');
             }
 
-            // Verificar que la organización coincida
-            if (this.usuarioActual.organizacionCamelCase !== orgCamelCase) {
-                throw new Error('No tienes permisos para editar esta región');
+            // 2. Obtener usuario actual (temporal - será reemplazado por componente Auth)
+            this.usuarioActual = this._obtenerUsuarioActual();
+            
+            if (!this.usuarioActual) {
+                console.warn('No hay información de usuario, usando valores por defecto');
+                this.usuarioActual = {
+                    id: `usuario_${Date.now()}`,
+                    nombreCompleto: 'Usuario',
+                    organizacion: 'Mi Organización',
+                    organizacionCamelCase: orgCamelCase, // Usar la organización de la URL
+                    correo: 'usuario@ejemplo.com'
+                };
             }
 
             // 3. Cargar RegionManager
@@ -57,49 +56,51 @@ class EditarRegionController {
         }
     }
 
-    // ========== CARGA DE USUARIO ==========
-    async _cargarUsuario() {
+    // ========== OBTENER USUARIO ACTUAL (TEMP) ==========
+    _obtenerUsuarioActual() {
+        // TODO: Reemplazar con llamado al componente Auth
         try {
-            // Mostrar loader
-            Swal.fire({
-                title: 'Verificando sesión...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            // Esperar a que window.userManager.currentUser esté disponible
-            let attempts = 0;
-            const maxAttempts = 30;
-
-            while (attempts < maxAttempts) {
-                if (window.userManager && window.userManager.currentUser) {
-                    const admin = window.userManager.currentUser;
-
-                    this.usuarioActual = {
-                        id: admin.id,
-                        uid: admin.id,
-                        nombreCompleto: admin.nombreCompleto,
-                        organizacion: admin.organizacion,
-                        organizacionCamelCase: admin.organizacionCamelCase,
-                        correo: admin.correoElectronico
-                    };
-
-                    Swal.close();
-                    return;
-                }
-                await new Promise(resolve => setTimeout(resolve, 500));
-                attempts++;
+            // Intentar obtener de localStorage primero
+            const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+            if (adminInfo && Object.keys(adminInfo).length > 0) {
+                return {
+                    id: adminInfo.id || adminInfo.uid || `admin_${Date.now()}`,
+                    nombreCompleto: adminInfo.nombreCompleto || 'Administrador',
+                    organizacion: adminInfo.organizacion || 'Mi Organización',
+                    organizacionCamelCase: adminInfo.organizacionCamelCase || this._generarCamelCase(adminInfo.organizacion),
+                    correo: adminInfo.correoElectronico || ''
+                };
             }
 
-            Swal.close();
-            throw new Error('No se pudo detectar el usuario actual');
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (userData && Object.keys(userData).length > 0) {
+                return {
+                    id: userData.uid || userData.id || `user_${Date.now()}`,
+                    nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                    organizacion: userData.organizacion || userData.empresa || 'Mi Organización',
+                    organizacionCamelCase: userData.organizacionCamelCase || this._generarCamelCase(userData.organizacion || userData.empresa),
+                    correo: userData.correo || userData.email || ''
+                };
+            }
+
+            // Si no hay datos, retornar null para usar valores por defecto
+            return null;
 
         } catch (error) {
-            Swal.close();
-            console.error('Error cargando usuario:', error);
-            throw error;
+            console.error('Error obteniendo usuario:', error);
+            return null;
         }
+    }
+
+    // ========== GENERAR CAMEL CASE (TEMP) ==========
+    _generarCamelCase(texto) {
+        if (!texto || typeof texto !== 'string') return 'miOrganizacion';
+        return texto
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+            .replace(/[^a-zA-Z0-9]/g, '');
     }
 
     // ========== CARGA DE DEPENDENCIAS ==========
@@ -357,8 +358,12 @@ class EditarRegionController {
             }
 
             // Mostrar loader
-            // Mostrar loader (VERSIÓN CORREGIDA CON SCROLL)
-
+            Swal.fire({
+                title: 'Actualizando región...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
             // Preparar datos a actualizar
             const datosActualizar = {};
@@ -413,7 +418,7 @@ class EditarRegionController {
 
     // ========== NAVEGACIÓN ==========
     _volverALista() {
-        window.location.href = '/usuarios/administrador/regiones/regiones.html';
+        window.location.href = '../regiones/regiones.html';
     }
 
     _cancelarEdicion() {
