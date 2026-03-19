@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Tarea Personal - Sistema Centinela</title>
+    <title>Crear Tarea - Sistema Centinela</title>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
@@ -18,22 +18,22 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- SEO Básico -->
-    <meta name="description" content="Crear tarea personal - Sistema Centinela">
+    <meta name="description" content="Crear tarea - Sistema Centinela">
     <meta name="author" content="Centinela-MX">
     <link rel="canonical" href="https://centinela-mx.web.app/" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://centinela-mx.web.app">
-    <meta property="og:title" content="Centinela-MX | Crear Tarea Personal">
-    <meta property="og:description" content="Crea tus propias tareas y checklists personales">
+    <meta property="og:title" content="Centinela-MX | Crear Tarea">
+    <meta property="og:description" content="Crea tareas personales, compartidas, por área o generales">
     <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
     <meta property="og:site_name" content="Centinela-MX">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Centinela-MX | Tareas Personales">
-    <meta name="twitter:description" content="Sistema de tareas personales">
+    <meta name="twitter:title" content="Centinela-MX | Tareas">
+    <meta name="twitter:description" content="Sistema de tareas unificado">
     <meta name="twitter:image" content="https://centinela-mx.web.app/assets/images/logo.png">
 </head>
 
@@ -46,32 +46,69 @@
         <!-- Header -->
         <div class="header-section">
             <div class="header-content">
-                <h1 class="main-title">
-                    <i class="fas fa-clipboard-list"></i>
-                    Crear Tarea Personal
+                <h1 class="main-title" id="mainTitle">
+                    <i class="fas fa-tasks"></i>
+                    Crear Tarea
                 </h1>
-                <div class="header-description-text">
+                <div class="header-description-text" id="headerDescription">
                     <i class="fas fa-quote-left"></i>
-                    Crea tus propios checklists y tareas personales
+                    Selecciona el tipo de tarea que deseas crear
                     <i class="fas fa-quote-right"></i>
                 </div>
             </div>
         </div>
 
         <!-- ============================================= -->
-        <!-- FORMULARIO: CREAR TAREA PERSONAL -->
+        <!-- SELECTOR DE TIPO DE TAREA -->
+        <!-- ============================================= -->
+        <div class="tipo-tarea-selector">
+            <div class="tipo-tarea-card" data-tipo="personal" id="tipoPersonal">
+                <div class="tipo-tarea-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="tipo-tarea-titulo">Personal</div>
+                <div class="tipo-tarea-desc">Solo visible para ti</div>
+            </div>
+
+            <div class="tipo-tarea-card" data-tipo="compartida" id="tipoCompartida">
+                <div class="tipo-tarea-icon">
+                    <i class="fas fa-share-alt"></i>
+                </div>
+                <div class="tipo-tarea-titulo">Compartida</div>
+                <div class="tipo-tarea-desc">Comparte con usuarios específicos</div>
+            </div>
+
+            <div class="tipo-tarea-card" data-tipo="area" id="tipoArea">
+                <div class="tipo-tarea-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="tipo-tarea-titulo">Por Área</div>
+                <div class="tipo-tarea-desc">Asigna a un área específica</div>
+            </div>
+
+            <div class="tipo-tarea-card" data-tipo="general" id="tipoGeneral">
+                <div class="tipo-tarea-icon">
+                    <i class="fas fa-globe"></i>
+                </div>
+                <div class="tipo-tarea-titulo">General</div>
+                <div class="tipo-tarea-desc">Visible para toda la organización</div>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- FORMULARIO UNIFICADO -->
         <!-- ============================================= -->
         <div class="form-row">
             <div class="full-width">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-edit"></i>Nueva Tarea Personal</h5>
+                        <h5><i class="fas fa-edit" id="formTitleIcon"></i><span id="formTitle">Nueva Tarea</span></h5>
                         <button id="btnVolverLista" class="btn-volver">
                             <i class="fas fa-arrow-left"></i>Volver a la lista
                         </button>
                     </div>
                     <div class="card-body">
-                        <form id="formTareaPersonal">
+                        <form id="formTarea">
                             <!-- Grid de 2 columnas -->
                             <div class="form-grid">
                                 <!-- Información Básica -->
@@ -92,12 +129,13 @@
 
                                 <!-- Nombre de la actividad -->
                                 <div class="full-width">
-                                    <label for="nombreActividad" class="form-label">Nombre de la actividad *</label>
+                                    <label for="nombreActividad" class="form-label required">Nombre de la actividad
+                                        *</label>
                                     <div class="input-group">
                                         <span class="input-group-icon"><i class="fas fa-clipboard-list"></i></span>
                                         <input type="text" class="form-control" id="nombreActividad"
-                                            placeholder="Ej: Compras del supermercado, Ejercicio diario, Leer libro"
-                                            required maxlength="100">
+                                            placeholder="Ej: Revisión de inventario, Compras, Proyecto..." required
+                                            maxlength="100">
                                     </div>
                                     <div class="char-limit-info">
                                         <span class="char-counter" id="nombreCounter">0/100</span>
@@ -110,12 +148,24 @@
                                     <div class="input-group">
                                         <span class="input-group-icon"><i class="fas fa-align-left"></i></span>
                                         <textarea class="form-control" id="descripcion" rows="3"
-                                            placeholder="Describe los detalles de tu tarea personal..."
+                                            placeholder="Describe los detalles de tu tarea..."
                                             maxlength="500"></textarea>
                                     </div>
                                     <div class="char-limit-info">
                                         <span class="char-counter" id="descripcionCounter">0/500</span>
                                     </div>
+                                </div>
+
+                                <!-- Prioridad (solo para tareas personales) -->
+                                <div class="full-width" id="prioridadContainer" style="display: none;">
+                                    <label for="prioridad" class="form-label">Prioridad</label>
+                                    <select class="form-control" id="prioridad">
+                                        <option value="baja">🔵 Baja</option>
+                                        <option value="media" selected>🟡 Media</option>
+                                        <option value="alta">🔴 Alta</option>
+                                        <option value="urgente">⚡ Urgente</option>
+                                    </select>
+                                    <div class="form-help-text">Establece la prioridad de tu tarea</div>
                                 </div>
 
                                 <!-- Items del Checklist -->
@@ -137,24 +187,23 @@
 
                                         <!-- Lista de items dinámicos -->
                                         <div id="itemsList" class="items-list">
-                                            <!-- Los items se agregarán aquí dinámicamente -->
                                             <div class="item-placeholder" id="itemsPlaceholder">
                                                 <i class="fas fa-clipboard-list"></i>
                                                 <p>No hay items agregados. Haz clic en "Agregar Item" para comenzar.</p>
-                                                <small style="color: var(--color-text-dim);">Ej: Comprar leche, Hacer
-                                                    ejercicio, Leer 30 minutos</small>
+                                                <small style="color: var(--color-text-dim);">Ej: Investigar, Redactar,
+                                                    Revisar, Aprobar</small>
                                             </div>
                                         </div>
 
                                         <div class="form-help-text">
                                             <i class="fas fa-info-circle"></i>
-                                            Agrega los pasos o tareas específicas que deseas completar
+                                            Agrega los pasos o tareas específicas que deben completarse
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- ========================================= -->
-                                <!-- NUEVA SECCIÓN: FECHA LÍMITE Y RECORDATORIO -->
+                                <!-- SECCIÓN: FECHA LÍMITE Y RECORDATORIO -->
                                 <!-- ========================================= -->
                                 <div class="full-width">
                                     <h6 class="section-title" style="margin-top: 15px;">
@@ -177,7 +226,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Fecha límite (visible condicionalmente) -->
+                                <!-- Fecha límite -->
                                 <div class="full-width" id="fechaContainer"
                                     style="transition: opacity 0.3s ease; opacity: 0.5;">
                                     <label for="fechaLimite" class="form-label">Fecha límite</label>
@@ -187,26 +236,171 @@
                                     </div>
                                     <div class="form-help-text">
                                         <i class="fas fa-exclamation-triangle" style="color: var(--color-warning);"></i>
-                                        Selecciona la fecha en que deseas completar esta tarea
+                                        Selecciona la fecha límite para completar esta tarea
                                     </div>
                                 </div>
 
-                                <!-- Selector de prioridad (opcional) -->
-                                <div class="full-width">
-                                    <label for="prioridad" class="form-label">Prioridad</label>
-                                    <select class="form-control" id="prioridad">
-                                        <option value="baja">🔵 Baja</option>
-                                        <option value="media" selected>🟡 Media</option>
-                                        <option value="alta">🔴 Alta</option>
-                                        <option value="urgente">⚡ Urgente</option>
-                                    </select>
-                                    <div class="form-help-text">Establece la prioridad de tu tarea personal</div>
+                                <!-- ========================================= -->
+                                <!-- SECCIÓN: COMPARTIR (solo para tareas compartidas) -->
+                                <!-- ========================================= -->
+                                <div id="compartirSection" style="display: none; width: 100%;">
+                                    <div class="full-width">
+                                        <h6 class="section-title" style="margin-top: 15px;">
+                                            <i class="fas fa-share-alt"></i>Compartir con usuarios
+                                        </h6>
+                                    </div>
+
+                                    <!-- Búsqueda de usuarios -->
+                                    <div class="full-width">
+                                        <label for="buscarUsuarios" class="form-label">Buscar usuarios</label>
+                                        <div class="input-group">
+                                            <span class="input-group-icon"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control" id="buscarUsuarios"
+                                                placeholder="Buscar por nombre o correo...">
+                                        </div>
+                                        <div class="form-help-text">Escribe para filtrar la lista de usuarios</div>
+                                    </div>
+
+                                    <!-- Selector de usuarios -->
+                                    <div class="full-width">
+                                        <label class="form-label">Seleccionar usuarios</label>
+                                        <div class="usuarios-container" id="usuariosContainer">
+                                            <div class="loading-users">
+                                                <i class="fas fa-spinner fa-spin"></i> Cargando usuarios...
+                                            </div>
+                                        </div>
+                                        <div class="form-help-text">
+                                            <i class="fas fa-info-circle"></i>
+                                            Selecciona los usuarios con quienes compartir esta tarea
+                                        </div>
+                                    </div>
+
+                                    <!-- Acciones rápidas usuarios -->
+                                    <div class="full-width">
+                                        <div class="acciones-rapidas">
+                                            <button type="button" class="btn-accion-rapida"
+                                                id="seleccionarTodosUsuarios">
+                                                <i class="fas fa-check-double"></i> Seleccionar Todos
+                                            </button>
+                                            <button type="button" class="btn-accion-rapida"
+                                                id="deseleccionarTodosUsuarios">
+                                                <i class="fas fa-times"></i> Deseleccionar Todos
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Resumen de usuarios seleccionados -->
+                                    <div class="full-width">
+                                        <div class="selected-users-summary" id="selectedUsersSummary">
+                                            <span class="selected-count">
+                                                <i class="fas fa-users"></i>
+                                                <span id="selectedUsersCount">0</span> usuarios seleccionados
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ========================================= -->
+                                <!-- SECCIÓN: ÁREA (solo para tareas por área) -->
+                                <!-- ========================================= -->
+                                <div id="areaSection" style="display: none; width: 100%;">
+                                    <div class="full-width">
+                                        <h6 class="section-title" style="margin-top: 15px;">
+                                            <i class="fas fa-building"></i>Asignar a Área
+                                        </h6>
+                                    </div>
+
+                                    <!-- Búsqueda de áreas -->
+                                    <div class="full-width">
+                                        <label for="buscarAreas" class="form-label">Buscar áreas</label>
+                                        <div class="input-group">
+                                            <span class="input-group-icon"><i class="fas fa-search"></i></span>
+                                            <input type="text" class="form-control" id="buscarAreas"
+                                                placeholder="Buscar por nombre de área...">
+                                        </div>
+                                        <div class="form-help-text">Escribe para filtrar la lista de áreas</div>
+                                    </div>
+
+                                    <!-- Selector de áreas -->
+                                    <div class="full-width">
+                                        <label class="form-label required">Seleccionar área *</label>
+                                        <div class="areas-container" id="areasContainer">
+                                            <div class="loading-areas">
+                                                <i class="fas fa-spinner fa-spin"></i> Cargando áreas...
+                                            </div>
+                                        </div>
+                                        <div class="form-help-text">
+                                            <i class="fas fa-info-circle"></i>
+                                            Selecciona el área a la que se asignará esta tarea
+                                        </div>
+                                    </div>
+
+                                    <!-- Cargos específicos (opcional) -->
+                                    <div class="full-width" id="cargosSection" style="display: none;">
+                                        <label class="form-label">
+                                            <i class="fas fa-user-tag"></i>
+                                            Cargos específicos (opcional)
+                                        </label>
+                                        <div class="cargos-container" id="cargosContainer">
+                                            <div class="loading-cargos">
+                                                <i class="fas fa-spinner fa-spin"></i> Cargando cargos...
+                                            </div>
+                                        </div>
+                                        <div class="form-help-text">
+                                            <i class="fas fa-info-circle"></i>
+                                            Si no seleccionas cargos, la tarea será visible para todos los cargos del
+                                            área
+                                        </div>
+                                    </div>
+
+                                    <!-- Acciones rápidas cargos -->
+                                    <div class="full-width" id="cargosAcciones" style="display: none;">
+                                        <div class="acciones-rapidas">
+                                            <button type="button" class="btn-accion-rapida" id="seleccionarTodosCargos">
+                                                <i class="fas fa-check-double"></i> Seleccionar Todos
+                                            </button>
+                                            <button type="button" class="btn-accion-rapida"
+                                                id="deseleccionarTodosCargos">
+                                                <i class="fas fa-times"></i> Deseleccionar Todos
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Resumen de selección -->
+                                    <div class="full-width">
+                                        <div class="selected-summary" id="selectedSummary">
+                                            <span class="selected-count">
+                                                <i class="fas fa-building"></i>
+                                                <span id="selectedAreaText">Ninguna área seleccionada</span>
+                                            </span>
+                                            <span class="selected-count" id="selectedCargosText" style="display: none;">
+                                                <i class="fas fa-users"></i>
+                                                <span id="selectedCargosCount">0</span> cargos seleccionados
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ========================================= -->
+                                <!-- SECCIÓN: VISIBILIDAD GENERAL (solo para tareas generales) -->
+                                <!-- ========================================= -->
+                                <div id="generalSection" style="display: none; width: 100%;">
+                                    <div class="full-width">
+                                        <div class="visibility-info">
+                                            <i class="fas fa-eye"></i>
+                                            <div class="visibility-text">
+                                                <strong>Visibilidad: Toda la organización</strong>
+                                                <p>Esta tarea será visible para todos los usuarios de la organización,
+                                                    incluyendo administradores y colaboradores de todas las áreas.</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </form>
 
-                        <!-- Mensaje informativo mejorado -->
-                        <div class="alert alert-info"
+                        <!-- Mensaje informativo dinámico -->
+                        <div class="alert alert-info" id="infoMensaje"
                             style="margin-top: 25px; background: rgba(47, 140, 255, 0.1); border-left: 4px solid var(--color-accent-primary);">
                             <div style="display: flex; gap: 15px; align-items: flex-start;">
                                 <i class="fas fa-info-circle"
@@ -215,11 +409,9 @@
                                     <strong
                                         style="color: var(--color-text-primary); display: block; margin-bottom: 5px;">Información
                                         importante:</strong>
-                                    <ul style="margin: 0; padding-left: 20px; color: var(--color-text-secondary);">
-                                        <li>Esta tarea será visible <strong>solo para ti</strong></li>
-                                        <li>Nadie más podrá verla o modificarla</li>
-                                        <li>Puedes agregar múltiples items a tu checklist</li>
-                                        <li>Activa recordatorios para no olvidar fechas importantes</li>
+                                    <ul style="margin: 0; padding-left: 20px; color: var(--color-text-secondary);"
+                                        id="infoList">
+                                        <li>Selecciona un tipo de tarea para comenzar</li>
                                     </ul>
                                 </div>
                             </div>
