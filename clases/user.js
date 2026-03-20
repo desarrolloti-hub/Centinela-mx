@@ -289,7 +289,6 @@ class UserManager {
 
                 this.currentUser = user;
                 this.users.push(user);
-                console.log("✅ Usuario Master cargado:", user.correoElectronico);
                 return user;
             }
 
