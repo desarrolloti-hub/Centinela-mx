@@ -68,7 +68,7 @@ async function inicializarVerPermiso() {
                     <i class="fas fa-exclamation-triangle"></i>
                     <h4>Error al cargar el permiso</h4>
                     <p>${error.message}</p>
-                    <button class="btn-volver" onclick="window.location.href='/usuarios/administrador/permisos/permisos.html'" style="margin-top: 15px;">
+                    <button class="btn-volver" onclick="window.location.href='../permisos/permisos.html'" style="margin-top: 15px;">
                         <i class="fas fa-arrow-left"></i> Volver a la lista
                     </button>
                 </div>
@@ -331,7 +331,7 @@ function configurarEventos() {
 // NAVEGACIÓN
 // =============================================
 function volverALista() {
-    window.location.href = '/usuarios/administrador/permisos/permisos.html';
+    window.location.href = '../permisos/permisos.html';
 }
 
 function editarPermiso() {
@@ -349,7 +349,7 @@ function editarPermiso() {
     };
 
     localStorage.setItem('selectedPermiso', JSON.stringify(selectedPermiso));
-    window.location.href = `/usuarios/administrador/editarPermiso/editarPermiso.html?id=${permisoActual.id}`;
+    window.location.href = `../editarPermiso/editarPermiso.html?id=${permisoActual.id}`;
 }
 
 // =============================================

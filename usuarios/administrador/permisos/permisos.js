@@ -459,7 +459,7 @@ function setupEvents() {
 // ========== VER PERMISO (REDIRECCIÓN A LA VISTA DETALLADA) ==========
 function verPermiso(permisoId, areaNombre, cargoNombre) {
     // Redirigir a la página de ver permiso con el ID en la URL
-    window.location.href = `/usuarios/administrador/verPermisos/verPermisos.html?id=${permisoId}`;
+    window.location.href = `../verPermisos/verPermisos.html?id=${permisoId}`;
 }
 
 // ========== EDITAR PERMISO ==========
@@ -483,7 +483,7 @@ async function editPermiso(permisoId, areaNombre, cargoNombre) {
     localStorage.setItem('selectedPermiso', JSON.stringify(selectedPermiso));
 
     // Usar la ruta correcta para editar permisos
-    window.location.href = `/usuarios/administrador/editarPermisos/editarPermisos.html?id=${permisoId}`;
+    window.location.href = `../editarPermisos/editarPermisos.html?id=${permisoId}`;
 }
 
 // ========== ESTADOS DE CARGA Y ERROR ==========
@@ -523,7 +523,7 @@ function showEmptyState() {
                     <p style="color:var(--color-text-dim); max-width:400px; margin:10px auto;">
                         Los permisos te permiten controlar a qué módulos puede acceder cada cargo en las diferentes áreas.
                     </p>
-                    <a href="/usuarios/administrador/crearPermisos/crearPermisos.html" class="btn-nuevo-permiso-header" style="display:inline-flex; margin-top:16px;">
+                    <a href="../crearPermisos/crearPermisos.html" class="btn-nuevo-permiso-header" style="display:inline-flex; margin-top:16px;">
                         <i class="fas fa-plus-circle"></i> Crear Primer Permiso
                     </a>
                 </div>
