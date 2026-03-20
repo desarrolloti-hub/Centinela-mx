@@ -71,15 +71,12 @@ body {
 
 @keyframes titleGlow {
     0% {
-        text-shadow: 0 0 5px var(--color-accent-primary),
-            0 0 15px var(--color-accent-primary);
+        text-shadow: 0 0 5px var(--color-accent-primary), 0 0 15px var(--color-accent-primary);
         opacity: 0.9;
     }
 
     100% {
-        text-shadow: 0 0 15px var(--color-accent-primary),
-            0 0 30px var(--color-accent-primary),
-            0 0 45px var(--color-accent-primary);
+        text-shadow: 0 0 15px var(--color-accent-primary), 0 0 30px var(--color-accent-primary), 0 0 45px var(--color-accent-primary);
         opacity: 1;
     }
 }
@@ -350,11 +347,10 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
     padding: 10px 0;
-    transition: all 0.3s ease;
 }
 
 /* =============================================
-   TARJETA DE NOTA
+   TARJETA DE NOTA - CON FOOTER FIJO EN LA PARTE INFERIOR
    ============================================= */
 .tarea-card {
     background: var(--color-bg-tertiary);
@@ -367,6 +363,8 @@ body {
     gap: 12px;
     position: relative;
     overflow: hidden;
+    height: 100%;
+    min-height: 280px;
 }
 
 .tarea-card:hover {
@@ -391,6 +389,7 @@ body {
     transform: translateX(100%);
 }
 
+/* Header de la tarjeta */
 .tarea-header {
     display: flex;
     justify-content: space-between;
@@ -449,24 +448,30 @@ body {
     box-shadow: 0 0 8px rgba(220, 53, 69, 0.2);
 }
 
+/* =============================================
+   LIMITAR DESCRIPCIÓN A EXACTAMENTE 4 LÍNEAS
+   ============================================= */
 .tarea-contenido {
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    line-height: 1.5;
-    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
     word-break: break-word;
+    white-space: normal;
+    line-height: 1.3;
+    max-height: 5.7em;
+    min-height: 5.6em;
+    margin: 0;
     padding: 8px 0;
     border-bottom: 1px dashed var(--color-border-light);
 }
 
+/* Asegurar que los items preview no se salgan */
 .tarea-items-preview {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin: 5px 0;
-    max-height: 120px;
+    max-height: 100px;
     overflow-y: auto;
-    padding-right: 5px;
+    flex: 1;
 }
 
 .tarea-items-preview::-webkit-scrollbar {
@@ -493,6 +498,8 @@ body {
     background: rgba(0, 0, 0, 0.2);
     border-radius: 4px;
     transition: all 0.2s ease;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .tarea-item-preview:hover {
@@ -504,6 +511,7 @@ body {
     height: 14px;
     accent-color: var(--color-accent-primary);
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .tarea-item-preview span {
@@ -524,6 +532,7 @@ body {
     font-weight: 600;
 }
 
+/* Footer de la tarjeta - SIEMPRE AL FINAL */
 .tarea-footer {
     display: flex;
     justify-content: space-between;
@@ -532,7 +541,7 @@ body {
     color: var(--color-text-dim);
     border-top: 1px solid var(--color-border-light);
     padding-top: 10px;
-    margin-top: 5px;
+    margin-top: auto;
 }
 
 .tarea-creador,
@@ -548,6 +557,7 @@ body {
     font-size: 10px;
 }
 
+/* Acciones de la tarjeta - SIEMPRE DESPUÉS DEL FOOTER */
 .tarea-acciones {
     display: flex;
     gap: 8px;
@@ -772,19 +782,19 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 }
 
 /* =============================================
-   ITEMS DEL CHECKLIST
+   ITEMS DEL CHECKLIST - VERSIÓN COMPACTA (COMO EN LA IMAGEN)
    ============================================= */
 .items-container {
     background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--border-radius-medium);
-    padding: 15px;
+    padding: 12px;
 }
 
 .items-list {
-    max-height: 250px;
+    max-height: 200px;
     overflow-y: auto;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     padding-right: 5px;
 }
 
@@ -805,8 +815,8 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 .item-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px;
+    gap: 8px;
+    padding: 6px 8px;
     border-bottom: 1px solid var(--color-border-light);
     animation: slideIn 0.3s ease;
 }
@@ -828,17 +838,18 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 }
 
 .item-checkbox {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     accent-color: var(--color-accent-primary);
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .item-texto {
     flex: 1;
     color: var(--color-text-primary);
-    font-size: 13px;
-    padding: 6px 8px;
+    font-size: 12px;
+    padding: 4px 6px;
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--border-radius-small);
@@ -856,13 +867,14 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
     border: none;
     color: var(--color-text-dim);
     cursor: pointer;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: var(--border-radius-small);
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .btn-eliminar-item:hover {
@@ -872,26 +884,27 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 }
 
 .btn-eliminar-item i {
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .btn-add-item {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
     border: 1px solid var(--color-accent-primary);
     color: var(--color-text-primary);
-    padding: 10px 15px;
+    padding: 6px 12px;
     border-radius: var(--border-radius-small);
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    width: 100%;
+    gap: 6px;
+    width: auto;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-top: 8px;
 }
 
 .btn-add-item:hover {
@@ -902,15 +915,16 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 
 .btn-add-item i {
     color: var(--color-accent-primary);
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .no-items {
     text-align: center;
     color: var(--color-text-dim);
-    padding: 30px;
+    padding: 20px;
     margin: 0;
     font-style: italic;
+    font-size: 12px;
 }
 
 /* =============================================
@@ -960,12 +974,12 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 }
 
 /* =============================================
-   CAMPOS ESPECÍFICOS (Prioridad, Usuarios, Áreas, Cargos)
+   CAMPOS ESPECÍFICOS
    ============================================= */
 .campos-especificos {
     margin-top: 20px;
     padding: 20px;
-    background: rgba(47, 140, 255, 0.05);
+
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-light);
 }
@@ -1058,6 +1072,7 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
     height: 18px;
     accent-color: var(--color-accent-primary);
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .usuario-avatar {
@@ -1073,6 +1088,7 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
     font-weight: 600;
     color: var(--color-text-primary);
     text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 .area-icon,
@@ -1088,6 +1104,7 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
     font-size: 12px;
     font-weight: 600;
     color: var(--color-text-primary);
+    flex-shrink: 0;
 }
 
 .usuario-info,
@@ -1184,10 +1201,10 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 }
 
 /* =============================================
-   VISIBILITY INFO (para tareas generales)
+   VISIBILITY INFO
    ============================================= */
 .visibility-info {
-    background: linear-gradient(135deg, rgba(47, 140, 255, 0.1), rgba(47, 140, 255, 0.05));
+
     border: 1px solid var(--color-accent-primary);
     border-radius: var(--border-radius-medium);
     padding: 15px;
@@ -1196,6 +1213,8 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
     align-items: center;
     gap: 15px;
     flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
 }
 
 .visibility-info i {
@@ -1204,25 +1223,17 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
     filter: drop-shadow(0 0 10px var(--color-accent-primary));
 }
 
-.visibility-text {
-    flex: 1;
-}
-
-.visibility-text strong {
-    display: block;
-    color: var(--color-text-primary);
-    font-size: 14px;
-    margin-bottom: 5px;
-    font-family: var(--font-family-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.visibility-text p {
+.visibility-info span {
     color: var(--color-text-secondary);
     font-size: 12px;
     line-height: 1.5;
-    margin: 0;
+}
+
+.visibility-info strong {
+    color: var(--color-text-primary);
+    font-family: var(--font-family-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* =============================================
@@ -1378,6 +1389,7 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator:hover {
 
     .tarea-card {
         padding: 15px;
+        min-height: 260px;
     }
 
     .tarea-titulo {
