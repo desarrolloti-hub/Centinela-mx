@@ -570,7 +570,7 @@ class CrearPermisoController {
 
     // ========== NAVEGACIÓN ==========
     _volverALista() {
-        window.location.href = '/usuarios/administrador/permisos/permisos.html';
+        window.location.href = '../permisos/permisos.html';
     }
 
     _cancelarCreacion() {
@@ -585,17 +585,6 @@ class CrearPermisoController {
             if (result.isConfirmed) {
                 this._volverALista();
             }
-        });
-    }
-
-    _redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión no válida',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
 
