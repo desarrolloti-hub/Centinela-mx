@@ -99,7 +99,49 @@ class NavbarComplete {
             this._renderizarNotificaciones();
 
         } catch (error) {
-            console.error('Error cargando notificaciones:', error);
+            // Error silencioso
+        }
+    }
+
+    async _marcarTodasLeidas() {
+        if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
+            return;
+        }
+
+        try {
+            await this.notificacionManager.marcarTodasComoLeidas(
+                this.currentUser.id,
+                this.currentUser.organizacionCamelCase
+            );
+            
+            this.notificacionesNoLeidas = 0;
+            this.notificaciones.forEach(n => n.leida = true);
+            this._actualizarBadgeNotificaciones();
+            this._renderizarNotificaciones();
+            
+        } catch (error) {
+            // Error silencioso
+        }
+    }
+
+    async _limpiarNotificacionesUsuario() {
+        if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
+            return;
+        }
+
+        try {
+            await this.notificacionManager.limpiarNotificacionesUsuario(
+                this.currentUser.id,
+                this.currentUser.organizacionCamelCase
+            );
+            
+            this.notificaciones = [];
+            this.notificacionesNoLeidas = 0;
+            this._actualizarBadgeNotificaciones();
+            this._renderizarNotificaciones();
+            
+        } catch (error) {
+            // Error silencioso
         }
     }
 
