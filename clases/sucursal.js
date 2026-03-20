@@ -1,4 +1,4 @@
-// sucursal.js - VERSIÓN COMPLETA CON HISTORIAL DE ACTIVIDADES
+// sucursal.js - VERSIÓN COMPLETA CON HISTORIAL DE ACTIVIDADES Y REGISTRO DE CONSUMO FIREBASE
 
 import { 
     collection, 
@@ -15,6 +15,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
+
+// [MODIFICACIÓN 1]: Importar la instancia de consumo
+import consumo from '/clases/consumoFirebase.js';
 
 let regionManagerInstance = null;
 
@@ -300,6 +303,9 @@ class SucursalManager {
             const organizacion = usuarioActual.organizacionCamelCase;
             const collectionName = this._getCollectionName(organizacion);
 
+            // [MODIFICACIÓN 2]: Registrar LECTURA antes de verificar existencia
+            await consumo.registrarFirestoreLectura(collectionName, 'verificar nombre');
+
             const existe = await this.verificarSucursalExistente(sucursalData.nombre, organizacion);
             if (existe) {
                 throw new Error('Ya existe una sucursal con ese nombre');
@@ -336,6 +342,9 @@ class SucursalManager {
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp()
             };
+
+            // [MODIFICACIÓN 3]: Registrar ESCRITURA antes de addDoc
+            await consumo.registrarFirestoreEscritura(collectionName, 'nueva sucursal');
 
             const docRef = await addDoc(sucursalesCollection, sucursalFirestoreData);
 
@@ -393,6 +402,9 @@ class SucursalManager {
                 orderBy("fechaCreacion", "desc")
             );
 
+            // [MODIFICACIÓN 4]: Registrar LECTURA antes de getDocs
+            await consumo.registrarFirestoreLectura(collectionName, 'lista sucursales');
+
             const snapshot = await getDocs(sucursalesQuery);
             const sucursales = [];
 
@@ -441,6 +453,10 @@ class SucursalManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const sucursalRef = doc(db, collectionName, sucursalId);
+
+            // [MODIFICACIÓN 5]: Registrar LECTURA antes de getDoc
+            await consumo.registrarFirestoreLectura(collectionName, sucursalId);
+
             const sucursalSnap = await getDoc(sucursalRef);
 
             if (sucursalSnap.exists()) {
@@ -474,6 +490,10 @@ class SucursalManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const sucursalRef = doc(db, collectionName, sucursalId);
+
+            // [MODIFICACIÓN 6]: Registrar LECTURA antes de getDoc
+            await consumo.registrarFirestoreLectura(collectionName, sucursalId);
+
             const sucursalSnap = await getDoc(sucursalRef);
 
             if (!sucursalSnap.exists()) {
@@ -483,6 +503,9 @@ class SucursalManager {
             const datosActuales = sucursalSnap.data();
 
             if (nuevosDatos.nombre && nuevosDatos.nombre !== datosActuales.nombre) {
+                // [MODIFICACIÓN 7]: Registrar LECTURA para verificar nombre
+                await consumo.registrarFirestoreLectura(collectionName, 'verificar nombre');
+
                 const existe = await this.verificarSucursalExistente(
                     nuevosDatos.nombre, 
                     organizacionCamelCase,
@@ -524,6 +547,9 @@ class SucursalManager {
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId
             };
+
+            // [MODIFICACIÓN 8]: Registrar ACTUALIZACIÓN antes de updateDoc
+            await consumo.registrarFirestoreActualizacion(collectionName, sucursalId);
 
             await updateDoc(sucursalRef, datosActualizados);
 
@@ -597,6 +623,9 @@ class SucursalManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const sucursalRef = doc(db, collectionName, sucursalId);
 
+            // [MODIFICACIÓN 9]: Registrar ELIMINACIÓN antes de deleteDoc
+            await consumo.registrarFirestoreEliminacion(collectionName, sucursalId);
+
             await deleteDoc(sucursalRef);
 
             this.cache.delete(sucursalId);
@@ -645,6 +674,9 @@ class SucursalManager {
                 where("nombre", "==", nombre)
             );
             
+            // [MODIFICACIÓN 10]: Registrar LECTURA antes de getDocs
+            await consumo.registrarFirestoreLectura(collectionName, 'verificar nombre');
+
             const snapshot = await getDocs(q);
             
             if (snapshot.empty) return false;
@@ -676,6 +708,9 @@ class SucursalManager {
                 where("regionId", "==", regionId)
             );
             
+            // [MODIFICACIÓN 11]: Registrar LECTURA antes de getDocs
+            await consumo.registrarFirestoreLectura(collectionName, 'sucursales por región');
+
             const snapshot = await getDocs(q);
             const sucursales = [];
 
