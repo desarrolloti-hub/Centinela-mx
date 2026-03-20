@@ -13,6 +13,7 @@ class NavbarComplete {
         this.notificacionesNoLeidas = 0;
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
+        this.intervalNotificaciones = null;
         this.init();
     }
 
@@ -64,22 +65,16 @@ class NavbarComplete {
         }
 
         try {
-            console.log('🔍 Cargando notificaciones para admin:', this.currentAdmin.id);
-
-            // Los admins ven TODAS las notificaciones de su organización
-            this.notificaciones = await this.notificacionManager.obtenerNotificaciones(
+            const todasNotificaciones = await this.notificacionManager.obtenerNotificaciones(
                 this.currentAdmin.id,
                 this.currentAdmin.organizacionCamelCase,
-                true, // solo no leídas para el badge
-                10
+                false,
+                20
             );
 
-            this.notificacionesNoLeidas = await this.notificacionManager.obtenerConteoNoLeidas(
-                this.currentAdmin.id,
-                this.currentAdmin.organizacionCamelCase
-            );
-
-            console.log(`📬 Notificaciones admin: ${this.notificaciones.length} (${this.notificacionesNoLeidas} no leídas)`);
+            // Los admins ven TODAS las notificaciones de su organización
+            this.notificaciones = todasNotificaciones;
+            this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
 
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
@@ -94,7 +89,11 @@ class NavbarComplete {
             return;
         }
 
-        setInterval(() => {
+        if (this.intervalNotificaciones) {
+            clearInterval(this.intervalNotificaciones);
+        }
+
+        this.intervalNotificaciones = setInterval(() => {
             this._cargarNotificaciones();
         }, 30000);
     }
@@ -127,20 +126,31 @@ class NavbarComplete {
 
         let html = '';
         this.notificaciones.slice(0, 5).forEach(notif => {
-            const notifUI = notif.toUI();
+            const notifUI = notif.toUI ? notif.toUI() : {
+                titulo: notif.titulo,
+                mensaje: notif.mensaje,
+                icono: notif.getIcono ? notif.getIcono() : 'fa-bell',
+                color: notif.getColor ? notif.getColor() : '#007bff',
+                sucursalNombre: notif.sucursalNombre,
+                nivelRiesgo: notif.nivelRiesgo,
+                tiempoRelativo: notif.getTiempoRelativo ? notif.getTiempoRelativo() : '',
+                urlDestino: notif.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
+                leida: notif.leida || false
+            };
+
             html += `
                 <div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
                     <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
                         <i class="fas ${notifUI.icono}"></i>
                     </div>
                     <div class="notificacion-contenido">
-                        <div class="notificacion-titulo">${notifUI.titulo}</div>
-                        <div class="notificacion-mensaje">${notifUI.mensaje}</div>
+                        <div class="notificacion-titulo">${this._escapeHTML(notifUI.titulo)}</div>
+                        <div class="notificacion-mensaje">${this._escapeHTML(notifUI.mensaje)}</div>
                         <div class="notificacion-detalles">
-                            ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${notifUI.sucursalNombre}</span>` : ''}
+                            ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${this._escapeHTML(notifUI.sucursalNombre)}</span>` : ''}
                             ${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}
                         </div>
-                        <div class="notificacion-tiempo">${notifUI.tiempoRelativo}</div>
+                        <div class="notificacion-tiempo">${this._escapeHTML(notifUI.tiempoRelativo)}</div>
                     </div>
                     <div class="notificacion-estado ${notifUI.leida ? 'leida' : 'no-leida'}"></div>
                 </div>
@@ -150,7 +160,7 @@ class NavbarComplete {
         if (this.notificaciones.length > 5) {
             html += `
                 <div class="notificaciones-ver-mas">
-                    <a href="/usuarios/administrador/notificaciones/notificaciones.html">Ver ${this.notificaciones.length - 5} más</a>
+                    <a href="#" class="ver-todas-notificaciones">Ver ${this.notificaciones.length - 5} más</a>
                 </div>
             `;
         }
@@ -159,18 +169,30 @@ class NavbarComplete {
 
         container.querySelectorAll('.notificacion-item').forEach(item => {
             item.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const id = item.dataset.id;
                 const url = item.dataset.url;
                 
-                if (this.notificacionManager) {
+                if (this.notificacionManager && id) {
                     await this.notificacionManager.marcarComoLeida(
                         this.currentAdmin.id,
                         id,
                         this.currentAdmin.organizacionCamelCase
                     );
                     
-                    this.notificacionesNoLeidas = Math.max(0, this.notificacionesNoLeidas - 1);
+                    const notifIndex = this.notificaciones.findIndex(n => n.id === id);
+                    if (notifIndex !== -1) {
+                        this.notificaciones[notifIndex].leida = true;
+                    }
+                    
+                    this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
                     this._actualizarBadgeNotificaciones();
+                    
+                    const estadoDiv = item.querySelector('.notificacion-estado');
+                    if (estadoDiv) {
+                        estadoDiv.classList.remove('no-leida');
+                        estadoDiv.classList.add('leida');
+                    }
                 }
                 
                 if (url) {
@@ -178,6 +200,111 @@ class NavbarComplete {
                 }
             });
         });
+
+        const verTodasLink = container.querySelector('.ver-todas-notificaciones');
+        if (verTodasLink) {
+            verTodasLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this._mostrarModalNotificaciones();
+            });
+        }
+    }
+
+    _mostrarModalNotificaciones() {
+        if (typeof Swal !== 'undefined') {
+            let notificacionesHtml = '<div style="max-height: 400px; overflow-y: auto;">';
+            
+            this.notificaciones.forEach(notif => {
+                const notifUI = notif.toUI ? notif.toUI() : {
+                    titulo: notif.titulo,
+                    mensaje: notif.mensaje,
+                    icono: notif.getIcono ? notif.getIcono() : 'fa-bell',
+                    color: notif.getColor ? notif.getColor() : '#007bff',
+                    tiempoRelativo: notif.getTiempoRelativo ? notif.getTiempoRelativo() : '',
+                    urlDestino: notif.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
+                    leida: notif.leida || false
+                };
+                
+                notificacionesHtml += `
+                    <div class="notificacion-item-modal" data-id="${notif.id}" data-url="${notifUI.urlDestino}" style="
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 12px;
+                        padding: 12px;
+                        border-bottom: 1px solid #333;
+                        cursor: pointer;
+                        background: ${notifUI.leida ? 'transparent' : 'rgba(0, 207, 255, 0.05)'};
+                    ">
+                        <div class="notificacion-icono" style="width: 40px; height: 40px; border-radius: 50%; background-color: ${notifUI.color}20; color: ${notifUI.color}; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas ${notifUI.icono}"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; margin-bottom: 4px;">${this._escapeHTML(notifUI.titulo)}</div>
+                            <div style="font-size: 13px; color: #aaa; margin-bottom: 4px;">${this._escapeHTML(notifUI.mensaje)}</div>
+                            <div style="font-size: 11px; color: #666;">${this._escapeHTML(notifUI.tiempoRelativo)}</div>
+                        </div>
+                        ${!notifUI.leida ? '<div style="width: 8px; height: 8px; border-radius: 50%; background-color: #007bff;"></div>' : ''}
+                    </div>
+                `;
+            });
+            
+            notificacionesHtml += '</div>';
+            
+            Swal.fire({
+                title: 'Todas las Notificaciones',
+                html: notificacionesHtml,
+                width: '500px',
+                background: '#1a1a1a',
+                color: '#fff',
+                confirmButtonText: 'Cerrar',
+                confirmButtonColor: '#00cfff',
+                didOpen: () => {
+                    document.querySelectorAll('.notificacion-item-modal').forEach(item => {
+                        item.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            const id = item.dataset.id;
+                            const url = item.dataset.url;
+                            
+                            if (this.notificacionManager && id) {
+                                await this.notificacionManager.marcarComoLeida(
+                                    this.currentAdmin.id,
+                                    id,
+                                    this.currentAdmin.organizacionCamelCase
+                                );
+                                
+                                const notifIndex = this.notificaciones.findIndex(n => n.id === id);
+                                if (notifIndex !== -1) {
+                                    this.notificaciones[notifIndex].leida = true;
+                                }
+                                
+                                this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
+                                this._actualizarBadgeNotificaciones();
+                                this._renderizarNotificaciones();
+                            }
+                            
+                            if (url) {
+                                window.location.href = url;
+                            }
+                            
+                            Swal.close();
+                        });
+                    });
+                }
+            });
+        } else {
+            window.location.href = '#';
+        }
+    }
+
+    _escapeHTML(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     async _marcarTodasLeidas() {
@@ -192,7 +319,7 @@ class NavbarComplete {
             );
             
             this.notificacionesNoLeidas = 0;
-            this.notificaciones = [];
+            this.notificaciones.forEach(n => n.leida = true);
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
             
@@ -212,6 +339,10 @@ class NavbarComplete {
             e.stopPropagation();
             this.dropdownNotificacionesAbierto = !this.dropdownNotificacionesAbierto;
             notificacionesDropdown.classList.toggle('active', this.dropdownNotificacionesAbierto);
+            
+            if (this.dropdownNotificacionesAbierto && this.notificacionesNoLeidas > 0) {
+                this._cargarNotificaciones();
+            }
         });
 
         document.addEventListener('click', (e) => {
@@ -648,6 +779,14 @@ class NavbarComplete {
                 visibility: hidden;
                 opacity: 0;
                 overflow-x: hidden;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            .navbar-main-menu::-webkit-scrollbar {
+                display: none;
+                width: 0;
+                background: transparent;
             }
             
             .navbar-main-menu.active {
@@ -772,7 +911,6 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* ===== ESTILOS CORREGIDOS PARA DROPDOWNS ===== */
             .nav-section {
                 padding: 10px 15px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -796,7 +934,6 @@ class NavbarComplete {
                 font-family: 'Orbitron', sans-serif;
             }
             
-            /* Botones principales de dropdown */
             .administracion-dropdown-btn,
             .admin-dropdown-btn {
                 display: flex;
@@ -835,7 +972,6 @@ class NavbarComplete {
                 transform: rotate(180deg);
             }
             
-            /* Contenedor de opciones - SIN LÍMITE DE ALTURA */
             .administracion-dropdown-options,
             .admin-dropdown-options {
                 display: none;
@@ -853,17 +989,15 @@ class NavbarComplete {
             
             .administracion-dropdown-options.active,
             .admin-dropdown-options.active {
-                /* ELIMINA max-height: none */
+                display: flex;
                 opacity: 1;
                 overflow: visible;
                 margin-bottom: 15px;
                 position: static;
-                height: auto; /* AÑADE ESTO */
-                display: flex; /* AÑADE ESTO */
-                flex-direction: column; /* AÑADE ESTO */
+                height: auto;
+                flex-direction: column;
             }
             
-            /* Opciones individuales */
             .administracion-dropdown-option,
             .admin-dropdown-option {
                 display: flex;
@@ -909,7 +1043,6 @@ class NavbarComplete {
                 line-height: 1.4;
             }
             
-            /* Opción especial para cerrar sesión */
             .logout-option {
                 background: linear-gradient(135deg, #ff6b6b, #ff5252);
                 border-color: #ff5252;
@@ -925,7 +1058,6 @@ class NavbarComplete {
                 color: white;
             }
             
-            /* Sección de espacios vacíos */
             .menu-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -944,7 +1076,6 @@ class NavbarComplete {
                 cursor: default;
             }
             
-            /* Sección de opciones al final */
             .admin-options-section {
                 padding: 20px 25px;
                 border-top: 1px solid var(--color-border-light);
@@ -968,6 +1099,33 @@ class NavbarComplete {
             .navbar-mobile-overlay.active {
                 display: block;
                 opacity: 1;
+            }
+            
+            .nav-section {
+                flex-shrink: 0;
+                overflow: visible !important;
+            }
+
+            .administracion-dropdown-options,
+            .admin-dropdown-options {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            .administracion-dropdown-options.active,
+            .admin-dropdown-options.active {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            .navbar-main-menu {
+                overflow-y: auto !important;
+            }
+
+            .navbar-main-menu * {
+                overflow-y: visible !important;
             }
             
             @media (max-width: 992px) {
@@ -1173,56 +1331,6 @@ class NavbarComplete {
                     font-size: 16px;
                 }
             }
-
-            /* FORZAR QUE LOS DROPDOWNS NO TENGAN SCROLL */
-            .nav-section {
-                flex-shrink: 0;
-                overflow: visible !important;
-            }
-
-            .administracion-dropdown-options,
-            .admin-dropdown-options {
-                overflow: visible !important;
-                max-height: none !important;
-                height: auto !important;
-            }
-
-            .administracion-dropdown-options.active,
-            .admin-dropdown-options.active {
-                overflow: visible !important;
-                max-height: none !important;
-                height: auto !important;
-            }
-
-            /* ELIMINAR CUALQUIER SCROLL INTERNO */
-            *::-webkit-scrollbar {
-                width: 8px;
-            }
-
-            .navbar-main-menu::-webkit-scrollbar {
-                width: 8px;
-            }
-
-            /* ASEGURAR QUE SOLO EL MENÚ PRINCIPAL TENGA SCROLL */
-            .navbar-main-menu {
-                overflow-y: auto !important;
-            }
-
-            .navbar-main-menu * {
-                overflow-y: visible !important;
-            }
-
-            /* OCULTAR EL SCROLL VISUALMENTE PERO MANTENER LA FUNCIONALIDAD */
-            .navbar-main-menu {
-                scrollbar-width: none; /* Para Firefox */
-                -ms-overflow-style: none; /* Para IE y Edge */
-            }
-
-            .navbar-main-menu::-webkit-scrollbar {
-                display: none; /* Para Chrome, Safari y Opera */
-                width: 0;
-                background: transparent;
-}
         `;
 
         const styleElement = document.createElement('style');
@@ -1276,7 +1384,7 @@ class NavbarComplete {
                                 </div>
                             </div>
                             <div class="notificaciones-footer">
-                                <a href="/usuarios/administrador/notificaciones/notificaciones.html">Ver todas</a>
+                                <a href="#" class="ver-todas-notificaciones-footer">Ver todas</a>
                             </div>
                         </div>
                     </div>
@@ -1351,6 +1459,18 @@ class NavbarComplete {
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Usuarios</span>
                         </a>
+                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-chart-bar"></i>
+                            <span>Estadísticas</span>
+                        </a>
+                        <a href="/usuarios/administrador/mapaAlertas/mapaAlertas.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-map"></i>
+                            <span>Mapa de Alertas</span>
+                        </a>
+                        <a href="/usuarios/administrador/tareas/tareas.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-tasks"></i>
+                            <span>Tareas</span>
+                        </a>
                     </div>
                 </div>
 
@@ -1369,6 +1489,11 @@ class NavbarComplete {
                         <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-plus-circle"></i>
                             <span>Crear Incidencia</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/incidenciasCanalizadas/incidenciasCanalizadas.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-list"></i>
+                            <span>Incidencias Canalizadas</span>
                         </a>
                     </div>
                 </div>
@@ -1697,6 +1822,15 @@ class NavbarComplete {
         this.loadOrbitronFont();
         this.setupLogout();
         this._configurarNotificacionesDropdown();
+        
+        const verTodasFooter = document.querySelector('.ver-todas-notificaciones-footer');
+        if (verTodasFooter) {
+            verTodasFooter.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this._mostrarModalNotificaciones();
+            });
+        }
     }
 
     setupMenu() {
@@ -1766,7 +1900,6 @@ class NavbarComplete {
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
             if (this.isIncidenciasDropdownOpen) {
                 this.toggleIncidenciasDropdown(false);
             }
@@ -1814,7 +1947,6 @@ class NavbarComplete {
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
             if (this.isAdministracionDropdownOpen) {
                 this.toggleAdministracionDropdown(false);
             }
@@ -1862,7 +1994,6 @@ class NavbarComplete {
         if (!dropdownBtn || !dropdownOptions) return;
 
         const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
             if (this.isAdministracionDropdownOpen) {
                 this.toggleAdministracionDropdown(false);
             }
@@ -1933,6 +2064,11 @@ class NavbarComplete {
 
     async performLogout() {
         try {
+            if (this.intervalNotificaciones) {
+                clearInterval(this.intervalNotificaciones);
+                this.intervalNotificaciones = null;
+            }
+
             if (this.userManager && typeof this.userManager.logout === 'function') {
                 await this.userManager.logout();
             } else {

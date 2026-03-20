@@ -136,7 +136,7 @@ class NotificacionArea {
             leida: this.leida,
             fechaLectura: this.fechaLectura,
             remitenteNombre: this.remitenteNombre,
-            urlDestino: this.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${this.incidenciaId}`,
+            urlDestino: this.urlDestino || `../verIncidencias/verIncidencias.html?id=${this.incidenciaId}`,
             prioridad: this.prioridad,
             detalles: this.detalles
         };
@@ -441,7 +441,7 @@ class NotificacionAreaManager {
                 mensaje = this._generarMensaje(tipo, areas, incidenciaTitulo, sucursalNombre);
             }
 
-            const urlDestino = `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
+            const urlDestino = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
             const notificacionId = this._generarNotificacionId();
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
