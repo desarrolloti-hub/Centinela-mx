@@ -1,4 +1,5 @@
 // incidencia.js - SOLO LA CLASE, SIN LÓGICA DE GENERACIÓN DE PDF
+// VERSIÓN COMPLETA CON REGISTRO DE CONSUMO (FIRESTORE + STORAGE)
 
 import {
     collection,
@@ -24,6 +25,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js";
 
 import { db, storage } from '/config/firebase-config.js';
+// [MODIFICACIÓN]: Importar la instancia de consumo
+import consumo from '/clases/consumoFirebase.js';
 
 class Incidencia {
     constructor(id, data) {
@@ -462,6 +465,10 @@ class IncidenciaManager {
                         },
                         async () => {
                             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            
+                            // [NUEVO]: Registrar subida en Storage
+                            await consumo.registrarStorageSubida(rutaCompleta, file.name);
+                            
                             resolve({
                                 url: downloadURL,
                                 path: rutaCompleta,
@@ -475,6 +482,10 @@ class IncidenciaManager {
             } else {
                 const snapshot = await uploadBytes(storageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
+                
+                // [NUEVO]: Registrar subida en Storage
+                await consumo.registrarStorageSubida(rutaCompleta, file.name);
+                
                 return {
                     url: downloadURL,
                     path: rutaCompleta,
@@ -493,6 +504,10 @@ class IncidenciaManager {
         try {
             const storageRef = ref(storage, urlODirectorio);
             await deleteObject(storageRef);
+            
+            // [NUEVO]: Registrar eliminación en Storage
+            await consumo.registrarStorageEliminacion(urlODirectorio);
+            
             return true;
         } catch (error) {
             console.error('Error eliminando archivo:', error);
@@ -515,6 +530,10 @@ class IncidenciaManager {
             });
 
             await Promise.all(deletePromises);
+            
+            // [NUEVO]: Registrar eliminación de carpeta en Storage
+            await consumo.registrarStorageEliminacion(rutaCarpeta);
+            
             return true;
         } catch (error) {
             console.error('Error eliminando carpeta:', error);
@@ -526,7 +545,7 @@ class IncidenciaManager {
     }
 
     // =============================================
-    // MÉTODO MODIFICADO PARA CREAR INCIDENCIA CON CANALIZACIONES
+    // MÉTODO MODIFICADO PARA CREAR INCIDENCIA CON CANALIZACIONES Y REGISTRO DE CONSUMO
     // =============================================
     async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
@@ -621,6 +640,8 @@ class IncidenciaManager {
                 fechaActualizacion: serverTimestamp()
             };
 
+            // [MODIFICACIÓN]: Registrar ESCRITURA antes de setDoc
+            await consumo.registrarFirestoreEscritura(collectionName, incidenciaId);
             await setDoc(incidenciaRef, incidenciaData);
 
             const nuevaIncidencia = new Incidencia(incidenciaId, {
@@ -673,6 +694,9 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
+            
+            // [MODIFICACIÓN]: Registrar LECTURA antes de getDoc
+            await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
 
             if (incidenciaSnap.exists()) {
@@ -712,6 +736,9 @@ class IncidenciaManager {
             }
 
             const incidenciasQuery = query(incidenciasCollection, ...constraints);
+            
+            // [MODIFICACIÓN]: Registrar LECTURA antes de getDocs
+            await consumo.registrarFirestoreLectura(collectionName, 'lista incidencias');
             const snapshot = await getDocs(incidenciasQuery);
 
             const incidencias = [];
@@ -773,6 +800,9 @@ class IncidenciaManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
+            
+            // [MODIFICACIÓN]: Registrar LECTURA antes de getDoc
+            await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
 
             if (!incidenciaSnap.exists()) {
@@ -791,6 +821,8 @@ class IncidenciaManager {
             delete datosActualizados.organizacionCamelCase;
             delete datosActualizados.fechaCreacion;
 
+            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN antes de updateDoc
+            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
             await updateDoc(incidenciaRef, datosActualizados);
 
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
@@ -885,6 +917,8 @@ class IncidenciaManager {
                 [seguimientoId]: nuevoSeguimiento
             };
 
+            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN antes de updateDoc
+            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
             await updateDoc(incidenciaRef, {
                 seguimiento: seguimientoActualizado,
                 fechaActualizacion: serverTimestamp(),
@@ -941,6 +975,8 @@ class IncidenciaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
 
+            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN antes de updateDoc
+            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
             await updateDoc(incidenciaRef, {
                 estado: 'finalizada',
                 fechaFinalizacion: serverTimestamp(),
@@ -999,6 +1035,9 @@ class IncidenciaManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
+            
+            // [MODIFICACIÓN]: Registrar ELIMINACIÓN antes de deleteDoc
+            await consumo.registrarFirestoreEliminacion(collectionName, incidenciaId);
             await deleteDoc(incidenciaRef);
 
             const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
@@ -1044,6 +1083,10 @@ class IncidenciaManager {
 
     async getEstadisticas(organizacionCamelCase) {
         try {
+            // [MODIFICACIÓN]: Registrar LECTURA para estadísticas
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            await consumo.registrarFirestoreLectura(collectionName, 'estadísticas');
+            
             const incidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase);
 
             // Contar incidencias canalizadas
@@ -1078,6 +1121,9 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
+            
+            // [MODIFICACIÓN]: Registrar LECTURA para verificar existencia
+            await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
             return incidenciaSnap.exists();
         } catch (error) {

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas de Operaciones - Sistema Centinela</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="./operaciones.css">
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS para exportar a Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+
+    <!-- SEO -->
+    <meta name="description" content="Estadísticas de operaciones Firestore y Storage - Sistema Centinela">
+    <meta name="author" content="Centinela-MX">
+    <link rel="canonical" href="https://centinela-mx.web.app/operacionesEstadisticas.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://centinela-mx.web.app">
+    <meta property="og:title" content="Centinela-MX | Estadísticas de Operaciones">
+    <meta property="og:description" content="Monitoreo de uso de Firestore y Storage por organización">
+    <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+</head>
+
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="admin-container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-chart-pie"></i>
+                Estadísticas de Operaciones
+            </h1>
+            <div class="header-description">
+                Monitoreo en tiempo real del uso de Firestore y Storage por organización.
+                Visualiza documentos, archivos y métricas de almacenamiento.
+            </div>
+        </div>
+
+        <!-- Selector de Empresa -->
+        <div class="empresa-selector-container">
+            <div class="empresa-label">
+                <i class="fas fa-building"></i>
+                Organización:
+            </div>
+            <select id="selectorEmpresa" class="empresa-select">
+                <option value="global">🌐 Todas las organizaciones (Global)</option>
+            </select>
+            <div class="empresa-badge" id="empresaSeleccionada">
+                <i class="fas fa-check-circle"></i>
+                <span>Global</span>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filtros-container">
+            <div class="filtros-header">
+                <h5><i class="fas fa-sliders-h"></i> Controles:</h5>
+            </div>
+            <div class="filtros-body">
+                <div class="filtro-grupo">
+                    <label for="filtroTipoArchivo">Tipo de archivo</label>
+                    <select id="filtroTipoArchivo" class="filtro-select">
+                        <option value="todos">Todos los tipos</option>
+                        <option value="pdf">PDF</option>
+                        <option value="imagen">Imágenes</option>
+                        <option value="documento">Documentos</option>
+                        <option value="multimedia">Multimedia</option>
+                        <option value="otros">Otros</option>
+                    </select>
+                </div>
+                <div class="filtro-grupo">
+                    <label for="filtroColeccion">Colección</label>
+                    <select id="filtroColeccion" class="filtro-select">
+                        <option value="todas">Todas las colecciones</option>
+                        <option value="usuarios">Usuarios</option>
+                        <option value="areas">Áreas</option>
+                        <option value="regiones">Regiones</option>
+                        <option value="sucursales">Sucursales</option>
+                        <option value="incidencias">Incidencias</option>
+                        <option value="categorias">Categorías</option>
+                    </select>
+                </div>
+                <div class="filtro-grupo">
+                    <label for="filtroFecha">Última actualización</label>
+                    <input type="date" id="filtroFecha" class="filtro-input">
+                </div>
+                <div class="filtro-acciones">
+                    <button class="btn-actualizar" id="btnActualizar">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </button>
+                    <button class="btn-limpiar" id="btnLimpiar">
+                        <i class="fas fa-broom"></i> Limpiar
+                    </button>
+                    <button class="btn-excel" id="btnExportarExcel">
+                        <i class="fas fa-file-excel"></i> Exportar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas principales de Firestore -->
+        <div class="metrics-grid">
+            <div class="metric-card firestore">
+                <div class="metric-title">
+                    <i class="fas fa-database"></i>
+                    Colecciones
+                </div>
+                <div class="metric-value" id="metricColecciones">0</div>
+                <div class="metric-subtitle">
+                    <i class="fas fa-layer-group"></i>
+                    <span id="metricColeccionesDetalle">Activas</span>
+                </div>
+                <i class="fas fa-server metric-icon"></i>
+            </div>
+
+            <div class="metric-card firestore">
+                <div class="metric-title">
+                    <i class="fas fa-file-alt"></i>
+                    Documentos
+                </div>
+                <div class="metric-value" id="metricDocumentos">0</div>
+                <div class="metric-subtitle">
+                    <i class="fas fa-users"></i>
+                    <span id="metricDocumentosDetalle">Total en Firestore</span>
+                </div>
+                <i class="fas fa-copy metric-icon"></i>
+            </div>
+
+            <div class="metric-card total">
+                <div class="metric-title">
+                    <i class="fas fa-user-tie"></i>
+                    Administradores
+                </div>
+                <div class="metric-value" id="metricAdministradores">0</div>
+                <div class="metric-subtitle">
+                    <i class="fas fa-user"></i>
+                    <span id="metricEmpleados">0 empleados</span>
+                </div>
+                <i class="fas fa-user-shield metric-icon"></i>
+            </div>
+
+            <div class="metric-card total">
+                <div class="metric-title">
+                    <i class="fas fa-building"></i>
+                    Áreas
+                </div>
+                <div class="metric-value" id="metricAreas">0</div>
+                <div class="metric-subtitle">
+                    <i class="fas fa-tag"></i>
+                    <span id="metricRoles">0 cargos</span>
+                </div>
+                <i class="fas fa-sitemap metric-icon"></i>
+            </div>
+        </div>
+
+        <!-- Métricas de Storage -->
+        <div class="storage-metrics-grid">
+            <div class="metric-card storage">
+                <div class="metric-title">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    Archivos Totales
+                </div>
+                <div class="metric-value" id="metricArchivosTotales">0</div>
+                <div class="metric-subtitle" id="metricTamanioTotal">0 MB</div>
+                <i class="fas fa-cloud metric-icon"></i>
+            </div>
+
+            <div class="metric-card pdf">
+                <div class="metric-title">
+                    <i class="fas fa-file-pdf"></i>
+                    PDF
+                </div>
+                <div class="metric-value" id="metricPDF">0</div>
+                <div class="metric-subtitle">
+                    <i class="fas fa-percent"></i>
+                    <span id="metricPDFPorcentaje">0%</span>
+                </div>
+                <i class="fas fa-file-pdf metric-icon"></i>
+            </div>
+
+            <div class="metric-card imagen">
+                <div class="metric-title">
+                    <i class="fas fa-image"></i>
+                    Imágenes
+                </div>
+                <div class="metric-value" id="metricImagenes">0</div>
+                <div class="metric-subtitle">
+                    <i class="fas fa-percent"></i>
+                    <span id="metricImagenesPorcentaje">0%</span>
+                </div>
+                <i class="fas fa-image metric-icon"></i>
+            </div>
+
+            <div class="metric-card storage">
+                <div class="metric-title">
+                    <i class="fas fa-file-word"></i>
+                    Documentos
+                </div>
+                <div class="metric-value" id="metricDocumentosStorage">0</div>
+                <div class="metric-subtitle">
+                    <i class="fas fa-percent"></i>
+                    <span id="metricDocumentosPorcentaje">0%</span>
+                </div>
+                <i class="fas fa-file-alt metric-icon"></i>
+            </div>
+
+            <div class="metric-card storage">
+                <div class="metric-title">
+                    <i class="fas fa-film"></i>
+                    Multimedia
+                </div>
+                <div class="metric-value" id="metricMultimedia">0</div>
+                <div class="metric-subtitle">
+                    <i class="fas fa-percent"></i>
+                    <span id="metricMultimediaPorcentaje">0%</span>
+                </div>
+                <i class="fas fa-video metric-icon"></i>
+            </div>
+        </div>
+
+        <!-- Gráficas de distribución -->
+        <div class="charts-grid-2col">
+            <!-- Gráfica 1: Distribución por tipo de archivo -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-pie"></i> Distribución por Tipo de Archivo</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoTiposArchivo" style="width: 100%; height: 250px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfica 2: Distribución Firestore -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> Distribución Firestore</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoFirestore" style="width: 100%; height: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfica 3: Archivos por carpeta -->
+        <div class="charts-grid-1col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-folder-tree"></i> Archivos por Carpeta</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoCarpetas" style="width: 100%; height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tablas de datos -->
+        <div class="tables-grid-2col">
+            <!-- Tabla de estadísticas por empresa -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-building"></i> Estadísticas por Organización</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Organización</th>
+                                    <th>Documentos</th>
+                                    <th>Archivos</th>
+                                    <th>Tamaño</th>
+                                    <th>PDF</th>
+                                    <th>Imágenes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaOrganizacionesBody">
+                                <tr>
+                                    <td colspan="6" style="text-align:center;">Cargando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de distribución por carpeta -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-folder"></i> Distribución por Carpeta</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Carpeta</th>
+                                    <th>Archivos</th>
+                                    <th>Porcentaje</th>
+                                    <th>Progreso</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaCarpetasBody">
+                                <tr>
+                                    <td colspan="4" style="text-align:center;">Cargando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Última actualización -->
+        <div class="footer-datetime">
+            <div>
+                <i class="fas fa-sync-alt"></i>
+                Última actualización: <span id="fechaActualizacion">-</span>
+            </div>
+            <div id="modoVisualizacion">
+                <i class="fas fa-globe"></i>
+                <span>Vista: Global</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="/components/cargadorTemas.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script type="module" src="./operaciones.js"></script>
+</body>
+
+</html>

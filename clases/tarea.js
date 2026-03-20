@@ -665,8 +665,8 @@ class TareaManager {
             const tarea = await this.getTareaById(tareaId, organizacionCamelCase);
             if (!tarea) throw new Error('Tarea no encontrada');
 
-            // Verificar permisos
-            if (!tarea.puedeEditar(UsuarioActual.id, usuarioActual.esAdmin)) {
+            // Verificar permisos - CORREGIDO: usuarioActual en minúscula
+            if (!tarea.puedeEditar(usuarioActual.id, usuarioActual.esAdmin)) {
                 throw new Error('No tienes permiso para eliminar esta tarea');
             }
 

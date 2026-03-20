@@ -263,15 +263,43 @@ class UserManager {
         }
     }
 
-    // ========== MÉTODO LOADCURRENTUSER ==========
+    // ========== MÉTODO LOADCURRENTUSER (CON MASTER/SYSADMIN) ==========
     async loadCurrentUser(userId) {
         try {
+            // 1. Buscar primero si es MASTER (Administrador del Sistema)
+            const masterRef = doc(db, "administradoresSistema", userId);
+            const masterSnap = await getDoc(masterRef);
+
+            if (masterSnap.exists()) {
+                const data = masterSnap.data();
+                const user = new User(userId, {
+                    ...data,
+                    idAuth: userId,
+                    rol: 'master', // Forzamos el rol a master
+                    cargo: data.cargo || null,
+                    cargoId: data.cargoId || null,
+                    fotoUsuario: data.fotoUsuario || null,
+                    // Los masters no pertenecen a una organización específica
+                    organizacion: 'Sistema',
+                    organizacionCamelCase: 'sistema',
+                    // Datos de verificación (por defecto true para masters)
+                    verificado: true,
+                    emailVerified: auth.currentUser?.emailVerified || false,
+                });
+
+                this.currentUser = user;
+                this.users.push(user);
+                console.log("✅ Usuario Master cargado:", user.correoElectronico);
+                return user;
+            }
+
+            // 2. Si no es Master, buscar como ADMINISTRADOR (dueño de organización)
             const adminRef = doc(db, "administradores", userId);
             const adminSnap = await getDoc(adminRef);
 
             if (adminSnap.exists()) {
                 const data = adminSnap.data();
-
+                // ... (resto de tu lógica actual para administradores) ...
                 const user = new User(userId, {
                     ...data,
                     idAuth: userId,
@@ -289,10 +317,10 @@ class UserManager {
 
                 this.users.push(user);
                 this.currentUser = user;
-
                 return user;
             }
 
+            // 3. Si no es Master ni Admin, buscar como COLABORADOR
             const todasLasOrganizaciones = await this.getTodasLasOrganizaciones();
 
             for (const organizacion of todasLasOrganizaciones) {
@@ -333,7 +361,6 @@ class UserManager {
 
                     this.currentUser = user;
                     this.users.push(user);
-
                     return user;
                 }
             }
@@ -341,7 +368,7 @@ class UserManager {
             return null;
 
         } catch (error) {
-            console.error("Error cargando usuario actual:", error);
+            console.error("❌ Error cargando usuario actual:", error);
             throw error;
         }
     }
@@ -445,6 +472,106 @@ class UserManager {
             throw error;
         }
     }
+   /**
+ * Crea un nuevo Administrador del Sistema (MASTER)
+ * @param {Object} masterData - Datos del master { nombreCompleto, correoElectronico, fotoUsuario (opcional) }
+ * @param {string} password - Contraseña
+ * @returns {Promise<Object>} - Resultado de la creación
+ */
+async createMaster(masterData, password) {
+    try {
+        // 1. Verificar si el correo ya existe en algún lado (sistema, admin o colaborador)
+        const emailExists = await this.verificarCorreoExistente(masterData.correoElectronico, 'todos');
+        if (emailExists) {
+            throw new Error('El correo electrónico ya está registrado en el sistema.');
+        }
+
+        // 2. Crear usuario en Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            masterData.correoElectronico,
+            password
+        );
+        const uid = userCredential.user.uid;
+
+        // 3. Enviar verificación de email
+        try {
+            await sendEmailVerification(userCredential.user, {
+                url: window.location.origin + '/verifyEmail.html',
+                handleCodeInApp: true
+            });
+        } catch (emailError) {
+            console.warn('⚠️ Error enviando verificación de email al master:', emailError);
+        }
+
+        // 4. Actualizar perfil con el nombre y la foto (si se proporcionó)
+        const profileUpdates = {
+            displayName: masterData.nombreCompleto
+        };
+        
+        // Si hay foto en base64, actualizamos la foto de perfil en Auth
+        if (masterData.fotoUsuario && masterData.fotoUsuario.startsWith('data:image')) {
+            // Nota: updateProfile no soporta imágenes base64 directamente para photoURL
+            // La foto se guardará en Firestore, no en Auth
+            console.log('📸 Se guardará foto en Firestore');
+        }
+        
+        await updateProfile(userCredential.user, profileUpdates);
+
+        // 5. Guardar en Firestore (Colección "administradoresSistema")
+        const masterRef = doc(db, "administradoresSistema", uid);
+        const masterFirestoreData = {
+            nombreCompleto: masterData.nombreCompleto,
+            correoElectronico: masterData.correoElectronico,
+            idAuth: uid,
+            fotoUsuario: masterData.fotoUsuario || null, // Guardamos la imagen en base64
+            fechaCreacion: serverTimestamp(),
+            fechaActualizacion: serverTimestamp(),
+            ultimoLogin: null,
+            creadoPor: this.currentUser?.id || 'sistema'
+        };
+
+        await setDoc(masterRef, masterFirestoreData);
+
+        // 6. Crear instancia local del usuario Master
+        const newMaster = new User(uid, {
+            ...masterFirestoreData,
+            rol: 'master',
+            organizacion: 'Sistema',
+            organizacionCamelCase: 'sistema',
+            fechaCreacion: new Date(),
+            fechaActualizacion: new Date(),
+            verificado: false,
+            emailVerified: false
+        });
+        
+        this.users.unshift(newMaster);
+
+        // 7. Cerrar sesión del usuario actual (si existe) para no mezclar cuentas
+        await signOut(auth);
+
+        console.log("✅ Administrador del Sistema (Master) creado exitosamente:", uid);
+        return {
+            id: uid,
+            user: newMaster,
+            credential: userCredential,
+            emailVerificationSent: true
+        };
+
+    } catch (error) {
+        console.error("❌ Error creando Administrador del Sistema (Master):", error);
+
+        // Limpiar usuario de Auth si falló algo en Firestore
+        if (auth.currentUser) {
+            try {
+                await auth.currentUser.delete();
+            } catch (deleteError) {
+                console.warn("No se pudo eliminar el usuario de Auth tras error:", deleteError);
+            }
+        }
+        throw error;
+    }
+}
 
     async createColaborador(colaboradorData, password, idAdministrador) {
         const adminEmail = auth.currentUser?.email;
@@ -1251,8 +1378,13 @@ class UserManager {
 
                 throw new Error('Tu email no está verificado. Se ha reenviado el correo de verificación.');
             }
-
-            if (user.esAdministrador()) {
+            // Actualizar último login según el tipo de usuario
+            if (user.esMaster()) {
+                await updateDoc(doc(db, "administradoresSistema", uid), {
+                    ultimoLogin: serverTimestamp(),
+                    fechaActualizacion: serverTimestamp()
+                });
+            }else if (user.esAdministrador()) {
                 await updateDoc(doc(db, "administradores", uid), {
                     ultimoLogin: serverTimestamp(),
                     fechaActualizacion: serverTimestamp(),
@@ -1290,7 +1422,11 @@ class UserManager {
             try {
                 localStorage.setItem('theme', user.theme);
                 localStorage.setItem('user-plan', user.plan);
+                localStorage.setItem('user-rol', user.rol);
                 localStorage.setItem('user-verified', user.verificado.toString());
+                if (!user.esMaster()) {
+                    localStorage.setItem('organizacion', user.organizacion);
+                }
             } catch (e) {
                 console.warn('No se pudo guardar datos en localStorage');
             }
@@ -1419,6 +1555,34 @@ class UserManager {
             return [];
         }
     }
+        /**
+     * Obtiene la lista de Administradores del Sistema (MASTERS)
+     * @returns {Promise<Array<User>>} - Lista de usuarios masters
+     */
+    async getMasters() {
+        try {
+            const mastersSnapshot = await getDocs(collection(db, "administradoresSistema"));
+            const masters = [];
+
+            mastersSnapshot.forEach(doc => {
+                const data = doc.data();
+                masters.push(new User(doc.id, {
+                    ...data,
+                    rol: 'master', // Asignamos el rol explícitamente
+                    organizacion: 'Sistema',
+                    organizacionCamelCase: 'sistema',
+                    cargo: data.cargo || null,
+                    fotoUsuario: data.fotoUsuario || null,
+                }));
+            });
+
+            return masters;
+
+        } catch (error) {
+            console.error("Error obteniendo administradores del sistema (masters):", error);
+            return [];
+        }
+    }
 
     async getUsuariosInactivosPorOrganizacion(organizacionCamelCase) {
         try {
@@ -1465,6 +1629,7 @@ class UserManager {
         }
     }
 
+    // ========== MÉTODO GETUSERBYID (ACTUALIZADO CON MASTER) ==========
     async getUserById(id) {
         const userInMemory = this.users.find(user => user.id === id);
         if (userInMemory) {
@@ -1472,6 +1637,33 @@ class UserManager {
         }
 
         try {
+            // 1. Buscar primero en MASTERS (Administradores del Sistema)
+            const masterRef = doc(db, "administradoresSistema", id);
+            const masterSnap = await getDoc(masterRef);
+
+            if (masterSnap.exists()) {
+                const data = masterSnap.data();
+                const user = new User(id, {
+                    ...data,
+                    idAuth: id,
+                    rol: 'master',
+                    organizacion: 'Sistema',
+                    organizacionCamelCase: 'sistema',
+                    cargo: data.cargo || null,
+                    fotoUsuario: data.fotoUsuario || null,
+                    email: data.correoElectronico || data.email,
+                    // Los masters no necesitan verificación forzosa
+                    verificado: true,
+                    emailVerified: auth.currentUser?.emailVerified || false,
+                    status: true // Los masters siempre están activos
+                });
+
+                this.users.push(user);
+                console.log('✅ Master encontrado:', user.correoElectronico);
+                return user;
+            }
+
+            // 2. Si no es Master, buscar en ADMINISTRADORES
             const adminRef = doc(db, "administradores", id);
             const adminSnap = await getDoc(adminRef);
 
@@ -1497,6 +1689,7 @@ class UserManager {
                 return user;
             }
 
+            // 3. Si no es Master ni Admin, buscar en COLABORADORES
             const organizaciones = await this.getTodasLasOrganizaciones();
 
             for (const org of organizaciones) {
@@ -1541,7 +1734,7 @@ class UserManager {
             return null;
 
         } catch (error) {
-            console.error('Error en getUserById:', error);
+            console.error('❌ Error en getUserById:', error);
             return null;
         }
     }
