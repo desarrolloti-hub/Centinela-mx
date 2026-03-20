@@ -467,7 +467,7 @@ class EditarPermisoController {
     _volverALista() {
         // Limpiar localStorage
         localStorage.removeItem('selectedPermiso');
-        window.location.href = '/usuarios/administrador/permisos/permisos.html';
+        window.location.href = '../permisos/permisos.html';
     }
 
     _cancelarEdicion() {
@@ -482,17 +482,6 @@ class EditarPermisoController {
             if (result.isConfirmed) {
                 this._volverALista();
             }
-        });
-    }
-
-    _redirigirAlLogin() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Sesión no válida',
-            text: 'Debes iniciar sesión para continuar',
-            confirmButtonText: 'Ir al login'
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         });
     }
 
