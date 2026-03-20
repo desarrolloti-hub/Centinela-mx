@@ -1,836 +1,544 @@
-// operaciones.js - Controlador principal para estadísticas de operaciones
+// operaciones.js - Script principal para la vista de estadísticas de operaciones
+// VERSIÓN CORREGIDA CON TODAS LAS IMPORTACIONES
 
-import { OperacionesManager } from '/clases/operacion.js';
-import { auth } from '/config/firebase-config.js';
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+import { operacionesManager } from '/clases/operacion.js';
+import { UserManager } from '/clases/user.js';
+import { db } from '/config/firebase-config.js';
+import {
+    collection,
+    getDocs,
+    getDoc,
+    doc,
+    query,
+    where,
+    orderBy,
+    limit
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
-// =============================================
-// INSTANCIA GLOBAL DEL MANAGER
-// =============================================
-const operacionesManager = new OperacionesManager();
+// Variables globales
+let currentData = null;
+let currentEmpresa = 'global';
+let graficoTiposArchivo = null;
+let graficoFirestore = null;
+let graficoCarpetas = null;
+let userManager = null;
+let usuarioActual = null;
 
-// =============================================
-// ESTADO DE LA APLICACIÓN
-// =============================================
-const estado = {
-    organizacionActual: 'global',
-    estadisticasActuales: null,
-    estadisticasGlobales: null,
-    estadisticasPorOrganizacion: [],
-    filtros: {
-        tipoArchivo: 'todos',
-        coleccion: 'todas',
-        fecha: null
-    },
-    graficos: {
-        tiposArchivo: null,
-        firestore: null,
-        carpetas: null
-    },
-    usuarioActual: null
-};
+// Formatear bytes a formato legible
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 
-// =============================================
-// DETECCIÓN AUTOMÁTICA DE COLECCIONES
-// =============================================
+// Formatear número con separadores de miles
+function formatNumber(num) {
+    if (num === undefined || num === null) return '0';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 
-/**
- * Detecta automáticamente todas las colecciones en Firestore
- * Esta función intenta descubrir colecciones de varias maneras
- */
-async function detectarColecciones() {
-    console.log('🔍 Detectando colecciones automáticamente...');
+// Actualizar métricas de Firestore
+function actualizarMetricasFirestore(operacion) {
+    const firestore = operacion.conteos.firestore;
+    const auth = operacion.conteos.auth;
+    const coleccionesPersonalizadas = operacion.conteos.coleccionesPersonalizadas || {};
     
-    try {
-        const coleccionesDetectadas = new Set();
-        
-        // Método 1: Intentar obtener colecciones de nivel raíz a través de un documento conocido
-        // En Firestore web, no hay una API directa para listar colecciones raíz,
-        // así que usamos un enfoque basado en documentos conocidos
-        
-        // Lista de colecciones comunes que podrían existir
-        const coleccionesComunes = [
-            'usuarios',
-            'incidencias',
-            'historial',
-            'notificaciones',
-            'configuracion',
-            'logs',
-            'backups',
-            'auditoria'
-        ];
-        
-        // Verificar cada colección común
-        for (const coleccion of coleccionesComunes) {
-            try {
-                const { getDocs, collection, query, limit } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-                const { db } = await import('/config/firebase-config.js');
-                
-                const coleccionRef = collection(db, coleccion);
-                const q = query(coleccionRef, limit(1));
-                const snapshot = await getDocs(q);
-                
-                if (!snapshot.empty || snapshot.size > 0) {
-                    coleccionesDetectadas.add(coleccion);
-                    console.log(`✅ Colección detectada: ${coleccion}`);
-                }
-            } catch (e) {
-                // La colección no existe o no se puede acceder
-            }
+    // Calcular áreas desde coleccionesPersonalizadas
+    let areasCount = 0;
+    let cargosCount = 0;
+    
+    Object.keys(coleccionesPersonalizadas).forEach(key => {
+        if (key.includes('areas_')) {
+            areasCount = coleccionesPersonalizadas[key];
         }
-        
-        // Método 2: Detectar colecciones por organización (prefijos)
-        // Si hay organizaciones, buscar colecciones con sus prefijos
-        if (estado.estadisticasPorOrganizacion.length > 0) {
-            const organizaciones = estado.estadisticasPorOrganizacion.map(org => org.id.replace('_', ''));
-            
-            for (const org of organizaciones) {
-                const coleccionesPorOrg = [
-                    `areas_${org}`,
-                    `roles_${org}`,
-                    `departamentos_${org}`,
-                    `empleados_${org}`,
-                    `proyectos_${org}`
-                ];
-                
-                for (const coleccion of coleccionesPorOrg) {
-                    try {
-                        const { getDocs, collection, query, limit } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-                        const { db } = await import('/config/firebase-config.js');
-                        
-                        const coleccionRef = collection(db, coleccion);
-                        const q = query(coleccionRef, limit(1));
-                        const snapshot = await getDocs(q);
-                        
-                        if (!snapshot.empty || snapshot.size > 0) {
-                            coleccionesDetectadas.add(coleccion);
-                            console.log(`✅ Colección por organización detectada: ${coleccion}`);
+        if (key.includes('cargos') || key.includes('roles')) {
+            cargosCount = coleccionesPersonalizadas[key];
+        }
+    });
+    
+    document.getElementById('metricColecciones').innerText = formatNumber(firestore.colecciones || 0);
+    document.getElementById('metricDocumentos').innerText = formatNumber(firestore.documentos || 0);
+    document.getElementById('metricAdministradores').innerText = formatNumber(auth.administradores || 0);
+    document.getElementById('metricAreas').innerText = formatNumber(areasCount);
+    
+    const empleados = (auth.usuarios || 0);
+    document.getElementById('metricEmpleados').innerHTML = `${formatNumber(empleados)} empleados`;
+    
+    const cargosTotal = cargosCount;
+    document.getElementById('metricRoles').innerHTML = `${formatNumber(cargosTotal)} cargos`;
+}
+
+// Actualizar métricas de Storage
+function actualizarMetricasStorage(operacion) {
+    const storage = operacion.conteos.storage;
+    const totalArchivos = storage.total || 0;
+    const totalSize = storage.totalSize || 0;
+    const pdf = storage.pdf || 0;
+    const imagenes = storage.imagenes || 0;
+    const documentos = storage.documentos || 0;
+    const multimedia = storage.multimedia || 0;
+    const otros = storage.otros || 0;
+    
+    document.getElementById('metricArchivosTotales').innerText = formatNumber(totalArchivos);
+    document.getElementById('metricTamanioTotal').innerHTML = `<i class="fas fa-hdd"></i> ${formatBytes(totalSize)}`;
+    document.getElementById('metricPDF').innerText = formatNumber(pdf);
+    document.getElementById('metricImagenes').innerText = formatNumber(imagenes);
+    document.getElementById('metricDocumentosStorage').innerText = formatNumber(documentos);
+    document.getElementById('metricMultimedia').innerText = formatNumber(multimedia);
+    
+    // Calcular porcentajes
+    if (totalArchivos > 0) {
+        document.getElementById('metricPDFPorcentaje').innerText = `${Math.round((pdf / totalArchivos) * 100)}%`;
+        document.getElementById('metricImagenesPorcentaje').innerText = `${Math.round((imagenes / totalArchivos) * 100)}%`;
+        document.getElementById('metricDocumentosPorcentaje').innerText = `${Math.round((documentos / totalArchivos) * 100)}%`;
+        document.getElementById('metricMultimediaPorcentaje').innerText = `${Math.round((multimedia / totalArchivos) * 100)}%`;
+    }
+}
+
+// Actualizar gráfica de tipos de archivo
+function actualizarGraficoTiposArchivo(operacion) {
+    const storage = operacion.conteos.storage;
+    const ctx = document.getElementById('graficoTiposArchivo').getContext('2d');
+    
+    const datos = {
+        labels: ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'],
+        datasets: [{
+            data: [
+                storage.pdf || 0,
+                storage.imagenes || 0,
+                storage.documentos || 0,
+                storage.multimedia || 0,
+                storage.otros || 0
+            ],
+            backgroundColor: [
+                '#ef4444',
+                '#8b5cf6',
+                '#10b981',
+                '#f59e0b',
+                '#6c757d'
+            ],
+            borderWidth: 0,
+            hoverOffset: 10
+        }]
+    };
+    
+    const config = {
+        type: 'pie',
+        data: datos,
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#ffffff',
+                        font: { family: 'Rajdhani', size: 12 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const porcentaje = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${label}: ${formatNumber(value)} (${porcentaje}%)`;
                         }
-                    } catch (e) {
-                        // La colección no existe
                     }
                 }
             }
         }
-        
-        // Método 3: Usar la API de administración si está disponible (solo en servidor)
-        // En cliente, no podemos listar todas las colecciones directamente
-        
-        // Convertir Set a Array y ordenar
-        const coleccionesArray = Array.from(coleccionesDetectadas).sort();
-        
-        console.log('📚 Colecciones detectadas:', coleccionesArray);
-        
-        // Actualizar el selector de colecciones en la UI
-        actualizarSelectorColecciones(coleccionesArray);
-        
-        return coleccionesArray;
-        
-    } catch (error) {
-        console.error('Error detectando colecciones:', error);
-        return [];
+    };
+    
+    if (graficoTiposArchivo) {
+        graficoTiposArchivo.destroy();
     }
+    graficoTiposArchivo = new Chart(ctx, config);
 }
 
-/**
- * Actualiza el selector de colecciones en la UI
- */
-function actualizarSelectorColecciones(colecciones) {
-    const selector = document.getElementById('filtroColeccion');
-    if (!selector) return;
+// Actualizar gráfica de Firestore
+function actualizarGraficoFirestore(operacion) {
+    const firestore = operacion.conteos.firestore;
+    const auth = operacion.conteos.auth;
+    const coleccionesPersonalizadas = operacion.conteos.coleccionesPersonalizadas || {};
     
-    // Guardar el valor seleccionado actual
-    const valorActual = selector.value;
+    let areasCount = 0;
+    let sucursalesCount = 0;
+    let incidenciasCount = 0;
     
-    // Limpiar opciones existentes (excepto la primera)
-    while (selector.options.length > 1) {
-        selector.remove(1);
-    }
-    
-    // Agregar nuevas opciones
-    colecciones.forEach(coleccion => {
-        const option = document.createElement('option');
-        option.value = coleccion;
-        
-        // Formatear nombre para mostrar
-        let nombreMostrar = coleccion
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, l => l.toUpperCase());
-        
-        option.textContent = nombreMostrar;
-        selector.appendChild(option);
+    Object.keys(coleccionesPersonalizadas).forEach(key => {
+        if (key.includes('areas_')) areasCount = coleccionesPersonalizadas[key];
+        if (key.includes('sucursales_')) sucursalesCount = coleccionesPersonalizadas[key];
+        if (key.includes('incidencias_')) incidenciasCount = coleccionesPersonalizadas[key];
     });
     
-    // Restaurar valor si existe
-    if (valorActual && valorActual !== 'todas') {
-        const existe = Array.from(selector.options).some(opt => opt.value === valorActual);
-        if (existe) {
-            selector.value = valorActual;
-        } else {
-            selector.value = 'todas';
-        }
-    }
-}
-
-// =============================================
-// CARGA INICIAL DE DATOS
-// =============================================
-
-/**
- * Carga las organizaciones disponibles
- */
-async function cargarOrganizaciones() {
-    try {
-        // Obtener organizaciones de los usuarios
-        const { collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        const { db } = await import('/config/firebase-config.js');
-        
-        const usuariosRef = collection(db, 'usuarios');
-        const snapshot = await getDocs(usuariosRef);
-        
-        const organizacionesMap = new Map();
-        
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            if (data.organizacionCamelCase) {
-                organizacionesMap.set(data.organizacionCamelCase, {
-                    id: data.organizacionCamelCase,
-                    nombre: data.organizacion || data.organizacionCamelCase
-                });
-            }
-        });
-        
-        const organizaciones = Array.from(organizacionesMap.values());
-        
-        // Actualizar selector
-        const selector = document.getElementById('selectorEmpresa');
-        if (selector) {
-            // Limpiar opciones existentes
-            selector.innerHTML = '<option value="global">🌐 Todas las organizaciones (Global)</option>';
-            
-            organizaciones.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(org => {
-                const option = document.createElement('option');
-                option.value = org.id;
-                option.textContent = `🏢 ${org.nombre}`;
-                selector.appendChild(option);
-            });
-        }
-        
-        return organizaciones;
-        
-    } catch (error) {
-        console.error('Error cargando organizaciones:', error);
-        return [];
-    }
-}
-
-/**
- * Carga todas las estadísticas iniciales
- */
-async function cargarEstadisticasIniciales() {
-    try {
-        console.log('📊 Cargando estadísticas iniciales...');
-        
-        // Mostrar estado de carga
-        mostrarCargando(true);
-        
-        // 1. Cargar estadísticas globales
-        const globalStats = await operacionesManager.getEstadisticas(null);
-        estado.estadisticasActuales = globalStats;
-        estado.estadisticasGlobales = globalStats;
-        
-        // 2. Cargar estadísticas por organización
-        const organizaciones = await cargarOrganizaciones();
-        
-        const statsPorOrg = [];
-        for (const org of organizaciones) {
-            try {
-                const stats = await operacionesManager.getEstadisticas(org.id);
-                if (stats) {
-                    statsPorOrg.push(stats);
-                }
-            } catch (e) {
-                console.warn(`No se pudieron cargar estadísticas para ${org.id}:`, e);
-            }
-        }
-        estado.estadisticasPorOrganizacion = statsPorOrg;
-        
-        // 3. Detectar colecciones automáticamente
-        await detectarColecciones();
-        
-        // 4. Actualizar UI con todos los datos
-        actualizarUICompleta();
-        
-        console.log('✅ Carga inicial completada');
-        
-    } catch (error) {
-        console.error('Error en carga inicial:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudieron cargar las estadísticas'
-        });
-    } finally {
-        mostrarCargando(false);
-    }
-}
-
-// =============================================
-// ACTUALIZACIÓN DE UI
-// =============================================
-
-/**
- * Actualiza toda la interfaz con los datos actuales
- */
-function actualizarUICompleta() {
-    if (!estado.estadisticasActuales) return;
+    const ctx = document.getElementById('graficoFirestore').getContext('2d');
     
-    const stats = estado.estadisticasActuales.toUI();
+    const datos = {
+        labels: ['Documentos', 'Usuarios', 'Administradores', 'Áreas', 'Sucursales', 'Incidencias'],
+        datasets: [{
+            label: 'Cantidad',
+            data: [
+                firestore.documentos || 0,
+                auth.usuarios || 0,
+                auth.administradores || 0,
+                areasCount,
+                sucursalesCount,
+                incidenciasCount
+            ],
+            backgroundColor: '#00cfff',
+            borderColor: '#ffffff',
+            borderWidth: 1,
+            borderRadius: 8
+        }]
+    };
     
-    // Actualizar métricas de Firestore
-    actualizarMetricasFirestore(stats);
-    
-    // Actualizar métricas de Storage
-    actualizarMetricasStorage(stats);
-    
-    // Actualizar gráficas
-    actualizarGraficas(stats);
-    
-    // Actualizar tablas
-    actualizarTablaOrganizaciones();
-    actualizarTablaCarpetas(stats);
-    
-    // Actualizar fecha de actualización
-    actualizarFechaActualizacion(stats);
-    
-    // Actualizar badge de organización
-    actualizarBadgeOrganizacion();
-}
-
-/**
- * Actualiza las métricas de Firestore
- */
-function actualizarMetricasFirestore(stats) {
-    document.getElementById('metricColecciones').textContent = stats.firestore.colecciones || 0;
-    document.getElementById('metricDocumentos').textContent = stats.firestore.documentos || 0;
-    document.getElementById('metricAdministradores').textContent = stats.firestore.administradores || 0;
-    document.getElementById('metricAreas').textContent = stats.firestore.areas || 0;
-    
-    document.getElementById('metricEmpleados').textContent = `${stats.firestore.empleados || 0} empleados`;
-    document.getElementById('metricRoles').textContent = `${stats.firestore.roles || 0} roles`;
-    document.getElementById('metricColeccionesDetalle').textContent = `${stats.firestore.colecciones || 0} activas`;
-    document.getElementById('metricDocumentosDetalle').textContent = `Total: ${stats.firestore.documentos || 0}`;
-}
-
-/**
- * Actualiza las métricas de Storage
- */
-function actualizarMetricasStorage(stats) {
-    const totalArchivos = stats.storage.total || 0;
-    const porTipo = stats.storage.porTipo || {};
-    const totalSize = stats.storage.totalSize || 0;
-    
-    document.getElementById('metricArchivosTotales').textContent = totalArchivos;
-    document.getElementById('metricTamanioTotal').textContent = stats.storage.totalSizeFormatted || '0 B';
-    document.getElementById('metricPDF').textContent = porTipo.pdf || 0;
-    document.getElementById('metricImagenes').textContent = porTipo.imagen || 0;
-    document.getElementById('metricDocumentosStorage').textContent = porTipo.documento || 0;
-    document.getElementById('metricMultimedia').textContent = porTipo.multimedia || 0;
-    
-    // Calcular porcentajes
-    if (totalArchivos > 0) {
-        document.getElementById('metricPDFPorcentaje').textContent = 
-            `${Math.round((porTipo.pdf || 0) / totalArchivos * 100)}%`;
-        document.getElementById('metricImagenesPorcentaje').textContent = 
-            `${Math.round((porTipo.imagen || 0) / totalArchivos * 100)}%`;
-        document.getElementById('metricDocumentosPorcentaje').textContent = 
-            `${Math.round((porTipo.documento || 0) / totalArchivos * 100)}%`;
-        document.getElementById('metricMultimediaPorcentaje').textContent = 
-            `${Math.round((porTipo.multimedia || 0) / totalArchivos * 100)}%`;
-    }
-}
-
-/**
- * Actualiza todas las gráficas
- */
-function actualizarGraficas(stats) {
-    actualizarGraficoTiposArchivo(stats);
-    actualizarGraficoFirestore(stats);
-    actualizarGraficoCarpetas(stats);
-}
-
-/**
- * Actualiza gráfica de tipos de archivo
- */
-function actualizarGraficoTiposArchivo(stats) {
-    const ctx = document.getElementById('graficoTiposArchivo')?.getContext('2d');
-    if (!ctx) return;
-    
-    const porTipo = stats.storage.porTipo || {};
-    
-    // Destruir gráfica anterior si existe
-    if (estado.graficos.tiposArchivo) {
-        estado.graficos.tiposArchivo.destroy();
-    }
-    
-    estado.graficos.tiposArchivo = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'],
-            datasets: [{
-                data: [
-                    porTipo.pdf || 0,
-                    porTipo.imagen || 0,
-                    porTipo.documento || 0,
-                    porTipo.multimedia || 0,
-                    porTipo.otros || 0
-                ],
-                backgroundColor: [
-                    '#ef4444',
-                    '#8b5cf6',
-                    '#3b82f6',
-                    '#10b981',
-                    '#6c757d'
-                ],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#fff' }
-                }
-            }
-        }
-    });
-}
-
-/**
- * Actualiza gráfica de Firestore
- */
-function actualizarGraficoFirestore(stats) {
-    const ctx = document.getElementById('graficoFirestore')?.getContext('2d');
-    if (!ctx) return;
-    
-    const firestore = stats.firestore || {};
-    
-    // Destruir gráfica anterior
-    if (estado.graficos.firestore) {
-        estado.graficos.firestore.destroy();
-    }
-    
-    estado.graficos.firestore = new Chart(ctx, {
+    const config = {
         type: 'bar',
-        data: {
-            labels: ['Usuarios', 'Áreas', 'Roles', 'Admins', 'Empleados'],
-            datasets: [{
-                label: 'Cantidad',
-                data: [
-                    firestore.usuarios || 0,
-                    firestore.areas || 0,
-                    firestore.roles || 0,
-                    firestore.administradores || 0,
-                    firestore.empleados || 0
-                ],
-                backgroundColor: [
-                    '#3b82f6',
-                    '#10b981',
-                    '#f59e0b',
-                    '#ef4444',
-                    '#8b5cf6'
-                ]
-            }]
-        },
+        data: datos,
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.raw.toLocaleString()} elementos`;
+                        }
+                    }
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     grid: { color: 'rgba(255,255,255,0.1)' },
-                    ticks: { color: '#fff' }
+                    ticks: { color: '#ffffff' }
                 },
                 x: {
-                    ticks: { color: '#fff' }
+                    grid: { display: false },
+                    ticks: { color: '#ffffff', font: { size: 11 } }
                 }
             }
         }
-    });
+    };
+    
+    if (graficoFirestore) {
+        graficoFirestore.destroy();
+    }
+    graficoFirestore = new Chart(ctx, config);
 }
 
-/**
- * Actualiza gráfica de carpetas
- */
-function actualizarGraficoCarpetas(stats) {
-    const ctx = document.getElementById('graficoCarpetas')?.getContext('2d');
-    if (!ctx) return;
+// Actualizar gráfica de carpetas
+function actualizarGraficoCarpetas(operacion) {
+    const coleccionesPersonalizadas = operacion.conteos.coleccionesPersonalizadas || {};
     
-    const porCarpeta = stats.storage.porCarpeta || {};
-    const carpetas = Object.entries(porCarpeta)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10); // Top 10 carpetas
+    const carpetas = [];
+    const valores = [];
+    const colores = ['#00cfff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ff6b6b', '#4ecdc4', '#45b7d1'];
     
-    // Destruir gráfica anterior
-    if (estado.graficos.carpetas) {
-        estado.graficos.carpetas.destroy();
-    }
-    
-    estado.graficos.carpetas = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: carpetas.map(([nombre]) => 
-                nombre.length > 20 ? nombre.substring(0, 20) + '...' : nombre
-            ),
-            datasets: [{
-                label: 'Archivos',
-                data: carpetas.map(([, cantidad]) => cantidad),
-                backgroundColor: '#3b82f6'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255,255,255,0.1)' },
-                    ticks: { color: '#fff' }
-                },
-                y: {
-                    ticks: { color: '#fff' }
-                }
-            }
+    let colorIndex = 0;
+    Object.keys(coleccionesPersonalizadas).forEach(key => {
+        if (key !== 'operaciones' && !key.includes('historial') && !key.includes('notificaciones')) {
+            carpetas.push(key.replace(/_.*$/, ''));
+            valores.push(coleccionesPersonalizadas[key]);
         }
     });
-}
-
-/**
- * Actualiza tabla de organizaciones
- */
-function actualizarTablaOrganizaciones() {
-    const tbody = document.getElementById('tablaOrganizacionesBody');
-    if (!tbody) return;
-    
-    if (estado.estadisticasPorOrganizacion.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay datos de organizaciones</td></tr>';
-        return;
-    }
-    
-    let html = '';
-    
-    // Agregar fila de global si está seleccionada
-    if (estado.organizacionActual === 'global' && estado.estadisticasGlobales) {
-        const global = estado.estadisticasGlobales.toUI();
-        html += generarFilaOrganizacion('🌐 Global', global);
-    }
-    
-    // Agregar filas de organizaciones
-    estado.estadisticasPorOrganizacion.forEach(org => {
-        const ui = org.toUI();
-        html += generarFilaOrganizacion(ui.organizacionNombre || ui.id, ui);
-    });
-    
-    tbody.innerHTML = html;
-}
-
-/**
- * Genera una fila para la tabla de organizaciones
- */
-function generarFilaOrganizacion(nombre, stats) {
-    const storage = stats.storage || {};
-    const porTipo = storage.porTipo || {};
-    
-    return `
-        <tr>
-            <td><strong>${nombre}</strong></td>
-            <td><span class="badge-value badge-primary">${stats.firestore?.documentos || 0}</span></td>
-            <td><span class="badge-value badge-success">${storage.total || 0}</span></td>
-            <td><span class="badge-value badge-info">${storage.totalSizeFormatted || '0 B'}</span></td>
-            <td><span class="badge-value badge-danger">${porTipo.pdf || 0}</span></td>
-            <td><span class="badge-value badge-purple">${porTipo.imagen || 0}</span></td>
-        </tr>
-    `;
-}
-
-/**
- * Actualiza tabla de carpetas
- */
-function actualizarTablaCarpetas(stats) {
-    const tbody = document.getElementById('tablaCarpetasBody');
-    if (!tbody) return;
-    
-    const porCarpeta = stats.storage?.porCarpeta || {};
-    const totalArchivos = stats.storage?.total || 0;
-    
-    const carpetas = Object.entries(porCarpeta)
-        .sort((a, b) => b[1] - a[1]);
     
     if (carpetas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay datos de carpetas</td></tr>';
+        carpetas.push('No hay datos');
+        valores.push(0);
+    }
+    
+    const ctx = document.getElementById('graficoCarpetas').getContext('2d');
+    
+    const datos = {
+        labels: carpetas,
+        datasets: [{
+            label: 'Documentos por colección',
+            data: valores,
+            backgroundColor: carpetas.map((_, i) => colores[i % colores.length]),
+            borderWidth: 0,
+            borderRadius: 8
+        }]
+    };
+    
+    const config = {
+        type: 'bar',
+        data: datos,
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.raw.toLocaleString()} documentos`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    ticks: { color: '#ffffff' }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: '#ffffff', font: { size: 11 } }
+                }
+            }
+        }
+    };
+    
+    if (graficoCarpetas) {
+        graficoCarpetas.destroy();
+    }
+    graficoCarpetas = new Chart(ctx, config);
+}
+
+// Actualizar tabla de organizaciones
+async function actualizarTablaOrganizaciones() {
+    const tbody = document.getElementById('tablaOrganizacionesBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;"><div class="loading-spinner"></div> Cargando...</td></tr>';
+    
+    try {
+        const estadisticasGlobales = await operacionesManager.getEstadisticasGlobales();
+        
+        if (!estadisticasGlobales) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Error al cargar datos</td></tr>';
+            return;
+        }
+        
+        // Obtener lista de organizaciones desde la colección operaciones
+        const operacionesCollectionRef = collection(db, 'operaciones');
+        const snapshot = await getDocs(operacionesCollectionRef);
+        
+        if (snapshot.empty) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay datos de organizaciones</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        for (const doc of snapshot.docs) {
+            const data = doc.data();
+            const storage = data.conteos?.storage || {};
+            const firestore = data.conteos?.firestore || {};
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${doc.id}</strong></td>
+                <td>${formatNumber(firestore.documentos || 0)}</td>
+                <td>${formatNumber(storage.total || 0)}</td>
+                <td><span class="size-badge">${formatBytes(storage.totalSize || 0)}</span></td>
+                <td><span class="badge-value badge-danger">${formatNumber(storage.pdf || 0)}</span></td>
+                <td><span class="badge-value badge-purple">${formatNumber(storage.imagenes || 0)}</span></td>
+            `;
+            tbody.appendChild(row);
+        }
+        
+    } catch (error) {
+        console.error('Error actualizando tabla de organizaciones:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Error al cargar datos</td></tr>';
+    }
+}
+
+// Actualizar tabla de carpetas
+function actualizarTablaCarpetas(operacion) {
+    const tbody = document.getElementById('tablaCarpetasBody');
+    const colecciones = operacion.conteos.coleccionesPersonalizadas || {};
+    
+    const carpetas = [];
+    Object.keys(colecciones).forEach(key => {
+        if (key !== 'operaciones' && !key.includes('historial') && !key.includes('notificaciones')) {
+            carpetas.push({
+                nombre: key,
+                documentos: colecciones[key]
+            });
+        }
+    });
+    
+    carpetas.sort((a, b) => b.documentos - a.documentos);
+    
+    const totalDocumentos = carpetas.reduce((sum, c) => sum + c.documentos, 0);
+    
+    if (carpetas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay datos disponibles</td></tr>';
         return;
     }
     
-    let html = '';
-    carpetas.forEach(([carpeta, cantidad]) => {
-        const porcentaje = totalArchivos > 0 ? Math.round((cantidad / totalArchivos) * 100) : 0;
-        
-        html += `
-            <tr>
-                <td><i class="fas fa-folder" style="color: #ffd700; margin-right: 8px;"></i>${carpeta}</td>
-                <td><span class="badge-value badge-info">${cantidad}</span></td>
-                <td>${porcentaje}%</td>
-                <td>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${porcentaje}%;"></div>
-                    </div>
-                </td>
-            </tr>
+    tbody.innerHTML = '';
+    
+    carpetas.forEach(carpeta => {
+        const porcentaje = totalDocumentos > 0 ? ((carpeta.documentos / totalDocumentos) * 100).toFixed(1) : 0;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><i class="fas fa-folder" style="color: #00cfff; margin-right: 8px;"></i>${carpeta.nombre}</td>
+            <td><strong>${formatNumber(carpeta.documentos)}</strong></td>
+            <td><span class="badge-value badge-info">${porcentaje}%</span></td>
+            <td style="width: 120px;">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${porcentaje}%;"></div>
+                </div>
+            </td>
         `;
+        tbody.appendChild(row);
     });
+}
+
+// Actualizar toda la vista
+async function actualizarVista(empresaId = null) {
+    const empresa = empresaId || currentEmpresa;
     
-    tbody.innerHTML = html;
-}
-
-/**
- * Actualiza la fecha de última actualización
- */
-function actualizarFechaActualizacion(stats) {
-    const span = document.getElementById('fechaActualizacion');
-    if (span && stats.ultimaActualizacion) {
-        span.textContent = stats.ultimaActualizacion;
-    }
-}
-
-/**
- * Actualiza el badge de organización seleccionada
- */
-function actualizarBadgeOrganizacion() {
-    const badge = document.getElementById('empresaSeleccionada');
-    const span = badge?.querySelector('span');
-    const selector = document.getElementById('selectorEmpresa');
-    
-    if (badge && span && selector) {
-        const selectedOption = selector.options[selector.selectedIndex];
-        const texto = selectedOption ? selectedOption.textContent.replace(/[🌐🏢]/g, '').trim() : 'Global';
-        span.textContent = texto;
-    }
-}
-
-// =============================================
-// CAMBIO DE ORGANIZACIÓN
-// =============================================
-
-/**
- * Maneja el cambio de organización en el selector
- */
-async function cambiarOrganizacion(organizacionId) {
     try {
-        console.log(`🔄 Cambiando a organización: ${organizacionId}`);
+        document.getElementById('fechaActualizacion').innerText = new Date().toLocaleString();
         
-        mostrarCargando(true);
-        
-        estado.organizacionActual = organizacionId;
-        
-        // Obtener estadísticas de la organización seleccionada
-        const stats = await operacionesManager.getEstadisticas(
-            organizacionId === 'global' ? null : organizacionId
-        );
-        
-        if (stats) {
-            estado.estadisticasActuales = stats;
-            actualizarUICompleta();
+        if (empresa === 'global') {
+            document.getElementById('modoVisualizacion').innerHTML = '<i class="fas fa-globe"></i> <span>Vista: Global</span>';
             
-            // Actualizar modo de visualización
-            const modoSpan = document.getElementById('modoVisualizacion');
-            if (modoSpan) {
-                const nombreOrg = organizacionId === 'global' ? 'Global' : 
-                    (stats.organizacionNombre || organizacionId);
-                modoSpan.innerHTML = `<i class="fas ${organizacionId === 'global' ? 'fa-globe' : 'fa-building'}"></i> Vista: ${nombreOrg}`;
-            }
-        }
-        
-    } catch (error) {
-        console.error('Error cambiando organización:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudieron cargar las estadísticas de la organización'
-        });
-    } finally {
-        mostrarCargando(false);
-    }
-}
-
-// =============================================
-// ACTUALIZACIÓN MANUAL
-// =============================================
-
-/**
- * Actualiza manualmente todas las estadísticas
- */
-async function actualizarManual() {
-    try {
-        console.log('🔄 Actualizando estadísticas manualmente...');
-        
-        const result = await Swal.fire({
-            title: '¿Actualizar estadísticas?',
-            text: 'Esto puede tomar unos segundos dependiendo del tamaño de los datos',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#00c3ff',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, actualizar',
-            cancelButtonText: 'Cancelar'
-        });
-        
-        if (!result.isConfirmed) return;
-        
-        mostrarCargando(true);
-        
-        // Actualizar estadísticas para la organización actual
-        if (estado.organizacionActual === 'global') {
-            // Actualizar global
-            await operacionesManager.actualizarEstadisticas(null, estado.usuarioActual);
+            const estadisticasGlobales = await operacionesManager.getEstadisticasGlobales();
             
-            // Actualizar cada organización
-            for (const org of estado.estadisticasPorOrganizacion) {
-                await operacionesManager.actualizarEstadisticas(org.id, estado.usuarioActual);
+            if (estadisticasGlobales) {
+                // Crear objeto de operación temporal para mostrar
+                const operacionTemp = {
+                    conteos: {
+                        firestore: estadisticasGlobales.firestore,
+                        storage: estadisticasGlobales.storage,
+                        auth: estadisticasGlobales.auth,
+                        coleccionesPersonalizadas: {}
+                    }
+                };
+                actualizarMetricasFirestore(operacionTemp);
+                actualizarMetricasStorage(operacionTemp);
+                actualizarGraficoTiposArchivo(operacionTemp);
+                actualizarGraficoFirestore(operacionTemp);
+                await actualizarTablaOrganizaciones();
             }
             
-            // Recargar todas las estadísticas
-            await cargarEstadisticasIniciales();
+            // Obtener datos globales para gráfica de carpetas
+            const operacionGlobal = await operacionesManager.getOperaciones('global');
+            if (operacionGlobal) {
+                actualizarGraficoCarpetas(operacionGlobal);
+                actualizarTablaCarpetas(operacionGlobal);
+            }
             
         } else {
-            // Actualizar solo la organización actual
-            await operacionesManager.actualizarEstadisticas(estado.organizacionActual, estado.usuarioActual);
+            document.getElementById('modoVisualizacion').innerHTML = '<i class="fas fa-building"></i> <span>Vista: ' + empresa + '</span>';
             
-            // Recargar estadísticas
-            const stats = await operacionesManager.getEstadisticas(estado.organizacionActual);
-            estado.estadisticasActuales = stats;
+            const operacion = await operacionesManager.getOperaciones(empresa);
             
-            // Actualizar también en el array de organizaciones
-            const index = estado.estadisticasPorOrganizacion.findIndex(org => org.id === estado.organizacionActual);
-            if (index !== -1) {
-                estado.estadisticasPorOrganizacion[index] = stats;
+            if (operacion) {
+                actualizarMetricasFirestore(operacion);
+                actualizarMetricasStorage(operacion);
+                actualizarGraficoTiposArchivo(operacion);
+                actualizarGraficoFirestore(operacion);
+                actualizarGraficoCarpetas(operacion);
+                actualizarTablaCarpetas(operacion);
+            } else {
+                console.warn('No se encontraron datos para la empresa:', empresa);
             }
-            
-            actualizarUICompleta();
         }
         
-        Swal.fire({
-            icon: 'success',
-            title: 'Actualizado',
-            text: 'Las estadísticas se actualizaron correctamente',
-            timer: 2000,
-            showConfirmButton: false
-        });
-        
     } catch (error) {
-        console.error('Error en actualización manual:', error);
+        console.error('Error actualizando vista:', error);
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'No se pudieron actualizar las estadísticas'
+            text: 'No se pudieron cargar los datos de operaciones'
         });
-    } finally {
-        mostrarCargando(false);
     }
 }
 
-// =============================================
-// EXPORTAR A EXCEL
-// =============================================
-
-/**
- * Exporta los datos a Excel
- */
-function exportarExcel() {
+// Cargar lista de empresas en el selector
+async function cargarListaEmpresas() {
+    const selector = document.getElementById('selectorEmpresa');
+    
     try {
-        console.log('📥 Exportando a Excel...');
+        const operacionesCollectionRef = collection(db, 'operaciones');
+        const snapshot = await getDocs(operacionesCollectionRef);
         
-        // Preparar datos para Excel
-        const datos = [];
+        snapshot.forEach(doc => {
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = doc.id;
+            selector.appendChild(option);
+        });
         
-        // Cabeceras
-        datos.push(['ESTADÍSTICAS DE OPERACIONES - SISTEMA CENTINELA']);
-        datos.push(['Fecha de exportación:', new Date().toLocaleString()]);
-        datos.push([]);
+    } catch (error) {
+        console.error('Error cargando lista de empresas:', error);
+    }
+}
+
+// Exportar a Excel
+function exportarAExcel() {
+    try {
+        const data = [];
         
-        // Resumen global
-        if (estado.estadisticasGlobales) {
-            const global = estado.estadisticasGlobales.toUI();
-            datos.push(['RESUMEN GLOBAL']);
-            datos.push(['Métrica', 'Valor']);
-            datos.push(['Colecciones', global.firestore?.colecciones || 0]);
-            datos.push(['Documentos totales', global.firestore?.documentos || 0]);
-            datos.push(['Usuarios', global.firestore?.usuarios || 0]);
-            datos.push(['Administradores', global.firestore?.administradores || 0]);
-            datos.push(['Empleados', global.firestore?.empleados || 0]);
-            datos.push(['Áreas', global.firestore?.areas || 0]);
-            datos.push(['Roles', global.firestore?.roles || 0]);
-            datos.push(['Archivos en Storage', global.storage?.total || 0]);
-            datos.push(['Tamaño total', global.storage?.totalSizeFormatted || '0 B']);
-            datos.push([]);
-        }
+        // Agregar encabezados
+        data.push(['Estadísticas de Operaciones - Centinela']);
+        data.push(['Fecha:', new Date().toLocaleString()]);
+        data.push([]);
         
-        // Datos por organización
-        datos.push(['ESTADÍSTICAS POR ORGANIZACIÓN']);
-        datos.push(['Organización', 'Documentos', 'Archivos', 'Tamaño', 'PDF', 'Imágenes', 'Documentos', 'Multimedia']);
+        // Métricas Firestore
+        data.push(['MÉTRICAS FIRESTORE']);
+        data.push(['Colecciones', document.getElementById('metricColecciones').innerText]);
+        data.push(['Documentos', document.getElementById('metricDocumentos').innerText]);
+        data.push(['Administradores', document.getElementById('metricAdministradores').innerText]);
+        data.push(['Empleados', document.getElementById('metricEmpleados').innerText.replace(' empleados', '')]);
+        data.push([]);
         
-        estado.estadisticasPorOrganizacion.forEach(org => {
-            const ui = org.toUI();
-            const storage = ui.storage || {};
-            const porTipo = storage.porTipo || {};
-            
-            datos.push([
-                ui.organizacionNombre || ui.id,
-                ui.firestore?.documentos || 0,
-                storage.total || 0,
-                storage.totalSizeFormatted || '0 B',
-                porTipo.pdf || 0,
-                porTipo.imagen || 0,
-                porTipo.documento || 0,
-                porTipo.multimedia || 0
-            ]);
+        // Métricas Storage
+        data.push(['MÉTRICAS STORAGE']);
+        data.push(['Archivos Totales', document.getElementById('metricArchivosTotales').innerText]);
+        data.push(['Tamaño Total', document.getElementById('metricTamanioTotal').innerText.replace('📁 ', '')]);
+        data.push(['PDF', document.getElementById('metricPDF').innerText]);
+        data.push(['Imágenes', document.getElementById('metricImagenes').innerText]);
+        data.push(['Documentos', document.getElementById('metricDocumentosStorage').innerText]);
+        data.push(['Multimedia', document.getElementById('metricMultimedia').innerText]);
+        data.push([]);
+        
+        // Tabla de organizaciones
+        data.push(['ESTADÍSTICAS POR ORGANIZACIÓN']);
+        data.push(['Organización', 'Documentos', 'Archivos', 'Tamaño', 'PDF', 'Imágenes']);
+        
+        const tablaOrg = document.getElementById('tablaOrganizacionesBody');
+        tablaOrg.querySelectorAll('tr').forEach(row => {
+            if (row.cells.length === 6 && row.cells[0].innerText !== 'Cargando...' && row.cells[0].innerText !== 'Error al cargar datos') {
+                data.push([
+                    row.cells[0].innerText,
+                    row.cells[1].innerText,
+                    row.cells[2].innerText,
+                    row.cells[3].innerText,
+                    row.cells[4].innerText,
+                    row.cells[5].innerText
+                ]);
+            }
         });
         
         // Crear libro de Excel
+        const ws = XLSX.utils.aoa_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(datos);
+        XLSX.utils.book_append_sheet(wb, ws, 'Operaciones');
         
-        // Ajustar ancho de columnas
-        ws['!cols'] = [
-            { wch: 25 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 10 },
-            { wch: 10 },
-            { wch: 10 },
-            { wch: 10 }
-        ];
+        // Ajustar anchos de columna
+        const colWidths = [{wch: 25}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 10}];
+        ws['!cols'] = colWidths;
         
-        XLSX.utils.book_append_sheet(wb, ws, 'Estadísticas');
-        
-        // Guardar archivo
-        const fecha = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(wb, `estadisticas_operaciones_${fecha}.xlsx`);
+        // Descargar
+        XLSX.writeFile(wb, `operaciones_${new Date().toISOString().slice(0, 19)}.xlsx`);
         
         Swal.fire({
             icon: 'success',
             title: 'Exportado',
-            text: 'Datos exportados a Excel correctamente',
-            timer: 2000,
+            text: 'Archivo Excel generado correctamente',
+            toast: true,
+            timer: 3000,
             showConfirmButton: false
         });
         
@@ -839,170 +547,108 @@ function exportarExcel() {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'No se pudieron exportar los datos'
+            text: 'No se pudo generar el archivo Excel'
         });
     }
 }
 
-// =============================================
-// LIMPIAR FILTROS
-// =============================================
-
-/**
- * Limpia todos los filtros
- */
-function limpiarFiltros() {
-    document.getElementById('filtroTipoArchivo').value = 'todos';
-    document.getElementById('filtroColeccion').value = 'todas';
-    document.getElementById('filtroFecha').value = '';
-    
-    estado.filtros = {
-        tipoArchivo: 'todos',
-        coleccion: 'todas',
-        fecha: null
-    };
-    
-    // Aquí se podría aplicar filtrado si es necesario
-    
-    Swal.fire({
-        icon: 'info',
-        title: 'Filtros limpiados',
-        text: 'Todos los filtros han sido restablecidos',
-        timer: 1500,
-        showConfirmButton: false
-    });
-}
-
-// =============================================
-// UTILIDADES
-// =============================================
-
-/**
- * Muestra u oculta el indicador de carga
- */
-function mostrarCargando(mostrar) {
-    if (mostrar) {
-        // Deshabilitar botones y mostrar spinner
-        document.querySelectorAll('button').forEach(btn => {
-            btn.disabled = true;
-        });
-        
-        // Agregar clase loading a las cards
-        document.querySelectorAll('.metric-card, .card').forEach(el => {
-            el.classList.add('loading');
-        });
-    } else {
-        // Habilitar botones
-        document.querySelectorAll('button').forEach(btn => {
-            btn.disabled = false;
-        });
-        
-        // Quitar clase loading
-        document.querySelectorAll('.metric-card, .card').forEach(el => {
-            el.classList.remove('loading');
-        });
-    }
-}
-
-// =============================================
-// INICIALIZACIÓN
-// =============================================
-
-/**
- * Inicializa la aplicación
- */
-async function inicializar() {
-    console.log('🚀 Inicializando estadísticas de operaciones...');
-    
-    try {
-        // Verificar autenticación
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                console.log('👤 Usuario autenticado:', user.email);
-                estado.usuarioActual = {
-                    id: user.uid,
-                    email: user.email,
-                    nombre: user.displayName
-                };
-                
-                // Cargar datos iniciales
-                await cargarEstadisticasIniciales();
-                
-                // Configurar listeners de eventos
-                configurarEventos();
-                
-                // Programar actualizaciones automáticas (cada 30 minutos)
-                operacionesManager.programarActualizaciones(30);
-                
-            } else {
-                console.log('❌ Usuario no autenticado, redirigiendo...');
-                window.location.href = '/index.html';
+// Inicializar suscripción en tiempo real
+function inicializarSuscripcion() {
+    if (currentEmpresa !== 'global') {
+        operacionesManager.suscribirACambios(currentEmpresa, (operacion) => {
+            if (operacion) {
+                actualizarMetricasFirestore(operacion);
+                actualizarMetricasStorage(operacion);
+                actualizarGraficoTiposArchivo(operacion);
+                actualizarGraficoFirestore(operacion);
+                actualizarGraficoCarpetas(operacion);
+                actualizarTablaCarpetas(operacion);
+                document.getElementById('fechaActualizacion').innerText = new Date().toLocaleString();
             }
         });
-        
-    } catch (error) {
-        console.error('Error en inicialización:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de inicialización',
-            text: 'No se pudo inicializar la aplicación'
-        });
     }
 }
 
-/**
- * Configura los event listeners
- */
-function configurarEventos() {
-    // Selector de empresa
+// Configurar event listeners
+function configurarEventListeners() {
     const selectorEmpresa = document.getElementById('selectorEmpresa');
-    if (selectorEmpresa) {
-        selectorEmpresa.addEventListener('change', (e) => {
-            cambiarOrganizacion(e.target.value);
-        });
-    }
-    
-    // Botón actualizar
     const btnActualizar = document.getElementById('btnActualizar');
-    if (btnActualizar) {
-        btnActualizar.addEventListener('click', actualizarManual);
-    }
-    
-    // Botón limpiar
     const btnLimpiar = document.getElementById('btnLimpiar');
-    if (btnLimpiar) {
-        btnLimpiar.addEventListener('click', limpiarFiltros);
-    }
+    const btnExportarExcel = document.getElementById('btnExportarExcel');
+    const filtroTipoArchivo = document.getElementById('filtroTipoArchivo');
+    const filtroColeccion = document.getElementById('filtroColeccion');
+    const filtroFecha = document.getElementById('filtroFecha');
     
-    // Botón exportar Excel
-    const btnExportar = document.getElementById('btnExportarExcel');
-    if (btnExportar) {
-        btnExportar.addEventListener('click', exportarExcel);
-    }
-    
-    // Filtros
-    document.getElementById('filtroTipoArchivo')?.addEventListener('change', (e) => {
-        estado.filtros.tipoArchivo = e.target.value;
-        // Aquí se podría aplicar filtrado
+    selectorEmpresa.addEventListener('change', async (e) => {
+        currentEmpresa = e.target.value;
+        const badgeSpan = document.querySelector('#empresaSeleccionada span');
+        if (badgeSpan) {
+            badgeSpan.innerText = currentEmpresa === 'global' ? 'Global' : currentEmpresa;
+        }
+        await actualizarVista(currentEmpresa);
+        inicializarSuscripcion();
     });
     
-    document.getElementById('filtroColeccion')?.addEventListener('change', (e) => {
-        estado.filtros.coleccion = e.target.value;
-        // Aquí se podría aplicar filtrado
+    btnActualizar.addEventListener('click', async () => {
+        await actualizarVista(currentEmpresa);
+        Swal.fire({
+            icon: 'success',
+            title: 'Actualizado',
+            text: 'Datos actualizados correctamente',
+            toast: true,
+            timer: 2000,
+            showConfirmButton: false
+        });
     });
     
-    document.getElementById('filtroFecha')?.addEventListener('change', (e) => {
-        estado.filtros.fecha = e.target.value;
-        // Aquí se podría aplicar filtrado
+    btnLimpiar.addEventListener('click', () => {
+        filtroTipoArchivo.value = 'todos';
+        filtroColeccion.value = 'todas';
+        filtroFecha.value = '';
+        actualizarVista(currentEmpresa);
     });
+    
+    btnExportarExcel.addEventListener('click', exportarAExcel);
 }
 
-// =============================================
-// INICIAR APLICACIÓN
-// =============================================
-document.addEventListener('DOMContentLoaded', inicializar);
+// Verificar autenticación
+async function verificarAutenticacion() {
+    userManager = new UserManager();
+    
+    const checkUser = () => {
+        if (userManager.currentUser) {
+            usuarioActual = userManager.currentUser;
+            inicializar();
+        }
+    };
+    
+    if (userManager.currentUser) {
+        usuarioActual = userManager.currentUser;
+        inicializar();
+    } else {
+        const checkInterval = setInterval(() => {
+            if (userManager.currentUser) {
+                clearInterval(checkInterval);
+                usuarioActual = userManager.currentUser;
+                inicializar();
+            }
+        }, 500);
+        
+        setTimeout(() => {
+            clearInterval(checkInterval);
+            if (!userManager.currentUser) {
+                window.location.href = '/index.html';
+            }
+        }, 5000);
+    }
+}
 
-// Limpiar listeners al cerrar la página
-window.addEventListener('beforeunload', () => {
-    operacionesManager.limpiarListeners();
-});
+// Inicialización principal
+async function inicializar() {
+    await cargarListaEmpresas();
+    await actualizarVista('global');
+    configurarEventListeners();
+}
+
+// Iniciar
+verificarAutenticacion();

@@ -472,98 +472,106 @@ class UserManager {
             throw error;
         }
     }
-        /**
-     * Crea un nuevo Administrador del Sistema (MASTER)
-     * @param {Object} masterData - Datos del master { nombreCompleto, correoElectronico, fotoUsuario (opcional) }
-     * @param {string} password - Contraseña
-     * @returns {Promise<Object>} - Resultado de la creación
-     */
-    async createMaster(masterData, password) {
-        try {
-            // 1. Verificar si el correo ya existe en algún lado (sistema, admin o colaborador)
-            const emailExists = await this.verificarCorreoExistente(masterData.correoElectronico, 'todos');
-            if (emailExists) {
-                throw new Error('El correo electrónico ya está registrado en el sistema.');
-            }
-
-            // 2. Crear usuario en Firebase Authentication
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                masterData.correoElectronico,
-                password
-            );
-            const uid = userCredential.user.uid;
-
-            // 3. Enviar verificación de email
-            try {
-                await sendEmailVerification(userCredential.user, {
-                    url: window.location.origin + '/verifyEmail.html',
-                    handleCodeInApp: true
-                });
-            } catch (emailError) {
-                console.warn('⚠️ Error enviando verificación de email al master:', emailError);
-            }
-
-            // 4. Actualizar perfil con el nombre
-            await updateProfile(userCredential.user, {
-                displayName: masterData.nombreCompleto
-            });
-
-            // 5. Guardar en Firestore (Colección "administradoresSistema")
-            const masterRef = doc(db, "administradoresSistema", uid);
-            const masterFirestoreData = {
-                nombreCompleto: masterData.nombreCompleto,
-                correoElectronico: masterData.correoElectronico,
-                idAuth: uid,
-                fotoUsuario: masterData.fotoUsuario || null,
-                fechaCreacion: serverTimestamp(),
-                fechaActualizacion: serverTimestamp(),
-                ultimoLogin: null,
-                // Podemos agregar un campo de control interno
-                creadoPor: this.currentUser?.id || 'sistema'
-            };
-
-            await setDoc(masterRef, masterFirestoreData);
-
-            // 6. Crear instancia local del usuario Master
-            const newMaster = new User(uid, {
-                ...masterFirestoreData,
-                rol: 'master',
-                organizacion: 'Sistema',
-                organizacionCamelCase: 'sistema',
-                fechaCreacion: new Date(),
-                fechaActualizacion: new Date(),
-                verificado: false, // Se volverá true cuando verifique el email
-                emailVerified: false
-            });
-            
-            this.users.unshift(newMaster);
-
-            // 7. Cerrar sesión del usuario actual (si existe) para no mezclar cuentas
-            await signOut(auth);
-
-            console.log("✅ Administrador del Sistema (Master) creado exitosamente:", uid);
-            return {
-                id: uid,
-                user: newMaster,
-                credential: userCredential,
-                emailVerificationSent: true
-            };
-
-        } catch (error) {
-            console.error("❌ Error creando Administrador del Sistema (Master):", error);
-
-            // Limpiar usuario de Auth si falló algo en Firestore
-            if (auth.currentUser) {
-                try {
-                    await auth.currentUser.delete();
-                } catch (deleteError) {
-                    console.warn("No se pudo eliminar el usuario de Auth tras error:", deleteError);
-                }
-            }
-            throw error;
+   /**
+ * Crea un nuevo Administrador del Sistema (MASTER)
+ * @param {Object} masterData - Datos del master { nombreCompleto, correoElectronico, fotoUsuario (opcional) }
+ * @param {string} password - Contraseña
+ * @returns {Promise<Object>} - Resultado de la creación
+ */
+async createMaster(masterData, password) {
+    try {
+        // 1. Verificar si el correo ya existe en algún lado (sistema, admin o colaborador)
+        const emailExists = await this.verificarCorreoExistente(masterData.correoElectronico, 'todos');
+        if (emailExists) {
+            throw new Error('El correo electrónico ya está registrado en el sistema.');
         }
+
+        // 2. Crear usuario en Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            masterData.correoElectronico,
+            password
+        );
+        const uid = userCredential.user.uid;
+
+        // 3. Enviar verificación de email
+        try {
+            await sendEmailVerification(userCredential.user, {
+                url: window.location.origin + '/verifyEmail.html',
+                handleCodeInApp: true
+            });
+        } catch (emailError) {
+            console.warn('⚠️ Error enviando verificación de email al master:', emailError);
+        }
+
+        // 4. Actualizar perfil con el nombre y la foto (si se proporcionó)
+        const profileUpdates = {
+            displayName: masterData.nombreCompleto
+        };
+        
+        // Si hay foto en base64, actualizamos la foto de perfil en Auth
+        if (masterData.fotoUsuario && masterData.fotoUsuario.startsWith('data:image')) {
+            // Nota: updateProfile no soporta imágenes base64 directamente para photoURL
+            // La foto se guardará en Firestore, no en Auth
+            console.log('📸 Se guardará foto en Firestore');
+        }
+        
+        await updateProfile(userCredential.user, profileUpdates);
+
+        // 5. Guardar en Firestore (Colección "administradoresSistema")
+        const masterRef = doc(db, "administradoresSistema", uid);
+        const masterFirestoreData = {
+            nombreCompleto: masterData.nombreCompleto,
+            correoElectronico: masterData.correoElectronico,
+            idAuth: uid,
+            fotoUsuario: masterData.fotoUsuario || null, // Guardamos la imagen en base64
+            fechaCreacion: serverTimestamp(),
+            fechaActualizacion: serverTimestamp(),
+            ultimoLogin: null,
+            creadoPor: this.currentUser?.id || 'sistema'
+        };
+
+        await setDoc(masterRef, masterFirestoreData);
+
+        // 6. Crear instancia local del usuario Master
+        const newMaster = new User(uid, {
+            ...masterFirestoreData,
+            rol: 'master',
+            organizacion: 'Sistema',
+            organizacionCamelCase: 'sistema',
+            fechaCreacion: new Date(),
+            fechaActualizacion: new Date(),
+            verificado: false,
+            emailVerified: false
+        });
+        
+        this.users.unshift(newMaster);
+
+        // 7. Cerrar sesión del usuario actual (si existe) para no mezclar cuentas
+        await signOut(auth);
+
+        console.log("✅ Administrador del Sistema (Master) creado exitosamente:", uid);
+        return {
+            id: uid,
+            user: newMaster,
+            credential: userCredential,
+            emailVerificationSent: true
+        };
+
+    } catch (error) {
+        console.error("❌ Error creando Administrador del Sistema (Master):", error);
+
+        // Limpiar usuario de Auth si falló algo en Firestore
+        if (auth.currentUser) {
+            try {
+                await auth.currentUser.delete();
+            } catch (deleteError) {
+                console.warn("No se pudo eliminar el usuario de Auth tras error:", deleteError);
+            }
+        }
+        throw error;
     }
+}
 
     async createColaborador(colaboradorData, password, idAdministrador) {
         const adminEmail = auth.currentUser?.email;

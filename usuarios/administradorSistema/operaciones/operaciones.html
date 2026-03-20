@@ -87,7 +87,10 @@
                         <option value="todas">Todas las colecciones</option>
                         <option value="usuarios">Usuarios</option>
                         <option value="areas">Áreas</option>
-                        <option value="roles">Roles</option>
+                        <option value="regiones">Regiones</option>
+                        <option value="sucursales">Sucursales</option>
+                        <option value="incidencias">Incidencias</option>
+                        <option value="categorias">Categorías</option>
                     </select>
                 </div>
                 <div class="filtro-grupo">
@@ -157,7 +160,7 @@
                 <div class="metric-value" id="metricAreas">0</div>
                 <div class="metric-subtitle">
                     <i class="fas fa-tag"></i>
-                    <span id="metricRoles">0 roles</span>
+                    <span id="metricRoles">0 cargos</span>
                 </div>
                 <i class="fas fa-sitemap metric-icon"></i>
             </div>
@@ -322,11 +325,14 @@
 
         <!-- Última actualización -->
         <div class="footer-datetime">
-            <i class="fas fa-sync-alt"></i>
-            Última actualización: <span id="fechaActualizacion">-</span>
-            <span class="size-badge" id="modoVisualizacion">
-                <i class="fas fa-globe"></i> Vista: Global
-            </span>
+            <div>
+                <i class="fas fa-sync-alt"></i>
+                Última actualización: <span id="fechaActualizacion">-</span>
+            </div>
+            <div id="modoVisualizacion">
+                <i class="fas fa-globe"></i>
+                <span>Vista: Global</span>
+            </div>
         </div>
     </div>
 
