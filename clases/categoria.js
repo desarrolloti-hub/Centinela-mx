@@ -1,4 +1,4 @@
-// categoria.js - VERSIÓN CORREGIDA CON REGISTRO DE ACTIVIDADES
+// categoria.js - VERSIÓN CORREGIDA CON REGISTRO DE ACTIVIDADES Y CONSUMO FIREBASE
 
 import { db } from '/config/firebase-config.js';
 import {
@@ -14,6 +14,9 @@ import {
     serverTimestamp,
     addDoc
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+// [MODIFICACIÓN 1]: Importar la instancia de consumo
+import consumo from '/clases/consumoFirebase.js';
 
 class Categoria {
     constructor(id, data) {
@@ -302,6 +305,9 @@ class CategoriaManager {
 
             const collectionName = this._getCollectionName();
 
+            // [MODIFICACIÓN 2]: Registrar LECTURA antes de verificar existencia
+            await consumo.registrarFirestoreLectura(collectionName, 'verificar nombre');
+
             const existe = await this.verificarCategoriaExistente(data.nombre.trim());
             if (existe) {
                 throw new Error(`Ya existe una categoría con el nombre "${data.nombre}"`);
@@ -343,6 +349,10 @@ class CategoriaManager {
             };
 
             const categoriasCollection = collection(db, collectionName);
+
+            // [MODIFICACIÓN 3]: Registrar ESCRITURA antes de addDoc
+            await consumo.registrarFirestoreEscritura(collectionName, 'nueva categoría');
+
             const docRef = await addDoc(categoriasCollection, categoriaFirestoreData);
             const categoriaId = docRef.id;
 
@@ -356,7 +366,7 @@ class CategoriaManager {
 
             this.categorias.unshift(nuevaCategoria);
 
-            // ✅ REGISTRO EN HISTORIAL
+            // REGISTRO EN HISTORIAL
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -396,8 +406,11 @@ class CategoriaManager {
             }
 
             const collectionName = this._getCollectionName(orgId);
-
             const categoriasCollection = collection(db, collectionName);
+
+            // [MODIFICACIÓN 4]: Registrar LECTURA antes de getDocs
+            await consumo.registrarFirestoreLectura(collectionName, 'lista categorías');
+
             const categoriasSnapshot = await getDocs(categoriasCollection);
             const categorias = [];
 
@@ -419,7 +432,7 @@ class CategoriaManager {
             categorias.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
             this.categorias = categorias;
 
-            // ✅ REGISTRO EN HISTORIAL (solo lectura)
+            // REGISTRO EN HISTORIAL (solo lectura)
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -454,6 +467,10 @@ class CategoriaManager {
         try {
             const collectionName = this._getCollectionName(orgId);
             const categoriaRef = doc(db, collectionName, categoriaId);
+
+            // [MODIFICACIÓN 5]: Registrar LECTURA antes de getDoc
+            await consumo.registrarFirestoreLectura(collectionName, categoriaId);
+
             const categoriaSnap = await getDoc(categoriaRef);
 
             if (categoriaSnap.exists()) {
@@ -486,6 +503,10 @@ class CategoriaManager {
 
             const collectionName = this._getCollectionName(orgId);
             const categoriaRef = doc(db, collectionName, categoriaId);
+
+            // [MODIFICACIÓN 6]: Registrar LECTURA antes de getDoc
+            await consumo.registrarFirestoreLectura(collectionName, categoriaId);
+
             const categoriaSnap = await getDoc(categoriaRef);
 
             if (!categoriaSnap.exists()) {
@@ -495,6 +516,9 @@ class CategoriaManager {
             const datosActuales = categoriaSnap.data();
 
             if (nuevosDatos.nombre && nuevosDatos.nombre !== datosActuales.nombre) {
+                // [MODIFICACIÓN 7]: Registrar LECTURA para verificar nombre
+                await consumo.registrarFirestoreLectura(collectionName, 'verificar nombre');
+
                 const existe = await this.verificarCategoriaExistente(nuevosDatos.nombre, orgId, categoriaId);
                 if (existe) {
                     throw new Error(`Ya existe otra categoría con el nombre "${nuevosDatos.nombre}"`);
@@ -510,6 +534,9 @@ class CategoriaManager {
             delete datosActualizados.organizacionCamelCase;
             delete datosActualizados.organizacionNombre;
 
+            // [MODIFICACIÓN 8]: Registrar ACTUALIZACIÓN antes de updateDoc
+            await consumo.registrarFirestoreActualizacion(collectionName, categoriaId);
+
             await updateDoc(categoriaRef, datosActualizados);
 
             const categoriaIndex = this.categorias.findIndex(c => c.id === categoriaId);
@@ -523,7 +550,7 @@ class CategoriaManager {
                 categoriaActual.fechaActualizacion = new Date();
             }
 
-            // ✅ REGISTRO EN HISTORIAL
+            // REGISTRO EN HISTORIAL
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -586,6 +613,9 @@ class CategoriaManager {
             const collectionName = this._getCollectionName(orgId);
             const categoriaRef = doc(db, collectionName, categoriaId);
 
+            // [MODIFICACIÓN 9]: Registrar ELIMINACIÓN antes de deleteDoc
+            await consumo.registrarFirestoreEliminacion(collectionName, categoriaId);
+
             await deleteDoc(categoriaRef);
 
             const categoriaIndex = this.categorias.findIndex(c => c.id === categoriaId);
@@ -593,7 +623,7 @@ class CategoriaManager {
                 this.categorias.splice(categoriaIndex, 1);
             }
 
-            // ✅ REGISTRO EN HISTORIAL
+            // REGISTRO EN HISTORIAL
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -633,6 +663,9 @@ class CategoriaManager {
                 categoriasCollection,
                 where("nombre", "==", nombre)
             );
+
+            // [MODIFICACIÓN 10]: Registrar LECTURA antes de getDocs
+            await consumo.registrarFirestoreLectura(collectionName, 'verificar nombre');
 
             const querySnapshot = await getDocs(q);
 
@@ -681,12 +714,15 @@ class CategoriaManager {
             const collectionName = this._getCollectionName(orgId);
             const categoriaRef = doc(db, collectionName, categoriaId);
 
+            // [MODIFICACIÓN 11]: Registrar ACTUALIZACIÓN antes de updateDoc
+            await consumo.registrarFirestoreActualizacion(collectionName, categoriaId);
+
             await updateDoc(categoriaRef, {
                 subcategorias: categoria.subcategorias,
                 fechaActualizacion: serverTimestamp()
             });
 
-            // ✅ REGISTRO EN HISTORIAL
+            // REGISTRO EN HISTORIAL
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
@@ -741,12 +777,15 @@ class CategoriaManager {
             const collectionName = this._getCollectionName(orgId);
             const categoriaRef = doc(db, collectionName, categoriaId);
 
+            // [MODIFICACIÓN 12]: Registrar ACTUALIZACIÓN antes de updateDoc
+            await consumo.registrarFirestoreActualizacion(collectionName, categoriaId);
+
             await updateDoc(categoriaRef, {
                 subcategorias: categoria.subcategorias,
                 fechaActualizacion: serverTimestamp()
             });
 
-            // ✅ REGISTRO EN HISTORIAL
+            // REGISTRO EN HISTORIAL
             if (usuarioActual) {
                 const historial = await this._getHistorialManager();
                 if (historial) {
