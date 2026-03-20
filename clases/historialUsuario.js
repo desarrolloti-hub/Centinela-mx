@@ -1,3 +1,5 @@
+// historialUsuario.js - CON REGISTRO DE CONSUMO FIREBASE
+
 import {
     collection,
     doc,
@@ -14,6 +16,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
+
+// [MODIFICACIÓN 1]: Importar la instancia de consumo
+import consumo from '/clases/consumoFirebase.js';
 
 class Actividad {
     constructor(id, data) {
@@ -131,6 +136,9 @@ class HistorialUsuarioManager {
         const docRef = doc(db, collectionName, docId);
         
         try {
+            // [MODIFICACIÓN 2]: Registrar LECTURA antes de getDoc
+            await consumo.registrarFirestoreLectura(collectionName, docId);
+            
             const docSnap = await getDoc(docRef);
             
             if (docSnap.exists()) {
@@ -147,6 +155,9 @@ class HistorialUsuarioManager {
                     fechaCreacion: serverTimestamp(),
                     fechaActualizacion: serverTimestamp()
                 };
+                
+                // [MODIFICACIÓN 3]: Registrar ESCRITURA antes de setDoc
+                await consumo.registrarFirestoreEscritura(collectionName, docId);
                 
                 await setDoc(docRef, nuevoDoc);
                 console.log('📄 Documento creado:', docId);
@@ -205,10 +216,20 @@ class HistorialUsuarioManager {
                 fecha: ahora.toISOString()
             };
 
+            // [MODIFICACIÓN 4]: Registrar LECTURA para obtener total actual
+            const collectionName = this._getCollectionName(organizacion);
+            await consumo.registrarFirestoreLectura(collectionName, docRef.id);
+            
+            const docSnap = await getDoc(docRef);
+            const totalActual = docSnap.data()?.totalActividades || 0;
+
+            // [MODIFICACIÓN 5]: Registrar ACTUALIZACIÓN antes de updateDoc
+            await consumo.registrarFirestoreActualizacion(collectionName, docRef.id);
+
             // Actualizar Firestore - agregar al MAP y aumentar contador
             const updateData = {
                 [`actividades.${actividadId}`]: actividad,
-                totalActividades: (await getDoc(docRef)).data()?.totalActividades + 1 || 1,
+                totalActividades: totalActual + 1,
                 fechaActualizacion: serverTimestamp()
             };
 
@@ -249,6 +270,9 @@ class HistorialUsuarioManager {
                 where("fecha", ">=", Timestamp.fromDate(inicioDia)),
                 where("fecha", "<=", Timestamp.fromDate(finDia))
             );
+
+            // [MODIFICACIÓN 6]: Registrar LECTURA antes de getDocs
+            await consumo.registrarFirestoreLectura(collectionName, 'actividades por fecha');
 
             const snapshot = await getDocs(q);
             const actividades = [];
@@ -294,6 +318,9 @@ class HistorialUsuarioManager {
             const docId = this._generarDocumentId(usuarioId, fecha);
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const docRef = doc(db, collectionName, docId);
+
+            // [MODIFICACIÓN 7]: Registrar LECTURA antes de getDoc
+            await consumo.registrarFirestoreLectura(collectionName, docId);
 
             const docSnap = await getDoc(docRef);
             

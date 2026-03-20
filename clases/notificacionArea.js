@@ -1,5 +1,4 @@
-// [file name]: notificacionArea.js
-// [file path]: /clases/notificacionArea.js
+// notificacionArea.js - VERSIÓN CORREGIDA Y OPTIMIZADA
 
 import {
     collection,
@@ -13,27 +12,25 @@ import {
     orderBy,
     limit,
     serverTimestamp,
-    Timestamp,
     increment,
     writeBatch,
-    deleteDoc,
-    arrayUnion
+    deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
+import consumo from '/clases/consumoFirebase.js';
 
 class NotificacionArea {
     constructor(id, data) {
         this.id = id;
         this.titulo = data.titulo || '';
         this.mensaje = data.mensaje || '';
-        this.tipo = data.tipo || 'canalizacion'; // canalizacion, comentario, asignacion, resolucion
+        this.tipo = data.tipo || 'canalizacion';
         this.fecha = data.fecha ? this._convertirFecha(data.fecha) : new Date();
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.remitenteId = data.remitenteId || '';
         this.remitenteNombre = data.remitenteNombre || '';
         
-        // Datos de la incidencia
         this.incidenciaId = data.incidenciaId || '';
         this.incidenciaTitulo = data.incidenciaTitulo || '';
         this.sucursalId = data.sucursalId || '';
@@ -42,26 +39,21 @@ class NotificacionArea {
         this.categoriaNombre = data.categoriaNombre || '';
         this.nivelRiesgo = data.nivelRiesgo || '';
         
-        // Áreas destino - ARRAY DE IDs para consultas eficientes
         this.areasIds = data.areasIds || [];
-        this.areasDestino = data.areasDestino || []; // Para mostrar en UI
+        this.areasDestino = data.areasDestino || [];
         
-        // Estadísticas
         this.totalUsuarios = data.totalUsuarios || 0;
-        this.leidas = data.leidas || 0; // Contador global
+        this.leidas = data.leidas || 0;
         
-        // URLs
         this.urlDestino = data.urlDestino || '';
         
-        // Metadatos
         this.detalles = data.detalles || {};
         this.prioridad = data.prioridad || 'normal';
         this.icono = data.icono || 'fa-bell';
         this.color = data.color || '#007bff';
         
-        // Campos para el usuario específico (se llenan en getNotificacionesUsuario)
-        this.leida = false;
-        this.fechaLectura = null;
+        this.leida = data.leida || false;
+        this.fechaLectura = data.fechaLectura || null;
     }
 
     _convertirFecha(fecha) {
@@ -141,7 +133,7 @@ class NotificacionArea {
             leida: this.leida,
             fechaLectura: this.fechaLectura,
             remitenteNombre: this.remitenteNombre,
-            urlDestino: this.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${this.incidenciaId}`,
+            urlDestino: this.urlDestino || `../verIncidencias/verIncidencias.html?id=${this.incidenciaId}`,
             prioridad: this.prioridad,
             detalles: this.detalles
         };
@@ -150,7 +142,6 @@ class NotificacionArea {
 
 class NotificacionAreaManager {
     constructor() {
-        console.log('📋 NotificacionAreaManager inicializado');
         this.usuarioActual = null;
         this.functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
         this.functionUrlV2 = 'https://sendpushnotification-5orj5w7mha-uc.a.run.app';
@@ -170,7 +161,7 @@ class NotificacionAreaManager {
                 };
             }
         } catch (error) {
-            console.error('Error al inicializar usuario:', error);
+            // Error silencioso
         }
     }
 
@@ -188,27 +179,20 @@ class NotificacionAreaManager {
         return `not_${timestamp}_${random}`;
     }
 
-    /**
-     * Obtiene TODOS los usuarios activos de un área específica
-     * con índice compuesto para consulta eficiente
-     */
     async _getUsuariosPorAreaId(areaId, organizacionCamelCase) {
         try {
             if (!areaId) return [];
 
-            console.log(`🔍 Buscando usuarios activos con areaAsignadaId = ${areaId}`);
-            
-            // Consultar en colección de colaboradores
             const colaboradoresCollection = `colaboradores_${organizacionCamelCase}`;
             const colabRef = collection(db, colaboradoresCollection);
             
-            // Usar índice compuesto: areaAsignadaId + status + fechaCreacion
             const q = query(
                 colabRef,
                 where("areaAsignadaId", "==", areaId),
-                where("status", "==", true),
-                orderBy("fechaCreacion", "desc")
+                where("status", "==", true)
             );
+            
+            await consumo.registrarFirestoreLectura(colaboradoresCollection, `usuarios por área: ${areaId}`);
             
             const snapshot = await getDocs(q);
             const usuarios = [];
@@ -220,23 +204,17 @@ class NotificacionAreaManager {
                     nombreCompleto: data.nombreCompleto || 'Usuario',
                     correo: data.correoElectronico || '',
                     dispositivos: data.dispositivos || [],
-                    areaAsignadaId: data.areaAsignadaId,
-                    tokensActivos: this._extraerTokensActivos(data.dispositivos)
+                    areaAsignadaId: data.areaAsignadaId
                 });
             });
 
-            console.log(`✅ Total usuarios activos en área ${areaId}: ${usuarios.length}`);
             return usuarios;
 
         } catch (error) {
-            console.error('Error en _getUsuariosPorAreaId:', error);
             return [];
         }
     }
 
-    /**
-     * Extrae tokens activos del array de dispositivos
-     */
     _extraerTokensActivos(dispositivos) {
         if (!dispositivos || !Array.isArray(dispositivos)) return [];
         return dispositivos
@@ -244,19 +222,13 @@ class NotificacionAreaManager {
             .map(d => d.token);
     }
 
-    /**
-     * Obtiene usuarios de múltiples áreas (sin duplicados)
-     */
     async _getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase) {
         try {
             if (!areasIds || areasIds.length === 0) return [];
 
-            console.log(`🔍 Buscando usuarios en ${areasIds.length} áreas...`);
-            
             const todosUsuarios = [];
             const idsVistos = new Set();
             
-            // Ejecutar consultas en paralelo para mejor rendimiento
             const promises = areasIds.map(areaId => 
                 this._getUsuariosPorAreaId(areaId, organizacionCamelCase)
             );
@@ -272,101 +244,95 @@ class NotificacionAreaManager {
                 }
             }
 
-            console.log(`✅ Total usuarios únicos: ${todosUsuarios.length}`);
             return todosUsuarios;
 
         } catch (error) {
-            console.error('Error en _getUsuariosPorMultiplesAreas:', error);
             return [];
         }
     }
 
-    /**
-     * Enviar notificaciones push a usuarios - VERSIÓN OPTIMIZADA
-     */
-async _enviarNotificacionesPush(usuarios, notificacionData) {
-    try {
-        console.log(`📱 Enviando notificaciones push a ${usuarios.length} usuarios...`);
-        
-        let enviados = 0;
-        let fallidos = 0;
+    async _enviarNotificacionesPush(usuarios, notificacionData) {
+        try {
+            let enviados = 0;
+            let totalNotificacionesPush = 0;
+            let usuariosExitosos = 0;
 
-        // Enviar UNA solicitud por CADA USUARIO (no por token)
-        for (const usuario of usuarios) {
-            try {
-                // Obtener tokens del usuario
-                const tokens = this._extraerTokensActivos(usuario.dispositivos);
-                
-                if (tokens.length === 0) {
-                    console.log(`⚠️ Usuario ${usuario.id} sin tokens activos`);
-                    continue;
-                }
+            for (const usuario of usuarios) {
+                try {
+                    const tokens = this._extraerTokensActivos(usuario.dispositivos);
+                    
+                    if (tokens.length === 0) continue;
 
-                // Enviar SOLICITUD ÚNICA para este usuario con TODOS sus tokens
-                const payload = {
-                    userId: usuario.id,                    // ← IGUAL que pruebas
-                    userType: 'colaborador',               // ← IGUAL que pruebas
-                    organizacionCamelCase: notificacionData.organizacionCamelCase,
-                    title: notificacionData.titulo,
-                    body: notificacionData.mensaje,
-                    url: notificacionData.urlDestino,
-                    senderToken: notificacionData.remitenteId || 'sistema',
-                    tokens: tokens,                         // ← Array de tokens del usuario
-                    data: {
-                        incidenciaId: notificacionData.incidenciaId,
-                        tipo: notificacionData.tipo,
-                        nivelRiesgo: notificacionData.nivelRiesgo,
-                        notificacionId: notificacionData.id,
-                        areasIds: notificacionData.areasIds
-                    }
-                };
-                
-                // Intentar con URL primaria
-                let response = await fetch(this.functionUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                // Si falla, intentar con v2
-                if (!response.ok && this.functionUrlV2) {
-                    console.log('🔄 Fallback a URL v2');
-                    response = await fetch(this.functionUrlV2, {
+                    const payload = {
+                        userId: usuario.id,
+                        userType: 'colaborador',
+                        organizacionCamelCase: notificacionData.organizacionCamelCase,
+                        title: notificacionData.titulo,
+                        body: notificacionData.mensaje,
+                        url: notificacionData.urlDestino,
+                        senderToken: notificacionData.remitenteId || 'sistema',
+                        tokens: tokens,
+                        data: {
+                            incidenciaId: notificacionData.incidenciaId,
+                            tipo: notificacionData.tipo,
+                            nivelRiesgo: notificacionData.nivelRiesgo,
+                            notificacionId: notificacionData.id,
+                            areasIds: notificacionData.areasIds
+                        }
+                    };
+                    
+                    let response = await fetch(this.functionUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                }
-                
-                if (response.ok) {
-                    enviados++;
-                    console.log(`✅ Push enviado a usuario ${usuario.id} (${tokens.length} tokens)`);
-                } else {
-                    fallidos++;
-                    console.log(`❌ Error ${response.status} para usuario ${usuario.id}`);
+
+                    if (!response.ok && this.functionUrlV2) {
+                        response = await fetch(this.functionUrlV2, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                    }
+                    
+                    if (response.ok) {
+                        enviados++;
+                        usuariosExitosos++;
+                        totalNotificacionesPush += tokens.length;
+                    }
+
+                } catch (error) {
+                    // Error silencioso
                 }
 
-            } catch (error) {
-                fallidos++;
-                console.error(`❌ Error con usuario ${usuario.id}:`, error.message);
+                await new Promise(r => setTimeout(r, 100));
             }
 
-            // Pequeña pausa entre usuarios
-            await new Promise(r => setTimeout(r, 100));
+            if (totalNotificacionesPush > 0) {
+                await consumo.registrarNotificacionesPush(
+                    totalNotificacionesPush,
+                    usuariosExitosos,
+                    'sendPushNotification',
+                    {
+                        incidenciaId: notificacionData.incidenciaId,
+                        totalUsuariosPotenciales: usuarios.length,
+                        tipoNotificacion: notificacionData.tipo
+                    }
+                );
+            }
+
+            return { 
+                success: enviados > 0, 
+                enviados: usuariosExitosos,
+                total: usuarios.length,
+                notificacionesPush: totalNotificacionesPush
+            };
+
+        } catch (error) {
+            return { success: false, error: error.message };
         }
-
-        console.log(`📊 Push: ${enviados}/${usuarios.length} usuarios notificados`);
-        return { success: enviados > 0, enviados, fallidos, total: usuarios.length };
-
-    } catch (error) {
-        console.error('❌ Error en _enviarNotificacionesPush:', error);
-        return { success: false, error: error.message };
     }
-}
 
-    /**
-     * MÉTODO PRINCIPAL: Notificar a múltiples áreas
-     */
     async notificarMultiplesAreas({
         areas = [],
         incidenciaId,
@@ -398,7 +364,6 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
                 return { success: false, error: 'incidenciaId requerido' };
             }
 
-            // Determinar remitente
             if (!remitenteId || !remitenteNombre) {
                 if (this.usuarioActual) {
                     remitenteId = this.usuarioActual.id;
@@ -409,15 +374,9 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
                 }
             }
 
-            // Obtener IDs de las áreas
             const areasIds = areas.map(a => a.id);
-            console.log('📋 Áreas a notificar:', areasIds);
-
-            // Obtener usuarios de esas áreas
             const usuarios = await this._getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase);
-            console.log(`👥 Usuarios encontrados: ${usuarios.length}`);
 
-            // Crear título y mensaje
             const titulo = this._generarTitulo(tipo, areas, nivelRiesgo);
             let mensaje = mensajePersonalizado;
             
@@ -425,10 +384,9 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
                 mensaje = this._generarMensaje(tipo, areas, incidenciaTitulo, sucursalNombre);
             }
 
-            const urlDestino = `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
+            const urlDestino = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
             const notificacionId = this._generarNotificacionId();
 
-            // Guardar notificación GLOBAL en Firestore
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const notificacionRef = doc(db, collectionName, notificacionId);
 
@@ -452,7 +410,7 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
                 nivelRiesgo: nivelRiesgo,
                 
                 areasDestino: areas.map(a => ({ id: a.id, nombre: a.nombre })),
-                areasIds: areasIds, // ARRAY para consultas eficientes
+                areasIds: areasIds,
                 
                 totalUsuarios: usuarios.length,
                 leidas: 0,
@@ -466,15 +424,13 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
                 fechaCreacion: serverTimestamp()
             };
 
+            await consumo.registrarFirestoreEscritura(collectionName, notificacionId);
             await setDoc(notificacionRef, notificacionData);
-            console.log(`✅ Notificación guardada: ${notificacionId}`);
 
-            // Crear índices para cada usuario (estado de lectura)
             if (usuarios.length > 0) {
                 await this._crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase);
             }
 
-            // ENVIAR NOTIFICACIONES PUSH
             let pushResult = null;
             if (enviarPush && usuarios.length > 0) {
                 pushResult = await this._enviarNotificacionesPush(usuarios, notificacionData);
@@ -489,14 +445,10 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
             };
 
         } catch (error) {
-            console.error('❌ Error en notificarMultiplesAreas:', error);
             return { success: false, error: error.message };
         }
     }
 
-    /**
-     * Generar título según tipo y áreas
-     */
     _generarTitulo(tipo, areas, nivelRiesgo) {
         if (tipo === 'canalizacion') {
             if (areas.length === 1) {
@@ -508,9 +460,6 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
         return '📢 Nueva notificación';
     }
 
-    /**
-     * Generar mensaje descriptivo
-     */
     _generarMensaje(tipo, areas, incidenciaTitulo, sucursalNombre) {
         let mensaje = '';
         
@@ -527,9 +476,6 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
         return mensaje;
     }
 
-    /**
-     * Crear índices para cada usuario (estado de lectura)
-     */
     async _crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase) {
         try {
             if (!usuarios || usuarios.length === 0) return;
@@ -555,27 +501,23 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
 
                 operaciones++;
 
-                // Firestore batch tiene límite de 500 operaciones
                 if (operaciones >= 400) {
+                    await consumo.registrarFirestoreActualizacion(userNotifCollectionName, `batch_${operaciones}_usuarios`);
                     await batch.commit();
-                    console.log(`✅ Lote de ${operaciones} índices guardado`);
                     operaciones = 0;
                 }
             }
 
             if (operaciones > 0) {
+                await consumo.registrarFirestoreActualizacion(userNotifCollectionName, `batch_final_${operaciones}_usuarios`);
                 await batch.commit();
-                console.log(`✅ Último lote de ${operaciones} índices guardado`);
             }
 
         } catch (error) {
-            console.error('Error creando índices:', error);
+            // Error silencioso
         }
     }
 
-    /**
-     * Obtener notificaciones de un usuario con ordenamiento por fecha
-     */
     async obtenerNotificaciones(usuarioId, organizacionCamelCase, soloNoLeidas = false, limite = 50) {
         try {
             if (!organizacionCamelCase || !usuarioId) return [];
@@ -583,8 +525,10 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
 
-            // Obtener índices del usuario
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+            
+            await consumo.registrarFirestoreLectura(userNotifCollectionName, usuarioId);
+            
             const userNotifSnap = await getDoc(userNotifRef);
 
             if (!userNotifSnap.exists()) {
@@ -600,7 +544,6 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
                 notificacionesIds = notificacionesIds.filter(id => !notificacionesMap[id].leida);
             }
 
-            // Ordenar por fecha de recepción (del mapa)
             notificacionesIds.sort((a, b) => {
                 const fechaA = notificacionesMap[a].fechaRecepcion?.toDate?.() || new Date(0);
                 const fechaB = notificacionesMap[b].fechaRecepcion?.toDate?.() || new Date(0);
@@ -615,15 +558,15 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
 
             const notificaciones = [];
 
-            // Obtener notificaciones en lotes de 10 (límite de Firestore para IN)
             for (let i = 0; i < notificacionesIds.length; i += 10) {
                 const batchIds = notificacionesIds.slice(i, i + 10);
                 
                 const q = query(
                     collection(db, notificacionesCollectionName),
-                    where("__name__", "in", batchIds),
-                    orderBy("fecha", "desc") // Ordenar por fecha de creación
+                    where("__name__", "in", batchIds)
                 );
+                
+                await consumo.registrarFirestoreLectura(notificacionesCollectionName, `batch_${i}`);
                 
                 const snapshot = await getDocs(q);
                 
@@ -644,27 +587,24 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
             return notificaciones;
 
         } catch (error) {
-            console.error('Error en obtenerNotificaciones:', error);
             return [];
         }
     }
 
-    /**
-     * Obtener notificaciones filtradas por área (para vistas específicas)
-     */
     async obtenerNotificacionesPorArea(areaId, organizacionCamelCase, limite = 50) {
         try {
             if (!organizacionCamelCase || !areaId) return [];
 
             const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
             
-            // Usar índice compuesto: areasIds + fecha
             const q = query(
                 collection(db, notificacionesCollectionName),
                 where("areasIds", "array-contains", areaId),
                 orderBy("fecha", "desc"),
                 limit(limite)
             );
+            
+            await consumo.registrarFirestoreLectura(notificacionesCollectionName, `notificaciones por área: ${areaId}`);
             
             const snapshot = await getDocs(q);
             const notificaciones = [];
@@ -676,20 +616,17 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
             return notificaciones;
 
         } catch (error) {
-            console.error('Error en obtenerNotificacionesPorArea:', error);
             return [];
         }
     }
 
-    /**
-     * Obtener conteo de no leídas (desde el documento del usuario)
-     */
     async obtenerConteoNoLeidas(usuarioId, organizacionCamelCase) {
         try {
             if (!organizacionCamelCase || !usuarioId) return 0;
 
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+            
             const userNotifSnap = await getDoc(userNotifRef);
 
             if (!userNotifSnap.exists()) {
@@ -697,17 +634,26 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
             }
 
             const userData = userNotifSnap.data();
-            return userData.totalPendientes || 0;
+            const totalPendientes = userData.totalPendientes || 0;
+            
+            if (totalPendientes < 0) {
+                const notificaciones = userData.notificaciones || {};
+                const noLeidasReales = Object.values(notificaciones).filter(n => !n.leida).length;
+                
+                await updateDoc(userNotifRef, {
+                    totalPendientes: noLeidasReales
+                });
+                
+                return noLeidasReales;
+            }
+            
+            return totalPendientes;
 
         } catch (error) {
-            console.error('Error en obtenerConteoNoLeidas:', error);
             return 0;
         }
     }
 
-    /**
-     * Marcar notificación como leída
-     */
     async marcarComoLeida(usuarioId, notificacionId, organizacionCamelCase) {
         try {
             if (!organizacionCamelCase || !usuarioId || !notificacionId) return false;
@@ -715,38 +661,68 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
 
-            // Actualizar estado en el documento del usuario
-            await updateDoc(userNotifRef, {
-                [`notificaciones.${notificacionId}.leida`]: true,
-                [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp(),
-                totalPendientes: increment(-1)
-            });
-
-            // Incrementar contador global en la notificación
-            const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
-            const notificacionRef = doc(db, notificacionesCollectionName, notificacionId);
+            const userNotifSnap = await getDoc(userNotifRef);
             
-            await updateDoc(notificacionRef, {
-                leidas: increment(1)
-            });
+            if (!userNotifSnap.exists()) {
+                return false;
+            }
+            
+            const userData = userNotifSnap.data();
+            const notificacionesMap = userData.notificaciones || {};
+            const notificacionActual = notificacionesMap[notificacionId];
+            
+            if (notificacionActual && notificacionActual.leida === true) {
+                return true;
+            }
+            
+            let totalPendientes = userData.totalPendientes || 0;
+            
+            if (totalPendientes < 0) {
+                const noLeidasReales = Object.values(notificacionesMap).filter(n => !n.leida).length;
+                totalPendientes = noLeidasReales;
+                
+                await updateDoc(userNotifRef, {
+                    totalPendientes: totalPendientes
+                });
+            }
+            
+            if (totalPendientes > 0) {
+                await updateDoc(userNotifRef, {
+                    [`notificaciones.${notificacionId}.leida`]: true,
+                    [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp(),
+                    totalPendientes: increment(-1)
+                });
+            } else {
+                await updateDoc(userNotifRef, {
+                    [`notificaciones.${notificacionId}.leida`]: true,
+                    [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp()
+                });
+            }
+
+            try {
+                const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+                const notificacionRef = doc(db, notificacionesCollectionName, notificacionId);
+                await updateDoc(notificacionRef, {
+                    leidas: increment(1)
+                });
+            } catch (error) {
+                // Error silencioso
+            }
 
             return true;
 
         } catch (error) {
-            console.error('Error en marcarComoLeida:', error);
             return false;
         }
     }
 
-    /**
-     * Marcar todas como leídas (para un usuario)
-     */
     async marcarTodasComoLeidas(usuarioId, organizacionCamelCase) {
         try {
             if (!organizacionCamelCase || !usuarioId) return false;
 
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+            
             const userNotifSnap = await getDoc(userNotifRef);
 
             if (!userNotifSnap.exists()) {
@@ -755,19 +731,20 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
 
             const userData = userNotifSnap.data();
             const notificaciones = userData.notificaciones || {};
-            const batch = writeBatch(db);
             
-            // Obtener todas las no leídas para actualizar contadores globales
             const noLeidasIds = Object.keys(notificaciones).filter(id => !notificaciones[id].leida);
             
-            // Actualizar cada notificación en el documento del usuario
-            Object.keys(notificaciones).forEach(notifId => {
-                if (!notificaciones[notifId].leida) {
-                    batch.update(userNotifRef, {
-                        [`notificaciones.${notifId}.leida`]: true,
-                        [`notificaciones.${notifId}.fechaLectura`]: serverTimestamp()
-                    });
-                }
+            if (noLeidasIds.length === 0) {
+                return true;
+            }
+            
+            const batch = writeBatch(db);
+            
+            noLeidasIds.forEach(notifId => {
+                batch.update(userNotifRef, {
+                    [`notificaciones.${notifId}.leida`]: true,
+                    [`notificaciones.${notifId}.fechaLectura`]: serverTimestamp()
+                });
             });
 
             batch.update(userNotifRef, {
@@ -776,32 +753,25 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
 
             await batch.commit();
 
-            // Actualizar contadores globales (en segundo plano, no crítico)
-            if (noLeidasIds.length > 0) {
-                const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
-                for (const notifId of noLeidasIds) {
-                    try {
-                        const notifRef = doc(db, notificacionesCollectionName, notifId);
-                        await updateDoc(notifRef, {
-                            leidas: increment(1)
-                        });
-                    } catch (e) {
-                        console.warn(`No se pudo actualizar contador global para ${notifId}`);
-                    }
+            const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+            for (const notifId of noLeidasIds) {
+                try {
+                    const notifRef = doc(db, notificacionesCollectionName, notifId);
+                    await updateDoc(notifRef, {
+                        leidas: increment(1)
+                    });
+                } catch (e) {
+                    // Error silencioso
                 }
             }
 
             return true;
 
         } catch (error) {
-            console.error('Error en marcarTodasComoLeidas:', error);
             return false;
         }
     }
 
-    /**
-     * Eliminar notificaciones antiguas (para limpieza)
-     */
     async limpiarNotificacionesAntiguas(organizacionCamelCase, dias = 30) {
         try {
             const fechaLimite = new Date();
@@ -811,8 +781,10 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
             const q = query(
                 collection(db, notificacionesCollectionName),
                 where("fecha", "<", fechaLimite),
-                limit(100) // Limitar por seguridad
+                limit(100)
             );
+            
+            await consumo.registrarFirestoreLectura(notificacionesCollectionName, 'limpieza_notificaciones_antiguas');
             
             const snapshot = await getDocs(q);
             const batch = writeBatch(db);
@@ -821,14 +793,32 @@ async _enviarNotificacionesPush(usuarios, notificacionData) {
                 batch.delete(doc.ref);
             });
             
+            if (snapshot.size > 0) {
+                await consumo.registrarFirestoreEliminacion(notificacionesCollectionName, `batch_limpieza_${snapshot.size}_notificaciones`);
+            }
+            
             await batch.commit();
-            console.log(`✅ Limpiadas ${snapshot.size} notificaciones antiguas`);
             
             return { success: true, eliminadas: snapshot.size };
 
         } catch (error) {
-            console.error('Error limpiando notificaciones:', error);
             return { success: false, error: error.message };
+        }
+    }
+
+    async limpiarNotificacionesUsuario(usuarioId, organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase || !usuarioId) return false;
+
+            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
+            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+            
+            await deleteDoc(userNotifRef);
+            
+            return true;
+
+        } catch (error) {
+            return false;
         }
     }
 

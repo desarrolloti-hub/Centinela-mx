@@ -27,7 +27,7 @@ class TareasController {
         // Estado del formulario
         this.modoEdicion = false;
         this.tareaActual = null;
-        this.tipoSeleccionado = 'personal'; // Tipo por defecto
+        this.tipoSeleccionado = 'personal';
         this.itemsActuales = [];
 
         // Cache para creación
@@ -44,15 +44,11 @@ class TareasController {
 
     async init() {
         try {
-            console.log('🚀 Inicializando TareasController con formulario inline...');
-
-            // 1. Inicializar managers
             this.userManager = new UserManager();
             this.areaManager = new AreaManager();
             const { TareaManager } = await import('/clases/tarea.js');
             this.tareaManager = new TareaManager();
 
-            // 2. Esperar usuario
             await this._esperarUsuario();
 
             if (!this.usuarioActual) {
@@ -60,9 +56,6 @@ class TareasController {
                 return;
             }
 
-            console.log('👤 Usuario actual:', this.usuarioActual.nombreCompleto);
-
-            // 3. Guardar info
             localStorage.setItem('adminInfo', JSON.stringify({
                 id: this.usuarioActual.id,
                 uid: this.usuarioActual.uid,
@@ -75,16 +68,13 @@ class TareasController {
                 cargoId: this.usuarioActual.cargoId
             }));
 
-            // 4. Cargar datos necesarios
             await this._cargarUsuarios();
             await this._cargarAreas();
             await this._cargarTareas();
 
-            // 5. Configurar UI
             this._configurarEventos();
 
         } catch (error) {
-            console.error('❌ Error en inicialización:', error);
             this._mostrarError(error.message);
         }
     }
@@ -120,7 +110,6 @@ class TareasController {
             }
             return false;
         } catch (error) {
-            console.error('Error cargando usuario:', error);
             return false;
         }
     }
@@ -149,7 +138,6 @@ class TareasController {
             });
 
         } catch (error) {
-            console.warn('Error cargando usuarios:', error);
             this.usuariosDisponibles = [];
         }
     }
@@ -165,7 +153,6 @@ class TareasController {
             this.areasDisponibles = this.areasDisponibles.filter(a => a.estado === 'activa');
 
         } catch (error) {
-            console.warn('Error cargando áreas:', error);
             this.areasDisponibles = [];
         }
     }
@@ -182,18 +169,14 @@ class TareasController {
                 this.usuarioActual.organizacionCamelCase
             );
 
-            console.log(`✅ ${this.todasLasTareas.length} notas cargadas`);
-
             this._aplicarFiltros();
 
         } catch (error) {
-            console.error('Error cargando tareas:', error);
             this._mostrarErrorEnGrid(error.message);
         }
     }
 
     _aplicarFiltros() {
-        // Aplicar búsqueda
         if (this.terminoBusqueda && this.terminoBusqueda.length >= 2) {
             this.tareasFiltradas = this.todasLasTareas.filter(t =>
                 (t.nombreActividad && t.nombreActividad.toLowerCase().includes(this.terminoBusqueda)) ||
@@ -203,7 +186,6 @@ class TareasController {
             this.tareasFiltradas = [...this.todasLasTareas];
         }
 
-        // Aplicar filtro por tipo
         if (this.tipoActual !== 'todas') {
             this.tareasFiltradas = this.tareasFiltradas.filter(t => {
                 if (this.tipoActual === 'generales') {
@@ -249,9 +231,9 @@ class TareasController {
 
         container.innerHTML = html;
 
-        // Agregar eventos a los botones
         container.querySelectorAll('.btn-card-action.edit').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 const tareaId = btn.dataset.id;
                 this._abrirFormularioEdicion(tareaId);
@@ -260,13 +242,13 @@ class TareasController {
 
         container.querySelectorAll('.btn-card-action.delete').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 const tareaId = btn.dataset.id;
                 this._eliminarTarea(tareaId);
             });
         });
 
-        // Eventos para checkboxes en vista previa
         container.querySelectorAll('.tarea-item-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
                 e.stopPropagation();
@@ -303,7 +285,6 @@ class TareasController {
         const esCreador = tarea.creadoPor === this.usuarioActual?.id;
         const items = tarea.items ? Object.values(tarea.items) : [];
 
-        // Vista previa de items (máximo 3)
         let itemsPreview = '';
         if (items.length > 0) {
             itemsPreview = '<div class="tarea-items-preview">';
@@ -368,15 +349,12 @@ class TareasController {
                 this.usuarioActual, this.usuarioActual.organizacionCamelCase
             );
 
-            // Actualizar en caché
             const tarea = this.todasLasTareas.find(t => t.id === tareaId);
             if (tarea && tarea.items && tarea.items[itemId]) {
                 tarea.items[itemId].completado = completado;
             }
 
         } catch (error) {
-            console.error('Error marcando item:', error);
-            // Revertir checkbox
             const checkbox = document.querySelector(`.tarea-item-checkbox[data-tarea-id="${tareaId}"][data-item-id="${itemId}"]`);
             if (checkbox) checkbox.checked = !completado;
 
@@ -394,7 +372,6 @@ class TareasController {
     // ========== FUNCIONES PARA EL FORMULARIO INLINE ==========
 
     _mostrarFormularioCreacion() {
-        // Resetear formulario
         this.modoEdicion = false;
         this.tareaActual = null;
         this.tipoSeleccionado = 'personal';
@@ -408,17 +385,15 @@ class TareasController {
         document.getElementById('fechaLimite').value = this._getFechaPorDefecto('personal');
         document.getElementById('fechaContainer').style.display = 'none';
 
-        // Limpiar items
         this._renderizarItemsInline([]);
-
-        // Seleccionar tipo por defecto (personal)
         this._seleccionarTipoFormulario('personal');
 
-        // Mostrar formulario
         document.getElementById('formularioCreacion').style.display = 'block';
-
-        // Scroll suave al formulario
         document.getElementById('formularioCreacion').scrollIntoView({ behavior: 'smooth' });
+
+        setTimeout(() => {
+            document.getElementById('notaTitulo').focus();
+        }, 100);
     }
 
     _ocultarFormulario() {
@@ -428,7 +403,6 @@ class TareasController {
     _seleccionarTipoFormulario(tipo) {
         this.tipoSeleccionado = tipo;
 
-        // Actualizar clases de las opciones
         document.querySelectorAll('.tipo-option').forEach(opt => {
             if (opt.dataset.tipo === tipo) {
                 opt.classList.add('seleccionado');
@@ -437,7 +411,6 @@ class TareasController {
             }
         });
 
-        // Actualizar título del formulario
         const titulos = {
             'general': 'Nueva Nota General',
             'personal': 'Nueva Nota Personal',
@@ -446,10 +419,7 @@ class TareasController {
         };
         document.getElementById('formularioTitulo').textContent = titulos[tipo] || 'Nueva Nota';
 
-        // Renderizar campos específicos según tipo
         this._renderizarCamposEspecificosInline(tipo);
-
-        // Actualizar fecha por defecto
         this._actualizarFechaPorDefecto();
     }
 
@@ -525,7 +495,6 @@ class TareasController {
 
         container.innerHTML = html;
 
-        // Eventos
         container.querySelectorAll('.item-checkbox').forEach(cb => {
             cb.addEventListener('change', (e) => {
                 const row = e.target.closest('.item-row');
@@ -559,7 +528,7 @@ class TareasController {
 
         switch (tipo) {
             case 'personal':
-                html = this._getHTMLPrioridad();
+                html = ''; // Prioridad eliminada
                 break;
             case 'compartida':
                 html = this._getHTMLUsuariosCreacion();
@@ -582,21 +551,6 @@ class TareasController {
     }
 
     // ========== HTML PARA CAMPOS ESPECÍFICOS ==========
-
-    _getHTMLPrioridad(tareaData = null) {
-        const prioridad = tareaData?.prioridad || 'media';
-        return `
-            <div class="campos-especificos">
-                <h6 class="section-title"><i class="fas fa-flag"></i> Prioridad</h6>
-                <select class="form-control" id="prioridad">
-                    <option value="baja" ${prioridad === 'baja' ? 'selected' : ''}>🔵 Baja</option>
-                    <option value="media" ${prioridad === 'media' ? 'selected' : ''}>🟡 Media</option>
-                    <option value="alta" ${prioridad === 'alta' ? 'selected' : ''}>🔴 Alta</option>
-                    <option value="urgente" ${prioridad === 'urgente' ? 'selected' : ''}>⚡ Urgente</option>
-                </select>
-            </div>
-        `;
-    }
 
     _getHTMLUsuariosCreacion() {
         if (this.usuariosDisponibles.length === 0) {
@@ -727,7 +681,6 @@ class TareasController {
 
         html += `</div>`;
 
-        // Cargos (se llenarán dinámicamente al seleccionar área)
         html += `
             <div id="cargosSection" style="margin-top: 20px; display: none;">
                 <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
@@ -781,7 +734,6 @@ class TareasController {
 
         html += `</div>`;
 
-        // Cargos
         html += `
             <div id="cargosSection" style="margin-top: 20px; ${!areaSeleccionada ? 'display: none;' : ''}">
                 <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
@@ -990,7 +942,6 @@ class TareasController {
         const tieneRecordatorio = document.getElementById('tieneRecordatorio').checked;
         const fechaLimiteInput = document.getElementById('fechaLimite').value;
 
-        // Obtener items
         const items = {};
         document.querySelectorAll('#itemsList .item-row').forEach((row, index) => {
             const checkbox = row.querySelector('.item-checkbox');
@@ -1008,15 +959,11 @@ class TareasController {
             }
         });
 
-        // Obtener datos específicos según tipo
-        let prioridad = 'media';
         let usuariosCompartidosIds = [];
         let areaId = null;
         let cargosIds = [];
 
-        if (tipo === 'personal') {
-            prioridad = document.getElementById('prioridad')?.value || 'media';
-        } else if (tipo === 'compartida') {
+        if (tipo === 'compartida') {
             usuariosCompartidosIds = Array.from(document.querySelectorAll('.usuario-checkbox:checked')).map(cb => cb.value);
         } else if (tipo === 'area') {
             const areaRadio = document.querySelector('.area-radio:checked');
@@ -1044,9 +991,7 @@ class TareasController {
             tieneRecordatorio: tieneRecordatorio
         };
 
-        if (tipo === 'personal') {
-            tareaData.prioridad = prioridad;
-        } else if (tipo === 'compartida') {
+        if (tipo === 'compartida') {
             tareaData.usuariosCompartidosIds = usuariosCompartidosIds;
         } else if (tipo === 'area') {
             tareaData.areaId = areaId;
@@ -1063,13 +1008,11 @@ class TareasController {
 
         try {
             if (notaId) {
-                // Actualizar
                 await this.tareaManager.actualizarTarea(
                     notaId, tareaData,
                     this.usuarioActual, this.usuarioActual.organizacionCamelCase
                 );
             } else {
-                // Crear
                 await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
             }
 
@@ -1084,7 +1027,6 @@ class TareasController {
                 background: 'var(--color-bg-secondary)'
             });
 
-            // Ocultar formulario y recargar tareas
             this._ocultarFormulario();
             await this._cargarTareas();
 
@@ -1094,7 +1036,7 @@ class TareasController {
         }
     }
 
-    // ========== ABRIR FORMULARIO DE EDICIÓN ==========
+    // ========== ABRIR FORMULARIO DE EDICIÓN (CON SCROLL FIX Y FOCUS SIN MOVER SCROLL) ==========
 
     async _abrirFormularioEdicion(tareaId) {
         Swal.fire({
@@ -1118,16 +1060,13 @@ class TareasController {
             this.tipoSeleccionado = this.tareaActual.tipo === 'global' ? 'general' : this.tareaActual.tipo;
             this.areaSeleccionada = null;
 
-            // Llenar campos
             document.getElementById('notaId').value = this.tareaActual.id;
             document.getElementById('notaTitulo').value = this.tareaActual.nombreActividad || '';
             document.getElementById('notaDescripcion').value = this.tareaActual.descripcion || '';
 
-            // Items
             const items = this.tareaActual.items ? Object.values(this.tareaActual.items) : [];
             this._renderizarItemsInline(items);
 
-            // Fecha límite y recordatorio
             const tieneRecordatorio = this.tareaActual.tieneRecordatorio || false;
             document.getElementById('tieneRecordatorio').checked = tieneRecordatorio;
 
@@ -1140,7 +1079,6 @@ class TareasController {
 
             document.getElementById('fechaContainer').style.display = tieneRecordatorio ? 'block' : 'none';
 
-            // Actualizar título del formulario
             const titulos = {
                 'general': 'Editar Nota General',
                 'personal': 'Editar Nota Personal',
@@ -1149,7 +1087,6 @@ class TareasController {
             };
             document.getElementById('formularioTitulo').textContent = titulos[this.tipoSeleccionado] || 'Editar Nota';
 
-            // Actualizar selección de tipo
             document.querySelectorAll('.tipo-option').forEach(opt => {
                 if (opt.dataset.tipo === this.tipoSeleccionado) {
                     opt.classList.add('seleccionado');
@@ -1158,12 +1095,32 @@ class TareasController {
                 }
             });
 
-            // Renderizar campos específicos para edición
             await this._renderizarCamposEspecificosEdicion(this.tipoSeleccionado, this.tareaActual);
 
-            // Mostrar formulario
-            document.getElementById('formularioCreacion').style.display = 'block';
-            document.getElementById('formularioCreacion').scrollIntoView({ behavior: 'smooth' });
+            const formulario = document.getElementById('formularioCreacion');
+            const tituloInput = document.getElementById('notaTitulo');
+            const scrollActual = window.scrollY;
+
+            formulario.style.display = 'block';
+
+            window.scrollTo({
+                top: scrollActual,
+                behavior: 'instant'
+            });
+
+            setTimeout(() => {
+                if (tituloInput) {
+                    const scrollPosAntes = window.scrollY;
+                    tituloInput.focus();
+                    tituloInput.select();
+                    if (window.scrollY !== scrollPosAntes) {
+                        window.scrollTo({
+                            top: scrollPosAntes,
+                            behavior: 'instant'
+                        });
+                    }
+                }
+            }, 50);
 
         } catch (error) {
             Swal.close();
@@ -1179,7 +1136,7 @@ class TareasController {
 
         switch (tipo) {
             case 'personal':
-                html = this._getHTMLPrioridad(tareaData);
+                html = ''; // Prioridad eliminada
                 break;
             case 'compartida':
                 html = this._getHTMLUsuariosEdicion(tareaData);
@@ -1404,12 +1361,10 @@ class TareasController {
     // ========== CONFIGURACIÓN DE EVENTOS ==========
 
     _configurarEventos() {
-        // Botón único de creación
         document.getElementById('btnCrearNota')?.addEventListener('click', () => {
             this._mostrarFormularioCreacion();
         });
 
-        // Cerrar formulario
         document.getElementById('cerrarFormulario')?.addEventListener('click', () => {
             this._ocultarFormulario();
         });
@@ -1418,7 +1373,6 @@ class TareasController {
             this._ocultarFormulario();
         });
 
-        // Tabs de filtrado
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1428,7 +1382,6 @@ class TareasController {
             });
         });
 
-        // Búsqueda
         document.getElementById('searchInput')?.addEventListener('input', (e) => {
             clearTimeout(this.searchTimeout);
             this.searchTimeout = setTimeout(() => {
@@ -1437,7 +1390,6 @@ class TareasController {
             }, 300);
         });
 
-        // Selector de tipo (tarjetas)
         document.querySelectorAll('.tipo-option').forEach(opt => {
             opt.addEventListener('click', () => {
                 const tipo = opt.dataset.tipo;
@@ -1445,20 +1397,15 @@ class TareasController {
             });
         });
 
-        // Guardar nota
         document.getElementById('guardarNota')?.addEventListener('click', () => this._guardarNota());
 
-        // Recordatorio
         document.getElementById('tieneRecordatorio')?.addEventListener('change', (e) => {
             document.getElementById('fechaContainer').style.display = e.target.checked ? 'block' : 'none';
         });
 
-        // Agregar item al checklist
         document.getElementById('btnAgregarItem')?.addEventListener('click', () => {
             this._agregarItemFormulario();
         });
-
-        console.log('✅ Eventos configurados');
     }
 
     // ========== ESTADOS DE UI ==========

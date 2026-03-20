@@ -1,6 +1,5 @@
-// estadisticas.js - CLASE DE ESTADÍSTICAS (Siguiendo estructura de incidencia.js)
+// estadisticas.js - CLASE DE ESTADÍSTICAS CON REGISTRO DE CONSUMO FIREBASE
 // VERSIÓN FINAL CON LA MISMA ESTRUCTURA
-
 
 import {
     collection,
@@ -11,6 +10,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
+
+// [MODIFICACIÓN 1]: Importar la instancia de consumo
+import consumo from '/clases/consumoFirebase.js';
 
 // ============================================
 // CLASE ESTADISTICAS MANAGER
@@ -84,6 +86,10 @@ class EstadisticasManager {
             }
 
             const incidenciasQuery = query(incidenciasCollection, ...constraints);
+            
+            // [MODIFICACIÓN 2]: Registrar LECTURA antes de getDocs
+            await consumo.registrarFirestoreLectura(collectionName, 'estadísticas');
+
             const snapshot = await getDocs(incidenciasQuery);
 
             this.incidencias = this._procesarIncidencias(snapshot);
@@ -185,14 +191,29 @@ class EstadisticasManager {
     // ===== MÉTODOS DE CONSULTA ESPECÍFICOS =====
 
     async getEstadisticasPorSucursal(organizacionCamelCase, sucursalId) {
+        // [MODIFICACIÓN 3]: Registrar LECTURA antes de la consulta
+        await consumo.registrarFirestoreLectura(
+            this._getCollectionName(organizacionCamelCase), 
+            `estadísticas por sucursal: ${sucursalId}`
+        );
         return await this.getEstadisticas(organizacionCamelCase, { sucursalId });
     }
 
     async getEstadisticasPorCategoria(organizacionCamelCase, categoriaId) {
+        // [MODIFICACIÓN 4]: Registrar LECTURA antes de la consulta
+        await consumo.registrarFirestoreLectura(
+            this._getCollectionName(organizacionCamelCase), 
+            `estadísticas por categoría: ${categoriaId}`
+        );
         return await this.getEstadisticas(organizacionCamelCase, { categoriaId });
     }
 
     async getEstadisticasPorPeriodo(organizacionCamelCase, fechaInicio, fechaFin) {
+        // [MODIFICACIÓN 5]: Registrar LECTURA antes de la consulta
+        await consumo.registrarFirestoreLectura(
+            this._getCollectionName(organizacionCamelCase), 
+            `estadísticas por período: ${fechaInicio} - ${fechaFin}`
+        );
         return await this.getEstadisticas(organizacionCamelCase, { fechaInicio, fechaFin });
     }
 

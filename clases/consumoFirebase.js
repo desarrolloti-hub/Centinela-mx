@@ -3,7 +3,7 @@
 // SOLO UN DOCUMENTO por empresa en colección "consumo"
 
 import { db } from '/config/firebase-config.js';
-import { doc, setDoc, updateDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { doc, setDoc, updateDoc, increment, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 class ConsumoFirebase {
     constructor() {
@@ -26,6 +26,8 @@ class ConsumoFirebase {
             },
             functions: {
                 invocaciones: 0,
+                notificacionesPushEnviadas: 0,
+                usuariosNotificados: 0,
                 total: 0
             },
             autenticacion: {
@@ -103,7 +105,6 @@ class ConsumoFirebase {
                     else if (tipo === 'escritura') campoRuta = 'firestore.escrituras';
                     else if (tipo === 'eliminacion') campoRuta = 'firestore.eliminaciones';
                     else if (tipo === 'actualizacion') campoRuta = 'firestore.actualizaciones';
-                    campoRuta = 'firestore.total'; // También incrementamos el total
                     break;
                     
                 case 'storage':
@@ -128,21 +129,6 @@ class ConsumoFirebase {
                     else if (tipo === 'token_eliminacion') campoRuta = 'fcm.tokensEliminados';
                     break;
             }
-
-            // Preparamos los datos para actualizar
-            const updateData = {
-                [`${servicio}.${tipo}`]: increment(1),
-                [`${servicio}.total`]: increment(1),
-                totalOperaciones: increment(1),
-                ultimaActualizacion: serverTimestamp(),
-                nombreEmpresa: nombreEmpresa,
-                ultimaOperacion: {
-                    servicio,
-                    tipo,
-                    detalles,
-                    timestamp: serverTimestamp()
-                }
-            };
 
             // Usar set con merge para crear el documento si no existe
             await setDoc(docRef, {
@@ -254,6 +240,80 @@ class ConsumoFirebase {
         await this.registrar('functions', 'invocacion', { nombreFuncion, parametros });
     }
 
+    // 🆕 NUEVO: Método específico para registrar notificaciones push enviadas
+    async registrarNotificacionesPush(cantidadNotificaciones, cantidadUsuarios, nombreFuncion = 'sendPushNotification', detalles = {}) {
+        console.log(`📱 REGISTRO PUSH: ${cantidadNotificaciones} notificaciones push enviadas a ${cantidadUsuarios} usuarios`);
+        
+        if (!this.organizacionCamelCase) {
+            console.warn('⚠️ No hay organización definida, no se guarda en Firestore');
+            return;
+        }
+
+        const idEmpresa = this.organizacionCamelCase;
+        const nombreEmpresa = this.nombreEmpresa || idEmpresa;
+        
+        try {
+            const docRef = doc(db, 'consumo', idEmpresa);
+            
+            // Preparamos los datos con campos específicos para push
+            const updateData = {
+                'functions.invocaciones': increment(1),
+                'functions.notificacionesPushEnviadas': increment(cantidadNotificaciones),
+                'functions.usuariosNotificados': increment(cantidadUsuarios),
+                'functions.total': increment(1),
+                totalOperaciones: increment(1),
+                ultimaActualizacion: serverTimestamp(),
+                nombreEmpresa: nombreEmpresa,
+                ultimaOperacion: {
+                    servicio: 'functions',
+                    tipo: 'notificacion_push',
+                    detalles: {
+                        nombreFuncion: nombreFuncion,
+                        notificacionesEnviadas: cantidadNotificaciones,
+                        usuariosNotificados: cantidadUsuarios,
+                        ...detalles
+                    },
+                    timestamp: serverTimestamp()
+                }
+            };
+
+            await setDoc(docRef, {
+                functions: {
+                    invocaciones: increment(1),
+                    notificacionesPushEnviadas: increment(cantidadNotificaciones),
+                    usuariosNotificados: increment(cantidadUsuarios),
+                    total: increment(1)
+                },
+                totalOperaciones: increment(1),
+                ultimaActualizacion: serverTimestamp(),
+                nombreEmpresa,
+                ultimaOperacion: {
+                    servicio: 'functions',
+                    tipo: 'notificacion_push',
+                    detalles: {
+                        nombreFuncion: nombreFuncion,
+                        notificacionesEnviadas: cantidadNotificaciones,
+                        usuariosNotificados: cantidadUsuarios,
+                        ...detalles
+                    },
+                    timestamp: serverTimestamp()
+                }
+            }, { merge: true });
+
+            console.log(`💾 Registro push guardado: ${cantidadNotificaciones} notificaciones, ${cantidadUsuarios} usuarios`);
+
+        } catch (error) {
+            console.error('❌ Error registrando notificaciones push:', error);
+        }
+
+        // Actualizar contadores en memoria
+        this.contadores.functions.invocaciones++;
+        this.contadores.functions.notificacionesPushEnviadas += cantidadNotificaciones;
+        this.contadores.functions.usuariosNotificados += cantidadUsuarios;
+        this.contadores.functions.total++;
+        this.contadores.totalOperaciones++;
+    }
+
     // Métodos para Auth
     async registrarAuthLogin(usuarioId) {
         await this.registrar('auth', 'login', { usuarioId });
@@ -300,7 +360,12 @@ class ConsumoFirebase {
         this.contadores = {
             firestore: { lecturas: 0, escrituras: 0, eliminaciones: 0, actualizaciones: 0, total: 0 },
             storage: { subidas: 0, descargas: 0, eliminaciones: 0, total: 0 },
-            functions: { invocaciones: 0, total: 0 },
+            functions: { 
+                invocaciones: 0, 
+                notificacionesPushEnviadas: 0, 
+                usuariosNotificados: 0, 
+                total: 0 
+            },
             autenticacion: { iniciosSesion: 0, cierresSesion: 0, registros: 0, total: 0 },
             fcm: { notificacionesEnviadas: 0, tokensRegistrados: 0, tokensEliminados: 0, total: 0 },
             totalOperaciones: 0,

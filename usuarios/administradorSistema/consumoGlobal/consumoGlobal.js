@@ -1,8 +1,13 @@
 // consumoGlobal.js - Panel administrativo para ver consumo de todas las empresas
-// VERSIÓN CORREGIDA - Campos en SINGULAR como en Firebase
+// VERSIÓN SIN AUTO-REFRESCO - Actualización manual mediante botones
+// CON BOTÓN PDF INTEGRADO
+// MODIFICADO: Todos los valores undefined ahora muestran 0
 
 import { db } from '/config/firebase-config.js';
 import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+// IMPORTAR GENERADOR PDF
+import generadorPDFConsumo from '/components/pdf-consumo-generador.js';
 
 // Elementos del DOM
 const selectEmpresa = document.getElementById('selectEmpresa');
@@ -13,6 +18,8 @@ const empresaNombre = document.getElementById('empresaNombre');
 const empresaUltimaActualizacion = document.getElementById('empresaUltimaActualizacion');
 const tablaEmpresasBody = document.getElementById('tablaEmpresasBody');
 const fechaGlobal = document.getElementById('fechaActualizacionGlobal');
+// Botón PDF
+const btnExportarPDF = document.getElementById('btnExportarPDF');
 
 // Métricas de empresa seleccionada
 const metricas = {
@@ -35,27 +42,52 @@ let chartDistribucion = null;
 let chartTipos = null;
 
 // =============================================
+// FUNCIÓN AUXILIAR PARA ASEGURAR NÚMERO (0 por defecto)
+// =============================================
+function asegurarNumero(valor) {
+    if (valor === undefined || valor === null || isNaN(valor)) {
+        return 0;
+    }
+    return typeof valor === 'number' ? valor : Number(valor) || 0;
+}
+
+// =============================================
 // INICIALIZACIÓN
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        console.log('🌍 Iniciando panel global de consumo...');
+        console.log('🌍 Iniciando panel global de consumo (sin auto-refresco)...');
         mostrarLoading();
 
-        // Listeners
-        btnCargar.addEventListener('click', cargarEmpresaSeleccionada);
-        btnActualizarTodo.addEventListener('click', cargarTodasLasEmpresas);
+        // Listeners de UI (solo para acciones manuales)
+        btnCargar.addEventListener('click', () => {
+            if (selectEmpresa.value) {
+                cargarEmpresaSeleccionada();
+            }
+        });
+        
+        btnActualizarTodo.addEventListener('click', async () => {
+            await cargarTodasLasEmpresas();
+            // Si hay una empresa seleccionada, también actualizar sus datos
+            if (selectEmpresa.value) {
+                await actualizarEmpresaSeleccionada();
+            }
+            mostrarNotificacionManual('Datos actualizados manualmente');
+        });
+        
         selectEmpresa.addEventListener('change', () => {
             if (selectEmpresa.value) {
                 cargarEmpresaSeleccionada();
             }
         });
 
-        // Cargar lista de empresas
-        await cargarTodasLasEmpresas();
+        // Botón PDF
+        if (btnExportarPDF) {
+            btnExportarPDF.addEventListener('click', exportarPDF);
+        }
 
-        // Actualizar cada 60 segundos
-        setInterval(cargarTodasLasEmpresas, 60000);
+        // Cargar datos iniciales
+        await cargarTodasLasEmpresas();
 
     } catch (error) {
         console.error('Error al inicializar:', error);
@@ -64,14 +96,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // =============================================
-// CARGAR TODAS LAS EMPRESAS (lista resumen)
+// CARGAR TODAS LAS EMPRESAS (SIN AUTO-REFRESCO)
 // =============================================
 async function cargarTodasLasEmpresas() {
-    console.log('📋 Cargando todas las empresas...');
+    console.log('📡 Cargando datos de todas las empresas...');
     
     try {
         const consumoRef = collection(db, 'consumo');
         const snapshot = await getDocs(consumoRef);
+        
+        console.log(`✅ Se encontraron ${snapshot.size} empresas`);
         
         if (snapshot.empty) {
             tablaEmpresasBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No hay empresas con datos de consumo.</td></tr>';
@@ -81,6 +115,7 @@ async function cargarTodasLasEmpresas() {
 
         let empresas = [];
         let options = '<option value="">-- Selecciona una empresa --</option>';
+        let valorSeleccionadoActual = selectEmpresa.value;
 
         snapshot.forEach(doc => {
             const data = doc.data();
@@ -88,25 +123,145 @@ async function cargarTodasLasEmpresas() {
             const nombre = data.nombreEmpresa || id;
             
             empresas.push({ id, ...data });
-            
-            options += `<option value="${id}">${nombre} (${id})</option>`;
+            options += `<option value="${id}" ${id === valorSeleccionadoActual ? 'selected' : ''}>${nombre} (${id})</option>`;
         });
 
-        // Ordenar por nombre
         empresas.sort((a, b) => (a.nombreEmpresa || a.id).localeCompare(b.nombreEmpresa || b.id));
 
         selectEmpresa.innerHTML = options;
         actualizarTablaEmpresas(empresas);
         fechaGlobal.textContent = new Date().toLocaleString('es-MX');
 
+        // Si había una empresa seleccionada, actualizar sus datos
+        if (valorSeleccionadoActual && empresas.some(e => e.id === valorSeleccionadoActual)) {
+            await actualizarEmpresaSeleccionada();
+        } else if (valorSeleccionadoActual) {
+            // La empresa seleccionada ya no existe
+            empresaInfo.style.display = 'none';
+            selectEmpresa.value = '';
+        }
+
     } catch (error) {
         console.error('Error cargando empresas:', error);
-        tablaEmpresasBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#ef4444;">Error al cargar empresas</td></tr>';
+        tablaEmpresasBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#ef4444;">Error al cargar los datos</td></tr>';
+        mostrarError('No se pudieron cargar los datos de las empresas.');
     }
 }
 
 // =============================================
-// ACTUALIZAR TABLA DE EMPRESAS (VERSIÓN CORREGIDA - SINGULAR)
+// ACTUALIZAR EMPRESA SELECCIONADA (CARGA MANUAL)
+// =============================================
+async function actualizarEmpresaSeleccionada() {
+    const empresaId = selectEmpresa.value;
+    
+    if (!empresaId) return;
+
+    try {
+        const docRef = doc(db, 'consumo', empresaId);
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) {
+            empresaInfo.style.display = 'none';
+            Swal.fire({
+                icon: 'info',
+                title: 'Empresa no encontrada',
+                text: 'La empresa seleccionada ya no existe en la base de datos.',
+                timer: 3000
+            });
+            selectEmpresa.value = '';
+            return;
+        }
+
+        const data = docSnap.data();
+        mostrarDatosEmpresa(empresaId, data);
+        
+    } catch (error) {
+        console.error('Error actualizando empresa:', error);
+        mostrarError('No se pudo actualizar los datos de la empresa.');
+    }
+}
+
+// =============================================
+// CARGAR EMPRESA SELECCIONADA
+// =============================================
+async function cargarEmpresaSeleccionada() {
+    const empresaId = selectEmpresa.value;
+    
+    if (!empresaId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Selecciona una empresa',
+            text: 'Debes seleccionar una empresa para ver sus datos.'
+        });
+        return;
+    }
+
+    try {
+        mostrarLoadingEmpresa();
+        await actualizarEmpresaSeleccionada();
+        
+    } catch (error) {
+        console.error('Error cargando empresa:', error);
+        mostrarError('No se pudo cargar los datos de la empresa.');
+    }
+}
+
+// =============================================
+// MOSTRAR NOTIFICACIÓN DE ACTUALIZACIÓN MANUAL
+// =============================================
+function mostrarNotificacionManual(mensaje) {
+    let indicator = document.getElementById('updateIndicator');
+    
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'updateIndicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        `;
+        document.body.appendChild(indicator);
+        
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes fadeOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    indicator.innerHTML = `<i class="fas fa-sync-alt"></i> ${mensaje || 'Datos actualizados'}`;
+    
+    setTimeout(() => {
+        if (indicator) {
+            indicator.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => {
+                if (indicator && indicator.parentNode) {
+                    indicator.parentNode.removeChild(indicator);
+                }
+            }, 300);
+        }
+    }, 2000);
+}
+
+// =============================================
+// ACTUALIZAR TABLA DE EMPRESAS
 // =============================================
 function actualizarTablaEmpresas(empresas) {
     if (!empresas || empresas.length === 0) {
@@ -115,52 +270,58 @@ function actualizarTablaEmpresas(empresas) {
     }
 
     tablaEmpresasBody.innerHTML = empresas.map(emp => {
-        // FIRESTORE - Campos en SINGULAR como en Firebase
-        const firestore = emp.firestore || { 
-            total: 0, 
-            lectura: 0,      // ← singular
-            escritura: 0,    // ← singular
-            actualizacion: 0, // ← singular
-            eliminacion: 0    // ← singular
+        // FIRESTORE - con valores por defecto 0
+        const firestore = {
+            total: asegurarNumero(emp.firestore?.total),
+            lectura: asegurarNumero(emp.firestore?.lectura),
+            escritura: asegurarNumero(emp.firestore?.escritura),
+            actualizacion: asegurarNumero(emp.firestore?.actualizacion),
+            eliminacion: asegurarNumero(emp.firestore?.eliminacion)
         };
         
-        // STORAGE
-        const storage = emp.storage || { 
-            total: 0, 
-            subida: 0,       // ← singular
-            descarga: 0,     // ← singular
-            eliminacion: 0   // ← singular
+        // STORAGE - con valores por defecto 0
+        const storage = {
+            total: asegurarNumero(emp.storage?.total),
+            subida: asegurarNumero(emp.storage?.subida),
+            descarga: asegurarNumero(emp.storage?.descarga),
+            eliminacion: asegurarNumero(emp.storage?.eliminacion)
         };
         
-        // FUNCTIONS
-        const functions = emp.functions || { 
-            total: 0, 
-            invocacion: 0    // ← singular
+        // FUNCTIONS - con valores por defecto 0
+        const functions = {
+            total: asegurarNumero(emp.functions?.total),
+            invocacion: asegurarNumero(emp.functions?.invocacion),
+            invocaciones: asegurarNumero(emp.functions?.invocaciones)
+        };
+        const invocacionesTotales = functions.invocacion + functions.invocaciones;
+        
+        // AUTH - con valores por defecto 0
+        const auth = {
+            total: asegurarNumero(emp.autenticacion?.total),
+            inicioSesion: asegurarNumero(emp.autenticacion?.inicioSesion),
+            cierreSesion: asegurarNumero(emp.autenticacion?.cierreSesion),
+            registro: asegurarNumero(emp.autenticacion?.registro)
         };
         
-        // AUTH
-        const auth = emp.autenticacion || { 
-            total: 0, 
-            inicioSesion: 0,   // ← singular
-            cierreSesion: 0,   // ← singular
-            registro: 0         // ← singular
+        // FCM - NOTIFICACIONES PUSH REALES
+        const notificacionesPushReales = asegurarNumero(emp.functions?.notificacionesPushEnviadas);
+        const usuariosNotificados = asegurarNumero(emp.functions?.usuariosNotificados);
+        
+        // FCM tradicional
+        const fcm = {
+            total: asegurarNumero(emp.fcm?.total),
+            notificacionEnviada: asegurarNumero(emp.fcm?.notificacionEnviada),
+            tokenRegistrado: asegurarNumero(emp.fcm?.tokenRegistrado),
+            tokenEliminado: asegurarNumero(emp.fcm?.tokenEliminado)
         };
         
-        // FCM
-        const fcm = emp.fcm || { 
-            total: 0, 
-            notificacionEnviada: 0,  // ← singular
-            tokenRegistrado: 0,       // ← singular
-            tokenEliminado: 0         // ← singular
-        };
-        
-        const total = firestore.total + storage.total + functions.total + auth.total + fcm.total;
+        const total = firestore.total + storage.total + (functions.total || invocacionesTotales) + auth.total + fcm.total;
         const ultima = emp.ultimaActualizacion ? new Date(emp.ultimaActualizacion.seconds * 1000).toLocaleString('es-MX') : 'N/A';
         const nombre = emp.nombreEmpresa || emp.id;
 
         return `
             <tr onclick="document.getElementById('selectEmpresa').value='${emp.id}'; window.cargarEmpresaSeleccionada()">
-                <td><strong>${nombre}</strong><br><small style="color:#6c757d;">${emp.id}</small></td>
+                <td><strong>${escapeHTML(nombre)}</strong><br><small style="color:#6c757d;">${escapeHTML(emp.id)}</small></td>
                 
                 <!-- FIRESTORE -->
                 <td>
@@ -182,8 +343,10 @@ function actualizarTablaEmpresas(empresas) {
                 
                 <!-- FUNCTIONS -->
                 <td>
-                    <span class="badge-value badge-secondary">${functions.total}</span><br>
-                    <small style="font-size:10px;">Inv:${functions.invocacion}</small>
+                    <span class="badge-value badge-secondary">${functions.total || invocacionesTotales}</span><br>
+                    <small style="font-size:10px;">
+                        Invocaciones: ${invocacionesTotales}
+                    </small>
                 </td>
                 
                 <!-- AUTH -->
@@ -195,11 +358,11 @@ function actualizarTablaEmpresas(empresas) {
                     </small>
                 </td>
                 
-                <!-- FCM -->
+                <!-- FCM (Notificaciones push reales) -->
                 <td>
-                    <span class="badge-value badge-danger">${fcm.total}</span><br>
+                    <span class="badge-value badge-danger" style="font-size:1.2rem; font-weight:bold;">${notificacionesPushReales}</span><br>
                     <small style="font-size:10px;">
-                        Not:${fcm.notificacionEnviada}<br>
+                        Usuarios: ${usuariosNotificados}<br>
                         Tok:${fcm.tokenRegistrado} | Elim:${fcm.tokenEliminado}
                     </small>
                 </td>
@@ -213,53 +376,11 @@ function actualizarTablaEmpresas(empresas) {
 }
 
 // =============================================
-// CARGAR EMPRESA SELECCIONADA
-// =============================================
-async function cargarEmpresaSeleccionada() {
-    const empresaId = selectEmpresa.value;
-    
-    if (!empresaId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Selecciona una empresa',
-            text: 'Debes seleccionar una empresa para ver sus datos.'
-        });
-        return;
-    }
-
-    try {
-        mostrarLoadingEmpresa();
-        
-        const docRef = doc(db, 'consumo', empresaId);
-        const docSnap = await getDoc(docRef);
-        
-        if (!docSnap.exists()) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Sin datos',
-                text: 'La empresa seleccionada no tiene datos de consumo.'
-            });
-            empresaInfo.style.display = 'none';
-            return;
-        }
-
-        const data = docSnap.data();
-        mostrarDatosEmpresa(empresaId, data);
-        
-    } catch (error) {
-        console.error('Error cargando empresa:', error);
-        mostrarError('No se pudo cargar los datos de la empresa.');
-    }
-}
-
-// =============================================
-// MOSTRAR DATOS DE EMPRESA (VERSIÓN CORREGIDA - SINGULAR)
+// MOSTRAR DATOS DE EMPRESA
 // =============================================
 function mostrarDatosEmpresa(id, data) {
-    // Mostrar el contenedor
     empresaInfo.style.display = 'block';
     
-    // Datos generales
     const nombre = data.nombreEmpresa || id;
     empresaNombre.textContent = nombre;
     
@@ -268,65 +389,74 @@ function mostrarDatosEmpresa(id, data) {
         'No disponible';
     empresaUltimaActualizacion.innerHTML = `<i class="fas fa-clock"></i> Última actualización: ${ultimaAct}`;
     
-    // FIRESTORE - Campos en SINGULAR
-    const fs = data.firestore || { 
-        lectura: 0, 
-        escritura: 0, 
-        actualizacion: 0, 
-        eliminacion: 0, 
-        total: 0 
+    // FIRESTORE
+    const fs = {
+        lectura: asegurarNumero(data.firestore?.lectura),
+        escritura: asegurarNumero(data.firestore?.escritura),
+        actualizacion: asegurarNumero(data.firestore?.actualizacion),
+        eliminacion: asegurarNumero(data.firestore?.eliminacion),
+        total: asegurarNumero(data.firestore?.total)
     };
     metricas.firestoreTotal.textContent = fs.total;
     metricas.firestoreDetalle.innerHTML = `L:${fs.lectura} / E:${fs.escritura} / U:${fs.actualizacion} / D:${fs.eliminacion}`;
     
     // STORAGE
-    const st = data.storage || { 
-        subida: 0, 
-        descarga: 0, 
-        eliminacion: 0, 
-        total: 0 
+    const st = {
+        subida: asegurarNumero(data.storage?.subida),
+        descarga: asegurarNumero(data.storage?.descarga),
+        eliminacion: asegurarNumero(data.storage?.eliminacion),
+        total: asegurarNumero(data.storage?.total)
     };
     metricas.storageTotal.textContent = st.total;
     metricas.storageDetalle.innerHTML = `Sub:${st.subida} / Desc:${st.descarga} / Elim:${st.eliminacion}`;
     
     // FUNCTIONS
-    const fn = data.functions || { 
-        invocacion: 0, 
-        total: 0 
+    const fn = {
+        invocacion: asegurarNumero(data.functions?.invocacion),
+        invocaciones: asegurarNumero(data.functions?.invocaciones),
+        total: asegurarNumero(data.functions?.total),
+        notificacionesPushEnviadas: asegurarNumero(data.functions?.notificacionesPushEnviadas),
+        usuariosNotificados: asegurarNumero(data.functions?.usuariosNotificados)
     };
-    metricas.functionsTotal.textContent = fn.total;
-    metricas.functionsDetalle.innerHTML = `Invocaciones: ${fn.invocacion}`;
+    const invocacionesTotales = fn.invocacion + fn.invocaciones;
+    
+    metricas.functionsTotal.textContent = fn.total || invocacionesTotales;
+    metricas.functionsDetalle.innerHTML = `Invocaciones: ${invocacionesTotales}`;
     
     // AUTH
-    const au = data.autenticacion || { 
-        inicioSesion: 0, 
-        cierreSesion: 0, 
-        registro: 0, 
-        total: 0 
+    const au = {
+        inicioSesion: asegurarNumero(data.autenticacion?.inicioSesion),
+        cierreSesion: asegurarNumero(data.autenticacion?.cierreSesion),
+        registro: asegurarNumero(data.autenticacion?.registro),
+        total: asegurarNumero(data.autenticacion?.total)
     };
     metricas.authTotal.textContent = au.total;
     metricas.authDetalle.innerHTML = `Login:${au.inicioSesion} / Logout:${au.cierreSesion} / Reg:${au.registro}`;
     
     // FCM
-    const fcm = data.fcm || { 
-        notificacionEnviada: 0, 
-        tokenRegistrado: 0, 
-        tokenEliminado: 0, 
-        total: 0 
-    };
-    metricas.fcmTotal.textContent = fcm.total;
-    metricas.fcmDetalle.innerHTML = `Notif:${fcm.notificacionEnviada} / Tokens:${fcm.tokenRegistrado} / TokElim:${fcm.tokenEliminado}`;
+    const notificacionesPushReales = fn.notificacionesPushEnviadas;
+    const usuariosNotificados = fn.usuariosNotificados;
     
-    // Total
-    const total = fs.total + st.total + fn.total + au.total + fcm.total;
+    const fcm = {
+        notificacionEnviada: asegurarNumero(data.fcm?.notificacionEnviada),
+        tokenRegistrado: asegurarNumero(data.fcm?.tokenRegistrado),
+        tokenEliminado: asegurarNumero(data.fcm?.tokenEliminado),
+        total: asegurarNumero(data.fcm?.total)
+    };
+    
+    metricas.fcmTotal.textContent = notificacionesPushReales;
+    metricas.fcmDetalle.innerHTML = `Usuarios notificados: ${usuariosNotificados}<br> Tokens registrados: ${fcm.tokenRegistrado} | Eliminados: ${fcm.tokenEliminado}`;
+    
+    // Total general
+    const total = fs.total + st.total + (fn.total || invocacionesTotales) + au.total + fcm.total;
     metricas.totalOperaciones.textContent = total;
-    metricas.totalDetalle.innerHTML = `${total} operaciones en total`;
+    metricas.totalDetalle.innerHTML = `${total} operaciones en total (${notificacionesPushReales} notificaciones push reales)`;
     
     // Última operación
     mostrarUltimaOperacion(data.ultimaOperacion);
     
     // Actualizar gráficas
-    actualizarGraficasEmpresa(fs, st, fn, au, fcm);
+    actualizarGraficasEmpresa(fs, st, { ...fn, invocacionesTotales, notificacionesPushReales, usuariosNotificados }, au, fcm);
 }
 
 // =============================================
@@ -346,9 +476,17 @@ function mostrarUltimaOperacion(ultima) {
     
     let detalles = '';
     if (ultima.detalles) {
-        if (ultima.detalles.coleccion) {
+        if (ultima.detalles.notificacionesEnviadas) {
+            detalles = ` Notificaciones push: ${ultima.detalles.notificacionesEnviadas} (${ultima.detalles.usuariosNotificados} usuarios)`;
+            if (ultima.detalles.incidenciaId) {
+                detalles += `<br> Incidencia: ${ultima.detalles.incidenciaId}`;
+            }
+        } else if (ultima.detalles.coleccion) {
             detalles = `Colección: ${ultima.detalles.coleccion}`;
             if (ultima.detalles.documento) detalles += `, Documento: ${ultima.detalles.documento}`;
+        } else if (ultima.detalles.nombreFuncion) {
+            detalles = `Función: ${ultima.detalles.nombreFuncion}`;
+            if (ultima.detalles.userId) detalles += `, Usuario: ${ultima.detalles.userId}`;
         } else {
             detalles = JSON.stringify(ultima.detalles);
         }
@@ -376,15 +514,15 @@ function getIconoServicio(servicio) {
 }
 
 // =============================================
-// GRÁFICAS (VERSIÓN CORREGIDA)
+// GRÁFICAS
 // =============================================
 function actualizarGraficasEmpresa(fs, st, fn, au, fcm) {
     // Totales por servicio
-    const fsTotal = fs.total || 0;
-    const stTotal = st.total || 0;
-    const fnTotal = fn.total || 0;
-    const auTotal = au.total || 0;
-    const fcmTotal = fcm.total || 0;
+    const fsTotal = asegurarNumero(fs.total);
+    const stTotal = asegurarNumero(st.total);
+    const fnTotal = asegurarNumero(fn.total) || asegurarNumero(fn.invocacionesTotales);
+    const auTotal = asegurarNumero(au.total);
+    const fcmTotal = asegurarNumero(fcm.total);
     
     // Gráfica de distribución por servicio
     const ctxDist = document.getElementById('graficoEmpresaDistribucion').getContext('2d');
@@ -428,37 +566,40 @@ function actualizarGraficasEmpresa(fs, st, fn, au, fcm) {
     const ctxTipos = document.getElementById('graficoEmpresaTipos').getContext('2d');
     
     const dataTipos = {
-        labels: ['Firestore', 'Storage', 'Auth', 'FCM'],
+        labels: ['Firestore', 'Storage', 'Auth', 'FCM (Push)', 'Functions'],
         datasets: [
             {
-                label: 'Lecturas / Subidas / Logins / Notificaciones',
+                label: 'Lecturas / Subidas / Logins / Notif. Push / Invocaciones',
                 data: [
-                    fs.lectura || 0,
-                    st.subida || 0,
-                    au.inicioSesion || 0,
-                    fcm.notificacionEnviada || 0
+                    asegurarNumero(fs.lectura),
+                    asegurarNumero(st.subida),
+                    asegurarNumero(au.inicioSesion),
+                    asegurarNumero(fn.notificacionesPushReales),
+                    asegurarNumero(fn.invocacion)
                 ],
                 backgroundColor: '#3b82f6',
                 stack: 'stack0'
             },
             {
-                label: 'Escrituras / Descargas / Logouts / Tokens',
+                label: 'Escrituras / Descargas / Logouts / Usuarios Notif. / Invocaciones (alt)',
                 data: [
-                    fs.escritura || 0,
-                    st.descarga || 0,
-                    au.cierreSesion || 0,
-                    fcm.tokenRegistrado || 0
+                    asegurarNumero(fs.escritura),
+                    asegurarNumero(st.descarga),
+                    asegurarNumero(au.cierreSesion),
+                    asegurarNumero(fn.usuariosNotificados),
+                    asegurarNumero(fn.invocaciones)
                 ],
                 backgroundColor: '#f97316',
                 stack: 'stack0'
             },
             {
-                label: 'Actualizaciones / Eliminaciones / Registros / TokElim',
+                label: 'Actualizaciones / Eliminaciones / Registros / Tokens / Total',
                 data: [
-                    fs.actualizacion || 0,
-                    st.eliminacion || 0,
-                    au.registro || 0,
-                    fcm.tokenEliminado || 0
+                    asegurarNumero(fs.actualizacion),
+                    asegurarNumero(st.eliminacion),
+                    asegurarNumero(au.registro),
+                    asegurarNumero(fcm.tokenRegistrado),
+                    0
                 ],
                 backgroundColor: '#10b981',
                 stack: 'stack0'
@@ -492,6 +633,112 @@ function actualizarGraficasEmpresa(fs, st, fn, au, fcm) {
             }
         });
     }
+}
+
+// =============================================
+// FUNCIÓN PARA EXPORTAR PDF
+// =============================================
+async function exportarPDF() {
+    const empresaId = selectEmpresa.value;
+    
+    if (!empresaId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Selecciona una empresa',
+            text: 'Debes seleccionar una empresa para exportar el reporte de consumo.'
+        });
+        return;
+    }
+
+    try {
+        Swal.fire({
+            title: 'Generando Reporte de Consumo...',
+            html: `
+                <div style="text-align: center; margin: 10px 0;">
+                    <i class="fas fa-chart-line fa-2x" style="color: #c9a03d; animation: pulse 1s infinite;"></i>
+                </div>
+                <div class="progress-bar-container" style="width:100%; height:20px; background:rgba(0,0,0,0.1); border-radius:10px; margin-top:10px;">
+                    <div class="progress-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #1a3b5d, #c9a03d); border-radius:10px; transition:width 0.3s;"></div>
+                </div>
+                <p style="margin-top: 10px; font-size: 12px;">Procesando métricas de consumo...</p>
+            `,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                let progreso = 0;
+                const intervalo = setInterval(() => {
+                    progreso += 8;
+                    if (progreso <= 90) {
+                        const barra = document.querySelector('.progress-bar');
+                        if (barra) {
+                            barra.style.width = progreso + '%';
+                        }
+                    }
+                }, 150);
+                window._intervaloProgresoPDF = intervalo;
+            }
+        });
+
+        const docRef = doc(db, 'consumo', empresaId);
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) {
+            if (window._intervaloProgresoPDF) clearInterval(window._intervaloProgresoPDF);
+            Swal.close();
+            Swal.fire({
+                icon: 'error',
+                title: 'Sin datos',
+                text: 'No hay datos de consumo para esta empresa.'
+            });
+            return;
+        }
+        
+        const datos = docSnap.data();
+        const empresaNombre = datos.nombreEmpresa || empresaId;
+        const ultimaActualizacion = datos.ultimaActualizacion ? 
+            new Date(datos.ultimaActualizacion.seconds * 1000) : new Date();
+        
+        if (window._intervaloProgresoPDF) clearInterval(window._intervaloProgresoPDF);
+        Swal.close();
+        
+        generadorPDFConsumo.configurar({
+            datosConsumo: datos,
+            empresaNombre: empresaNombre,
+            empresaId: empresaId,
+            ultimaActualizacion: ultimaActualizacion,
+            organizacionActual: { nombre: empresaNombre }
+        });
+        
+        await generadorPDFConsumo.generarReporte(datos, {
+            mostrarAlerta: true,
+            empresaNombre: empresaNombre,
+            empresaId: empresaId,
+            ultimaActualizacion: ultimaActualizacion
+        });
+        
+    } catch (error) {
+        console.error('Error exportando PDF:', error);
+        if (window._intervaloProgresoPDF) clearInterval(window._intervaloProgresoPDF);
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el reporte PDF: ' + error.message
+        });
+    }
+}
+
+// =============================================
+// FUNCIÓN DE ESCAPE HTML
+// =============================================
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
 }
 
 // =============================================
