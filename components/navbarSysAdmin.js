@@ -3,7 +3,7 @@
 
 class NavbarComplete {
     constructor() {
-        this.isMenuOpen = false; // Ya no se usará para el menú lateral, pero lo dejamos por si acaso.
+        this.isMenuOpen = false;
         this.isAdminDropdownOpen = false;
         this.isAdministracionDropdownOpen = false;
         this.isIncidenciasDropdownOpen = false;
@@ -20,7 +20,9 @@ class NavbarComplete {
         if (window.NavbarCompleteLoaded) {
             return;
         }
+
         window.NavbarCompleteLoaded = true;
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setup());
         } else {
@@ -31,8 +33,8 @@ class NavbarComplete {
     async setup() {
         try {
             this.removeOriginalNavbar();
-            this.createNavbar(); // Este método ahora inserta el nuevo HTML
-            this.setupFunctionalities(); // Este método ahora configura la nueva lógica
+            this.createNavbar();
+            this.setupFunctionalities();
 
             this.loadAdminDataFromLocalStorage();
             this.updateNavbarWithAdminData();
@@ -60,21 +62,28 @@ class NavbarComplete {
         if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
             return;
         }
+
         try {
             console.log('🔍 Cargando notificaciones para admin:', this.currentAdmin.id);
+
+            // Los admins ven TODAS las notificaciones de su organización
             this.notificaciones = await this.notificacionManager.obtenerNotificaciones(
                 this.currentAdmin.id,
                 this.currentAdmin.organizacionCamelCase,
-                true,
+                true, // solo no leídas para el badge
                 10
             );
+
             this.notificacionesNoLeidas = await this.notificacionManager.obtenerConteoNoLeidas(
                 this.currentAdmin.id,
                 this.currentAdmin.organizacionCamelCase
             );
+
             console.log(`📬 Notificaciones admin: ${this.notificaciones.length} (${this.notificacionesNoLeidas} no leídas)`);
+
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
+
         } catch (error) {
             console.error('Error cargando notificaciones:', error);
         }
@@ -84,6 +93,7 @@ class NavbarComplete {
         if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
             return;
         }
+
         setInterval(() => {
             this._cargarNotificaciones();
         }, 30000);
@@ -92,6 +102,7 @@ class NavbarComplete {
     _actualizarBadgeNotificaciones() {
         const badge = document.getElementById('notificacionesBadge');
         if (!badge) return;
+
         if (this.notificacionesNoLeidas > 0) {
             badge.textContent = this.notificacionesNoLeidas > 99 ? '99+' : this.notificacionesNoLeidas;
             badge.style.display = 'flex';
@@ -103,6 +114,7 @@ class NavbarComplete {
     _renderizarNotificaciones() {
         const container = document.getElementById('notificacionesLista');
         if (!container) return;
+
         if (this.notificaciones.length === 0) {
             container.innerHTML = `
                 <div class="notificaciones-vacia">
@@ -112,6 +124,7 @@ class NavbarComplete {
             `;
             return;
         }
+
         let html = '';
         this.notificaciones.slice(0, 5).forEach(notif => {
             const notifUI = notif.toUI();
@@ -133,6 +146,7 @@ class NavbarComplete {
                 </div>
             `;
         });
+
         if (this.notificaciones.length > 5) {
             html += `
                 <div class="notificaciones-ver-mas">
@@ -140,20 +154,25 @@ class NavbarComplete {
                 </div>
             `;
         }
+
         container.innerHTML = html;
+
         container.querySelectorAll('.notificacion-item').forEach(item => {
             item.addEventListener('click', async (e) => {
                 const id = item.dataset.id;
                 const url = item.dataset.url;
+                
                 if (this.notificacionManager) {
                     await this.notificacionManager.marcarComoLeida(
                         this.currentAdmin.id,
                         id,
                         this.currentAdmin.organizacionCamelCase
                     );
+                    
                     this.notificacionesNoLeidas = Math.max(0, this.notificacionesNoLeidas - 1);
                     this._actualizarBadgeNotificaciones();
                 }
+                
                 if (url) {
                     window.location.href = url;
                 }
@@ -165,15 +184,18 @@ class NavbarComplete {
         if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
             return;
         }
+
         try {
             await this.notificacionManager.marcarTodasComoLeidas(
                 this.currentAdmin.id,
                 this.currentAdmin.organizacionCamelCase
             );
+            
             this.notificacionesNoLeidas = 0;
             this.notificaciones = [];
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
+            
         } catch (error) {
             console.error('Error marcando todas como leídas:', error);
         }
@@ -212,14 +234,12 @@ class NavbarComplete {
         originalHeader?.remove();
     }
 
-    // [MODIFICADO] Este método ahora inserta el nuevo HTML para el menú visible
     createNavbar() {
-        this.addStyles(); // Los estilos también se han modificado
+        this.addStyles();
         this.insertHTML();
         this.adjustBodyPadding();
     }
 
-    // [MODIFICADO] Los estilos han sido simplificados y adaptados para el menú visible
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
 
@@ -246,7 +266,7 @@ class NavbarComplete {
                 justify-content: space-between;
                 align-items: center;
                 padding: 5px 20px;
-                min-height: 60px; /* Un poco más alto para el menú visible */
+                min-height: 50px;
                 margin: 0;
                 position: relative;
                 width: 100%;
@@ -347,153 +367,12 @@ class NavbarComplete {
                 width: max-content;
             }
             
-            /* ===== NUEVA SECCIÓN: CONTENEDOR DEL MENÚ VISIBLE ===== */
-            .navbar-menu-container {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                margin-left: auto; /* Empuja el menú hacia la derecha */
-                margin-right: 15px; /* Espacio antes de las notificaciones */
-                flex: 0 1 auto; /* Permite que se encoja si es necesario */
-            }
-
-            /* Estilos para los enlaces del menú visible */
-            .navbar-menu-link {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 8px 15px;
-                background-color: transparent;
-                border: 1px solid var(--color-border-light);
-                border-radius: var(--border-radius-medium);
-                color: var(--navbar-text);
-                font-size: 14px;
-                font-weight: 500;
-                font-family: 'Orbitron', sans-serif;
-                text-decoration: none;
-                transition: all 0.3s ease;
-                white-space: nowrap;
-            }
-
-            .navbar-menu-link i {
-                font-size: 16px;
-                color: var(--color-accent-primary);
-            }
-
-            .navbar-menu-link:hover {
-                background-color: var(--color-bg-secondary);
-                border-color: var(--color-accent-primary);
-                transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            }
-
-            /* Dropdowns para el menú visible (similar a los anteriores, pero en posición absoluta) */
-            .navbar-menu-item {
-                position: relative;
-            }
-
-            .navbar-menu-button {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 8px 15px;
-                background-color: transparent;
-                border: 1px solid var(--color-border-light);
-                border-radius: var(--border-radius-medium);
-                color: var(--navbar-text);
-                font-size: 14px;
-                font-weight: 500;
-                font-family: 'Orbitron', sans-serif;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                white-space: nowrap;
-            }
-
-            .navbar-menu-button i:first-child {
-                font-size: 16px;
-                color: var(--color-accent-primary);
-            }
-
-            .navbar-menu-button i:last-child {
-                font-size: 12px;
-                margin-left: 5px;
-            }
-
-            .navbar-menu-button:hover {
-                background-color: var(--color-bg-secondary);
-                border-color: var(--color-accent-primary);
-                transform: translateY(-2px);
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            }
-
-            /* Opciones del dropdown dentro del menú visible */
-            .navbar-dropdown-options {
-                position: absolute;
-                top: 100%;
-                right: 0; /* Alineado a la derecha del botón */
-                min-width: 220px;
-                background-color: var(--color-bg-primary);
-                border-radius: var(--border-radius-medium);
-                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-                border: 1px solid var(--color-border-light);
-                z-index: 1004;
-                display: none;
-                margin-top: 10px;
-                padding: 8px 0;
-            }
-
-            .navbar-dropdown-options.active {
-                display: block;
-            }
-
-            .navbar-dropdown-option {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px 16px;
-                color: var(--color-text-primary);
-                text-decoration: none;
-                font-size: 14px;
-                font-family: 'Orbitron', sans-serif;
-                transition: all 0.2s ease;
-                white-space: nowrap;
-            }
-
-            .navbar-dropdown-option i {
-                width: 20px;
-                text-align: center;
-                font-size: 16px;
-                color: var(--color-accent-primary);
-            }
-
-            .navbar-dropdown-option:hover {
-                background-color: var(--color-bg-secondary);
-                transform: translateX(5px);
-            }
-
-            /* Opción especial para cerrar sesión */
-            .logout-option {
-                background: linear-gradient(135deg, #ff6b6b, #ff5252);
-                border-color: #ff5252;
-                color: white;
-            }
-            
-            .logout-option:hover {
-                background: linear-gradient(135deg, #ff5252, #ff3838);
-                border-color: #ff3838;
-            }
-            
-            .logout-option i {
-                color: white;
-            }
-            
-            /* ===== FIN DE NUEVAS SECCIONES ===== */
-            
             .navbar-right-container {
                 display: flex;
                 align-items: center;
                 justify-content: flex-end;
                 flex: 0 0 auto;
+                margin-left: auto;
                 gap: 15px;
             }
 
@@ -712,22 +591,405 @@ class NavbarComplete {
                 text-decoration: underline;
             }
             
-            /* Eliminamos los estilos del menú hamburguesa y del menú lateral */
-            /* .navbar-hamburger-btn, .navbar-main-menu, .admin-profile-section, etc. ya no son necesarios */
-
-            /* [ELIMINADO] .navbar-hamburger-btn, .navbar-main-menu, .admin-profile-section, etc. */
+            .navbar-hamburger-btn {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background: none;
+                border: none;
+                cursor: pointer;
+                width: 40px;
+                height: 40px;
+                padding: 0;
+                position: relative;
+                z-index: 1002;
+                transition: var(--transition-default);
+                flex-shrink: 0;
+            }
             
-            /* Adaptaciones responsive para el nuevo menú */
-            @media (max-width: 1200px) {
-                .navbar-menu-link span, .navbar-menu-button span {
-                    display: none; /* En pantallas medianas, ocultamos el texto y mostramos solo íconos */
-                }
-                .navbar-menu-link, .navbar-menu-button {
-                    padding: 8px 12px;
-                }
+            .hamburger-line {
+                display: block;
+                width: 25px;
+                height: 3px;
+                background-color: var(--navbar-text);
+                margin: 3px 0;
+                border-radius: var(--border-radius-small);
+                transition: var(--transition-default);
+            }
+            
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(1) {
+                transform: rotate(45deg) translate(6.3px, 6.3px);
+            }
+            
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(2) {
+                opacity: 0;
+            }
+            
+            .navbar-hamburger-btn.active .hamburger-line:nth-child(3) {
+                transform: rotate(-45deg) translate(6.3px, -6.3px);
+            }
+            
+            .navbar-main-menu {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 25%;
+                height: 100vh;
+                background-color: var(--navbar-scrolled-bg);
+                margin: 0;
+                padding: 0 0 30px 0;
+                display: flex;
+                flex-direction: column;
+                transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1001;
+                overflow-y: auto;
+                box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+                visibility: hidden;
+                opacity: 0;
+                overflow-x: hidden;
+            }
+            
+            .navbar-main-menu.active {
+                right: 0;
+                visibility: visible;
+                opacity: 1;
+            }
+            
+            .admin-profile-section {
+                padding: 30px 25px 20px;
+                background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
+                color: var(--color-text-primary);
+                border-bottom: 1px solid var(--color-border-light);
+                text-align: center;
+                position: relative;
+            }
+            
+            .profile-photo-container {
+                position: relative;
+                width: 120px;
+                height: 120px;
+                margin: 0 auto 20px;
+                display: inline-block;
+            }
+            
+            .admin-profile-circle {
+                width: 100%;
+                height: 100%;
+                border-radius: var(--border-radius-circle);
+                overflow: hidden;
+                border: 3px solid var(--color-accent-primary);
+                background-color: var(--color-bg-secondary);
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .admin-profile-img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .profile-placeholder {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: var(--color-accent-primary);
+                font-size: 40px;
+            }
+
+            .profile-placeholder span {
+                font-size: 12px;
+                margin-top: 5px;
+                font-weight: bold;
+            }
+            
+            .edit-profile-icon {
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                background-color: var(--color-accent-primary);
+                width: 35px;
+                height: 35px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                border: 2px solid white;
+                z-index: 10;
+                text-decoration: none;
+                color: white;
+            }
+            
+            .edit-profile-icon:hover {
+                background-color: var(--color-accent-secondary);
+                transform: scale(1.1) rotate(10deg);
+                color: white;
+            }
+            
+            .edit-profile-icon i {
+                font-size: 14px;
+            }
+            
+            .admin-info {
+                margin-bottom: 20px;
+            }
+            
+            .admin-name {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: var(--color-text-primary);
+                font-family: 'Orbitron', sans-serif;
+                min-height: 25px;
+            }
+            
+            .admin-role {
+                font-size: 14px;
+                color: var(--color-text-secondary);
+                margin-bottom: 10px;
+                font-family: 'Orbitron', sans-serif;
+            }
+            
+            .admin-email {
+                font-size: 13px;
+                color: var(--color-text-tertiary);
+                min-height: 20px;
+            }
+
+            .admin-organization {
+                font-size: 13px;
+                color: var(--color-accent-primary);
+                margin-top: 5px;
+                font-weight: 600;
+            }
+            
+            /* ===== ESTILOS CORREGIDOS PARA DROPDOWNS ===== */
+            .nav-section {
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--color-border-light);
+                overflow-x: hidden;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .nav-section:last-of-type {
+                border-bottom: none;
+            }
+            
+            .nav-section-title {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 15px;
+                color: var(--color-text-secondary);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-family: 'Orbitron', sans-serif;
+            }
+            
+            /* Botones principales de dropdown */
+            .administracion-dropdown-btn,
+            .admin-dropdown-btn {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 14px 16px;
+                background-color: var(--color-bg-primary);
+                border: 2px solid var(--color-border-medium);
+                border-radius: var(--border-radius-medium);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text-primary);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+                font-family: 'Orbitron', sans-serif;
+                margin-bottom: 15px;
+            }
+            
+            .administracion-dropdown-btn:hover,
+            .admin-dropdown-btn:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateY(-2px);
+                box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+            }
+            
+            .administracion-dropdown-btn i,
+            .admin-dropdown-btn i {
+                transition: transform 0.3s ease;
+                font-size: 14px;
+            }
+            
+            .administracion-dropdown-btn.active i,
+            .admin-dropdown-btn.active i {
+                transform: rotate(180deg);
+            }
+            
+            /* Contenedor de opciones - SIN LÍMITE DE ALTURA */
+            .administracion-dropdown-options,
+            .admin-dropdown-options {
+                display: none;
+                flex-direction: column;
+                gap: 10px;
+                padding: 15px;
+                background-color: var(--color-bg-tertiary);
+                border-radius: var(--border-radius-medium);
+                border: 1px solid var(--color-border-light);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                margin-bottom: 0;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .administracion-dropdown-options.active,
+            .admin-dropdown-options.active {
+                /* ELIMINA max-height: none */
+                opacity: 1;
+                overflow: visible;
+                margin-bottom: 15px;
+                position: static;
+                height: auto; /* AÑADE ESTO */
+                display: flex; /* AÑADE ESTO */
+                flex-direction: column; /* AÑADE ESTO */
+            }
+            
+            /* Opciones individuales */
+            .administracion-dropdown-option,
+            .admin-dropdown-option {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 15px;
+                background-color: var(--color-bg-primary);
+                border: 1px solid var(--color-border-light);
+                border-radius: var(--border-radius-small);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                color: var(--color-text-primary);
+                font-weight: 500;
+                font-family: 'Orbitron', sans-serif;
+                word-break: break-word;
+                white-space: normal;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .administracion-dropdown-option:hover,
+            .admin-dropdown-option:hover {
+                background-color: var(--color-bg-secondary);
+                transform: translateX(5px);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            }
+            
+            .administracion-dropdown-option i,
+            .admin-dropdown-option i {
+                width: 20px;
+                text-align: center;
+                font-size: 16px;
+                color: var(--color-accent-primary);
+                flex-shrink: 0;
+            }
+            
+            .administracion-dropdown-option span,
+            .admin-dropdown-option span {
+                flex: 1;
+                white-space: normal;
+                word-break: break-word;
+                line-height: 1.4;
+            }
+            
+            /* Opción especial para cerrar sesión */
+            .logout-option {
+                background: linear-gradient(135deg, #ff6b6b, #ff5252);
+                border-color: #ff5252;
+                color: white;
+            }
+            
+            .logout-option:hover {
+                background: linear-gradient(135deg, #ff5252, #ff3838);
+                border-color: #ff3838;
+            }
+            
+            .logout-option i {
+                color: white;
+            }
+            
+            /* Sección de espacios vacíos */
+            .menu-section {
+                padding: 20px 25px;
+                border-bottom: 1px solid var(--color-border-light);
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .empty-menu-item {
+                padding: 10px 15px;
+                border-radius: var(--border-radius-small);
+                transition: var(--transition-default);
+                height: 40px;
+                background-color: transparent;
+                border: none;
+                cursor: default;
+            }
+            
+            /* Sección de opciones al final */
+            .admin-options-section {
+                padding: 20px 25px;
+                border-top: 1px solid var(--color-border-light);
+                margin-top: 0;
+                flex-shrink: 0;
+            }
+            
+            .navbar-mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+                display: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            
+            .navbar-mobile-overlay.active {
+                display: block;
+                opacity: 1;
             }
             
             @media (max-width: 992px) {
+                .navbar-main-menu {
+                    width: 85%;
+                }
+                
+                .logo-circle-container {
+                    width: 50px;
+                    height: 50px;
+                }
+
+                .org-text-logo {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 12px;
+                }
+
+                .logo-separator {
+                    height: 35px;
+                }
+                
                 .navbar-title {
                     font-size: 22px;
                 }
@@ -740,56 +1002,15 @@ class NavbarComplete {
                     width: 300px;
                     right: -50px;
                 }
-
-                /* Ajustes para el menú visible en móvil */
-                .navbar-menu-container {
-                    position: fixed;
-                    top: 70px; /* Debajo de la barra superior */
-                    left: 0;
-                    width: 100%;
-                    background-color: var(--navbar-scrolled-bg);
-                    flex-direction: column;
-                    align-items: stretch;
-                    padding: 15px;
-                    gap: 10px;
-                    margin: 0;
-                    border-top: 1px solid var(--color-border-light);
-                    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-                    display: none; /* Oculto por defecto en móvil */
-                    z-index: 999;
-                }
-
-                .navbar-menu-container.active {
-                    display: flex; /* Se muestra cuando se activa (con un botón de menú) */
-                }
-
-                .navbar-menu-link, .navbar-menu-button {
-                    justify-content: flex-start;
-                    padding: 12px 15px;
-                }
-
-                .navbar-menu-link span, .navbar-menu-button span {
-                    display: inline; /* Mostramos el texto en móvil */
-                }
-
-                /* Agregamos un botón de menú para móvil */
-                .navbar-mobile-menu-btn {
-                    display: flex !important; /* Mostramos el botón de hamburguesa solo en móvil */
-                }
-
-                .navbar-dropdown-options {
-                    position: static;
-                    box-shadow: none;
-                    border: 1px solid var(--color-border-light);
-                    margin-top: 5px;
-                    margin-left: 20px;
-                    width: auto;
-                }
             }
             
             @media (max-width: 768px) {
                 .navbar-top-section {
                     padding: 5px 15px;
+                }
+                
+                .navbar-main-menu {
+                    width: 100%;
                 }
 
                 .logo-circle-container {
@@ -814,6 +1035,64 @@ class NavbarComplete {
                     max-width: 150px;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                }
+                
+                .profile-photo-container {
+                    width: 100px;
+                    height: 100px;
+                }
+                
+                .edit-profile-icon {
+                    width: 30px;
+                    height: 30px;
+                }
+                
+                .admin-dropdown-btn,
+                .administracion-dropdown-btn {
+                    padding: 12px 14px;
+                    font-size: 15px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 36px;
+                    height: 36px;
+                }
+                
+                .hamburger-line {
+                    width: 22px;
+                    height: 2.5px;
+                }
+                
+                .admin-dropdown-options,
+                .administracion-dropdown-options {
+                    padding: 12px;
+                }
+                
+                .admin-dropdown-options.active,
+                .administracion-dropdown-options.active {
+                    max-height: 1500px;
+                }
+                
+                .admin-dropdown-option,
+                .administracion-dropdown-option {
+                    padding: 14px 12px;
+                    gap: 12px;
+                }
+                
+                .admin-dropdown-option i,
+                .administracion-dropdown-option i {
+                    font-size: 16px;
+                    width: 24px;
+                }
+                
+                .admin-dropdown-option span,
+                .administracion-dropdown-option span {
+                    font-size: 15px;
+                    line-height: 1.4;
+                }
+                
+                .nav-section-title {
+                    font-size: 15px;
                 }
                 
                 .notificaciones-dropdown {
@@ -848,6 +1127,26 @@ class NavbarComplete {
                     margin: 0 2px;
                 }
                 
+                .navbar-hamburger-btn {
+                    width: 32px;
+                    height: 32px;
+                }
+                
+                .hamburger-line {
+                    width: 20px;
+                    height: 2px;
+                }
+                
+                .admin-dropdown-option,
+                .administracion-dropdown-option {
+                    padding: 12px 10px;
+                }
+                
+                .admin-dropdown-option span,
+                .administracion-dropdown-option span {
+                    font-size: 14px;
+                }
+                
                 .notificaciones-dropdown {
                     width: 260px;
                     right: -80px;
@@ -874,6 +1173,56 @@ class NavbarComplete {
                     font-size: 16px;
                 }
             }
+
+            /* FORZAR QUE LOS DROPDOWNS NO TENGAN SCROLL */
+            .nav-section {
+                flex-shrink: 0;
+                overflow: visible !important;
+            }
+
+            .administracion-dropdown-options,
+            .admin-dropdown-options {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            .administracion-dropdown-options.active,
+            .admin-dropdown-options.active {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+
+            /* ELIMINAR CUALQUIER SCROLL INTERNO */
+            *::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .navbar-main-menu::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            /* ASEGURAR QUE SOLO EL MENÚ PRINCIPAL TENGA SCROLL */
+            .navbar-main-menu {
+                overflow-y: auto !important;
+            }
+
+            .navbar-main-menu * {
+                overflow-y: visible !important;
+            }
+
+            /* OCULTAR EL SCROLL VISUALMENTE PERO MANTENER LA FUNCIONALIDAD */
+            .navbar-main-menu {
+                scrollbar-width: none; /* Para Firefox */
+                -ms-overflow-style: none; /* Para IE y Edge */
+            }
+
+            .navbar-main-menu::-webkit-scrollbar {
+                display: none; /* Para Chrome, Safari y Opera */
+                width: 0;
+                background: transparent;
+}
         `;
 
         const styleElement = document.createElement('style');
@@ -882,7 +1231,6 @@ class NavbarComplete {
         document.head.appendChild(styleElement);
     }
 
-    // [MODIFICADO] Este método ahora genera el HTML con el menú visible
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
@@ -908,97 +1256,7 @@ class NavbarComplete {
 
                 <h1 class="navbar-title">CENTINELA</h1>
 
-                <!-- ===== NUEVO: CONTENEDOR DEL MENÚ VISIBLE ===== -->
-                <div class="navbar-menu-container" id="navbarMenuContainer">
-                    
-                    <!-- Dropdown de Gestionar -->
-                    <div class="navbar-menu-item">
-                        <button class="navbar-menu-button" id="administracionMenuBtn">
-                            <i class="fa-solid fa-gears"></i>
-                            <span>Gestionar</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="navbar-dropdown-options" id="administracionMenuOptions">
-                            <a href="/usuarios/administrador/areas/areas.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-map"></i>
-                                <span>Áreas</span>
-                            </a>
-                            <a href="/usuarios/administrador/categorias/categorias.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-tags"></i>
-                                <span>Categorías</span>
-                            </a>
-                            <a href="/usuarios/administrador/sucursales/sucursales.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-store"></i>
-                                <span>Sucursales</span>
-                            </a>
-                            <a href="/usuarios/administrador/regiones/regiones.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-location-dot"></i>
-                                <span>Regiones</span>
-                            </a>
-                            <a href="/usuarios/administrador/permisos/permisos.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-lock"></i>
-                                <span>Permisos</span>
-                            </a>
-                            <a href="/usuarios/administrador/usuarios/usuarios.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-users-gear"></i>
-                                <span>Usuarios</span>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Dropdown de Incidencias -->
-                    <div class="navbar-menu-item">
-                        <button class="navbar-menu-button" id="incidenciasMenuBtn">
-                            <i class="fa-solid fa-exclamation-triangle"></i>
-                            <span>Incidencias</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="navbar-dropdown-options" id="incidenciasMenuOptions">
-                            <a href="/usuarios/administrador/incidencias/incidencias.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-list"></i>
-                                <span>Lista de Incidencias</span>
-                            </a>
-                            <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-plus-circle"></i>
-                                <span>Crear Incidencia</span>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Enlace directo a Bitácora -->
-                    <a href="/usuarios/administrador/bitacoraActividades/bitacoraActividades.html" class="navbar-menu-link">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                        <span>Bitácora</span>
-                    </a>
-
-                    <!-- Dropdown de Configuración -->
-                    <div class="navbar-menu-item">
-                        <button class="navbar-menu-button" id="adminMenuBtn">
-                            <i class="fa-solid fa-user-cog"></i>
-                            <span>Configuración</span>
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </button>
-                        <div class="navbar-dropdown-options" id="adminMenuOptions">
-                            <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-palette"></i>
-                                <span>Personalización</span>
-                            </a>
-                            <a href="#" class="navbar-dropdown-option logout-option" id="logoutOption">
-                                <i class="fa-solid fa-right-from-bracket"></i>
-                                <span>Cerrar Sesión</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="navbar-right-container">
-                    <!-- Botón de menú para móvil (visible solo en pantallas pequeñas) -->
-                    <button class="navbar-hamburger-btn navbar-mobile-menu-btn" id="navbarMobileMenuBtn" style="display: none;" aria-label="Toggle menu">
-                        <span class="hamburger-line"></span>
-                        <span class="hamburger-line"></span>
-                        <span class="hamburger-line"></span>
-                    </button>
-
                     <div class="navbar-notificaciones-container">
                         <button class="navbar-notificaciones-btn" id="notificacionesBtn">
                             <i class="fas fa-bell"></i>
@@ -1023,32 +1281,129 @@ class NavbarComplete {
                         </div>
                     </div>
 
-                    <!-- Perfil de administrador (ahora como ícono con dropdown) -->
-                    <div class="navbar-menu-item">
-                        <button class="navbar-menu-button" id="profileMenuBtn" style="padding: 5px 10px;">
-                            <div class="profile-mini-container" style="width: 30px; height: 30px; border-radius: 50%; overflow: hidden; border: 2px solid var(--color-accent-primary);">
-                                <img src="/assets/images/logo.png" alt="Perfil" id="profileMiniImg" style="width: 100%; height: 100%; object-fit: cover; display: block;">
-                                <div id="profileMiniPlaceholder" style="display: none; width: 100%; height: 100%; background-color: var(--color-accent-primary); color: white; align-items: center; justify-content: center; font-weight: bold;">AD</div>
-                            </div>
-                            <i class="fa-solid fa-chevron-down" style="margin-left: 5px;"></i>
-                        </button>
-                        <div class="navbar-dropdown-options" id="profileMenuOptions" style="right: 0; left: auto; min-width: 200px;">
-                            <div style="padding: 15px; border-bottom: 1px solid var(--color-border-light);">
-                                <div style="font-weight: 600; color: var(--color-text-primary);" id="profileMenuName">Cargando...</div>
-                                <div style="font-size: 12px; color: var(--color-text-secondary);" id="profileMenuEmail">cargando@email.com</div>
-                                <div style="font-size: 12px; color: var(--color-accent-primary); margin-top: 5px;" id="profileMenuOrg"></div>
-                            </div>
-                            <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="navbar-dropdown-option">
-                                <i class="fa-solid fa-user-edit"></i>
-                                <span>Editar Perfil</span>
-                            </a>
-                        </div>
-                    </div>
+                    <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Overlay para móvil (ya no es necesario, pero lo dejamos por si acaso) -->
-            <div class="navbar-mobile-overlay" id="navbarMobileOverlay" style="display: none;"></div>
+            <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
+
+            <div class="navbar-main-menu" id="navbarMainMenu">
+
+                <div class="admin-profile-section">
+                    <div class="profile-photo-container">
+                        <div class="admin-profile-circle">
+                            <img src="/assets/images/logo.png" alt="Administrador" class="admin-profile-img" id="adminProfileImg">
+                            <div class="profile-placeholder" id="profilePlaceholder" style="display: none;">
+                                <i class="fas fa-user"></i>
+                                <span>Admin</span>
+                            </div>
+                        </div>
+                        <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
+                            <i class="fas fa-pencil-alt"></i>
+                        </a>
+                    </div>
+
+                    <div class="admin-info">
+                        <div class="admin-name" id="adminName">Cargando...</div>
+                        <div class="admin-role">Administrador</div>
+                        <div class="admin-email" id="adminEmail">cargando@email.com</div>
+                        <div class="admin-organization" id="adminOrganization"></div>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
+                        <span>Gestionar</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="administracion-dropdown-options" id="administracionDropdownOptions">
+                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-map"></i>
+                            <span>Áreas</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Categorías</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Sucursales</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>Regiones</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-lock"></i>
+                            <span>Permisos</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-users-gear"></i>
+                            <span>Usuarios</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
+                        <span>Incidencias</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="administracion-dropdown-options" id="incidenciasDropdownOptions">
+                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-list"></i>
+                            <span>Lista de Incidencias</span>
+                        </a>
+
+                        <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Crear Incidencia</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Bitácora</span>
+                    </div>
+
+                    <a href="/usuarios/administrador/bitacoraActividades/bitacoraActividades.html" class="admin-dropdown-option" style="width: 100%;">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Bitácora de Actividades</span>
+                    </a>
+                </div>
+
+                <div class="admin-options-section">
+                    <button class="admin-dropdown-btn" id="adminDropdownBtn">
+                        <span>Configuración</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div class="admin-dropdown-options" id="adminDropdownOptions">
+                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
+                            <i class="fa-solid fa-palette"></i>
+                            <span>Personalización</span>
+                        </a>
+
+                        <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
         `;
 
         document.body.prepend(navbar);
@@ -1214,7 +1569,6 @@ class NavbarComplete {
         }
     }
 
-    // [MODIFICADO] Actualiza también los nuevos elementos del perfil
     updateNavbarWithAdminData() {
         if (!this.currentAdmin) {
             const adminName = document.getElementById('adminName');
@@ -1224,14 +1578,6 @@ class NavbarComplete {
             if (adminName) adminName.textContent = 'No autenticado';
             if (adminEmail) adminEmail.textContent = 'Inicia sesión para continuar';
             if (adminOrganization) adminOrganization.textContent = '';
-
-            // Actualizar también los nuevos elementos del perfil
-            const profileMenuName = document.getElementById('profileMenuName');
-            const profileMenuEmail = document.getElementById('profileMenuEmail');
-            const profileMenuOrg = document.getElementById('profileMenuOrg');
-            if (profileMenuName) profileMenuName.textContent = 'No autenticado';
-            if (profileMenuEmail) profileMenuEmail.textContent = 'Inicia sesión';
-            if (profileMenuOrg) profileMenuOrg.textContent = '';
 
             return;
         }
@@ -1289,7 +1635,6 @@ class NavbarComplete {
         orgTextLogo.title = orgName;
     }
 
-    // [MODIFICADO] Actualiza también los nuevos elementos del perfil
     updateAdminMenuInfo() {
         const adminName = document.getElementById('adminName');
         if (adminName) {
@@ -1319,44 +1664,6 @@ class NavbarComplete {
                 this.showProfilePlaceholder();
             }
         }
-
-        // Actualizar el mini perfil
-        this.updateMiniProfile();
-    }
-
-    // [NUEVO] Actualiza el mini perfil en la barra superior
-    updateMiniProfile() {
-        const profileMiniImg = document.getElementById('profileMiniImg');
-        const profileMiniPlaceholder = document.getElementById('profileMiniPlaceholder');
-        const profileMenuName = document.getElementById('profileMenuName');
-        const profileMenuEmail = document.getElementById('profileMenuEmail');
-        const profileMenuOrg = document.getElementById('profileMenuOrg');
-
-        if (profileMenuName) profileMenuName.textContent = this.currentAdmin?.nombreCompleto || 'Administrador';
-        if (profileMenuEmail) profileMenuEmail.textContent = this.currentAdmin?.correoElectronico || '';
-        if (profileMenuOrg) profileMenuOrg.textContent = this.currentAdmin?.organizacion || '';
-
-        if (profileMiniImg && profileMiniPlaceholder) {
-            if (this.currentAdmin?.fotoUsuario && this.currentAdmin.fotoUsuario.length > 10) {
-                profileMiniImg.src = this.currentAdmin.fotoUsuario;
-                profileMiniImg.style.display = 'block';
-                profileMiniPlaceholder.style.display = 'none';
-            } else {
-                profileMiniImg.style.display = 'none';
-                profileMiniPlaceholder.style.display = 'flex';
-                if (this.currentAdmin?.nombreCompleto) {
-                    const initials = this.currentAdmin.nombreCompleto
-                        .split(' ')
-                        .map(word => word.charAt(0))
-                        .join('')
-                        .toUpperCase()
-                        .substring(0, 2);
-                    profileMiniPlaceholder.textContent = initials;
-                } else {
-                    profileMiniPlaceholder.textContent = 'AD';
-                }
-            }
-        }
     }
 
     showProfilePlaceholder() {
@@ -1380,143 +1687,210 @@ class NavbarComplete {
         }
     }
 
-    // [MODIFICADO] Configura las nuevas funcionalidades del menú visible
     setupFunctionalities() {
-        // Ya no llamamos a setupMenu() porque no tenemos menú lateral
-        // this.setupMenu();
+        this.setupMenu();
         this.setupScroll();
         this.loadFontAwesome();
+        this.setupAdminDropdown();
+        this.setupAdministracionDropdown();
+        this.setupIncidenciasDropdown();
         this.loadOrbitronFont();
-
-        // Configurar los nuevos dropdowns
-        this.setupNewDropdown('administracionMenuBtn', 'administracionMenuOptions', 'isAdministracionDropdownOpen');
-        this.setupNewDropdown('incidenciasMenuBtn', 'incidenciasMenuOptions', 'isIncidenciasDropdownOpen');
-        this.setupNewDropdown('adminMenuBtn', 'adminMenuOptions', 'isAdminDropdownOpen');
-        this.setupNewDropdown('profileMenuBtn', 'profileMenuOptions', 'isProfileDropdownOpen', true); // Perfil tiene su propia variable
-
-        this.setupLogout(); // Configurar logout
+        this.setupLogout();
         this._configurarNotificacionesDropdown();
-
-        // Configurar menú móvil
-        this.setupMobileMenu();
     }
 
-    // [NUEVO] Configura un dropdown de manera genérica
-    setupNewDropdown(buttonId, optionsId, stateVarName, isProfile = false) {
-        const btn = document.getElementById(buttonId);
-        const options = document.getElementById(optionsId);
+    setupMenu() {
+        const hamburgerBtn = document.getElementById('navbarHamburger');
+        const mainMenu = document.getElementById('navbarMainMenu');
+        const overlay = document.getElementById('navbarMobileOverlay');
 
-        if (!btn || !options) return;
+        if (!hamburgerBtn || !mainMenu || !overlay) return;
 
-        // Inicializar estado si no existe
-        if (!this[stateVarName]) {
-            this[stateVarName] = false;
-        }
+        const toggleMenu = () => {
+            this.isMenuOpen = !this.isMenuOpen;
 
-        const toggleDropdown = (show) => {
-            this[stateVarName] = show;
-            btn.classList.toggle('active', show);
-            options.classList.toggle('active', show);
+            mainMenu.classList.toggle('active', this.isMenuOpen);
+            hamburgerBtn.classList.toggle('active', this.isMenuOpen);
+            overlay.classList.toggle('active', this.isMenuOpen);
+            document.body.classList.toggle('menu-open', this.isMenuOpen);
+
+            if (!this.isMenuOpen) {
+                if (this.isAdminDropdownOpen) {
+                    this.toggleAdminDropdown(false);
+                }
+                if (this.isAdministracionDropdownOpen) {
+                    this.toggleAdministracionDropdown(false);
+                }
+                if (this.isIncidenciasDropdownOpen) {
+                    this.toggleIncidenciasDropdown(false);
+                }
+            }
         };
 
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
+        const closeMenu = () => {
+            if (this.isMenuOpen) {
+                this.isMenuOpen = false;
+                mainMenu.classList.remove('active');
+                hamburgerBtn.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.classList.remove('menu-open');
 
-            // Cerrar todos los otros dropdowns
-            const dropdowns = ['administracionMenuOptions', 'incidenciasMenuOptions', 'adminMenuOptions', 'profileMenuOptions'];
-            dropdowns.forEach(id => {
-                if (id !== optionsId) {
-                    const otherOptions = document.getElementById(id);
-                    const otherBtn = document.getElementById(id.replace('Options', 'Btn'));
-                    if (otherOptions && otherOptions.classList.contains('active')) {
-                        otherOptions.classList.remove('active');
-                        if (otherBtn) otherBtn.classList.remove('active');
-                        // Actualizar estado
-                        if (id === 'administracionMenuOptions') this.isAdministracionDropdownOpen = false;
-                        if (id === 'incidenciasMenuOptions') this.isIncidenciasDropdownOpen = false;
-                        if (id === 'adminMenuOptions') this.isAdminDropdownOpen = false;
-                        if (id === 'profileMenuOptions') this.isProfileDropdownOpen = false;
-                    }
+                if (this.isAdminDropdownOpen) {
+                    this.toggleAdminDropdown(false);
                 }
-            });
-
-            // Abrir/cerrar el actual
-            const newState = !this[stateVarName];
-            toggleDropdown(newState);
-        });
-
-        // Cerrar al hacer clic fuera
-        document.addEventListener('click', (e) => {
-            if (!btn.contains(e.target) && !options.contains(e.target) && this[stateVarName]) {
-                toggleDropdown(false);
+                if (this.isAdministracionDropdownOpen) {
+                    this.toggleAdministracionDropdown(false);
+                }
+                if (this.isIncidenciasDropdownOpen) {
+                    this.toggleIncidenciasDropdown(false);
+                }
             }
-        });
+        };
 
-        // Cerrar con Escape
+        hamburgerBtn.addEventListener('click', toggleMenu);
+        overlay.addEventListener('click', closeMenu);
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this[stateVarName]) {
-                toggleDropdown(false);
+            if (e.key === 'Escape' && this.isMenuOpen) closeMenu();
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 992 && this.isMenuOpen) closeMenu();
+        });
+    }
+
+    setupAdministracionDropdown() {
+        const dropdownBtn = document.getElementById('administracionDropdownBtn');
+        const dropdownOptions = document.getElementById('administracionDropdownOptions');
+
+        if (!dropdownBtn || !dropdownOptions) return;
+
+        const toggleDropdown = () => {
+            // Cerrar los otros dropdowns
+            if (this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
+            }
+            if (this.isAdminDropdownOpen) {
+                this.toggleAdminDropdown(false);
+            }
+            
+            this.isAdministracionDropdownOpen = !this.isAdministracionDropdownOpen;
+            this.toggleAdministracionDropdown(this.isAdministracionDropdownOpen);
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isAdministracionDropdownOpen) {
+                this.toggleAdministracionDropdown(false);
             }
         });
 
-        // Opciones dentro del dropdown
-        options.querySelectorAll('.navbar-dropdown-option').forEach(option => {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isAdministracionDropdownOpen) {
+                this.toggleAdministracionDropdown(false);
+            }
+        });
+
+        const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
+        options.forEach(option => {
             option.addEventListener('click', () => {
                 setTimeout(() => {
-                    toggleDropdown(false);
+                    this.toggleAdministracionDropdown(false);
                 }, 100);
             });
         });
     }
 
-    // [NUEVO] Configura el menú móvil (para cuando la pantalla es pequeña)
-    setupMobileMenu() {
-        const mobileMenuBtn = document.getElementById('navbarMobileMenuBtn');
-        const menuContainer = document.getElementById('navbarMenuContainer');
-        const overlay = document.getElementById('navbarMobileOverlay');
+    setupIncidenciasDropdown() {
+        const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
+        const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
 
-        if (!mobileMenuBtn || !menuContainer || !overlay) return;
+        if (!dropdownBtn || !dropdownOptions) return;
 
-        // Mostrar el botón solo en móvil (lo manejamos con CSS)
-        mobileMenuBtn.style.display = 'none'; // Por defecto oculto, CSS lo mostrará en @media
+        const toggleDropdown = () => {
+            // Cerrar los otros dropdowns
+            if (this.isAdministracionDropdownOpen) {
+                this.toggleAdministracionDropdown(false);
+            }
+            if (this.isAdminDropdownOpen) {
+                this.toggleAdminDropdown(false);
+            }
+            
+            this.isIncidenciasDropdownOpen = !this.isIncidenciasDropdownOpen;
+            this.toggleIncidenciasDropdown(this.isIncidenciasDropdownOpen);
+        };
 
-        mobileMenuBtn.addEventListener('click', (e) => {
+        dropdownBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const isActive = menuContainer.classList.toggle('active');
-            overlay.classList.toggle('active', isActive);
-            mobileMenuBtn.classList.toggle('active', isActive);
-            document.body.classList.toggle('menu-open', isActive);
+            toggleDropdown();
         });
 
-        overlay.addEventListener('click', () => {
-            menuContainer.classList.remove('active');
-            overlay.classList.remove('active');
-            mobileMenuBtn.classList.remove('active');
-            document.body.classList.remove('menu-open');
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
+            }
         });
 
-        // Cerrar al hacer clic en un enlace
-        menuContainer.querySelectorAll('a, button').forEach(el => {
-            el.addEventListener('click', () => {
-                if (window.innerWidth <= 992) {
-                    menuContainer.classList.remove('active');
-                    overlay.classList.remove('active');
-                    mobileMenuBtn.classList.remove('active');
-                    document.body.classList.remove('menu-open');
-                }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
+            }
+        });
+
+        const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                setTimeout(() => {
+                    this.toggleIncidenciasDropdown(false);
+                }, 100);
             });
         });
     }
 
-    // [ELIMINADO] setupMenu, setupAdministracionDropdown, setupIncidenciasDropdown, setupAdminDropdown, etc. ya no son necesarios
+    setupAdminDropdown() {
+        const dropdownBtn = document.getElementById('adminDropdownBtn');
+        const dropdownOptions = document.getElementById('adminDropdownOptions');
 
-    setupScroll() {
-        const navbar = document.getElementById('complete-navbar');
-        if (!navbar) return;
+        if (!dropdownBtn || !dropdownOptions) return;
 
-        window.addEventListener('scroll', () => {
-            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        const toggleDropdown = () => {
+            // Cerrar los otros dropdowns
+            if (this.isAdministracionDropdownOpen) {
+                this.toggleAdministracionDropdown(false);
+            }
+            if (this.isIncidenciasDropdownOpen) {
+                this.toggleIncidenciasDropdown(false);
+            }
+            
+            this.isAdminDropdownOpen = !this.isAdminDropdownOpen;
+            this.toggleAdminDropdown(this.isAdminDropdownOpen);
+        };
+
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!dropdownBtn.contains(e.target) &&
+                !dropdownOptions.contains(e.target) &&
+                this.isAdminDropdownOpen) {
+                this.toggleAdminDropdown(false);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isAdminDropdownOpen) {
+                this.toggleAdminDropdown(false);
+            }
         });
     }
 
@@ -1665,7 +2039,47 @@ class NavbarComplete {
         }, 1000);
     }
 
-    // [ELIMINADOS] toggleAdminDropdown, toggleAdministracionDropdown, toggleIncidenciasDropdown ya no son necesarios
+    toggleAdminDropdown(show) {
+        const dropdownBtn = document.getElementById('adminDropdownBtn');
+        const dropdownOptions = document.getElementById('adminDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isAdminDropdownOpen = show;
+        }
+    }
+
+    toggleAdministracionDropdown(show) {
+        const dropdownBtn = document.getElementById('administracionDropdownBtn');
+        const dropdownOptions = document.getElementById('administracionDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isAdministracionDropdownOpen = show;
+        }
+    }
+
+    toggleIncidenciasDropdown(show) {
+        const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
+        const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
+
+        if (dropdownBtn && dropdownOptions) {
+            dropdownBtn.classList.toggle('active', show);
+            dropdownOptions.classList.toggle('active', show);
+            this.isIncidenciasDropdownOpen = show;
+        }
+    }
+
+    setupScroll() {
+        const navbar = document.getElementById('complete-navbar');
+        if (!navbar) return;
+
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+    }
 
     loadFontAwesome() {
         if (!document.querySelector('link[href*="font-awesome"]')) {
@@ -1687,4 +2101,3 @@ class NavbarComplete {
 }
 
 new NavbarComplete();
-

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Alertas - Sistema Centinela</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Estilos globales -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Icono y PWA -->
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- TU CSS -->
+    <link rel="stylesheet" href="mapaAlerta.css">
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="admin-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-map-marked-alt"></i>
+                Mapa de Alertas en Vivo
+            </h1>
+            <div class="header-description">
+                Visualiza en tiempo real las alertas activas y todas las sucursales con el color de su región
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filtros-container">
+            <div class="filtros-header">
+                <h5><i class="fas fa-filter"></i> Filtrar elementos:</h5>
+            </div>
+            <div class="filtros-body">
+                <div class="filtro-grupo">
+                    <label for="filtroSeveridad">Severidad</label>
+                    <select id="filtroSeveridad" class="filtro-input">
+                        <option value="todas">Todas las alertas</option>
+                        <option value="alta">Alta 🔴</option>
+                        <option value="media">Media 🟡</option>
+                        <option value="baja">Baja 🟢</option>
+                    </select>
+                </div>
+                <div class="filtro-grupo">
+                    <label for="buscarZona">Zona / Sucursal</label>
+                    <input type="text" id="buscarZona" class="filtro-input" placeholder="Ej: Centro, Chapultepec...">
+                </div>
+                <div class="filtro-acciones">
+                    <button class="btn-buscar" id="btnAplicarFiltros">
+                        <i class="fas fa-search"></i> Aplicar
+                    </button>
+                    <button class="btn-limpiar" id="btnLimpiarFiltros">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid: Panel + Mapa -->
+        <div class="mapa-grid-container">
+            <!-- Panel lateral -->
+            <div class="panel-alertas-card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bell"></i> Alertas activas <span class="contador-alertas"
+                            id="contadorAlertas">0</span></h5>
+                    <button class="btn-refrescar" id="btnCentrarMapa">
+                        <i class="fas fa-crosshairs"></i> Centrar
+                    </button>
+                </div>
+                <div class="lista-alertas-container" id="listaAlertas">
+                    <div class="loading-alertas">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando...
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    <div class="leyenda-colores">
+                        <span><i class="fas fa-circle" style="color: #ff4444;"></i> Alta</span>
+                        <span><i class="fas fa-circle" style="color: #ffbb33;"></i> Media</span>
+                        <span><i class="fas fa-circle" style="color: #00C851;"></i> Baja</span>
+                        <span><i class="fas fa-store" style="color: #2f8cff;"></i> Sucursal</span>
+                    </div>
+                    <small class="text-muted">⚡ Actualización en tiempo real</small>
+                </div>
+            </div>
+
+            <!-- Mapa -->
+            <div class="mapa-card">
+                <div class="card-header">
+                    <h5><i class="fas fa-map"></i> Visualización geográfica</h5>
+                    <div class="indicador-conexion" id="indicadorConexion">
+                        <i class="fas fa-wifi"></i> Conectado
+                    </div>
+                </div>
+                <div class="mapa-wrapper">
+                    <div id="mapa"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="stats-container">
+            <div class="stat-item">
+                <i class="fas fa-exclamation-triangle" style="color: #ff4444;"></i>
+                <span class="stat-label">Alertas Altas</span>
+                <span class="stat-value" id="statAltas">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-exclamation-circle" style="color: #ffbb33;"></i>
+                <span class="stat-label">Alertas Medias</span>
+                <span class="stat-value" id="statMedias">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-info-circle" style="color: #00C851;"></i>
+                <span class="stat-label">Alertas Bajas</span>
+                <span class="stat-value" id="statBajas">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-store" style="color: #2f8cff;"></i>
+                <span class="stat-label">Sucursales</span>
+                <span class="stat-value" id="statSucursales">0</span>
+            </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- NUEVA TABLA DE REGIONES -->
+        <!-- ============================================= -->
+        <div class="card" style="margin-top: 30px;">
+            <div class="card-header">
+                <h5><i class="fas fa-palette"></i> Regiones y sus colores</h5>
+                <button class="btn-refrescar" id="btnRefrescarRegiones">
+                    <i class="fas fa-sync-alt"></i> Refrescar
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="tablaRegiones">
+                        <thead>
+                            <tr>
+                                <th>Color</th>
+                                <th>Región</th>
+                                <th>Sucursales</th>
+                                <th>Fecha Creación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="regionesTableBody">
+                            <tr>
+                                <td colspan="4" class="loading-state">
+                                    <div class="loading-content">
+                                        <div class="loading-spinner"></div>
+                                        <h3>Cargando regiones...</h3>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/components/navbarAdministrador.js"></script>
+    <script src="/components/footerAdministrador.js"></script>
+    <script type="module" src="/components/cargadorTemas.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+
+    <!-- TU JS -->
+    <script type="module" src="mapaAlerta.js"></script>
+</body>
+
+</html>

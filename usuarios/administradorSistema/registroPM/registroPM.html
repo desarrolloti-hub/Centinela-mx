@@ -3,90 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vinculación Power Manage | Centinela-MX</title>
+    <title>Vinculación monitoreo alarma - intrusión | Centinela-MX</title>
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
     
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="registroPM.css">
     
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <canvas id="particle-canvas"></canvas>
-
+    
     <div class="page-header">
-        <h1><i class="fas fa-network-wired"></i> Configuración de Servidor</h1>
-        <div class="header-description">Gestión de Middleware para cuentas maestras de organizaciones.</div>
+        <h1>
+            <i class="fas fa-network-wired"></i> Creación cuenta de monitoreo
+        </h1>
+        <div class="header-description">
+            Creación de cuentas de monitoreo
+        </div>
     </div>
 
     <div class="edit-main-container">
-        <div class="edit-wrapper">
-            <div class="edit-left-panel">
-                <header class="edit-header">
-                    <h1 class="edit-main-title">POWER MANAGE</h1>
-                    <p class="edit-sub-title">API INTERACTIVE 13.0</p>
-                </header>
-
-                <section class="photo-section">
-                    <div class="photo-container">
-                        <div class="profile-circle org-disabled">
-                            <div class="placeholder-text">
-                                <i class="fas fa-shield-alt"></i>
-                                <span>RSI MASTER</span>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="photo-info">Este proceso genera el User-Token institucional necesario para el monitoreo.</p>
-                </section>
-
-                <footer class="back-btn-container">
-                    <a href="/usuarios/administrador/usuarios/usuarios.html" class="back-btn">
-                        <i class="fas fa-arrow-left"></i> VOLVER A GESTIÓN
-                    </a>
-                </footer>
-            </div>
-
-            <div class="edit-right-panel">
+        <div class="edit-wrapper" style="max-width: 600px;"> <!-- Contenedor más pequeño solo para formulario -->
+            
+            <!-- Panel único con formulario (sin panel izquierdo) -->
+            <div class="edit-right-panel" style="border: none; width: 100%;">
                 <header class="edit-header">
                     <h1 class="edit-main-title">ALTA TÉCNICA</h1>
-                    <p class="edit-sub-title">Sigue los pasos para vincular la organización.</p>
+                    <p class="edit-sub-title">
+                        Sigue los pasos para vincular la organización
+                    </p>
                 </header>
 
                 <form class="edit-form-container" id="pmRegisterForm">
+                    
+                    <!-- PASO 1 -->
                     <div id="step1">
                         <div class="form-field-group">
                             <label class="field-label" for="pmEmail">
                                 <i class="fas fa-envelope"></i> EMAIL ORGANIZACIONAL
                             </label>
-                            <input class="form-input-field" type="email" id="pmEmail" 
-                                   placeholder="ejemplo@organizacion.com" required>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="email" id="pmEmail" 
+                                       placeholder="ejemplo@organizacion.com" required>
+                            </div>
                         </div>
+                        
                         <button type="button" class="action-btn save-btn" id="btnSendCode">
-                            SOLICITAR CÓDIGO 2FA
+                            <i class="fas fa-paper-plane"></i> SOLICITAR CÓDIGO 2FA
                         </button>
                     </div>
 
+                    <!-- PASO 2 -->
                     <div id="step2" style="display:none;">
                         <div class="message-container info">
-                            <i class="fas fa-info-circle"></i> 
-                            Ingresa el código de 12 caracteres enviado al correo anterior.
+                            <i class="fas fa-info-circle"></i>
+                            Ingresa el código de verificación enviado al correo
                         </div>
+                        
                         <div class="form-field-group">
                             <label class="field-label" for="pmCode">
-                                <i class="fas fa-key"></i> CÓDIGO RECIBIDO
+                                <i class="fas fa-key"></i> CÓDIGO DE VERIFICACIÓN
                             </label>
-                            <input class="form-input-field" type="text" id="pmCode" 
-                                   placeholder="ABC123XYZ..." maxlength="12">
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="text" id="pmCode" 
+                                       placeholder="Ingresa el código" maxlength="12">
+                            </div>
                         </div>
+                        
                         <button type="submit" class="action-btn save-btn">
-                            FINALIZAR VINCULACIÓN
+                            <i class="fas fa-check-circle"></i> FINALIZAR VINCULACIÓN
                         </button>
                     </div>
+                    
                 </form>
+
+                <footer class="back-btn-container" style="margin-top: 1.5rem;">
+                    <a href="/usuarios/administrador/usuarios/usuarios.html" class="back-btn">
+                        <i class="fas fa-arrow-left"></i> VOLVER A GESTIÓN
+                    </a>
+                </footer>
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
+    <script type="module" src="/components/cargadorTemas.js"></script>
+    <script src="/components/navbarAdministrador.js"></script>
+    <script src="/components/footerAdministrador.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
     <script type="module" src="registroPM.js"></script>
 </body>
 </html>
