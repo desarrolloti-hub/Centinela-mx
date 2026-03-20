@@ -1,14 +1,16 @@
-// operaciones.js - CONTROLLER CON FILTRO POR ORGANIZACIÓN (SIN ÁREAS)
+// operaciones.js - CONTROLLER CON CARGA DIFERIDA Y ESTIMADO DE TIEMPO
+// GRÁFICA DE DOCUMENTOS POR EMPRESA MEJORADA
 
 import { operacionesManager } from '/clases/operacion.js';
 
-// Variables globales
 let currentEmpresa = 'global';
 let charts = {
     tipos: null,
-    firestore: null,
-    carpetas: null
+    almacenamientoEmpresas: null,
+    documentosEmpresas: null
 };
+let ultimaActualizacion = null;
+let resizeTimeout = null;
 
 // =============================================
 // FUNCIONES DE UTILIDAD
@@ -27,63 +29,55 @@ function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+// Función para redimensionar gráficas cuando cambia el tamaño de pantalla
+function resizeCharts() {
+    if (charts.tipos) {
+        charts.tipos.resize();
+    }
+    if (charts.almacenamientoEmpresas) {
+        charts.almacenamientoEmpresas.resize();
+    }
+    if (charts.documentosEmpresas) {
+        charts.documentosEmpresas.resize();
+    }
+}
+
+// Escuchar cambios de tamaño de pantalla
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        resizeCharts();
+    }, 250);
+});
+
 // =============================================
 // ACTUALIZACIÓN DE MÉTRICAS EN EL DOM
 // =============================================
 
 function actualizarMetricas(conteos) {
-    if (!conteos) {
-        console.warn('No hay datos para actualizar métricas');
-        return;
-    }
+    if (!conteos) return;
     
     const firestore = conteos.firestore;
     const storage = conteos.storage;
     const auth = conteos.auth;
     
-    // Actualizar métricas de Firestore
-    const coleccionesElem = document.getElementById('metricColecciones');
-    const documentosElem = document.getElementById('metricDocumentos');
-    const adminsElem = document.getElementById('metricAdministradores');
-    const colaboradoresElem = document.getElementById('metricColaboradores');
-    const totalUsuariosElem = document.getElementById('metricTotalUsuarios');
-    const empleadosElem = document.getElementById('metricEmpleados');
+    document.getElementById('metricDocumentos').innerText = formatNumber(firestore.documentos || 0);
+    document.getElementById('metricAdministradores').innerText = formatNumber(auth.administradores || 0);
+    document.getElementById('metricColaboradores').innerText = formatNumber(auth.usuarios || 0);
+    document.getElementById('metricTotalUsuarios').innerText = formatNumber((auth.usuarios || 0) + (auth.administradores || 0));
     
-    if (coleccionesElem) coleccionesElem.innerText = formatNumber(firestore.colecciones || 0);
-    if (documentosElem) documentosElem.innerText = formatNumber(firestore.documentos || 0);
-    if (adminsElem) adminsElem.innerText = formatNumber(auth.administradores || 0);
-    if (colaboradoresElem) colaboradoresElem.innerText = formatNumber(auth.usuarios || 0);
-    if (totalUsuariosElem) totalUsuariosElem.innerHTML = `${formatNumber(auth.total || 0)} total`;
-    if (empleadosElem) empleadosElem.innerHTML = `${formatNumber(auth.usuarios || 0)} empleados`;
+    document.getElementById('metricArchivosTotales').innerText = formatNumber(storage.total || 0);
+    document.getElementById('metricTamanioTotal').innerHTML = `<i class="fas fa-hdd"></i> ${formatBytes(storage.totalSize || 0)}`;
+    document.getElementById('metricPDF').innerText = formatNumber(storage.pdf || 0);
+    document.getElementById('metricImagenes').innerText = formatNumber(storage.imagenes || 0);
+    document.getElementById('metricDocumentosStorage').innerText = formatNumber(storage.documentos || 0);
+    document.getElementById('metricMultimedia').innerText = formatNumber(storage.multimedia || 0);
     
-    // Actualizar métricas de Storage
-    const archivosElem = document.getElementById('metricArchivosTotales');
-    const tamanioElem = document.getElementById('metricTamanioTotal');
-    const pdfElem = document.getElementById('metricPDF');
-    const imagenesElem = document.getElementById('metricImagenes');
-    const docsStorageElem = document.getElementById('metricDocumentosStorage');
-    const multimediaElem = document.getElementById('metricMultimedia');
-    
-    if (archivosElem) archivosElem.innerText = formatNumber(storage.total || 0);
-    if (tamanioElem) tamanioElem.innerHTML = `<i class="fas fa-hdd"></i> ${formatBytes(storage.totalSize || 0)}`;
-    if (pdfElem) pdfElem.innerText = formatNumber(storage.pdf || 0);
-    if (imagenesElem) imagenesElem.innerText = formatNumber(storage.imagenes || 0);
-    if (docsStorageElem) docsStorageElem.innerText = formatNumber(storage.documentos || 0);
-    if (multimediaElem) multimediaElem.innerText = formatNumber(storage.multimedia || 0);
-    
-    // Calcular porcentajes
-    const totalArchivos = storage.total || 1;
-    const pdfPct = document.getElementById('metricPDFPorcentaje');
-    const imgPct = document.getElementById('metricImagenesPorcentaje');
-    const docsPct = document.getElementById('metricDocumentosPorcentaje');
-    const multiPct = document.getElementById('metricMultimediaPorcentaje');
-    
-    if (pdfPct) pdfPct.innerText = `${Math.round(((storage.pdf || 0) / totalArchivos) * 100)}%`;
-    if (imgPct) imgPct.innerText = `${Math.round(((storage.imagenes || 0) / totalArchivos) * 100)}%`;
-    if (docsPct) docsPct.innerText = `${Math.round(((storage.documentos || 0) / totalArchivos) * 100)}%`;
-    if (multiPct) multiPct.innerText = `${Math.round(((storage.multimedia || 0) / totalArchivos) * 100)}%`;
-    
-    console.log('✅ Métricas actualizadas');
+    const total = storage.total || 1;
+    document.getElementById('metricPDFPorcentaje').innerText = `${Math.round(((storage.pdf || 0) / total) * 100)}%`;
+    document.getElementById('metricImagenesPorcentaje').innerText = `${Math.round(((storage.imagenes || 0) / total) * 100)}%`;
+    document.getElementById('metricDocumentosPorcentaje').innerText = `${Math.round(((storage.documentos || 0) / total) * 100)}%`;
+    document.getElementById('metricMultimediaPorcentaje').innerText = `${Math.round(((storage.multimedia || 0) / total) * 100)}%`;
 }
 
 // =============================================
@@ -102,181 +96,246 @@ function graficoTiposArchivo(storage) {
         data: {
             labels: ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'],
             datasets: [{
-                data: [
-                    storage.pdf || 0,
-                    storage.imagenes || 0,
-                    storage.documentos || 0,
-                    storage.multimedia || 0,
-                    storage.otros || 0
-                ],
+                data: [storage.pdf || 0, storage.imagenes || 0, storage.documentos || 0, storage.multimedia || 0, storage.otros || 0],
                 backgroundColor: ['#ef4444', '#8b5cf6', '#10b981', '#f59e0b', '#6c757d'],
-                borderWidth: 0,
-                hoverOffset: 10
+                borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                legend: { position: 'bottom', labels: { color: '#ffffff' } },
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        color: '#ffffff',
+                        font: { size: 11 }
+                    } 
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const label = context.label || '';
-                            const value = context.raw || 0;
+                            const label = context.label;
+                            const value = context.raw;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const porcentaje = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return `${label}: ${formatNumber(value)} (${porcentaje}%)`;
+                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${label}: ${formatNumber(value)} (${pct}%)`;
                         }
                     }
                 }
             }
         }
     });
+    
+    setTimeout(() => {
+        if (charts.tipos) charts.tipos.resize();
+    }, 100);
 }
 
-function graficoFirestore(firestore, auth, colecciones) {
-    const canvas = document.getElementById('graficoFirestore');
+function graficoAlmacenamientoPorEmpresa(datosEmpresas) {
+    const canvas = document.getElementById('graficoAlmacenamientoPorEmpresa');
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    if (charts.firestore) charts.firestore.destroy();
+    if (charts.almacenamientoEmpresas) charts.almacenamientoEmpresas.destroy();
     
-    let sucursalesCount = 0;
-    let incidenciasCount = 0;
-    let areasCount = 0;
+    const empresas = datosEmpresas.map(e => e.nombre);
+    const tamanios = datosEmpresas.map(e => e.totalSize);
     
-    Object.keys(colecciones).forEach(key => {
-        if (key.includes('sucursales_')) sucursalesCount = colecciones[key];
-        if (key.includes('incidencias_')) incidenciasCount = colecciones[key];
-        if (key.includes('areas_')) areasCount = colecciones[key];
-    });
-    
-    charts.firestore = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Documentos', 'Colaboradores', 'Administradores', 'Áreas', 'Sucursales', 'Incidencias'],
-            datasets: [{
-                label: 'Cantidad',
-                data: [
-                    firestore.documentos || 0,
-                    auth.usuarios || 0,
-                    auth.administradores || 0,
-                    areasCount,
-                    sucursalesCount,
-                    incidenciasCount
-                ],
-                backgroundColor: '#00cfff',
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffffff' } },
-                x: { ticks: { color: '#ffffff', font: { size: 11 } } }
+    if (empresas.length === 0) {
+        charts.almacenamientoEmpresas = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['No hay datos'],
+                datasets: [{ data: [1], backgroundColor: ['#6c757d'] }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { labels: { color: '#ffffff' } } }
             }
-        }
-    });
-}
-
-function graficoCarpetas(colecciones) {
-    const canvas = document.getElementById('graficoCarpetas');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (charts.carpetas) charts.carpetas.destroy();
-    
-    const items = Object.keys(colecciones)
-        .filter(key => !key.includes('operaciones') && !key.includes('historial') && !key.includes('notificaciones'))
-        .map(key => ({
-            nombre: key,
-            documentos: colecciones[key]
-        }))
-        .sort((a, b) => b.documentos - a.documentos)
-        .slice(0, 10);
-    
-    if (items.length === 0) {
-        items.push({ nombre: 'No hay datos', documentos: 0 });
+        });
+        return;
     }
     
-    charts.carpetas = new Chart(ctx, {
-        type: 'bar',
+    charts.almacenamientoEmpresas = new Chart(ctx, {
+        type: 'pie',
         data: {
-            labels: items.map(i => i.nombre),
+            labels: empresas,
             datasets: [{
-                label: 'Documentos',
-                data: items.map(i => i.documentos),
-                backgroundColor: '#00cfff',
-                borderRadius: 8
+                data: tamanios,
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec489a', '#14b8a6', '#f97316'],
+                borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            indexAxis: 'y',
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { ticks: { color: '#ffffff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
-                y: { ticks: { color: '#ffffff' } }
+            plugins: {
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        color: '#ffffff',
+                        font: { size: 11 }
+                    } 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label;
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${label}: ${formatBytes(value)} (${pct}%)`;
+                        }
+                    }
+                }
             }
         }
     });
+    
+    setTimeout(() => {
+        if (charts.almacenamientoEmpresas) charts.almacenamientoEmpresas.resize();
+    }, 100);
+}
+
+/**
+ * GRÁFICA DE DOCUMENTOS POR EMPRESA - VERSIÓN MEJORADA
+ * Usa gráfico de barras HORIZONTAL para mejor visualización de nombres largos
+ */
+function graficoDocumentosPorEmpresa(datosEmpresas) {
+    const canvas = document.getElementById('graficoDocumentosPorEmpresa');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (charts.documentosEmpresas) charts.documentosEmpresas.destroy();
+    
+    // Ordenar por documentos (mayor a menor)
+    const datosOrdenados = [...datosEmpresas].sort((a, b) => b.documentos - a.documentos);
+    
+    // Limitar a máximo 15 empresas para no saturar la gráfica
+    const datosMostrar = datosOrdenados.slice(0, 15);
+    const empresas = datosMostrar.map(e => e.nombre);
+    const documentos = datosMostrar.map(e => e.documentos);
+    
+    if (empresas.length === 0) {
+        charts.documentosEmpresas = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['No hay datos'],
+                datasets: [{ label: 'Documentos', data: [0], backgroundColor: '#00cfff' }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: '#ffffff' } },
+                    x: { ticks: { color: '#ffffff' } }
+                }
+            }
+        });
+        return;
+    }
+    
+    // Usar gráfico de barras HORIZONTAL para mejor legibilidad de nombres
+    charts.documentosEmpresas = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: empresas,
+            datasets: [{
+                label: 'Documentos',
+                data: documentos,
+                backgroundColor: '#00cfff',
+                borderRadius: 6,
+                barPercentage: 0.7,
+                categoryPercentage: 0.8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            indexAxis: 'y', // ¡CLAVE! Esto hace que la gráfica sea HORIZONTAL
+            plugins: { 
+                legend: { 
+                    display: false 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${formatNumber(context.raw)} documentos`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { 
+                    beginAtZero: true, 
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 11 },
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
+                    },
+                    grid: { 
+                        color: 'rgba(255,255,255,0.1)' 
+                    },
+                    title: {
+                        display: true,
+                        text: 'Cantidad de Documentos',
+                        color: '#ffffff',
+                        font: { size: 10, weight: 'normal' }
+                    }
+                },
+                y: { 
+                    ticks: { 
+                        color: '#ffffff', 
+                        font: { size: 11 },
+                        // Truncar nombres muy largos
+                        callback: function(value, index) {
+                            let label = empresas[index] || value;
+                            if (label.length > 25) {
+                                return label.substring(0, 22) + '...';
+                            }
+                            return label;
+                        }
+                    },
+                    grid: { 
+                        display: false 
+                    }
+                }
+            },
+            // Ajustar altura dinámica según cantidad de empresas
+            maintainAspectRatio: true,
+            responsive: true
+        }
+    });
+    
+    // Ajustar altura del canvas según cantidad de empresas
+    const canvasHeight = Math.max(250, Math.min(450, empresas.length * 28));
+    canvas.style.height = `${canvasHeight}px`;
+    
+    setTimeout(() => {
+        if (charts.documentosEmpresas) charts.documentosEmpresas.resize();
+    }, 100);
 }
 
 // =============================================
 // TABLAS
 // =============================================
 
-function tablaCarpetas(colecciones) {
-    const tbody = document.getElementById('tablaCarpetasBody');
-    if (!tbody) return;
-    
-    const items = Object.keys(colecciones)
-        .filter(key => !key.includes('operaciones') && !key.includes('historial') && !key.includes('notificaciones'))
-        .map(key => ({
-            nombre: key,
-            documentos: colecciones[key]
-        }))
-        .sort((a, b) => b.documentos - a.documentos);
-    
-    const totalDocumentos = items.reduce((sum, item) => sum + item.documentos, 0);
-    
-    if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay datos disponibles</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = items.map(item => {
-        const porcentaje = totalDocumentos > 0 ? ((item.documentos / totalDocumentos) * 100).toFixed(1) : 0;
-        return `
-            <tr>
-                <td><i class="fas fa-folder" style="color: #00cfff; margin-right: 8px;"></i>${item.nombre}</td>
-                <td><strong>${formatNumber(item.documentos)}</strong></td>
-                <td><span class="badge-value badge-info">${porcentaje}%</span></td>
-                <td style="width: 120px;">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${porcentaje}%;"></div>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
 async function tablaOrganizaciones() {
     const tbody = document.getElementById('tablaOrganizacionesBody');
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;"><div class="loading-spinner"></div> Cargando...</td></tr>';
+    tbody.innerHTML = '发展<td colspan="7" style="text-align:center;"><div class="loading-spinner"></div> Cargando...发展</td></tr>';
     
     try {
         const organizaciones = await operacionesManager.getOrganizaciones();
         
         if (organizaciones.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay organizaciones registradas</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay organizaciones registradas</td></tr>';
             return;
         }
         
@@ -285,133 +344,316 @@ async function tablaOrganizaciones() {
             return {
                 id: org.camelCase,
                 nombre: org.nombre,
-                conteos: op ? op.conteos : null
+                documentos: op?.conteos?.firestore?.documentos || 0,
+                archivos: op?.conteos?.storage?.total || 0,
+                totalSize: op?.conteos?.storage?.totalSize || 0,
+                administradores: op?.conteos?.auth?.administradores || 0,
+                colaboradores: op?.conteos?.auth?.usuarios || 0
+            };
+        });
+        
+        const resultados = await Promise.all(statsPromises);
+        const ordenados = resultados.sort((a, b) => b.documentos - a.documentos);
+        
+        tbody.innerHTML = ordenados.map(emp => `
+            <tr>
+                <td><strong>${emp.nombre}</strong><br><small style="color: #888;">${emp.id}</small></td>
+                <td>${formatNumber(emp.documentos)}</td>
+                <td>${formatNumber(emp.archivos)}</td>
+                <td><span class="size-badge">${formatBytes(emp.totalSize)}</span></td>
+                <td>${formatNumber(emp.administradores)}</td>
+                <td>${formatNumber(emp.colaboradores)}</td>
+                <td>${formatNumber(emp.administradores + emp.colaboradores)}</td>
+            </tr>
+        `).join('');
+        
+        return ordenados;
+        
+    } catch (error) {
+        console.error('Error:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Error al cargar datos</td></tr>';
+        return [];
+    }
+}
+
+// =============================================
+// CARGA DE DATOS GUARDADOS
+// =============================================
+
+async function cargarDatosGuardados() {
+    console.log('📀 Cargando datos guardados...');
+    
+    try {
+        const organizaciones = await operacionesManager.getOrganizaciones();
+        
+        if (organizaciones.length === 0) return false;
+        
+        const statsPromises = organizaciones.map(async org => {
+            const op = await operacionesManager.getOperaciones(org.camelCase);
+            return {
+                id: org.camelCase,
+                nombre: org.nombre,
+                documentos: op?.conteos?.firestore?.documentos || 0,
+                archivos: op?.conteos?.storage?.total || 0,
+                totalSize: op?.conteos?.storage?.totalSize || 0,
+                administradores: op?.conteos?.auth?.administradores || 0,
+                colaboradores: op?.conteos?.auth?.usuarios || 0,
+                storage: op?.conteos?.storage || { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
+                firestore: op?.conteos?.firestore || { documentos: 0 },
+                auth: op?.conteos?.auth || { usuarios: 0, administradores: 0 }
             };
         });
         
         const resultados = await Promise.all(statsPromises);
         
-        const conDatos = resultados.filter(r => r.conteos).sort((a, b) => {
-            const docsA = a.conteos?.firestore?.documentos || 0;
-            const docsB = b.conteos?.firestore?.documentos || 0;
-            return docsB - docsA;
-        });
+        const tieneDatos = resultados.some(r => r.documentos > 0 || r.archivos > 0);
         
-        if (conDatos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay datos disponibles</td></tr>';
-            return;
+        if (!tieneDatos) {
+            console.log('📀 No hay datos guardados previamente');
+            return false;
         }
         
-        tbody.innerHTML = conDatos.map(org => {
-            const storage = org.conteos.storage || {};
-            const firestore = org.conteos.firestore || {};
-            
-            return `
-                <tr>
-                    <td><strong>${org.id}</strong><br><small>${org.nombre}</small></td>
-                    <td>${formatNumber(firestore.documentos || 0)}</td>
-                    <td>${formatNumber(storage.total || 0)}</td>
-                    <td><span class="size-badge">${formatBytes(storage.totalSize || 0)}</span></td>
-                    <td><span class="badge-value badge-danger">${formatNumber(storage.pdf || 0)}</span></td>
-                    <td><span class="badge-value badge-purple">${formatNumber(storage.imagenes || 0)}</span></td>
-                </tr>
-            `;
-        }).join('');
+        // Cargar vista global con datos guardados
+        const globalConteos = {
+            firestore: { documentos: 0 },
+            storage: { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
+            auth: { usuarios: 0, administradores: 0 }
+        };
+        
+        resultados.forEach(r => {
+            globalConteos.firestore.documentos += r.documentos;
+            globalConteos.storage.total += r.archivos;
+            globalConteos.storage.totalSize += r.totalSize;
+            globalConteos.storage.pdf += r.storage.pdf || 0;
+            globalConteos.storage.imagenes += r.storage.imagenes || 0;
+            globalConteos.storage.documentos += r.storage.documentos || 0;
+            globalConteos.storage.multimedia += r.storage.multimedia || 0;
+            globalConteos.storage.otros += r.storage.otros || 0;
+            globalConteos.auth.usuarios += r.colaboradores;
+            globalConteos.auth.administradores += r.administradores;
+        });
+        
+        actualizarMetricas(globalConteos);
+        graficoTiposArchivo(globalConteos.storage);
+        
+        const datosGraficas = resultados.map(r => ({
+            nombre: r.nombre,
+            documentos: r.documentos,
+            totalSize: r.totalSize
+        })).sort((a, b) => b.totalSize - a.totalSize);
+        
+        graficoAlmacenamientoPorEmpresa(datosGraficas);
+        graficoDocumentosPorEmpresa(datosGraficas);
+        
+        await tablaOrganizaciones();
+        
+        // Buscar la fecha de la última actualización
+        const fechas = [];
+        for (const org of organizaciones) {
+            const op = await operacionesManager.getOperaciones(org.camelCase);
+            if (op?.fechaActualizacion) {
+                fechas.push(new Date(op.fechaActualizacion));
+            }
+        }
+        
+        if (fechas.length > 0) {
+            const fechaMasReciente = new Date(Math.max(...fechas));
+            ultimaActualizacion = fechaMasReciente;
+            document.getElementById('fechaActualizacion').innerText = fechaMasReciente.toLocaleString();
+        }
+        
+        console.log('📀 Datos guardados cargados correctamente');
+        return true;
         
     } catch (error) {
-        console.error('Error cargando tabla:', error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Error al cargar datos</td></tr>';
+        console.error('Error cargando datos guardados:', error);
+        return false;
     }
 }
 
 // =============================================
-// ACTUALIZACIÓN DE VISTA PRINCIPAL
+// ACTUALIZACIÓN DE DATOS REALES
+// =============================================
+
+async function actualizarDatosReales(mostrarProgress = true) {
+    console.log('🔄 Actualizando datos reales...');
+    
+    let progressInterval;
+    let startTime = Date.now();
+    let estimatedTime = 0;
+    
+    if (mostrarProgress) {
+        Swal.fire({
+            title: 'Actualizando estadísticas',
+            html: `
+                <div style="text-align: center;">
+                    <div class="loading-spinner" style="margin: 20px auto;"></div>
+                    <p id="progressText" style="margin-top: 15px;">Recopilando datos de Firestore y Storage...</p>
+                    <p id="progressTime" style="font-size: 12px; color: #888;">Estimado: calculando...</p>
+                </div>
+            `,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                let elapsed = 0;
+                progressInterval = setInterval(() => {
+                    elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    const progressText = document.getElementById('progressText');
+                    const progressTime = document.getElementById('progressTime');
+                    
+                    if (progressText) {
+                        if (elapsed < 5) {
+                            progressText.innerHTML = '📡 Conectando con Firebase...';
+                            estimatedTime = 10;
+                        } else if (elapsed < 10) {
+                            progressText.innerHTML = '📁 Contando documentos en Firestore...';
+                            estimatedTime = 15;
+                        } else if (elapsed < 15) {
+                            progressText.innerHTML = '💾 Escaneando archivos en Storage...';
+                            estimatedTime = 20;
+                        } else if (elapsed < 25) {
+                            progressText.innerHTML = '📊 Procesando datos y generando estadísticas...';
+                            estimatedTime = 30;
+                        } else {
+                            progressText.innerHTML = '⏳ Casi listo, finalizando...';
+                            estimatedTime = Math.max(5, 40 - elapsed);
+                        }
+                        
+                        const remaining = Math.max(0, estimatedTime - elapsed);
+                        if (progressTime) {
+                            progressTime.innerHTML = `⏱️ Tiempo transcurrido: ${elapsed}s | Estimado restante: ~${remaining}s`;
+                        }
+                    }
+                }, 1000);
+            }
+        });
+    }
+    
+    try {
+        await operacionesManager.recopilarTodasLasOrganizaciones();
+        await actualizarVista(currentEmpresa);
+        
+        ultimaActualizacion = new Date();
+        document.getElementById('fechaActualizacion').innerText = ultimaActualizacion.toLocaleString();
+        
+        if (progressInterval) clearInterval(progressInterval);
+        
+        const totalTime = Math.floor((Date.now() - startTime) / 1000);
+        
+        if (mostrarProgress) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Actualización completada',
+                html: `Datos actualizados correctamente.<br>⏱️ Tiempo total: ${totalTime} segundos`,
+                timer: 3000,
+                showConfirmButton: true
+            });
+        }
+        
+        console.log(`✅ Actualización completada en ${totalTime} segundos`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error actualizando datos:', error);
+        
+        if (progressInterval) clearInterval(progressInterval);
+        
+        if (mostrarProgress) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron actualizar los datos. Verifica tu conexión.'
+            });
+        }
+        
+        return false;
+    }
+}
+
+// =============================================
+// ACTUALIZACIÓN DE VISTA
 // =============================================
 
 async function actualizarVista(empresaId = 'global') {
     console.log(`🔄 Actualizando vista para: ${empresaId}`);
     
     try {
-        const fechaElem = document.getElementById('fechaActualizacion');
-        if (fechaElem) fechaElem.innerText = new Date().toLocaleString();
+        const organizaciones = await operacionesManager.getOrganizaciones();
+        
+        if (organizaciones.length === 0) return;
+        
+        const statsPromises = organizaciones.map(async org => {
+            const op = await operacionesManager.getOperaciones(org.camelCase);
+            return {
+                id: org.camelCase,
+                nombre: org.nombre,
+                documentos: op?.conteos?.firestore?.documentos || 0,
+                archivos: op?.conteos?.storage?.total || 0,
+                totalSize: op?.conteos?.storage?.totalSize || 0,
+                administradores: op?.conteos?.auth?.administradores || 0,
+                colaboradores: op?.conteos?.auth?.usuarios || 0,
+                storage: op?.conteos?.storage || { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
+                firestore: op?.conteos?.firestore || { documentos: 0 },
+                auth: op?.conteos?.auth || { usuarios: 0, administradores: 0 }
+            };
+        });
+        
+        const resultados = await Promise.all(statsPromises);
         
         if (empresaId === 'global') {
-            const modoElem = document.getElementById('modoVisualizacion');
-            if (modoElem) modoElem.innerHTML = '<i class="fas fa-globe"></i> Vista: Global';
-            
-            // Obtener todas las organizaciones y sumar sus datos
-            const organizaciones = await operacionesManager.getOrganizaciones();
-            const statsPromises = organizaciones.map(org => operacionesManager.getOperaciones(org.camelCase));
-            const resultados = await Promise.all(statsPromises);
+            document.getElementById('modoVisualizacion').innerHTML = '<i class="fas fa-globe"></i> Vista: Global';
             
             const globalConteos = {
-                firestore: { colecciones: 0, documentos: 0 },
+                firestore: { documentos: 0 },
                 storage: { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
-                auth: { usuarios: 0, administradores: 0, total: 0 },
-                coleccionesPersonalizadas: {}
+                auth: { usuarios: 0, administradores: 0 }
             };
             
-            resultados.forEach(op => {
-                if (op && op.conteos) {
-                    globalConteos.firestore.colecciones += op.conteos.firestore.colecciones || 0;
-                    globalConteos.firestore.documentos += op.conteos.firestore.documentos || 0;
-                    globalConteos.storage.total += op.conteos.storage.total || 0;
-                    globalConteos.storage.totalSize += op.conteos.storage.totalSize || 0;
-                    globalConteos.storage.pdf += op.conteos.storage.pdf || 0;
-                    globalConteos.storage.imagenes += op.conteos.storage.imagenes || 0;
-                    globalConteos.storage.documentos += op.conteos.storage.documentos || 0;
-                    globalConteos.storage.multimedia += op.conteos.storage.multimedia || 0;
-                    globalConteos.storage.otros += op.conteos.storage.otros || 0;
-                    globalConteos.auth.usuarios += op.conteos.auth.usuarios || 0;
-                    globalConteos.auth.administradores += op.conteos.auth.administradores || 0;
-                    globalConteos.auth.total += op.conteos.auth.total || 0;
-                    
-                    Object.keys(op.conteos.coleccionesPersonalizadas).forEach(key => {
-                        globalConteos.coleccionesPersonalizadas[key] = 
-                            (globalConteos.coleccionesPersonalizadas[key] || 0) + op.conteos.coleccionesPersonalizadas[key];
-                    });
-                }
+            resultados.forEach(r => {
+                globalConteos.firestore.documentos += r.documentos;
+                globalConteos.storage.total += r.archivos;
+                globalConteos.storage.totalSize += r.totalSize;
+                globalConteos.storage.pdf += r.storage.pdf || 0;
+                globalConteos.storage.imagenes += r.storage.imagenes || 0;
+                globalConteos.storage.documentos += r.storage.documentos || 0;
+                globalConteos.storage.multimedia += r.storage.multimedia || 0;
+                globalConteos.storage.otros += r.storage.otros || 0;
+                globalConteos.auth.usuarios += r.colaboradores;
+                globalConteos.auth.administradores += r.administradores;
             });
             
             actualizarMetricas(globalConteos);
             graficoTiposArchivo(globalConteos.storage);
-            graficoFirestore(globalConteos.firestore, globalConteos.auth, globalConteos.coleccionesPersonalizadas);
-            graficoCarpetas(globalConteos.coleccionesPersonalizadas);
-            tablaCarpetas(globalConteos.coleccionesPersonalizadas);
-            await tablaOrganizaciones();
             
         } else {
-            const modoElem = document.getElementById('modoVisualizacion');
-            if (modoElem) modoElem.innerHTML = `<i class="fas fa-building"></i> Vista: ${empresaId}`;
-            
-            const operacion = await operacionesManager.getOperaciones(empresaId);
-            
-            if (operacion && operacion.conteos) {
-                actualizarMetricas(operacion.conteos);
-                graficoTiposArchivo(operacion.conteos.storage);
-                graficoFirestore(operacion.conteos.firestore, operacion.conteos.auth, operacion.conteos.coleccionesPersonalizadas);
-                graficoCarpetas(operacion.conteos.coleccionesPersonalizadas);
-                tablaCarpetas(operacion.conteos.coleccionesPersonalizadas);
-            } else {
-                console.warn(`No se encontraron datos para: ${empresaId}`);
-                const vacio = {
-                    firestore: { documentos: 0, colecciones: 0 },
-                    storage: { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
-                    auth: { usuarios: 0, administradores: 0, total: 0 },
-                    coleccionesPersonalizadas: {}
+            const empresaData = resultados.find(r => r.id === empresaId);
+            if (empresaData) {
+                document.getElementById('modoVisualizacion').innerHTML = `<i class="fas fa-building"></i> Vista: ${empresaData.nombre}`;
+                const empresaConteos = {
+                    firestore: { documentos: empresaData.documentos },
+                    storage: empresaData.storage,
+                    auth: { usuarios: empresaData.colaboradores, administradores: empresaData.administradores }
                 };
-                actualizarMetricas(vacio);
-                graficoTiposArchivo(vacio.storage);
-                graficoFirestore(vacio.firestore, vacio.auth, {});
-                graficoCarpetas({});
-                tablaCarpetas({});
+                actualizarMetricas(empresaConteos);
+                graficoTiposArchivo(empresaData.storage);
             }
         }
+        
+        const datosGraficas = resultados.map(r => ({
+            nombre: r.nombre,
+            documentos: r.documentos,
+            totalSize: r.totalSize
+        })).sort((a, b) => b.totalSize - a.totalSize);
+        
+        graficoAlmacenamientoPorEmpresa(datosGraficas);
+        graficoDocumentosPorEmpresa(datosGraficas);
+        
+        await tablaOrganizaciones();
         
         console.log('✅ Vista actualizada');
         
     } catch (error) {
-        console.error('❌ Error actualizando vista:', error);
+        console.error('❌ Error:', error);
     }
 }
 
@@ -426,21 +668,16 @@ async function cargarEmpresas() {
     try {
         const organizaciones = await operacionesManager.getOrganizaciones();
         
-        // Limpiar opciones existentes (mantener la primera opción de global)
-        while (selector.options.length > 1) {
-            selector.remove(1);
-        }
+        while (selector.options.length > 1) selector.remove(1);
         
         organizaciones.forEach(org => {
             if (org.camelCase) {
                 const option = document.createElement('option');
                 option.value = org.camelCase;
-                option.textContent = `${org.nombre} (${org.camelCase})`;
+                option.textContent = org.nombre;
                 selector.appendChild(option);
             }
         });
-        
-        console.log(`✅ ${organizaciones.length} empresas cargadas en el selector`);
         
     } catch (error) {
         console.error('Error cargando empresas:', error);
@@ -461,7 +698,9 @@ function configurarEventos() {
             currentEmpresa = e.target.value;
             const badgeSpan = document.querySelector('#empresaSeleccionada span');
             if (badgeSpan) {
-                badgeSpan.innerText = currentEmpresa === 'global' ? 'Global' : currentEmpresa;
+                const organizaciones = await operacionesManager.getOrganizaciones();
+                const empresa = organizaciones.find(org => org.camelCase === currentEmpresa);
+                badgeSpan.innerText = currentEmpresa === 'global' ? 'Global' : (empresa ? empresa.nombre : currentEmpresa);
             }
             await actualizarVista(currentEmpresa);
         });
@@ -469,51 +708,13 @@ function configurarEventos() {
     
     if (btnActualizar) {
         btnActualizar.addEventListener('click', async () => {
-            Swal.fire({
-                icon: 'info',
-                title: 'Actualizando...',
-                text: 'Recopilando datos más recientes',
-                toast: true,
-                timer: 1500,
-                showConfirmButton: false
-            });
-            
-            if (currentEmpresa === 'global') {
-                await operacionesManager.recopilarTodasLasOrganizaciones();
-            } else {
-                await operacionesManager.recopilarEstadisticas(currentEmpresa);
-            }
-            await actualizarVista(currentEmpresa);
+            await actualizarDatosReales(true);
         });
     }
     
     if (btnExportar) {
-        btnExportar.addEventListener('click', async () => {
-            Swal.fire({
-                icon: 'info',
-                title: 'Exportando...',
-                text: 'Generando archivo Excel',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-            
-            try {
-                // Aquí iría la lógica de exportación a Excel
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Exportado',
-                    text: 'Archivo Excel generado correctamente',
-                    toast: true,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se pudo exportar los datos'
-                });
-            }
+        btnExportar.addEventListener('click', () => {
+            Swal.fire({ icon: 'info', title: 'Exportar', text: 'Función en desarrollo' });
         });
     }
 }
@@ -523,42 +724,42 @@ function configurarEventos() {
 // =============================================
 
 async function inicializar() {
-    console.log('🚀 Inicializando página de estadísticas...');
+    console.log('🚀 Inicializando página...');
     
-    Swal.fire({
-        title: 'Cargando estadísticas...',
-        text: 'Recopilando datos de Firestore y Storage',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
+    const tieneDatosGuardados = await cargarDatosGuardados();
     
-    try {
-        // Recopilar datos de todas las organizaciones
-        await operacionesManager.recopilarTodasLasOrganizaciones();
-        
-        // Cargar empresas en el selector
-        await cargarEmpresas();
-        
-        // Actualizar vista
-        await actualizarVista('global');
-        
-        // Configurar eventos
-        configurarEventos();
-        
-        Swal.close();
-        console.log('✅ Inicialización completada');
-        
-    } catch (error) {
-        console.error('❌ Error en inicialización:', error);
-        Swal.close();
+    if (tieneDatosGuardados) {
+        console.log('📀 Mostrando datos guardados de la última actualización');
         Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudieron cargar los datos. Verifica tu conexión.'
+            icon: 'info',
+            title: 'Datos cargados',
+            html: `Mostrando datos de la última actualización.<br>Presiona "Actualizar" para obtener datos recientes.`,
+            toast: true,
+            timer: 3000,
+            showConfirmButton: false
+        });
+    } else {
+        console.log('📀 No hay datos guardados, será necesario actualizar');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sin datos previos',
+            html: `No hay estadísticas guardadas. Presiona "Actualizar" para generar los datos.`,
+            toast: true,
+            timer: 3000,
+            showConfirmButton: false
         });
     }
+    
+    await cargarEmpresas();
+    configurarEventos();
+    
+    if (ultimaActualizacion) {
+        document.getElementById('fechaActualizacion').innerText = ultimaActualizacion.toLocaleString();
+    } else {
+        document.getElementById('fechaActualizacion').innerText = 'No actualizado';
+    }
+    
+    console.log('✅ Inicialización completada');
 }
 
 // =============================================
@@ -566,3 +767,15 @@ async function inicializar() {
 // =============================================
 
 inicializar();
+
+// =============================================
+// INICIAR APLICACIÓN
+// =============================================
+
+inicializar();
+/*Estrategia	Antes	Después
+Carga inicial	Recopilaba todo (10-30s)	Mostraba datos guardados (< 1s)
+Storage	getMetadata() para cada archivo	Cache + lotes + clasificación por extensión
+Empresas	Todas a la vez (se saturaba)	De a 2 empresas en paralelo
+Cache	No había	Cache persistente en memoria
+Actualización	Cada vez que cargaba	Solo cuando el usuario presiona "Actualizar"*/
