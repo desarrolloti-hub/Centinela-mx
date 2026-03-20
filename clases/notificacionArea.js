@@ -1,4 +1,4 @@
-// notificacionArea.js - CON REGISTRO DE CONSUMO FIREBASE Y CLOUD FUNCTIONS
+// notificacionArea.js - VERSIÓN CORREGIDA Y OPTIMIZADA
 
 import {
     collection,
@@ -12,15 +12,12 @@ import {
     orderBy,
     limit,
     serverTimestamp,
-    Timestamp,
     increment,
     writeBatch,
-    deleteDoc,
-    arrayUnion
+    deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
-
 import consumo from '/clases/consumoFirebase.js';
 
 class NotificacionArea {
@@ -55,8 +52,8 @@ class NotificacionArea {
         this.icono = data.icono || 'fa-bell';
         this.color = data.color || '#007bff';
         
-        this.leida = false;
-        this.fechaLectura = null;
+        this.leida = data.leida || false;
+        this.fechaLectura = data.fechaLectura || null;
     }
 
     _convertirFecha(fecha) {
@@ -136,7 +133,7 @@ class NotificacionArea {
             leida: this.leida,
             fechaLectura: this.fechaLectura,
             remitenteNombre: this.remitenteNombre,
-            urlDestino: this.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${this.incidenciaId}`,
+            urlDestino: this.urlDestino || `../verIncidencias/verIncidencias.html?id=${this.incidenciaId}`,
             prioridad: this.prioridad,
             detalles: this.detalles
         };
@@ -145,7 +142,6 @@ class NotificacionArea {
 
 class NotificacionAreaManager {
     constructor() {
-        console.log('📋 NotificacionAreaManager inicializado');
         this.usuarioActual = null;
         this.functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
         this.functionUrlV2 = 'https://sendpushnotification-5orj5w7mha-uc.a.run.app';
@@ -165,7 +161,7 @@ class NotificacionAreaManager {
                 };
             }
         } catch (error) {
-            console.error('Error al inicializar usuario:', error);
+            // Error silencioso
         }
     }
 
@@ -187,16 +183,13 @@ class NotificacionAreaManager {
         try {
             if (!areaId) return [];
 
-            console.log(`🔍 Buscando usuarios activos con areaAsignadaId = ${areaId}`);
-            
             const colaboradoresCollection = `colaboradores_${organizacionCamelCase}`;
             const colabRef = collection(db, colaboradoresCollection);
             
             const q = query(
                 colabRef,
                 where("areaAsignadaId", "==", areaId),
-                where("status", "==", true),
-                orderBy("fechaCreacion", "desc")
+                where("status", "==", true)
             );
             
             await consumo.registrarFirestoreLectura(colaboradoresCollection, `usuarios por área: ${areaId}`);
@@ -211,16 +204,13 @@ class NotificacionAreaManager {
                     nombreCompleto: data.nombreCompleto || 'Usuario',
                     correo: data.correoElectronico || '',
                     dispositivos: data.dispositivos || [],
-                    areaAsignadaId: data.areaAsignadaId,
-                    tokensActivos: this._extraerTokensActivos(data.dispositivos)
+                    areaAsignadaId: data.areaAsignadaId
                 });
             });
 
-            console.log(`✅ Total usuarios activos en área ${areaId}: ${usuarios.length}`);
             return usuarios;
 
         } catch (error) {
-            console.error('Error en _getUsuariosPorAreaId:', error);
             return [];
         }
     }
@@ -236,8 +226,6 @@ class NotificacionAreaManager {
         try {
             if (!areasIds || areasIds.length === 0) return [];
 
-            console.log(`🔍 Buscando usuarios en ${areasIds.length} áreas...`);
-            
             const todosUsuarios = [];
             const idsVistos = new Set();
             
@@ -256,33 +244,24 @@ class NotificacionAreaManager {
                 }
             }
 
-            console.log(`✅ Total usuarios únicos: ${todosUsuarios.length}`);
             return todosUsuarios;
 
         } catch (error) {
-            console.error('Error en _getUsuariosPorMultiplesAreas:', error);
             return [];
         }
     }
 
     async _enviarNotificacionesPush(usuarios, notificacionData) {
         try {
-            console.log(`📱 Enviando notificaciones push a ${usuarios.length} usuarios...`);
-            
             let enviados = 0;
-            let fallidos = 0;
             let totalNotificacionesPush = 0;
             let usuariosExitosos = 0;
-            let invocaciones = 0;
 
             for (const usuario of usuarios) {
                 try {
                     const tokens = this._extraerTokensActivos(usuario.dispositivos);
                     
-                    if (tokens.length === 0) {
-                        console.log(`⚠️ Usuario ${usuario.id} sin tokens activos`);
-                        continue;
-                    }
+                    if (tokens.length === 0) continue;
 
                     const payload = {
                         userId: usuario.id,
@@ -302,13 +281,6 @@ class NotificacionAreaManager {
                         }
                     };
                     
-                    await consumo.registrarFunctionInvocacion('sendPushNotification', {
-                        userId: usuario.id,
-                        userType: 'colaborador',
-                        tokensCount: tokens.length,
-                        incidenciaId: notificacionData.incidenciaId
-                    });
-                    
                     let response = await fetch(this.functionUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -316,14 +288,6 @@ class NotificacionAreaManager {
                     });
 
                     if (!response.ok && this.functionUrlV2) {
-                        console.log('🔄 Fallback a URL v2');
-                        
-                        await consumo.registrarFunctionInvocacion('sendPushNotificationV2', {
-                            userId: usuario.id,
-                            fallback: true,
-                            originalStatus: response.status
-                        });
-                        
                         response = await fetch(this.functionUrlV2, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -331,27 +295,14 @@ class NotificacionAreaManager {
                         });
                     }
                     
-                    invocaciones++;
-                    
                     if (response.ok) {
                         enviados++;
                         usuariosExitosos++;
                         totalNotificacionesPush += tokens.length;
-                        console.log(`✅ Push enviado a usuario ${usuario.id} (${tokens.length} tokens)`);
-                    } else {
-                        fallidos++;
-                        console.log(`❌ Error ${response.status} para usuario ${usuario.id}`);
                     }
 
                 } catch (error) {
-                    fallidos++;
-                    console.error(`❌ Error con usuario ${usuario.id}:`, error.message);
-                    
-                    await consumo.registrarFunctionInvocacion('sendPushNotification', {
-                        userId: usuario.id,
-                        error: error.message,
-                        success: false
-                    });
+                    // Error silencioso
                 }
 
                 await new Promise(r => setTimeout(r, 100));
@@ -365,24 +316,19 @@ class NotificacionAreaManager {
                     {
                         incidenciaId: notificacionData.incidenciaId,
                         totalUsuariosPotenciales: usuarios.length,
-                        usuariosSinTokens: usuarios.length - usuariosExitosos,
                         tipoNotificacion: notificacionData.tipo
                     }
                 );
             }
 
-            console.log(`📊 Push: ${enviados}/${usuarios.length} usuarios notificados (${totalNotificacionesPush} notificaciones push reales, ${invocaciones} invocaciones a Cloud Function)`);
             return { 
                 success: enviados > 0, 
                 enviados: usuariosExitosos,
-                fallidos, 
                 total: usuarios.length,
-                notificacionesPush: totalNotificacionesPush,
-                invocaciones: invocaciones
+                notificacionesPush: totalNotificacionesPush
             };
 
         } catch (error) {
-            console.error('❌ Error en _enviarNotificacionesPush:', error);
             return { success: false, error: error.message };
         }
     }
@@ -429,10 +375,7 @@ class NotificacionAreaManager {
             }
 
             const areasIds = areas.map(a => a.id);
-            console.log('📋 Áreas a notificar:', areasIds);
-
             const usuarios = await this._getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase);
-            console.log(`👥 Usuarios encontrados: ${usuarios.length}`);
 
             const titulo = this._generarTitulo(tipo, areas, nivelRiesgo);
             let mensaje = mensajePersonalizado;
@@ -441,7 +384,7 @@ class NotificacionAreaManager {
                 mensaje = this._generarMensaje(tipo, areas, incidenciaTitulo, sucursalNombre);
             }
 
-            const urlDestino = `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${incidenciaId}`;
+            const urlDestino = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
             const notificacionId = this._generarNotificacionId();
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
@@ -482,9 +425,7 @@ class NotificacionAreaManager {
             };
 
             await consumo.registrarFirestoreEscritura(collectionName, notificacionId);
-            
             await setDoc(notificacionRef, notificacionData);
-            console.log(`✅ Notificación guardada: ${notificacionId}`);
 
             if (usuarios.length > 0) {
                 await this._crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase);
@@ -504,7 +445,6 @@ class NotificacionAreaManager {
             };
 
         } catch (error) {
-            console.error('❌ Error en notificarMultiplesAreas:', error);
             return { success: false, error: error.message };
         }
     }
@@ -564,7 +504,6 @@ class NotificacionAreaManager {
                 if (operaciones >= 400) {
                     await consumo.registrarFirestoreActualizacion(userNotifCollectionName, `batch_${operaciones}_usuarios`);
                     await batch.commit();
-                    console.log(`✅ Lote de ${operaciones} índices guardado`);
                     operaciones = 0;
                 }
             }
@@ -572,11 +511,10 @@ class NotificacionAreaManager {
             if (operaciones > 0) {
                 await consumo.registrarFirestoreActualizacion(userNotifCollectionName, `batch_final_${operaciones}_usuarios`);
                 await batch.commit();
-                console.log(`✅ Último lote de ${operaciones} índices guardado`);
             }
 
         } catch (error) {
-            console.error('Error creando índices:', error);
+            // Error silencioso
         }
     }
 
@@ -625,8 +563,7 @@ class NotificacionAreaManager {
                 
                 const q = query(
                     collection(db, notificacionesCollectionName),
-                    where("__name__", "in", batchIds),
-                    orderBy("fecha", "desc")
+                    where("__name__", "in", batchIds)
                 );
                 
                 await consumo.registrarFirestoreLectura(notificacionesCollectionName, `batch_${i}`);
@@ -650,7 +587,6 @@ class NotificacionAreaManager {
             return notificaciones;
 
         } catch (error) {
-            console.error('Error en obtenerNotificaciones:', error);
             return [];
         }
     }
@@ -680,7 +616,6 @@ class NotificacionAreaManager {
             return notificaciones;
 
         } catch (error) {
-            console.error('Error en obtenerNotificacionesPorArea:', error);
             return [];
         }
     }
@@ -692,8 +627,6 @@ class NotificacionAreaManager {
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
             
-            await consumo.registrarFirestoreLectura(userNotifCollectionName, usuarioId);
-            
             const userNotifSnap = await getDoc(userNotifRef);
 
             if (!userNotifSnap.exists()) {
@@ -701,10 +634,22 @@ class NotificacionAreaManager {
             }
 
             const userData = userNotifSnap.data();
-            return userData.totalPendientes || 0;
+            const totalPendientes = userData.totalPendientes || 0;
+            
+            if (totalPendientes < 0) {
+                const notificaciones = userData.notificaciones || {};
+                const noLeidasReales = Object.values(notificaciones).filter(n => !n.leida).length;
+                
+                await updateDoc(userNotifRef, {
+                    totalPendientes: noLeidasReales
+                });
+                
+                return noLeidasReales;
+            }
+            
+            return totalPendientes;
 
         } catch (error) {
-            console.error('Error en obtenerConteoNoLeidas:', error);
             return 0;
         }
     }
@@ -716,27 +661,57 @@ class NotificacionAreaManager {
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
 
-            await consumo.registrarFirestoreActualizacion(userNotifCollectionName, usuarioId);
+            const userNotifSnap = await getDoc(userNotifRef);
             
-            await updateDoc(userNotifRef, {
-                [`notificaciones.${notificacionId}.leida`]: true,
-                [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp(),
-                totalPendientes: increment(-1)
-            });
+            if (!userNotifSnap.exists()) {
+                return false;
+            }
+            
+            const userData = userNotifSnap.data();
+            const notificacionesMap = userData.notificaciones || {};
+            const notificacionActual = notificacionesMap[notificacionId];
+            
+            if (notificacionActual && notificacionActual.leida === true) {
+                return true;
+            }
+            
+            let totalPendientes = userData.totalPendientes || 0;
+            
+            if (totalPendientes < 0) {
+                const noLeidasReales = Object.values(notificacionesMap).filter(n => !n.leida).length;
+                totalPendientes = noLeidasReales;
+                
+                await updateDoc(userNotifRef, {
+                    totalPendientes: totalPendientes
+                });
+            }
+            
+            if (totalPendientes > 0) {
+                await updateDoc(userNotifRef, {
+                    [`notificaciones.${notificacionId}.leida`]: true,
+                    [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp(),
+                    totalPendientes: increment(-1)
+                });
+            } else {
+                await updateDoc(userNotifRef, {
+                    [`notificaciones.${notificacionId}.leida`]: true,
+                    [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp()
+                });
+            }
 
-            const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
-            const notificacionRef = doc(db, notificacionesCollectionName, notificacionId);
-            
-            await consumo.registrarFirestoreActualizacion(notificacionesCollectionName, notificacionId);
-            
-            await updateDoc(notificacionRef, {
-                leidas: increment(1)
-            });
+            try {
+                const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+                const notificacionRef = doc(db, notificacionesCollectionName, notificacionId);
+                await updateDoc(notificacionRef, {
+                    leidas: increment(1)
+                });
+            } catch (error) {
+                // Error silencioso
+            }
 
             return true;
 
         } catch (error) {
-            console.error('Error en marcarComoLeida:', error);
             return false;
         }
     }
@@ -748,8 +723,6 @@ class NotificacionAreaManager {
             const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
             const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
             
-            await consumo.registrarFirestoreLectura(userNotifCollectionName, usuarioId);
-            
             const userNotifSnap = await getDoc(userNotifRef);
 
             if (!userNotifSnap.exists()) {
@@ -758,46 +731,43 @@ class NotificacionAreaManager {
 
             const userData = userNotifSnap.data();
             const notificaciones = userData.notificaciones || {};
-            const batch = writeBatch(db);
             
             const noLeidasIds = Object.keys(notificaciones).filter(id => !notificaciones[id].leida);
             
-            Object.keys(notificaciones).forEach(notifId => {
-                if (!notificaciones[notifId].leida) {
-                    batch.update(userNotifRef, {
-                        [`notificaciones.${notifId}.leida`]: true,
-                        [`notificaciones.${notifId}.fechaLectura`]: serverTimestamp()
-                    });
-                }
+            if (noLeidasIds.length === 0) {
+                return true;
+            }
+            
+            const batch = writeBatch(db);
+            
+            noLeidasIds.forEach(notifId => {
+                batch.update(userNotifRef, {
+                    [`notificaciones.${notifId}.leida`]: true,
+                    [`notificaciones.${notifId}.fechaLectura`]: serverTimestamp()
+                });
             });
 
             batch.update(userNotifRef, {
                 totalPendientes: 0
             });
 
-            await consumo.registrarFirestoreActualizacion(userNotifCollectionName, `batch_todas_leidas_${usuarioId}`);
-            
             await batch.commit();
 
-            if (noLeidasIds.length > 0) {
-                const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
-                for (const notifId of noLeidasIds) {
-                    try {
-                        const notifRef = doc(db, notificacionesCollectionName, notifId);
-                        await consumo.registrarFirestoreActualizacion(notificacionesCollectionName, notifId);
-                        await updateDoc(notifRef, {
-                            leidas: increment(1)
-                        });
-                    } catch (e) {
-                        console.warn(`No se pudo actualizar contador global para ${notifId}`);
-                    }
+            const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+            for (const notifId of noLeidasIds) {
+                try {
+                    const notifRef = doc(db, notificacionesCollectionName, notifId);
+                    await updateDoc(notifRef, {
+                        leidas: increment(1)
+                    });
+                } catch (e) {
+                    // Error silencioso
                 }
             }
 
             return true;
 
         } catch (error) {
-            console.error('Error en marcarTodasComoLeidas:', error);
             return false;
         }
     }
@@ -828,13 +798,27 @@ class NotificacionAreaManager {
             }
             
             await batch.commit();
-            console.log(`✅ Limpiadas ${snapshot.size} notificaciones antiguas`);
             
             return { success: true, eliminadas: snapshot.size };
 
         } catch (error) {
-            console.error('Error limpiando notificaciones:', error);
             return { success: false, error: error.message };
+        }
+    }
+
+    async limpiarNotificacionesUsuario(usuarioId, organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase || !usuarioId) return false;
+
+            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
+            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+            
+            await deleteDoc(userNotifRef);
+            
+            return true;
+
+        } catch (error) {
+            return false;
         }
     }
 
