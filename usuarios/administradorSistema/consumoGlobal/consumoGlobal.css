@@ -617,3 +617,33 @@ canvas {
     .metric-icon { font-size: 2.5rem; right: 15px; }
     .table th, .table td { font-size: 11px !important; padding: 6px 4px !important; }
 }
+/* =============================================
+   BOTÓN PDF ROJO
+   ============================================= */
+.btn-pdf {
+    padding: 12px 20px;
+    border-radius: var(--border-radius-medium);
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    flex: 1;
+    background: linear-gradient(145deg, #8b0000, #a52a2a);
+    border: 1px solid #ff6b6b;
+    color: white !important;
+}
+
+.btn-pdf:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
+    border-color: #ffffff;
+    background: linear-gradient(145deg, #a52a2a, #8b0000);
+}
