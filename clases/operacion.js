@@ -1,4 +1,4 @@
-// operacion.js - VERSIÓN SIMPLIFICADA PARA PRUEBA
+// operacion.js - VERSIÓN QUE CUENTA STORAGE CORRECTAMENTE
 
 import { db, storage } from '/config/firebase-config.js';
 import {
@@ -7,162 +7,395 @@ import {
     getDocs,
     getDoc,
     setDoc,
-    updateDoc,
+    query,
+    where,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import {
+    ref,
+    listAll,
+    getMetadata
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js";
 
-// Clase Operacion simplificada
 class Operacion {
     constructor(id, data = {}) {
         this.id = id;
-        this.conteos = data.conteos || {
-            firestore: { colecciones: 0, documentos: 0 },
-            storage: { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
-            auth: { usuarios: 0, administradores: 0, superAdmin: 0, total: 0 },
-            coleccionesPersonalizadas: {}
+        this.conteos = {
+            firestore: {
+                colecciones: data.conteos?.firestore?.colecciones || 0,
+                documentos: data.conteos?.firestore?.documentos || 0,
+                lecturas: 0, escrituras: 0, actualizaciones: 0, eliminaciones: 0
+            },
+            storage: {
+                total: data.conteos?.storage?.total || 0,
+                totalSize: data.conteos?.storage?.totalSize || 0,
+                pdf: data.conteos?.storage?.pdf || 0,
+                imagenes: data.conteos?.storage?.imagenes || 0,
+                documentos: data.conteos?.storage?.documentos || 0,
+                multimedia: data.conteos?.storage?.multimedia || 0,
+                otros: data.conteos?.storage?.otros || 0,
+                tamañoPorTipo: data.conteos?.storage?.tamañoPorTipo || { 
+                    pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 
+                }
+            },
+            auth: {
+                usuarios: data.conteos?.auth?.usuarios || 0,
+                administradores: data.conteos?.auth?.administradores || 0,
+                superAdmin: data.conteos?.auth?.superAdmin || 0,
+                total: data.conteos?.auth?.total || 0
+            },
+            coleccionesPersonalizadas: data.conteos?.coleccionesPersonalizadas || {}
         };
-        this.fechaActualizacion = new Date();
+        this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
+        this.organizacion = data.organizacion || id;
+        this.nombreEmpresa = data.nombreEmpresa || '';
+    }
+
+    _convertirFecha(fecha) {
+        if (fecha && typeof fecha.toDate === 'function') return fecha.toDate();
+        if (fecha instanceof Date) return fecha;
+        return new Date();
     }
 
     toFirestore() {
         return {
             conteos: this.conteos,
-            fechaActualizacion: serverTimestamp()
+            fechaActualizacion: serverTimestamp(),
+            organizacion: this.organizacion,
+            nombreEmpresa: this.nombreEmpresa
         };
     }
 }
 
-// Clase OperacionesManager simplificada
 class OperacionesManager {
     constructor() {
         this.COLECCION = 'operaciones';
         this.cache = new Map();
-        console.log('✅ OperacionesManager inicializado');
+        this.storageCache = new Map();
     }
 
-    _getDocRef(organizacionCamelCase) {
-        return doc(db, this.COLECCION, organizacionCamelCase);
+    _getDocRef(org) { 
+        return doc(db, this.COLECCION, org); 
     }
 
-    async getOperaciones(organizacionCamelCase) {
+    async getOperaciones(org) {
+        if (this.cache.has(org)) return this.cache.get(org);
         try {
-            console.log(`📊 Obteniendo operaciones para: ${organizacionCamelCase}`);
-            
-            if (this.cache.has(organizacionCamelCase)) {
-                console.log('📦 Usando caché');
-                return this.cache.get(organizacionCamelCase);
-            }
-
-            const docRef = this._getDocRef(organizacionCamelCase);
+            const docRef = this._getDocRef(org);
             const docSnap = await getDoc(docRef);
-
             if (docSnap.exists()) {
-                console.log('✅ Documento encontrado');
-                const operacion = new Operacion(organizacionCamelCase, docSnap.data());
-                this.cache.set(organizacionCamelCase, operacion);
-                return operacion;
-            } else {
-                console.log('📝 Documento no existe, creando uno nuevo');
-                const nuevaOperacion = new Operacion(organizacionCamelCase);
-                await setDoc(docRef, nuevaOperacion.toFirestore());
-                this.cache.set(organizacionCamelCase, nuevaOperacion);
-                return nuevaOperacion;
+                const op = new Operacion(org, docSnap.data());
+                this.cache.set(org, op);
+                return op;
             }
+            return await this._crearOperacionInicial(org);
         } catch (error) {
-            console.error('❌ Error en getOperaciones:', error);
+            console.error('Error obteniendo operaciones:', error);
             return null;
         }
     }
 
-    async getEstadisticasGlobales() {
-        try {
-            console.log('🌐 Obteniendo estadísticas globales');
-            const collectionRef = collection(db, this.COLECCION);
-            const snapshot = await getDocs(collectionRef);
-            
-            const globalStats = {
-                firestore: { colecciones: 0, documentos: 0 },
-                storage: { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
-                auth: { usuarios: 0, administradores: 0, superAdmin: 0, total: 0 },
-                totalEmpresas: snapshot.size
-            };
+    async _crearOperacionInicial(org) {
+        const nuevaOp = new Operacion(org);
+        await setDoc(this._getDocRef(org), nuevaOp.toFirestore());
+        this.cache.set(org, nuevaOp);
+        return nuevaOp;
+    }
 
-            snapshot.forEach(doc => {
+    async getOrganizaciones() {
+        try {
+            const adminsRef = collection(db, "administradores");
+            const adminsSnapshot = await getDocs(adminsRef);
+            const organizaciones = [];
+            
+            adminsSnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.conteos?.firestore) {
-                    globalStats.firestore.documentos += data.conteos.firestore.documentos || 0;
-                }
-                if (data.conteos?.storage) {
-                    globalStats.storage.total += data.conteos.storage.total || 0;
-                    globalStats.storage.totalSize += data.conteos.storage.totalSize || 0;
-                    globalStats.storage.pdf += data.conteos.storage.pdf || 0;
-                    globalStats.storage.imagenes += data.conteos.storage.imagenes || 0;
-                }
-                if (data.conteos?.auth) {
-                    globalStats.auth.total += data.conteos.auth.total || 0;
+                if (data.organizacionCamelCase) {
+                    organizaciones.push({
+                        id: doc.id,
+                        nombre: data.organizacion,
+                        camelCase: data.organizacionCamelCase
+                    });
                 }
             });
-
-            console.log('✅ Estadísticas globales calculadas:', globalStats);
-            return globalStats;
+            
+            return organizaciones;
         } catch (error) {
-            console.error('❌ Error en getEstadisticasGlobales:', error);
+            console.error('Error obteniendo organizaciones:', error);
+            return [];
+        }
+    }
+
+    async recopilarEstadisticas(orgCamelCase) {
+        try {
+            const [firestoreStats, storageStats, authStats] = await Promise.all([
+                this._getFirestoreStats(orgCamelCase),
+                this._getStorageStats(orgCamelCase),
+                this._getAuthStats(orgCamelCase)
+            ]);
+            
+            const nuevosConteos = {
+                firestore: {
+                    colecciones: firestoreStats.colecciones,
+                    documentos: firestoreStats.documentos,
+                    lecturas: 0, escrituras: 0, actualizaciones: 0, eliminaciones: 0
+                },
+                storage: storageStats,
+                auth: authStats,
+                coleccionesPersonalizadas: firestoreStats.coleccionesPersonalizadas
+            };
+
+            await setDoc(this._getDocRef(orgCamelCase), { 
+                conteos: nuevosConteos, 
+                fechaActualizacion: serverTimestamp() 
+            }, { merge: true });
+            
+            this.cache.set(orgCamelCase, new Operacion(orgCamelCase, { conteos: nuevosConteos }));
+            
+            return nuevosConteos;
+        } catch (error) {
+            console.error('Error recopilando estadísticas:', error);
             return null;
         }
     }
 
-    async recopilarTodasLasEstadisticas(organizacionCamelCase) {
-        console.log(`🔄 Recopilando estadísticas para: ${organizacionCamelCase || 'global'}`);
-        
-        // Datos de prueba para que la vista muestre algo
-        const stats = {
-            firestore: {
-                colecciones: 5,
-                documentos: Math.floor(Math.random() * 1000) + 100,
-                lecturas: 0,
-                escrituras: 0,
-                actualizaciones: 0,
-                eliminaciones: 0
-            },
-            storage: {
-                total: Math.floor(Math.random() * 500) + 50,
-                totalSize: Math.floor(Math.random() * 10000000) + 1000000,
-                pdf: Math.floor(Math.random() * 100) + 10,
-                imagenes: Math.floor(Math.random() * 200) + 20,
-                documentos: Math.floor(Math.random() * 150) + 15,
-                multimedia: Math.floor(Math.random() * 50) + 5,
-                otros: Math.floor(Math.random() * 30) + 3,
-                tamañoPorTipo: {
-                    pdf: Math.floor(Math.random() * 5000000),
-                    imagenes: Math.floor(Math.random() * 3000000),
-                    documentos: Math.floor(Math.random() * 2000000),
-                    multimedia: Math.floor(Math.random() * 8000000),
-                    otros: Math.floor(Math.random() * 1000000)
+    async _getFirestoreStats(orgCamelCase) {
+        const posiblesColecciones = [
+            `colaboradores_${orgCamelCase}`,
+            `areas_${orgCamelCase}`,
+            `regiones_${orgCamelCase}`,
+            `sucursales_${orgCamelCase}`,
+            `incidencias_${orgCamelCase}`,
+            `categorias_${orgCamelCase}`,
+            `tareas_${orgCamelCase}`,
+            `permisos_${orgCamelCase}`,
+            `notificaciones_${orgCamelCase}`
+        ];
+
+        let totalDocumentos = 0;
+        let coleccionesExistentes = 0;
+        const coleccionesPersonalizadas = {};
+
+        const resultados = await Promise.all(
+            posiblesColecciones.map(async (col) => {
+                try {
+                    const coleccionRef = collection(db, col);
+                    const snapshot = await getDocs(coleccionRef);
+                    return { col, count: snapshot.size, success: true };
+                } catch (error) {
+                    return { col, count: 0, success: false };
                 }
-            },
-            auth: {
-                usuarios: Math.floor(Math.random() * 200) + 20,
-                administradores: Math.floor(Math.random() * 10) + 1,
-                superAdmin: 1,
-                total: 0
-            },
-            coleccionesPersonalizadas: {
-                'usuarios_empresa': Math.floor(Math.random() * 200) + 20,
-                'areas_empresa': Math.floor(Math.random() * 15) + 3,
-                'sucursales_empresa': Math.floor(Math.random() * 30) + 5,
-                'incidencias_empresa': Math.floor(Math.random() * 100) + 10
+            })
+        );
+
+        for (const r of resultados) {
+            if (r.success) {
+                coleccionesExistentes++;
+                coleccionesPersonalizadas[r.col] = r.count;
+                totalDocumentos += r.count;
             }
+        }
+
+        try {
+            const adminQuery = query(
+                collection(db, "administradores"),
+                where("organizacionCamelCase", "==", orgCamelCase)
+            );
+            const adminSnapshot = await getDocs(adminQuery);
+            const adminCount = adminSnapshot.size;
+            coleccionesPersonalizadas[`administradores_${orgCamelCase}`] = adminCount;
+            totalDocumentos += adminCount;
+            coleccionesExistentes++;
+        } catch (error) {
+            // Ignorar
+        }
+
+        return {
+            colecciones: coleccionesExistentes,
+            documentos: totalDocumentos,
+            coleccionesPersonalizadas: coleccionesPersonalizadas
         };
-        
-        stats.auth.total = stats.auth.usuarios + stats.auth.administradores + stats.auth.superAdmin;
-        
-        if (organizacionCamelCase && organizacionCamelCase !== 'global') {
-            const docRef = this._getDocRef(organizacionCamelCase);
-            await setDoc(docRef, { conteos: stats, fechaActualizacion: serverTimestamp() }, { merge: true });
-            this.cache.set(organizacionCamelCase, new Operacion(organizacionCamelCase, { conteos: stats }));
+    }
+
+    /**
+     * CUENTA ARCHIVOS EN STORAGE - BUSCA EN TODA LA ESTRUCTURA DE incidencias_${orgCamelCase}/
+     * CON CACHE PARA NO RECARGAR SIEMPRE
+     */
+    async _getStorageStats(orgCamelCase) {
+        // Usar cache para evitar recargar siempre
+        if (this.storageCache.has(orgCamelCase)) {
+            return this.storageCache.get(orgCamelCase);
         }
         
-        return new Operacion(organizacionCamelCase || 'global', { conteos: stats });
+        try {
+            const carpeta = `incidencias_${orgCamelCase}`;
+            const carpetaRef = ref(storage, carpeta);
+            
+            console.log(`Buscando archivos en: ${carpeta}`);
+            
+            // Buscar recursivamente en toda la carpeta
+            const archivos = await this._listarArchivosRecursivamente(carpetaRef);
+            
+            console.log(`Encontrados ${archivos.length} archivos en ${carpeta}`);
+            
+            const stats = {
+                total: archivos.length,
+                totalSize: 0,
+                pdf: 0,
+                imagenes: 0,
+                documentos: 0,
+                multimedia: 0,
+                otros: 0,
+                tamañoPorTipo: {
+                    pdf: 0,
+                    imagenes: 0,
+                    documentos: 0,
+                    multimedia: 0,
+                    otros: 0
+                }
+            };
+
+            // Procesar archivos en lotes para no bloquear
+            const batchSize = 50;
+            for (let i = 0; i < archivos.length; i += batchSize) {
+                const batch = archivos.slice(i, i + batchSize);
+                await Promise.all(batch.map(async (archivo) => {
+                    try {
+                        const metadata = await getMetadata(archivo);
+                        const size = metadata.size;
+                        stats.totalSize += size;
+                        
+                        const tipo = this._clasificarArchivo(metadata.contentType || '', archivo.name);
+                        stats[tipo]++;
+                        stats.tamañoPorTipo[tipo] += size;
+                    } catch (error) {
+                        // Ignorar errores individuales
+                    }
+                }));
+            }
+            
+            // Guardar en cache
+            this.storageCache.set(orgCamelCase, stats);
+            
+            return stats;
+            
+        } catch (error) {
+            console.log(`No se encontró la carpeta incidencias_${orgCamelCase}`);
+            const vacio = {
+                total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, 
+                multimedia: 0, otros: 0,
+                tamañoPorTipo: { pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 }
+            };
+            this.storageCache.set(orgCamelCase, vacio);
+            return vacio;
+        }
+    }
+
+    /**
+     * LISTA TODOS LOS ARCHIVOS RECURSIVAMENTE EN UNA CARPETA
+     */
+    async _listarArchivosRecursivamente(folderRef) {
+        const archivos = [];
+        try {
+            const resultado = await listAll(folderRef);
+            
+            // Agregar archivos del nivel actual
+            archivos.push(...resultado.items);
+            
+            // Recorrer subcarpetas recursivamente
+            for (const subCarpeta of resultado.prefixes) {
+                const subArchivos = await this._listarArchivosRecursivamente(subCarpeta);
+                archivos.push(...subArchivos);
+            }
+            
+        } catch (error) {
+            if (error.code !== 'storage/object-not-found') {
+                console.error('Error listando archivos:', error);
+            }
+        }
+        return archivos;
+    }
+
+    _clasificarArchivo(contentType, nombreArchivo) {
+        const extension = nombreArchivo.split('.').pop()?.toLowerCase() || '';
+        
+        if (contentType.includes('pdf') || extension === 'pdf') return 'pdf';
+        if (contentType.includes('image') || 
+            ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico'].includes(extension)) {
+            return 'imagenes';
+        }
+        if (contentType.includes('document') || contentType.includes('spreadsheet') || contentType.includes('presentation') ||
+            ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'odt', 'ods', 'odp'].includes(extension)) {
+            return 'documentos';
+        }
+        if (contentType.includes('video') || contentType.includes('audio') ||
+            ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'mp3', 'wav', 'ogg', 'webm', 'flv'].includes(extension)) {
+            return 'multimedia';
+        }
+        return 'otros';
+    }
+
+    async _getAuthStats(orgCamelCase) {
+        try {
+            let usuarios = 0;
+            let administradores = 0;
+            
+            try {
+                const colabRef = collection(db, `colaboradores_${orgCamelCase}`);
+                const colabSnap = await getDocs(colabRef);
+                usuarios = colabSnap.size;
+            } catch (error) {
+                // Colección no existe
+            }
+            
+            try {
+                const adminQuery = query(
+                    collection(db, "administradores"),
+                    where("organizacionCamelCase", "==", orgCamelCase)
+                );
+                const adminSnap = await getDocs(adminQuery);
+                administradores = adminSnap.size;
+            } catch (error) {
+                // Ignorar
+            }
+            
+            const total = usuarios + administradores;
+            
+            return { usuarios, administradores, superAdmin: 0, total };
+            
+        } catch (error) {
+            return { usuarios: 0, administradores: 0, superAdmin: 0, total: 0 };
+        }
+    }
+
+    async recopilarTodasLasOrganizaciones() {
+        try {
+            const organizaciones = await this.getOrganizaciones();
+            
+            // Procesar de a 2 empresas a la vez para no saturar
+            const chunkSize = 2;
+            for (let i = 0; i < organizaciones.length; i += chunkSize) {
+                const chunk = organizaciones.slice(i, i + chunkSize);
+                await Promise.all(
+                    chunk.map(org => {
+                        if (org.camelCase) {
+                            return this.recopilarEstadisticas(org.camelCase);
+                        }
+                        return Promise.resolve();
+                    })
+                );
+            }
+            
+            return organizaciones;
+        } catch (error) {
+            console.error('Error recopilando todas las organizaciones:', error);
+            return [];
+        }
+    }
+
+    // Limpiar cache (útil después de subir nuevos archivos)
+    limpiarCacheStorage() {
+        this.storageCache.clear();
     }
 }
 
