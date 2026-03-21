@@ -42,6 +42,13 @@ import { UserManager } from '/clases/user.js';
             
             console.log('👤 Autenticador:', currentUser ? `${currentUser.correoElectronico} (${currentUser.rol})` : 'Sin sesión');
             
+            // 🔴 SI NO HAY USUARIO, LO MANDA AL LOGIN
+            if (!currentUser) {
+                console.log('🔴 Usuario no autenticado - Redirigiendo a login');
+                window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
+                return;
+            }
+            
             // Notificar a los listeners
             notifyListeners();
             
@@ -51,6 +58,8 @@ import { UserManager } from '/clases/user.js';
         } catch (error) {
             console.error('❌ Error inicializando Autenticador:', error);
             initialized = true;
+            // Si hay error, también redirige al login
+            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
         }
     }
 
