@@ -963,28 +963,26 @@ class CrearIncidenciaController {
                 return;
             }
         
-            // Obtener datos de la incidencia
             const sucursalInput = document.getElementById('sucursalIncidencia');
             const categoriaInput = document.getElementById('categoriaIncidencia');
             const riesgoSelect = document.getElementById('nivelRiesgo');
         
-            // Formatear áreas con ID y nombre
             const areasFormateadas = areas.map(area => ({
                 id: area.id,
                 nombre: area.nombre
             }));
         
             console.log('📨 Enviando notificaciones a áreas:', areasFormateadas);
+            console.log('👑 Administradores recibirán automáticamente la notificación');
         
-            // Mostrar loading
             Swal.fire({
                 title: 'Enviando notificaciones...',
-                text: 'Notificando a los usuarios de las áreas seleccionadas',
+                text: 'Notificando a colaboradores de las áreas y administradores',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
         
-            // Usar el método mejorado del manager
+            // El método notificarMultiplesAreas AHORA incluye automáticamente a administradores
             const resultado = await notificacionManager.notificarMultiplesAreas({
                 areas: areasFormateadas,
                 incidenciaId: incidenciaId,
@@ -999,14 +997,15 @@ class CrearIncidenciaController {
                 remitenteId: this.usuarioActual.id,
                 remitenteNombre: this.usuarioActual.nombreCompleto,
                 organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
-                enviarPush: true,
-                mensajePersonalizado: `Nueva incidencia canalizada a ${areas.length === 1 ? 'tu área' : 'áreas asignadas'}`
+                enviarPush: true
             });
         
             Swal.close();
         
             if (resultado.success) {
-                let mensaje = `✅ ${resultado.totalUsuarios} usuarios notificados en ${resultado.areas} áreas`;
+                let mensaje = `✅ Notificaciones enviadas:`;
+                mensaje += `<br>👥 ${resultado.totalColaboradores} colaboradores en ${resultado.areas} áreas`;
+                mensaje += `<br>👑 ${resultado.totalAdministradores} administradores`;
                 
                 if (resultado.push && resultado.push.enviados > 0) {
                     mensaje += `<br>📱 Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
@@ -1018,7 +1017,7 @@ class CrearIncidenciaController {
                     icon: 'success',
                     title: 'Notificaciones enviadas',
                     html: mensaje,
-                    timer: 3000,
+                    timer: 4000,
                     showConfirmButton: false
                 });
             } else {
@@ -1039,7 +1038,7 @@ class CrearIncidenciaController {
                 text: error.message
             });
         }
-    }
+}
 
     async _guardarIncidencia(datos) {
         const btnCrear = document.getElementById('btnCrearIncidencia');
