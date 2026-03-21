@@ -118,6 +118,15 @@ export const MODULOS_SISTEMA = {
         icono: 'fa-history',
         color: '#f97316',
         categoria: 'admin'
+    },
+    // NUEVO MÓDULO DE PERMISOS - SIEMPRE ACTIVO
+    permisos: {
+        id: 'permisos',
+        nombre: 'Permisos',
+        descripcion: 'Gestión de permisos y roles del sistema',
+        icono: 'fa-lock',
+        color: '#8b5cf6',
+        categoria: 'admin'
     }
 };
 
@@ -142,9 +151,10 @@ export const TIPOS_PLAN_PERSONALIZADO = {
             notificaciones: true,
             dashboard: true,
             mapeo: true,
-            usuarios: false,
+            usuarios: true,        // MODIFICADO: AHORA EN TRUE
             configuracion: true,
-            bitacora: false
+            bitacora: false,
+            permisos: true         // NUEVO: SIEMPRE TRUE
         }
     },
     INCIDENCIAS: {
@@ -164,9 +174,10 @@ export const TIPOS_PLAN_PERSONALIZADO = {
             notificaciones: true,
             dashboard: true,
             mapeo: false,
-            usuarios: false,
+            usuarios: true,        // MODIFICADO: AHORA EN TRUE
             configuracion: true,
-            bitacora: false
+            bitacora: false,
+            permisos: true         // NUEVO: SIEMPRE TRUE
         }
     },
     COMPLETO: {
@@ -186,9 +197,10 @@ export const TIPOS_PLAN_PERSONALIZADO = {
             notificaciones: true,
             dashboard: true,
             mapeo: true,
-            usuarios: true,
+            usuarios: true,        // MODIFICADO: AHORA EN TRUE
             configuracion: true,
-            bitacora: true
+            bitacora: true,
+            permisos: true         // NUEVO: SIEMPRE TRUE
         }
     }
 };
@@ -261,6 +273,16 @@ class PlanPersonalizado {
         
         this.fechaCreacion = data.fechaCreacion ? this._convertirFecha(data.fechaCreacion) : new Date();
         this.fechaActualizacion = data.fechaActualizacion ? this._convertirFecha(data.fechaActualizacion) : new Date();
+        
+        // ASEGURAR QUE PERMISOS SIEMPRE ESTÉ EN TRUE
+        this._asegurarModulosObligatorios();
+    }
+    
+    _asegurarModulosObligatorios() {
+        // Siempre incluir el módulo de permisos como true
+        this.modulosIncluidos['permisos'] = true;
+        // Siempre incluir el módulo de usuarios como true
+        this.modulosIncluidos['usuarios'] = true;
     }
     
     _convertirFecha(fecha) {
@@ -336,6 +358,8 @@ class PlanPersonalizado {
     
     actualizarModulos(nuevosModulos, usuarioId, usuarioNombre) {
         this.modulosIncluidos = { ...this.modulosIncluidos, ...nuevosModulos };
+        // Asegurar módulos obligatorios después de actualizar
+        this._asegurarModulosObligatorios();
         this.actualizadoPor = usuarioId;
         this.actualizadoPorNombre = usuarioNombre;
         this.fechaActualizacion = new Date();
@@ -364,6 +388,9 @@ class PlanPersonalizado {
     }
     
     toFirestoreCreate(superAdminId, superAdminNombre) {
+        // Asegurar módulos obligatorios antes de guardar
+        this._asegurarModulosObligatorios();
+        
         return {
             adminId: this.adminId,
             adminEmail: this.adminEmail,
@@ -393,6 +420,9 @@ class PlanPersonalizado {
     }
     
     toFirestoreUpdate(superAdminId, superAdminNombre) {
+        // Asegurar módulos obligatorios antes de actualizar
+        this._asegurarModulosObligatorios();
+        
         return {
             nombre: this.nombre,
             descripcion: this.descripcion,
@@ -545,11 +575,16 @@ class PlanPersonalizadoManager {
                     notificaciones: false,
                     dashboard: true,
                     mapeo: false,
-                    usuarios: false,
+                    usuarios: true,        // NUEVO: TRUE POR DEFECTO
                     configuracion: true,
-                    bitacora: false
+                    bitacora: false,
+                    permisos: true         // NUEVO: SIEMPRE TRUE
                 };
             }
+            
+            // Asegurar que permisos y usuarios estén en true
+            modulosIniciales['permisos'] = true;
+            modulosIniciales['usuarios'] = true;
             
             const nuevoPlan = new PlanPersonalizado(planId, {
                 adminId: planData.adminId,
@@ -662,7 +697,10 @@ class PlanPersonalizadoManager {
             if (datos.precio !== undefined) plan.precio = datos.precio;
             if (datos.color !== undefined) plan.color = datos.color;
             if (datos.icono !== undefined) plan.icono = datos.icono;
-            if (datos.modulosIncluidos !== undefined) plan.modulosIncluidos = { ...plan.modulosIncluidos, ...datos.modulosIncluidos };
+            if (datos.modulosIncluidos !== undefined) {
+                plan.modulosIncluidos = { ...plan.modulosIncluidos, ...datos.modulosIncluidos };
+                plan._asegurarModulosObligatorios();
+            }
             
             plan.actualizadoPor = usuarioId;
             plan.actualizadoPorNombre = usuarioNombre;
