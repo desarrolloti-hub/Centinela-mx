@@ -1,3 +1,5 @@
+/* operaciones.css - VERSIÓN COMPLETA */
+
 /* =============================================
    operacionesEstadisticas.css - GRÁFICAS CON FILTROS POR FECHAS
    ============================================= */
@@ -75,7 +77,7 @@ body {
 }
 
 /* =============================================
-   FILTROS Y CONTROLES - MEJORADO
+   FILTROS Y CONTROLES
    ============================================= */
 .filtros-container {
     background: var(--color-bg-secondary);
@@ -439,23 +441,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-}
-
-/* MENSAJE SIN DATOS */
-.empty-data {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--color-text-muted);
-}
-
-.empty-data i {
-    font-size: 3rem;
-    margin-bottom: 15px;
-    opacity: 0.5;
-}
-
-.empty-data p {
-    font-size: 0.9rem;
+    min-height: 350px;
 }
 
 /* =============================================
@@ -468,16 +454,21 @@ body {
     width: 100%;
 }
 
-#graficoTiposArchivo,
+#graficoTiposArchivo {
+    width: 400px !important;
+    height: 350px !important;
+    display: block;
+}
+
 #graficoAlmacenamientoPorEmpresa {
-    width: 350px !important;
-    height: 280px !important;
+    width: 500px !important;
+    height: 400px !important;
     display: block;
 }
 
 #graficoDocumentosPorEmpresa {
-    width: 500px !important;
-    height: 300px !important;
+    width: 600px !important;
+    height: 350px !important;
     display: block;
 }
 
@@ -519,6 +510,26 @@ body {
 }
 
 /* =============================================
+   MENSAJE SIN DATOS
+   ============================================= */
+.empty-data {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--color-text-muted);
+}
+
+.empty-data i {
+    font-size: 4rem;
+    margin-bottom: 15px;
+    opacity: 0.3;
+}
+
+.empty-data p {
+    font-size: 1rem;
+    margin-top: 15px;
+}
+
+/* =============================================
    FOOTER
    ============================================= */
 .footer-datetime {
@@ -553,8 +564,42 @@ body {
 }
 
 /* =============================================
+   BARRA DE PROGRESO
+   ============================================= */
+#progressContainer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-accent-primary);
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+}
+
+/* =============================================
    RESPONSIVE
    ============================================= */
+@media (max-width: 1200px) {
+    #graficoAlmacenamientoPorEmpresa {
+        width: 450px !important;
+        height: 380px !important;
+    }
+    
+    #graficoTiposArchivo {
+        width: 380px !important;
+        height: 330px !important;
+    }
+    
+    #graficoDocumentosPorEmpresa {
+        width: 550px !important;
+        height: 330px !important;
+    }
+}
+
 @media (max-width: 1024px) {
     .admin-container {
         padding: 20px;
@@ -579,15 +624,19 @@ body {
         font-size: 1.6rem;
     }
     
-    #graficoTiposArchivo,
     #graficoAlmacenamientoPorEmpresa {
-        width: 300px !important;
-        height: 240px !important;
+        width: 420px !important;
+        height: 360px !important;
+    }
+    
+    #graficoTiposArchivo {
+        width: 350px !important;
+        height: 300px !important;
     }
     
     #graficoDocumentosPorEmpresa {
-        width: 450px !important;
-        height: 270px !important;
+        width: 500px !important;
+        height: 300px !important;
     }
 }
 
@@ -660,15 +709,19 @@ body {
         padding: 15px;
     }
     
-    #graficoTiposArchivo,
     #graficoAlmacenamientoPorEmpresa {
-        width: 260px !important;
-        height: 210px !important;
+        width: 380px !important;
+        height: 320px !important;
+    }
+    
+    #graficoTiposArchivo {
+        width: 300px !important;
+        height: 260px !important;
     }
     
     #graficoDocumentosPorEmpresa {
-        width: 380px !important;
-        height: 240px !important;
+        width: 420px !important;
+        height: 280px !important;
     }
 }
 
@@ -717,15 +770,19 @@ body {
         padding: 12px;
     }
     
-    #graficoTiposArchivo,
     #graficoAlmacenamientoPorEmpresa {
-        width: 220px !important;
-        height: 180px !important;
+        width: 280px !important;
+        height: 280px !important;
+    }
+    
+    #graficoTiposArchivo {
+        width: 240px !important;
+        height: 220px !important;
     }
     
     #graficoDocumentosPorEmpresa {
         width: 320px !important;
-        height: 200px !important;
+        height: 260px !important;
     }
     
     .table {
@@ -756,4 +813,89 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--color-text-primary);
+}
+/* =============================================
+   ESTILOS PARA GRÁFICAS (consistente con estadisticas)
+   ============================================= */
+
+/* Contenedores de gráficas */
+.grafica-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 300px;
+}
+
+/* Dimensiones fijas para gráficas */
+#graficoTiposArchivo,
+#graficoAlmacenamientoPorEmpresa,
+#graficoDocumentosPorEmpresa {
+    width: 100% !important;
+    max-width: 500px;
+    height: auto !important;
+    max-height: 300px;
+    display: block;
+    margin: 0 auto;
+}
+
+/* Badges para valores en tablas */
+.badge-value {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-right: 6px;
+}
+
+.badge-info {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.badge-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.badge-secondary {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+}
+
+.badge-primary {
+    background: rgba(0, 207, 255, 0.2);
+    color: #00cfff;
+}
+
+.porcentaje-badge {
+    font-size: 0.6rem;
+    color: #6c757d;
+    margin-left: 4px;
+}
+
+/* Responsive para gráficas */
+@media (max-width: 768px) {
+    #graficoTiposArchivo,
+    #graficoAlmacenamientoPorEmpresa,
+    #graficoDocumentosPorEmpresa {
+        max-width: 100%;
+        height: auto !important;
+    }
+    
+    .grafica-wrapper {
+        min-height: 250px;
+    }
+}
+
+@media (max-width: 480px) {
+    .grafica-wrapper {
+        min-height: 220px;
+    }
 }
