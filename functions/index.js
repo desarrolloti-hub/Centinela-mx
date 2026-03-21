@@ -155,43 +155,135 @@ const axios = require('axios');
 const cors = require('cors')({origin: true});
 
 // Configuración de la API externa
-const PM_API = "https://cenc5.com/rest_api/14.0";//La documentacion es la 13 pero JCI entrego la 14. NO MUEVAS LA VERSION
+const PM_API = "https://cenc5.com/rest_api/14.0"; // La documentación es la 13 pero JCI entrego la 14. NO MUEVAS LA VERSION
 
 /**
  * Función centralizada para manejar peticiones a Power Manage
  */
 exports.proxyPowerManage = functions.https.onRequest((req, res) => {
     return cors(req, res, async () => {
-        // Solo aceptamos POST para el registro
         if (req.method !== 'POST') {
-            return res.status(405).json({ error: "Método no permitido" });
+            return res.status(405).json({ error: "Solo POST" });
         }
 
-        const { action, email, email_code, app_id } = req.body;
+        const { action, email, password, email_code, app_id, user_token, panel_data, reset_password_code, new_password } = req.body;
 
         try {
-            if (action === 'solicitarCodigo') {
-                // Paso 1: Generar código y enviar a email
-                const response = await axios.post(`${PM_API}/register`, { email });
-                return res.status(200).json({ success: true, message: "Código enviado" });
+            switch (action) {
+                case 'solicitarCodigo':
+                    await axios.post(`${PM_API}/register`, { email });
+                    return res.status(200).json({ success: true });
 
-            } else if (action === 'completarRegistro') {
-                // Paso 2: Validar código y obtener tokens
-                const response = await axios.post(`${PM_API}/register/complete`, {
-                    email_code,
-                    app_id
-                });
-                // Devolvemos el user_token para que el cliente lo guarde vía la clase CuentaPM
-                return res.status(200).json(response.data);
+                case 'completarRegistro':
+                    const regRes = await axios.post(`${PM_API}/register/complete`, { email_code, app_id });
+                    return res.status(200).json(regRes.data);
+
+                case 'establecerContraseña':
+                    const passRes = await axios.post(`${PM_API}/password/reset/complete`, {
+                        reset_password_code,
+                        new_password,
+                        app_id
+                    });
+                    return res.status(200).json(passRes.data);
+
+                case 'autenticar':
+                    const authRes = await axios.post(`${PM_API}/auth`, { email, password, app_id });
+                    return res.status(200).json(authRes.data);
+
+                case 'listarPaneles':
+                    const listRes = await axios.get(`${PM_API}/panels`, {
+                        headers: { 'User-Token': user_token }
+                    });
+                    return res.status(200).json(listRes.data);
+
+                case 'vincularPanel':
+                    if (!panel_data || !panel_data.panel_serial || !panel_data.master_user_code) {
+                        return res.status(400).json({ error_message: 'Faltan datos del panel' });
+                    }
+                    
+                    const payload = {
+                        alias: panel_data.alias || 'Panel Nuevo',
+                        panel_serial: panel_data.panel_serial,
+                        master_user_code: panel_data.master_user_code
+                    };
+                    
+                    if (panel_data.access_proof) {
+                        payload.access_proof = panel_data.access_proof;
+                    }
+                    
+                    const linkRes = await axios.post(`${PM_API}/panel/add`, payload, {
+                        headers: { 'User-Token': user_token }
+                    });
+                    
+                    return res.status(200).json({ success: true, data: linkRes.data });
+
+                case 'loginPanel':
+                    if (!panel_data || !panel_data.panel_serial || !panel_data.user_code) {
+                        return res.status(400).json({ error_message: 'Faltan datos: panel_serial y user_code son requeridos' });
+                    }
+                    
+                    const loginRes = await axios.post(`${PM_API}/panel/login`, {
+                        panel_serial: panel_data.panel_serial,
+                        user_code: panel_data.user_code,
+                        app_id: panel_data.app_id,
+                        app_type: panel_data.app_type || 'com.visonic.neogo'
+                    }, {
+                        headers: { 'User-Token': user_token }
+                    });
+                    
+                    return res.status(200).json(loginRes.data);
+
+                case 'obtenerEstadoPanel':
+                    const statusRes = await axios.get(`${PM_API}/status`, {
+                        headers: { 'User-Token': user_token, 'Session-Token': req.body.session_token }
+                    });
+                    return res.status(200).json(statusRes.data);
+
+                case 'listarZonas':
+                    const devicesRes = await axios.get(`${PM_API}/devices`, {
+                        headers: { 'User-Token': user_token, 'Session-Token': req.body.session_token }
+                    });
+                    const zonas = devicesRes.data.filter(d => d.device_type === 'ZONE');
+                    return res.status(200).json(zonas);
+
+                case 'listarEventos':
+                    const eventsRes = await axios.get(`${PM_API}/events`, {
+                        headers: { 'User-Token': user_token, 'Session-Token': req.body.session_token }
+                    });
+                    return res.status(200).json(eventsRes.data);
+
+                case 'listarDispositivos':
+                    const allDevicesRes = await axios.get(`${PM_API}/devices`, {
+                        headers: { 'User-Token': user_token, 'Session-Token': req.body.session_token }
+                    });
+                    return res.status(200).json(allDevicesRes.data);
+
+                case 'setEstadoPanel':
+                    await axios.post(`${PM_API}/set_state`, {
+                        partition: req.body.partition || 1,
+                        state: req.body.state,
+                        options: req.body.options || []
+                    }, {
+                        headers: { 'User-Token': user_token, 'Session-Token': req.body.session_token }
+                    });
+                    return res.status(200).json({ success: true });
+
+                case 'verificarSesion':
+                    try {
+                        await axios.get(`${PM_API}/panel_info`, {
+                            headers: { 'User-Token': user_token, 'Session-Token': req.body.session_token }
+                        });
+                        return res.status(200).json({ valid: true });
+                    } catch (error) {
+                        return res.status(401).json({ valid: false });
+                    }
+
+                default:
+                    return res.status(400).json({ error: `Acción no reconocida: ${action}` });
             }
-
-            return res.status(400).json({ error: "Acción no reconocida" });
-
         } catch (error) {
-            console.error("Error en Proxy PM:", error.response?.data || error.message);
-            return res.status(error.response?.status || 500).json(
-                error.response?.data || { error: "Error de conexión con el servidor de alarmas" }
-            );
+            console.error(`❌ Error en ${action}:`, error.response?.data || error.message);
+            return res.status(error.response?.status || 500).json(error.response?.data || { error_message: "Error en el servidor PM" });
         }
     });
 });
