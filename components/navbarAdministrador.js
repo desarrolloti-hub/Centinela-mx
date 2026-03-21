@@ -1,5 +1,8 @@
 // [file name]: navbarAdministrador.js
 // [file path]: /components/navbarAdministrador.js
+// VERSIÓN DINÁMICA - Muestra módulos según el plan del administrador
+
+import { PlanPersonalizadoManager, MODULOS_SISTEMA } from '/clases/plan.js';
 
 class NavbarComplete {
     constructor() {
@@ -10,6 +13,8 @@ class NavbarComplete {
         this.currentAdmin = null;
         this.userManager = null;
         this.notificacionManager = null;
+        this.planManager = null;
+        this.planActual = null; // Objeto del plan con módulos
         this.notificacionesNoLeidas = 0;
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
@@ -38,6 +43,10 @@ class NavbarComplete {
             this.setupFunctionalities();
 
             this.loadAdminDataFromLocalStorage();
+            
+            // Cargar el plan del administrador desde localStorage
+            await this.cargarPlanAdministrador();
+            
             this.updateNavbarWithAdminData();
 
             await this.loadAdminDataFromFirebase();
@@ -47,6 +56,289 @@ class NavbarComplete {
 
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
+        }
+    }
+
+    /**
+     * Carga el plan del administrador desde localStorage y obtiene los módulos desde Firestore
+     */
+    async cargarPlanAdministrador() {
+        try {
+            // Obtener el planId desde localStorage (guardado durante el login)
+            const planId = localStorage.getItem('userPlan') || localStorage.getItem('plan');
+            
+            if (!planId) {
+                console.warn('⚠️ No se encontró plan asignado para el administrador');
+                this.planActual = null;
+                return;
+            }
+
+            console.log(`📋 Cargando plan: ${planId}`);
+            
+            // Inicializar PlanPersonalizadoManager
+            this.planManager = new PlanPersonalizadoManager();
+            
+            // Obtener el plan por ID desde Firestore
+            const plan = await this.planManager.obtenerPorId(planId);
+            
+            if (plan) {
+                this.planActual = {
+                    id: plan.id,
+                    nombre: plan.nombre,
+                    tipoBase: plan.tipoBase,
+                    modulosIncluidos: plan.modulosIncluidos,
+                    modulosActivos: plan.obtenerModulosActivos(),
+                    tieneModulo: (moduloId) => plan.tieneModulo(moduloId)
+                };
+                console.log(`✅ Plan cargado: ${plan.nombre}`, this.planActual.modulosActivos);
+            } else {
+                console.warn(`⚠️ No se encontró el plan con ID: ${planId}`);
+                this.planActual = null;
+            }
+            
+        } catch (error) {
+            console.error('❌ Error cargando plan del administrador:', error);
+            this.planActual = null;
+        }
+    }
+
+    /**
+     * Verifica si el administrador tiene acceso a un módulo específico
+     */
+    tieneAccesoModulo(moduloId) {
+        if (!this.planActual) {
+            // Si no hay plan, mostrar solo módulos básicos
+            const modulosBasicos = ['dashboard', 'reportes', 'configuracion', 'permisos'];
+            return modulosBasicos.includes(moduloId);
+        }
+        return this.planActual.tieneModulo(moduloId);
+    }
+
+    /**
+     * Genera el HTML de los módulos de Gestionar según el plan
+     */
+    generarGestionarModulos() {
+        const modulos = [];
+        
+        // Áreas
+        if (this.tieneAccesoModulo('areas')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-map"></i>
+                    <span>Áreas</span>
+                </a>
+            `);
+        }
+        
+        // Categorías
+        if (this.tieneAccesoModulo('categorias')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-tags"></i>
+                    <span>Categorías</span>
+                </a>
+            `);
+        }
+        
+        // Sucursales
+        if (this.tieneAccesoModulo('sucursales')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Sucursales</span>
+                </a>
+            `);
+        }
+        
+        // Regiones
+        if (this.tieneAccesoModulo('regiones')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Regiones</span>
+                </a>
+            `);
+        }
+        
+        // Permisos
+        if (this.tieneAccesoModulo('permisos')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-lock"></i>
+                    <span>Permisos</span>
+                </a>
+            `);
+        }
+        
+        // Usuarios
+        if (this.tieneAccesoModulo('usuarios')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Usuarios</span>
+                </a>
+            `);
+        }
+        
+        // Estadísticas / Reportes
+        if (this.tieneAccesoModulo('reportes')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-chart-bar"></i>
+                    <span>Estadísticas</span>
+                </a>
+            `);
+        }
+        
+        // Mapa de Alertas / Mapeo
+        if (this.tieneAccesoModulo('mapeo')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/mapaAlertas/mapaAlertas.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-map"></i>
+                    <span>Mapa de Alertas</span>
+                </a>
+            `);
+        }
+        
+        // Tareas
+        if (this.tieneAccesoModulo('tareas')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/tareas/tareas.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-tasks"></i>
+                    <span>Tareas</span>
+                </a>
+            `);
+        }
+        
+        // Configuración
+        if (this.tieneAccesoModulo('configuracion')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/configuracion/configuracion.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-cog"></i>
+                    <span>Configuración</span>
+                </a>
+            `);
+        }
+        
+        if (modulos.length === 0) {
+            return `
+                <div class="empty-menu-item">
+                    <span>No hay módulos disponibles</span>
+                </div>
+            `;
+        }
+        
+        return modulos.join('');
+    }
+    
+    /**
+     * Genera el HTML de los módulos de Incidencias según el plan
+     */
+    generarIncidenciasModulos() {
+        const modulos = [];
+        
+        if (this.tieneAccesoModulo('incidencias')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-list"></i>
+                    <span>Lista de Incidencias</span>
+                </a>
+                <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    <span>Crear Incidencia</span>
+                </a>
+                <a href="/usuarios/administrador/incidenciasCanalizadas/incidenciasCanalizadas.html" class="administracion-dropdown-option">
+                    <i class="fa-solid fa-list"></i>
+                    <span>Incidencias Canalizadas</span>
+                </a>
+            `);
+        } else {
+            return `
+                <div class="empty-menu-item">
+                    <span>No tienes acceso al módulo de incidencias</span>
+                </div>
+            `;
+        }
+        
+        return modulos.join('');
+    }
+    
+    /**
+     * Genera el HTML de Bitácora según el plan
+     */
+    generarBitacoraModulo() {
+        if (this.tieneAccesoModulo('bitacora')) {
+            return `
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fa-solid fa-book"></i>
+                        <span>Bitácora</span>
+                    </div>
+                    <a href="/usuarios/administrador/bitacoraActividades/bitacoraActividades.html" class="admin-dropdown-option" style="width: 100%;">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Bitácora de Actividades</span>
+                    </a>
+                </div>
+            `;
+        }
+        return '';
+    }
+    
+    /**
+     * Genera el HTML de la sección de Configuración según el plan
+     */
+    generarConfiguracionModulos() {
+        const modulos = [];
+        
+        if (this.tieneAccesoModulo('configuracion')) {
+            modulos.push(`
+                <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
+                    <i class="fa-solid fa-palette"></i>
+                    <span>Personalización</span>
+                </a>
+            `);
+        }
+        
+        modulos.push(`
+            <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        `);
+        
+        return modulos.join('');
+    }
+    
+    /**
+     * Actualiza dinámicamente los módulos según el plan
+     */
+    actualizarModulosDinamicos() {
+        const gestionarOptions = document.getElementById('administracionDropdownOptions');
+        const incidenciasOptions = document.getElementById('incidenciasDropdownOptions');
+        
+        if (gestionarOptions) {
+            gestionarOptions.innerHTML = this.generarGestionarModulos();
+        }
+        
+        if (incidenciasOptions) {
+            incidenciasOptions.innerHTML = this.generarIncidenciasModulos();
+        }
+        
+        // Actualizar la sección de bitácora
+        const bitacoraSection = document.querySelector('.nav-section:has(.nav-section-title i.fa-book)');
+        if (bitacoraSection) {
+            if (!this.tieneAccesoModulo('bitacora')) {
+                bitacoraSection.remove();
+            }
+        } else {
+            // Si no existe y el usuario tiene acceso, agregarla
+            if (this.tieneAccesoModulo('bitacora')) {
+                const adminOptionsSection = document.querySelector('.admin-options-section');
+                const bitacoraHtml = this.generarBitacoraModulo();
+                if (adminOptionsSection && bitacoraHtml) {
+                    adminOptionsSection.insertAdjacentHTML('beforebegin', bitacoraHtml);
+                }
+            }
         }
     }
 
@@ -1107,10 +1399,12 @@ class NavbarComplete {
                 padding: 10px 15px;
                 border-radius: var(--border-radius-small);
                 transition: var(--transition-default);
-                height: 40px;
                 background-color: transparent;
                 border: none;
                 cursor: default;
+                color: var(--color-text-secondary);
+                font-style: italic;
+                text-align: center;
             }
             
             .admin-options-section {
@@ -1460,6 +1754,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
+                <!-- SECCIÓN GESTIONAR - DINÁMICA SEGÚN PLAN -->
                 <div class="nav-section">
                     <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
                         <span>Gestionar</span>
@@ -1467,50 +1762,11 @@ class NavbarComplete {
                     </button>
 
                     <div class="administracion-dropdown-options" id="administracionDropdownOptions">
-                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-map"></i>
-                            <span>Áreas</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-tags"></i>
-                            <span>Categorías</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-store"></i>
-                            <span>Sucursales</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-location-dot"></i>
-                            <span>Regiones</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-lock"></i>
-                            <span>Permisos</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-users-gear"></i>
-                            <span>Usuarios</span>
-                        </a>
-                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-chart-bar"></i>
-                            <span>Estadísticas</span>
-                        </a>
-                        <a href="/usuarios/administrador/mapaAlertas/mapaAlertas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-map"></i>
-                            <span>Mapa de Alertas</span>
-                        </a>
-                        <a href="/usuarios/administrador/tareas/tareas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-tasks"></i>
-                            <span>Tareas</span>
-                        </a>
+                        <!-- Los módulos se cargarán dinámicamente -->
                     </div>
                 </div>
 
+                <!-- SECCIÓN INCIDENCIAS - DINÁMICA SEGÚN PLAN -->
                 <div class="nav-section">
                     <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
                         <span>Incidencias</span>
@@ -1518,34 +1774,12 @@ class NavbarComplete {
                     </button>
 
                     <div class="administracion-dropdown-options" id="incidenciasDropdownOptions">
-                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-list"></i>
-                            <span>Lista de Incidencias</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-plus-circle"></i>
-                            <span>Crear Incidencia</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/incidenciasCanalizadas/incidenciasCanalizadas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-list"></i>
-                            <span>Incidencias Canalizadas</span>
-                        </a>
+                        <!-- Los módulos se cargarán dinámicamente -->
                     </div>
                 </div>
 
-                <div class="nav-section">
-                    <div class="nav-section-title">
-                        <i class="fa-solid fa-book"></i>
-                        <span>Bitácora</span>
-                    </div>
-
-                    <a href="/usuarios/administrador/bitacoraActividades/bitacoraActividades.html" class="admin-dropdown-option" style="width: 100%;">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                        <span>Bitácora de Actividades</span>
-                    </a>
-                </div>
+                <!-- SECCIÓN BITÁCORA - DINÁMICA SEGÚN PLAN -->
+                <!-- Se insertará dinámicamente si el plan tiene acceso a bitácora -->
 
                 <div class="admin-options-section">
                     <button class="admin-dropdown-btn" id="adminDropdownBtn">
@@ -1554,21 +1788,31 @@ class NavbarComplete {
                     </button>
 
                     <div class="admin-dropdown-options" id="adminDropdownOptions">
-                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
-                            <i class="fa-solid fa-palette"></i>
-                            <span>Personalización</span>
-                        </a>
-
-                        <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                            <span>Cerrar Sesión</span>
-                        </a>
+                        <!-- Los módulos se cargarán dinámicamente -->
                     </div>
                 </div>
             </div>
         `;
 
         document.body.prepend(navbar);
+        
+        // Cargar los módulos dinámicos después de insertar el HTML
+        setTimeout(() => {
+            this.actualizarModulosDinamicos();
+            this.actualizarConfiguracionModulos();
+        }, 100);
+    }
+    
+    /**
+     * Actualiza los módulos de configuración dinámicamente
+     */
+    actualizarConfiguracionModulos() {
+        const adminOptions = document.getElementById('adminDropdownOptions');
+        if (adminOptions) {
+            adminOptions.innerHTML = this.generarConfiguracionModulos();
+            // Reconfigurar el logout después de actualizar
+            this.setupLogout();
+        }
     }
 
     adjustBodyPadding() {
@@ -2077,7 +2321,11 @@ class NavbarComplete {
 
         if (!logoutOption) return;
 
-        logoutOption.addEventListener('click', async (e) => {
+        // Remover event listeners anteriores para evitar duplicados
+        const newLogoutOption = logoutOption.cloneNode(true);
+        logoutOption.parentNode.replaceChild(newLogoutOption, logoutOption);
+        
+        newLogoutOption.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
 
