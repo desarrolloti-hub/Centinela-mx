@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,13 @@
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Icono en barra de titulo -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
@@ -23,8 +26,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- SEO Básico -->
-    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
-    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="description"
+        content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords"
+        content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
     <meta name="author" content="Centinela-MX">
     <link rel="canonical" href="https://centinela-mx.web.app/" />
 
@@ -32,7 +37,8 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://centinela-mx.web.app">
     <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
-    <meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:description"
+        content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
     <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
@@ -47,7 +53,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://centinela-mx.web.app">
     <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
-    <meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+    <meta name="twitter:description"
+        content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
     <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta name="twitter:creator" content="">
 
@@ -77,7 +84,7 @@
     }
     }
     </script>
-    
+
     <style>
         /* Estilos adicionales para los botones dentro del mapa */
         .map-footer-buttons {
@@ -88,19 +95,20 @@
             justify-content: flex-start;
             gap: 15px;
         }
-        
+
         @media (max-width: 768px) {
             .map-footer-buttons {
                 flex-direction: column;
                 gap: 10px;
             }
-            
+
             .map-footer-buttons .btn {
                 width: 100%;
             }
         }
     </style>
 </head>
+
 <body>
     <canvas id="particle-canvas"></canvas>
     <br>
@@ -137,7 +145,7 @@
                         <form id="sucursalForm">
                             <!-- INFORMACIÓN BÁSICA -->
                             <h6 class="section-title"><i class="fas fa-info-circle"></i>Información Básica</h6>
-                            
+
                             <div class="form-grid">
                                 <div class="form-field">
                                     <label for="nombreSucursal" class="form-label">Nombre de la Sucursal *</label>
@@ -161,8 +169,9 @@
                             </div>
 
                             <!-- UBICACIÓN -->
-                            <h6 class="section-title" style="margin-top: 20px;"><i class="fas fa-map-marker-alt"></i>Ubicación</h6>
-                            
+                            <h6 class="section-title" style="margin-top: 20px;"><i
+                                    class="fas fa-map-marker-alt"></i>Ubicación</h6>
+
                             <div class="form-grid">
                                 <div class="form-field">
                                     <label for="regionSucursal" class="form-label">Región *</label>
@@ -212,8 +221,9 @@
                             </div>
 
                             <!-- CONTACTO -->
-                            <h6 class="section-title" style="margin-top: 20px;"><i class="fas fa-phone-alt"></i>Contacto</h6>
-                            
+                            <h6 class="section-title" style="margin-top: 20px;"><i class="fas fa-phone-alt"></i>Contacto
+                            </h6>
+
                             <div class="form-field">
                                 <label for="contactoSucursal" class="form-label">Teléfono de Contacto *</label>
                                 <div class="input-group">
@@ -228,8 +238,9 @@
                             </div>
 
                             <!-- COORDENADAS -->
-                            <h6 class="section-title" style="margin-top: 20px;"><i class="fas fa-globe-americas"></i>Coordenadas</h6>
-                            
+                            <h6 class="section-title" style="margin-top: 20px;"><i
+                                    class="fas fa-globe-americas"></i>Coordenadas</h6>
+
                             <div class="coordenadas-grid">
                                 <div class="form-field">
                                     <label for="latitudSucursal" class="form-label">Latitud *</label>
@@ -248,7 +259,7 @@
                                             placeholder="Ej: -100.316112" required>
                                     </div>
                                 </div>
-                                
+
                                 <div class="coordenadas-info">
                                     <i class="fas fa-info-circle"></i>
                                     <span>Formato decimal (grados). Ejemplo: 25.686614, -100.316112</span>
@@ -275,7 +286,7 @@
                 <div class="card-body" style="padding: 0;">
                     <div class="map-wrapper">
                         <div id="sucursalMap"></div>
-                        
+
                         <!-- Overlay con botones de control -->
                         <div class="map-overlay">
                             <button class="map-button" id="btnCentrarMapa" title="Centrar en ubicación actual">
@@ -292,7 +303,7 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Panel de coordenadas en tiempo real -->
                     <div class="map-coordinates-panel">
                         <div class="coordinates-display">
@@ -312,7 +323,7 @@
                             <span>Arrastra el marcador para ajustar</span>
                         </div>
                     </div>
-                    
+
                     <!-- ============================================= -->
                     <!-- BOTONES DE ACCIÓN DENTRO DEL MAPA (ABAJO) -->
                     <!-- ============================================= -->
@@ -332,7 +343,7 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
     <!-- Scripts -->
     <script type="module" src="/components/autenticador.js"></script>
     <script src="/components/navbarColaborador.js"></script>
@@ -340,5 +351,9 @@
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script type="module" src="/usuarios/administrador/crearSucursales/crearSucursales.js"></script>
+
+    <!-- Opción 1: Solo autenticación (cualquier colaborador) -->
+    <script src="/components/protector-de-pagina.js"></script>
 </body>
+
 </html>
