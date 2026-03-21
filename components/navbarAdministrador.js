@@ -54,6 +54,16 @@ class NavbarComplete {
         try {
             const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
             this.notificacionManager = new NotificacionAreaManager();
+            
+            // Actualizar el usuario actual con el rol de admin
+            if (this.notificacionManager && this.currentAdmin) {
+                this.notificacionManager.usuarioActual = {
+                    ...this.notificacionManager.usuarioActual,
+                    ...this.currentAdmin,
+                    esAdmin: true,
+                    rol: 'administrador'
+                };
+            }
         } catch (error) {
             console.error('Error inicializando notificacionManager:', error);
         }
@@ -61,18 +71,22 @@ class NavbarComplete {
 
     async _cargarNotificaciones() {
         if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
+            console.log('⚠️ No se pueden cargar notificaciones: falta información');
             return;
         }
 
         try {
+            // Para administradores, obtener TODAS las notificaciones de su organización
             const todasNotificaciones = await this.notificacionManager.obtenerNotificaciones(
                 this.currentAdmin.id,
                 this.currentAdmin.organizacionCamelCase,
                 false,
-                20
+                50
             );
 
-            // Los admins ven TODAS las notificaciones de su organización
+            console.log(`📬 Admin cargó ${todasNotificaciones.length} notificaciones`);
+
+            // Los admins ven TODAS las notificaciones
             this.notificaciones = todasNotificaciones;
             this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
 
@@ -80,7 +94,7 @@ class NavbarComplete {
             this._renderizarNotificaciones();
 
         } catch (error) {
-            console.error('Error cargando notificaciones:', error);
+            console.error('Error cargando notificaciones para admin:', error);
         }
     }
 
@@ -93,6 +107,7 @@ class NavbarComplete {
             clearInterval(this.intervalNotificaciones);
         }
 
+        // Actualizar cada 30 segundos
         this.intervalNotificaciones = setInterval(() => {
             this._cargarNotificaciones();
         }, 30000);
@@ -118,7 +133,7 @@ class NavbarComplete {
             container.innerHTML = `
                 <div class="notificaciones-vacia">
                     <i class="fas fa-bell-slash"></i>
-                    <p>No hay notificaciones nuevas</p>
+                    <p>No hay notificaciones</p>
                 </div>
             `;
             return;
@@ -138,6 +153,11 @@ class NavbarComplete {
                 leida: notif.leida || false
             };
 
+            // Mostrar áreas destino para contexto
+            const areasTexto = notif.areasDestino && notif.areasDestino.length > 0 
+                ? notif.areasDestino.map(a => a.nombre).join(', ')
+                : '';
+
             html += `
                 <div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
                     <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
@@ -149,6 +169,7 @@ class NavbarComplete {
                         <div class="notificacion-detalles">
                             ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${this._escapeHTML(notifUI.sucursalNombre)}</span>` : ''}
                             ${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}
+                            ${areasTexto ? `<span><i class="fas fa-users"></i> ${this._escapeHTML(areasTexto)}</span>` : ''}
                         </div>
                         <div class="notificacion-tiempo">${this._escapeHTML(notifUI.tiempoRelativo)}</div>
                     </div>
@@ -226,6 +247,10 @@ class NavbarComplete {
                     leida: notif.leida || false
                 };
                 
+                const areasTexto = notif.areasDestino && notif.areasDestino.length > 0 
+                    ? notif.areasDestino.map(a => a.nombre).join(', ')
+                    : '';
+                
                 notificacionesHtml += `
                     <div class="notificacion-item-modal" data-id="${notif.id}" data-url="${notifUI.urlDestino}" style="
                         display: flex;
@@ -242,6 +267,7 @@ class NavbarComplete {
                         <div style="flex: 1;">
                             <div style="font-weight: 600; margin-bottom: 4px;">${this._escapeHTML(notifUI.titulo)}</div>
                             <div style="font-size: 13px; color: #aaa; margin-bottom: 4px;">${this._escapeHTML(notifUI.mensaje)}</div>
+                            ${areasTexto ? `<div style="font-size: 11px; color: #888; margin-bottom: 4px;"><i class="fas fa-users"></i> ${this._escapeHTML(areasTexto)}</div>` : ''}
                             <div style="font-size: 11px; color: #666;">${this._escapeHTML(notifUI.tiempoRelativo)}</div>
                         </div>
                         ${!notifUI.leida ? '<div style="width: 8px; height: 8px; border-radius: 50%; background-color: #007bff;"></div>' : ''}
@@ -254,7 +280,7 @@ class NavbarComplete {
             Swal.fire({
                 title: 'Todas las Notificaciones',
                 html: notificacionesHtml,
-                width: '500px',
+                width: '550px',
                 background: '#1a1a1a',
                 color: '#fff',
                 confirmButtonText: 'Cerrar',
@@ -323,6 +349,16 @@ class NavbarComplete {
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
             
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Listo!',
+                    text: 'Todas las notificaciones marcadas como leídas',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+            
         } catch (error) {
             console.error('Error marcando todas como leídas:', error);
         }
@@ -340,7 +376,7 @@ class NavbarComplete {
             this.dropdownNotificacionesAbierto = !this.dropdownNotificacionesAbierto;
             notificacionesDropdown.classList.toggle('active', this.dropdownNotificacionesAbierto);
             
-            if (this.dropdownNotificacionesAbierto && this.notificacionesNoLeidas > 0) {
+            if (this.dropdownNotificacionesAbierto) {
                 this._cargarNotificaciones();
             }
         });
@@ -553,7 +589,7 @@ class NavbarComplete {
                 position: absolute;
                 top: 100%;
                 right: 0;
-                width: 350px;
+                width: 380px;
                 background-color: var(--color-bg-primary);
                 border-radius: var(--border-radius-medium);
                 box-shadow: 0 5px 20px rgba(0,0,0,0.2);
@@ -598,7 +634,7 @@ class NavbarComplete {
             }
             
             .notificaciones-lista {
-                max-height: 400px;
+                max-height: 450px;
                 overflow-y: auto;
                 padding: 10px;
             }
@@ -716,6 +752,7 @@ class NavbarComplete {
                 text-decoration: none;
                 font-size: 13px;
                 font-weight: 500;
+                cursor: pointer;
             }
             
             .notificaciones-footer a:hover, .notificaciones-ver-mas a:hover {
@@ -1157,7 +1194,7 @@ class NavbarComplete {
                 }
                 
                 .notificaciones-dropdown {
-                    width: 300px;
+                    width: 340px;
                     right: -50px;
                 }
             }
@@ -1254,7 +1291,7 @@ class NavbarComplete {
                 }
                 
                 .notificaciones-dropdown {
-                    width: 280px;
+                    width: 320px;
                     right: -70px;
                 }
             }
@@ -1306,7 +1343,7 @@ class NavbarComplete {
                 }
                 
                 .notificaciones-dropdown {
-                    width: 260px;
+                    width: 280px;
                     right: -80px;
                 }
             }
@@ -1372,7 +1409,7 @@ class NavbarComplete {
                         </button>
                         <div class="notificaciones-dropdown" id="notificacionesDropdown">
                             <div class="notificaciones-header">
-                                <h3>Notificaciones</h3>
+                                <h3><i class="fas fa-bell"></i> Notificaciones</h3>
                                 <button class="notificaciones-marcar-todas" id="marcarTodasBtn">
                                     <i class="fas fa-check-double"></i> Marcar todas
                                 </button>
@@ -1654,6 +1691,16 @@ class NavbarComplete {
 
                     this.updateNavbarWithAdminData();
                     this.updateLocalStorageFromFirebase(firebaseUser);
+                    
+                    // Actualizar notificacionManager con el usuario actualizado
+                    if (this.notificacionManager) {
+                        this.notificacionManager.usuarioActual = {
+                            ...this.notificacionManager.usuarioActual,
+                            ...this.currentAdmin,
+                            esAdmin: true,
+                            rol: 'administrador'
+                        };
+                    }
                 }
             }
 

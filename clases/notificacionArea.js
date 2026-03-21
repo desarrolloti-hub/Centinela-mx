@@ -1,4 +1,4 @@
-// notificacionArea.js - VERSIÓN CORREGIDA Y OPTIMIZADA
+// notificacionArea.js - VERSIÓN QUE ELIMINA NOTIFICACIONES DESPUÉS DE VERLAS
 
 import {
     collection,
@@ -14,7 +14,8 @@ import {
     serverTimestamp,
     increment,
     writeBatch,
-    deleteDoc
+    deleteDoc,
+    arrayRemove
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
@@ -157,7 +158,8 @@ class NotificacionAreaManager {
                     uid: userData.id,
                     nombreCompleto: userData.nombreCompleto || 'Usuario',
                     correo: userData.email || userData.correo || '',
-                    organizacionCamelCase: userData.organizacionCamelCase || ''
+                    organizacionCamelCase: userData.organizacionCamelCase || '',
+                    rol: (userData.rol || '').toLowerCase()
                 };
             }
         } catch (error) {
@@ -204,7 +206,8 @@ class NotificacionAreaManager {
                     nombreCompleto: data.nombreCompleto || 'Usuario',
                     correo: data.correoElectronico || '',
                     dispositivos: data.dispositivos || [],
-                    areaAsignadaId: data.areaAsignadaId
+                    areaAsignadaId: data.areaAsignadaId,
+                    esAdmin: false
                 });
             });
 
@@ -250,6 +253,59 @@ class NotificacionAreaManager {
             return [];
         }
     }
+    
+    /**
+     * Obtener TODOS los administradores de la organización
+     * Busca en la colección GLOBAL 'administradores' (sin camel case)
+     */
+    async _getAdministradores(organizacionCamelCase) {
+        try {
+            const adminRef = collection(db, 'administradores');
+            
+            const q = query(
+                adminRef,
+                where("status", "==", true)
+            );
+            
+            await consumo.registrarFirestoreLectura('administradores', 'obtener_administradores');
+            
+            const snapshot = await getDocs(q);
+            const administradores = [];
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const adminOrgCamelCase = data.organizacionCamelCase || this._generarCamelCase(data.organizacion);
+                
+                if (adminOrgCamelCase === organizacionCamelCase) {
+                    administradores.push({
+                        id: doc.id,
+                        nombreCompleto: data.nombreCompleto || 'Administrador',
+                        correo: data.correoElectronico || data.email || '',
+                        dispositivos: data.dispositivos || [],
+                        esAdmin: true,
+                        rol: 'administrador'
+                    });
+                }
+            });
+            
+            console.log(`📋 Encontrados ${administradores.length} administradores para ${organizacionCamelCase}`);
+            return administradores;
+            
+        } catch (error) {
+            console.error('Error obteniendo administradores:', error);
+            return [];
+        }
+    }
+    
+    _generarCamelCase(texto) {
+        if (!texto || typeof texto !== 'string') return '';
+        return texto
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+(.)/g, (match, chr) => chr.toUpperCase())
+            .replace(/[^a-zA-Z0-9]/g, '');
+    }
 
     async _enviarNotificacionesPush(usuarios, notificacionData) {
         try {
@@ -265,7 +321,7 @@ class NotificacionAreaManager {
 
                     const payload = {
                         userId: usuario.id,
-                        userType: 'colaborador',
+                        userType: usuario.esAdmin ? 'administrador' : 'colaborador',
                         organizacionCamelCase: notificacionData.organizacionCamelCase,
                         title: notificacionData.titulo,
                         body: notificacionData.mensaje,
@@ -375,7 +431,25 @@ class NotificacionAreaManager {
             }
 
             const areasIds = areas.map(a => a.id);
-            const usuarios = await this._getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase);
+            
+            const colaboradores = await this._getUsuariosPorMultiplesAreas(areasIds, organizacionCamelCase);
+            console.log(`👥 Colaboradores encontrados: ${colaboradores.length}`);
+            
+            const administradores = await this._getAdministradores(organizacionCamelCase);
+            console.log(`👑 Administradores encontrados: ${administradores.length}`);
+            
+            const todosDestinatarios = [...colaboradores, ...administradores];
+            const idsUnicos = new Set();
+            const destinatariosUnicos = [];
+            
+            for (const destinatario of todosDestinatarios) {
+                if (!idsUnicos.has(destinatario.id)) {
+                    idsUnicos.add(destinatario.id);
+                    destinatariosUnicos.push(destinatario);
+                }
+            }
+            
+            console.log(`📬 Total destinatarios únicos: ${destinatariosUnicos.length}`);
 
             const titulo = this._generarTitulo(tipo, areas, nivelRiesgo);
             let mensaje = mensajePersonalizado;
@@ -412,7 +486,8 @@ class NotificacionAreaManager {
                 areasDestino: areas.map(a => ({ id: a.id, nombre: a.nombre })),
                 areasIds: areasIds,
                 
-                totalUsuarios: usuarios.length,
+                totalUsuarios: colaboradores.length,
+                totalAdministradores: administradores.length,
                 leidas: 0,
                 
                 detalles: detalles,
@@ -427,24 +502,27 @@ class NotificacionAreaManager {
             await consumo.registrarFirestoreEscritura(collectionName, notificacionId);
             await setDoc(notificacionRef, notificacionData);
 
-            if (usuarios.length > 0) {
-                await this._crearIndicesUsuarios(notificacionId, usuarios, organizacionCamelCase);
+            if (destinatariosUnicos.length > 0) {
+                await this._crearIndicesUsuarios(notificacionId, destinatariosUnicos, organizacionCamelCase);
             }
 
             let pushResult = null;
-            if (enviarPush && usuarios.length > 0) {
-                pushResult = await this._enviarNotificacionesPush(usuarios, notificacionData);
+            if (enviarPush && destinatariosUnicos.length > 0) {
+                pushResult = await this._enviarNotificacionesPush(destinatariosUnicos, notificacionData);
             }
 
             return {
                 success: true,
                 notificacionId: notificacionId,
-                totalUsuarios: usuarios.length,
+                totalColaboradores: colaboradores.length,
+                totalAdministradores: administradores.length,
+                totalDestinatarios: destinatariosUnicos.length,
                 areas: areas.length,
                 push: pushResult
             };
 
         } catch (error) {
+            console.error('Error en notificarMultiplesAreas:', error);
             return { success: false, error: error.message };
         }
     }
@@ -514,7 +592,120 @@ class NotificacionAreaManager {
             }
 
         } catch (error) {
-            // Error silencioso
+            console.error('Error creando índices de usuarios:', error);
+        }
+    }
+
+    /**
+     * Marcar una notificación como leída Y ELIMINARLA de la lista del usuario
+     */
+    async marcarComoLeida(usuarioId, notificacionId, organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase || !usuarioId || !notificacionId) return false;
+
+            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
+            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+
+            const userNotifSnap = await getDoc(userNotifRef);
+            
+            if (!userNotifSnap.exists()) {
+                return false;
+            }
+            
+            const userData = userNotifSnap.data();
+            const notificacionesMap = userData.notificaciones || {};
+            const notificacionActual = notificacionesMap[notificacionId];
+            
+            // Si ya está leída o no existe, retornar true
+            if (!notificacionActual || notificacionActual.leida === true) {
+                return true;
+            }
+            
+            // ELIMINAR la notificación del mapa de notificaciones del usuario
+            // en lugar de solo marcarla como leída
+            const updatedNotificaciones = { ...notificacionesMap };
+            delete updatedNotificaciones[notificacionId];
+            
+            // Actualizar totalPendientes
+            const totalPendientes = (userData.totalPendientes || 0) - 1;
+            
+            // Actualizar en Firestore
+            await updateDoc(userNotifRef, {
+                notificaciones: updatedNotificaciones,
+                totalPendientes: totalPendientes >= 0 ? totalPendientes : 0,
+                ultimaActualizacion: serverTimestamp()
+            });
+
+            // Actualizar contador global de la notificación (leidas)
+            try {
+                const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+                const notificacionRef = doc(db, notificacionesCollectionName, notificacionId);
+                await updateDoc(notificacionRef, {
+                    leidas: increment(1)
+                });
+            } catch (error) {
+                // Error silencioso
+            }
+
+            return true;
+
+        } catch (error) {
+            console.error('Error marcando notificación como leída:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Marcar TODAS las notificaciones como leídas Y ELIMINARLAS de la lista del usuario
+     */
+    async marcarTodasComoLeidas(usuarioId, organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase || !usuarioId) return false;
+
+            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
+            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+            
+            const userNotifSnap = await getDoc(userNotifRef);
+
+            if (!userNotifSnap.exists()) {
+                return false;
+            }
+
+            const userData = userNotifSnap.data();
+            const notificacionesMap = userData.notificaciones || {};
+            
+            // Obtener IDs de notificaciones no leídas
+            const noLeidasIds = Object.keys(notificacionesMap).filter(id => !notificacionesMap[id].leida);
+            
+            if (noLeidasIds.length === 0) {
+                return true;
+            }
+            
+            // ELIMINAR todas las notificaciones del usuario
+            await updateDoc(userNotifRef, {
+                notificaciones: {},
+                totalPendientes: 0,
+                ultimaActualizacion: serverTimestamp()
+            });
+
+            // Actualizar contadores globales
+            const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
+            for (const notifId of noLeidasIds) {
+                try {
+                    const notifRef = doc(db, notificacionesCollectionName, notifId);
+                    await updateDoc(notifRef, {
+                        leidas: increment(1)
+                    });
+                } catch (e) {
+                    // Error silencioso
+                }
+            }
+
+            return true;
+
+        } catch (error) {
+            console.error('Error marcando todas como leídas:', error);
+            return false;
         }
     }
 
@@ -587,7 +778,59 @@ class NotificacionAreaManager {
             return notificaciones;
 
         } catch (error) {
+            console.error('Error obteniendo notificaciones:', error);
             return [];
+        }
+    }
+
+    async obtenerConteoNoLeidas(usuarioId, organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase || !usuarioId) return 0;
+
+            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
+            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+            
+            const userNotifSnap = await getDoc(userNotifRef);
+
+            if (!userNotifSnap.exists()) {
+                return 0;
+            }
+
+            const userData = userNotifSnap.data();
+            const totalPendientes = userData.totalPendientes || 0;
+            
+            // Si el contador está desincronizado, recalcular
+            if (totalPendientes < 0) {
+                const notificaciones = userData.notificaciones || {};
+                const noLeidasReales = Object.values(notificaciones).filter(n => !n.leida).length;
+                
+                await updateDoc(userNotifRef, {
+                    totalPendientes: noLeidasReales
+                });
+                
+                return noLeidasReales;
+            }
+            
+            return totalPendientes;
+
+        } catch (error) {
+            return 0;
+        }
+    }
+
+    async limpiarNotificacionesUsuario(usuarioId, organizacionCamelCase) {
+        try {
+            if (!organizacionCamelCase || !usuarioId) return false;
+
+            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
+            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
+            
+            await deleteDoc(userNotifRef);
+            
+            return true;
+
+        } catch (error) {
+            return false;
         }
     }
 
@@ -617,158 +860,6 @@ class NotificacionAreaManager {
 
         } catch (error) {
             return [];
-        }
-    }
-
-    async obtenerConteoNoLeidas(usuarioId, organizacionCamelCase) {
-        try {
-            if (!organizacionCamelCase || !usuarioId) return 0;
-
-            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
-            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
-            
-            const userNotifSnap = await getDoc(userNotifRef);
-
-            if (!userNotifSnap.exists()) {
-                return 0;
-            }
-
-            const userData = userNotifSnap.data();
-            const totalPendientes = userData.totalPendientes || 0;
-            
-            if (totalPendientes < 0) {
-                const notificaciones = userData.notificaciones || {};
-                const noLeidasReales = Object.values(notificaciones).filter(n => !n.leida).length;
-                
-                await updateDoc(userNotifRef, {
-                    totalPendientes: noLeidasReales
-                });
-                
-                return noLeidasReales;
-            }
-            
-            return totalPendientes;
-
-        } catch (error) {
-            return 0;
-        }
-    }
-
-    async marcarComoLeida(usuarioId, notificacionId, organizacionCamelCase) {
-        try {
-            if (!organizacionCamelCase || !usuarioId || !notificacionId) return false;
-
-            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
-            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
-
-            const userNotifSnap = await getDoc(userNotifRef);
-            
-            if (!userNotifSnap.exists()) {
-                return false;
-            }
-            
-            const userData = userNotifSnap.data();
-            const notificacionesMap = userData.notificaciones || {};
-            const notificacionActual = notificacionesMap[notificacionId];
-            
-            if (notificacionActual && notificacionActual.leida === true) {
-                return true;
-            }
-            
-            let totalPendientes = userData.totalPendientes || 0;
-            
-            if (totalPendientes < 0) {
-                const noLeidasReales = Object.values(notificacionesMap).filter(n => !n.leida).length;
-                totalPendientes = noLeidasReales;
-                
-                await updateDoc(userNotifRef, {
-                    totalPendientes: totalPendientes
-                });
-            }
-            
-            if (totalPendientes > 0) {
-                await updateDoc(userNotifRef, {
-                    [`notificaciones.${notificacionId}.leida`]: true,
-                    [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp(),
-                    totalPendientes: increment(-1)
-                });
-            } else {
-                await updateDoc(userNotifRef, {
-                    [`notificaciones.${notificacionId}.leida`]: true,
-                    [`notificaciones.${notificacionId}.fechaLectura`]: serverTimestamp()
-                });
-            }
-
-            try {
-                const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
-                const notificacionRef = doc(db, notificacionesCollectionName, notificacionId);
-                await updateDoc(notificacionRef, {
-                    leidas: increment(1)
-                });
-            } catch (error) {
-                // Error silencioso
-            }
-
-            return true;
-
-        } catch (error) {
-            return false;
-        }
-    }
-
-    async marcarTodasComoLeidas(usuarioId, organizacionCamelCase) {
-        try {
-            if (!organizacionCamelCase || !usuarioId) return false;
-
-            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
-            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
-            
-            const userNotifSnap = await getDoc(userNotifRef);
-
-            if (!userNotifSnap.exists()) {
-                return false;
-            }
-
-            const userData = userNotifSnap.data();
-            const notificaciones = userData.notificaciones || {};
-            
-            const noLeidasIds = Object.keys(notificaciones).filter(id => !notificaciones[id].leida);
-            
-            if (noLeidasIds.length === 0) {
-                return true;
-            }
-            
-            const batch = writeBatch(db);
-            
-            noLeidasIds.forEach(notifId => {
-                batch.update(userNotifRef, {
-                    [`notificaciones.${notifId}.leida`]: true,
-                    [`notificaciones.${notifId}.fechaLectura`]: serverTimestamp()
-                });
-            });
-
-            batch.update(userNotifRef, {
-                totalPendientes: 0
-            });
-
-            await batch.commit();
-
-            const notificacionesCollectionName = this._getCollectionName(organizacionCamelCase);
-            for (const notifId of noLeidasIds) {
-                try {
-                    const notifRef = doc(db, notificacionesCollectionName, notifId);
-                    await updateDoc(notifRef, {
-                        leidas: increment(1)
-                    });
-                } catch (e) {
-                    // Error silencioso
-                }
-            }
-
-            return true;
-
-        } catch (error) {
-            return false;
         }
     }
 
@@ -803,22 +894,6 @@ class NotificacionAreaManager {
 
         } catch (error) {
             return { success: false, error: error.message };
-        }
-    }
-
-    async limpiarNotificacionesUsuario(usuarioId, organizacionCamelCase) {
-        try {
-            if (!organizacionCamelCase || !usuarioId) return false;
-
-            const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
-            const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
-            
-            await deleteDoc(userNotifRef);
-            
-            return true;
-
-        } catch (error) {
-            return false;
         }
     }
 
