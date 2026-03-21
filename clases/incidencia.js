@@ -1,5 +1,5 @@
-// incidencia.js - SOLO LA CLASE, SIN LÓGICA DE GENERACIÓN DE PDF
-// VERSIÓN COMPLETA CON REGISTRO DE CONSUMO (FIRESTORE + STORAGE)
+// incidencia.js - CLASE COMPLETA CON PAGINACIÓN
+// SIN IMPORTACIONES DUPLICADAS, TODO CENTRALIZADO AQUÍ
 
 import {
     collection,
@@ -12,6 +12,9 @@ import {
     query,
     where,
     orderBy,
+    limit,
+    startAfter,
+    getCountFromServer,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
@@ -25,7 +28,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js";
 
 import { db, storage } from '/config/firebase-config.js';
-// [MODIFICACIÓN]: Importar la instancia de consumo
 import consumo from '/clases/consumoFirebase.js';
 
 class Incidencia {
@@ -47,11 +49,9 @@ class Incidencia {
             this.seguimiento = JSON.parse(JSON.stringify(data.seguimiento));
         }
 
-        // === NUEVOS CAMPOS PARA CANALIZACIÓN ===
-        this.canalizaciones = data.canalizaciones || {}; // Objeto con áreas destino
-        this.canalizacionActiva = data.canalizacionActiva || null; // ID del área actualmente activa
-        this.esMultiCanalizada = data.esMultiCanalizada || false; // Si fue canalizada a múltiples áreas
-        // ========================================
+        this.canalizaciones = data.canalizaciones || {};
+        this.canalizacionActiva = data.canalizacionActiva || null;
+        this.esMultiCanalizada = data.esMultiCanalizada || false;
 
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
@@ -89,19 +89,6 @@ class Incidencia {
         }
     }
 
-    // =============================================
-    // NUEVOS MÉTODOS PARA GESTIONAR CANALIZACIONES
-    // =============================================
-
-    /**
-     * Agrega una canalización a un área específica
-     * @param {string} areaId - ID del área destino
-     * @param {string} areaNombre - Nombre del área destino
-     * @param {string} usuarioId - ID del usuario que canaliza
-     * @param {string} usuarioNombre - Nombre del usuario que canaliza
-     * @param {string} motivo - Motivo de la canalización
-     * @returns {string} - ID de la canalización
-     */
     agregarCanalizacion(areaId, areaNombre, usuarioId, usuarioNombre, motivo = '') {
         const canalizacionId = `CAN${Date.now()}_${areaId.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
@@ -116,16 +103,14 @@ class Incidencia {
             canalizadoPorNombre: usuarioNombre,
             motivo: motivo || 'Atención requerida',
             fechaCanalizacion: new Date(),
-            estado: 'pendiente', // pendiente, recibida, finalizada
+            estado: 'pendiente',
             seguimientos: []
         };
 
-        // Si no hay canalización activa, establecer esta como activa
         if (!this.canalizacionActiva) {
             this.canalizacionActiva = areaId;
         }
 
-        // Marcar como multi-canalizada si hay más de una
         const totalCanalizaciones = Object.keys(this.canalizaciones).length;
         if (totalCanalizaciones > 1) {
             this.esMultiCanalizada = true;
@@ -134,13 +119,6 @@ class Incidencia {
         return canalizacionId;
     }
 
-    /**
-     * Agrega múltiples canalizaciones a la vez
-     * @param {Array} areas - Array de objetos {areaId, areaNombre, motivo}
-     * @param {string} usuarioId - ID del usuario que canaliza
-     * @param {string} usuarioNombre - Nombre del usuario que canaliza
-     * @returns {Array} - Array de IDs de canalizaciones creadas
-     */
     agregarMultiplesCanalizaciones(areas, usuarioId, usuarioNombre) {
         if (!areas || areas.length === 0) return [];
 
@@ -162,10 +140,6 @@ class Incidencia {
         return idsCreados;
     }
 
-    /**
-     * Obtiene todas las canalizaciones como array
-     * @returns {Array} - Array de canalizaciones
-     */
     getCanalizacionesArray() {
         const canalizacionesArray = [];
         if (this.canalizaciones) {
@@ -176,7 +150,6 @@ class Incidencia {
                 });
             });
 
-            // Ordenar por fecha (más reciente primero)
             canalizacionesArray.sort((a, b) => {
                 const fechaA = a.fechaCanalizacion ? new Date(a.fechaCanalizacion) : 0;
                 const fechaB = b.fechaCanalizacion ? new Date(b.fechaCanalizacion) : 0;
@@ -186,21 +159,11 @@ class Incidencia {
         return canalizacionesArray;
     }
 
-    /**
-     * Verifica si la incidencia está canalizada a un área específica
-     * @param {string} areaId - ID del área a verificar
-     * @returns {boolean} - True si está canalizada a esa área
-     */
     estaCanalizadaA(areaId) {
         if (!this.canalizaciones) return false;
-
         return Object.values(this.canalizaciones).some(c => c.areaId === areaId);
     }
 
-    /**
-     * Obtiene las áreas a las que está canalizada la incidencia
-     * @returns {Array} - Array de objetos {areaId, areaNombre, estado}
-     */
     getAreasCanalizadas() {
         const areas = [];
         if (this.canalizaciones) {
@@ -216,12 +179,6 @@ class Incidencia {
         return areas;
     }
 
-    /**
-     * Actualiza el estado de una canalización
-     * @param {string} areaId - ID del área
-     * @param {string} nuevoEstado - Nuevo estado (recibida, finalizada, etc.)
-     * @returns {boolean} - True si se actualizó correctamente
-     */
     actualizarEstadoCanalizacion(areaId, nuevoEstado) {
         if (!this.canalizaciones) return false;
 
@@ -231,7 +188,6 @@ class Incidencia {
             if (this.canalizaciones[id].areaId === areaId) {
                 this.canalizaciones[id].estado = nuevoEstado;
 
-                // Si el estado es "recibida", activar esta área si no hay otra activa
                 if (nuevoEstado === 'recibida' && !this.canalizacionActiva) {
                     this.canalizacionActiva = areaId;
                 }
@@ -242,10 +198,6 @@ class Incidencia {
 
         return actualizado;
     }
-
-    // =============================================
-    // MÉTODOS EXISTENTES (SIN MODIFICACIONES)
-    // =============================================
 
     getRutaStorageBase() {
         return `incidencias_${this.organizacionCamelCase}/${this.id}`;
@@ -369,7 +321,6 @@ class Incidencia {
             imagenes: this.imagenes,
             pdfUrl: this.pdfUrl,
             seguimiento: this.seguimiento,
-            // Nuevos campos de canalización
             canalizaciones: this.canalizaciones,
             canalizacionActiva: this.canalizacionActiva,
             esMultiCanalizada: this.esMultiCanalizada,
@@ -403,7 +354,6 @@ class Incidencia {
             pdfUrl: this.pdfUrl,
             totalSeguimientos: this.getSeguimientosArray().length,
             ultimoSeguimiento: this.getUltimoSeguimiento(),
-            // Nuevos campos de canalización para UI
             canalizaciones: this.getCanalizacionesArray(),
             totalCanalizaciones: this.getCanalizacionesArray().length,
             areasCanalizadas: this.getAreasCanalizadas(),
@@ -446,6 +396,187 @@ class IncidenciaManager {
         return `INC-${fecha}-${hora}`;
     }
 
+    _construirConstraints(filtros = {}) {
+        const constraints = [];
+        
+        constraints.push(orderBy("fechaCreacion", "desc"));
+        
+        if (filtros.estado && filtros.estado !== 'todos') {
+            constraints.push(where("estado", "==", filtros.estado));
+        }
+        
+        if (filtros.sucursalId && filtros.sucursalId !== 'todos') {
+            constraints.push(where("sucursalId", "==", filtros.sucursalId));
+        }
+        
+        if (filtros.nivelRiesgo && filtros.nivelRiesgo !== 'todos') {
+            constraints.push(where("nivelRiesgo", "==", filtros.nivelRiesgo));
+        }
+        
+        if (filtros.categoriaId && filtros.categoriaId !== 'todos') {
+            constraints.push(where("categoriaId", "==", filtros.categoriaId));
+        }
+        
+        return constraints;
+    }
+
+    async contarTotalIncidencias(organizacionCamelCase, filtros = {}) {
+        try {
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const incidenciasCollection = collection(db, collectionName);
+            
+            const constraints = this._construirConstraints(filtros);
+            const constraintsSinOrder = constraints.filter(c => c.type !== 'orderBy');
+            
+            const q = query(incidenciasCollection, ...constraintsSinOrder);
+            
+            await consumo.registrarFirestoreLectura(collectionName, 'conteo incidencias');
+            const snapshot = await getCountFromServer(q);
+            
+            return snapshot.data().count;
+        } catch (error) {
+            console.error('Error contando incidencias:', error);
+            return 0;
+        }
+    }
+
+    async getIncidenciasPaginadas(organizacionCamelCase, filtros = {}, pagina = 1, itemsPorPagina = 10, cursores = null) {
+        try {
+            if (!organizacionCamelCase) {
+                throw new Error('Organización no especificada');
+            }
+
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const incidenciasCollection = collection(db, collectionName);
+            
+            let constraints = this._construirConstraints(filtros);
+            
+            if (pagina > 1 && cursores?.ultimoDocumento) {
+                constraints.push(startAfter(cursores.ultimoDocumento));
+            }
+            
+            constraints.push(limit(itemsPorPagina));
+            
+            const q = query(incidenciasCollection, ...constraints);
+            
+            await consumo.registrarFirestoreLectura(collectionName, `página ${pagina}`);
+            const snapshot = await getDocs(q);
+            
+            const incidencias = [];
+            let ultimoDoc = null;
+            let primerDoc = null;
+            
+            if (!snapshot.empty) {
+                ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
+                primerDoc = snapshot.docs[0];
+                
+                snapshot.forEach(doc => {
+                    try {
+                        const data = doc.data();
+                        const incidencia = new Incidencia(doc.id, {
+                            ...data,
+                            id: doc.id,
+                            fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
+                            fechaInicio: data.fechaInicio?.toDate?.() || data.fechaInicio,
+                            fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
+                        });
+                        incidencias.push(incidencia);
+                    } catch (error) {
+                        console.error('Error procesando incidencia:', error);
+                    }
+                });
+            }
+            
+            const total = await this.contarTotalIncidencias(organizacionCamelCase, filtros);
+            
+            return {
+                incidencias,
+                total,
+                paginaActual: pagina,
+                totalPaginas: Math.ceil(total / itemsPorPagina),
+                ultimoDocumento: ultimoDoc,
+                primerDocumento: primerDoc,
+                tieneMas: snapshot.docs.length === itemsPorPagina
+            };
+            
+        } catch (error) {
+            console.error('Error obteniendo incidencias paginadas:', error);
+            return {
+                incidencias: [],
+                total: 0,
+                paginaActual: pagina,
+                totalPaginas: 0,
+                ultimoDocumento: null,
+                primerDocumento: null,
+                tieneMas: false
+            };
+        }
+    }
+
+    async getIncidenciasPaginaEspecifica(organizacionCamelCase, filtros = {}, paginaDeseada = 1, itemsPorPagina = 10) {
+        try {
+            if (paginaDeseada === 1) {
+                return await this.getIncidenciasPaginadas(organizacionCamelCase, filtros, 1, itemsPorPagina);
+            }
+            
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const incidenciasCollection = collection(db, collectionName);
+            
+            let constraints = this._construirConstraints(filtros);
+            constraints.push(limit((paginaDeseada - 1) * itemsPorPagina + itemsPorPagina));
+            
+            const q = query(incidenciasCollection, ...constraints);
+            
+            await consumo.registrarFirestoreLectura(collectionName, `página específica ${paginaDeseada}`);
+            const snapshot = await getDocs(q);
+            
+            const startIndex = (paginaDeseada - 1) * itemsPorPagina;
+            const docsPagina = snapshot.docs.slice(startIndex, startIndex + itemsPorPagina);
+            
+            const incidencias = [];
+            docsPagina.forEach(doc => {
+                try {
+                    const data = doc.data();
+                    const incidencia = new Incidencia(doc.id, {
+                        ...data,
+                        id: doc.id,
+                        fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
+                        fechaInicio: data.fechaInicio?.toDate?.() || data.fechaInicio,
+                        fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
+                    });
+                    incidencias.push(incidencia);
+                } catch (error) {
+                    console.error('Error procesando incidencia:', error);
+                }
+            });
+            
+            const total = await this.contarTotalIncidencias(organizacionCamelCase, filtros);
+            const ultimoDoc = docsPagina.length > 0 ? docsPagina[docsPagina.length - 1] : null;
+            
+            return {
+                incidencias,
+                total,
+                paginaActual: paginaDeseada,
+                totalPaginas: Math.ceil(total / itemsPorPagina),
+                ultimoDocumento: ultimoDoc,
+                primerDocumento: docsPagina.length > 0 ? docsPagina[0] : null,
+                tieneMas: docsPagina.length === itemsPorPagina
+            };
+            
+        } catch (error) {
+            console.error('Error obteniendo página específica:', error);
+            return {
+                incidencias: [],
+                total: 0,
+                paginaActual: paginaDeseada,
+                totalPaginas: 0,
+                ultimoDocumento: null,
+                primerDocumento: null,
+                tieneMas: false
+            };
+        }
+    }
+
     async subirArchivo(file, rutaCompleta, onProgress = null) {
         try {
             const storageRef = ref(storage, rutaCompleta);
@@ -465,10 +596,7 @@ class IncidenciaManager {
                         },
                         async () => {
                             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                            
-                            // [NUEVO]: Registrar subida en Storage
                             await consumo.registrarStorageSubida(rutaCompleta, file.name);
-                            
                             resolve({
                                 url: downloadURL,
                                 path: rutaCompleta,
@@ -482,10 +610,7 @@ class IncidenciaManager {
             } else {
                 const snapshot = await uploadBytes(storageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
-                
-                // [NUEVO]: Registrar subida en Storage
                 await consumo.registrarStorageSubida(rutaCompleta, file.name);
-                
                 return {
                     url: downloadURL,
                     path: rutaCompleta,
@@ -504,10 +629,7 @@ class IncidenciaManager {
         try {
             const storageRef = ref(storage, urlODirectorio);
             await deleteObject(storageRef);
-            
-            // [NUEVO]: Registrar eliminación en Storage
             await consumo.registrarStorageEliminacion(urlODirectorio);
-            
             return true;
         } catch (error) {
             console.error('Error eliminando archivo:', error);
@@ -530,10 +652,7 @@ class IncidenciaManager {
             });
 
             await Promise.all(deletePromises);
-            
-            // [NUEVO]: Registrar eliminación de carpeta en Storage
             await consumo.registrarStorageEliminacion(rutaCarpeta);
-            
             return true;
         } catch (error) {
             console.error('Error eliminando carpeta:', error);
@@ -544,9 +663,6 @@ class IncidenciaManager {
         }
     }
 
-    // =============================================
-    // MÉTODO MODIFICADO PARA CREAR INCIDENCIA CON CANALIZACIONES Y REGISTRO DE CONSUMO
-    // =============================================
     async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
             if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
@@ -581,9 +697,6 @@ class IncidenciaManager {
 
             const fechaInicio = data.fechaInicio || new Date();
 
-            // =============================================
-            // NUEVO: Procesar canalizaciones si existen
-            // =============================================
             let canalizaciones = {};
             let canalizacionActiva = null;
             let esMultiCanalizada = false;
@@ -604,7 +717,6 @@ class IncidenciaManager {
                             seguimientos: []
                         };
 
-                        // Establecer la primera como activa
                         if (index === 0) {
                             canalizacionActiva = canal.areaId;
                         }
@@ -627,7 +739,6 @@ class IncidenciaManager {
                 imagenes: imagenesUrls,
                 pdfUrl: '',
                 seguimiento: {},
-                // Nuevos campos de canalización
                 canalizaciones: canalizaciones,
                 canalizacionActiva: canalizacionActiva,
                 esMultiCanalizada: esMultiCanalizada,
@@ -640,7 +751,6 @@ class IncidenciaManager {
                 fechaActualizacion: serverTimestamp()
             };
 
-            // [MODIFICACIÓN]: Registrar ESCRITURA antes de setDoc
             await consumo.registrarFirestoreEscritura(collectionName, incidenciaId);
             await setDoc(incidenciaRef, incidenciaData);
 
@@ -652,7 +762,6 @@ class IncidenciaManager {
 
             this.incidencias.unshift(nuevaIncidencia);
 
-            // Registrar en historial
             const historial = await this._getHistorialManager();
             if (historial) {
                 const totalCanalizaciones = Object.keys(canalizaciones).length;
@@ -695,7 +804,6 @@ class IncidenciaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             
-            // [MODIFICACIÓN]: Registrar LECTURA antes de getDoc
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
 
@@ -737,7 +845,6 @@ class IncidenciaManager {
 
             const incidenciasQuery = query(incidenciasCollection, ...constraints);
             
-            // [MODIFICACIÓN]: Registrar LECTURA antes de getDocs
             await consumo.registrarFirestoreLectura(collectionName, 'lista incidencias');
             const snapshot = await getDocs(incidenciasQuery);
 
@@ -774,15 +881,12 @@ class IncidenciaManager {
         }
     }
 
-    // Método auxiliar para filtrar incidencias por área canalizada
     async getIncidenciasPorAreaCanalizada(organizacionCamelCase, areaId, filtros = {}) {
         try {
             const todasIncidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase, filtros);
 
             return todasIncidencias.filter(inc => {
-                // Verificar si está canalizada al área especificada
                 if (!inc.canalizaciones) return false;
-
                 return Object.values(inc.canalizaciones).some(c => c.areaId === areaId);
             });
 
@@ -801,7 +905,6 @@ class IncidenciaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             
-            // [MODIFICACIÓN]: Registrar LECTURA antes de getDoc
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
 
@@ -821,7 +924,6 @@ class IncidenciaManager {
             delete datosActualizados.organizacionCamelCase;
             delete datosActualizados.fechaCreacion;
 
-            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN antes de updateDoc
             await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
             await updateDoc(incidenciaRef, datosActualizados);
 
@@ -917,7 +1019,6 @@ class IncidenciaManager {
                 [seguimientoId]: nuevoSeguimiento
             };
 
-            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN antes de updateDoc
             await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
             await updateDoc(incidenciaRef, {
                 seguimiento: seguimientoActualizado,
@@ -975,7 +1076,6 @@ class IncidenciaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
 
-            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN antes de updateDoc
             await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
             await updateDoc(incidenciaRef, {
                 estado: 'finalizada',
@@ -1036,7 +1136,6 @@ class IncidenciaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             
-            // [MODIFICACIÓN]: Registrar ELIMINACIÓN antes de deleteDoc
             await consumo.registrarFirestoreEliminacion(collectionName, incidenciaId);
             await deleteDoc(incidenciaRef);
 
@@ -1083,13 +1182,11 @@ class IncidenciaManager {
 
     async getEstadisticas(organizacionCamelCase) {
         try {
-            // [MODIFICACIÓN]: Registrar LECTURA para estadísticas
             const collectionName = this._getCollectionName(organizacionCamelCase);
             await consumo.registrarFirestoreLectura(collectionName, 'estadísticas');
             
             const incidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase);
 
-            // Contar incidencias canalizadas
             const incidenciasCanalizadas = incidencias.filter(i => i.canalizaciones && Object.keys(i.canalizaciones).length > 0);
             const incidenciasMultiCanalizadas = incidencias.filter(i => i.esMultiCanalizada);
 
@@ -1106,7 +1203,6 @@ class IncidenciaManager {
                 conImagenes: incidencias.filter(i => (i.imagenes || []).length > 0).length,
                 totalSeguimientos: incidencias.reduce((acc, i) => acc + i.getSeguimientosArray().length, 0),
                 conPDF: incidencias.filter(i => i.pdfUrl).length,
-                // Nuevas estadísticas de canalización
                 canalizadas: incidenciasCanalizadas.length,
                 multiCanalizadas: incidenciasMultiCanalizadas.length,
                 totalCanalizaciones: incidencias.reduce((acc, i) => acc + (i.canalizaciones ? Object.keys(i.canalizaciones).length : 0), 0)
@@ -1122,7 +1218,6 @@ class IncidenciaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
             
-            // [MODIFICACIÓN]: Registrar LECTURA para verificar existencia
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
             return incidenciaSnap.exists();

@@ -1,25 +1,9 @@
-// incidencias.js - VERSIÓN CON PAGINACIÓN REAL EN FIRESTORE
+// incidencias.js - CONTROLADOR
+// NO IMPORTA FIRESTORE DIRECTAMENTE
 
 import { generadorIPH } from '/components/iph-generator.js';
 import '/components/visualizadorPDF.js';
-
-// =============================================
-// IMPORTAR FIRESTORE DIRECTAMENTE PARA PAGINACIÓN
-// =============================================
-import {
-    collection,
-    query,
-    where,
-    orderBy,
-    limit,
-    startAfter,
-    getDocs,
-    getCountFromServer
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-
-import { db } from '/config/firebase-config.js';
-import { Incidencia } from '/clases/incidencia.js';
-import consumo from '/clases/consumoFirebase.js';
+import { IncidenciaManager } from '/clases/incidencia.js';
 
 // =============================================
 // VARIABLES GLOBALES
@@ -30,16 +14,17 @@ let sucursalesCache = [];
 let categoriasCache = [];
 let subcategoriasCache = [];
 let usuariosCache = [];
-let authToken = null;
 
 // Configuración de paginación REAL
 const ITEMS_POR_PAGINA = 10;
 let paginaActual = 1;
 let totalIncidencias = 0;
 let totalPaginas = 0;
-let ultimoDocumento = null; // Para paginación con cursor
-let primerDocumento = null; // Para paginación hacia atrás
-let incidenciasActuales = []; // Solo las incidencias de la página actual
+let incidenciasActuales = [];
+let cursoresPaginacion = {
+    ultimoDocumento: null,
+    primerDocumento: null
+};
 
 // Filtros activos
 let filtrosActivos = {
@@ -47,9 +32,6 @@ let filtrosActivos = {
     nivelRiesgo: 'todos',
     sucursalId: 'todos'
 };
-
-// Cache de consultas para evitar recargas innecesarias
-let ultimaConsultaHash = '';
 
 // =============================================
 // FUNCIÓN PARA OBTENER USUARIO ACTUAL
@@ -91,67 +73,6 @@ function obtenerUsuarioActual() {
 }
 
 // =============================================
-// GENERAR HASH DE CONSULTA PARA CACHÉ
-// =============================================
-function generarConsultaHash() {
-    return JSON.stringify({
-        estado: filtrosActivos.estado,
-        nivelRiesgo: filtrosActivos.nivelRiesgo,
-        sucursalId: filtrosActivos.sucursalId,
-        pagina: paginaActual
-    });
-}
-
-// =============================================
-// CONSTRUIR CONSTRAINTS DE CONSULTA
-// =============================================
-function construirConstraints() {
-    const constraints = [];
-    
-    // Ordenar por fechaCreacion descendente (SIEMPRE)
-    constraints.push(orderBy("fechaCreacion", "desc"));
-    
-    // Agregar filtros en orden para usar índices
-    if (filtrosActivos.estado !== 'todos') {
-        constraints.push(where("estado", "==", filtrosActivos.estado));
-    }
-    
-    if (filtrosActivos.sucursalId !== 'todos') {
-        constraints.push(where("sucursalId", "==", filtrosActivos.sucursalId));
-    }
-    
-    if (filtrosActivos.nivelRiesgo !== 'todos') {
-        constraints.push(where("nivelRiesgo", "==", filtrosActivos.nivelRiesgo));
-    }
-    
-    return constraints;
-}
-
-// =============================================
-// CONTAR TOTAL DE INCIDENCIAS CON FILTROS
-// =============================================
-async function contarTotalIncidencias() {
-    try {
-        const collectionName = `incidencias_${organizacionActual.camelCase}`;
-        const incidenciasCollection = collection(db, collectionName);
-        
-        const constraints = construirConstraints();
-        
-        // Quitar el orderBy para el conteo (más eficiente)
-        const constraintsSinOrder = constraints.filter(c => c.type !== 'orderBy');
-        
-        const q = query(incidenciasCollection, ...constraintsSinOrder);
-        const snapshot = await getCountFromServer(q);
-        
-        return snapshot.data().count;
-    } catch (error) {
-        console.error('Error contando incidencias:', error);
-        // Fallback: obtener todas (solo si es necesario)
-        return 0;
-    }
-}
-
-// =============================================
 // CARGAR INCIDENCIAS CON PAGINACIÓN REAL
 // =============================================
 async function cargarIncidenciasPagina(pagina) {
@@ -164,7 +85,6 @@ async function cargarIncidenciasPagina(pagina) {
         const tbody = document.getElementById('tablaIncidenciasBody');
         if (!tbody) return;
 
-        // Mostrar loader
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" style="text-align:center; padding:40px;">
@@ -176,28 +96,23 @@ async function cargarIncidenciasPagina(pagina) {
             </tr>
         `;
 
-        const collectionName = `incidencias_${organizacionActual.camelCase}`;
-        const incidenciasCollection = collection(db, collectionName);
+        const resultado = await incidenciaManager.getIncidenciasPaginadas(
+            organizacionActual.camelCase,
+            filtrosActivos,
+            pagina,
+            ITEMS_POR_PAGINA,
+            cursoresPaginacion
+        );
+
+        cursoresPaginacion.ultimoDocumento = resultado.ultimoDocumento;
+        cursoresPaginacion.primerDocumento = resultado.primerDocumento;
         
-        // Construir consulta con filtros
-        let constraints = construirConstraints();
+        incidenciasActuales = resultado.incidencias;
+        totalIncidencias = resultado.total;
+        totalPaginas = resultado.totalPaginas;
+        paginaActual = resultado.paginaActual;
         
-        // Si no es la primera página, usar startAfter
-        if (pagina > 1 && ultimoDocumento) {
-            constraints.push(startAfter(ultimoDocumento));
-        }
-        
-        // Limitar resultados
-        constraints.push(limit(ITEMS_POR_PAGINA));
-        
-        const q = query(incidenciasCollection, ...constraints);
-        
-        // Registrar lectura para estadísticas
-        await consumo.registrarFirestoreLectura(collectionName, `página ${pagina}`);
-        
-        const snapshot = await getDocs(q);
-        
-        if (snapshot.empty && pagina === 1) {
+        if (incidenciasActuales.length === 0 && pagina === 1) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" style="text-align:center; padding:60px 20px;">
@@ -215,43 +130,6 @@ async function cargarIncidenciasPagina(pagina) {
             return;
         }
         
-        // Guardar último documento para la siguiente página
-        if (snapshot.docs.length > 0) {
-            ultimoDocumento = snapshot.docs[snapshot.docs.length - 1];
-            
-            // Si es página 1, guardar primer documento para navegación
-            if (pagina === 1 && snapshot.docs.length > 0) {
-                primerDocumento = snapshot.docs[0];
-            }
-        }
-        
-        // Obtener total de incidencias (solo la primera vez o cuando cambian filtros)
-        const hashActual = generarConsultaHash();
-        if (hashActual !== ultimaConsultaHash) {
-            totalIncidencias = await contarTotalIncidencias();
-            totalPaginas = Math.ceil(totalIncidencias / ITEMS_POR_PAGINA);
-            ultimaConsultaHash = hashActual;
-        }
-        
-        // Convertir a objetos Incidencia
-        incidenciasActuales = [];
-        snapshot.forEach(doc => {
-            try {
-                const data = doc.data();
-                const incidencia = new Incidencia(doc.id, {
-                    ...data,
-                    id: doc.id,
-                    fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
-                    fechaInicio: data.fechaInicio?.toDate?.() || data.fechaInicio,
-                    fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
-                });
-                incidenciasActuales.push(incidencia);
-            } catch (error) {
-                console.error('Error procesando incidencia:', error);
-            }
-        });
-        
-        // Renderizar
         renderizarIncidencias();
         
     } catch (error) {
@@ -259,6 +137,58 @@ async function cargarIncidenciasPagina(pagina) {
         mostrarError('Error al cargar incidencias: ' + error.message);
     }
 }
+
+window.irPagina = async function (pagina) {
+    if (pagina < 1 || pagina > totalPaginas || pagina === paginaActual) return;
+    
+    try {
+        const tbody = document.getElementById('tablaIncidenciasBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:40px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p style="margin-top: 12px;">Cargando página ${pagina}...</p>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        let resultado;
+        
+        if (pagina > paginaActual) {
+            resultado = await incidenciaManager.getIncidenciasPaginadas(
+                organizacionActual.camelCase,
+                filtrosActivos,
+                pagina,
+                ITEMS_POR_PAGINA,
+                cursoresPaginacion
+            );
+        } else {
+            resultado = await incidenciaManager.getIncidenciasPaginaEspecifica(
+                organizacionActual.camelCase,
+                filtrosActivos,
+                pagina,
+                ITEMS_POR_PAGINA
+            );
+        }
+        
+        cursoresPaginacion.ultimoDocumento = resultado.ultimoDocumento;
+        cursoresPaginacion.primerDocumento = resultado.primerDocumento;
+        incidenciasActuales = resultado.incidencias;
+        totalIncidencias = resultado.total;
+        totalPaginas = resultado.totalPaginas;
+        paginaActual = pagina;
+        
+        renderizarIncidencias();
+        
+    } catch (error) {
+        console.error('Error navegando a página:', error);
+        mostrarError('Error al cambiar de página: ' + error.message);
+    }
+};
 
 function renderizarIncidencias() {
     const tbody = document.getElementById('tablaIncidenciasBody');
@@ -296,7 +226,6 @@ function renderizarPaginacion() {
 
     let html = '';
     
-    // Botón anterior
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="irPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
@@ -305,7 +234,6 @@ function renderizarPaginacion() {
         </li>
     `;
     
-    // Mostrar máximo 5 páginas a la vez
     const maxPagesToShow = 5;
     let startPage = Math.max(1, paginaActual - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPaginas, startPage + maxPagesToShow - 1);
@@ -340,7 +268,6 @@ function renderizarPaginacion() {
         `;
     }
     
-    // Botón siguiente
     html += `
         <li class="page-item ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}">
             <button class="page-link" onclick="irPagina(${paginaActual + 1})" ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}>
@@ -352,102 +279,13 @@ function renderizarPaginacion() {
     pagination.innerHTML = html;
 }
 
-window.irPagina = function (pagina) {
-    if (pagina < 1 || pagina > totalPaginas || pagina === paginaActual) return;
-    
-    // Si vamos a una página anterior, necesitamos reiniciar la consulta
-    if (pagina < paginaActual) {
-        // Reiniciar cursor para ir a página anterior (requiere nueva consulta desde inicio)
-        ultimoDocumento = null;
-        paginaActual = pagina;
-        
-        // Para ir a página anterior, cargamos desde el inicio con el nuevo límite
-        cargarDesdeInicioPagina(pagina);
-    } else {
-        paginaActual = pagina;
-        cargarIncidenciasPagina(pagina);
-    }
-};
-
-// Función para cargar una página específica desde el inicio
-async function cargarDesdeInicioPagina(pagina) {
-    try {
-        const tbody = document.getElementById('tablaIncidenciasBody');
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align:center; padding:40px;">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                        <p style="margin-top: 12px;">Cargando página ${pagina}...</p>
-                    </td>
-                </tr>
-            `;
-        }
-        
-        const collectionName = `incidencias_${organizacionActual.camelCase}`;
-        const incidenciasCollection = collection(db, collectionName);
-        
-        let constraints = construirConstraints();
-        constraints.push(limit((pagina - 1) * ITEMS_POR_PAGINA + ITEMS_POR_PAGINA));
-        
-        const q = query(incidenciasCollection, ...constraints);
-        const snapshot = await getDocs(q);
-        
-        if (snapshot.docs.length > 0) {
-            // Obtener los documentos de la página deseada
-            const startIndex = (pagina - 1) * ITEMS_POR_PAGINA;
-            const docsPagina = snapshot.docs.slice(startIndex, startIndex + ITEMS_POR_PAGINA);
-            
-            if (docsPagina.length > 0) {
-                ultimoDocumento = docsPagina[docsPagina.length - 1];
-                
-                incidenciasActuales = [];
-                docsPagina.forEach(doc => {
-                    try {
-                        const data = doc.data();
-                        const incidencia = new Incidencia(doc.id, {
-                            ...data,
-                            id: doc.id,
-                            fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
-                            fechaInicio: data.fechaInicio?.toDate?.() || data.fechaInicio,
-                            fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
-                        });
-                        incidenciasActuales.push(incidencia);
-                    } catch (error) {
-                        console.error('Error procesando incidencia:', error);
-                    }
-                });
-                
-                renderizarIncidencias();
-            } else {
-                // No hay incidencias en esta página
-                cargarIncidenciasPagina(1);
-            }
-        } else {
-            cargarIncidenciasPagina(1);
-        }
-        
-    } catch (error) {
-        console.error('Error cargando página desde inicio:', error);
-        cargarIncidenciasPagina(1);
-    }
-}
-
-// =============================================
-// FUNCIONES DE FILTRADO (re-carga con nuevos filtros)
-// =============================================
 function aplicarFiltros() {
     filtrosActivos.estado = document.getElementById('filtroEstado')?.value || 'todos';
     filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo')?.value || 'todos';
     filtrosActivos.sucursalId = document.getElementById('filtroSucursal')?.value || 'todos';
     
-    // Reiniciar paginación
     paginaActual = 1;
-    ultimoDocumento = null;
-    primerDocumento = null;
-    ultimaConsultaHash = '';
+    cursoresPaginacion = { ultimoDocumento: null, primerDocumento: null };
     
     cargarIncidenciasPagina(1);
 }
@@ -467,18 +305,12 @@ function limpiarFiltros() {
         sucursalId: 'todos'
     };
     
-    // Reiniciar paginación
     paginaActual = 1;
-    ultimoDocumento = null;
-    primerDocumento = null;
-    ultimaConsultaHash = '';
+    cursoresPaginacion = { ultimoDocumento: null, primerDocumento: null };
     
     cargarIncidenciasPagina(1);
 }
 
-// =============================================
-// FUNCIONES DE ACCIÓN
-// =============================================
 window.verDetallesIncidencia = function (incidenciaId, event) {
     event?.stopPropagation();
     window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
@@ -531,9 +363,6 @@ window.generarIPHMultiple = async function () {
     }
 };
 
-// =============================================
-// CARGAR DATOS DE APOYO
-// =============================================
 async function cargarSucursales() {
     try {
         const { SucursalManager } = await import('/clases/sucursal.js');
@@ -625,9 +454,6 @@ async function cargarUsuarios() {
     }
 }
 
-// =============================================
-// FUNCIONES AUXILIARES
-// =============================================
 function obtenerNombreSucursal(sucursalId) {
     if (!sucursalId) return 'No especificada';
     const sucursal = sucursalesCache.find(s => s.id === sucursalId);
@@ -794,27 +620,6 @@ function mostrarErrorInicializacion() {
     }
 }
 
-async function obtenerTokenAuth() {
-    try {
-        if (window.firebase && firebase.auth) {
-            const user = firebase.auth().currentUser;
-            if (user) {
-                authToken = await user.getIdToken();
-            }
-        }
-        if (!authToken) {
-            const token = localStorage.getItem('firebaseToken') ||
-                localStorage.getItem('authToken') ||
-                localStorage.getItem('token');
-            if (token) {
-                authToken = token;
-            }
-        }
-    } catch (error) {
-        authToken = null;
-    }
-}
-
 async function obtenerDatosOrganizacion() {
     try {
         const usuario = obtenerUsuarioActual();
@@ -824,15 +629,6 @@ async function obtenerDatosOrganizacion() {
                 camelCase: usuario.organizacionCamelCase || ''
             };
             console.log('📌 Organización:', organizacionActual);
-            return;
-        }
-
-        if (window.userManager && window.userManager.currentUser) {
-            const user = window.userManager.currentUser;
-            organizacionActual = {
-                nombre: user.organizacion || 'Mi Empresa',
-                camelCase: user.organizacionCamelCase || ''
-            };
             return;
         }
 
@@ -848,19 +644,12 @@ async function obtenerDatosOrganizacion() {
     }
 }
 
-// =============================================
-// INICIALIZACIÓN PRINCIPAL
-// =============================================
 async function inicializarIncidenciaManager() {
     try {
         await obtenerDatosOrganizacion();
-        await obtenerTokenAuth();
 
-        // No necesitamos incidenciaManager para la paginación, solo para operaciones
-        const { IncidenciaManager } = await import('/clases/incidencia.js');
         incidenciaManager = new IncidenciaManager();
 
-        // Cargar datos de apoyo (sucursales, categorías, etc.)
         await Promise.all([
             cargarSucursales().catch(() => { console.warn('Error cargando sucursales'); }),
             cargarCategorias().catch(() => { console.warn('Error cargando categorías'); }),
@@ -868,22 +657,19 @@ async function inicializarIncidenciaManager() {
             cargarUsuarios().catch(() => { console.warn('Error cargando usuarios'); })
         ]);
 
-        // Configurar generador IPH
         if (generadorIPH && typeof generadorIPH.configurar === 'function') {
             generadorIPH.configurar({
                 organizacionActual,
                 sucursalesCache,
                 categoriasCache,
                 subcategoriasCache,
-                usuariosCache,
-                authToken
+                usuariosCache
             });
         }
 
         configurarEventListeners();
         agregarBotonIPHMultiple();
         
-        // Cargar primera página
         await cargarIncidenciasPagina(1);
 
         return true;
@@ -894,9 +680,6 @@ async function inicializarIncidenciaManager() {
     }
 }
 
-// =============================================
-// INICIALIZACIÓN
-// =============================================
 document.addEventListener('DOMContentLoaded', async function () {
     await inicializarIncidenciaManager();
 });
