@@ -623,3 +623,171 @@
         width: 100%;
     }
 }
+/* Agregar al final del archivo CSS existente */
+
+.btn-pdf {
+    padding: 10px 16px;
+    border-radius: var(--border-radius-medium);
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(145deg, #8b0000, #5a0000);
+    border: 1px solid #ff4444;
+    color: white !important;
+}
+
+.btn-pdf:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(145deg, #a00000, #6a0000);
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
+    border-color: #ff6666;
+}
+
+.btn-pdf i {
+    color: white !important;
+}
+
+/* Responsive para el botón PDF */
+@media (max-width: 768px) {
+    .filtro-acciones {
+        flex-direction: column;
+    }
+    
+    .btn-buscar,
+    .btn-limpiar,
+    .btn-pdf {
+        width: 100%;
+        justify-content: center;
+    }
+}
+/* Agregar al final del archivo CSS existente */
+
+/* Botones de acción en fila */
+.btn-group-acciones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn-accion {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--border-radius-small);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(145deg, #030303, #111212);
+    border: 1px solid var(--color-border-light);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.btn-accion:hover {
+    transform: translateY(-2px);
+}
+
+.btn-accion i {
+    font-size: 14px;
+}
+
+.btn-ver:hover {
+    border-color: #00cfff;
+    color: #00cfff;
+    box-shadow: 0 0 10px rgba(0, 207, 255, 0.2);
+}
+
+.btn-inactivar:hover {
+    border-color: #ff4d4d;
+    color: #ff4d4d;
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.2);
+}
+
+.btn-reactivar:hover {
+    border-color: #28a745;
+    color: #28a745;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.2);
+}
+
+.btn-pdf-individual:hover {
+    border-color: #dc3545;
+    color: #dc3545;
+    box-shadow: 0 0 10px rgba(220, 53, 69, 0.2);
+}
+
+/* Botón PDF global */
+.btn-pdf-global {
+    padding: 10px 16px;
+    border-radius: var(--border-radius-medium);
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    background: linear-gradient(145deg, #8b0000, #5a0000);
+    border: 1px solid #ff4444;
+    color: white !important;
+}
+
+.btn-pdf-global:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(145deg, #a00000, #6a0000);
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
+    border-color: #ff6666;
+}
+
+.btn-pdf-global i {
+    color: white !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filtro-acciones {
+        flex-direction: column;
+    }
+    
+    .btn-buscar,
+    .btn-limpiar,
+    .btn-pdf-global {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .btn-group-acciones {
+        justify-content: flex-start;
+    }
+    
+    .btn-accion {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-group-acciones {
+        gap: 6px;
+    }
+    
+    .btn-accion {
+        width: 34px;
+        height: 34px;
+    }
+}
