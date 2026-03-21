@@ -1,5 +1,4 @@
-// operacion.js - VERSIÓN BALANCEADA
-// OBTIENE DATOS COMPLETOS PERO OPTIMIZADA
+// operacion.js - VERSIÓN QUE CUENTA STORAGE CORRECTAMENTE CON REGISTRO DE CONSUMO
 
 import { db, storage } from '/config/firebase-config.js';
 import {
@@ -10,14 +9,16 @@ import {
     setDoc,
     query,
     where,
-    serverTimestamp,
-    limit
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import {
     ref,
     listAll,
     getMetadata
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js";
+
+// [MODIFICACIÓN]: Importar la instancia de consumo
+import consumo from '/clases/consumoFirebase.js';
 
 class Operacion {
     constructor(id, data = {}) {
@@ -74,7 +75,6 @@ class OperacionesManager {
         this.COLECCION = 'operaciones';
         this.cache = new Map();
         this.storageCache = new Map();
-        this.procesando = new Set();
     }
 
     _getDocRef(org) { 
@@ -85,6 +85,10 @@ class OperacionesManager {
         if (this.cache.has(org)) return this.cache.get(org);
         try {
             const docRef = this._getDocRef(org);
+            
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(this.COLECCION, org);
+            
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const op = new Operacion(org, docSnap.data());
@@ -100,6 +104,10 @@ class OperacionesManager {
 
     async _crearOperacionInicial(org) {
         const nuevaOp = new Operacion(org);
+        
+        // [MODIFICACIÓN]: Registrar ESCRITURA
+        await consumo.registrarFirestoreEscritura(this.COLECCION, org);
+        
         await setDoc(this._getDocRef(org), nuevaOp.toFirestore());
         this.cache.set(org, nuevaOp);
         return nuevaOp;
@@ -108,6 +116,10 @@ class OperacionesManager {
     async getOrganizaciones() {
         try {
             const adminsRef = collection(db, "administradores");
+            
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura("administradores", "lista organizaciones");
+            
             const adminsSnapshot = await getDocs(adminsRef);
             const organizaciones = [];
             
@@ -130,16 +142,10 @@ class OperacionesManager {
     }
 
     async recopilarEstadisticas(orgCamelCase) {
-        if (this.procesando.has(orgCamelCase)) {
-            return this.cache.get(orgCamelCase)?.conteos || null;
-        }
-        
-        this.procesando.add(orgCamelCase);
-        
         try {
             const [firestoreStats, storageStats, authStats] = await Promise.all([
                 this._getFirestoreStats(orgCamelCase),
-                this._getStorageStatsOptimizado(orgCamelCase),
+                this._getStorageStats(orgCamelCase),
                 this._getAuthStats(orgCamelCase)
             ]);
             
@@ -154,6 +160,9 @@ class OperacionesManager {
                 coleccionesPersonalizadas: firestoreStats.coleccionesPersonalizadas
             };
 
+            // [MODIFICACIÓN]: Registrar ESCRITURA
+            await consumo.registrarFirestoreEscritura(this.COLECCION, orgCamelCase);
+            
             await setDoc(this._getDocRef(orgCamelCase), { 
                 conteos: nuevosConteos, 
                 fechaActualizacion: serverTimestamp() 
@@ -165,8 +174,6 @@ class OperacionesManager {
         } catch (error) {
             console.error('Error recopilando estadísticas:', error);
             return null;
-        } finally {
-            this.procesando.delete(orgCamelCase);
         }
     }
 
@@ -191,6 +198,10 @@ class OperacionesManager {
             posiblesColecciones.map(async (col) => {
                 try {
                     const coleccionRef = collection(db, col);
+                    
+                    // [MODIFICACIÓN]: Registrar LECTURA para cada colección
+                    await consumo.registrarFirestoreLectura(col, `estadísticas ${orgCamelCase}`);
+                    
                     const snapshot = await getDocs(coleccionRef);
                     return { col, count: snapshot.size, success: true };
                 } catch (error) {
@@ -212,6 +223,10 @@ class OperacionesManager {
                 collection(db, "administradores"),
                 where("organizacionCamelCase", "==", orgCamelCase)
             );
+            
+            // [MODIFICACIÓN]: Registrar LECTURA para administradores
+            await consumo.registrarFirestoreLectura("administradores", `estadísticas ${orgCamelCase}`);
+            
             const adminSnapshot = await getDocs(adminQuery);
             const adminCount = adminSnapshot.size;
             coleccionesPersonalizadas[`administradores_${orgCamelCase}`] = adminCount;
@@ -229,10 +244,11 @@ class OperacionesManager {
     }
 
     /**
-     * VERSIÓN OPTIMIZADA - OBTIENE DATOS COMPLETOS PERO RÁPIDO
-     * Usa procesamiento por lotes y cache
+     * CUENTA ARCHIVOS EN STORAGE - BUSCA EN TODA LA ESTRUCTURA DE incidencias_${orgCamelCase}/
+     * CON CACHE PARA NO RECARGAR SIEMPRE
      */
-    async _getStorageStatsOptimizado(orgCamelCase) {
+    async _getStorageStats(orgCamelCase) {
+        // Usar cache para evitar recargar siempre
         if (this.storageCache.has(orgCamelCase)) {
             return this.storageCache.get(orgCamelCase);
         }
@@ -241,16 +257,16 @@ class OperacionesManager {
             const carpeta = `incidencias_${orgCamelCase}`;
             const carpetaRef = ref(storage, carpeta);
             
-            // Obtener lista de archivos primero (rápido)
-            const archivos = await this._listarArchivosRapido(carpetaRef);
+            console.log(`Buscando archivos en: ${carpeta}`);
             
-            if (archivos.length === 0) {
-                const vacio = this._storageVacio();
-                this.storageCache.set(orgCamelCase, vacio);
-                return vacio;
-            }
+            // [MODIFICACIÓN]: Registrar LECTURA en Storage
+            await consumo.registrarStorageDescarga(carpeta);
             
-            // Procesar metadatos en lotes pequeños para no bloquear
+            // Buscar recursivamente en toda la carpeta
+            const archivos = await this._listarArchivosRecursivamente(carpetaRef);
+            
+            console.log(`Encontrados ${archivos.length} archivos en ${carpeta}`);
+            
             const stats = {
                 total: archivos.length,
                 totalSize: 0,
@@ -260,60 +276,73 @@ class OperacionesManager {
                 multimedia: 0,
                 otros: 0,
                 tamañoPorTipo: {
-                    pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0
+                    pdf: 0,
+                    imagenes: 0,
+                    documentos: 0,
+                    multimedia: 0,
+                    otros: 0
                 }
             };
-            
-            // Procesar en lotes de 20 archivos para no saturar
-            const batchSize = 20;
+
+            // Procesar archivos en lotes para no bloquear
+            const batchSize = 50;
             for (let i = 0; i < archivos.length; i += batchSize) {
                 const batch = archivos.slice(i, i + batchSize);
-                const batchResults = await Promise.all(
-                    batch.map(async (archivo) => {
-                        try {
-                            const metadata = await getMetadata(archivo);
-                            const size = metadata.size;
-                            const tipo = this._clasificarArchivo(metadata.contentType || '', archivo.name);
-                            return { size, tipo };
-                        } catch (error) {
-                            // Si falla, clasificar por extensión
-                            const extension = archivo.name.split('.').pop()?.toLowerCase() || '';
-                            const tipo = this._clasificarPorExtension(extension);
-                            return { size: 0, tipo };
-                        }
-                    })
-                );
-                
-                // Acumular resultados del lote
-                for (const res of batchResults) {
-                    stats.totalSize += res.size;
-                    stats[res.tipo]++;
-                    stats.tamañoPorTipo[res.tipo] += res.size;
-                }
-                
-                // Pequeña pausa para no saturar
-                await new Promise(r => setTimeout(r, 10));
+                await Promise.all(batch.map(async (archivo) => {
+                    try {
+                        // [MODIFICACIÓN]: Registrar LECTURA de metadata en Storage
+                        await consumo.registrarStorageDescarga(archivo.fullPath);
+                        
+                        const metadata = await getMetadata(archivo);
+                        const size = metadata.size;
+                        stats.totalSize += size;
+                        
+                        const tipo = this._clasificarArchivo(metadata.contentType || '', archivo.name);
+                        stats[tipo]++;
+                        stats.tamañoPorTipo[tipo] += size;
+                    } catch (error) {
+                        // Ignorar errores individuales
+                    }
+                }));
             }
             
+            // Guardar en cache
             this.storageCache.set(orgCamelCase, stats);
+            
             return stats;
             
         } catch (error) {
-            const vacio = this._storageVacio();
+            console.log(`No se encontró la carpeta incidencias_${orgCamelCase}`);
+            const vacio = {
+                total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, 
+                multimedia: 0, otros: 0,
+                tamañoPorTipo: { pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 }
+            };
             this.storageCache.set(orgCamelCase, vacio);
             return vacio;
         }
     }
 
-    async _listarArchivosRapido(folderRef) {
+    /**
+     * LISTA TODOS LOS ARCHIVOS RECURSIVAMENTE EN UNA CARPETA
+     */
+    async _listarArchivosRecursivamente(folderRef) {
         const archivos = [];
         try {
+            // [MODIFICACIÓN]: Registrar LECTURA de lista en Storage
+            await consumo.registrarStorageDescarga(folderRef.fullPath);
+            
             const resultado = await listAll(folderRef);
+            
+            // Agregar archivos del nivel actual
             archivos.push(...resultado.items);
+            
+            // Recorrer subcarpetas recursivamente
             for (const subCarpeta of resultado.prefixes) {
-                const subArchivos = await this._listarArchivosRapido(subCarpeta);
+                const subArchivos = await this._listarArchivosRecursivamente(subCarpeta);
                 archivos.push(...subArchivos);
             }
+            
         } catch (error) {
             if (error.code !== 'storage/object-not-found') {
                 console.error('Error listando archivos:', error);
@@ -341,22 +370,6 @@ class OperacionesManager {
         return 'otros';
     }
 
-    _clasificarPorExtension(extension) {
-        if (extension === 'pdf') return 'pdf';
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico'].includes(extension)) return 'imagenes';
-        if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'odt'].includes(extension)) return 'documentos';
-        if (['mp4', 'avi', 'mov', 'mkv', 'mp3', 'wav', 'ogg'].includes(extension)) return 'multimedia';
-        return 'otros';
-    }
-
-    _storageVacio() {
-        return {
-            total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, 
-            multimedia: 0, otros: 0,
-            tamañoPorTipo: { pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 }
-        };
-    }
-
     async _getAuthStats(orgCamelCase) {
         try {
             let usuarios = 0;
@@ -364,6 +377,10 @@ class OperacionesManager {
             
             try {
                 const colabRef = collection(db, `colaboradores_${orgCamelCase}`);
+                
+                // [MODIFICACIÓN]: Registrar LECTURA
+                await consumo.registrarFirestoreLectura(`colaboradores_${orgCamelCase}`, `estadísticas auth ${orgCamelCase}`);
+                
                 const colabSnap = await getDocs(colabRef);
                 usuarios = colabSnap.size;
             } catch (error) {
@@ -375,13 +392,19 @@ class OperacionesManager {
                     collection(db, "administradores"),
                     where("organizacionCamelCase", "==", orgCamelCase)
                 );
+                
+                // [MODIFICACIÓN]: Registrar LECTURA
+                await consumo.registrarFirestoreLectura("administradores", `estadísticas auth ${orgCamelCase}`);
+                
                 const adminSnap = await getDocs(adminQuery);
                 administradores = adminSnap.size;
             } catch (error) {
                 // Ignorar
             }
             
-            return { usuarios, administradores, superAdmin: 0, total: usuarios + administradores };
+            const total = usuarios + administradores;
+            
+            return { usuarios, administradores, superAdmin: 0, total };
             
         } catch (error) {
             return { usuarios: 0, administradores: 0, superAdmin: 0, total: 0 };
@@ -413,6 +436,7 @@ class OperacionesManager {
         }
     }
 
+    // Limpiar cache (útil después de subir nuevos archivos)
     limpiarCacheStorage() {
         this.storageCache.clear();
     }

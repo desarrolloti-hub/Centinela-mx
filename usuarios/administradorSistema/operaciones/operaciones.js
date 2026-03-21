@@ -1,5 +1,5 @@
 // operaciones.js - CONTROLLER CON CARGA DIFERIDA Y ESTIMADO DE TIEMPO
-// GRÁFICA DE DOCUMENTOS POR EMPRESA MEJORADA
+// GRÁFICA DE DOCUMENTOS POR EMPRESA MEJORADA CON RESPONSIVE Y SOPORTE PARA ZOOM
 
 import { operacionesManager } from '/clases/operacion.js';
 
@@ -11,6 +11,9 @@ let charts = {
 };
 let ultimaActualizacion = null;
 let resizeTimeout = null;
+let resizeObserver = null;
+let lastWindowWidth = window.innerWidth;
+let lastWindowHeight = window.innerHeight;
 
 // =============================================
 // FUNCIONES DE UTILIDAD
@@ -29,25 +32,209 @@ function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-// Función para redimensionar gráficas cuando cambia el tamaño de pantalla
-function resizeCharts() {
-    if (charts.tipos) {
-        charts.tipos.resize();
+// Función para ajustar altura de gráfica de barras según cantidad de empresas y zoom
+function ajustarAlturaGraficaBarras(empresasCount) {
+    const canvas = document.getElementById('graficoDocumentosPorEmpresa');
+    const container = canvas?.closest('.card-body');
+    if (!canvas || !container) return;
+    
+    // Obtener altura disponible del contenedor
+    const containerHeight = container.clientHeight;
+    const zoomLevel = window.devicePixelRatio || 1;
+    
+    // Calcular altura basada en cantidad de empresas y zoom
+    const baseHeight = 280;
+    const alturaPorEmpresa = 36;
+    let alturaCalculada = Math.max(baseHeight, Math.min(600, empresasCount * alturaPorEmpresa));
+    
+    // Ajustar por zoom (cuando hay zoom out, la altura debe ser mayor proporcionalmente)
+    if (zoomLevel < 1) {
+        alturaCalculada = alturaCalculada / zoomLevel;
     }
-    if (charts.almacenamientoEmpresas) {
-        charts.almacenamientoEmpresas.resize();
-    }
+    
+    // Limitar altura máxima
+    alturaCalculada = Math.min(alturaCalculada, 550);
+    
+    canvas.style.height = `${alturaCalculada}px`;
+    canvas.style.minHeight = `${Math.min(alturaCalculada, 300)}px`;
+    
+    // Si la gráfica ya existe, redimensionar
     if (charts.documentosEmpresas) {
-        charts.documentosEmpresas.resize();
+        setTimeout(() => {
+            charts.documentosEmpresas.resize();
+            charts.documentosEmpresas.update('none');
+        }, 50);
     }
 }
 
-// Escuchar cambios de tamaño de pantalla
+// Función para redimensionar gráficas cuando cambia el tamaño de pantalla o zoom
+function resizeCharts() {
+    if (!charts) return;
+    
+    try {
+        if (charts.tipos && charts.tipos.resize) {
+            charts.tipos.resize();
+            charts.tipos.update('none');
+        }
+        if (charts.almacenamientoEmpresas && charts.almacenamientoEmpresas.resize) {
+            charts.almacenamientoEmpresas.resize();
+            charts.almacenamientoEmpresas.update('none');
+        }
+        if (charts.documentosEmpresas && charts.documentosEmpresas.resize) {
+            charts.documentosEmpresas.resize();
+            charts.documentosEmpresas.update('none');
+            
+            // Reajustar altura si es necesario
+            if (charts.documentosEmpresas.data && charts.documentosEmpresas.data.labels) {
+                ajustarAlturaGraficaBarras(charts.documentosEmpresas.data.labels.length);
+            }
+        }
+    } catch (error) {
+        console.warn('Error redimensionando gráficas:', error);
+    }
+}
+
+// Función para detectar cambios de zoom (usando resize con detección de cambios significativos)
+function checkZoomChange() {
+    const currentWidth = window.innerWidth;
+    const currentHeight = window.innerHeight;
+    
+    // Si hubo un cambio significativo en tamaño (incluye zoom)
+    if (Math.abs(currentWidth - lastWindowWidth) > 10 || 
+        Math.abs(currentHeight - lastWindowHeight) > 10) {
+        
+        lastWindowWidth = currentWidth;
+        lastWindowHeight = currentHeight;
+        
+        // Forzar redimensionamiento
+        setTimeout(() => {
+            resizeCharts();
+            
+            // Recrear gráficas si es necesario para asegurar proporciones correctas
+            if (charts.documentosEmpresas && charts.documentosEmpresas.data) {
+                const empresas = charts.documentosEmpresas.data.labels;
+                const documentos = charts.documentosEmpresas.data.datasets[0].data;
+                
+                // Recrear con nuevas dimensiones
+                const canvas = document.getElementById('graficoDocumentosPorEmpresa');
+                if (canvas && empresas.length > 0) {
+                    const ctx = canvas.getContext('2d');
+                    charts.documentosEmpresas.destroy();
+                    
+                    const usarHorizontal = window.innerWidth >= 768;
+                    const fontSize = window.innerWidth <= 480 ? 9 : (window.innerWidth <= 768 ? 10 : 11);
+                    
+                    charts.documentosEmpresas = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: empresas,
+                            datasets: [{
+                                label: 'Documentos',
+                                data: documentos,
+                                backgroundColor: '#00cfff',
+                                borderRadius: 6,
+                                barPercentage: usarHorizontal ? 0.7 : 0.8,
+                                categoryPercentage: usarHorizontal ? 0.8 : 0.9
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            indexAxis: usarHorizontal ? 'y' : 'x',
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${formatNumber(context.raw)} documentos`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: { 
+                                    beginAtZero: true, 
+                                    ticks: { 
+                                        color: '#ffffff',
+                                        font: { size: fontSize },
+                                        callback: function(value) {
+                                            return formatNumber(value);
+                                        }
+                                    },
+                                    grid: { color: 'rgba(255,255,255,0.1)' },
+                                    title: {
+                                        display: true,
+                                        text: 'Cantidad de Documentos',
+                                        color: '#ffffff',
+                                        font: { size: fontSize - 1, weight: 'normal' }
+                                    }
+                                },
+                                y: { 
+                                    ticks: { 
+                                        color: '#ffffff', 
+                                        font: { size: fontSize },
+                                        callback: function(value, index) {
+                                            let label = empresas[index] || value;
+                                            const maxLength = window.innerWidth <= 480 ? 12 : (window.innerWidth <= 768 ? 18 : 22);
+                                            if (label.length > maxLength) {
+                                                return label.substring(0, maxLength - 3) + '...';
+                                            }
+                                            return label;
+                                        }
+                                    },
+                                    grid: { display: false }
+                                }
+                            },
+                            layout: {
+                                padding: {
+                                    left: window.innerWidth <= 480 ? 5 : 10,
+                                    right: window.innerWidth <= 480 ? 5 : 10,
+                                    top: 10,
+                                    bottom: 10
+                                }
+                            }
+                        }
+                    });
+                    
+                    ajustarAlturaGraficaBarras(empresas.length);
+                }
+            }
+        }, 100);
+    }
+}
+
+// Escuchar cambios de tamaño de pantalla con debounce mejorado
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => {
-        resizeCharts();
-    }, 250);
+        checkZoomChange();
+    }, 150);
+});
+
+// Usar ResizeObserver para detectar cambios en el contenedor
+if (typeof ResizeObserver !== 'undefined') {
+    const chartContainers = document.querySelectorAll('.card-body');
+    const observer = new ResizeObserver(() => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            resizeCharts();
+        }, 100);
+    });
+    
+    chartContainers.forEach(container => {
+        observer.observe(container);
+    });
+}
+
+// Detectar cambios de zoom (también con wheel + ctrl)
+let zoomTimeout;
+window.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) {
+        clearTimeout(zoomTimeout);
+        zoomTimeout = setTimeout(() => {
+            checkZoomChange();
+        }, 200);
+    }
 });
 
 // =============================================
@@ -91,6 +278,10 @@ function graficoTiposArchivo(storage) {
     const ctx = canvas.getContext('2d');
     if (charts.tipos) charts.tipos.destroy();
     
+    // Ajustar tamaño de fuente según pantalla y zoom
+    const fontSize = window.innerWidth <= 480 ? 9 : (window.innerWidth <= 768 ? 10 : 11);
+    const boxSize = window.innerWidth <= 480 ? 8 : (window.innerWidth <= 768 ? 10 : 12);
+    
     charts.tipos = new Chart(ctx, {
         type: 'pie',
         data: {
@@ -109,7 +300,9 @@ function graficoTiposArchivo(storage) {
                     position: 'bottom', 
                     labels: { 
                         color: '#ffffff',
-                        font: { size: 11 }
+                        font: { size: fontSize },
+                        boxWidth: boxSize,
+                        padding: window.innerWidth <= 480 ? 6 : 8
                     } 
                 },
                 tooltip: {
@@ -142,7 +335,15 @@ function graficoAlmacenamientoPorEmpresa(datosEmpresas) {
     const empresas = datosEmpresas.map(e => e.nombre);
     const tamanios = datosEmpresas.map(e => e.totalSize);
     
-    if (empresas.length === 0) {
+    // Limitar a 8 empresas para no saturar el pie
+    const maxEmpresas = window.innerWidth <= 480 ? 5 : (window.innerWidth <= 768 ? 6 : 8);
+    const mostrarEmpresas = empresas.slice(0, maxEmpresas);
+    const mostrarTamanios = tamanios.slice(0, maxEmpresas);
+    
+    const fontSize = window.innerWidth <= 480 ? 9 : (window.innerWidth <= 768 ? 10 : 11);
+    const boxSize = window.innerWidth <= 480 ? 8 : (window.innerWidth <= 768 ? 10 : 12);
+    
+    if (mostrarEmpresas.length === 0) {
         charts.almacenamientoEmpresas = new Chart(ctx, {
             type: 'pie',
             data: {
@@ -152,7 +353,7 @@ function graficoAlmacenamientoPorEmpresa(datosEmpresas) {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { labels: { color: '#ffffff' } } }
+                plugins: { legend: { labels: { color: '#ffffff', font: { size: fontSize } } } }
             }
         });
         return;
@@ -161,9 +362,9 @@ function graficoAlmacenamientoPorEmpresa(datosEmpresas) {
     charts.almacenamientoEmpresas = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: empresas,
+            labels: mostrarEmpresas,
             datasets: [{
-                data: tamanios,
+                data: mostrarTamanios,
                 backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec489a', '#14b8a6', '#f97316'],
                 borderWidth: 0
             }]
@@ -176,7 +377,9 @@ function graficoAlmacenamientoPorEmpresa(datosEmpresas) {
                     position: 'bottom', 
                     labels: { 
                         color: '#ffffff',
-                        font: { size: 11 }
+                        font: { size: fontSize },
+                        boxWidth: boxSize,
+                        padding: window.innerWidth <= 480 ? 5 : 8
                     } 
                 },
                 tooltip: {
@@ -200,8 +403,7 @@ function graficoAlmacenamientoPorEmpresa(datosEmpresas) {
 }
 
 /**
- * GRÁFICA DE DOCUMENTOS POR EMPRESA - VERSIÓN MEJORADA
- * Usa gráfico de barras HORIZONTAL para mejor visualización de nombres largos
+ * GRÁFICA DE DOCUMENTOS POR EMPRESA - VERSIÓN MEJORADA CON RESPONSIVE Y ZOOM
  */
 function graficoDocumentosPorEmpresa(datosEmpresas) {
     const canvas = document.getElementById('graficoDocumentosPorEmpresa');
@@ -218,6 +420,9 @@ function graficoDocumentosPorEmpresa(datosEmpresas) {
     const empresas = datosMostrar.map(e => e.nombre);
     const documentos = datosMostrar.map(e => e.documentos);
     
+    // Ajustar altura según cantidad de empresas
+    ajustarAlturaGraficaBarras(empresas.length);
+    
     if (empresas.length === 0) {
         charts.documentosEmpresas = new Chart(ctx, {
             type: 'bar',
@@ -230,15 +435,18 @@ function graficoDocumentosPorEmpresa(datosEmpresas) {
                 maintainAspectRatio: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, ticks: { color: '#ffffff' } },
-                    x: { ticks: { color: '#ffffff' } }
+                    x: { beginAtZero: true, ticks: { color: '#ffffff' } },
+                    y: { ticks: { color: '#ffffff' } }
                 }
             }
         });
         return;
     }
     
-    // Usar gráfico de barras HORIZONTAL para mejor legibilidad de nombres
+    // Determinar si usar gráfica horizontal basado en el ancho de pantalla
+    const usarHorizontal = window.innerWidth >= 768;
+    const fontSize = window.innerWidth <= 480 ? 9 : (window.innerWidth <= 768 ? 10 : 11);
+    
     charts.documentosEmpresas = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -248,14 +456,14 @@ function graficoDocumentosPorEmpresa(datosEmpresas) {
                 data: documentos,
                 backgroundColor: '#00cfff',
                 borderRadius: 6,
-                barPercentage: 0.7,
-                categoryPercentage: 0.8
+                barPercentage: usarHorizontal ? 0.7 : 0.8,
+                categoryPercentage: usarHorizontal ? 0.8 : 0.9
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            indexAxis: 'y', // ¡CLAVE! Esto hace que la gráfica sea HORIZONTAL
+            indexAxis: usarHorizontal ? 'y' : 'x',
             plugins: { 
                 legend: { 
                     display: false 
@@ -273,7 +481,7 @@ function graficoDocumentosPorEmpresa(datosEmpresas) {
                     beginAtZero: true, 
                     ticks: { 
                         color: '#ffffff',
-                        font: { size: 11 },
+                        font: { size: fontSize },
                         callback: function(value) {
                             return formatNumber(value);
                         }
@@ -285,18 +493,18 @@ function graficoDocumentosPorEmpresa(datosEmpresas) {
                         display: true,
                         text: 'Cantidad de Documentos',
                         color: '#ffffff',
-                        font: { size: 10, weight: 'normal' }
+                        font: { size: fontSize - 1, weight: 'normal' }
                     }
                 },
                 y: { 
                     ticks: { 
                         color: '#ffffff', 
-                        font: { size: 11 },
-                        // Truncar nombres muy largos
+                        font: { size: fontSize },
                         callback: function(value, index) {
                             let label = empresas[index] || value;
-                            if (label.length > 25) {
-                                return label.substring(0, 22) + '...';
+                            const maxLength = window.innerWidth <= 480 ? 12 : (window.innerWidth <= 768 ? 18 : 22);
+                            if (label.length > maxLength) {
+                                return label.substring(0, maxLength - 3) + '...';
                             }
                             return label;
                         }
@@ -306,18 +514,22 @@ function graficoDocumentosPorEmpresa(datosEmpresas) {
                     }
                 }
             },
-            // Ajustar altura dinámica según cantidad de empresas
-            maintainAspectRatio: true,
-            responsive: true
+            layout: {
+                padding: {
+                    left: window.innerWidth <= 480 ? 5 : 10,
+                    right: window.innerWidth <= 480 ? 5 : 10,
+                    top: 10,
+                    bottom: 10
+                }
+            }
         }
     });
     
-    // Ajustar altura del canvas según cantidad de empresas
-    const canvasHeight = Math.max(250, Math.min(450, empresas.length * 28));
-    canvas.style.height = `${canvasHeight}px`;
-    
     setTimeout(() => {
-        if (charts.documentosEmpresas) charts.documentosEmpresas.resize();
+        if (charts.documentosEmpresas) {
+            charts.documentosEmpresas.resize();
+            charts.documentosEmpresas.update('none');
+        }
     }, 100);
 }
 
@@ -329,7 +541,7 @@ async function tablaOrganizaciones() {
     const tbody = document.getElementById('tablaOrganizacionesBody');
     if (!tbody) return;
     
-    tbody.innerHTML = '发展<td colspan="7" style="text-align:center;"><div class="loading-spinner"></div> Cargando...发展</td></tr>';
+    tbody.innerHTML = '发展<td colspan="7" style="text-align:center;"><div class="loading-spinner"></div> Cargando...发展</tr>';
     
     try {
         const organizaciones = await operacionesManager.getOrganizaciones();
@@ -696,12 +908,6 @@ function configurarEventos() {
     if (selector) {
         selector.addEventListener('change', async (e) => {
             currentEmpresa = e.target.value;
-            const badgeSpan = document.querySelector('#empresaSeleccionada span');
-            if (badgeSpan) {
-                const organizaciones = await operacionesManager.getOrganizaciones();
-                const empresa = organizaciones.find(org => org.camelCase === currentEmpresa);
-                badgeSpan.innerText = currentEmpresa === 'global' ? 'Global' : (empresa ? empresa.nombre : currentEmpresa);
-            }
             await actualizarVista(currentEmpresa);
         });
     }
@@ -767,15 +973,3 @@ async function inicializar() {
 // =============================================
 
 inicializar();
-
-// =============================================
-// INICIAR APLICACIÓN
-// =============================================
-
-inicializar();
-/*Estrategia	Antes	Después
-Carga inicial	Recopilaba todo (10-30s)	Mostraba datos guardados (< 1s)
-Storage	getMetadata() para cada archivo	Cache + lotes + clasificación por extensión
-Empresas	Todas a la vez (se saturaba)	De a 2 empresas en paralelo
-Cache	No había	Cache persistente en memoria
-Actualización	Cada vez que cargaba	Solo cuando el usuario presiona "Actualizar"*/
