@@ -1551,7 +1551,7 @@ class NavbarComplete {
                             <span>Crear Incidencia</span>
                         </a>
 
-                        <a href="../incidenciasCanalizadasColaborador/incidenciasCanalizadasColaborador.html" class="incidencias-dropdown-option" id="incidenciasCanalizadasBtn">
+                        <a href="../incidenciasCanalizadas/incidenciasCanalizadas.html" class="incidencias-dropdown-option" id="incidenciasCanalizadasBtn">
                             <i class="fa-solid fa-check-circle"></i>
                             <span>Incidencias Canalizadas</span>
                         </a>

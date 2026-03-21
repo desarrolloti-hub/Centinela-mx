@@ -1,4 +1,5 @@
-// seguimientoIncidencia.js - VERSIÓN FINAL CORREGIDA CON CANALIZACIONES
+// seguimientoIncidencia.js - CONTROLADOR
+// NO IMPORTA FIRESTORE DIRECTAMENTE, USA SOLO LA CLASE
 
 import '/components/visualizadorImagen.js';
 
@@ -21,12 +22,21 @@ let areas = [];
 let areaManager = null;
 let notificacionManager = null;
 
+// Caché para datos relacionados
+let areasCache = null;
+let areasCacheOrg = null;
+let areasCacheTimestamp = null;
+let sucursalesCacheData = null;
+let categoriasCacheData = null;
+let datosCacheTimestamp = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
 const LIMITES = {
     DESCRIPCION_SEGUIMIENTO: 500
 };
 
 // =============================================
-// FUNCIÓN PARA CONVERTIR FECHAS DE FIRESTORE
+// FUNCIÓN PARA CONVERTIR FECHAS
 // =============================================
 function convertirFechaFirestore(fecha) {
     if (!fecha) return null;
@@ -71,7 +81,29 @@ function configurarCollapsible() {
 }
 
 // =============================================
-// INICIALIZACIÓN
+// FUNCIONES DE CACHÉ
+// =============================================
+function limpiarCacheAreas() {
+    areasCache = null;
+    areasCacheOrg = null;
+    areasCacheTimestamp = null;
+    console.log('🗑️ Caché de áreas limpiada');
+}
+
+function limpiarCacheDatos() {
+    sucursalesCacheData = null;
+    categoriasCacheData = null;
+    datosCacheTimestamp = null;
+    console.log('🗑️ Caché de datos limpiada');
+}
+
+function limpiarTodaCache() {
+    limpiarCacheAreas();
+    limpiarCacheDatos();
+}
+
+// =============================================
+// INICIALIZACIÓN OPTIMIZADA
 // =============================================
 async function inicializarSeguimiento() {
     try {
@@ -89,10 +121,14 @@ async function inicializarSeguimiento() {
         }
 
         await inicializarIncidenciaManager();
-        await cargarIncidencia(incidenciaId);
-        await cargarDatosRelacionados();
-        await cargarAreas();
-        await initNotificacionManager();
+        
+        // Cargar incidencia y datos en paralelo
+        await Promise.all([
+            cargarIncidencia(incidenciaId),
+            cargarAreas(),
+            cargarDatosRelacionados(),
+            initNotificacionManager()
+        ]);
 
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
@@ -146,22 +182,42 @@ async function initNotificacionManager() {
     return notificacionManager;
 }
 
-async function cargarAreas() {
+async function cargarAreas(forceReload = false) {
     try {
+        const now = Date.now();
+        
+        // Verificar caché
+        if (!forceReload && areasCache && areasCacheOrg === usuarioActual.organizacionCamelCase && 
+            areasCacheTimestamp && (now - areasCacheTimestamp) < CACHE_TTL) {
+            areas = areasCache;
+            console.log('📦 Áreas cargadas desde caché:', areas.length);
+            return areas;
+        }
+        
         const { AreaManager } = await import('/clases/area.js');
         areaManager = new AreaManager();
 
         if (usuarioActual && usuarioActual.organizacionCamelCase) {
             const areasObtenidas = await areaManager.getAreasByOrganizacion(
-                usuarioActual.organizacionCamelCase
+                usuarioActual.organizacionCamelCase,
+                true // solo activas
             );
 
             areas = areasObtenidas.filter(area => area.estado === 'activa');
+            
+            // Guardar en caché
+            areasCache = areas;
+            areasCacheOrg = usuarioActual.organizacionCamelCase;
+            areasCacheTimestamp = now;
+            
             console.log('✅ Áreas cargadas para seguimiento:', areas.length);
         }
+        
+        return areas;
     } catch (error) {
         console.error('Error cargando áreas:', error);
         areas = [];
+        return areas;
     }
 }
 
@@ -258,25 +314,48 @@ async function cargarIncidencia(incidenciaId) {
     }
 }
 
-async function cargarDatosRelacionados() {
+async function cargarDatosRelacionados(forceReload = false) {
     try {
+        const now = Date.now();
+        
+        // Verificar caché
+        if (!forceReload && sucursalesCacheData && categoriasCacheData && 
+            datosCacheTimestamp && (now - datosCacheTimestamp) < CACHE_TTL) {
+            sucursalesMap = sucursalesCacheData;
+            categoriasMap = categoriasCacheData;
+            console.log('📦 Datos relacionados cargados desde caché');
+            return;
+        }
+        
         const { SucursalManager } = await import('/clases/sucursal.js');
         const sucursalManager = new SucursalManager();
         const sucursales = await sucursalManager.getSucursalesByOrganizacion(
             usuarioActual.organizacionCamelCase
         );
 
+        const nuevaSucursalesMap = new Map();
         sucursales.forEach(suc => {
-            sucursalesMap.set(suc.id, suc);
+            nuevaSucursalesMap.set(suc.id, suc);
         });
 
         const { CategoriaManager } = await import('/clases/categoria.js');
         const categoriaManager = new CategoriaManager();
         const categorias = await categoriaManager.obtenerTodasCategorias();
 
+        const nuevaCategoriasMap = new Map();
         categorias.forEach(cat => {
-            categoriasMap.set(cat.id, cat);
+            nuevaCategoriasMap.set(cat.id, cat);
         });
+        
+        sucursalesMap = nuevaSucursalesMap;
+        categoriasMap = nuevaCategoriasMap;
+        
+        // Guardar en caché
+        sucursalesCacheData = nuevaSucursalesMap;
+        categoriasCacheData = nuevaCategoriasMap;
+        datosCacheTimestamp = now;
+        
+        console.log('✅ Datos relacionados cargados:', sucursales.length, 'sucursales,', categorias.length, 'categorías');
 
     } catch (error) {
         console.error('Error cargando datos relacionados:', error);
@@ -510,7 +589,7 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO - CORREGIDO
+// MOSTRAR HISTORIAL DE SEGUIMIENTO
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
@@ -665,9 +744,6 @@ function procesarEvidencias(files) {
     document.getElementById('inputEvidencias').value = '';
 }
 
-// =============================================
-// ACTUALIZAR VISTA PREVIA DE EVIDENCIAS - CORREGIDO
-// =============================================
 function actualizarVistaPreviaEvidencias() {
     const container = document.getElementById('evidenciasPreview');
     const containerParent = document.getElementById('evidenciasPreviewContainer');
@@ -890,82 +966,14 @@ async function confirmarYGuardar(datos) {
     }
 }
 
-/**
- * Genera y sube el PDF después de guardar el seguimiento
- */
-async function _generarYSubirPDF() {
-    try {
-        console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
-
-        // Cargar sucursales y categorías para el generador
-        const sucursalesArray = Array.from(sucursalesMap.values());
-        const categoriasArray = Array.from(categoriasMap.values());
-
-        // Importar generador IPH
-        const { generadorIPH } = await import('/components/iph-generator.js');
-
-        // Configurar generador
-        generadorIPH.configurar({
-            organizacionActual: {
-                nombre: usuarioActual.organizacion,
-                camelCase: usuarioActual.organizacionCamelCase
-            },
-            sucursalesCache: sucursalesArray,
-            categoriasCache: categoriasArray,
-            authToken: localStorage.getItem('authToken')
-        });
-
-        // Generar PDF y obtener BLOB
-        const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, {
-            mostrarAlerta: false,
-            returnBlob: true
-        });
-
-        if (!pdfBlob || pdfBlob.size === 0) {
-            throw new Error('El PDF generado está vacío');
-        }
-
-        // Crear archivo
-        const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
-
-        // Subir a Storage
-        const rutaPDF = incidenciaActual.getRutaPDF();
-
-        const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-
-        // Actualizar la incidencia con la URL del PDF
-        const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        const { db } = await import('/config/firebase-config.js');
-
-        const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
-        const incidenciaRef = doc(db, collectionName, incidenciaActual.id);
-
-        await updateDoc(incidenciaRef, {
-            pdfUrl: resultado.url,
-            fechaActualizacion: serverTimestamp()
-        });
-
-        // Actualizar el objeto en memoria
-        incidenciaActual.pdfUrl = resultado.url;
-
-        console.log('✅ PDF actualizado exitosamente:', resultado.url);
-        return true;
-
-    } catch (error) {
-        console.error('❌ Error actualizando PDF:', error);
-        return false;
-    }
-}
-
-/**
- * CANALIZACIÓN - IGUAL QUE EN CREAR INCIDENCIAS
- */
+// =============================================
+// FUNCIONES DE CANALIZACIÓN (USANDO LA CLASE)
+// =============================================
 async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
     let continuar = true;
     let areasCanalizadas = [];
 
     while (continuar) {
-        // Crear objeto de opciones para el select
         const inputOptions = {};
         areas.forEach(area => {
             if (!areasCanalizadas.some(a => a.id === area.id)) {
@@ -973,7 +981,6 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
             }
         });
 
-        // Si no hay áreas disponibles, salir del bucle
         if (Object.keys(inputOptions).length === 0) {
             if (areasCanalizadas.length > 0) {
                 await Swal.fire({
@@ -1021,30 +1028,27 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
                 });
 
                 try {
-                    const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-                    const { db } = await import('/config/firebase-config.js');
+                    // USAR EL MANAGER PARA AGREGAR CANALIZACIÓN
+                    const resultado = await incidenciaManager.agregarCanalizacion(
+                        incidenciaId,
+                        area.id,
+                        area.nombreArea,
+                        usuarioActual.id,
+                        usuarioActual.nombreCompleto,
+                        'Canalización desde seguimiento'
+                    );
 
-                    const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
-                    const incidenciaRef = doc(db, collectionName, incidenciaId);
-
-                    await updateDoc(incidenciaRef, {
-                        canalizaciones: arrayUnion({
-                            areaId: area.id,
-                            areaNombre: area.nombreArea,
-                            fecha: new Date(),
-                            canalizadoPor: usuarioActual.id,
-                            canalizadoPorNombre: usuarioActual.nombreCompleto,
-                            estado: 'pendiente'
-                        })
-                    });
-
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'Área agregada',
-                        text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
+                    if (resultado) {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Área agregada',
+                            text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        throw new Error('Error al guardar canalización');
+                    }
 
                 } catch (error) {
                     console.error('Error guardando canalización:', error);
@@ -1060,14 +1064,12 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
 
     if (areasCanalizadas.length > 0) {
         await _enviarNotificacionesCanalizacion(areasCanalizadas, incidenciaId, incidenciaTitulo);
+        limpiarCacheAreas();
     }
 
     return areasCanalizadas;
 }
 
-/**
- * ENVIAR NOTIFICACIONES - IGUAL QUE EN CREAR INCIDENCIAS
- */
 async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidenciaTitulo) {
     try {
         if (!notificacionManager) {
@@ -1079,31 +1081,64 @@ async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidencia
             return;
         }
 
+        const sucursalNombre = sucursalesMap.get(incidenciaActual.sucursalId)?.nombre || '';
+        const categoriaNombre = categoriasMap.get(incidenciaActual.categoriaId)?.nombre || '';
+        
+        const areasFormateadas = areas.map(area => ({
+            id: area.id,
+            nombre: area.nombre
+        }));
+
         const resultado = await notificacionManager.notificarMultiplesAreas({
-            areas: areas,
+            areas: areasFormateadas,
             incidenciaId: incidenciaId,
-            incidenciaTitulo: incidenciaTitulo || 'Incidencia',
+            incidenciaTitulo: incidenciaTitulo || incidenciaActual.getTitulo?.() || 'Incidencia',
             sucursalId: incidenciaActual.sucursalId || '',
-            sucursalNombre: sucursalesMap.get(incidenciaActual.sucursalId)?.nombre || '',
+            sucursalNombre: sucursalNombre,
             categoriaId: incidenciaActual.categoriaId || '',
-            categoriaNombre: categoriasMap.get(incidenciaActual.categoriaId)?.nombre || '',
+            categoriaNombre: categoriaNombre,
             nivelRiesgo: incidenciaActual.nivelRiesgo || 'medio',
             tipo: 'canalizacion',
-            prioridad: incidenciaActual.nivelRiesgo || 'normal',
+            prioridad: incidenciaActual.nivelRiesgo === 'critico' ? 'urgente' : 'normal',
             remitenteId: usuarioActual.id,
             remitenteNombre: usuarioActual.nombreCompleto,
-            organizacionCamelCase: usuarioActual.organizacionCamelCase
+            organizacionCamelCase: usuarioActual.organizacionCamelCase,
+            enviarPush: true
         });
 
+        Swal.close();
+
         if (resultado.success) {
-            console.log(`✅ Notificaciones enviadas: ${resultado.totalUsuarios} usuarios notificados`);
+            let mensaje = `✅ Notificaciones enviadas:`;
+            mensaje += `<br>👥 ${resultado.totalColaboradores} colaboradores notificados`;
+            mensaje += `<br>👑 ${resultado.totalAdministradores} administradores notificados`;
+            
+            if (resultado.push && resultado.push.enviados > 0) {
+                mensaje += `<br>📱 Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
+            }
+            
+            console.log('📨 Notificaciones enviadas:', mensaje);
+            
+            await Swal.fire({
+                icon: 'success',
+                title: 'Notificaciones enviadas',
+                html: mensaje,
+                timer: 3000,
+                showConfirmButton: false
+            });
+        } else {
+            console.error('❌ Error al enviar notificaciones:', resultado.error);
         }
 
     } catch (error) {
         console.error('Error en _enviarNotificacionesCanalizacion:', error);
+        Swal.close();
     }
 }
 
+// =============================================
+// GUARDAR SEGUIMIENTO (USANDO LA CLASE)
+// =============================================
 async function guardarSeguimiento(datos) {
     const btnGuardar = document.getElementById('btnGuardarSeguimiento');
     const originalHTML = btnGuardar ? btnGuardar.innerHTML : '<i class="fas fa-save me-2"></i>Guardar Seguimiento';
@@ -1114,7 +1149,6 @@ async function guardarSeguimiento(datos) {
             btnGuardar.disabled = true;
         }
 
-        // Mostrar loading mientras se guarda TODO (seguimiento + PDF)
         Swal.fire({
             title: 'Guardando seguimiento...',
             text: 'Por favor espere, esto puede tomar unos segundos.',
@@ -1128,7 +1162,7 @@ async function guardarSeguimiento(datos) {
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
-        // 1. Guardar el seguimiento
+        // 1. Guardar el seguimiento usando el manager
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
@@ -1141,6 +1175,7 @@ async function guardarSeguimiento(datos) {
             usuarioActual
         );
 
+        // 2. Actualizar estado si cambió
         if (datos.nuevoEstado !== incidenciaActual.estado) {
             await incidenciaManager.actualizarIncidencia(
                 incidenciaActual.id,
@@ -1151,21 +1186,22 @@ async function guardarSeguimiento(datos) {
             );
         }
 
+        // 3. Limpiar evidencias
         evidenciasSeleccionadas.forEach(ev => {
             if (ev.preview) URL.revokeObjectURL(ev.preview);
         });
         evidenciasSeleccionadas = [];
 
-        // 2. Recargar la incidencia para tener los datos actualizados
+        // 4. Recargar la incidencia para tener los datos actualizados
         await cargarIncidencia(incidenciaActual.id);
 
-        // 3. Generar y subir el PDF
+        // 5. Generar y subir el PDF (usando el manager)
         const pdfGenerado = await _generarYSubirPDF();
 
-        // 4. Cerrar el loading inicial
+        // 6. Cerrar el loading inicial
         Swal.close();
 
-        // 5. PREGUNTAR SI QUIERE CANALIZAR - IGUAL QUE EN CREAR INCIDENCIAS
+        // 7. Preguntar si quiere canalizar
         const quiereCanalizar = await Swal.fire({
             icon: 'question',
             title: '¿Canalizar esta incidencia?',
@@ -1187,7 +1223,7 @@ async function guardarSeguimiento(datos) {
             ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
             : 'No se canalizó a ninguna área.';
 
-        // 6. Actualizar la vista
+        // 8. Actualizar la vista
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
@@ -1196,7 +1232,7 @@ async function guardarSeguimiento(datos) {
         actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
         configurarFechaSeguimiento();
 
-        // 7. Mostrar mensaje final
+        // 9. Mostrar mensaje final
         await Swal.fire({
             icon: 'success',
             title: '¡Seguimiento guardado!',
@@ -1219,6 +1255,60 @@ async function guardarSeguimiento(datos) {
             btnGuardar.disabled = false;
         }
         ocultarCargando();
+    }
+}
+
+async function _generarYSubirPDF() {
+    try {
+        console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
+
+        const sucursalesArray = Array.from(sucursalesMap.values());
+        const categoriasArray = Array.from(categoriasMap.values());
+
+        const { generadorIPH } = await import('/components/iph-generator.js');
+
+        generadorIPH.configurar({
+            organizacionActual: {
+                nombre: usuarioActual.organizacion,
+                camelCase: usuarioActual.organizacionCamelCase
+            },
+            sucursalesCache: sucursalesArray,
+            categoriasCache: categoriasArray,
+            authToken: localStorage.getItem('authToken')
+        });
+
+        const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, {
+            mostrarAlerta: false,
+            returnBlob: true
+        });
+
+        if (!pdfBlob || pdfBlob.size === 0) {
+            throw new Error('El PDF generado está vacío');
+        }
+
+        const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
+        const rutaPDF = incidenciaActual.getRutaPDF();
+
+        // Usar el método de la clase para subir archivo
+        const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
+
+        // Actualizar la incidencia con la URL del PDF usando el manager
+        await incidenciaManager.actualizarIncidencia(
+            incidenciaActual.id,
+            { pdfUrl: resultado.url },
+            usuarioActual.id,
+            usuarioActual.organizacionCamelCase,
+            usuarioActual
+        );
+
+        incidenciaActual.pdfUrl = resultado.url;
+
+        console.log('✅ PDF actualizado exitosamente:', resultado.url);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error actualizando PDF:', error);
+        return false;
     }
 }
 

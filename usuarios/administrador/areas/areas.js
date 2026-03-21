@@ -1,3 +1,4 @@
+
 window.appDebug = {
     estado: 'iniciando',
     controller: null
@@ -11,7 +12,14 @@ let Area, AreaManager;
 const ITEMS_POR_PAGINA = 10;
 let paginaActual = 1;
 let terminoBusqueda = '';
-let todasLasAreas = []; // Almacena todas las áreas para búsqueda
+let totalAreas = 0;
+let totalPaginas = 0;
+let areasActuales = []; // Solo las áreas de la página actual
+
+// Filtros activos
+let filtrosActivos = {
+    estado: 'todos'
+};
 
 async function cargarDependencias() {
     try {
@@ -58,32 +66,13 @@ function inicializarController() {
 
 class AreasController {
     constructor() {
-        this.areaManager = new AreaManager();
-        this.areas = []; // Áreas filtradas para mostrar
+        this.areaManager = null;
         this.filaExpandida = null;
+        this.usuarioActual = null;
+        this.todasLasAreasCache = []; // Cache para búsqueda local
 
         // Cargar datos del usuario desde localStorage
-        this.userManager = this.cargarUsuarioDesdeStorage();
-
-        // Si no hay usuario, usar valores por defecto
-        if (!this.userManager || !this.userManager.currentUser) {
-            this.userManager = {
-                currentUser: {
-                    id: 'default-user',
-                    nombre: 'Usuario',
-                    nombreCompleto: 'Usuario',
-                    rol: 'colaborador',
-                    organizacion: 'Mi Organización',
-                    organizacionCamelCase: 'miOrganizacion',
-                    correo: '',
-                    fotoUsuario: null,
-                    fotoOrganizacion: null,
-                    esSuperAdmin: false,
-                    esAdminOrganizacion: false,
-                    timestamp: new Date().toISOString()
-                }
-            };
-        }
+        this.cargarUsuarioDesdeStorage();
     }
 
     cargarUsuarioDesdeStorage() {
@@ -104,8 +93,7 @@ class AreasController {
                     fotoUsuario: adminData.fotoUsuario,
                     fotoOrganizacion: adminData.fotoOrganizacion,
                     esSuperAdmin: adminData.esSuperAdmin || true,
-                    esAdminOrganizacion: adminData.esAdminOrganizacion || true,
-                    timestamp: adminData.timestamp || new Date().toISOString()
+                    esAdminOrganizacion: adminData.esAdminOrganizacion || true
                 };
             }
 
@@ -118,7 +106,19 @@ class AreasController {
             }
 
             if (!userData) {
-                return null;
+                userData = {
+                    id: `user_${Date.now()}`,
+                    nombre: 'Usuario',
+                    nombreCompleto: 'Usuario',
+                    rol: 'colaborador',
+                    organizacion: 'Sin organización',
+                    organizacionCamelCase: 'sinOrganizacion',
+                    correo: '',
+                    fotoUsuario: null,
+                    fotoOrganizacion: null,
+                    esSuperAdmin: false,
+                    esAdminOrganizacion: false
+                };
             }
 
             if (!userData.id) userData.id = `user_${Date.now()}`;
@@ -129,10 +129,23 @@ class AreasController {
             if (!userData.rol) userData.rol = 'colaborador';
             if (!userData.nombreCompleto) userData.nombreCompleto = userData.nombre || 'Usuario';
 
-            return { currentUser: userData };
+            this.usuarioActual = userData;
 
         } catch (error) {
-            return null;
+            console.error('Error cargando usuario:', error);
+            this.usuarioActual = {
+                id: `user_${Date.now()}`,
+                nombre: 'Usuario',
+                nombreCompleto: 'Usuario',
+                rol: 'colaborador',
+                organizacion: 'Sin organización',
+                organizacionCamelCase: 'sinOrganizacion',
+                correo: '',
+                fotoUsuario: null,
+                fotoOrganizacion: null,
+                esSuperAdmin: false,
+                esAdminOrganizacion: false
+            };
         }
     }
 
@@ -168,6 +181,14 @@ class AreasController {
                         <input type="text" id="buscarArea" class="filtro-input" 
                                placeholder="Escribe para buscar" autocomplete="off">
                     </div>
+                    <div class="filtro-grupo">
+                        <label for="filtroEstado">Estado</label>
+                        <select id="filtroEstado" class="filtro-select">
+                            <option value="todos">Todos</option>
+                            <option value="activa">Activas</option>
+                            <option value="inactiva">Inactivas</option>
+                        </select>
+                    </div>
                     <div class="filtro-acciones">
                         <button class="btn-buscar" id="btnBuscarArea">
                             <i class="fas fa-search"></i> Buscar
@@ -183,23 +204,35 @@ class AreasController {
         }
 
         const inputBuscar = document.getElementById('buscarArea');
+        const filtroEstado = document.getElementById('filtroEstado');
         const btnBuscar = document.getElementById('btnBuscarArea');
         const btnLimpiar = document.getElementById('btnLimpiarBusquedaArea');
 
         if (btnBuscar) {
             btnBuscar.addEventListener('click', () => {
                 terminoBusqueda = inputBuscar?.value.trim() || '';
+                filtrosActivos.estado = filtroEstado?.value || 'todos';
                 paginaActual = 1;
-                this.filtrarYRenderizar();
+                this.cargarAreasPagina(1);
             });
         }
 
         if (btnLimpiar) {
             btnLimpiar.addEventListener('click', () => {
                 if (inputBuscar) inputBuscar.value = '';
+                if (filtroEstado) filtroEstado.value = 'todos';
                 terminoBusqueda = '';
+                filtrosActivos.estado = 'todos';
                 paginaActual = 1;
-                this.filtrarYRenderizar();
+                this.cargarAreasPagina(1);
+            });
+        }
+
+        if (filtroEstado) {
+            filtroEstado.addEventListener('change', () => {
+                filtrosActivos.estado = filtroEstado.value;
+                paginaActual = 1;
+                this.cargarAreasPagina(1);
             });
         }
 
@@ -210,47 +243,98 @@ class AreasController {
                 timeoutId = setTimeout(() => {
                     terminoBusqueda = e.target.value.trim();
                     paginaActual = 1;
-                    this.filtrarYRenderizar();
-                }, 300);
-            });
-
-            inputBuscar.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    terminoBusqueda = e.target.value.trim();
-                    paginaActual = 1;
-                    this.filtrarYRenderizar();
-                }
+                    this.cargarAreasPagina(1);
+                }, 500);
             });
         }
     }
 
-    filtrarYRenderizar() {
-        if (!todasLasAreas.length) {
-            this.areas = [];
-        } else if (!terminoBusqueda || terminoBusqueda.length < 2) {
-            this.areas = [...todasLasAreas];
-        } else {
-            const terminoLower = terminoBusqueda.toLowerCase();
-            this.areas = todasLasAreas.filter(area =>
-                (area.nombreArea && area.nombreArea.toLowerCase().includes(terminoLower)) ||
-                (area.descripcion && area.descripcion.toLowerCase().includes(terminoLower))
-            );
+    // =============================================
+    // CARGAR ÁREAS CON PAGINACIÓN USANDO AREA MANAGER
+    // =============================================
+    async cargarAreasPagina(pagina) {
+        if (!this.usuarioActual?.organizacionCamelCase) {
+            console.error('No hay organización configurada');
+            return;
         }
 
-        this.actualizarTablaConPaginacion();
+        try {
+            this.mostrarCargando();
+
+            // Inicializar AreaManager si es necesario
+            if (!this.areaManager) {
+                const { AreaManager } = await import('/clases/area.js');
+                this.areaManager = new AreaManager();
+            }
+
+            // Obtener filtros para la consulta
+            const filtrosConsulta = {};
+            if (filtrosActivos.estado !== 'todos') {
+                filtrosConsulta.estado = filtrosActivos.estado;
+            }
+
+            // Obtener TODAS las áreas con los filtros aplicados (el manager ya maneja ordenamiento)
+            const todasLasAreas = await this.areaManager.getAreasByOrganizacion(
+                this.usuarioActual.organizacionCamelCase,
+                filtrosConsulta.estado === 'activa' ? true : false,
+                this.usuarioActual
+            );
+
+            // Ordenar por fechaCreacion descendente (más recientes primero)
+            todasLasAreas.sort((a, b) => {
+                const fechaA = a.fechaCreacion ? new Date(a.fechaCreacion) : 0;
+                const fechaB = b.fechaCreacion ? new Date(b.fechaCreacion) : 0;
+                return fechaB - fechaA;
+            });
+
+            // Guardar en caché para búsqueda local
+            this.todasLasAreasCache = todasLasAreas;
+
+            // Filtrar por búsqueda local si hay término
+            let areasFiltradas = [...todasLasAreas];
+            if (terminoBusqueda && terminoBusqueda.length >= 2) {
+                const terminoLower = terminoBusqueda.toLowerCase();
+                areasFiltradas = areasFiltradas.filter(area =>
+                    (area.nombreArea && area.nombreArea.toLowerCase().includes(terminoLower)) ||
+                    (area.descripcion && area.descripcion.toLowerCase().includes(terminoLower))
+                );
+            }
+
+            // Calcular totales
+            totalAreas = areasFiltradas.length;
+            totalPaginas = Math.ceil(totalAreas / ITEMS_POR_PAGINA);
+
+            // Asegurar que la página actual sea válida
+            if (paginaActual > totalPaginas && totalPaginas > 0) {
+                paginaActual = totalPaginas;
+            }
+
+            // Paginar
+            const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+            const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalAreas);
+            areasActuales = areasFiltradas.slice(inicio, fin);
+
+            this.actualizarTablaConPaginacion();
+            this.ocultarCargando();
+
+        } catch (error) {
+            console.error('Error cargando áreas:', error);
+            this.mostrarError('Error al cargar áreas: ' + error.message);
+            this.ocultarCargando();
+        }
     }
 
     // =============================================
     // PAGINACIÓN
     // =============================================
     irPagina(pagina) {
+        if (pagina < 1 || pagina > totalPaginas || pagina === paginaActual) return;
         paginaActual = pagina;
-        this.actualizarTablaConPaginacion();
+        this.cargarAreasPagina(pagina);
         document.querySelector('.card-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    renderizarPaginacion(totalPaginas) {
+    renderizarPaginacion() {
         const pagination = document.getElementById('pagination');
         if (!pagination) return;
 
@@ -260,15 +344,60 @@ class AreasController {
         }
 
         let html = '';
-
-        for (let i = 1; i <= totalPaginas; i++) {
+        
+        // Botón anterior
+        html += `
+            <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+                <button class="page-link" onclick="window.appDebug.controller.irPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </li>
+        `;
+        
+        // Mostrar máximo 5 páginas a la vez
+        const maxPagesToShow = 5;
+        let startPage = Math.max(1, paginaActual - Math.floor(maxPagesToShow / 2));
+        let endPage = Math.min(totalPaginas, startPage + maxPagesToShow - 1);
+        
+        if (endPage - startPage + 1 < maxPagesToShow) {
+            startPage = Math.max(1, endPage - maxPagesToShow + 1);
+        }
+        
+        if (startPage > 1) {
+            html += `
+                <li class="page-item">
+                    <button class="page-link" onclick="window.appDebug.controller.irPagina(1)">1</button>
+                </li>
+                ${startPage > 2 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
+            `;
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
             html += `
                 <li class="page-item ${i === paginaActual ? 'active' : ''}">
                     <button class="page-link" onclick="window.appDebug.controller.irPagina(${i})">${i}</button>
                 </li>
             `;
         }
-
+        
+        if (endPage < totalPaginas) {
+            html += `
+                ${endPage < totalPaginas - 1 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
+                <li class="page-item">
+                    <button class="page-link" onclick="window.appDebug.controller.irPagina(${totalPaginas})">${totalPaginas}</button>
+                </li>
+            `;
+        }
+        
+        // Botón siguiente
+        html += `
+            <li class="page-item ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}">
+                <button class="page-link" onclick="window.appDebug.controller.irPagina(${paginaActual + 1})" ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </li>
+        `;
+        
         pagination.innerHTML = html;
     }
 
@@ -281,32 +410,25 @@ class AreasController {
 
         this.filaExpandida = null;
 
-        const totalItems = this.areas.length;
-        const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
-
-        if (paginaActual > totalPaginas && totalPaginas > 0) {
-            paginaActual = totalPaginas;
-        }
-
-        const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
-        const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
-        const areasPagina = this.areas.slice(inicio, fin);
-
+        const itemsMostrados = areasActuales.length;
+        
         const paginationInfo = document.getElementById('paginationInfo');
         if (paginationInfo) {
-            if (totalItems === 0) {
+            if (totalAreas === 0) {
                 paginationInfo.textContent = 'No se encontraron áreas';
             } else {
-                paginationInfo.textContent = `Mostrando ${inicio + 1}-${fin} de ${totalItems} áreas`;
+                const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA + 1;
+                const fin = Math.min(inicio + itemsMostrados - 1, totalAreas);
+                paginationInfo.textContent = `Mostrando ${inicio}-${fin} de ${totalAreas} áreas`;
             }
         }
 
         const paginacionContainer = document.querySelector('.pagination-container');
         if (paginacionContainer) {
-            paginacionContainer.style.display = totalItems > ITEMS_POR_PAGINA ? 'flex' : 'none';
+            paginacionContainer.style.display = totalPaginas > 1 ? 'flex' : 'none';
         }
 
-        if (totalItems === 0) {
+        if (areasActuales.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="8" class="text-center py-5">
@@ -314,7 +436,7 @@ class AreasController {
                             <i class="fas fa-search" style="font-size: 48px; color: rgba(255,255,255,0.3); margin-bottom: 16px;"></i>
                             <h5 style="color:white;">No se encontraron áreas</h5>
                             <p style="color: var(--color-text-dim); margin-top: 10px;">
-                                ${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}
+                                ${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : 'No hay áreas registradas'}
                             </p>
                             ${!terminoBusqueda ? `
                                 <button class="btn-nueva-area" onclick="window.appDebug.controller.irACrearArea()" style="margin-top: 16px;">
@@ -325,35 +447,35 @@ class AreasController {
                     </td>
                 </tr>
             `;
-            this.renderizarPaginacion(0);
+            this.renderizarPaginacion();
             return;
         }
 
         tbody.innerHTML = '';
 
-        areasPagina.forEach((area) => {
+        areasActuales.forEach((area) => {
             tbody.appendChild(this.crearFilaArea(area));
         });
 
-        this.renderizarPaginacion(totalPaginas);
+        this.renderizarPaginacion();
     }
 
     // =============================================
     // MÉTODOS PRINCIPALES
     // =============================================
-    init() {
+    async init() {
         this.actualizarBadgeEmpresa();
         this.configurarBusqueda();
         this.inicializarEventos();
-        this.cargarAreas();
+        await this.cargarAreasPagina(1);
     }
 
     actualizarBadgeEmpresa() {
         const badgeEmpresa = document.getElementById('badge-empresa');
         const empresaNombre = badgeEmpresa?.querySelector('.empresa-nombre');
 
-        if (badgeEmpresa && empresaNombre && this.userManager?.currentUser?.organizacion) {
-            empresaNombre.textContent = this.userManager.currentUser.organizacion;
+        if (badgeEmpresa && empresaNombre && this.usuarioActual?.organizacion) {
+            empresaNombre.textContent = this.usuarioActual.organizacion;
             badgeEmpresa.style.display = 'inline-flex';
         }
     }
@@ -381,25 +503,6 @@ class AreasController {
     irACrearCargo(areaId, event) {
         event?.stopPropagation();
         window.location.href = `../editarAreas/editarAreas.html?id=${areaId}&nuevoCargo=true`;
-    }
-
-    async cargarAreas() {
-        try {
-            this.mostrarCargando();
-
-            const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
-            todasLasAreas = await this.areaManager.getAreasByOrganizacion(organizacionCamelCase, this.userManager.currentUser);
-
-            todasLasAreas.sort((a, b) => (a.nombreArea || '').localeCompare(b.nombreArea || ''));
-
-            this.areas = [...todasLasAreas];
-
-            this.actualizarTablaConPaginacion();
-            this.ocultarCargando();
-        } catch (error) {
-            console.error('Error cargando áreas:', error);
-            this.mostrarError('Error cargando áreas');
-        }
     }
 
     toggleCargos(areaId, event) {
@@ -430,7 +533,7 @@ class AreasController {
     }
 
     mostrarCargosDesplegables(areaId, filaReferencia) {
-        const area = todasLasAreas.find(a => a.id === areaId);
+        const area = areasActuales.find(a => a.id === areaId);
         if (!area) return;
 
         const cargos = area.getCargosAsArray();
@@ -560,7 +663,7 @@ class AreasController {
     verDetallesCargo(areaId, cargoId, event) {
         event?.stopPropagation();
 
-        const area = todasLasAreas.find(a => a.id === areaId);
+        const area = areasActuales.find(a => a.id === areaId);
         if (!area) return;
 
         const cargos = area.getCargosAsArray();
@@ -610,7 +713,7 @@ class AreasController {
     async inactivarCargo(areaId, cargoId, event) {
         event?.stopPropagation();
 
-        const area = todasLasAreas.find(a => a.id === areaId);
+        const area = areasActuales.find(a => a.id === areaId);
         if (!area) {
             Swal.fire({
                 icon: 'error',
@@ -655,9 +758,9 @@ class AreasController {
                 await this.areaManager.inactivarCargo(
                     areaId,
                     cargoId,
-                    this.userManager.currentUser.id,
-                    this.userManager.currentUser.organizacionCamelCase,
-                    this.userManager.currentUser
+                    this.usuarioActual.id,
+                    this.usuarioActual.organizacionCamelCase,
+                    this.usuarioActual
                 );
 
                 await Swal.fire({
@@ -668,27 +771,7 @@ class AreasController {
                     showConfirmButton: false
                 });
 
-                const areaActualizada = await this.areaManager.getAreaById(areaId, this.userManager.currentUser.organizacionCamelCase);
-                const index = todasLasAreas.findIndex(a => a.id === areaId);
-                if (index !== -1) todasLasAreas[index] = areaActualizada;
-
-                const indexFiltrado = this.areas.findIndex(a => a.id === areaId);
-                if (indexFiltrado !== -1) this.areas[indexFiltrado] = areaActualizada;
-
-                const filaCargos = document.getElementById(`cargos-${areaId}`);
-                if (filaCargos) {
-                    filaCargos.remove();
-                    this.filaExpandida = null;
-                }
-
-                const filaArea = document.getElementById(`fila-${areaId}`);
-                if (filaArea) {
-                    const cantidadActivos = areaActualizada.getCantidadCargosActivos();
-                    const badge = filaArea.querySelector('.cargo-count-badge');
-                    if (badge) {
-                        badge.innerHTML = `${cantidadActivos} ${cantidadActivos === 1 ? 'cargo activo' : 'cargos activos'}`;
-                    }
-                }
+                await this.cargarAreasPagina(paginaActual);
 
             } catch (error) {
                 Swal.fire({
@@ -703,7 +786,7 @@ class AreasController {
     async reactivarCargo(areaId, cargoId, event) {
         event?.stopPropagation();
 
-        const area = todasLasAreas.find(a => a.id === areaId);
+        const area = areasActuales.find(a => a.id === areaId);
         if (!area) {
             Swal.fire({
                 icon: 'error',
@@ -748,9 +831,9 @@ class AreasController {
                 await this.areaManager.reactivarCargo(
                     areaId,
                     cargoId,
-                    this.userManager.currentUser.id,
-                    this.userManager.currentUser.organizacionCamelCase,
-                    this.userManager.currentUser
+                    this.usuarioActual.id,
+                    this.usuarioActual.organizacionCamelCase,
+                    this.usuarioActual
                 );
 
                 await Swal.fire({
@@ -761,27 +844,7 @@ class AreasController {
                     showConfirmButton: false
                 });
 
-                const areaActualizada = await this.areaManager.getAreaById(areaId, this.userManager.currentUser.organizacionCamelCase);
-                const index = todasLasAreas.findIndex(a => a.id === areaId);
-                if (index !== -1) todasLasAreas[index] = areaActualizada;
-
-                const indexFiltrado = this.areas.findIndex(a => a.id === areaId);
-                if (indexFiltrado !== -1) this.areas[indexFiltrado] = areaActualizada;
-
-                const filaCargos = document.getElementById(`cargos-${areaId}`);
-                if (filaCargos) {
-                    filaCargos.remove();
-                    this.filaExpandida = null;
-                }
-
-                const filaArea = document.getElementById(`fila-${areaId}`);
-                if (filaArea) {
-                    const cantidadActivos = areaActualizada.getCantidadCargosActivos();
-                    const badge = filaArea.querySelector('.cargo-count-badge');
-                    if (badge) {
-                        badge.innerHTML = `${cantidadActivos} ${cantidadActivos === 1 ? 'cargo activo' : 'cargos activos'}`;
-                    }
-                }
+                await this.cargarAreasPagina(paginaActual);
 
             } catch (error) {
                 Swal.fire({
@@ -793,11 +856,8 @@ class AreasController {
         }
     }
 
-    // =============================================
-    // INACTIVAR ÁREA
-    // =============================================
     solicitarInactivacion(areaId) {
-        const area = todasLasAreas.find(a => a.id === areaId);
+        const area = areasActuales.find(a => a.id === areaId);
         if (!area) {
             Swal.fire({
                 icon: 'error',
@@ -852,12 +912,11 @@ class AreasController {
 
     async inactivarArea(areaId) {
         try {
-            const organizacionCamelCase = this.userManager.currentUser.organizacionCamelCase;
             await this.areaManager.inactivarArea(
                 areaId, 
-                this.userManager.currentUser.id, 
-                organizacionCamelCase,
-                this.userManager.currentUser
+                this.usuarioActual.id, 
+                this.usuarioActual.organizacionCamelCase,
+                this.usuarioActual
             );
 
             Swal.fire({
@@ -868,7 +927,7 @@ class AreasController {
                 showConfirmButton: false
             });
 
-            await this.cargarAreas();
+            await this.cargarAreasPagina(1);
         } catch (error) {
             Swal.fire({
                 icon: 'error',
@@ -907,7 +966,7 @@ class AreasController {
 
     async verDetalles(areaId) {
         try {
-            const area = todasLasAreas.find(a => a.id === areaId);
+            const area = areasActuales.find(a => a.id === areaId);
             if (!area) {
                 this.mostrarError('Área no encontrada');
                 return;
@@ -970,10 +1029,6 @@ class AreasController {
         }
     }
 
-    actualizarTabla() {
-        this.actualizarTablaConPaginacion();
-    }
-
     crearFilaArea(area) {
         const fila = document.createElement('tr');
         fila.id = `fila-${area.id}`;
@@ -989,7 +1044,7 @@ class AreasController {
         fila.innerHTML = `
             <td class="text-center" style="width:50px;" data-label="">
                 <span class="toggle-icon" style="background: transparent; border: none;"><i class="fas fa-chevron-right" style="color: white;"></i></span>
-            </td>
+             </td>
             <td data-label="Nombre">
                 <div style="display: flex; align-items: center;">
                     <div style="width:4px; height:24px; background:#2f8cff; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
@@ -999,7 +1054,7 @@ class AreasController {
                     </div>
                 </div>
             </td>
-            <td data-label="Organización">${this.escapeHTML(area.organizacionCamelCase || this.userManager.currentUser.organizacion)}</td>
+            <td data-label="Organización">${this.escapeHTML(area.organizacionCamelCase || this.usuarioActual.organizacion)}</td>
             <td data-label="Cargos">
                 <span class="cargo-count-badge">
                     ${cargosActivos} ${cargosActivos === 1 ? 'activo' : 'activos'} / ${cargosTotal} total
