@@ -108,23 +108,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Panel de regiones desplegable -->
-            <div class="regions-panel" id="regionsPanel">
-                <div class="regions-header" id="toggleRegions">
-                    <h4>
-                        <i class="fas fa-palette"></i>
-                        Regiones
-                    </h4>
-                    <i class="fas fa-chevron-up" id="regionsChevron"></i>
-                </div>
-                <div class="regions-list" id="regionesList">
-                    <div class="no-incidencias" style="padding: 15px;">
-                        <i class="fas fa-spinner fa-spin"></i> Cargando...
-                    </div>
-                </div>
-            </div>
-
             <!-- Panel inferior derecho - Botones de control -->
             <div class="control-panel">
                 <button class="control-btn" id="btnCentrarMapa">
@@ -164,23 +147,27 @@
                 </div>
             </div>
 
-            <!-- Indicador de conexión -->
-            <div class="connection-indicator online" id="indicadorConexion">
-                <i class="fas fa-wifi"></i>
-                <span>Conectado</span>
-            </div>
+
         </div>
     </div>
 
     <!-- Scripts -->
+    <script type="module" src="/components/autenticador.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/components/navbarAdministrador.js"></script>
+    <script type="module" src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
 
     <!-- TU JS - NOMBRE CORRECTO -->
     <script type="module" src="mapaAlertas.js"></script>
+
+    <!-- Protector de pagina -->
+    <script src="/components/protector-de-pagina.js" data-rol="administrador"
+        data-mensaje="Solo administradores pueden acceder a esta página."
+        data-titulo="Acceso de Administrador Requerido"
+        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
+        </script>
 </body>
 
 </html>

@@ -1,4 +1,5 @@
-// seguimientoIncidencia.js - VERSIÓN OPTIMIZADA CON CACHÉ Y NOTIFICACIONES
+// seguimientoIncidencia.js - CONTROLADOR
+// NO IMPORTA FIRESTORE DIRECTAMENTE, USA SOLO LA CLASE
 
 import '/components/visualizadorImagen.js';
 
@@ -35,7 +36,7 @@ const LIMITES = {
 };
 
 // =============================================
-// FUNCIÓN PARA CONVERTIR FECHAS DE FIRESTORE
+// FUNCIÓN PARA CONVERTIR FECHAS
 // =============================================
 function convertirFechaFirestore(fecha) {
     if (!fecha) return null;
@@ -965,67 +966,9 @@ async function confirmarYGuardar(datos) {
     }
 }
 
-/**
- * Genera y sube el PDF después de guardar el seguimiento
- */
-async function _generarYSubirPDF() {
-    try {
-        console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
-
-        const sucursalesArray = Array.from(sucursalesMap.values());
-        const categoriasArray = Array.from(categoriasMap.values());
-
-        const { generadorIPH } = await import('/components/iph-generator.js');
-
-        generadorIPH.configurar({
-            organizacionActual: {
-                nombre: usuarioActual.organizacion,
-                camelCase: usuarioActual.organizacionCamelCase
-            },
-            sucursalesCache: sucursalesArray,
-            categoriasCache: categoriasArray,
-            authToken: localStorage.getItem('authToken')
-        });
-
-        const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, {
-            mostrarAlerta: false,
-            returnBlob: true
-        });
-
-        if (!pdfBlob || pdfBlob.size === 0) {
-            throw new Error('El PDF generado está vacío');
-        }
-
-        const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
-        const rutaPDF = incidenciaActual.getRutaPDF();
-
-        const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-
-        const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-        const { db } = await import('/config/firebase-config.js');
-
-        const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
-        const incidenciaRef = doc(db, collectionName, incidenciaActual.id);
-
-        await updateDoc(incidenciaRef, {
-            pdfUrl: resultado.url,
-            fechaActualizacion: serverTimestamp()
-        });
-
-        incidenciaActual.pdfUrl = resultado.url;
-
-        console.log('✅ PDF actualizado exitosamente:', resultado.url);
-        return true;
-
-    } catch (error) {
-        console.error('❌ Error actualizando PDF:', error);
-        return false;
-    }
-}
-
-/**
- * CANALIZACIÓN - IGUAL QUE EN CREAR INCIDENCIAS
- */
+// =============================================
+// FUNCIONES DE CANALIZACIÓN (USANDO LA CLASE)
+// =============================================
 async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
     let continuar = true;
     let areasCanalizadas = [];
@@ -1085,30 +1028,27 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
                 });
 
                 try {
-                    const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-                    const { db } = await import('/config/firebase-config.js');
+                    // USAR EL MANAGER PARA AGREGAR CANALIZACIÓN
+                    const resultado = await incidenciaManager.agregarCanalizacion(
+                        incidenciaId,
+                        area.id,
+                        area.nombreArea,
+                        usuarioActual.id,
+                        usuarioActual.nombreCompleto,
+                        'Canalización desde seguimiento'
+                    );
 
-                    const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
-                    const incidenciaRef = doc(db, collectionName, incidenciaId);
-
-                    await updateDoc(incidenciaRef, {
-                        canalizaciones: arrayUnion({
-                            areaId: area.id,
-                            areaNombre: area.nombreArea,
-                            fecha: new Date(),
-                            canalizadoPor: usuarioActual.id,
-                            canalizadoPorNombre: usuarioActual.nombreCompleto,
-                            estado: 'pendiente'
-                        })
-                    });
-
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'Área agregada',
-                        text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
+                    if (resultado) {
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Área agregada',
+                            text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        throw new Error('Error al guardar canalización');
+                    }
 
                 } catch (error) {
                     console.error('Error guardando canalización:', error);
@@ -1124,16 +1064,12 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
 
     if (areasCanalizadas.length > 0) {
         await _enviarNotificacionesCanalizacion(areasCanalizadas, incidenciaId, incidenciaTitulo);
-        // Limpiar caché de áreas después de canalizar
         limpiarCacheAreas();
     }
 
     return areasCanalizadas;
 }
 
-/**
- * ENVIAR NOTIFICACIONES - IGUAL QUE EN CREAR INCIDENCIAS
- */
 async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidenciaTitulo) {
     try {
         if (!notificacionManager) {
@@ -1145,12 +1081,9 @@ async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidencia
             return;
         }
 
-
-        // Obtener datos de la incidencia para la notificación
         const sucursalNombre = sucursalesMap.get(incidenciaActual.sucursalId)?.nombre || '';
         const categoriaNombre = categoriasMap.get(incidenciaActual.categoriaId)?.nombre || '';
         
-        // Formatear áreas para el método
         const areasFormateadas = areas.map(area => ({
             id: area.id,
             nombre: area.nombre
@@ -1186,7 +1119,6 @@ async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidencia
             
             console.log('📨 Notificaciones enviadas:', mensaje);
             
-            // Mostrar mensaje de éxito sin cerrar el modal principal
             await Swal.fire({
                 icon: 'success',
                 title: 'Notificaciones enviadas',
@@ -1204,6 +1136,9 @@ async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidencia
     }
 }
 
+// =============================================
+// GUARDAR SEGUIMIENTO (USANDO LA CLASE)
+// =============================================
 async function guardarSeguimiento(datos) {
     const btnGuardar = document.getElementById('btnGuardarSeguimiento');
     const originalHTML = btnGuardar ? btnGuardar.innerHTML : '<i class="fas fa-save me-2"></i>Guardar Seguimiento';
@@ -1227,7 +1162,7 @@ async function guardarSeguimiento(datos) {
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
-        // 1. Guardar el seguimiento
+        // 1. Guardar el seguimiento usando el manager
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
@@ -1240,6 +1175,7 @@ async function guardarSeguimiento(datos) {
             usuarioActual
         );
 
+        // 2. Actualizar estado si cambió
         if (datos.nuevoEstado !== incidenciaActual.estado) {
             await incidenciaManager.actualizarIncidencia(
                 incidenciaActual.id,
@@ -1250,21 +1186,22 @@ async function guardarSeguimiento(datos) {
             );
         }
 
+        // 3. Limpiar evidencias
         evidenciasSeleccionadas.forEach(ev => {
             if (ev.preview) URL.revokeObjectURL(ev.preview);
         });
         evidenciasSeleccionadas = [];
 
-        // 2. Recargar la incidencia para tener los datos actualizados
+        // 4. Recargar la incidencia para tener los datos actualizados
         await cargarIncidencia(incidenciaActual.id);
 
-        // 3. Generar y subir el PDF
+        // 5. Generar y subir el PDF (usando el manager)
         const pdfGenerado = await _generarYSubirPDF();
 
-        // 4. Cerrar el loading inicial
+        // 6. Cerrar el loading inicial
         Swal.close();
 
-        // 5. PREGUNTAR SI QUIERE CANALIZAR
+        // 7. Preguntar si quiere canalizar
         const quiereCanalizar = await Swal.fire({
             icon: 'question',
             title: '¿Canalizar esta incidencia?',
@@ -1286,7 +1223,7 @@ async function guardarSeguimiento(datos) {
             ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
             : 'No se canalizó a ninguna área.';
 
-        // 6. Actualizar la vista
+        // 8. Actualizar la vista
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
         mostrarHistorialSeguimiento();
@@ -1295,7 +1232,7 @@ async function guardarSeguimiento(datos) {
         actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
         configurarFechaSeguimiento();
 
-        // 7. Mostrar mensaje final
+        // 9. Mostrar mensaje final
         await Swal.fire({
             icon: 'success',
             title: '¡Seguimiento guardado!',
@@ -1318,6 +1255,60 @@ async function guardarSeguimiento(datos) {
             btnGuardar.disabled = false;
         }
         ocultarCargando();
+    }
+}
+
+async function _generarYSubirPDF() {
+    try {
+        console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
+
+        const sucursalesArray = Array.from(sucursalesMap.values());
+        const categoriasArray = Array.from(categoriasMap.values());
+
+        const { generadorIPH } = await import('/components/iph-generator.js');
+
+        generadorIPH.configurar({
+            organizacionActual: {
+                nombre: usuarioActual.organizacion,
+                camelCase: usuarioActual.organizacionCamelCase
+            },
+            sucursalesCache: sucursalesArray,
+            categoriasCache: categoriasArray,
+            authToken: localStorage.getItem('authToken')
+        });
+
+        const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, {
+            mostrarAlerta: false,
+            returnBlob: true
+        });
+
+        if (!pdfBlob || pdfBlob.size === 0) {
+            throw new Error('El PDF generado está vacío');
+        }
+
+        const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
+        const rutaPDF = incidenciaActual.getRutaPDF();
+
+        // Usar el método de la clase para subir archivo
+        const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
+
+        // Actualizar la incidencia con la URL del PDF usando el manager
+        await incidenciaManager.actualizarIncidencia(
+            incidenciaActual.id,
+            { pdfUrl: resultado.url },
+            usuarioActual.id,
+            usuarioActual.organizacionCamelCase,
+            usuarioActual
+        );
+
+        incidenciaActual.pdfUrl = resultado.url;
+
+        console.log('✅ PDF actualizado exitosamente:', resultado.url);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error actualizando PDF:', error);
+        return false;
     }
 }
 

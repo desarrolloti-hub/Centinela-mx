@@ -5,11 +5,9 @@
 // MODIFICADO: Eliminada la tabla de resumen de empresas y la tarjeta de última operación
 // MODIFICADO: Todos los textos en español (abreviados)
 // MODIFICADO: Eliminada la tarjeta de Authentication
+// MODIFICADO: Usa la clase ConsumoFirebase para todas las operaciones (sin importar Firestore directamente)
 
-import { db } from '/config/firebase-config.js';
-import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-
-// IMPORTAR GENERADOR PDF
+import instanciaConsumo from '/clases/consumoFirebase.js';
 import generadorPDFConsumo from '/components/pdf-consumo-generador.js';
 
 // Elementos del DOM
@@ -102,30 +100,26 @@ async function cargarTodasLasEmpresas() {
     console.log('📡 Cargando datos de todas las empresas...');
     
     try {
-        const consumoRef = collection(db, 'consumo');
-        const snapshot = await getDocs(consumoRef);
+        // Usar el método de la clase para listar todas las empresas
+        const empresas = await instanciaConsumo.listarTodasLasEmpresas();
         
-        console.log(`✅ Se encontraron ${snapshot.size} empresas`);
+        console.log(`✅ Se encontraron ${empresas.length} empresas`);
         
-        if (snapshot.empty) {
+        if (empresas.length === 0) {
             selectEmpresa.innerHTML = '<option value="">-- No hay empresas disponibles --</option>';
             return;
         }
 
-        let empresas = [];
         let options = '<option value="">-- Selecciona una empresa --</option>';
         let valorSeleccionadoActual = selectEmpresa.value;
 
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const id = doc.id;
-            const nombre = data.nombreEmpresa || id;
-            
-            empresas.push({ id, ...data });
+        empresas.sort((a, b) => (a.nombreEmpresa || a.id).localeCompare(b.nombreEmpresa || b.id));
+
+        empresas.forEach(empresa => {
+            const id = empresa.id;
+            const nombre = empresa.nombreEmpresa || id;
             options += `<option value="${id}" ${id === valorSeleccionadoActual ? 'selected' : ''}>${nombre} (${id})</option>`;
         });
-
-        empresas.sort((a, b) => (a.nombreEmpresa || a.id).localeCompare(b.nombreEmpresa || b.id));
 
         selectEmpresa.innerHTML = options;
         fechaGlobal.textContent = new Date().toLocaleString('es-MX');
@@ -155,10 +149,10 @@ async function actualizarEmpresaSeleccionada() {
     if (!empresaId) return;
 
     try {
-        const docRef = doc(db, 'consumo', empresaId);
-        const docSnap = await getDoc(docRef);
+        // Usar el método de la clase para obtener datos de la empresa
+        const data = await instanciaConsumo.obtenerConsumoEmpresa(empresaId);
         
-        if (!docSnap.exists()) {
+        if (!data) {
             empresaInfo.style.display = 'none';
             Swal.fire({
                 icon: 'info',
@@ -170,7 +164,6 @@ async function actualizarEmpresaSeleccionada() {
             return;
         }
 
-        const data = docSnap.data();
         mostrarDatosEmpresa(empresaId, data);
         
     } catch (error) {
@@ -491,10 +484,10 @@ async function exportarPDF() {
             }
         });
 
-        const docRef = doc(db, 'consumo', empresaId);
-        const docSnap = await getDoc(docRef);
+        // Usar el método de la clase para obtener datos de la empresa
+        const datos = await instanciaConsumo.obtenerConsumoEmpresa(empresaId);
         
-        if (!docSnap.exists()) {
+        if (!datos) {
             if (window._intervaloProgresoPDF) clearInterval(window._intervaloProgresoPDF);
             Swal.close();
             Swal.fire({
@@ -505,7 +498,6 @@ async function exportarPDF() {
             return;
         }
         
-        const datos = docSnap.data();
         const empresaNombre = datos.nombreEmpresa || empresaId;
         const ultimaActualizacion = datos.ultimaActualizacion ? 
             new Date(datos.ultimaActualizacion.seconds * 1000) : new Date();

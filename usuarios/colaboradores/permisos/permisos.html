@@ -122,8 +122,7 @@
         <div class="card">
             <div class="card-header">
                 <h5><i class="fas fa-lock"></i> Lista de Permisos</h5>
-                <a href="../crearPermisos/crearPermisos.html" class="btn-nuevo-permiso-header"
-                    id="addBtn">
+                <a href="../crearPermisos/crearPermisos.html" class="btn-nuevo-permiso-header" id="addBtn">
                     <i class="fas fa-plus"></i> Nuevo Permiso
                 </a>
             </div>
@@ -159,12 +158,16 @@
     <br>
 
     <!-- Scripts -->
+    <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbarColaborador.js"></script>
     <script src="/components/footerColaborador.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module" src="/usuarios/administrador/permisos/permisos.js"></script>
+
+    <!-- Opción 1: Solo autenticación (cualquier colaborador) -->
+    <script src="/components/protector-de-pagina.js"></script>
 </body>
 
 </html>
