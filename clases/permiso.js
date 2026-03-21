@@ -1,4 +1,4 @@
-// permiso.js - VERSIÓN COMPLETA CON HISTORIAL DE ACTIVIDADES
+// permiso.js - VERSIÓN COMPLETA CON HISTORIAL DE ACTIVIDADES Y REGISTRO DE CONSUMO
 
 import {
     collection,
@@ -14,6 +14,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
+
+// [MODIFICACIÓN]: Importar la instancia de consumo
+import consumo from '/clases/consumoFirebase.js';
 
 class Permiso {
     constructor(id, data) {
@@ -239,6 +242,9 @@ class PermisoManager {
             const organizacion = usuarioActual.organizacionCamelCase;
             const collectionName = this._getCollectionName(organizacion);
 
+            // [MODIFICACIÓN]: Registrar LECTURA para verificar existencia
+            await consumo.registrarFirestoreLectura(collectionName, 'verificar existencia');
+
             const existe = await this.verificarExistente(
                 permisoData.areaId,
                 permisoData.cargoId,
@@ -285,6 +291,10 @@ class PermisoManager {
             };
 
             const permisosCollection = collection(db, collectionName);
+            
+            // [MODIFICACIÓN]: Registrar ESCRITURA
+            await consumo.registrarFirestoreEscritura(collectionName, 'nuevo permiso');
+            
             const docRef = await addDoc(permisosCollection, permisoFirestoreData);
             const permisoId = docRef.id;
 
@@ -340,6 +350,9 @@ class PermisoManager {
             }
 
             const collectionName = this._getCollectionName(orgId);
+
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(collectionName, 'lista permisos');
 
             const permisosCollection = collection(db, collectionName);
             const permisosSnapshot = await getDocs(permisosCollection);
@@ -397,6 +410,10 @@ class PermisoManager {
         try {
             const collectionName = this._getCollectionName(orgId);
             const permisoRef = doc(db, collectionName, id);
+            
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(collectionName, id);
+            
             const permisoSnap = await getDoc(permisoRef);
 
             if (permisoSnap.exists()) {
@@ -428,6 +445,10 @@ class PermisoManager {
             const permisosCollection = collection(db, collectionName);
 
             const q = query(permisosCollection, where("areaId", "==", areaId));
+            
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(collectionName, `permisos por área ${areaId}`);
+            
             const querySnapshot = await getDocs(q);
             const permisos = [];
 
@@ -468,6 +489,9 @@ class PermisoManager {
                 where("areaId", "==", areaId)
             );
 
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(collectionName, `permisos por cargo ${cargoId} y área ${areaId}`);
+
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
@@ -503,6 +527,9 @@ class PermisoManager {
                 fechaActualizacion: serverTimestamp()
             };
 
+            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
+            await consumo.registrarFirestoreActualizacion(collectionName, id);
+            
             await updateDoc(permisoRef, datosActualizados);
 
             const permisoIndex = this.permisos.findIndex(p => p.id === id);
@@ -568,6 +595,9 @@ class PermisoManager {
             const collectionName = this._getCollectionName(orgId);
             const permisoRef = doc(db, collectionName, id);
 
+            // [MODIFICACIÓN]: Registrar ELIMINACIÓN
+            await consumo.registrarFirestoreEliminacion(collectionName, id);
+            
             await deleteDoc(permisoRef);
 
             const permisoIndex = this.permisos.findIndex(p => p.id === id);
@@ -614,6 +644,9 @@ class PermisoManager {
                 where("areaId", "==", areaId),
                 where("cargoId", "==", cargoId)
             );
+
+            // [MODIFICACIÓN]: Registrar LECTURA (aunque ya se registró antes, pero por si se llama solo)
+            await consumo.registrarFirestoreLectura(collectionName, `verificar permiso área ${areaId} cargo ${cargoId}`);
 
             const querySnapshot = await getDocs(q);
             return !querySnapshot.empty;
