@@ -51,7 +51,6 @@
                     <button class="btn-actualizar" id="btnActualizarTodo">
                         <i class="fas fa-sync-alt"></i> Actualizar Lista
                     </button>
-                    <!-- 🆕 NUEVO BOTÓN PDF ROJO -->
                     <button class="btn-pdf" id="btnExportarPDF">
                         <i class="fas fa-file-pdf"></i> Exportar PDF
                     </button>
@@ -73,7 +72,7 @@
                         <i class="fas fa-database"></i> Firestore
                     </div>
                     <div class="metric-value" id="empresaFirestoreTotal">0</div>
-                    <div class="metric-subtitle" id="empresaFirestoreDetalle">L:0 / E:0 / U:0 / D:0</div>
+                    <div class="metric-subtitle" id="empresaFirestoreDetalle">L:0 / E:0 / A:0 / D:0</div>
                     <i class="fas fa-cloud metric-icon"></i>
                 </div>
 
@@ -83,7 +82,7 @@
                         <i class="fas fa-cloud-upload-alt"></i> Storage
                     </div>
                     <div class="metric-value" id="empresaStorageTotal">0</div>
-                    <div class="metric-subtitle" id="empresaStorageDetalle">Sub:0 / Desc:0 / Elim:0</div>
+                    <div class="metric-subtitle" id="empresaStorageDetalle">Sub:0 / Desc:0 / Del:0</div>
                     <i class="fas fa-archive metric-icon"></i>
                 </div>
 
@@ -93,27 +92,17 @@
                         <i class="fas fa-code"></i> Cloud Functions
                     </div>
                     <div class="metric-value" id="empresaFunctionsTotal">0</div>
-                    <div class="metric-subtitle" id="empresaFunctionsDetalle">Invocaciones: 0</div>
+                    <div class="metric-subtitle" id="empresaFunctionsDetalle">Invoc: 0</div>
                     <i class="fas fa-bolt metric-icon"></i>
                 </div>
 
-                <!-- Auth -->
-                <div class="metric-card auth">
-                    <div class="metric-title">
-                        <i class="fas fa-user-lock"></i> Authentication
-                    </div>
-                    <div class="metric-value" id="empresaAuthTotal">0</div>
-                    <div class="metric-subtitle" id="empresaAuthDetalle">Login:0 / Logout:0 / Reg:0</div>
-                    <i class="fas fa-users metric-icon"></i>
-                </div>
-
-                <!-- FCM (Nueva tarjeta) -->
+                <!-- FCM -->
                 <div class="metric-card fcm">
                     <div class="metric-title">
                         <i class="fas fa-bell"></i> FCM Notificaciones
                     </div>
                     <div class="metric-value" id="empresaFCMTotal">0</div>
-                    <div class="metric-subtitle" id="empresaFCMDetalle">Notif:0 / Tokens:0</div>
+                    <div class="metric-subtitle" id="empresaFCMDetalle">Push:0 / Tokens:0</div>
                     <i class="fas fa-broadcast-tower metric-icon"></i>
                 </div>
 
@@ -148,47 +137,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Tabla de últimas operaciones -->
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-history"></i> Última operación registrada</h5>
-                </div>
-                <div class="card-body">
-                    <div class="ultima-operacion" id="ultimaOperacion">
-                        <span class="sin-datos">No hay operaciones registradas</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Lista de todas las empresas (Resumen) -->
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="fas fa-list"></i> Resumen de todas las empresas</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Empresa</th>
-                                <th>Firestore</th>
-                                <th>Storage</th>
-                                <th>Functions</th>
-                                <th>Auth</th>
-                                <th>FCM</th>
-                                <th>Total</th>
-                                <th>Última actualización</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaEmpresasBody">
-                            <tr><td colspan="9" style="text-align:center;">Cargando empresas...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
 
         <!-- Footer -->
@@ -201,7 +149,8 @@
     <!-- Scripts -->
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-  <script type="module" src="/components/navbarSysAdmin.js"></script>    <script src="/components/footerAdministrador.js"></script>
+    <script type="module" src="/components/navbarSysAdmin.js"></script>
+    <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="./consumoGlobal.js"></script>
 </body>
 

@@ -1,6 +1,6 @@
 /**
  * PDF CONSUMO GENERATOR - Sistema Centinela
- * VERSIÓN: 3.3 - Versión final con resumen de consumo detallado
+ * VERSIÓN: 4.7 - Gráfica grande intacta + Resumen perfectamente alineado
  */
 
 import { PDFBaseGenerator, coloresBase } from './pdf-base-generator.js';
@@ -14,7 +14,6 @@ export const coloresConsumo = {
         firestore: '#3b82f6',
         storage: '#f97316',
         functions: '#8b5cf6',
-        auth: '#10b981',
         fcm: '#ec4899',
         total: '#0dcaf0'
     }
@@ -86,14 +85,8 @@ class PDFConsumoGenerator extends PDFBaseGenerator {
 
             const pdf = new this.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             
-            // Página 1: Tarjetas de métricas
             await this._generarPagina1(pdf, datosConsumo);
-            
-            // Página 2: Gráfica de distribución
             await this._generarPagina2(pdf, datosConsumo);
-            
-            // Página 3: Resumen de consumo detallado
-            await this._generarPagina3(pdf, datosConsumo);
 
             const nombreArchivo = `CONSUMO_${this.empresaNombre.replace(/[^a-zA-Z0-9]/g, '_')}_${this.formatearFechaArchivo()}.pdf`;
 
@@ -121,10 +114,8 @@ class PDFConsumoGenerator extends PDFBaseGenerator {
         const anchoContenido = anchoPagina - (margen * 2);
         let yPos = this.alturaEncabezado + 5;
 
-        // ENCABEZADO
         this.dibujarEncabezadoBase(pdf, 'REPORTE DE CONSUMO', this.empresaNombre || 'SISTEMA CENTINELA');
 
-        // INFO DE EMPRESA
         pdf.setDrawColor(200, 200, 200);
         pdf.setFillColor(255, 255, 255);
         pdf.roundedRect(margen, yPos, anchoContenido, 28, 3, 3, 'FD');
@@ -145,214 +136,187 @@ class PDFConsumoGenerator extends PDFBaseGenerator {
         
         yPos += 32;
 
-        // MÉTRICAS
-        const anchoTarjeta = (anchoContenido - 20) / 3;
-        const altoTarjeta = 52;
+        const anchoTarjeta = (anchoContenido - 30) / 4;
+        const altoTarjeta = 58;
         
         const fs = datos.firestore || { lectura: 0, escritura: 0, actualizacion: 0, eliminacion: 0, total: 0 };
         const st = datos.storage || { subida: 0, descarga: 0, eliminacion: 0, total: 0 };
         const fn = datos.functions || { invocacion: 0, invocaciones: 0, notificacionesPushEnviadas: 0, usuariosNotificados: 0, total: 0 };
-        const au = datos.autenticacion || { inicioSesion: 0, cierreSesion: 0, registro: 0, total: 0 };
         const fcm = datos.fcm || { notificacionEnviada: 0, tokenRegistrado: 0, tokenEliminado: 0, total: 0 };
         
         const invocacionesTotales = (fn.invocacion || 0) + (fn.invocaciones || 0);
         const notificacionesPush = fn.notificacionesPushEnviadas || 0;
-        const usuariosNotificados = fn.usuariosNotificados || 0;
-        const totalGeneral = fs.total + st.total + (fn.total || invocacionesTotales) + au.total + fcm.total;
+        const totalGeneral = fs.total + st.total + (fn.total || invocacionesTotales) + fcm.total;
         
-        // Fila 1
-        this._dibujarTarjeta(pdf, 'Firestore', this._formatearNumero(fs.total), 
-            `L:${fs.lectura} / E:${fs.escritura} / U:${fs.actualizacion} / D:${fs.eliminacion}`,
+        this._dibujarTarjetaGrande(pdf, 'Firestore', this._formatearNumero(fs.total), 
+            `L:${fs.lectura} / E:${fs.escritura} / A:${fs.actualizacion} / D:${fs.eliminacion || 0}`,
             margen, yPos, anchoTarjeta, altoTarjeta, '#3b82f6');
         
-        this._dibujarTarjeta(pdf, 'Storage', this._formatearNumero(st.total),
-            `Sub:${st.subida} / Desc:${st.descarga} / Elim:${st.eliminacion}`,
+        this._dibujarTarjetaGrande(pdf, 'Storage', this._formatearNumero(st.total),
+            `Sub:${st.subida} / Desc:${st.descarga} / Del:${st.eliminacion || 0}`,
             margen + anchoTarjeta + 10, yPos, anchoTarjeta, altoTarjeta, '#f97316');
         
-        this._dibujarTarjeta(pdf, 'Cloud Functions', this._formatearNumero(invocacionesTotales),
-            `Invocaciones: ${invocacionesTotales}`,
+        this._dibujarTarjetaGrande(pdf, 'Cloud Functions', this._formatearNumero(invocacionesTotales),
+            `Invoc: ${invocacionesTotales}`,
             margen + (anchoTarjeta + 10) * 2, yPos, anchoTarjeta, altoTarjeta, '#8b5cf6');
+        
+        this._dibujarTarjetaCompactaGrande(pdf, 'FCM Notificaciones', this._formatearNumero(notificacionesPush),
+            `Push:${notificacionesPush} / Tokens:${fcm.tokenRegistrado}`,
+            margen + (anchoTarjeta + 10) * 3, yPos, anchoTarjeta, altoTarjeta, '#ec4899');
         
         yPos += altoTarjeta + 12;
         
-        // Fila 2
-        this._dibujarTarjeta(pdf, 'Authentication', this._formatearNumero(au.total),
-            `Login:${au.inicioSesion} Logout:${au.cierreSesion} Reg:${au.registro}`,
-            margen, yPos, anchoTarjeta, altoTarjeta, '#10b981');
-        
-        this._dibujarTarjetaCompacta(pdf, 'FCM Notificaciones', this._formatearNumero(notificacionesPush),
-            `Usuarios:${usuariosNotificados} Tokens:${fcm.tokenRegistrado} Elim:${fcm.tokenEliminado}`,
-            margen + anchoTarjeta + 10, yPos, anchoTarjeta, altoTarjeta, '#ec4899');
-        
-        this._dibujarTarjetaCompacta(pdf, 'Total Operaciones', this._formatearNumero(totalGeneral),
-            `${this._formatearNumero(totalGeneral)} ops (${notificacionesPush} push)`,
-            margen + (anchoTarjeta + 10) * 2, yPos, anchoTarjeta, altoTarjeta, '#0dcaf0');
+        const anchoTotal = 140;
+        const xTotal = (anchoPagina - anchoTotal) / 2;
+        this._dibujarTarjetaTotalGrande(pdf, 'Total Operaciones', this._formatearNumero(totalGeneral),
+            `${this._formatearNumero(totalGeneral)} ops total (${notificacionesPush} push reales)`,
+            xTotal, yPos, anchoTotal, altoTarjeta, '#0dcaf0');
         
         this.dibujarPiePagina(pdf);
     }
 
     async _generarPagina2(pdf, datos) {
-        // Agregar nueva página
         pdf.addPage();
         
-        const margen = 20;
+        const margen = 18;
         const anchoPagina = pdf.internal.pageSize.getWidth();
         const anchoContenido = anchoPagina - (margen * 2);
-        let yPos = 25;
+        let yPos = 15;
         
-        // Título de la página de gráficas
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(18);
+        pdf.setFontSize(14);
         pdf.setTextColor(26, 59, 93);
-        pdf.text('ANÁLISIS GRÁFICO DE CONSUMO', anchoPagina / 2, yPos, { align: 'center' });
-        yPos += 15;
+        pdf.text('DISTRIBUCIÓN DE CONSUMO POR SERVICIO', anchoPagina / 2, yPos, { align: 'center' });
+        yPos += 8;
         
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
+        pdf.setFontSize(9);
         pdf.setTextColor(100, 100, 100);
         pdf.text(`Empresa: ${this.empresaNombre}`, anchoPagina / 2, yPos, { align: 'center' });
-        yPos += 25;
+        yPos += 18;
         
-        // Extraer datos
         const fs = datos.firestore || { total: 0 };
         const st = datos.storage || { total: 0 };
         const fn = datos.functions || { invocacion: 0, invocaciones: 0, total: 0 };
-        const au = datos.autenticacion || { total: 0 };
         const fcm = datos.fcm || { total: 0 };
         
         const invocacionesTotales = (fn.invocacion || 0) + (fn.invocaciones || 0);
         
-        // Gráfica: Distribución por servicio (tamaño completo)
-        const altoGrafica = 180;
-        await this._dibujarGraficaCircularCanvas(pdf, 'Distribución por servicio',
-            [
-                { nombre: 'Firestore', valor: fs.total, color: '#3b82f6' },
-                { nombre: 'Storage', valor: st.total, color: '#f97316' },
-                { nombre: 'Cloud Functions', valor: invocacionesTotales, color: '#8b5cf6' },
-                { nombre: 'Authentication', valor: au.total, color: '#10b981' },
-                { nombre: 'FCM', valor: fcm.total, color: '#ec4899' }
-            ],
-            margen, yPos, anchoContenido, altoGrafica);
+        const datosGrafica = [
+            { nombre: 'Firestore', valor: fs.total, color: '#3b82f6' },
+            { nombre: 'Storage', valor: st.total, color: '#f97316' },
+            { nombre: 'Cloud Functions', valor: invocacionesTotales, color: '#8b5cf6' },
+            { nombre: 'FCM', valor: fcm.total, color: '#ec4899' }
+        ];
         
-        this.dibujarPiePagina(pdf);
-    }
-
-    async _generarPagina3(pdf, datos) {
-        // Agregar nueva página
-        pdf.addPage();
+        // Gráfica grande - igual que en versión 4.2
+        const altoGrafica = 125;
+        await this._dibujarGraficaCircularPerfecta(pdf, datosGrafica, margen, yPos, anchoContenido, altoGrafica);
+        yPos += altoGrafica + 15;
         
-        const margen = 15;
-        const anchoPagina = pdf.internal.pageSize.getWidth();
-        const anchoContenido = anchoPagina - (margen * 2);
-        let yPos = 30;
-        
-        // Título
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(16);
+        pdf.setFontSize(13);
         pdf.setTextColor(26, 59, 93);
         pdf.text('RESUMEN DETALLADO DE CONSUMO', anchoPagina / 2, yPos, { align: 'center' });
-        yPos += 20;
+        yPos += 12;
         
-        // Resumen de métricas detalladas
-        const fs = datos.firestore || { lectura: 0, escritura: 0, actualizacion: 0, eliminacion: 0, total: 0 };
-        const st = datos.storage || { subida: 0, descarga: 0, eliminacion: 0, total: 0 };
-        const fn = datos.functions || { invocacion: 0, invocaciones: 0, notificacionesPushEnviadas: 0, usuariosNotificados: 0, total: 0 };
-        const au = datos.autenticacion || { inicioSesion: 0, cierreSesion: 0, registro: 0, total: 0 };
-        const fcm = datos.fcm || { tokenRegistrado: 0, tokenEliminado: 0 };
+        const fsDetalle = datos.firestore || { lectura: 0, escritura: 0, actualizacion: 0, eliminacion: 0, total: 0 };
+        const stDetalle = datos.storage || { subida: 0, descarga: 0, eliminacion: 0, total: 0 };
+        const fnDetalle = datos.functions || { invocacion: 0, invocaciones: 0, notificacionesPushEnviadas: 0, usuariosNotificados: 0, total: 0 };
+        const fcmDetalle = datos.fcm || { tokenRegistrado: 0, tokenEliminado: 0 };
         
-        const invocacionesTotales = (fn.invocacion || 0) + (fn.invocaciones || 0);
-        const notificacionesPush = fn.notificacionesPushEnviadas || 0;
-        const usuariosNotificados = fn.usuariosNotificados || 0;
+        const invocacionesTotalesDetalle = (fnDetalle.invocacion || 0) + (fnDetalle.invocaciones || 0);
+        const notificacionesPushDetalle = fnDetalle.notificacionesPushEnviadas || 0;
+        const usuariosNotificadosDetalle = fnDetalle.usuariosNotificados || 0;
         
+        // Layout en 2 columnas con alineación perfecta
+        const columnaIzq = margen;
+        const columnaDer = anchoPagina / 2 + 5;
+        
+        // Calcular la altura de la columna izquierda para alinear la derecha
+        let yIzq = yPos;
+        
+        // ========== COLUMNA IZQUIERDA ==========
+        // Firestore
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
+        pdf.setFontSize(11);
         pdf.setTextColor(26, 59, 93);
-        pdf.text('Firestore', margen, yPos);
-        yPos += 6;
+        pdf.text('Firestore', columnaIzq, yIzq);
+        yIzq += 6;
         
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
+        pdf.setFontSize(9);
         pdf.setTextColor(80, 80, 80);
-        pdf.text(`• Total: ${this._formatearNumero(fs.total)} operaciones`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Lecturas: ${this._formatearNumero(fs.lectura)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Escrituras: ${this._formatearNumero(fs.escritura)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Actualizaciones: ${this._formatearNumero(fs.actualizacion)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Eliminaciones: ${this._formatearNumero(fs.eliminacion)}`, margen + 5, yPos);
-        yPos += 10;
+        pdf.text(`• Total: ${this._formatearNumero(fsDetalle.total)} operaciones`, columnaIzq + 5, yIzq);
+        yIzq += 5;
+        pdf.text(`  Lecturas: ${this._formatearNumero(fsDetalle.lectura)}`, columnaIzq + 5, yIzq);
+        yIzq += 5;
+        pdf.text(`  Escrituras: ${this._formatearNumero(fsDetalle.escritura)}`, columnaIzq + 5, yIzq);
+        yIzq += 5;
+        pdf.text(`  Actualizaciones: ${this._formatearNumero(fsDetalle.actualizacion)}`, columnaIzq + 5, yIzq);
+        yIzq += 5;
+        pdf.text(`  Eliminaciones: ${this._formatearNumero(fsDetalle.eliminacion || 0)}`, columnaIzq + 5, yIzq);
+        yIzq += 10;
         
+        // Storage
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
+        pdf.setFontSize(11);
         pdf.setTextColor(26, 59, 93);
-        pdf.text('Storage', margen, yPos);
-        yPos += 6;
+        pdf.text('Storage', columnaIzq, yIzq);
+        yIzq += 6;
         
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
+        pdf.setFontSize(9);
         pdf.setTextColor(80, 80, 80);
-        pdf.text(`• Total: ${this._formatearNumero(st.total)} operaciones`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Subidas: ${this._formatearNumero(st.subida)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Descargas: ${this._formatearNumero(st.descarga)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Eliminaciones: ${this._formatearNumero(st.eliminacion)}`, margen + 5, yPos);
-        yPos += 10;
+        pdf.text(`• Total: ${this._formatearNumero(stDetalle.total)} operaciones`, columnaIzq + 5, yIzq);
+        yIzq += 5;
+        pdf.text(`  Subidas: ${this._formatearNumero(stDetalle.subida)}`, columnaIzq + 5, yIzq);
+        yIzq += 5;
+        pdf.text(`  Descargas: ${this._formatearNumero(stDetalle.descarga)}`, columnaIzq + 5, yIzq);
+        yIzq += 5;
+        pdf.text(`  Eliminaciones: ${this._formatearNumero(stDetalle.eliminacion || 0)}`, columnaIzq + 5, yIzq);
         
+        // ========== COLUMNA DERECHA (alineada con Firestore y Storage) ==========
+        let yDer = yPos;
+        
+        // Cloud Functions - alineado con Firestore
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
+        pdf.setFontSize(11);
         pdf.setTextColor(26, 59, 93);
-        pdf.text('Cloud Functions', margen, yPos);
-        yPos += 6;
+        pdf.text('Cloud Functions', columnaDer, yDer);
+        yDer += 6;
         
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
+        pdf.setFontSize(9);
         pdf.setTextColor(80, 80, 80);
-        pdf.text(`• Invocaciones: ${this._formatearNumero(invocacionesTotales)}`, margen + 5, yPos);
-        yPos += 10;
+        pdf.text(`• Invocaciones: ${this._formatearNumero(invocacionesTotalesDetalle)}`, columnaDer + 5, yDer);
+        yDer += 28; // Espacio para que Notificaciones quede alineada con Storage
         
+        // Notificaciones Push - alineado con Storage
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
+        pdf.setFontSize(11);
         pdf.setTextColor(26, 59, 93);
-        pdf.text('Authentication', margen, yPos);
-        yPos += 6;
+        pdf.text('Notificaciones Push (FCM)', columnaDer, yDer);
+        yDer += 6;
         
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
+        pdf.setFontSize(9);
         pdf.setTextColor(80, 80, 80);
-        pdf.text(`• Total: ${this._formatearNumero(au.total)} operaciones`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Login: ${this._formatearNumero(au.inicioSesion)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Logout: ${this._formatearNumero(au.cierreSesion)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Registro: ${this._formatearNumero(au.registro)}`, margen + 5, yPos);
-        yPos += 10;
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
-        pdf.setTextColor(26, 59, 93);
-        pdf.text('Notificaciones Push (FCM)', margen, yPos);
-        yPos += 6;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        pdf.setTextColor(80, 80, 80);
-        pdf.text(`• Enviadas: ${this._formatearNumero(notificacionesPush)} notificaciones`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Usuarios notificados: ${this._formatearNumero(usuariosNotificados)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Tokens registrados: ${this._formatearNumero(fcm.tokenRegistrado)}`, margen + 5, yPos);
-        yPos += 5;
-        pdf.text(`  Tokens eliminados: ${this._formatearNumero(fcm.tokenEliminado)}`, margen + 5, yPos);
+        pdf.text(`• Enviadas: ${this._formatearNumero(notificacionesPushDetalle)} notificaciones`, columnaDer + 5, yDer);
+        yDer += 5;
+        pdf.text(`  Usuarios notificados: ${this._formatearNumero(usuariosNotificadosDetalle)}`, columnaDer + 5, yDer);
+        yDer += 5;
+        pdf.text(`  Tokens registrados: ${this._formatearNumero(fcmDetalle.tokenRegistrado)}`, columnaDer + 5, yDer);
+        yDer += 5;
+        pdf.text(`  Tokens eliminados: ${this._formatearNumero(fcmDetalle.tokenEliminado)}`, columnaDer + 5, yDer);
         
         this.dibujarPiePagina(pdf);
     }
 
-    _dibujarTarjeta(pdf, titulo, valorGrande, detalle, x, y, ancho, alto, colorHex) {
+    // =============================================
+    // TARJETAS CON TEXTO MÁS GRANDE
+    // =============================================
+    _dibujarTarjetaGrande(pdf, titulo, valorGrande, detalle, x, y, ancho, alto, colorHex) {
         pdf.setFillColor(250, 250, 250);
         pdf.setDrawColor(200, 200, 200);
         pdf.roundedRect(x, y, ancho, alto, 4, 4, 'FD');
@@ -361,124 +325,167 @@ class PDFConsumoGenerator extends PDFBaseGenerator {
         const g = parseInt(colorHex.slice(3, 5), 16);
         const b = parseInt(colorHex.slice(5, 7), 16);
         pdf.setFillColor(r, g, b);
-        pdf.rect(x, y, ancho, 3, 'F');
+        pdf.rect(x, y, ancho, 4, 'F');
         
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(8);
+        pdf.setFontSize(9);
         pdf.setTextColor(80, 80, 80);
-        pdf.text(titulo, x + 6, y + 10);
+        pdf.text(titulo, x + 5, y + 10);
         
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(16);
+        pdf.setFontSize(18);
         pdf.setTextColor(26, 59, 93);
-        pdf.text(valorGrande, x + 6, y + 24);
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(6);
-        pdf.setTextColor(100, 100, 100);
-        const lineasDetalle = this._dividirTexto(detalle, ancho - 12);
-        lineasDetalle.forEach((linea, i) => {
-            pdf.text(linea, x + 6, y + 32 + (i * 3.5));
-        });
-    }
-
-    _dibujarTarjetaCompacta(pdf, titulo, valorGrande, detalle, x, y, ancho, alto, colorHex) {
-        pdf.setFillColor(250, 250, 250);
-        pdf.setDrawColor(200, 200, 200);
-        pdf.roundedRect(x, y, ancho, alto, 4, 4, 'FD');
-        
-        const r = parseInt(colorHex.slice(1, 3), 16);
-        const g = parseInt(colorHex.slice(3, 5), 16);
-        const b = parseInt(colorHex.slice(5, 7), 16);
-        pdf.setFillColor(r, g, b);
-        pdf.rect(x, y, ancho, 3, 'F');
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(8);
-        pdf.setTextColor(80, 80, 80);
-        pdf.text(titulo, x + 6, y + 10);
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(16);
-        pdf.setTextColor(26, 59, 93);
-        pdf.text(valorGrande, x + 6, y + 24);
+        pdf.text(valorGrande, x + 5, y + 25);
         
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(7);
         pdf.setTextColor(100, 100, 100);
-        pdf.text(detalle, x + 6, y + 34);
+        const lineasDetalle = this._dividirTexto(detalle, ancho - 10);
+        lineasDetalle.forEach((linea, i) => {
+            pdf.text(linea, x + 5, y + 35 + (i * 4));
+        });
     }
 
-    async _dibujarGraficaCircularCanvas(pdf, titulo, datos, x, y, ancho, alto) {
+    _dibujarTarjetaCompactaGrande(pdf, titulo, valorGrande, detalle, x, y, ancho, alto, colorHex) {
+        pdf.setFillColor(250, 250, 250);
+        pdf.setDrawColor(200, 200, 200);
+        pdf.roundedRect(x, y, ancho, alto, 4, 4, 'FD');
+        
+        const r = parseInt(colorHex.slice(1, 3), 16);
+        const g = parseInt(colorHex.slice(3, 5), 16);
+        const b = parseInt(colorHex.slice(5, 7), 16);
+        pdf.setFillColor(r, g, b);
+        pdf.rect(x, y, ancho, 4, 'F');
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(80, 80, 80);
+        pdf.text(titulo, x + 5, y + 10);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(18);
+        pdf.setTextColor(26, 59, 93);
+        pdf.text(valorGrande, x + 5, y + 25);
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(detalle, x + 5, y + 37);
+    }
+
+    _dibujarTarjetaTotalGrande(pdf, titulo, valorGrande, detalle, x, y, ancho, alto, colorHex) {
+        pdf.setFillColor(250, 250, 250);
+        pdf.setDrawColor(200, 200, 200);
+        pdf.roundedRect(x, y, ancho, alto, 4, 4, 'FD');
+        
+        const r = parseInt(colorHex.slice(1, 3), 16);
+        const g = parseInt(colorHex.slice(3, 5), 16);
+        const b = parseInt(colorHex.slice(5, 7), 16);
+        pdf.setFillColor(r, g, b);
+        pdf.rect(x, y, ancho, 4, 'F');
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.setTextColor(80, 80, 80);
+        pdf.text(titulo, x + 10, y + 11);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(20);
+        pdf.setTextColor(26, 59, 93);
+        pdf.text(valorGrande, x + 10, y + 27);
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(detalle, x + 10, y + 39);
+    }
+
+    // =============================================
+    // GRÁFICA CIRCULAR PERFECTA - MÁS GRANDE (igual que versión 4.2)
+    // =============================================
+    async _dibujarGraficaCircularPerfecta(pdf, datos, x, y, ancho, alto) {
+        const total = datos.reduce((sum, d) => sum + d.valor, 0);
+        
+        if (total === 0) {
+            pdf.setFillColor(250, 250, 250);
+            pdf.setDrawColor(200, 200, 200);
+            pdf.roundedRect(x, y, ancho, alto, 3, 3, 'FD');
+            pdf.setFont('helvetica', 'italic');
+            pdf.setFontSize(10);
+            pdf.setTextColor(150, 150, 150);
+            pdf.text('Sin datos disponibles', x + ancho / 2, y + alto / 2, { align: 'center' });
+            return;
+        }
+
+        const canvasSize = 700;
         const canvas = document.createElement('canvas');
-        canvas.width = 800;
-        canvas.height = 600;
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
         const ctx = canvas.getContext('2d');
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        ctx.font = 'bold 24px Arial';
-        ctx.fillStyle = '#1a3b5d';
-        ctx.fillText(titulo, 40, 50);
+        const centroX = canvasSize / 2;
+        const centroY = canvasSize / 2 - 15;
+        const radio = canvasSize * 0.32;
         
-        const total = datos.reduce((sum, d) => sum + d.valor, 0);
+        let anguloInicio = 0;
         
-        if (total === 0) {
-            ctx.font = 'italic 18px Arial';
-            ctx.fillStyle = '#999';
-            ctx.fillText('Sin datos disponibles', canvas.width/2 - 80, canvas.height/2);
-        } else {
-            const centroX = canvas.width * 0.4;
-            const centroY = canvas.height * 0.55;
-            const radio = Math.min(canvas.width * 0.22, canvas.height * 0.3);
-            let anguloInicio = 0;
-            
-            datos.forEach((d) => {
-                const angulo = (d.valor / total) * 360;
-                const anguloFin = anguloInicio + angulo;
-                const radInicio = (anguloInicio * Math.PI) / 180;
-                const radFin = (anguloFin * Math.PI) / 180;
-                
-                ctx.beginPath();
-                ctx.moveTo(centroX, centroY);
-                ctx.arc(centroX, centroY, radio, radInicio, radFin);
-                ctx.closePath();
-                ctx.fillStyle = d.color;
-                ctx.fill();
-                
-                anguloInicio = anguloFin;
-            });
+        datos.forEach((d) => {
+            const angulo = (d.valor / total) * 360;
+            const anguloFin = anguloInicio + angulo;
+            const radInicio = (anguloInicio * Math.PI) / 180;
+            const radFin = (anguloFin * Math.PI) / 180;
             
             ctx.beginPath();
-            ctx.arc(centroX, centroY, radio * 0.45, 0, 2 * Math.PI);
-            ctx.fillStyle = '#ffffff';
+            ctx.moveTo(centroX, centroY);
+            ctx.arc(centroX, centroY, radio, radInicio, radFin);
+            ctx.closePath();
+            ctx.fillStyle = d.color;
             ctx.fill();
             
-            let yLeyenda = 60;
-            datos.forEach((d) => {
-                const porcentaje = total > 0 ? Math.round((d.valor / total) * 100) : 0;
-                ctx.fillStyle = d.color;
-                ctx.fillRect(canvas.width - 200, yLeyenda, 16, 16);
-                ctx.font = '14px Arial';
-                ctx.fillStyle = '#555';
-                ctx.fillText(`${d.nombre}: ${porcentaje}% (${this._formatearNumero(d.valor)})`, canvas.width - 175, yLeyenda + 12);
-                yLeyenda += 28;
-            });
-            
-            ctx.font = 'bold 18px Arial';
-            ctx.fillStyle = '#1a3b5d';
-            ctx.fillText(`Total: ${this._formatearNumero(total)} operaciones`, centroX - 80, centroY + radio + 40);
-        }
+            anguloInicio = anguloFin;
+        });
         
-        const imgData = canvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', x, y, ancho, alto);
+        ctx.beginPath();
+        ctx.arc(centroX, centroY, radio * 0.45, 0, 2 * Math.PI);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        
+        const xLeyenda = canvasSize - 160;
+        let yLeyenda = 70;
+        
+        datos.forEach((d) => {
+            const porcentaje = total > 0 ? Math.round((d.valor / total) * 100) : 0;
+            ctx.fillStyle = d.color;
+            ctx.fillRect(xLeyenda, yLeyenda, 16, 16);
+            ctx.font = 'bold 14px Arial';
+            ctx.fillStyle = '#333';
+            let nombre = d.nombre;
+            if (nombre === 'Cloud Functions') nombre = 'Functions';
+            ctx.fillText(`${nombre}: ${porcentaje}%`, xLeyenda + 22, yLeyenda + 13);
+            yLeyenda += 28;
+        });
+        
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#1a3b5d';
+        ctx.fillText(`Total: ${this._formatearNumero(total)}`, centroX - 65, centroY + radio + 48);
+        
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        
+        const margenInterno = 5;
+        const altoImagen = alto - margenInterno;
+        const anchoImagen = altoImagen;
+        const xImagen = x + (ancho - anchoImagen) / 2;
+        
+        pdf.addImage(imgData, 'PNG', xImagen, y, anchoImagen, altoImagen);
     }
 
     _dividirTexto(texto, anchoMax) {
         if (!texto) return [''];
-        const longitudMax = Math.floor(anchoMax / 2.2);
+        const longitudMax = Math.floor(anchoMax / 1.8);
         if (texto.length <= longitudMax) return [texto];
         
         const palabras = texto.split(' ');
