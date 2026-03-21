@@ -5,10 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seguimiento de Incidencia - Sistema Centinela</title>
-        <!-- Estilos -->
+    <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Icono en barra de titulo -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
@@ -25,8 +27,10 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
     <!-- SEO Básico -->
-    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
-    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="description"
+        content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords"
+        content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
     <meta name="author" content="Centinela-MX">
     <link rel="canonical" href="https://centinela-mx.web.app/" />
 
@@ -34,7 +38,8 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://centinela-mx.web.app">
     <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
-    <meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:description"
+        content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
     <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
@@ -49,7 +54,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://centinela-mx.web.app">
     <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
-    <meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+    <meta name="twitter:description"
+        content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
     <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta name="twitter:creator" content="">
 
@@ -144,7 +150,8 @@
 
                             <!-- Columna 2 -->
                             <div class="info-item">
-                                <span class="info-label"><i class="fas fa-exclamation-triangle"></i> Nivel de Riesgo:</span>
+                                <span class="info-label"><i class="fas fa-exclamation-triangle"></i> Nivel de
+                                    Riesgo:</span>
                                 <span class="info-value" id="infoRiesgo">-</span>
                             </div>
 
@@ -206,7 +213,8 @@
                         <h5><i class="fas fa-history"></i>Historial de Seguimiento</h5>
                         <div style="display: flex; gap: 15px; align-items: center;">
                             <span class="badge-info" id="totalSeguimientos">0 seguimientos</span>
-                            <i class="fas fa-chevron-down" id="historialToggle" style="color: var(--color-accent-primary); transition: transform 0.3s;"></i>
+                            <i class="fas fa-chevron-down" id="historialToggle"
+                                style="color: var(--color-accent-primary); transition: transform 0.3s;"></i>
                         </div>
                     </div>
                     <div class="card-body" id="historialContent">
@@ -235,7 +243,8 @@
                             <div class="form-grid">
                                 <!-- Fecha y Hora -->
                                 <div class="full-width">
-                                    <label for="fechaSeguimiento" class="form-label">Fecha y Hora del Seguimiento *</label>
+                                    <label for="fechaSeguimiento" class="form-label">Fecha y Hora del Seguimiento
+                                        *</label>
                                     <div class="input-group">
                                         <span class="input-group-icon"><i class="fas fa-calendar-alt"></i></span>
                                         <input type="text" class="form-control" id="fechaSeguimiento"
@@ -261,7 +270,8 @@
 
                                 <!-- Descripción del seguimiento -->
                                 <div class="full-width">
-                                    <label for="descripcionSeguimiento" class="form-label">Descripción del Seguimiento *</label>
+                                    <label for="descripcionSeguimiento" class="form-label">Descripción del Seguimiento
+                                        *</label>
                                     <textarea class="form-control" id="descripcionSeguimiento" rows="4"
                                         placeholder="Describe las acciones realizadas, novedades, o información adicional..."></textarea>
                                     <div class="form-help-text">Detalla la información de este seguimiento</div>
@@ -275,20 +285,23 @@
                                     <label class="form-label">Evidencias del Seguimiento</label>
                                     <div class="image-upload-section">
                                         <div class="upload-area">
-                                            <input type="file" id="inputEvidencias" multiple accept="image/*" style="display: none;">
+                                            <input type="file" id="inputEvidencias" multiple accept="image/*"
+                                                style="display: none;">
                                             <button type="button" class="btn-upload" id="btnAgregarEvidencias">
                                                 <i class="fas fa-cloud-upload-alt"></i>
                                                 Agregar evidencias
                                             </button>
                                             <div class="upload-hint">
                                                 <i class="fas fa-info-circle"></i>
-                                                Formatos: JPG, PNG, GIF. Máximo 5MB por imagen. Puedes editar las imágenes después de agregarlas.
+                                                Formatos: JPG, PNG, GIF. Máximo 5MB por imagen. Puedes editar las
+                                                imágenes después de agregarlas.
                                             </div>
                                         </div>
                                     </div>
 
                                     <!-- Vista previa de evidencias -->
-                                    <div class="images-preview-container" id="evidenciasPreviewContainer" style="display: none;">
+                                    <div class="images-preview-container" id="evidenciasPreviewContainer"
+                                        style="display: none;">
                                         <h6>
                                             <i class="fas fa-images"></i>
                                             Evidencias a subir (<span id="evidenciasCount">0</span>)
@@ -323,6 +336,12 @@
     <script src="/components/imagenEditorEvidencias.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="seguimientoIncidencias.js"></script>
+
+    <script src="/js/protector-de-pagina.js" data-rol="administrador"
+        data-mensaje="Solo administradores pueden acceder a esta página."
+        data-titulo="Acceso de Administrador Requerido"
+        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
+        </script>
 </body>
 
 </html>

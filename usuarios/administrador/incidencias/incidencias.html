@@ -145,7 +145,8 @@
         <div class="card">
             <div class="card-header">
                 <h5><i class="fas fa-list"></i> Lista de Incidencias</h5>
-                <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="btn-nueva-incidencia-header">
+                <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html"
+                    class="btn-nueva-incidencia-header">
                     <i class="fas fa-plus"></i> Nueva Incidencia
                 </a>
             </div>
@@ -188,6 +189,12 @@
     <script src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="incidencias.js"></script>
+
+    <script src="/js/protector-de-pagina.js" data-rol="administrador"
+        data-mensaje="Solo administradores pueden acceder a esta página."
+        data-titulo="Acceso de Administrador Requerido"
+        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
+        </script>
 </body>
 
 </html>

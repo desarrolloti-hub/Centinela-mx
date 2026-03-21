@@ -163,6 +163,12 @@
     <script src="/components/footerAdministrador.js"></script>
     <!-- JS específico de colaboradores -->
     <script type="module" src="incidenciasCanalizadas.js"></script>
+
+    <script src="/js/protector-de-pagina.js" data-rol="administrador"
+        data-mensaje="Solo administradores pueden acceder a esta página."
+        data-titulo="Acceso de Administrador Requerido"
+        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
+        </script>
 </body>
 
 </html>

@@ -5,10 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ver Incidencia - Sistema Centinela</title>
-        <!-- Estilos -->
+    <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Icono en barra de titulo -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
@@ -21,8 +23,10 @@
 
 
     <!-- SEO Básico -->
-    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
-    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="description"
+        content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords"
+        content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
     <meta name="author" content="Centinela-MX">
     <link rel="canonical" href="https://centinela-mx.web.app/" />
 
@@ -30,7 +34,8 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://centinela-mx.web.app">
     <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
-    <meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:description"
+        content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
     <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
@@ -45,7 +50,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://centinela-mx.web.app">
     <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
-    <meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+    <meta name="twitter:description"
+        content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
     <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta name="twitter:creator" content="">
 
@@ -140,7 +146,8 @@
 
                             <!-- Columna 2 -->
                             <div class="info-item">
-                                <span class="info-label"><i class="fas fa-exclamation-triangle"></i> Nivel de Riesgo:</span>
+                                <span class="info-label"><i class="fas fa-exclamation-triangle"></i> Nivel de
+                                    Riesgo:</span>
                                 <span class="info-value" id="infoRiesgo">-</span>
                             </div>
 
@@ -155,7 +162,8 @@
                             </div>
 
                             <div class="info-item" id="fechaFinalizacionContainer" style="display: none;">
-                                <span class="info-label"><i class="fas fa-calendar-check"></i> Fecha Finalización:</span>
+                                <span class="info-label"><i class="fas fa-calendar-check"></i> Fecha
+                                    Finalización:</span>
                                 <span class="info-value" id="infoFechaFinalizacion">-</span>
                             </div>
 
@@ -241,6 +249,13 @@
     <script src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="verIncidencias.js"></script>
+
+    <!-- Script de protección de página -->
+    <script src="/js/protector-de-pagina.js" data-rol="administrador"
+        data-mensaje="Solo administradores pueden acceder a esta página."
+        data-titulo="Acceso de Administrador Requerido"
+        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
+        </script>
 </body>
 
 </html>
