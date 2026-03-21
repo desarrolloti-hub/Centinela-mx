@@ -1,7 +1,25 @@
-// incidencias.js - VERSIÓN OPTIMIZADA CON PAGINACIÓN Y CÓDIGO COMPLETO
+// incidencias.js - VERSIÓN CON PAGINACIÓN REAL EN FIRESTORE
 
 import { generadorIPH } from '/components/iph-generator.js';
 import '/components/visualizadorPDF.js';
+
+// =============================================
+// IMPORTAR FIRESTORE DIRECTAMENTE PARA PAGINACIÓN
+// =============================================
+import {
+    collection,
+    query,
+    where,
+    orderBy,
+    limit,
+    startAfter,
+    getDocs,
+    getCountFromServer
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+import { db } from '/config/firebase-config.js';
+import { Incidencia } from '/clases/incidencia.js';
+import consumo from '/clases/consumoFirebase.js';
 
 // =============================================
 // VARIABLES GLOBALES
@@ -14,11 +32,14 @@ let subcategoriasCache = [];
 let usuariosCache = [];
 let authToken = null;
 
-// Configuración de paginación - OPTIMIZADA
-const ITEMS_POR_PAGINA = 20;  // 20 por página para mejor rendimiento
+// Configuración de paginación REAL
+const ITEMS_POR_PAGINA = 10;
 let paginaActual = 1;
 let totalIncidencias = 0;
 let totalPaginas = 0;
+let ultimoDocumento = null; // Para paginación con cursor
+let primerDocumento = null; // Para paginación hacia atrás
+let incidenciasActuales = []; // Solo las incidencias de la página actual
 
 // Filtros activos
 let filtrosActivos = {
@@ -27,8 +48,8 @@ let filtrosActivos = {
     sucursalId: 'todos'
 };
 
-// Cache de la última consulta (para evitar recargas innecesarias)
-let ultimaConsulta = null;
+// Cache de consultas para evitar recargas innecesarias
+let ultimaConsultaHash = '';
 
 // =============================================
 // FUNCIÓN PARA OBTENER USUARIO ACTUAL
@@ -70,326 +91,72 @@ function obtenerUsuarioActual() {
 }
 
 // =============================================
-// INICIALIZACIÓN
+// GENERAR HASH DE CONSULTA PARA CACHÉ
 // =============================================
-async function inicializarIncidenciaManager() {
-    try {
-        await obtenerDatosOrganizacion();
-        await obtenerTokenAuth();
-
-        const { IncidenciaManager } = await import('/clases/incidencia.js');
-        incidenciaManager = new IncidenciaManager();
-
-        // Cargar datos de apoyo (sucursales, categorías, etc.) - estos sí se cargan completos
-        await Promise.all([
-            cargarSucursales().catch(() => { }),
-            cargarCategorias().catch(() => { }),
-            cargarSubcategorias().catch(() => { }),
-            cargarUsuarios().catch(() => { })
-        ]);
-
-        // Cargar primera página de incidencias
-        await cargarIncidenciasPagina(1);
-
-        // Configurar generador IPH
-        if (generadorIPH && typeof generadorIPH.configurar === 'function') {
-            generadorIPH.configurar({
-                organizacionActual,
-                sucursalesCache,
-                categoriasCache,
-                subcategoriasCache,
-                usuariosCache,
-                authToken
-            });
-        }
-
-        configurarEventListeners();
-        agregarBotonIPHMultiple();
-
-        return true;
-    } catch (error) {
-        console.error('Error al inicializar incidencias:', error);
-        mostrarErrorInicializacion();
-        return false;
-    }
-}
-
-async function obtenerTokenAuth() {
-    try {
-        if (window.firebase && firebase.auth) {
-            const user = firebase.auth().currentUser;
-            if (user) {
-                authToken = await user.getIdToken();
-            }
-        }
-        if (!authToken) {
-            const token = localStorage.getItem('firebaseToken') ||
-                localStorage.getItem('authToken') ||
-                localStorage.getItem('token');
-            if (token) {
-                authToken = token;
-            }
-        }
-    } catch (error) {
-        authToken = null;
-    }
-}
-
-async function obtenerDatosOrganizacion() {
-    try {
-        const usuario = obtenerUsuarioActual();
-        if (usuario) {
-            organizacionActual = {
-                nombre: usuario.organizacion || 'Mi Empresa',
-                camelCase: usuario.organizacionCamelCase || ''
-            };
-            return;
-        }
-
-        if (window.userManager && window.userManager.currentUser) {
-            const user = window.userManager.currentUser;
-            organizacionActual = {
-                nombre: user.organizacion || 'Mi Empresa',
-                camelCase: user.organizacionCamelCase || ''
-            };
-            return;
-        }
-
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
-
-        organizacionActual = {
-            nombre: userData.organizacion || adminInfo.organizacion || 'Mi Empresa',
-            camelCase: userData.organizacionCamelCase || adminInfo.organizacionCamelCase || ''
-        };
-    } catch (error) {
-        organizacionActual = { nombre: 'Mi Empresa', camelCase: '' };
-    }
-}
-
-async function cargarSucursales() {
-    try {
-        const { SucursalManager } = await import('/clases/sucursal.js');
-        const sucursalManager = new SucursalManager();
-
-        if (organizacionActual.camelCase) {
-            sucursalesCache = await sucursalManager.getSucursalesByOrganizacion(organizacionActual.camelCase);
-
-            const filtroSucursal = document.getElementById('filtroSucursal');
-            if (filtroSucursal) {
-                filtroSucursal.innerHTML = '<option value="todos">Todas las sucursales</option>';
-                sucursalesCache.forEach(suc => {
-                    const option = document.createElement('option');
-                    option.value = suc.id;
-                    option.textContent = suc.nombre;
-                    filtroSucursal.appendChild(option);
-                });
-            }
-        }
-    } catch (error) {
-        sucursalesCache = [];
-    }
-}
-
-async function cargarCategorias() {
-    try {
-        const { CategoriaManager } = await import('/clases/categoria.js');
-        const categoriaManager = new CategoriaManager();
-        categoriasCache = await categoriaManager.obtenerTodasCategorias();
-    } catch (error) {
-        categoriasCache = [];
-    }
-}
-
-async function cargarSubcategorias() {
-    try {
-        const modulo = await import('/clases/subcategoria.js').catch(() => null);
-        if (!modulo) {
-            subcategoriasCache = [];
-            return;
-        }
-
-        const SubcategoriaManager = modulo.SubcategoriaManager || modulo.default;
-        if (!SubcategoriaManager) {
-            subcategoriasCache = [];
-            return;
-        }
-
-        const subcategoriaManager = new SubcategoriaManager();
-
-        if (organizacionActual?.camelCase) {
-            subcategoriasCache = await subcategoriaManager.obtenerSubcategoriasPorOrganizacion?.(organizacionActual.camelCase) || [];
-        } else {
-            subcategoriasCache = await subcategoriaManager.obtenerTodasSubcategorias?.() || [];
-        }
-    } catch (error) {
-        subcategoriasCache = [];
-    }
-}
-
-async function cargarUsuarios() {
-    try {
-        const modulo = await import('/clases/user.js').catch(() => null);
-        if (!modulo) {
-            usuariosCache = [];
-            return;
-        }
-
-        const UsuarioManager = modulo.UsuarioManager || modulo.default || modulo;
-
-        if (typeof UsuarioManager !== 'function') {
-            usuariosCache = [];
-            return;
-        }
-
-        const usuarioManager = new UsuarioManager();
-
-        if (organizacionActual.camelCase && typeof usuarioManager.obtenerUsuariosPorOrganizacion === 'function') {
-            usuariosCache = await usuarioManager.obtenerUsuariosPorOrganizacion(organizacionActual.camelCase);
-        } else {
-            usuariosCache = [];
-        }
-    } catch (error) {
-        usuariosCache = [];
-    }
-}
-
-function configurarEventListeners() {
-    const btnFiltrar = document.getElementById('btnFiltrar');
-    const btnLimpiar = document.getElementById('btnLimpiarFiltros');
-
-    if (btnFiltrar) {
-        btnFiltrar.addEventListener('click', aplicarFiltros);
-    }
-
-    if (btnLimpiar) {
-        btnLimpiar.addEventListener('click', limpiarFiltros);
-    }
+function generarConsultaHash() {
+    return JSON.stringify({
+        estado: filtrosActivos.estado,
+        nivelRiesgo: filtrosActivos.nivelRiesgo,
+        sucursalId: filtrosActivos.sucursalId,
+        pagina: paginaActual
+    });
 }
 
 // =============================================
-// FUNCIONES DE FILTRADO
+// CONSTRUIR CONSTRAINTS DE CONSULTA
 // =============================================
-function aplicarFiltros() {
-    filtrosActivos.estado = document.getElementById('filtroEstado')?.value || 'todos';
-    filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo')?.value || 'todos';
-    filtrosActivos.sucursalId = document.getElementById('filtroSucursal')?.value || 'todos';
-
-    paginaActual = 1;
-    cargarIncidenciasPagina(1);
-}
-
-function limpiarFiltros() {
-    const filtroEstado = document.getElementById('filtroEstado');
-    const filtroRiesgo = document.getElementById('filtroRiesgo');
-    const filtroSucursal = document.getElementById('filtroSucursal');
-
-    if (filtroEstado) filtroEstado.value = 'todos';
-    if (filtroRiesgo) filtroRiesgo.value = 'todos';
-    if (filtroSucursal) filtroSucursal.value = 'todos';
-
-    filtrosActivos = {
-        estado: 'todos',
-        nivelRiesgo: 'todos',
-        sucursalId: 'todos'
-    };
-
-    paginaActual = 1;
-    cargarIncidenciasPagina(1);
-}
-
-function construirConstraintsParaConsulta() {
+function construirConstraints() {
     const constraints = [];
-
-    // Agregar filtros en orden para usar los índices
+    
+    // Ordenar por fechaCreacion descendente (SIEMPRE)
+    constraints.push(orderBy("fechaCreacion", "desc"));
+    
+    // Agregar filtros en orden para usar índices
     if (filtrosActivos.estado !== 'todos') {
-        constraints.push({ field: "estado", value: filtrosActivos.estado });
+        constraints.push(where("estado", "==", filtrosActivos.estado));
     }
-
+    
     if (filtrosActivos.sucursalId !== 'todos') {
-        constraints.push({ field: "sucursalId", value: filtrosActivos.sucursalId });
+        constraints.push(where("sucursalId", "==", filtrosActivos.sucursalId));
     }
-
+    
     if (filtrosActivos.nivelRiesgo !== 'todos') {
-        constraints.push({ field: "nivelRiesgo", value: filtrosActivos.nivelRiesgo });
+        constraints.push(where("nivelRiesgo", "==", filtrosActivos.nivelRiesgo));
     }
-
+    
     return constraints;
 }
 
 // =============================================
-// FUNCIONES DE ACCIÓN
+// CONTAR TOTAL DE INCIDENCIAS CON FILTROS
 // =============================================
-window.verDetallesIncidencia = function (incidenciaId, event) {
-    event?.stopPropagation();
-    window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
-};
-
-window.seguimientoIncidencia = function (incidenciaId, event) {
-    event?.stopPropagation();
-    window.location.href = `../seguimientoIncidencias/seguimientoIncidencias.html?id=${incidenciaId}`;
-};
-
-window.verPDF = async function (incidenciaId, event) {
-    event?.stopPropagation();
-
+async function contarTotalIncidencias() {
     try {
-        // Buscar incidencia en caché o cargar específicamente
-        let incidencia = null;
+        const collectionName = `incidencias_${organizacionActual.camelCase}`;
+        const incidenciasCollection = collection(db, collectionName);
         
-        // Intentar obtener de la página actual
-        const fila = document.querySelector(`tr[data-id="${incidenciaId}"]`);
-        if (fila && fila.incidenciaData) {
-            incidencia = fila.incidenciaData;
-        }
-
-        if (!incidencia) {
-            // Cargar incidencia específica desde Firestore
-            incidencia = await incidenciaManager.getIncidenciaById(incidenciaId, organizacionActual.camelCase);
-        }
-
-        if (!incidencia) {
-            throw new Error('Incidencia no encontrada');
-        }
-
-        if (incidencia.pdfUrl) {
-            window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
-        } else {
-            Swal.fire({
-                icon: 'info',
-                title: 'PDF no disponible',
-                text: 'Esta incidencia aún no tiene un PDF generado.'
-            });
-        }
+        const constraints = construirConstraints();
+        
+        // Quitar el orderBy para el conteo (más eficiente)
+        const constraintsSinOrder = constraints.filter(c => c.type !== 'orderBy');
+        
+        const q = query(incidenciasCollection, ...constraintsSinOrder);
+        const snapshot = await getCountFromServer(q);
+        
+        return snapshot.data().count;
     } catch (error) {
-        console.error('Error al abrir PDF:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudo abrir el PDF: ' + error.message
-        });
+        console.error('Error contando incidencias:', error);
+        // Fallback: obtener todas (solo si es necesario)
+        return 0;
     }
-};
-
-window.generarIPHMultiple = async function () {
-    try {
-        Swal.fire({
-            icon: 'info',
-            title: 'Información',
-            text: 'Los PDFs se generan automáticamente al crear o modificar incidencias.',
-            confirmButtonText: 'Entendido'
-        });
-    } catch (error) {
-        console.error('Error:', error);
-    }
-};
+}
 
 // =============================================
-// CARGAR INCIDENCIAS CON PAGINACIÓN
+// CARGAR INCIDENCIAS CON PAGINACIÓN REAL
 // =============================================
 async function cargarIncidenciasPagina(pagina) {
-    if (!incidenciaManager || !organizacionActual.camelCase) {
-        mostrarError('No se pudo cargar el gestor de incidencias');
+    if (!organizacionActual?.camelCase) {
+        console.error('No hay organización configurada');
         return;
     }
 
@@ -397,114 +164,40 @@ async function cargarIncidenciasPagina(pagina) {
         const tbody = document.getElementById('tablaIncidenciasBody');
         if (!tbody) return;
 
-        // Mostrar skeleton loader
+        // Mostrar loader
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" style="text-align:center; padding:40px;">
-                    <div class="skeleton-loader">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                        <p style="margin-top: 12px; color: var(--color-text-secondary);">Cargando incidencias...</p>
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
                     </div>
+                    <p style="margin-top: 12px; color: var(--color-text-secondary);">Cargando incidencias...</p>
                 </td>
             </tr>
         `;
 
-        // Obtener usuario actual
-        const usuarioActual = obtenerUsuarioActual();
-
-        // Construir consulta paginada
-        const coleccion = `incidencias_${organizacionActual.camelCase}`;
-        const incidenciasCollection = collection(db, coleccion);
+        const collectionName = `incidencias_${organizacionActual.camelCase}`;
+        const incidenciasCollection = collection(db, collectionName);
         
-        // Construir constraints según filtros activos
-        let constraints = [];
+        // Construir consulta con filtros
+        let constraints = construirConstraints();
         
-        // Siempre filtrar por organización (usando el nombre de la colección)
-        // Usar el índice compuesto más específico según los filtros
-        
-        if (filtrosActivos.estado !== 'todos') {
-            constraints.push(where("estado", "==", filtrosActivos.estado));
+        // Si no es la primera página, usar startAfter
+        if (pagina > 1 && ultimoDocumento) {
+            constraints.push(startAfter(ultimoDocumento));
         }
         
-        if (filtrosActivos.sucursalId !== 'todos') {
-            constraints.push(where("sucursalId", "==", filtrosActivos.sucursalId));
-        }
+        // Limitar resultados
+        constraints.push(limit(ITEMS_POR_PAGINA));
         
-        if (filtrosActivos.nivelRiesgo !== 'todos') {
-            constraints.push(where("nivelRiesgo", "==", filtrosActivos.nivelRiesgo));
-        }
-        
-        // Siempre ordenar por fechaCreación descendente
-        constraints.push(orderBy("fechaCreacion", "desc"));
-        
-        // Paginación: calcular offset
-        const offset = (pagina - 1) * ITEMS_POR_PAGINA;
-        
-        // Crear consulta con límite y offset
-        let incidenciasQuery;
-        
-        if (offset === 0) {
-            // Primera página
-            incidenciasQuery = query(
-                incidenciasCollection,
-                ...constraints,
-                limit(ITEMS_POR_PAGINA)
-            );
-        } else {
-            // Necesitamos un cursor para paginación eficiente
-            // Primero obtener el último documento de la página anterior
-            const lastDocQuery = query(
-                incidenciasCollection,
-                ...constraints,
-                limit(offset)
-            );
-            
-            const lastDocSnapshot = await getDocs(lastDocQuery);
-            const lastDoc = lastDocSnapshot.docs[lastDocSnapshot.docs.length - 1];
-            
-            if (lastDoc) {
-                incidenciasQuery = query(
-                    incidenciasCollection,
-                    ...constraints,
-                    startAfter(lastDoc),
-                    limit(ITEMS_POR_PAGINA)
-                );
-            } else {
-                incidenciasQuery = query(
-                    incidenciasCollection,
-                    ...constraints,
-                    limit(ITEMS_POR_PAGINA)
-                );
-            }
-        }
+        const q = query(incidenciasCollection, ...constraints);
         
         // Registrar lectura para estadísticas
-        await consumo.registrarFirestoreLectura(coleccion, `página ${pagina}`);
+        await consumo.registrarFirestoreLectura(collectionName, `página ${pagina}`);
         
-        // Ejecutar consulta
-        const snapshot = await getDocs(incidenciasQuery);
+        const snapshot = await getDocs(q);
         
-        // Obtener total de incidencias para paginación
-        const totalQuery = query(incidenciasCollection, ...constraints);
-        const totalSnapshot = await getDocs(totalQuery);
-        totalIncidencias = totalSnapshot.size;
-        totalPaginas = Math.ceil(totalIncidencias / ITEMS_POR_PAGINA);
-        
-        // Convertir a objetos Incidencia
-        const incidencias = [];
-        snapshot.forEach(doc => {
-            try {
-                const incidencia = new Incidencia(doc.id, doc.data());
-                incidencias.push(incidencia);
-            } catch (error) {
-                console.error('Error procesando incidencia:', error);
-            }
-        });
-        
-        // Actualizar UI
-        if (incidencias.length === 0 && pagina === 1) {
+        if (snapshot.empty && pagina === 1) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" style="text-align:center; padding:60px 20px;">
@@ -522,28 +215,70 @@ async function cargarIncidenciasPagina(pagina) {
             return;
         }
         
-        renderizarIncidencias(incidencias);
+        // Guardar último documento para la siguiente página
+        if (snapshot.docs.length > 0) {
+            ultimoDocumento = snapshot.docs[snapshot.docs.length - 1];
+            
+            // Si es página 1, guardar primer documento para navegación
+            if (pagina === 1 && snapshot.docs.length > 0) {
+                primerDocumento = snapshot.docs[0];
+            }
+        }
+        
+        // Obtener total de incidencias (solo la primera vez o cuando cambian filtros)
+        const hashActual = generarConsultaHash();
+        if (hashActual !== ultimaConsultaHash) {
+            totalIncidencias = await contarTotalIncidencias();
+            totalPaginas = Math.ceil(totalIncidencias / ITEMS_POR_PAGINA);
+            ultimaConsultaHash = hashActual;
+        }
+        
+        // Convertir a objetos Incidencia
+        incidenciasActuales = [];
+        snapshot.forEach(doc => {
+            try {
+                const data = doc.data();
+                const incidencia = new Incidencia(doc.id, {
+                    ...data,
+                    id: doc.id,
+                    fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
+                    fechaInicio: data.fechaInicio?.toDate?.() || data.fechaInicio,
+                    fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
+                });
+                incidenciasActuales.push(incidencia);
+            } catch (error) {
+                console.error('Error procesando incidencia:', error);
+            }
+        });
+        
+        // Renderizar
+        renderizarIncidencias();
         
     } catch (error) {
-        console.error('Error al cargar incidencias:', error);
+        console.error('Error cargando incidencias:', error);
         mostrarError('Error al cargar incidencias: ' + error.message);
     }
 }
 
-function renderizarIncidencias(incidencias) {
+function renderizarIncidencias() {
     const tbody = document.getElementById('tablaIncidenciasBody');
     if (!tbody) return;
 
     const paginationInfo = document.getElementById('paginationInfo');
     if (paginationInfo) {
         const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA + 1;
-        const fin = Math.min(inicio + incidencias.length - 1, totalIncidencias);
-        paginationInfo.textContent = `Mostrando ${inicio}-${fin} de ${totalIncidencias} incidencias`;
+        const fin = Math.min(inicio + incidenciasActuales.length - 1, totalIncidencias);
+        
+        if (totalIncidencias > 0) {
+            paginationInfo.textContent = `Mostrando ${inicio}-${fin} de ${totalIncidencias} incidencias`;
+        } else {
+            paginationInfo.textContent = `Mostrando 0 de 0 incidencias`;
+        }
     }
 
     tbody.innerHTML = '';
 
-    incidencias.forEach(incidencia => {
+    incidenciasActuales.forEach(incidencia => {
         crearFilaIncidencia(incidencia, tbody);
     });
 
@@ -553,6 +288,11 @@ function renderizarIncidencias(incidencias) {
 function renderizarPaginacion() {
     const pagination = document.getElementById('pagination');
     if (!pagination) return;
+
+    if (totalPaginas <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
 
     let html = '';
     
@@ -614,16 +354,296 @@ function renderizarPaginacion() {
 
 window.irPagina = function (pagina) {
     if (pagina < 1 || pagina > totalPaginas || pagina === paginaActual) return;
-    paginaActual = pagina;
-    cargarIncidenciasPagina(pagina);
+    
+    // Si vamos a una página anterior, necesitamos reiniciar la consulta
+    if (pagina < paginaActual) {
+        // Reiniciar cursor para ir a página anterior (requiere nueva consulta desde inicio)
+        ultimoDocumento = null;
+        paginaActual = pagina;
+        
+        // Para ir a página anterior, cargamos desde el inicio con el nuevo límite
+        cargarDesdeInicioPagina(pagina);
+    } else {
+        paginaActual = pagina;
+        cargarIncidenciasPagina(pagina);
+    }
 };
+
+// Función para cargar una página específica desde el inicio
+async function cargarDesdeInicioPagina(pagina) {
+    try {
+        const tbody = document.getElementById('tablaIncidenciasBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:40px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p style="margin-top: 12px;">Cargando página ${pagina}...</p>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        const collectionName = `incidencias_${organizacionActual.camelCase}`;
+        const incidenciasCollection = collection(db, collectionName);
+        
+        let constraints = construirConstraints();
+        constraints.push(limit((pagina - 1) * ITEMS_POR_PAGINA + ITEMS_POR_PAGINA));
+        
+        const q = query(incidenciasCollection, ...constraints);
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.docs.length > 0) {
+            // Obtener los documentos de la página deseada
+            const startIndex = (pagina - 1) * ITEMS_POR_PAGINA;
+            const docsPagina = snapshot.docs.slice(startIndex, startIndex + ITEMS_POR_PAGINA);
+            
+            if (docsPagina.length > 0) {
+                ultimoDocumento = docsPagina[docsPagina.length - 1];
+                
+                incidenciasActuales = [];
+                docsPagina.forEach(doc => {
+                    try {
+                        const data = doc.data();
+                        const incidencia = new Incidencia(doc.id, {
+                            ...data,
+                            id: doc.id,
+                            fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
+                            fechaInicio: data.fechaInicio?.toDate?.() || data.fechaInicio,
+                            fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
+                        });
+                        incidenciasActuales.push(incidencia);
+                    } catch (error) {
+                        console.error('Error procesando incidencia:', error);
+                    }
+                });
+                
+                renderizarIncidencias();
+            } else {
+                // No hay incidencias en esta página
+                cargarIncidenciasPagina(1);
+            }
+        } else {
+            cargarIncidenciasPagina(1);
+        }
+        
+    } catch (error) {
+        console.error('Error cargando página desde inicio:', error);
+        cargarIncidenciasPagina(1);
+    }
+}
+
+// =============================================
+// FUNCIONES DE FILTRADO (re-carga con nuevos filtros)
+// =============================================
+function aplicarFiltros() {
+    filtrosActivos.estado = document.getElementById('filtroEstado')?.value || 'todos';
+    filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo')?.value || 'todos';
+    filtrosActivos.sucursalId = document.getElementById('filtroSucursal')?.value || 'todos';
+    
+    // Reiniciar paginación
+    paginaActual = 1;
+    ultimoDocumento = null;
+    primerDocumento = null;
+    ultimaConsultaHash = '';
+    
+    cargarIncidenciasPagina(1);
+}
+
+function limpiarFiltros() {
+    const filtroEstado = document.getElementById('filtroEstado');
+    const filtroRiesgo = document.getElementById('filtroRiesgo');
+    const filtroSucursal = document.getElementById('filtroSucursal');
+
+    if (filtroEstado) filtroEstado.value = 'todos';
+    if (filtroRiesgo) filtroRiesgo.value = 'todos';
+    if (filtroSucursal) filtroSucursal.value = 'todos';
+
+    filtrosActivos = {
+        estado: 'todos',
+        nivelRiesgo: 'todos',
+        sucursalId: 'todos'
+    };
+    
+    // Reiniciar paginación
+    paginaActual = 1;
+    ultimoDocumento = null;
+    primerDocumento = null;
+    ultimaConsultaHash = '';
+    
+    cargarIncidenciasPagina(1);
+}
+
+// =============================================
+// FUNCIONES DE ACCIÓN
+// =============================================
+window.verDetallesIncidencia = function (incidenciaId, event) {
+    event?.stopPropagation();
+    window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
+};
+
+window.seguimientoIncidencia = function (incidenciaId, event) {
+    event?.stopPropagation();
+    window.location.href = `../seguimientoIncidencias/seguimientoIncidencias.html?id=${incidenciaId}`;
+};
+
+window.verPDF = async function (incidenciaId, event) {
+    event?.stopPropagation();
+    
+    try {
+        const incidencia = incidenciasActuales.find(i => i.id === incidenciaId);
+        
+        if (!incidencia) {
+            throw new Error('Incidencia no encontrada');
+        }
+        
+        if (incidencia.pdfUrl) {
+            window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
+        } else {
+            Swal.fire({
+                icon: 'info',
+                title: 'PDF no disponible',
+                text: 'Esta incidencia aún no tiene un PDF generado.'
+            });
+        }
+    } catch (error) {
+        console.error('Error al abrir PDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo abrir el PDF: ' + error.message
+        });
+    }
+};
+
+window.generarIPHMultiple = async function () {
+    try {
+        Swal.fire({
+            icon: 'info',
+            title: 'Información',
+            text: 'Los PDFs se generan automáticamente al crear o modificar incidencias.',
+            confirmButtonText: 'Entendido'
+        });
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+// =============================================
+// CARGAR DATOS DE APOYO
+// =============================================
+async function cargarSucursales() {
+    try {
+        const { SucursalManager } = await import('/clases/sucursal.js');
+        const sucursalManager = new SucursalManager();
+
+        if (organizacionActual.camelCase) {
+            sucursalesCache = await sucursalManager.getSucursalesByOrganizacion(organizacionActual.camelCase);
+
+            const filtroSucursal = document.getElementById('filtroSucursal');
+            if (filtroSucursal) {
+                filtroSucursal.innerHTML = '<option value="todos">Todas las sucursales</option>';
+                sucursalesCache.forEach(suc => {
+                    const option = document.createElement('option');
+                    option.value = suc.id;
+                    option.textContent = suc.nombre;
+                    filtroSucursal.appendChild(option);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando sucursales:', error);
+        sucursalesCache = [];
+    }
+}
+
+async function cargarCategorias() {
+    try {
+        const { CategoriaManager } = await import('/clases/categoria.js');
+        const categoriaManager = new CategoriaManager();
+        categoriasCache = await categoriaManager.obtenerTodasCategorias();
+    } catch (error) {
+        console.error('Error cargando categorías:', error);
+        categoriasCache = [];
+    }
+}
+
+async function cargarSubcategorias() {
+    try {
+        const modulo = await import('/clases/subcategoria.js').catch(() => null);
+        if (!modulo) {
+            subcategoriasCache = [];
+            return;
+        }
+
+        const SubcategoriaManager = modulo.SubcategoriaManager || modulo.default;
+        if (!SubcategoriaManager) {
+            subcategoriasCache = [];
+            return;
+        }
+
+        const subcategoriaManager = new SubcategoriaManager();
+
+        if (organizacionActual?.camelCase) {
+            subcategoriasCache = await subcategoriaManager.obtenerSubcategoriasPorOrganizacion?.(organizacionActual.camelCase) || [];
+        } else {
+            subcategoriasCache = await subcategoriaManager.obtenerTodasSubcategorias?.() || [];
+        }
+    } catch (error) {
+        console.error('Error cargando subcategorías:', error);
+        subcategoriasCache = [];
+    }
+}
+
+async function cargarUsuarios() {
+    try {
+        const modulo = await import('/clases/user.js').catch(() => null);
+        if (!modulo) {
+            usuariosCache = [];
+            return;
+        }
+
+        const UsuarioManager = modulo.UsuarioManager || modulo.default || modulo;
+
+        if (typeof UsuarioManager !== 'function') {
+            usuariosCache = [];
+            return;
+        }
+
+        const usuarioManager = new UsuarioManager();
+
+        if (organizacionActual.camelCase && typeof usuarioManager.obtenerUsuariosPorOrganizacion === 'function') {
+            usuariosCache = await usuarioManager.obtenerUsuariosPorOrganizacion(organizacionActual.camelCase);
+        } else {
+            usuariosCache = [];
+        }
+    } catch (error) {
+        console.error('Error cargando usuarios:', error);
+        usuariosCache = [];
+    }
+}
+
+// =============================================
+// FUNCIONES AUXILIARES
+// =============================================
+function obtenerNombreSucursal(sucursalId) {
+    if (!sucursalId) return 'No especificada';
+    const sucursal = sucursalesCache.find(s => s.id === sucursalId);
+    return sucursal ? sucursal.nombre : 'No disponible';
+}
+
+function obtenerNombreCategoria(categoriaId) {
+    if (!categoriaId) return 'No especificada';
+    const categoria = categoriasCache.find(c => c.id === categoriaId);
+    return categoria ? categoria.nombre : 'No disponible';
+}
 
 function crearFilaIncidencia(incidencia, tbody) {
     const tr = document.createElement('tr');
     tr.className = 'incidencia-row';
     tr.dataset.id = incidencia.id;
-    // Guardar referencia de la incidencia para acceso rápido
-    tr.incidenciaData = incidencia;
 
     const riesgoTexto = incidencia.getNivelRiesgoTexto ? incidencia.getNivelRiesgoTexto() : incidencia.nivelRiesgo;
     const riesgoColor = incidencia.getNivelRiesgoColor ? incidencia.getNivelRiesgoColor() : '';
@@ -714,35 +734,17 @@ function agregarBotonIPHMultiple() {
     }
 }
 
-// Funciones auxiliares
-function obtenerNombreSucursal(sucursalId) {
-    if (!sucursalId) return 'No especificada';
-    const sucursal = sucursalesCache.find(s => s.id === sucursalId);
-    return sucursal ? sucursal.nombre : 'No disponible';
-}
+function configurarEventListeners() {
+    const btnFiltrar = document.getElementById('btnFiltrar');
+    const btnLimpiar = document.getElementById('btnLimpiarFiltros');
 
-function obtenerNombreCategoria(categoriaId) {
-    if (!categoriaId) return 'No especificada';
-    const categoria = categoriasCache.find(c => c.id === categoriaId);
-    return categoria ? categoria.nombre : 'No disponible';
-}
+    if (btnFiltrar) {
+        btnFiltrar.addEventListener('click', aplicarFiltros);
+    }
 
-function obtenerNombreSubcategoria(subcategoriaId) {
-    if (!subcategoriaId) return 'No especificada';
-    const subcategoria = subcategoriasCache.find(s => s.id === subcategoriaId);
-    return subcategoria ? subcategoria.nombre : 'No disponible';
-}
-
-function obtenerNombreUsuario(usuarioId) {
-    if (!usuarioId) return 'Sistema';
-    const usuario = usuariosCache.find(u => u.id === usuarioId);
-    return usuario ? usuario.nombreCompleto || usuario.email || 'Usuario' : 'Usuario desconocido';
-}
-
-function obtenerCargoUsuario(usuarioId) {
-    if (!usuarioId) return '';
-    const usuario = usuariosCache.find(u => u.id === usuarioId);
-    return usuario ? usuario.cargo || 'No especificado' : '';
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', limpiarFiltros);
+    }
 }
 
 function escapeHTML(text) {
@@ -789,6 +791,106 @@ function mostrarErrorInicializacion() {
                 </td>
             </tr>
         `;
+    }
+}
+
+async function obtenerTokenAuth() {
+    try {
+        if (window.firebase && firebase.auth) {
+            const user = firebase.auth().currentUser;
+            if (user) {
+                authToken = await user.getIdToken();
+            }
+        }
+        if (!authToken) {
+            const token = localStorage.getItem('firebaseToken') ||
+                localStorage.getItem('authToken') ||
+                localStorage.getItem('token');
+            if (token) {
+                authToken = token;
+            }
+        }
+    } catch (error) {
+        authToken = null;
+    }
+}
+
+async function obtenerDatosOrganizacion() {
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (usuario) {
+            organizacionActual = {
+                nombre: usuario.organizacion || 'Mi Empresa',
+                camelCase: usuario.organizacionCamelCase || ''
+            };
+            console.log('📌 Organización:', organizacionActual);
+            return;
+        }
+
+        if (window.userManager && window.userManager.currentUser) {
+            const user = window.userManager.currentUser;
+            organizacionActual = {
+                nombre: user.organizacion || 'Mi Empresa',
+                camelCase: user.organizacionCamelCase || ''
+            };
+            return;
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+
+        organizacionActual = {
+            nombre: userData.organizacion || adminInfo.organizacion || 'Mi Empresa',
+            camelCase: userData.organizacionCamelCase || adminInfo.organizacionCamelCase || ''
+        };
+    } catch (error) {
+        organizacionActual = { nombre: 'Mi Empresa', camelCase: '' };
+    }
+}
+
+// =============================================
+// INICIALIZACIÓN PRINCIPAL
+// =============================================
+async function inicializarIncidenciaManager() {
+    try {
+        await obtenerDatosOrganizacion();
+        await obtenerTokenAuth();
+
+        // No necesitamos incidenciaManager para la paginación, solo para operaciones
+        const { IncidenciaManager } = await import('/clases/incidencia.js');
+        incidenciaManager = new IncidenciaManager();
+
+        // Cargar datos de apoyo (sucursales, categorías, etc.)
+        await Promise.all([
+            cargarSucursales().catch(() => { console.warn('Error cargando sucursales'); }),
+            cargarCategorias().catch(() => { console.warn('Error cargando categorías'); }),
+            cargarSubcategorias().catch(() => { console.warn('Error cargando subcategorías'); }),
+            cargarUsuarios().catch(() => { console.warn('Error cargando usuarios'); })
+        ]);
+
+        // Configurar generador IPH
+        if (generadorIPH && typeof generadorIPH.configurar === 'function') {
+            generadorIPH.configurar({
+                organizacionActual,
+                sucursalesCache,
+                categoriasCache,
+                subcategoriasCache,
+                usuariosCache,
+                authToken
+            });
+        }
+
+        configurarEventListeners();
+        agregarBotonIPHMultiple();
+        
+        // Cargar primera página
+        await cargarIncidenciasPagina(1);
+
+        return true;
+    } catch (error) {
+        console.error('Error al inicializar incidencias:', error);
+        mostrarErrorInicializacion();
+        return false;
     }
 }
 

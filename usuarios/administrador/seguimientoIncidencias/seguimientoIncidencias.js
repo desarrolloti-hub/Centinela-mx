@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN COMPLETA CON NOTIFICACIONES
+// seguimientoIncidencia.js - VERSIÓN OPTIMIZADA CON CACHÉ Y NOTIFICACIONES
 
 import '/components/visualizadorImagen.js';
 
@@ -20,6 +20,15 @@ let historialCollapsed = false;
 let areas = [];
 let areaManager = null;
 let notificacionManager = null;
+
+// Caché para datos relacionados
+let areasCache = null;
+let areasCacheOrg = null;
+let areasCacheTimestamp = null;
+let sucursalesCacheData = null;
+let categoriasCacheData = null;
+let datosCacheTimestamp = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 const LIMITES = {
     DESCRIPCION_SEGUIMIENTO: 500
@@ -71,7 +80,29 @@ function configurarCollapsible() {
 }
 
 // =============================================
-// INICIALIZACIÓN
+// FUNCIONES DE CACHÉ
+// =============================================
+function limpiarCacheAreas() {
+    areasCache = null;
+    areasCacheOrg = null;
+    areasCacheTimestamp = null;
+    console.log('🗑️ Caché de áreas limpiada');
+}
+
+function limpiarCacheDatos() {
+    sucursalesCacheData = null;
+    categoriasCacheData = null;
+    datosCacheTimestamp = null;
+    console.log('🗑️ Caché de datos limpiada');
+}
+
+function limpiarTodaCache() {
+    limpiarCacheAreas();
+    limpiarCacheDatos();
+}
+
+// =============================================
+// INICIALIZACIÓN OPTIMIZADA
 // =============================================
 async function inicializarSeguimiento() {
     try {
@@ -89,10 +120,14 @@ async function inicializarSeguimiento() {
         }
 
         await inicializarIncidenciaManager();
-        await cargarIncidencia(incidenciaId);
-        await cargarDatosRelacionados();
-        await cargarAreas();
-        await initNotificacionManager();
+        
+        // Cargar incidencia y datos en paralelo
+        await Promise.all([
+            cargarIncidencia(incidenciaId),
+            cargarAreas(),
+            cargarDatosRelacionados(),
+            initNotificacionManager()
+        ]);
 
         mostrarInfoIncidencia();
         mostrarEvidenciasOriginales();
@@ -146,22 +181,42 @@ async function initNotificacionManager() {
     return notificacionManager;
 }
 
-async function cargarAreas() {
+async function cargarAreas(forceReload = false) {
     try {
+        const now = Date.now();
+        
+        // Verificar caché
+        if (!forceReload && areasCache && areasCacheOrg === usuarioActual.organizacionCamelCase && 
+            areasCacheTimestamp && (now - areasCacheTimestamp) < CACHE_TTL) {
+            areas = areasCache;
+            console.log('📦 Áreas cargadas desde caché:', areas.length);
+            return areas;
+        }
+        
         const { AreaManager } = await import('/clases/area.js');
         areaManager = new AreaManager();
 
         if (usuarioActual && usuarioActual.organizacionCamelCase) {
             const areasObtenidas = await areaManager.getAreasByOrganizacion(
-                usuarioActual.organizacionCamelCase
+                usuarioActual.organizacionCamelCase,
+                true // solo activas
             );
 
             areas = areasObtenidas.filter(area => area.estado === 'activa');
+            
+            // Guardar en caché
+            areasCache = areas;
+            areasCacheOrg = usuarioActual.organizacionCamelCase;
+            areasCacheTimestamp = now;
+            
             console.log('✅ Áreas cargadas para seguimiento:', areas.length);
         }
+        
+        return areas;
     } catch (error) {
         console.error('Error cargando áreas:', error);
         areas = [];
+        return areas;
     }
 }
 
@@ -258,25 +313,48 @@ async function cargarIncidencia(incidenciaId) {
     }
 }
 
-async function cargarDatosRelacionados() {
+async function cargarDatosRelacionados(forceReload = false) {
     try {
+        const now = Date.now();
+        
+        // Verificar caché
+        if (!forceReload && sucursalesCacheData && categoriasCacheData && 
+            datosCacheTimestamp && (now - datosCacheTimestamp) < CACHE_TTL) {
+            sucursalesMap = sucursalesCacheData;
+            categoriasMap = categoriasCacheData;
+            console.log('📦 Datos relacionados cargados desde caché');
+            return;
+        }
+        
         const { SucursalManager } = await import('/clases/sucursal.js');
         const sucursalManager = new SucursalManager();
         const sucursales = await sucursalManager.getSucursalesByOrganizacion(
             usuarioActual.organizacionCamelCase
         );
 
+        const nuevaSucursalesMap = new Map();
         sucursales.forEach(suc => {
-            sucursalesMap.set(suc.id, suc);
+            nuevaSucursalesMap.set(suc.id, suc);
         });
 
         const { CategoriaManager } = await import('/clases/categoria.js');
         const categoriaManager = new CategoriaManager();
         const categorias = await categoriaManager.obtenerTodasCategorias();
 
+        const nuevaCategoriasMap = new Map();
         categorias.forEach(cat => {
-            categoriasMap.set(cat.id, cat);
+            nuevaCategoriasMap.set(cat.id, cat);
         });
+        
+        sucursalesMap = nuevaSucursalesMap;
+        categoriasMap = nuevaCategoriasMap;
+        
+        // Guardar en caché
+        sucursalesCacheData = nuevaSucursalesMap;
+        categoriasCacheData = nuevaCategoriasMap;
+        datosCacheTimestamp = now;
+        
+        console.log('✅ Datos relacionados cargados:', sucursales.length, 'sucursales,', categorias.length, 'categorías');
 
     } catch (error) {
         console.error('Error cargando datos relacionados:', error);
@@ -1046,6 +1124,8 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
 
     if (areasCanalizadas.length > 0) {
         await _enviarNotificacionesCanalizacion(areasCanalizadas, incidenciaId, incidenciaTitulo);
+        // Limpiar caché de áreas después de canalizar
+        limpiarCacheAreas();
     }
 
     return areasCanalizadas;
@@ -1053,7 +1133,6 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
 
 /**
  * ENVIAR NOTIFICACIONES - IGUAL QUE EN CREAR INCIDENCIAS
- * Esto envía notificaciones tanto a colaboradores como a administradores
  */
 async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidenciaTitulo) {
     try {
@@ -1066,13 +1145,6 @@ async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidencia
             return;
         }
 
-        // Mostrar loading
-        Swal.fire({
-            title: 'Enviando notificaciones...',
-            text: 'Notificando a los usuarios de las áreas seleccionadas y a administradores',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
 
         // Obtener datos de la incidencia para la notificación
         const sucursalNombre = sucursalesMap.get(incidenciaActual.sucursalId)?.nombre || '';
@@ -1192,7 +1264,7 @@ async function guardarSeguimiento(datos) {
         // 4. Cerrar el loading inicial
         Swal.close();
 
-        // 5. PREGUNTAR SI QUIERE CANALIZAR - IGUAL QUE EN CREAR INCIDENCIAS
+        // 5. PREGUNTAR SI QUIERE CANALIZAR
         const quiereCanalizar = await Swal.fire({
             icon: 'question',
             title: '¿Canalizar esta incidencia?',
