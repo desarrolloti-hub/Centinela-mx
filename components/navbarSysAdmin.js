@@ -1,3 +1,6 @@
+// [file name]: navbarAdministrador.js
+// [file path]: /components/navbarAdministrador.js
+
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
@@ -208,6 +211,7 @@ class NavbarComplete {
         if (document.getElementById('navbar-complete-styles')) return;
         
         const styles = `
+            /* Estilos base del navbar */
             #complete-navbar {
                 position: fixed;
                 top: 0;
@@ -225,6 +229,7 @@ class NavbarComplete {
                 box-shadow: var(--navbar-scrolled-shadow);
             }
             
+            /* Top section - estructura principal */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
@@ -237,6 +242,7 @@ class NavbarComplete {
                 box-sizing: border-box;
             }
             
+            /* Contenedor izquierdo - logos */
             .navbar-left-container {
                 display: flex;
                 align-items: center;
@@ -246,6 +252,7 @@ class NavbarComplete {
                 margin-right: auto;
             }
             
+            /* Enlaces de logos */
             .navbar-logo-link {
                 display: flex;
                 align-items: center;
@@ -255,6 +262,7 @@ class NavbarComplete {
                 flex: 0 0 auto;
             }
             
+            /* Contenedor circular del logo */
             .logo-circle-container {
                 width: 50px;
                 height: 50px;
@@ -282,6 +290,7 @@ class NavbarComplete {
                 border-color: var(--color-accent-secondary);
             }
             
+            /* Separador entre logos */
             .logo-separator {
                 width: 2px;
                 height: 45px;
@@ -297,6 +306,7 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
+            /* Logo de texto/organización */
             .org-text-logo {
                 display: none;
                 align-items: center;
@@ -320,6 +330,7 @@ class NavbarComplete {
                 object-fit: cover;
             }
             
+            /* Título CENTINELA */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -338,6 +349,7 @@ class NavbarComplete {
                 width: max-content;
             }
             
+            /* Contenedor derecho - notificaciones y menú hamburguesa */
             .navbar-right-container {
                 display: flex;
                 align-items: center;
@@ -347,6 +359,7 @@ class NavbarComplete {
                 gap: 15px;
             }
             
+            /* Notificaciones */
             .navbar-notificaciones-container {
                 position: relative;
             }
@@ -389,6 +402,7 @@ class NavbarComplete {
                 border: 2px solid var(--navbar-bg);
             }
             
+            /* Dropdown de notificaciones */
             .notificaciones-dropdown {
                 position: absolute;
                 top: 100%;
@@ -565,6 +579,7 @@ class NavbarComplete {
                 text-decoration: underline;
             }
             
+            /* Botón hamburguesa */
             .navbar-hamburger-btn {
                 display: flex;
                 flex-direction: column;
@@ -604,6 +619,7 @@ class NavbarComplete {
                 transform: rotate(-45deg) translate(6.3px, -6.3px);
             }
             
+            /* Menú lateral */
             .navbar-main-menu {
                 position: fixed;
                 top: 0;
@@ -638,6 +654,7 @@ class NavbarComplete {
                 opacity: 1;
             }
             
+            /* Perfil del administrador */
             .admin-profile-section {
                 padding: 30px 25px 20px;
                 background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
@@ -754,6 +771,7 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
+            /* Secciones del menú */
             .nav-section {
                 padding: 10px 15px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -777,6 +795,7 @@ class NavbarComplete {
                 font-family: 'Orbitron', sans-serif;
             }
             
+            /* Botones desplegables */
             .gestion-dropdown-btn,
             .admin-dropdown-btn {
                 display: flex;
@@ -815,6 +834,7 @@ class NavbarComplete {
                 transform: rotate(180deg);
             }
             
+            /* Opciones desplegables */
             .gestion-dropdown-options,
             .admin-dropdown-options {
                 display: none;
@@ -841,6 +861,7 @@ class NavbarComplete {
                 flex-direction: column;
             }
             
+            /* Items de opciones */
             .gestion-dropdown-option,
             .admin-dropdown-option {
                 display: flex;
@@ -886,6 +907,7 @@ class NavbarComplete {
                 line-height: 1.4;
             }
             
+            /* Botón cerrar sesión */
             .logout-option {
                 background: linear-gradient(135deg, #ff6b6b, #ff5252);
                 border-color: #ff5252;
@@ -926,6 +948,7 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
+            /* Overlay móvil */
             .navbar-mobile-overlay {
                 position: fixed;
                 top: 0;
@@ -971,28 +994,61 @@ class NavbarComplete {
                 overflow-y: visible !important;
             }
             
+            /* ============================================ */
+            /* MEDIA QUERIES - RESPONSIVE DESIGN */
+            /* ============================================ */
+            
+            /* Tablets y pantallas medianas */
             @media (max-width: 992px) {
-                .navbar-main-menu {
-                    width: 85%;
+                .navbar-top-section {
+                    padding: 5px 15px;
+                }
+                
+                .navbar-left-container {
+                    gap: 8px;
+                    max-width: 35%;
+                    overflow: hidden;
+                }
+                
+                .navbar-logo-link {
+                    height: 55px;
                 }
                 
                 .logo-circle-container {
-                    width: 50px;
-                    height: 50px;
+                    width: 45px;
+                    height: 45px;
                 }
                 
                 .org-text-logo {
-                    width: 50px;
-                    height: 50px;
+                    width: 45px;
+                    height: 45px;
                     font-size: 12px;
                 }
                 
                 .logo-separator {
                     height: 35px;
+                    margin: 0 4px;
                 }
                 
                 .navbar-title {
-                    font-size: 22px;
+                    position: relative;
+                    left: auto;
+                    top: auto;
+                    transform: none;
+                    font-size: 20px;
+                    white-space: nowrap;
+                    margin: 0 auto;
+                    text-align: center;
+                    flex: 1;
+                    pointer-events: auto;
+                }
+                
+                .navbar-right-container {
+                    gap: 10px;
+                }
+                
+                .navbar-main-menu {
+                    width: 85%;
                 }
                 
                 body.menu-open {
@@ -1000,29 +1056,28 @@ class NavbarComplete {
                 }
                 
                 .notificaciones-dropdown {
-                    width: 300px;
-                    right: -50px;
+                    width: 320px;
+                    right: -40px;
                 }
             }
-            
-            @media (max-width: 768px) {
-                .navbar-top-section {
-                    padding: 5px 15px;
+                .navbar-left-container {
+                    gap: 6px;
+                    max-width: 30%;
                 }
                 
-                .navbar-main-menu {
-                    width: 100%;
+                .navbar-logo-link {
+                    height: 45px;
                 }
                 
                 .logo-circle-container {
-                    width: 40px;
-                    height: 40px;
+                    width: 38px;
+                    height: 38px;
                 }
                 
                 .org-text-logo {
-                    width: 40px;
-                    height: 40px;
-                    font-size: 10px;
+                    width: 38px;
+                    height: 38px;
+                    font-size: 11px;
                 }
                 
                 .logo-separator {
@@ -1031,13 +1086,27 @@ class NavbarComplete {
                 }
                 
                 .navbar-title {
-                    font-size: 18px;
-                    white-space: normal;
-                    max-width: 150px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    max-width: 35%;
                 }
                 
+                .navbar-right-container {
+                    gap: 8px;
+                }
+                
+                .navbar-notificaciones-btn {
+                    padding: 6px;
+                    font-size: 18px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 36px;
+                    height: 36px;
+                }
                 .profile-photo-container {
                     width: 100px;
                     height: 100px;
@@ -1052,16 +1121,6 @@ class NavbarComplete {
                 .admin-dropdown-btn {
                     padding: 12px 14px;
                     font-size: 15px;
-                }
-                
-                .navbar-hamburger-btn {
-                    width: 36px;
-                    height: 36px;
-                }
-                
-                .hamburger-line {
-                    width: 22px;
-                    height: 2.5px;
                 }
                 
                 .gestion-dropdown-options,
@@ -1097,35 +1156,63 @@ class NavbarComplete {
                 }
                 
                 .notificaciones-dropdown {
-                    width: 280px;
-                    right: -70px;
+                    width: 300px;
+                    right: -50px;
                 }
             }
             
+            /* Móviles pequeños */
             @media (max-width: 480px) {
                 .navbar-top-section {
-                    padding: 5px 10px;
+                    padding: 5px 8px;
                 }
                 
-                .navbar-title {
-                    font-size: 16px;
-                    max-width: 120px;
+                .navbar-left-container {
+                    gap: 4px;
+                    max-width: 28%;
+                }
+                
+                .navbar-logo-link {
+                    height: 38px;
                 }
                 
                 .logo-circle-container {
-                    width: 36px;
-                    height: 36px;
+                    width: 32px;
+                    height: 32px;
+                    border-width: 2px;
                 }
                 
                 .org-text-logo {
-                    width: 36px;
-                    height: 36px;
+                    width: 32px;
+                    height: 32px;
                     font-size: 9px;
+                    border-width: 2px;
                 }
                 
                 .logo-separator {
-                    height: 28px;
+                    height: 24px;
                     margin: 0 2px;
+                }
+                
+                .navbar-title {
+                    font-size: 13px;
+                    font-weight: 600;
+                    max-width: 32%;
+                }
+                
+                .navbar-right-container {
+                    gap: 5px;
+                }
+                
+                .navbar-notificaciones-btn {
+                    padding: 5px;
+                    font-size: 16px;
+                }
+                
+                .notificaciones-badge {
+                    font-size: 9px;
+                    min-width: 15px;
+                    height: 15px;
                 }
                 
                 .navbar-hamburger-btn {
@@ -1133,10 +1220,7 @@ class NavbarComplete {
                     height: 32px;
                 }
                 
-                .hamburger-line {
-                    width: 20px;
-                    height: 2px;
-                }
+           
                 
                 .gestion-dropdown-option,
                 .admin-dropdown-option {
@@ -1149,11 +1233,52 @@ class NavbarComplete {
                 }
                 
                 .notificaciones-dropdown {
-                    width: 260px;
-                    right: -80px;
+                    width: 280px;
+                    right: -60px;
                 }
             }
             
+ 
+                .logo-circle-container {
+                    width: 28px;
+                    height: 28px;
+                }
+                
+                .org-text-logo {
+                    width: 28px;
+                    height: 28px;
+                    font-size: 8px;
+                }
+                
+                .logo-separator {
+                    height: 20px;
+                }
+                
+                .navbar-title {
+                    font-size: 11px;
+                    max-width: 30%;
+                }
+                
+                .navbar-notificaciones-btn {
+                    padding: 4px;
+                    font-size: 14px;
+                }
+                
+                .notificaciones-badge {
+                    font-size: 8px;
+                    min-width: 13px;
+                    height: 13px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 28px;
+                    height: 28px;
+                }
+                
+           
+            }
+            
+            /* Pantallas muy grandes */
             @media (min-width: 1600px) {
                 .navbar-top-section {
                     padding: 5px 40px;
@@ -1390,11 +1515,9 @@ class NavbarComplete {
         
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
         
-        // Usar la misma foto que el admin-profile-img (fotoUsuario) para org-text-logo
         const fotoAdmin = this.currentAdmin?.fotoUsuario;
         
         if (fotoAdmin && fotoAdmin.length > 10) {
-            // Limpiar el contenido del org-text-logo y agregar una imagen
             orgTextLogo.innerHTML = '';
             const imgElement = document.createElement('img');
             imgElement.src = fotoAdmin;
@@ -1409,7 +1532,6 @@ class NavbarComplete {
             orgTextLogo.style.backgroundColor = 'transparent';
             orgTextLogo.style.border = '3px solid var(--color-accent-primary)';
         } else {
-            // Si no hay foto, mostrar las iniciales
             orgTextLogo.innerHTML = '';
             const orgName = this.currentAdmin?.organizacion || 'Organización';
             const initials = orgName.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substring(0, 3);
@@ -1426,7 +1548,6 @@ class NavbarComplete {
     }
 
     showOrgTextLogo() {
-        // Este método ya no se usa directamente, la lógica está en updateOrganizationLogo
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
         if (!organizationLogoImg || !orgTextLogo) return;
