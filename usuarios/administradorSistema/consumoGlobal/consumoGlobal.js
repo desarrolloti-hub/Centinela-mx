@@ -3,6 +3,8 @@
 // CON BOTÓN PDF INTEGRADO
 // MODIFICADO: Todos los valores undefined ahora muestran 0
 // MODIFICADO: Eliminada la tabla de resumen de empresas y la tarjeta de última operación
+// MODIFICADO: Todos los textos en español (abreviados)
+// MODIFICADO: Eliminada la tarjeta de Authentication
 
 import { db } from '/config/firebase-config.js';
 import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
@@ -29,8 +31,6 @@ const metricas = {
     storageDetalle: document.getElementById('empresaStorageDetalle'),
     functionsTotal: document.getElementById('empresaFunctionsTotal'),
     functionsDetalle: document.getElementById('empresaFunctionsDetalle'),
-    authTotal: document.getElementById('empresaAuthTotal'),
-    authDetalle: document.getElementById('empresaAuthDetalle'),
     fcmTotal: document.getElementById('empresaFCMTotal'),
     fcmDetalle: document.getElementById('empresaFCMDetalle'),
     totalOperaciones: document.getElementById('empresaTotalOperaciones'),
@@ -281,7 +281,7 @@ function mostrarDatosEmpresa(id, data) {
         total: asegurarNumero(data.firestore?.total)
     };
     metricas.firestoreTotal.textContent = fs.total;
-    metricas.firestoreDetalle.innerHTML = `L:${fs.lectura} / E:${fs.escritura} / U:${fs.actualizacion} / D:${fs.eliminacion}`;
+    metricas.firestoreDetalle.innerHTML = `L:${fs.lectura} / E:${fs.escritura} / A:${fs.actualizacion} / D:${fs.eliminacion}`;
     
     // STORAGE
     const st = {
@@ -291,7 +291,7 @@ function mostrarDatosEmpresa(id, data) {
         total: asegurarNumero(data.storage?.total)
     };
     metricas.storageTotal.textContent = st.total;
-    metricas.storageDetalle.innerHTML = `Sub:${st.subida} / Desc:${st.descarga} / Elim:${st.eliminacion}`;
+    metricas.storageDetalle.innerHTML = `Sub:${st.subida} / Desc:${st.descarga} / Del:${st.eliminacion}`;
     
     // FUNCTIONS
     const fn = {
@@ -304,17 +304,7 @@ function mostrarDatosEmpresa(id, data) {
     const invocacionesTotales = fn.invocacion + fn.invocaciones;
     
     metricas.functionsTotal.textContent = fn.total || invocacionesTotales;
-    metricas.functionsDetalle.innerHTML = `Invocaciones: ${invocacionesTotales}`;
-    
-    // AUTH
-    const au = {
-        inicioSesion: asegurarNumero(data.autenticacion?.inicioSesion),
-        cierreSesion: asegurarNumero(data.autenticacion?.cierreSesion),
-        registro: asegurarNumero(data.autenticacion?.registro),
-        total: asegurarNumero(data.autenticacion?.total)
-    };
-    metricas.authTotal.textContent = au.total;
-    metricas.authDetalle.innerHTML = `Login:${au.inicioSesion} / Logout:${au.cierreSesion} / Reg:${au.registro}`;
+    metricas.functionsDetalle.innerHTML = `Invoc: ${invocacionesTotales}`;
     
     // FCM
     const notificacionesPushReales = fn.notificacionesPushEnviadas;
@@ -328,36 +318,35 @@ function mostrarDatosEmpresa(id, data) {
     };
     
     metricas.fcmTotal.textContent = notificacionesPushReales;
-    metricas.fcmDetalle.innerHTML = `Usuarios notificados: ${usuariosNotificados}<br> Tokens registrados: ${fcm.tokenRegistrado} | Eliminados: ${fcm.tokenEliminado}`;
+    metricas.fcmDetalle.innerHTML = `Push:${notificacionesPushReales} / Tokens:${fcm.tokenRegistrado}`;
     
-    // Total general
-    const total = fs.total + st.total + (fn.total || invocacionesTotales) + au.total + fcm.total;
+    // Total general (sin Auth)
+    const total = fs.total + st.total + (fn.total || invocacionesTotales) + fcm.total;
     metricas.totalOperaciones.textContent = total;
-    metricas.totalDetalle.innerHTML = `${total} operaciones en total (${notificacionesPushReales} notificaciones push reales)`;
+    metricas.totalDetalle.innerHTML = `${total} operaciones total (${notificacionesPushReales} push reales)`;
     
-    // Actualizar gráficas
-    actualizarGraficasEmpresa(fs, st, { ...fn, invocacionesTotales, notificacionesPushReales, usuariosNotificados }, au, fcm);
+    // Actualizar gráficas (sin Auth)
+    actualizarGraficasEmpresa(fs, st, { ...fn, invocacionesTotales, notificacionesPushReales, usuariosNotificados }, fcm);
 }
 
 // =============================================
-// GRÁFICAS
+// GRÁFICAS (sin Auth)
 // =============================================
-function actualizarGraficasEmpresa(fs, st, fn, au, fcm) {
+function actualizarGraficasEmpresa(fs, st, fn, fcm) {
     // Totales por servicio
     const fsTotal = asegurarNumero(fs.total);
     const stTotal = asegurarNumero(st.total);
     const fnTotal = asegurarNumero(fn.total) || asegurarNumero(fn.invocacionesTotales);
-    const auTotal = asegurarNumero(au.total);
     const fcmTotal = asegurarNumero(fcm.total);
     
     // Gráfica de distribución por servicio
     const ctxDist = document.getElementById('graficoEmpresaDistribucion').getContext('2d');
     
     const dataDist = {
-        labels: ['Firestore', 'Storage', 'Functions', 'Auth', 'FCM'],
+        labels: ['Firestore', 'Storage', 'Functions', 'FCM'],
         datasets: [{
-            data: [fsTotal, stTotal, fnTotal, auTotal, fcmTotal],
-            backgroundColor: ['#3b82f6', '#f97316', '#8b5cf6', '#10b981', '#ec4899'],
+            data: [fsTotal, stTotal, fnTotal, fcmTotal],
+            backgroundColor: ['#3b82f6', '#f97316', '#8b5cf6', '#ec4899'],
             borderWidth: 0
         }]
     };
@@ -388,18 +377,17 @@ function actualizarGraficasEmpresa(fs, st, fn, au, fcm) {
         });
     }
     
-    // Gráfica de desglose por tipo
+    // Gráfica de desglose por tipo (sin Auth)
     const ctxTipos = document.getElementById('graficoEmpresaTipos').getContext('2d');
     
     const dataTipos = {
-        labels: ['Firestore', 'Storage', 'Auth', 'FCM (Push)', 'Functions'],
+        labels: ['Firestore', 'Storage', 'FCM', 'Functions'],
         datasets: [
             {
-                label: 'Lecturas / Subidas / Logins / Notif. Push / Invocaciones',
+                label: 'Lecturas / Subidas / Push / Invocaciones',
                 data: [
                     asegurarNumero(fs.lectura),
                     asegurarNumero(st.subida),
-                    asegurarNumero(au.inicioSesion),
                     asegurarNumero(fn.notificacionesPushReales),
                     asegurarNumero(fn.invocacion)
                 ],
@@ -407,24 +395,22 @@ function actualizarGraficasEmpresa(fs, st, fn, au, fcm) {
                 stack: 'stack0'
             },
             {
-                label: 'Escrituras / Descargas / Logouts / Usuarios Notif. / Invocaciones (alt)',
+                label: 'Escrituras / Descargas / Tokens / Invocaciones (alt)',
                 data: [
                     asegurarNumero(fs.escritura),
                     asegurarNumero(st.descarga),
-                    asegurarNumero(au.cierreSesion),
-                    asegurarNumero(fn.usuariosNotificados),
+                    asegurarNumero(fcm.tokenRegistrado),
                     asegurarNumero(fn.invocaciones)
                 ],
                 backgroundColor: '#f97316',
                 stack: 'stack0'
             },
             {
-                label: 'Actualizaciones / Eliminaciones / Registros / Tokens / Total',
+                label: 'Actualizaciones / Eliminaciones',
                 data: [
                     asegurarNumero(fs.actualizacion),
                     asegurarNumero(st.eliminacion),
-                    asegurarNumero(au.registro),
-                    asegurarNumero(fcm.tokenRegistrado),
+                    0,
                     0
                 ],
                 backgroundColor: '#10b981',
@@ -565,7 +551,6 @@ function mostrarLoadingEmpresa() {
     metricas.firestoreTotal.textContent = '...';
     metricas.storageTotal.textContent = '...';
     metricas.functionsTotal.textContent = '...';
-    metricas.authTotal.textContent = '...';
     metricas.fcmTotal.textContent = '...';
     metricas.totalOperaciones.textContent = '...';
 }
