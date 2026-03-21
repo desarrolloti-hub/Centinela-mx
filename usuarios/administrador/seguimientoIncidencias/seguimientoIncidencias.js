@@ -1,4 +1,4 @@
-// seguimientoIncidencia.js - VERSIÓN FINAL CORREGIDA CON CANALIZACIONES
+// seguimientoIncidencia.js - VERSIÓN COMPLETA CON NOTIFICACIONES
 
 import '/components/visualizadorImagen.js';
 
@@ -510,7 +510,7 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO - CORREGIDO
+// MOSTRAR HISTORIAL DE SEGUIMIENTO
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
@@ -665,9 +665,6 @@ function procesarEvidencias(files) {
     document.getElementById('inputEvidencias').value = '';
 }
 
-// =============================================
-// ACTUALIZAR VISTA PREVIA DE EVIDENCIAS - CORREGIDO
-// =============================================
 function actualizarVistaPreviaEvidencias() {
     const container = document.getElementById('evidenciasPreview');
     const containerParent = document.getElementById('evidenciasPreviewContainer');
@@ -897,14 +894,11 @@ async function _generarYSubirPDF() {
     try {
         console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
 
-        // Cargar sucursales y categorías para el generador
         const sucursalesArray = Array.from(sucursalesMap.values());
         const categoriasArray = Array.from(categoriasMap.values());
 
-        // Importar generador IPH
         const { generadorIPH } = await import('/components/iph-generator.js');
 
-        // Configurar generador
         generadorIPH.configurar({
             organizacionActual: {
                 nombre: usuarioActual.organizacion,
@@ -915,7 +909,6 @@ async function _generarYSubirPDF() {
             authToken: localStorage.getItem('authToken')
         });
 
-        // Generar PDF y obtener BLOB
         const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, {
             mostrarAlerta: false,
             returnBlob: true
@@ -925,15 +918,11 @@ async function _generarYSubirPDF() {
             throw new Error('El PDF generado está vacío');
         }
 
-        // Crear archivo
         const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
-
-        // Subir a Storage
         const rutaPDF = incidenciaActual.getRutaPDF();
 
         const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
 
-        // Actualizar la incidencia con la URL del PDF
         const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
         const { db } = await import('/config/firebase-config.js');
 
@@ -945,7 +934,6 @@ async function _generarYSubirPDF() {
             fechaActualizacion: serverTimestamp()
         });
 
-        // Actualizar el objeto en memoria
         incidenciaActual.pdfUrl = resultado.url;
 
         console.log('✅ PDF actualizado exitosamente:', resultado.url);
@@ -965,7 +953,6 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
     let areasCanalizadas = [];
 
     while (continuar) {
-        // Crear objeto de opciones para el select
         const inputOptions = {};
         areas.forEach(area => {
             if (!areasCanalizadas.some(a => a.id === area.id)) {
@@ -973,7 +960,6 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
             }
         });
 
-        // Si no hay áreas disponibles, salir del bucle
         if (Object.keys(inputOptions).length === 0) {
             if (areasCanalizadas.length > 0) {
                 await Swal.fire({
@@ -1067,6 +1053,7 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
 
 /**
  * ENVIAR NOTIFICACIONES - IGUAL QUE EN CREAR INCIDENCIAS
+ * Esto envía notificaciones tanto a colaboradores como a administradores
  */
 async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidenciaTitulo) {
     try {
@@ -1079,28 +1066,69 @@ async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidencia
             return;
         }
 
-        const resultado = await notificacionManager.notificarMultiplesAreas({
-            areas: areas,
-            incidenciaId: incidenciaId,
-            incidenciaTitulo: incidenciaTitulo || 'Incidencia',
-            sucursalId: incidenciaActual.sucursalId || '',
-            sucursalNombre: sucursalesMap.get(incidenciaActual.sucursalId)?.nombre || '',
-            categoriaId: incidenciaActual.categoriaId || '',
-            categoriaNombre: categoriasMap.get(incidenciaActual.categoriaId)?.nombre || '',
-            nivelRiesgo: incidenciaActual.nivelRiesgo || 'medio',
-            tipo: 'canalizacion',
-            prioridad: incidenciaActual.nivelRiesgo || 'normal',
-            remitenteId: usuarioActual.id,
-            remitenteNombre: usuarioActual.nombreCompleto,
-            organizacionCamelCase: usuarioActual.organizacionCamelCase
+        // Mostrar loading
+        Swal.fire({
+            title: 'Enviando notificaciones...',
+            text: 'Notificando a los usuarios de las áreas seleccionadas y a administradores',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
         });
 
+        // Obtener datos de la incidencia para la notificación
+        const sucursalNombre = sucursalesMap.get(incidenciaActual.sucursalId)?.nombre || '';
+        const categoriaNombre = categoriasMap.get(incidenciaActual.categoriaId)?.nombre || '';
+        
+        // Formatear áreas para el método
+        const areasFormateadas = areas.map(area => ({
+            id: area.id,
+            nombre: area.nombre
+        }));
+
+        const resultado = await notificacionManager.notificarMultiplesAreas({
+            areas: areasFormateadas,
+            incidenciaId: incidenciaId,
+            incidenciaTitulo: incidenciaTitulo || incidenciaActual.getTitulo?.() || 'Incidencia',
+            sucursalId: incidenciaActual.sucursalId || '',
+            sucursalNombre: sucursalNombre,
+            categoriaId: incidenciaActual.categoriaId || '',
+            categoriaNombre: categoriaNombre,
+            nivelRiesgo: incidenciaActual.nivelRiesgo || 'medio',
+            tipo: 'canalizacion',
+            prioridad: incidenciaActual.nivelRiesgo === 'critico' ? 'urgente' : 'normal',
+            remitenteId: usuarioActual.id,
+            remitenteNombre: usuarioActual.nombreCompleto,
+            organizacionCamelCase: usuarioActual.organizacionCamelCase,
+            enviarPush: true
+        });
+
+        Swal.close();
+
         if (resultado.success) {
-            console.log(`✅ Notificaciones enviadas: ${resultado.totalUsuarios} usuarios notificados`);
+            let mensaje = `✅ Notificaciones enviadas:`;
+            mensaje += `<br>👥 ${resultado.totalColaboradores} colaboradores notificados`;
+            mensaje += `<br>👑 ${resultado.totalAdministradores} administradores notificados`;
+            
+            if (resultado.push && resultado.push.enviados > 0) {
+                mensaje += `<br>📱 Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
+            }
+            
+            console.log('📨 Notificaciones enviadas:', mensaje);
+            
+            // Mostrar mensaje de éxito sin cerrar el modal principal
+            await Swal.fire({
+                icon: 'success',
+                title: 'Notificaciones enviadas',
+                html: mensaje,
+                timer: 3000,
+                showConfirmButton: false
+            });
+        } else {
+            console.error('❌ Error al enviar notificaciones:', resultado.error);
         }
 
     } catch (error) {
         console.error('Error en _enviarNotificacionesCanalizacion:', error);
+        Swal.close();
     }
 }
 
@@ -1114,7 +1142,6 @@ async function guardarSeguimiento(datos) {
             btnGuardar.disabled = true;
         }
 
-        // Mostrar loading mientras se guarda TODO (seguimiento + PDF)
         Swal.fire({
             title: 'Guardando seguimiento...',
             text: 'Por favor espere, esto puede tomar unos segundos.',
