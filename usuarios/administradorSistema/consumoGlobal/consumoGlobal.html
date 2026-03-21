@@ -51,6 +51,7 @@
                     <button class="btn-actualizar" id="btnActualizarTodo">
                         <i class="fas fa-sync-alt"></i> Actualizar Lista
                     </button>
+                    <!-- 🆕 NUEVO BOTÓN PDF ROJO -->
                     <button class="btn-pdf" id="btnExportarPDF">
                         <i class="fas fa-file-pdf"></i> Exportar PDF
                     </button>
@@ -147,6 +148,47 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Tabla de últimas operaciones -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Última operación registrada</h5>
+                </div>
+                <div class="card-body">
+                    <div class="ultima-operacion" id="ultimaOperacion">
+                        <span class="sin-datos">No hay operaciones registradas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de todas las empresas (Resumen) -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list"></i> Resumen de todas las empresas</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Empresa</th>
+                                <th>Firestore</th>
+                                <th>Storage</th>
+                                <th>Functions</th>
+                                <th>Auth</th>
+                                <th>FCM</th>
+                                <th>Total</th>
+                                <th>Última actualización</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaEmpresasBody">
+                            <tr><td colspan="9" style="text-align:center;">Cargando empresas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- Footer -->
@@ -159,8 +201,7 @@
     <!-- Scripts -->
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <script src="/components/navbarAdministrador.js"></script>
-    <script src="/components/footerAdministrador.js"></script>
+  <script type="module" src="/components/navbarSysAdmin.js"></script>    <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="./consumoGlobal.js"></script>
 </body>
 
