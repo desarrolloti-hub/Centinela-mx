@@ -181,14 +181,6 @@ class AreasController {
                         <input type="text" id="buscarArea" class="filtro-input" 
                                placeholder="Escribe para buscar" autocomplete="off">
                     </div>
-                    <div class="filtro-grupo">
-                        <label for="filtroEstado">Estado</label>
-                        <select id="filtroEstado" class="filtro-select">
-                            <option value="todos">Todos</option>
-                            <option value="activa">Activas</option>
-                            <option value="inactiva">Inactivas</option>
-                        </select>
-                    </div>
                     <div class="filtro-acciones">
                         <button class="btn-buscar" id="btnBuscarArea">
                             <i class="fas fa-search"></i> Buscar
