@@ -1,5 +1,5 @@
 // incidencia.js - CLASE COMPLETA CON PAGINACIÓN
-// SIN IMPORTACIONES DUPLICADAS, TODO CENTRALIZADO AQUÍ
+// CON MÉTODO agregarCanalizacion AGREGADO
 
 import {
     collection,
@@ -893,6 +893,111 @@ class IncidenciaManager {
         } catch (error) {
             console.error('Error filtrando incidencias por área:', error);
             return [];
+        }
+    }
+
+    /**
+     * AGREGAR CANALIZACIÓN A UNA INCIDENCIA EXISTENTE
+     * Este es el método que faltaba
+     */
+    async agregarCanalizacion(incidenciaId, areaId, areaNombre, usuarioId, usuarioNombre, motivo = '', organizacionCamelCase = null) {
+        try {
+            if (!incidenciaId || !areaId) {
+                throw new Error('Faltan datos para agregar canalización');
+            }
+
+            // Si no se proporciona organización, obtenerla de la incidencia
+            let organizacion = organizacionCamelCase;
+            if (!organizacion) {
+                const incidenciaTemp = await this.getIncidenciaById(incidenciaId, this.organizacionCache);
+                if (incidenciaTemp) {
+                    organizacion = incidenciaTemp.organizacionCamelCase;
+                }
+            }
+            
+            if (!organizacion) {
+                throw new Error('No se pudo determinar la organización');
+            }
+
+            const collectionName = this._getCollectionName(organizacion);
+            
+            // Generar ID único para la canalización
+            const canalizacionId = `CAN${Date.now()}_${areaId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+            // Obtener la incidencia actual
+            const incidenciaRef = doc(db, collectionName, incidenciaId);
+            await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
+            const incidenciaSnap = await getDoc(incidenciaRef);
+
+            if (!incidenciaSnap.exists()) {
+                throw new Error('Incidencia no encontrada');
+            }
+
+            const incidenciaData = incidenciaSnap.data();
+            const canalizacionesActuales = incidenciaData.canalizaciones || {};
+
+            // Verificar si ya está canalizada a esta área
+            const yaExiste = Object.values(canalizacionesActuales).some(c => c.areaId === areaId);
+            if (yaExiste) {
+                return { success: false, message: 'Ya está canalizada a esta área' };
+            }
+
+            // Crear nueva canalización
+            const nuevaCanalizacion = {
+                areaId,
+                areaNombre,
+                canalizadoPor: usuarioId,
+                canalizadoPorNombre: usuarioNombre,
+                motivo: motivo || 'Atención requerida',
+                fechaCanalizacion: new Date(),
+                estado: 'pendiente',
+                seguimientos: []
+            };
+
+            // Combinar canalizaciones
+            const nuevasCanalizaciones = {
+                ...canalizacionesActuales,
+                [canalizacionId]: nuevaCanalizacion
+            };
+
+            const esMultiCanalizada = Object.keys(nuevasCanalizaciones).length > 1;
+            
+            // Determinar la canalización activa (la primera si no hay ninguna)
+            let canalizacionActiva = incidenciaData.canalizacionActiva;
+            if (!canalizacionActiva && Object.keys(nuevasCanalizaciones).length > 0) {
+                canalizacionActiva = areaId;
+            }
+
+            // Actualizar en Firestore
+            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+            await updateDoc(incidenciaRef, {
+                canalizaciones: nuevasCanalizaciones,
+                canalizacionActiva: canalizacionActiva,
+                esMultiCanalizada: esMultiCanalizada,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioId,
+                actualizadoPorNombre: usuarioNombre
+            });
+
+            // Actualizar caché local si existe
+            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+            if (incidenciaIndex !== -1) {
+                this.incidencias[incidenciaIndex].canalizaciones = nuevasCanalizaciones;
+                this.incidencias[incidenciaIndex].canalizacionActiva = canalizacionActiva;
+                this.incidencias[incidenciaIndex].esMultiCanalizada = esMultiCanalizada;
+                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+            }
+
+            return {
+                success: true,
+                canalizacionId,
+                areaId,
+                areaNombre
+            };
+
+        } catch (error) {
+            console.error('Error agregando canalización:', error);
+            throw error;
         }
     }
 
