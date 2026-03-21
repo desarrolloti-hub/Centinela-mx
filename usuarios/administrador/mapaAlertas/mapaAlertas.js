@@ -1,4 +1,4 @@
-// mapaAlertas.js - VERSIÓN COMPLETA CON MODAL FULLSCREEN, VISOR DE PDF, ID EN NOTIFICACIONES Y PANEL CERRADO
+// mapaAlertas.js - VERSIÓN COMPLETA CON MODAL FULLSCREEN, VISOR DE PDF, ID EN NOTIFICACIONES, PANEL CERRADO Y HEATMAP
 
 import { SucursalManager } from '/clases/sucursal.js';
 import { RegionManager } from '/clases/region.js';
@@ -26,10 +26,22 @@ const CONFIG = {
         bajo: '#00C851'
     },
     nivelesRiesgo: {
-        'critico': { color: '#ff4444', icono: 'fa-skull-crossbones', texto: 'CRÍTICO' },
-        'alto': { color: '#ff8844', icono: 'fa-exclamation-triangle', texto: 'ALTO' },
-        'medio': { color: '#ffbb33', icono: 'fa-exclamation-circle', texto: 'MEDIO' },
-        'bajo': { color: '#00C851', icono: 'fa-info-circle', texto: 'BAJO' }
+        'critico': { color: '#ff4444', icono: 'fa-skull-crossbones', texto: 'CRÍTICO', peso: 4 },
+        'alto': { color: '#ff8844', icono: 'fa-exclamation-triangle', texto: 'ALTO', peso: 3 },
+        'medio': { color: '#ffbb33', icono: 'fa-exclamation-circle', texto: 'MEDIO', peso: 2 },
+        'bajo': { color: '#00C851', icono: 'fa-info-circle', texto: 'BAJO', peso: 1 }
+    },
+    heatmapConfig: {
+        radius: 25,
+        blur: 15,
+        maxZoom: 17,
+        minOpacity: 0.3,
+        gradient: {
+            0.0: '#00C851',
+            0.33: '#ffbb33',
+            0.66: '#ff8844',
+            1.0: '#ff4444'
+        }
     }
 };
 
@@ -55,6 +67,11 @@ let usuarioActual = null;
 let unsubscribeIncidencias = null;
 let isFirstSnapshot = true;
 
+// Variables para Heatmap
+let heatmapLayer = null;
+let heatmapVisible = false;
+let puntosHeatmap = [];
+
 // Cache de datos para el generador IPH
 let organizacionActual = null;
 let sucursalesCache = [];
@@ -70,7 +87,7 @@ let pdfModal = null;
 // INICIALIZACIÓN
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Iniciando mapa con listener real y PDF...');
+    console.log('🚀 Iniciando mapa con listener real, PDF y Heatmap...');
 
     try {
         if (!inicializarMapa()) return;
@@ -88,6 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         configurarEventos();
         configurarPaneles();
         configurarSelectorRegion();
+        agregarBotonHeatmap();
         console.log('✅ Todo listo!');
 
     } catch (error) {
@@ -95,6 +113,190 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarError(error.message);
     }
 });
+
+// =============================================
+// AGREGAR BOTÓN DE HEATMAP AL PANEL DE CONTROL
+// =============================================
+function agregarBotonHeatmap() {
+    const controlPanel = document.querySelector('.control-panel');
+    if (!controlPanel) return;
+    
+    // Verificar si ya existe
+    if (document.getElementById('btnHeatmap')) return;
+    
+    const btnHeatmap = document.createElement('button');
+    btnHeatmap.id = 'btnHeatmap';
+    btnHeatmap.className = 'control-btn';
+    btnHeatmap.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
+    btnHeatmap.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
+    btnHeatmap.style.border = 'none';
+    btnHeatmap.onclick = toggleHeatmap;
+    
+    controlPanel.appendChild(btnHeatmap);
+    console.log('✅ Botón de Heatmap agregado');
+}
+
+// =============================================
+// GENERAR PUNTOS PARA HEATMAP
+// =============================================
+function generarPuntosHeatmap() {
+    puntosHeatmap = [];
+    
+    incidencias.forEach(inc => {
+        const sucursal = sucursalesMap.get(inc.sucursalId);
+        if (sucursal && sucursal.latitud && sucursal.longitud) {
+            const peso = CONFIG.nivelesRiesgo[inc.nivelRiesgo]?.peso || 1;
+            // Aumentar peso para incidencias recientes (últimas 24h)
+            let pesoFinal = peso;
+            const fechaInc = new Date(inc.fecha);
+            const ahora = new Date();
+            const horasDiff = (ahora - fechaInc) / (1000 * 60 * 60);
+            if (horasDiff < 24) {
+                pesoFinal = peso * 1.5; // Incidencias recientes tienen más peso
+            }
+            
+            puntosHeatmap.push({
+                lat: parseFloat(sucursal.latitud),
+                lng: parseFloat(sucursal.longitud),
+                intensity: pesoFinal
+            });
+        }
+    });
+    
+    console.log(`🔥 Generados ${puntosHeatmap.length} puntos para heatmap`);
+}
+
+// =============================================
+// CREAR CAPA DE HEATMAP
+// =============================================
+function crearHeatmapLayer() {
+    if (typeof L.heatLayer === 'undefined') {
+        console.warn('⚠️ Leaflet.heat no está cargado, cargando...');
+        // Cargar la librería Leaflet.heat dinámicamente
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js';
+            script.onload = () => {
+                console.log('✅ Leaflet.heat cargado');
+                const layer = L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
+                resolve(layer);
+            };
+            script.onerror = () => {
+                console.error('❌ Error cargando Leaflet.heat');
+                reject();
+            };
+            document.head.appendChild(script);
+        });
+    }
+    
+    return L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
+}
+
+// =============================================
+// ALTERNAR VISIBILIDAD DEL HEATMAP
+// =============================================
+async function toggleHeatmap() {
+    const btn = document.getElementById('btnHeatmap');
+    
+    if (!heatmapVisible) {
+        // Activar heatmap
+        console.log('🔥 Activando mapa de calor...');
+        
+        if (puntosHeatmap.length === 0) {
+            generarPuntosHeatmap();
+        }
+        
+        if (puntosHeatmap.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Sin datos',
+                text: 'No hay incidencias para mostrar en el mapa de calor',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
+            return;
+        }
+        
+        try {
+            if (!heatmapLayer) {
+                heatmapLayer = await crearHeatmapLayer();
+            }
+            
+            if (heatmapLayer) {
+                heatmapLayer.addTo(mapa);
+                heatmapVisible = true;
+                btn.style.background = 'linear-gradient(135deg, #ff8844, #ff4444)';
+                btn.style.boxShadow = '0 0 15px rgba(255, 68, 68, 0.5)';
+                btn.innerHTML = '<i class="fas fa-fire"></i><span>Ocultar Calor</span>';
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Mapa de Calor Activado',
+                    text: `Mostrando ${puntosHeatmap.length} zonas de calor`,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    background: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-primary)'
+                });
+            }
+        } catch (error) {
+            console.error('Error activando heatmap:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo cargar el mapa de calor',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
+        }
+        
+    } else {
+        // Desactivar heatmap
+        if (heatmapLayer && mapa.hasLayer(heatmapLayer)) {
+            mapa.removeLayer(heatmapLayer);
+        }
+        heatmapVisible = false;
+        btn.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
+        btn.style.boxShadow = 'none';
+        btn.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
+        
+        Swal.fire({
+            icon: 'info',
+            title: 'Mapa de Calor Oculto',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1500,
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
+        });
+    }
+}
+
+// =============================================
+// ACTUALIZAR HEATMAP CUANDO CAMBIAN INCIDENCIAS
+// =============================================
+function actualizarHeatmap() {
+    if (!heatmapVisible) return;
+    
+    console.log('🔄 Actualizando heatmap...');
+    generarPuntosHeatmap();
+    
+    if (heatmapLayer && mapa.hasLayer(heatmapLayer)) {
+        mapa.removeLayer(heatmapLayer);
+        // Recrear layer con nuevos puntos
+        if (typeof L.heatLayer !== 'undefined') {
+            heatmapLayer = L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
+            heatmapLayer.addTo(mapa);
+        }
+    }
+}
 
 // =============================================
 // CREAR MODAL PARA VISUALIZAR PDF CON ID
@@ -584,6 +786,11 @@ async function iniciarListenerIncidenciasReales() {
             const incidenciasAnteriores = [...incidencias];
             incidencias = nuevasIncidencias;
 
+            // Actualizar heatmap si está activo
+            if (heatmapVisible) {
+                actualizarHeatmap();
+            }
+
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const data = change.doc.data();
@@ -616,6 +823,8 @@ async function iniciarListenerIncidenciasReales() {
             if (isFirstSnapshot) {
                 isFirstSnapshot = false;
                 console.log('✅ Primera carga completada, listener activo');
+                // Generar puntos de heatmap iniciales
+                generarPuntosHeatmap();
             }
             
             actualizarListaUltimasIncidencias();
@@ -1290,14 +1499,14 @@ function configurarPaneles() {
     const incidenciasChevron = document.getElementById('incidenciasChevron');
     
     if (incidenciasHeader && incidenciasList && incidenciasChevron) {
-        let incidenciasOpen = false; // INICIA CERRADO
+        let incidenciasOpen = false;
         incidenciasHeader.addEventListener('click', () => {
             incidenciasOpen = !incidenciasOpen;
             incidenciasList.style.display = incidenciasOpen ? 'block' : 'none';
             incidenciasChevron.className = incidenciasOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
         });
-        incidenciasList.style.display = 'none'; // OCULTO AL INICIAR
-        incidenciasChevron.className = 'fas fa-chevron-up'; // ICONO APUNTANDO ARRIBA
+        incidenciasList.style.display = 'none';
+        incidenciasChevron.className = 'fas fa-chevron-up';
     }
     
     // Panel de regiones - INICIA CERRADO
