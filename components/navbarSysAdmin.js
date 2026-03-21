@@ -1,6 +1,3 @@
-// [file name]: navbarAdministrador.js
-// [file path]: /components/navbarAdministrador.js
-
 class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
@@ -314,6 +311,13 @@ class NavbarComplete {
                 text-align: center;
                 border: 3px solid var(--color-accent-primary);
                 flex-shrink: 0;
+            }
+            
+            .org-text-logo img {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                object-fit: cover;
             }
             
             .navbar-title {
@@ -1193,7 +1197,7 @@ class NavbarComplete {
                     <a href="/usuarios/administradorSistema/panelAdministrador/panelAdministrador.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
                             <img src="/assets/images/logo.png" alt="Logo Organización" class="navbar-logo-img" id="orgLogoImg">
-                            <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                            <div class="org-text-logo" id="orgTextLogo" style="display: none;"></div>
                         </div>
                     </a>
                 </div>
@@ -1379,30 +1383,78 @@ class NavbarComplete {
     setupAdminButtons() {}
 
     updateOrganizationLogo() {
-        const organizationLogoImg = document.getElementById('orgLogoImg'), orgTextLogo = document.getElementById('orgTextLogo'), orgLogoLink = document.getElementById('orgLogoLink'), orgLogoContainer = document.getElementById('orgLogoContainer');
+        const organizationLogoImg = document.getElementById('orgLogoImg');
+        const orgTextLogo = document.getElementById('orgTextLogo');
+        const orgLogoLink = document.getElementById('orgLogoLink');
+        const orgLogoContainer = document.getElementById('orgLogoContainer');
+        
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
-        if (this.currentAdmin?.fotoOrganizacion && this.currentAdmin.fotoOrganizacion.length > 10) {
-            organizationLogoImg.src = this.currentAdmin.fotoOrganizacion;
-            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion || 'Organización'}`;
-            organizationLogoImg.style.display = 'block';
-            orgTextLogo.style.display = 'none';
-            organizationLogoImg.title = this.currentAdmin.organizacion || 'Organización';
-            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion || '');
-        } else this.showOrgTextLogo();
+        
+        // Usar la misma foto que el admin-profile-img (fotoUsuario) para org-text-logo
+        const fotoAdmin = this.currentAdmin?.fotoUsuario;
+        
+        if (fotoAdmin && fotoAdmin.length > 10) {
+            // Limpiar el contenido del org-text-logo y agregar una imagen
+            orgTextLogo.innerHTML = '';
+            const imgElement = document.createElement('img');
+            imgElement.src = fotoAdmin;
+            imgElement.alt = `Foto de ${this.currentAdmin?.nombreCompleto || 'Administrador'}`;
+            imgElement.style.width = '100%';
+            imgElement.style.height = '100%';
+            imgElement.style.borderRadius = '50%';
+            imgElement.style.objectFit = 'cover';
+            orgTextLogo.appendChild(imgElement);
+            orgTextLogo.style.display = 'flex';
+            organizationLogoImg.style.display = 'none';
+            orgTextLogo.style.backgroundColor = 'transparent';
+            orgTextLogo.style.border = '3px solid var(--color-accent-primary)';
+        } else {
+            // Si no hay foto, mostrar las iniciales
+            orgTextLogo.innerHTML = '';
+            const orgName = this.currentAdmin?.organizacion || 'Organización';
+            const initials = orgName.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substring(0, 3);
+            orgTextLogo.textContent = initials;
+            orgTextLogo.style.display = 'flex';
+            organizationLogoImg.style.display = 'none';
+            orgTextLogo.style.backgroundColor = 'var(--color-accent-primary)';
+            orgTextLogo.style.color = 'white';
+        }
+        
         orgLogoLink.href = '/usuarios/administradorSistema/panelAdministrador/panelAdministrador.html';
         orgLogoContainer.style.borderRadius = '50%';
         orgLogoContainer.style.overflow = 'hidden';
     }
 
     showOrgTextLogo() {
-        const organizationLogoImg = document.getElementById('orgLogoImg'), orgTextLogo = document.getElementById('orgTextLogo');
+        // Este método ya no se usa directamente, la lógica está en updateOrganizationLogo
+        const organizationLogoImg = document.getElementById('orgLogoImg');
+        const orgTextLogo = document.getElementById('orgTextLogo');
         if (!organizationLogoImg || !orgTextLogo) return;
-        organizationLogoImg.style.display = 'none';
+        
+        const fotoAdmin = this.currentAdmin?.fotoUsuario;
+        
+        if (fotoAdmin && fotoAdmin.length > 10) {
+            orgTextLogo.innerHTML = '';
+            const imgElement = document.createElement('img');
+            imgElement.src = fotoAdmin;
+            imgElement.alt = `Foto de ${this.currentAdmin?.nombreCompleto || 'Administrador'}`;
+            imgElement.style.width = '100%';
+            imgElement.style.height = '100%';
+            imgElement.style.borderRadius = '50%';
+            imgElement.style.objectFit = 'cover';
+            orgTextLogo.appendChild(imgElement);
+            orgTextLogo.style.backgroundColor = 'transparent';
+        } else {
+            orgTextLogo.innerHTML = '';
+            const orgName = this.currentAdmin?.organizacion || 'Organización';
+            const initials = orgName.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substring(0, 3);
+            orgTextLogo.textContent = initials;
+            orgTextLogo.style.backgroundColor = 'var(--color-accent-primary)';
+            orgTextLogo.style.color = 'white';
+        }
+        
         orgTextLogo.style.display = 'flex';
-        const orgName = this.currentAdmin?.organizacion || 'Organización';
-        const initials = orgName.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substring(0, 3);
-        orgTextLogo.textContent = initials;
-        orgTextLogo.title = orgName;
+        organizationLogoImg.style.display = 'none';
     }
 
     updateAdminMenuInfo() {
