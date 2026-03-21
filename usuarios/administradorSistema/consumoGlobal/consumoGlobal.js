@@ -2,6 +2,7 @@
 // VERSIÓN SIN AUTO-REFRESCO - Actualización manual mediante botones
 // CON BOTÓN PDF INTEGRADO
 // MODIFICADO: Todos los valores undefined ahora muestran 0
+// MODIFICADO: Eliminada la tabla de resumen de empresas y la tarjeta de última operación
 
 import { db } from '/config/firebase-config.js';
 import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
@@ -16,7 +17,6 @@ const btnActualizarTodo = document.getElementById('btnActualizarTodo');
 const empresaInfo = document.getElementById('empresaInfo');
 const empresaNombre = document.getElementById('empresaNombre');
 const empresaUltimaActualizacion = document.getElementById('empresaUltimaActualizacion');
-const tablaEmpresasBody = document.getElementById('tablaEmpresasBody');
 const fechaGlobal = document.getElementById('fechaActualizacionGlobal');
 // Botón PDF
 const btnExportarPDF = document.getElementById('btnExportarPDF');
@@ -108,7 +108,6 @@ async function cargarTodasLasEmpresas() {
         console.log(`✅ Se encontraron ${snapshot.size} empresas`);
         
         if (snapshot.empty) {
-            tablaEmpresasBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No hay empresas con datos de consumo.</td></tr>';
             selectEmpresa.innerHTML = '<option value="">-- No hay empresas disponibles --</option>';
             return;
         }
@@ -129,7 +128,6 @@ async function cargarTodasLasEmpresas() {
         empresas.sort((a, b) => (a.nombreEmpresa || a.id).localeCompare(b.nombreEmpresa || b.id));
 
         selectEmpresa.innerHTML = options;
-        actualizarTablaEmpresas(empresas);
         fechaGlobal.textContent = new Date().toLocaleString('es-MX');
 
         // Si había una empresa seleccionada, actualizar sus datos
@@ -143,7 +141,7 @@ async function cargarTodasLasEmpresas() {
 
     } catch (error) {
         console.error('Error cargando empresas:', error);
-        tablaEmpresasBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#ef4444;">Error al cargar los datos</td></tr>';
+        selectEmpresa.innerHTML = '<option value="">-- Error al cargar empresas --</option>';
         mostrarError('No se pudieron cargar los datos de las empresas.');
     }
 }
@@ -261,121 +259,6 @@ function mostrarNotificacionManual(mensaje) {
 }
 
 // =============================================
-// ACTUALIZAR TABLA DE EMPRESAS
-// =============================================
-function actualizarTablaEmpresas(empresas) {
-    if (!empresas || empresas.length === 0) {
-        tablaEmpresasBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No hay datos disponibles</td></tr>';
-        return;
-    }
-
-    tablaEmpresasBody.innerHTML = empresas.map(emp => {
-        // FIRESTORE - con valores por defecto 0
-        const firestore = {
-            total: asegurarNumero(emp.firestore?.total),
-            lectura: asegurarNumero(emp.firestore?.lectura),
-            escritura: asegurarNumero(emp.firestore?.escritura),
-            actualizacion: asegurarNumero(emp.firestore?.actualizacion),
-            eliminacion: asegurarNumero(emp.firestore?.eliminacion)
-        };
-        
-        // STORAGE - con valores por defecto 0
-        const storage = {
-            total: asegurarNumero(emp.storage?.total),
-            subida: asegurarNumero(emp.storage?.subida),
-            descarga: asegurarNumero(emp.storage?.descarga),
-            eliminacion: asegurarNumero(emp.storage?.eliminacion)
-        };
-        
-        // FUNCTIONS - con valores por defecto 0
-        const functions = {
-            total: asegurarNumero(emp.functions?.total),
-            invocacion: asegurarNumero(emp.functions?.invocacion),
-            invocaciones: asegurarNumero(emp.functions?.invocaciones)
-        };
-        const invocacionesTotales = functions.invocacion + functions.invocaciones;
-        
-        // AUTH - con valores por defecto 0
-        const auth = {
-            total: asegurarNumero(emp.autenticacion?.total),
-            inicioSesion: asegurarNumero(emp.autenticacion?.inicioSesion),
-            cierreSesion: asegurarNumero(emp.autenticacion?.cierreSesion),
-            registro: asegurarNumero(emp.autenticacion?.registro)
-        };
-        
-        // FCM - NOTIFICACIONES PUSH REALES
-        const notificacionesPushReales = asegurarNumero(emp.functions?.notificacionesPushEnviadas);
-        const usuariosNotificados = asegurarNumero(emp.functions?.usuariosNotificados);
-        
-        // FCM tradicional
-        const fcm = {
-            total: asegurarNumero(emp.fcm?.total),
-            notificacionEnviada: asegurarNumero(emp.fcm?.notificacionEnviada),
-            tokenRegistrado: asegurarNumero(emp.fcm?.tokenRegistrado),
-            tokenEliminado: asegurarNumero(emp.fcm?.tokenEliminado)
-        };
-        
-        const total = firestore.total + storage.total + (functions.total || invocacionesTotales) + auth.total + fcm.total;
-        const ultima = emp.ultimaActualizacion ? new Date(emp.ultimaActualizacion.seconds * 1000).toLocaleString('es-MX') : 'N/A';
-        const nombre = emp.nombreEmpresa || emp.id;
-
-        return `
-            <tr onclick="document.getElementById('selectEmpresa').value='${emp.id}'; window.cargarEmpresaSeleccionada()">
-                <td><strong>${escapeHTML(nombre)}</strong><br><small style="color:#6c757d;">${escapeHTML(emp.id)}</small></td>
-                
-                <!-- FIRESTORE -->
-                <td>
-                    <span class="badge-value badge-info">${firestore.total}</span><br>
-                    <small style="font-size:10px;">
-                        L:${firestore.lectura} | E:${firestore.escritura}<br>
-                        U:${firestore.actualizacion} | D:${firestore.eliminacion}
-                    </small>
-                </td>
-                
-                <!-- STORAGE -->
-                <td>
-                    <span class="badge-value badge-warning">${storage.total}</span><br>
-                    <small style="font-size:10px;">
-                        Sub:${storage.subida} | Desc:${storage.descarga}<br>
-                        Elim:${storage.eliminacion}
-                    </small>
-                </td>
-                
-                <!-- FUNCTIONS -->
-                <td>
-                    <span class="badge-value badge-secondary">${functions.total || invocacionesTotales}</span><br>
-                    <small style="font-size:10px;">
-                        Invocaciones: ${invocacionesTotales}
-                    </small>
-                </td>
-                
-                <!-- AUTH -->
-                <td>
-                    <span class="badge-value badge-success">${auth.total}</span><br>
-                    <small style="font-size:10px;">
-                        Lg:${auth.inicioSesion} | Lo:${auth.cierreSesion}<br>
-                        Rg:${auth.registro}
-                    </small>
-                </td>
-                
-                <!-- FCM (Notificaciones push reales) -->
-                <td>
-                    <span class="badge-value badge-danger" style="font-size:1.2rem; font-weight:bold;">${notificacionesPushReales}</span><br>
-                    <small style="font-size:10px;">
-                        Usuarios: ${usuariosNotificados}<br>
-                        Tok:${fcm.tokenRegistrado} | Elim:${fcm.tokenEliminado}
-                    </small>
-                </td>
-                
-                <td><span class="badge-value" style="background:rgba(13,202,240,0.2); color:#0dcaf0;">${total}</span></td>
-                <td>${ultima}</td>
-                <td><button class="btn-seleccionar" onclick="event.stopPropagation(); document.getElementById('selectEmpresa').value='${emp.id}'; window.cargarEmpresaSeleccionada()"><i class="fas fa-eye"></i> Ver</button></td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// =============================================
 // MOSTRAR DATOS DE EMPRESA
 // =============================================
 function mostrarDatosEmpresa(id, data) {
@@ -452,65 +335,8 @@ function mostrarDatosEmpresa(id, data) {
     metricas.totalOperaciones.textContent = total;
     metricas.totalDetalle.innerHTML = `${total} operaciones en total (${notificacionesPushReales} notificaciones push reales)`;
     
-    // Última operación
-    mostrarUltimaOperacion(data.ultimaOperacion);
-    
     // Actualizar gráficas
     actualizarGraficasEmpresa(fs, st, { ...fn, invocacionesTotales, notificacionesPushReales, usuariosNotificados }, au, fcm);
-}
-
-// =============================================
-// MOSTRAR ÚLTIMA OPERACIÓN
-// =============================================
-function mostrarUltimaOperacion(ultima) {
-    const container = document.getElementById('ultimaOperacion');
-    
-    if (!ultima || !ultima.servicio) {
-        container.innerHTML = '<span class="sin-datos">No hay operaciones registradas</span>';
-        return;
-    }
-    
-    const fecha = ultima.timestamp ? 
-        new Date(ultima.timestamp.seconds * 1000).toLocaleString('es-MX') : 
-        'Fecha no disponible';
-    
-    let detalles = '';
-    if (ultima.detalles) {
-        if (ultima.detalles.notificacionesEnviadas) {
-            detalles = ` Notificaciones push: ${ultima.detalles.notificacionesEnviadas} (${ultima.detalles.usuariosNotificados} usuarios)`;
-            if (ultima.detalles.incidenciaId) {
-                detalles += `<br> Incidencia: ${ultima.detalles.incidenciaId}`;
-            }
-        } else if (ultima.detalles.coleccion) {
-            detalles = `Colección: ${ultima.detalles.coleccion}`;
-            if (ultima.detalles.documento) detalles += `, Documento: ${ultima.detalles.documento}`;
-        } else if (ultima.detalles.nombreFuncion) {
-            detalles = `Función: ${ultima.detalles.nombreFuncion}`;
-            if (ultima.detalles.userId) detalles += `, Usuario: ${ultima.detalles.userId}`;
-        } else {
-            detalles = JSON.stringify(ultima.detalles);
-        }
-    }
-    
-    container.innerHTML = `
-        <div class="operacion-detalle">
-            <span class="operacion-servicio"><i class="fas fa-${getIconoServicio(ultima.servicio)}"></i> ${ultima.servicio}</span>
-            <span class="operacion-tipo">${ultima.tipo}</span>
-            <span class="operacion-detalles">${detalles}</span>
-            <span class="operacion-fecha"><i class="far fa-clock"></i> ${fecha}</span>
-        </div>
-    `;
-}
-
-function getIconoServicio(servicio) {
-    switch(servicio) {
-        case 'firestore': return 'database';
-        case 'storage': return 'cloud-upload-alt';
-        case 'functions': return 'code';
-        case 'auth': return 'user-lock';
-        case 'fcm': return 'bell';
-        default: return 'circle';
-    }
 }
 
 // =============================================
@@ -729,23 +555,9 @@ async function exportarPDF() {
 }
 
 // =============================================
-// FUNCIÓN DE ESCAPE HTML
-// =============================================
-function escapeHTML(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
-
-// =============================================
 // UTILIDADES
 // =============================================
 function mostrarLoading() {
-    tablaEmpresasBody.innerHTML = '<tr><td colspan="9" style="text-align:center;"><i class="fas fa-spinner fa-spin"></i> Cargando empresas...</td></tr>';
     selectEmpresa.innerHTML = '<option value="">-- Cargando empresas... --</option>';
 }
 
