@@ -355,11 +355,19 @@
     </div>
 
     <!-- Scripts -->
+    <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="estadisticas.js"></script>
+
+    <!-- Protector de pagina -->
+    <script src="/components/protector-de-pagina.js" data-rol="administrador"
+        data-mensaje="Solo administradores pueden acceder a esta página."
+        data-titulo="Acceso de Administrador Requerido"
+        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
+        </script>
 </body>
 
 </html>

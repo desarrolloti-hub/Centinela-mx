@@ -1,8 +1,9 @@
-// mapaAlertas.js - VERSIÓN CORREGIDA (SOLO INCIDENCIAS REALES)
+// mapaAlertas.js - VERSIÓN COMPLETA CON MODAL FULLSCREEN, VISOR DE PDF, ID EN NOTIFICACIONES, PANEL CERRADO Y HEATMAP
 
 import { SucursalManager } from '/clases/sucursal.js';
 import { RegionManager } from '/clases/region.js';
 import { IncidenciaManager } from '/clases/incidencia.js';
+import { generadorIPH } from '/components/iph-generator.js';
 
 // =============================================
 // CONFIGURACIÓN DEL MAPA
@@ -25,10 +26,22 @@ const CONFIG = {
         bajo: '#00C851'
     },
     nivelesRiesgo: {
-        'critico': { color: '#ff4444', icono: 'fa-skull-crossbones', texto: 'CRÍTICO' },
-        'alto': { color: '#ff8844', icono: 'fa-exclamation-triangle', texto: 'ALTO' },
-        'medio': { color: '#ffbb33', icono: 'fa-exclamation-circle', texto: 'MEDIO' },
-        'bajo': { color: '#00C851', icono: 'fa-info-circle', texto: 'BAJO' }
+        'critico': { color: '#ff4444', icono: 'fa-skull-crossbones', texto: 'CRÍTICO', peso: 4 },
+        'alto': { color: '#ff8844', icono: 'fa-exclamation-triangle', texto: 'ALTO', peso: 3 },
+        'medio': { color: '#ffbb33', icono: 'fa-exclamation-circle', texto: 'MEDIO', peso: 2 },
+        'bajo': { color: '#00C851', icono: 'fa-info-circle', texto: 'BAJO', peso: 1 }
+    },
+    heatmapConfig: {
+        radius: 25,
+        blur: 15,
+        maxZoom: 17,
+        minOpacity: 0.3,
+        gradient: {
+            0.0: '#00C851',
+            0.33: '#ffbb33',
+            0.66: '#ff8844',
+            1.0: '#ff4444'
+        }
     }
 };
 
@@ -52,42 +65,47 @@ let regionManager = null;
 let incidenciaManager = null;
 let usuarioActual = null;
 let unsubscribeIncidencias = null;
-let incidenciasCargadas = false; // Bandera para saber si ya se cargaron las incidencias iniciales
+let isFirstSnapshot = true;
+
+// Variables para Heatmap
+let heatmapLayer = null;
+let heatmapVisible = false;
+let puntosHeatmap = [];
+
+// Cache de datos para el generador IPH
+let organizacionActual = null;
+let sucursalesCache = [];
+let categoriasCache = [];
+let subcategoriasCache = [];
+let usuariosCache = [];
+let authToken = null;
+
+// Variable para el modal de PDF
+let pdfModal = null;
 
 // =============================================
 // INICIALIZACIÓN
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Iniciando mapa con incidencias reales...');
+    console.log('🚀 Iniciando mapa con listener real, PDF y Heatmap...');
 
     try {
-        // 1. Inicializar mapa
         if (!inicializarMapa()) return;
-
-        // 2. Cargar usuario
-        cargarUsuario();
-
-        // 3. Inicializar managers
+        await cargarUsuario();
         sucursalManager = new SucursalManager();
         regionManager = new RegionManager();
         incidenciaManager = new IncidenciaManager();
-
-        // 4. Cargar datos
+        crearModalPDF();
         await cargarRegiones();
         await cargarSucursales();
-
-        // 5. Cargar UI
+        await cargarDatosParaPDF();
         await cargarRegionesEnSelector();
         await cargarRegionesEnLista();
-
-        // 6. Iniciar listener de incidencias (solo incidencias reales)
-        iniciarListenerIncidencias();
-
-        // 7. Configurar eventos
+        await iniciarListenerIncidenciasReales();
         configurarEventos();
         configurarPaneles();
         configurarSelectorRegion();
-
+        agregarBotonHeatmap();
         console.log('✅ Todo listo!');
 
     } catch (error) {
@@ -95,6 +113,369 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarError(error.message);
     }
 });
+
+// =============================================
+// AGREGAR BOTÓN DE HEATMAP AL PANEL DE CONTROL
+// =============================================
+function agregarBotonHeatmap() {
+    const controlPanel = document.querySelector('.control-panel');
+    if (!controlPanel) return;
+    
+    // Verificar si ya existe
+    if (document.getElementById('btnHeatmap')) return;
+    
+    const btnHeatmap = document.createElement('button');
+    btnHeatmap.id = 'btnHeatmap';
+    btnHeatmap.className = 'control-btn';
+    btnHeatmap.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
+    btnHeatmap.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
+    btnHeatmap.style.border = 'none';
+    btnHeatmap.onclick = toggleHeatmap;
+    
+    controlPanel.appendChild(btnHeatmap);
+    console.log('✅ Botón de Heatmap agregado');
+}
+
+// =============================================
+// GENERAR PUNTOS PARA HEATMAP
+// =============================================
+function generarPuntosHeatmap() {
+    puntosHeatmap = [];
+    
+    incidencias.forEach(inc => {
+        const sucursal = sucursalesMap.get(inc.sucursalId);
+        if (sucursal && sucursal.latitud && sucursal.longitud) {
+            const peso = CONFIG.nivelesRiesgo[inc.nivelRiesgo]?.peso || 1;
+            // Aumentar peso para incidencias recientes (últimas 24h)
+            let pesoFinal = peso;
+            const fechaInc = new Date(inc.fecha);
+            const ahora = new Date();
+            const horasDiff = (ahora - fechaInc) / (1000 * 60 * 60);
+            if (horasDiff < 24) {
+                pesoFinal = peso * 1.5; // Incidencias recientes tienen más peso
+            }
+            
+            puntosHeatmap.push({
+                lat: parseFloat(sucursal.latitud),
+                lng: parseFloat(sucursal.longitud),
+                intensity: pesoFinal
+            });
+        }
+    });
+    
+    console.log(`🔥 Generados ${puntosHeatmap.length} puntos para heatmap`);
+}
+
+// =============================================
+// CREAR CAPA DE HEATMAP
+// =============================================
+function crearHeatmapLayer() {
+    if (typeof L.heatLayer === 'undefined') {
+        console.warn('⚠️ Leaflet.heat no está cargado, cargando...');
+        // Cargar la librería Leaflet.heat dinámicamente
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js';
+            script.onload = () => {
+                console.log('✅ Leaflet.heat cargado');
+                const layer = L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
+                resolve(layer);
+            };
+            script.onerror = () => {
+                console.error('❌ Error cargando Leaflet.heat');
+                reject();
+            };
+            document.head.appendChild(script);
+        });
+    }
+    
+    return L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
+}
+
+// =============================================
+// ALTERNAR VISIBILIDAD DEL HEATMAP
+// =============================================
+async function toggleHeatmap() {
+    const btn = document.getElementById('btnHeatmap');
+    
+    if (!heatmapVisible) {
+        // Activar heatmap
+        console.log('🔥 Activando mapa de calor...');
+        
+        if (puntosHeatmap.length === 0) {
+            generarPuntosHeatmap();
+        }
+        
+        if (puntosHeatmap.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Sin datos',
+                text: 'No hay incidencias para mostrar en el mapa de calor',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
+            return;
+        }
+        
+        try {
+            if (!heatmapLayer) {
+                heatmapLayer = await crearHeatmapLayer();
+            }
+            
+            if (heatmapLayer) {
+                heatmapLayer.addTo(mapa);
+                heatmapVisible = true;
+                btn.style.background = 'linear-gradient(135deg, #ff8844, #ff4444)';
+                btn.style.boxShadow = '0 0 15px rgba(255, 68, 68, 0.5)';
+                btn.innerHTML = '<i class="fas fa-fire"></i><span>Ocultar Calor</span>';
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Mapa de Calor Activado',
+                    text: `Mostrando ${puntosHeatmap.length} zonas de calor`,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    background: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-primary)'
+                });
+            }
+        } catch (error) {
+            console.error('Error activando heatmap:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo cargar el mapa de calor',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
+        }
+        
+    } else {
+        // Desactivar heatmap
+        if (heatmapLayer && mapa.hasLayer(heatmapLayer)) {
+            mapa.removeLayer(heatmapLayer);
+        }
+        heatmapVisible = false;
+        btn.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
+        btn.style.boxShadow = 'none';
+        btn.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
+        
+        Swal.fire({
+            icon: 'info',
+            title: 'Mapa de Calor Oculto',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1500,
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
+        });
+    }
+}
+
+// =============================================
+// ACTUALIZAR HEATMAP CUANDO CAMBIAN INCIDENCIAS
+// =============================================
+function actualizarHeatmap() {
+    if (!heatmapVisible) return;
+    
+    console.log('🔄 Actualizando heatmap...');
+    generarPuntosHeatmap();
+    
+    if (heatmapLayer && mapa.hasLayer(heatmapLayer)) {
+        mapa.removeLayer(heatmapLayer);
+        // Recrear layer con nuevos puntos
+        if (typeof L.heatLayer !== 'undefined') {
+            heatmapLayer = L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
+            heatmapLayer.addTo(mapa);
+        }
+    }
+}
+
+// =============================================
+// CREAR MODAL PARA VISUALIZAR PDF CON ID
+// =============================================
+function crearModalPDF() {
+    const existingModal = document.getElementById('pdfFullscreenModal');
+    if (existingModal) existingModal.remove();
+    
+    pdfModal = document.createElement('div');
+    pdfModal.id = 'pdfFullscreenModal';
+    pdfModal.className = 'pdf-fullscreen-modal';
+    pdfModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 9999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        backdrop-filter: blur(5px);
+    `;
+    
+    pdfModal.innerHTML = `
+        <div class="pdf-modal-header" style="
+            width: 100%;
+            background: linear-gradient(135deg, #1a1a2e, #0f0f1a);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 207, 255, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        ">
+            <div class="pdf-modal-title" style="display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-file-pdf" style="color: #c0392b; font-size: 24px;"></i>
+                <span style="color: white; font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: bold;" id="pdfModalTitle">Visor de PDF</span>
+            </div>
+            <div class="pdf-modal-actions" style="display: flex; gap: 15px;">
+                <button id="btnDescargarPDF" style="
+                    background: linear-gradient(135deg, #2c3e50, #1a2632);
+                    border: 1px solid #00cfff;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-family: 'Rajdhani', sans-serif;
+                    font-weight: bold;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <i class="fas fa-download"></i> Descargar
+                </button>
+                <button id="btnCerrarPDF" style="
+                    background: linear-gradient(135deg, #c0392b, #a93226);
+                    border: none;
+                    color: white;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    font-size: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="pdf-modal-content" style="
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+            padding: 20px;
+        ">
+            <iframe id="pdfViewer" style="
+                width: 100%;
+                height: 100%;
+                border: none;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            "></iframe>
+        </div>
+    `;
+    
+    document.body.appendChild(pdfModal);
+    
+    const btnCerrar = document.getElementById('btnCerrarPDF');
+    const btnDescargar = document.getElementById('btnDescargarPDF');
+    
+    if (btnCerrar) {
+        btnCerrar.addEventListener('click', cerrarModalPDF);
+    }
+    
+    if (btnDescargar) {
+        btnDescargar.addEventListener('click', () => {
+            const iframe = document.getElementById('pdfViewer');
+            const pdfUrl = iframe.src;
+            if (pdfUrl && pdfUrl !== 'about:blank') {
+                const a = document.createElement('a');
+                a.href = pdfUrl;
+                a.download = `INFORME_INCIDENCIA_${window.currentIncidenciaId || Date.now()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Descarga iniciada',
+                    text: 'El PDF se está descargando',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    background: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-primary)'
+                });
+            }
+        });
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && pdfModal && pdfModal.style.display === 'flex') {
+            cerrarModalPDF();
+        }
+    });
+}
+
+// =============================================
+// ABRIR MODAL PDF CON ID VISIBLE
+// =============================================
+function abrirModalPDF(pdfUrl, incidenciaId = null, titulo = 'Visor de PDF') {
+    if (!pdfModal) {
+        crearModalPDF();
+    }
+    
+    const iframe = document.getElementById('pdfViewer');
+    const titleSpan = document.getElementById('pdfModalTitle');
+    
+    if (iframe) {
+        iframe.src = pdfUrl;
+    }
+    
+    window.currentIncidenciaId = incidenciaId;
+    
+    if (titleSpan) {
+        if (incidenciaId) {
+            titleSpan.innerHTML = `<i class="fas fa-file-pdf" style="color: #c0392b;"></i> INFORME INCIDENCIA - ID: ${incidenciaId}`;
+        } else {
+            titleSpan.innerHTML = `<i class="fas fa-file-pdf" style="color: #c0392b;"></i> ${titulo}`;
+        }
+    }
+    
+    pdfModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalPDF() {
+    if (pdfModal) {
+        pdfModal.style.display = 'none';
+        const iframe = document.getElementById('pdfViewer');
+        if (iframe) {
+            iframe.src = 'about:blank';
+        }
+        document.body.style.overflow = '';
+        window.currentIncidenciaId = null;
+    }
+}
 
 // =============================================
 // INICIALIZAR MAPA
@@ -140,7 +521,7 @@ function inicializarMapa() {
 // =============================================
 // CARGAR USUARIO
 // =============================================
-function cargarUsuario() {
+async function cargarUsuario() {
     try {
         const adminInfo = localStorage.getItem('adminInfo');
         if (adminInfo) {
@@ -151,6 +532,10 @@ function cargarUsuario() {
                 organizacion: data.organizacion,
                 organizacionCamelCase: data.organizacionCamelCase || 'pollosRay'
             };
+            organizacionActual = {
+                nombre: data.organizacion,
+                camelCase: data.organizacionCamelCase || 'pollosRay'
+            };
         } else {
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             if (userData && userData.organizacionCamelCase) {
@@ -160,14 +545,94 @@ function cargarUsuario() {
                     organizacion: userData.organizacion,
                     organizacionCamelCase: userData.organizacionCamelCase
                 };
+                organizacionActual = {
+                    nombre: userData.organizacion,
+                    camelCase: userData.organizacionCamelCase
+                };
             } else {
                 usuarioActual = { organizacionCamelCase: 'pollosRay' };
+                organizacionActual = { nombre: 'Mi Empresa', camelCase: 'pollosRay' };
             }
         }
         console.log('👤 Usuario:', usuarioActual.organizacionCamelCase);
+        await obtenerTokenAuth();
+        
     } catch (error) {
         console.error('Error cargando usuario:', error);
         usuarioActual = { organizacionCamelCase: 'pollosRay' };
+        organizacionActual = { nombre: 'Mi Empresa', camelCase: 'pollosRay' };
+    }
+}
+
+async function obtenerTokenAuth() {
+    try {
+        if (window.firebase && firebase.auth) {
+            const user = firebase.auth().currentUser;
+            if (user) {
+                authToken = await user.getIdToken();
+            }
+        }
+        if (!authToken) {
+            const token = localStorage.getItem('firebaseToken') ||
+                localStorage.getItem('authToken') ||
+                localStorage.getItem('token');
+            if (token) {
+                authToken = token;
+            }
+        }
+    } catch (error) {
+        console.warn('Error obteniendo token:', error);
+        authToken = null;
+    }
+}
+
+// =============================================
+// CARGAR DATOS PARA PDF
+// =============================================
+async function cargarDatosParaPDF() {
+    try {
+        const data = await sucursalManager.getSucursalesByOrganizacion(usuarioActual.organizacionCamelCase);
+        if (data?.length) {
+            sucursalesCache = data;
+        }
+        
+        try {
+            const { CategoriaManager } = await import('/clases/categoria.js');
+            const categoriaManager = new CategoriaManager();
+            categoriasCache = await categoriaManager.obtenerTodasCategorias();
+        } catch (error) {
+            console.warn('Error cargando categorías:', error);
+            categoriasCache = [];
+        }
+        
+        try {
+            const modulo = await import('/clases/subcategoria.js').catch(() => null);
+            if (modulo) {
+                const SubcategoriaManager = modulo.SubcategoriaManager || modulo.default;
+                if (SubcategoriaManager) {
+                    const subcategoriaManager = new SubcategoriaManager();
+                    subcategoriasCache = await subcategoriaManager.obtenerSubcategoriasPorOrganizacion?.(usuarioActual.organizacionCamelCase) || [];
+                }
+            }
+        } catch (error) {
+            console.warn('Error cargando subcategorías:', error);
+            subcategoriasCache = [];
+        }
+        
+        if (generadorIPH && typeof generadorIPH.configurar === 'function') {
+            generadorIPH.configurar({
+                organizacionActual,
+                sucursalesCache,
+                categoriasCache,
+                subcategoriasCache,
+                usuariosCache,
+                authToken
+            });
+        }
+        
+        console.log('✅ Datos para PDF cargados');
+    } catch (error) {
+        console.error('Error cargando datos para PDF:', error);
     }
 }
 
@@ -198,7 +663,6 @@ async function cargarSucursales() {
 
         if (data?.length) {
             sucursales = data;
-
             sucursales.forEach(s => {
                 sucursalesMap.set(s.id, s);
             });
@@ -277,137 +741,140 @@ function agregarSucursalAlMapa(sucursal, region) {
 // =============================================
 // INICIAR LISTENER DE INCIDENCIAS REALES
 // =============================================
-function iniciarListenerIncidencias() {
-    console.log('📡 Iniciando listener de incidencias reales...');
+async function iniciarListenerIncidenciasReales() {
+    console.log('📡 Iniciando listener de incidencias REAL con onSnapshot...');
 
     try {
-        if (!window.db) {
-            console.warn('⚠️ db no disponible');
-            return;
-        }
+        const { collection, query, orderBy, limit, onSnapshot } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+        const { db } = await import('/config/firebase-config.js');
 
-        import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js").then(({ collection, query, orderBy, limit, where, onSnapshot }) => {
-            const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
-            console.log(`📁 Escuchando colección: ${collectionName}`);
+        const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
+        console.log(`📁 Escuchando colección: ${collectionName}`);
 
-            // Query para obtener solo incidencias pendientes, ordenadas por fecha
-            const incidenciasRef = collection(window.db, collectionName);
-            const q = query(
-                incidenciasRef,
-                where("estado", "==", "pendiente"),
-                orderBy("fechaCreacion", "desc"),
-                limit(20)
-            );
+        const incidenciasRef = collection(db, collectionName);
+        const q = query(
+            incidenciasRef,
+            orderBy("fechaCreacion", "desc"),
+            limit(20)
+        );
 
-            unsubscribeIncidencias = onSnapshot(q, async (snapshot) => {
-                console.log(`📊 Cambio detectado: ${snapshot.docChanges().length} cambios`);
+        unsubscribeIncidencias = onSnapshot(q, async (snapshot) => {
+            console.log(`📊 Cambio detectado: ${snapshot.docChanges().length} cambios`);
 
-                const nuevasIncidencias = [];
+            const nuevasIncidencias = [];
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const fecha = data.fechaCreacion?.toDate?.() || new Date(data.fechaCreacion) || new Date();
+                
+                nuevasIncidencias.push({
+                    id: doc.id,
+                    sucursalId: data.sucursalId,
+                    titulo: data.detalles?.substring(0, 60) || 'Incidencia sin título',
+                    descripcion: data.detalles || '',
+                    nivelRiesgo: data.nivelRiesgo || 'bajo',
+                    estado: data.estado || 'pendiente',
+                    fecha: fecha,
+                    fechaCreacion: fecha,
+                    categoriaId: data.categoriaId,
+                    subcategoriaId: data.subcategoriaId,
+                    imagenes: data.imagenes || [],
+                    pdfUrl: data.pdfUrl || ''
+                });
+            });
 
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const fecha = data.fechaCreacion?.toDate?.() || new Date();
+            const incidenciasAnteriores = [...incidencias];
+            incidencias = nuevasIncidencias;
 
-                    nuevasIncidencias.push({
-                        id: doc.id,
+            // Actualizar heatmap si está activo
+            if (heatmapVisible) {
+                actualizarHeatmap();
+            }
+
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const data = change.doc.data();
+                    const fecha = data.fechaCreacion?.toDate?.() || new Date(data.fechaCreacion) || new Date();
+                    
+                    const nuevaIncidencia = {
+                        id: change.doc.id,
                         sucursalId: data.sucursalId,
                         titulo: data.detalles?.substring(0, 60) || 'Incidencia sin título',
                         descripcion: data.detalles || '',
                         nivelRiesgo: data.nivelRiesgo || 'bajo',
                         estado: data.estado || 'pendiente',
-                        fecha: fecha,
-                        categoriaId: data.categoriaId,
-                        subcategoriaId: data.subcategoriaId,
-                        fechaCreacion: fecha
-                    });
-                });
-
-                // Guardar incidencias
-                const incidenciasAnteriores = [...incidencias];
-                incidencias = nuevasIncidencias;
-
-                // Detectar nuevas incidencias (comparar por ID)
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === 'added') {
-                        const data = change.doc.data();
-                        const fecha = data.fechaCreacion?.toDate?.() || new Date();
-
-                        const nuevaIncidencia = {
-                            id: change.doc.id,
-                            sucursalId: data.sucursalId,
-                            titulo: data.detalles?.substring(0, 60) || 'Incidencia sin título',
-                            descripcion: data.detalles || '',
-                            nivelRiesgo: data.nivelRiesgo || 'bajo',
-                            fecha: fecha
-                        };
-
-                        // Verificar si es realmente nueva (no estaba en la lista anterior)
-                        const yaExiste = incidenciasAnteriores.some(inc => inc.id === change.doc.id);
-
-                        if (!yaExiste && incidenciasCargadas) {
-                            console.log('🔔 NUEVA INCIDENCIA DETECTADA:', nuevaIncidencia.id);
-
-                            const sucursal = sucursalesMap.get(nuevaIncidencia.sucursalId);
-                            if (sucursal) {
-                                mostrarNotificacionIncidencia(nuevaIncidencia, sucursal);
-                                centrarEnSucursal(sucursal.id);
-                            }
+                        fecha: fecha
+                    };
+                    
+                    const yaExiste = incidenciasAnteriores.some(inc => inc.id === change.doc.id);
+                    
+                    if (!yaExiste && !isFirstSnapshot) {
+                        console.log('🔔 NUEVA INCIDENCIA DETECTADA:', nuevaIncidencia.id);
+                        
+                        const sucursal = sucursalesMap.get(nuevaIncidencia.sucursalId);
+                        if (sucursal) {
+                            mostrarNotificacionIncidencia(nuevaIncidencia, sucursal);
+                            centrarEnSucursal(sucursal.id);
                         }
                     }
-                });
-
-                // Marcar que ya se cargaron las incidencias iniciales
-                incidenciasCargadas = true;
-
-                // Actualizar UI
-                actualizarListaIncidencias();
-                actualizarStats();
-
-                console.log(`✅ Incidencias cargadas: ${incidencias.length} pendientes`);
-
-            }, (error) => {
-                console.error('❌ Error en listener de incidencias:', error);
+                }
             });
-
-            console.log('✅ Listener de incidencias activo');
+            
+            if (isFirstSnapshot) {
+                isFirstSnapshot = false;
+                console.log('✅ Primera carga completada, listener activo');
+                // Generar puntos de heatmap iniciales
+                generarPuntosHeatmap();
+            }
+            
+            actualizarListaUltimasIncidencias();
+            actualizarStats();
+            
+            console.log(`✅ Total incidencias cargadas: ${incidencias.length}`);
+            
+        }, (error) => {
+            console.error('❌ Error en listener de incidencias:', error);
         });
-
+        
+        console.log('✅ Listener de incidencias REAL activo');
+        
     } catch (error) {
         console.error('❌ Error iniciando listener:', error);
     }
 }
 
 // =============================================
-// ACTUALIZAR LISTA DE INCIDENCIAS EN EL PANEL
+// ACTUALIZAR LISTA DE ÚLTIMAS 5 INCIDENCIAS
 // =============================================
-function actualizarListaIncidencias() {
+function actualizarListaUltimasIncidencias() {
     const container = document.getElementById('listaIncidencias');
     if (!container) return;
-
-    // Tomar solo las últimas 5 incidencias PENDIENTES
+    
     const ultimasIncidencias = incidencias.slice(0, 5);
-
+    
     if (!ultimasIncidencias.length) {
         container.innerHTML = `
             <div class="no-incidencias">
-                <i class="fas fa-check-circle"></i> No hay incidencias pendientes
+                <i class="fas fa-check-circle"></i> No hay incidencias registradas
             </div>
         `;
         const badge = document.getElementById('incidenciasBadge');
         if (badge) badge.textContent = '0';
         return;
     }
-
+    
     const badge = document.getElementById('incidenciasBadge');
     if (badge) badge.textContent = ultimasIncidencias.length;
-
+    
     container.innerHTML = ultimasIncidencias.map(inc => {
         const nivel = CONFIG.nivelesRiesgo[inc.nivelRiesgo] || CONFIG.nivelesRiesgo.bajo;
         const sucursal = sucursalesMap.get(inc.sucursalId);
         const sucursalNombre = sucursal?.nombre || 'Sucursal desconocida';
-
+        const estadoTexto = inc.estado === 'finalizada' ? 'Finalizada' : 'Pendiente';
+        const estadoClass = inc.estado === 'finalizada' ? 'finalizada' : 'pendiente';
+        
         return `
-            <div class="incidencia-item ${inc.nivelRiesgo}" onclick="window.centrarEnSucursal('${inc.sucursalId}')">
+            <div class="incidencia-item ${inc.nivelRiesgo}">
                 <div class="incidencia-header">
                     <i class="fas ${nivel.icono}" style="color: ${nivel.color};"></i>
                     <span class="incidencia-nivel" style="color: ${nivel.color};">${nivel.texto}</span>
@@ -417,7 +884,39 @@ function actualizarListaIncidencias() {
                 <div class="incidencia-descripcion">${escapeHTML(inc.descripcion.substring(0, 80))}${inc.descripcion.length > 80 ? '...' : ''}</div>
                 <div class="incidencia-meta">
                     <span><i class="fas fa-store"></i> ${escapeHTML(sucursalNombre)}</span>
-                    <span class="incidencia-estado pendiente">Pendiente</span>
+                    <span class="incidencia-estado ${estadoClass}">${estadoTexto}</span>
+                </div>
+                <div class="incidencia-actions" style="display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end;">
+                    <button class="btn-pdf-mini" onclick="window.verPDFIncidencia('${inc.id}')" title="Ver PDF" style="
+                        background: linear-gradient(135deg, #2c3e50, #1a2632);
+                        border: none;
+                        color: white;
+                        padding: 5px 12px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 0.7rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                        transition: all 0.2s ease;
+                    " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-file-pdf" style="color: #c0392b;"></i> PDF
+                    </button>
+                    <button class="btn-ver-mapa-mini" onclick="window.centrarEnSucursal('${inc.sucursalId}')" title="Ver en mapa" style="
+                        background: linear-gradient(135deg, #2c3e50, #1a2632);
+                        border: none;
+                        color: white;
+                        padding: 5px 12px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 0.7rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                        transition: all 0.2s ease;
+                    " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-map-marker-alt" style="color: #00cfff;"></i> Mapa
+                    </button>
                 </div>
             </div>
         `;
@@ -425,14 +924,178 @@ function actualizarListaIncidencias() {
 }
 
 // =============================================
-// MOSTRAR NOTIFICACIÓN DE NUEVA INCIDENCIA
+// FUNCIÓN PARA VER PDF EN MODAL CON ID
+// =============================================
+window.verPDFIncidencia = async function(incidenciaId) {
+    console.log('📄 Abriendo PDF para incidencia:', incidenciaId);
+    
+    try {
+        const incidencia = incidencias.find(i => i.id === incidenciaId);
+        
+        if (!incidencia) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se encontró la incidencia',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Generando PDF...',
+            html: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div><p style="margin-top: 12px;">Por favor espere</p>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
+        });
+        
+        const incidenciaCompleta = {
+            id: incidencia.id,
+            sucursalId: incidencia.sucursalId,
+            detalles: incidencia.descripcion,
+            nivelRiesgo: incidencia.nivelRiesgo,
+            estado: incidencia.estado,
+            fechaCreacion: incidencia.fecha,
+            fechaInicio: incidencia.fecha,
+            categoriaId: incidencia.categoriaId,
+            subcategoriaId: incidencia.subcategoriaId,
+            imagenes: incidencia.imagenes || [],
+            pdfUrl: incidencia.pdfUrl,
+            getNivelRiesgoTexto: function() {
+                const niveles = { 'bajo': 'Bajo', 'medio': 'Medio', 'alto': 'Alto', 'critico': 'Crítico' };
+                return niveles[this.nivelRiesgo] || 'Bajo';
+            },
+            getEstadoTexto: function() {
+                const estados = { 'pendiente': 'Pendiente', 'finalizada': 'Finalizada' };
+                return estados[this.estado] || 'Pendiente';
+            },
+            getSeguimientosArray: function() {
+                return [];
+            }
+        };
+        
+        let pdfBlob = null;
+        
+        if (incidencia.pdfUrl) {
+            Swal.close();
+            const result = await Swal.fire({
+                title: 'PDF Disponible',
+                text: 'Esta incidencia ya tiene un PDF generado. ¿Qué deseas hacer?',
+                icon: 'question',
+                confirmButtonText: 'Ver PDF existente',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
+            
+            if (result.isConfirmed) {
+                abrirModalPDF(incidencia.pdfUrl, incidencia.id, `Incidencia ${incidencia.id}`);
+                return;
+            }
+        }
+        try {
+            pdfBlob = await generadorIPH.generarIPH(incidenciaCompleta, {
+                mostrarAlerta: false,
+                returnBlob: true
+            });
+            
+            if (pdfBlob) {
+                const url = URL.createObjectURL(pdfBlob);
+                abrirModalPDF(url, incidencia.id, `Incidencia ${incidencia.id}`);
+                window.currentPDFBlob = pdfBlob;
+                window.currentPDFUrl = url;
+                Swal.close();
+            } else {
+                throw new Error('No se pudo generar el PDF');
+            }
+            
+        } catch (genError) {
+            console.error('Error generando PDF con IPH:', genError);
+            
+            Swal.update({
+                html: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Generando PDF simple...</span></div><p style="margin-top: 12px;">Generando PDF básico...</p>'
+            });
+            
+            const pdfSimpleBlob = await generarPDFSimple(incidencia);
+            if (pdfSimpleBlob) {
+                const url = URL.createObjectURL(pdfSimpleBlob);
+                abrirModalPDF(url, incidencia.id, `Incidencia ${incidencia.id} (Básico)`);
+                window.currentPDFBlob = pdfSimpleBlob;
+                window.currentPDFUrl = url;
+                Swal.close();
+            } else {
+                throw new Error('No se pudo generar el PDF');
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error generando PDF:', error);
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'No se pudo generar el PDF',
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
+        });
+    }
+};
+
+// =============================================
+// GENERAR PDF SIMPLE (FALLBACK)
+// =============================================
+async function generarPDFSimple(incidencia) {
+    try {
+        const { jsPDF } = window.jspdf || await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+        const doc = new jsPDF();
+        
+        const sucursal = sucursalesMap.get(incidencia.sucursalId);
+        const nivel = CONFIG.nivelesRiesgo[incidencia.nivelRiesgo] || CONFIG.nivelesRiesgo.bajo;
+        
+        doc.setFontSize(18);
+        doc.setTextColor(0, 82, 155);
+        doc.text('INFORME DE INCIDENCIA', 105, 20, { align: 'center' });
+        
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`ID: ${incidencia.id}`, 20, 35);
+        doc.text(`Sucursal: ${sucursal?.nombre || 'Desconocida'}`, 20, 45);
+        doc.text(`Nivel de Riesgo: ${nivel.texto}`, 20, 55);
+        doc.text(`Estado: ${incidencia.estado === 'finalizada' ? 'Finalizada' : 'Pendiente'}`, 20, 65);
+        doc.text(`Fecha: ${formatearFecha(incidencia.fecha)}`, 20, 75);
+        
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('Descripción:', 20, 95);
+        doc.setFont(undefined, 'normal');
+        const descripcionLines = doc.splitTextToSize(incidencia.descripcion || 'Sin descripción', 170);
+        doc.text(descripcionLines, 20, 103);
+        
+        return doc.output('blob');
+        
+    } catch (error) {
+        console.error('Error en PDF simple:', error);
+        return null;
+    }
+}
+
+// =============================================
+// MOSTRAR NOTIFICACIÓN DE NUEVA INCIDENCIA CON ID
 // =============================================
 function mostrarNotificacionIncidencia(incidencia, sucursal) {
     const nivel = CONFIG.nivelesRiesgo[incidencia.nivelRiesgo] || CONFIG.nivelesRiesgo.bajo;
-
+    
     console.log('🔔 Mostrando notificación para incidencia:', incidencia.id);
-
-    // Notificación con SweetAlert
+    
+    try {
+        const audio = new Audio('/assets/sounds/notificacion.mp3');
+        audio.play().catch(e => console.log('Sonido no disponible'));
+    } catch (e) {
+        console.log('Error reproduciendo sonido');
+    }
+    
     Swal.fire({
         title: '🚨 NUEVA INCIDENCIA',
         html: `
@@ -445,7 +1108,11 @@ function mostrarNotificacionIncidencia(incidencia, sucursal) {
                         </span>
                     </div>
                 </div>
-                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 8px;">
+                <div style="background: rgba(0, 207, 255, 0.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid #00cfff;">
+                    <i class="fas fa-hashtag" style="color: #00cfff; font-size: 0.8rem;"></i>
+                    <strong style="color: #00cfff; font-family: monospace; font-size: 0.85rem;"> ID: ${incidencia.id}</strong>
+                </div>
+                <div style="font-size: 1rem; font-weight: bold; margin-bottom: 8px;">
                     ${escapeHTML(incidencia.titulo)}
                 </div>
                 <div style="color: #aaa; margin-bottom: 12px;">
@@ -462,34 +1129,30 @@ function mostrarNotificacionIncidencia(incidencia, sucursal) {
         showConfirmButton: true,
         confirmButtonText: 'VER EN MAPA',
         showCancelButton: true,
-        cancelButtonText: 'CERRAR',
+        cancelButtonText: 'VER PDF',
         confirmButtonColor: nivel.color,
+        cancelButtonColor: '#c0392b',
         background: 'var(--color-bg-secondary)',
         color: 'var(--color-text-primary)',
-        didOpen: () => {
-            // Reproducir sonido si está disponible
-            try {
-                const audio = new Audio('/assets/sounds/notificacion.mp3');
-                audio.play().catch(e => console.log('Sonido no disponible'));
-            } catch (e) {
-                console.log('Error reproduciendo sonido');
-            }
+        customClass: {
+            popup: 'notification-swal'
         }
     }).then((result) => {
         if (result.isConfirmed && sucursal) {
             centrarEnSucursal(sucursal.id);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+            window.verPDFIncidencia(incidencia.id);
         }
     });
-
-    // Mostrar notificación toast adicional
+    
     Swal.fire({
         title: `${nivel.texto} - Nueva incidencia`,
-        text: `${incidencia.titulo} en ${sucursal?.nombre || 'sucursal desconocida'}`,
+        html: `<strong style="font-family: monospace; color: #00cfff;">📎 ID: ${incidencia.id}</strong><br>${incidencia.titulo}<br><small>📍 ${sucursal?.nombre || 'sucursal desconocida'}</small>`,
         icon: 'warning',
         toast: true,
         position: 'top-end',
         showConfirmButton: false,
-        timer: 4000,
+        timer: 5000,
         timerProgressBar: true,
         background: 'var(--color-bg-secondary)',
         color: 'var(--color-text-primary)'
@@ -504,12 +1167,10 @@ function centrarEnSucursal(sucursalId) {
     if (sucursal && marcadores.sucursales[sucursalId]) {
         mapa.setView([sucursal.latitud, sucursal.longitud], 16);
         marcadores.sucursales[sucursalId].openPopup();
-
-        // Resaltar el marcador temporalmente
+        
         const marker = marcadores.sucursales[sucursalId];
         const originalIcon = marker.getIcon();
-
-        // Crear un efecto de resaltado
+        
         const highlightIcon = L.divIcon({
             className: 'marcador-sucursal highlight',
             html: `<i class="fas fa-store" style="color: ${sucursal.regionColor}; font-size: 2.5rem; filter: drop-shadow(0 0 15px ${sucursal.regionColor});"></i>`,
@@ -517,15 +1178,20 @@ function centrarEnSucursal(sucursalId) {
             iconAnchor: [16, 32],
             popupAnchor: [0, -32]
         });
-
+        
         marker.setIcon(highlightIcon);
         setTimeout(() => {
             marker.setIcon(originalIcon);
         }, 2000);
+        
+        console.log(`📍 Centrado en sucursal: ${sucursal.nombre}`);
+    } else {
+        console.warn(`⚠️ No se encontró la sucursal con ID: ${sucursalId}`);
     }
 }
 
 window.centrarEnSucursal = centrarEnSucursal;
+window.verPDFIncidencia = window.verPDFIncidencia;
 
 // =============================================
 // ACTUALIZAR ESTADÍSTICAS
@@ -535,13 +1201,15 @@ function actualizarStats() {
     const altas = incidencias.filter(i => i.nivelRiesgo === 'alto').length;
     const medias = incidencias.filter(i => i.nivelRiesgo === 'medio').length;
     const bajas = incidencias.filter(i => i.nivelRiesgo === 'bajo').length;
-
+    
+    const totalAltas = criticas + altas;
+    
     const altasMini = document.getElementById('statAltasMini');
     const mediasMini = document.getElementById('statMediasMini');
     const bajasMini = document.getElementById('statBajasMini');
     const sucursalesMini = document.getElementById('statSucursalesMini');
-
-    if (altasMini) altasMini.textContent = criticas + altas;
+    
+    if (altasMini) altasMini.textContent = totalAltas;
     if (mediasMini) mediasMini.textContent = medias;
     if (bajasMini) bajasMini.textContent = bajas;
     if (sucursalesMini) sucursalesMini.textContent = sucursales.length;
@@ -553,19 +1221,19 @@ function actualizarStats() {
 async function cargarRegionesEnSelector() {
     const container = document.getElementById('regionList');
     if (!container) return;
-
+    
     if (!regiones.length) {
         container.innerHTML = '<div class="loading-regions">No hay regiones disponibles</div>';
         return;
     }
-
+    
     const sucursalesPorRegion = {};
     sucursales.forEach(s => {
         if (s.regionId) {
             sucursalesPorRegion[s.regionId] = (sucursalesPorRegion[s.regionId] || 0) + 1;
         }
     });
-
+    
     container.innerHTML = regiones.map(region => {
         const count = sucursalesPorRegion[region.id] || 0;
         return `
@@ -576,7 +1244,7 @@ async function cargarRegionesEnSelector() {
             </div>
         `;
     }).join('');
-
+    
     document.querySelectorAll('.region-option').forEach(opt => {
         opt.addEventListener('click', () => {
             const regionId = opt.dataset.regionId;
@@ -594,19 +1262,19 @@ async function cargarRegionesEnSelector() {
 async function cargarRegionesEnLista() {
     const container = document.getElementById('regionesList');
     if (!container) return;
-
+    
     if (!regiones.length) {
         container.innerHTML = '<div class="no-incidencias" style="padding: 15px;">No hay regiones</div>';
         return;
     }
-
+    
     const sucursalesPorRegion = {};
     sucursales.forEach(s => {
         if (s.regionId) {
             sucursalesPorRegion[s.regionId] = (sucursalesPorRegion[s.regionId] || 0) + 1;
         }
     });
-
+    
     container.innerHTML = regiones.map(region => {
         const count = sucursalesPorRegion[region.id] || 0;
         return `
@@ -625,7 +1293,7 @@ async function cargarRegionesEnLista() {
 function filtrarPorRegion(regionId, regionName, regionColor) {
     filtros.regionId = regionId;
     filtros.regionNombre = regionName;
-
+    
     const btn = document.getElementById('btnSeleccionarRegion');
     if (btn) {
         btn.innerHTML = `
@@ -636,9 +1304,9 @@ function filtrarPorRegion(regionId, regionName, regionColor) {
             <i class="fas fa-chevron-down"></i>
         `;
     }
-
+    
     mostrarBadgeRegionActiva(regionName, regionColor);
-
+    
     Object.keys(marcadores.sucursales).forEach(id => {
         const s = sucursales.find(x => x.id === id);
         if (s) {
@@ -653,12 +1321,12 @@ function filtrarPorRegion(regionId, regionName, regionColor) {
             }
         }
     });
-
+    
     const sucursalesRegion = Object.values(marcadores.sucursales).filter((m, idx) => {
         const s = sucursales.find(x => x.id === Object.keys(marcadores.sucursales)[idx]);
         return s && s.regionId === regionId;
     });
-
+    
     if (sucursalesRegion.length > 0) {
         const grupo = L.featureGroup(sucursalesRegion);
         mapa.fitBounds(grupo.getBounds().pad(0.2));
@@ -668,7 +1336,7 @@ function filtrarPorRegion(regionId, regionName, regionColor) {
 function mostrarTodasLasSucursales() {
     filtros.regionId = null;
     filtros.regionNombre = null;
-
+    
     const btn = document.getElementById('btnSeleccionarRegion');
     if (btn) {
         btn.innerHTML = `
@@ -677,15 +1345,15 @@ function mostrarTodasLasSucursales() {
             <i class="fas fa-chevron-down"></i>
         `;
     }
-
+    
     ocultarBadgeRegionActiva();
-
+    
     Object.keys(marcadores.sucursales).forEach(id => {
         if (!mapa.hasLayer(marcadores.sucursales[id])) {
             marcadores.sucursales[id].addTo(mapa);
         }
     });
-
+    
     const todos = Object.values(marcadores.sucursales);
     if (todos.length > 0) {
         const grupo = L.featureGroup(todos);
@@ -712,7 +1380,7 @@ function mostrarBadgeRegionActiva(nombre, color) {
         </button>
     `;
     badge.style.display = 'flex';
-
+    
     const btnQuitar = document.getElementById('btnQuitarFiltroRegion');
     if (btnQuitar) {
         btnQuitar.addEventListener('click', mostrarTodasLasSucursales);
@@ -731,7 +1399,7 @@ function configurarSelectorRegion() {
     const btn = document.getElementById('btnSeleccionarRegion');
     const dropdown = document.getElementById('regionDropdown');
     const limpiarBtn = document.getElementById('limpiarFiltroRegion');
-
+    
     if (btn && dropdown) {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -739,7 +1407,7 @@ function configurarSelectorRegion() {
             btn.classList.toggle('active');
         });
     }
-
+    
     if (limpiarBtn) {
         limpiarBtn.addEventListener('click', () => {
             mostrarTodasLasSucursales();
@@ -747,7 +1415,7 @@ function configurarSelectorRegion() {
             if (btn) btn.classList.remove('active');
         });
     }
-
+    
     document.addEventListener('click', (e) => {
         if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) {
             dropdown.classList.remove('show');
@@ -768,7 +1436,7 @@ function cerrarDropdown() {
 // =============================================
 function centrarMapa() {
     if (!mapa) return;
-    const todos = [...Object.values(marcadores.incidencias), ...Object.values(marcadores.sucursales)];
+    const todos = [...Object.values(marcadores.sucursales)];
     if (todos.length) {
         mapa.fitBounds(L.featureGroup(todos).getBounds().pad(0.1));
     } else {
@@ -787,20 +1455,20 @@ async function refrescarRegiones() {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Cargando...</span>';
             btn.disabled = true;
         }
-
+        
         regiones = await regionManager.getRegionesByOrganizacion(
             usuarioActual.organizacionCamelCase,
             usuarioActual
         );
-
+        
         await cargarRegionesEnLista();
         await cargarRegionesEnSelector();
-
+        
         if (btn) {
             btn.innerHTML = '<i class="fas fa-sync-alt"></i><span>Actualizar</span>';
             btn.disabled = false;
         }
-
+        
         Swal.fire({
             icon: 'success',
             title: 'Actualizado',
@@ -810,7 +1478,7 @@ async function refrescarRegiones() {
             showConfirmButton: false,
             timer: 2000
         });
-
+        
     } catch (error) {
         console.error('Error:', error);
         const btn = document.getElementById('btnRefrescarRegiones');
@@ -822,30 +1490,31 @@ async function refrescarRegiones() {
 }
 
 // =============================================
-// CONFIGURAR PANELES
+// CONFIGURAR PANELES (PANEL DE INCIDENCIAS INICIA CERRADO)
 // =============================================
 function configurarPaneles() {
-    // Panel de incidencias
+    // Panel de incidencias - INICIA CERRADO
     const incidenciasHeader = document.getElementById('toggleIncidencias');
     const incidenciasList = document.querySelector('.incidencias-list');
     const incidenciasChevron = document.getElementById('incidenciasChevron');
-
+    
     if (incidenciasHeader && incidenciasList && incidenciasChevron) {
-        let incidenciasOpen = true;
+        let incidenciasOpen = false;
         incidenciasHeader.addEventListener('click', () => {
             incidenciasOpen = !incidenciasOpen;
             incidenciasList.style.display = incidenciasOpen ? 'block' : 'none';
             incidenciasChevron.className = incidenciasOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
         });
-        incidenciasList.style.display = 'block';
+        incidenciasList.style.display = 'none';
+        incidenciasChevron.className = 'fas fa-chevron-up';
     }
-
-    // Panel de regiones
+    
+    // Panel de regiones - INICIA CERRADO
     const regionsHeader = document.getElementById('toggleRegions');
     const regionsPanel = document.getElementById('regionsPanel');
     const regionsList = document.querySelector('.regions-list');
     const regionsChevron = document.getElementById('regionsChevron');
-
+    
     if (regionsHeader && regionsPanel && regionsList && regionsChevron) {
         let regionsOpen = false;
         regionsHeader.addEventListener('click', () => {
@@ -865,7 +1534,7 @@ function configurarPaneles() {
 function configurarEventos() {
     const btnCentrar = document.getElementById('btnCentrarMapa');
     if (btnCentrar) btnCentrar.addEventListener('click', centrarMapa);
-
+    
     const btnRefrescar = document.getElementById('btnRefrescarRegiones');
     if (btnRefrescar) btnRefrescar.addEventListener('click', refrescarRegiones);
 }
@@ -891,7 +1560,8 @@ function formatearFecha(fecha) {
             hour: '2-digit',
             minute: '2-digit',
             day: '2-digit',
-            month: '2-digit'
+            month: '2-digit',
+            year: 'numeric'
         });
     } catch {
         return 'Fecha inválida';
