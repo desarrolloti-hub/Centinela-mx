@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Planes del Sistema | Super Admin - Centinela-MX</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="/components/personalization/personalization.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="/assets/images/logo.png" type="image/png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="gestionPlanesSistema.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <meta name="description" content="Gestión de planes del sistema - Centinela-MX">
+    <meta name="author" content="Centinela-MX">
+</head>
+
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <main class="admin-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>
+                <i class="fas fa-crown"></i>
+                Gestión de Planes del Sistema
+            </h1>
+            <div class="header-description">
+                Crea y administra los planes disponibles para los administradores.
+                Cada plan define qué módulos pueden gestionar en su organización.
+            </div>
+        </div>
+
+        <!-- Botón para crear nuevo plan -->
+        <div class="btn-crear-container">
+            <button id="btnCrearPlan" class="btn-crear-plan">
+                <i class="fas fa-plus-circle"></i> Crear Nuevo Plan
+            </button>
+        </div>
+
+        <!-- Lista de planes existentes -->
+        <div class="planes-container">
+            <div class="planes-header">
+                <h5><i class="fas fa-list"></i> Planes Disponibles</h5>
+                <span class="planes-count" id="planesCount">0 planes</span>
+            </div>
+            <div id="planesLista" class="planes-lista">
+                <!-- Se llenará dinámicamente -->
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando planes...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL PARA CREAR/EDITAR PLAN -->
+    <div id="modalPlan" class="modal-plan" style="display: none;">
+        <div class="modal-plan-content">
+            <div class="modal-plan-header">
+                <h3 id="modalTitle">Crear Nuevo Plan</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-plan-body">
+                <form id="formPlan">
+                    <!-- Nombre del plan -->
+                    <div class="form-group">
+                        <label for="planNombre">Nombre del Plan *</label>
+                        <input type="text" id="planNombre" class="form-input" placeholder="Ej: Plan Monitoreo, Plan Completo" required>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="form-group">
+                        <label for="planDescripcion">Descripción</label>
+                        <textarea id="planDescripcion" class="form-input" rows="2" placeholder="Describe brevemente el plan..."></textarea>
+                    </div>
+
+                    <!-- Precio -->
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="planPrecio">Precio (MXN) *</label>
+                            <input type="number" id="planPrecio" class="form-input" placeholder="499" min="0" step="100" required>
+                        </div>
+                        <div class="form-group half">
+                            <label for="planMoneda">Moneda</label>
+                            <select id="planMoneda" class="form-input">
+                                <option value="MXN">MXN - Peso Mexicano</option>
+                                <option value="USD">USD - Dólar Americano</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Color del plan -->
+                    <div class="form-group">
+                        <label for="planColor">Color del Plan</label>
+                        <div class="color-picker-container">
+                            <input type="color" id="planColor" class="color-picker" value="#3b82f6">
+                            <span id="colorPreview" class="color-preview" style="background: #3b82f6;"></span>
+                            <span class="color-value" id="colorValue">#3b82f6</span>
+                        </div>
+                    </div>
+
+                    <!-- Icono -->
+                    <div class="form-group">
+                        <label for="planIcono">Icono</label>
+                        <div class="icono-selector">
+                            <select id="planIcono" class="form-input">
+                                <option value="fa-chart-line">📊 Monitoreo</option>
+                                <option value="fa-exclamation-triangle">⚠️ Incidencias</option>
+                                <option value="fa-crown">👑 Completo</option>
+                                <option value="fa-shield-alt">🛡️ Seguridad</option>
+                                <option value="fa-database">💾 Almacenamiento</option>
+                                <option value="fa-users">👥 Usuarios</option>
+                                <option value="fa-chart-pie">📈 Reportes</option>
+                                <option value="fa-bell">🔔 Notificaciones</option>
+                            </select>
+                            <i id="iconoPreview" class="fas fa-chart-line" style="font-size: 1.5rem; margin-left: 10px;"></i>
+                        </div>
+                    </div>
+
+                    <!-- Días de prueba por defecto -->
+                    <div class="form-group">
+                        <label for="planDiasPrueba">Días de prueba por defecto</label>
+                        <input type="number" id="planDiasPrueba" class="form-input" value="14" min="0" max="90">
+                    </div>
+
+                    <!-- Módulos disponibles -->
+                    <div class="form-group">
+                        <label>Módulos incluidos en el plan</label>
+                        <div class="modulos-grid" id="modulosGrid">
+                            <!-- Se llenará dinámicamente con JavaScript -->
+                        </div>
+                        <small class="help-text">Selecciona los módulos a los que tendrá acceso el administrador</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="btnCancelarModal" class="btn-cancelar">Cancelar</button>
+                        <button type="submit" id="btnGuardarPlan" class="btn-guardar">Guardar Plan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA ELIMINAR PLAN -->
+    <div id="modalEliminar" class="modal-plan" style="display: none;">
+        <div class="modal-plan-content small">
+            <div class="modal-plan-header">
+                <h3>Eliminar Plan</h3>
+                <button class="modal-close" id="closeEliminarModal">&times;</button>
+            </div>
+            <div class="modal-plan-body">
+                <div id="eliminarContenido"></div>
+                <div class="form-actions">
+                    <button type="button" id="btnCancelarEliminar" class="btn-cancelar">Cancelar</button>
+                    <button type="button" id="btnConfirmarEliminar" class="btn-eliminar-confirm">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="/components/cargadorTemas.js"></script>
+    <script type="module" src="/components/particulas.js"></script>
+    <script type="module" src="/components/navbarSysAdmin.js"></script>
+    <script src="/components/footerAdministrador.js"></script>
+    <script type="module" src="gestionPlanesSistema.js"></script>
+</body>
+
+</html>
