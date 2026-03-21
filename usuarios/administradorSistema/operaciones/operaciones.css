@@ -345,7 +345,7 @@ body {
 }
 
 /* =============================================
-   CARDS - CONTENEDORES DE GRÁFICAS
+   CARDS - CONTENEDORES DE GRÁFICAS - MEJORADO PARA ZOOM
    ============================================= */
 .card {
     background: var(--color-bg-secondary);
@@ -353,6 +353,10 @@ body {
     border-radius: var(--border-radius-large);
     overflow: hidden;
     transition: var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 350px;
 }
 
 .card:hover {
@@ -364,6 +368,7 @@ body {
     background: rgba(20, 20, 20, 0.95);
     border-bottom: 1px solid var(--color-border-light);
     padding: 12px 18px;
+    flex-shrink: 0;
 }
 
 .card-header h5 {
@@ -388,13 +393,17 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex: 1;
+    min-height: 280px;
+    overflow: visible;
+    position: relative;
 }
 
-/* CONTENEDOR DE GRÁFICAS - TAMAÑO FIJO Y CENTRADO */
+/* CONTENEDOR DE GRÁFICAS - FLEXIBLE PARA ZOOM */
 .chart-container {
     position: relative;
     width: 100%;
-    max-width: 500px;
+    max-width: 100%;
     margin: 0 auto;
     height: auto;
 }
@@ -403,12 +412,20 @@ canvas {
     display: block;
     width: 100% !important;
     height: auto !important;
-    max-height: 280px;
+    max-height: 100%;
 }
 
-/* Gráfica de barras (documentos por empresa) */
+/* Contenedores específicos con altura flexible */
+#graficoTiposArchivo,
+#graficoAlmacenamientoPorEmpresa {
+    max-height: 280px;
+    min-height: 250px;
+}
+
 #graficoDocumentosPorEmpresa {
-    max-height: 320px;
+    max-height: 500px;
+    min-height: 300px;
+    width: 100% !important;
 }
 
 /* =============================================
@@ -510,13 +527,28 @@ canvas {
 }
 
 /* =============================================
-   BREAKPOINTS RESPONSIVE
+   BREAKPOINTS RESPONSIVE - CON SOPORTE PARA ZOOM
    ============================================= */
 
-/* Pantallas grandes */
-@media (max-width: 1200px) {
+/* Pantallas grandes y zoom out */
+@media (max-width: 1400px) {
     .admin-container {
         padding: 25px;
+        max-width: 95%;
+    }
+    
+    .card {
+        min-height: 320px;
+    }
+    
+    .card-body {
+        min-height: 260px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .admin-container {
+        padding: 20px;
     }
     
     .metrics-grid {
@@ -528,7 +560,27 @@ canvas {
     }
     
     .metric-value {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
+    }
+    
+    .card {
+        min-height: 300px;
+    }
+    
+    .card-body {
+        min-height: 240px;
+        padding: 12px;
+    }
+    
+    #graficoTiposArchivo,
+    #graficoAlmacenamientoPorEmpresa {
+        max-height: 260px;
+        min-height: 230px;
+    }
+    
+    #graficoDocumentosPorEmpresa {
+        max-height: 450px;
+        min-height: 280px;
     }
 }
 
@@ -543,11 +595,20 @@ canvas {
     }
     
     .charts-grid-2col {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
+        gap: 25px;
     }
     
     .page-header h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
+    }
+    
+    .card {
+        min-height: 350px;
+    }
+    
+    .card-body {
+        min-height: 280px;
     }
 }
 
@@ -555,10 +616,6 @@ canvas {
 @media (max-width: 900px) {
     .storage-metrics-grid {
         grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .charts-grid-2col {
-        grid-template-columns: 1fr;
     }
     
     .filtros-body {
@@ -582,10 +639,6 @@ canvas {
         flex-wrap: wrap;
         padding: 8px 12px;
     }
-    
-    .chart-container {
-        max-width: 450px;
-    }
 }
 
 /* Móvil grande */
@@ -605,32 +658,40 @@ canvas {
     }
     
     .metric-card {
-        padding: 1rem;
+        padding: 0.9rem;
     }
     
     .metric-value {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
     }
     
     .metric-icon {
-        font-size: 2rem;
+        font-size: 1.8rem;
         right: 12px;
     }
     
     .page-header h1 {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
     
-    .chart-container {
-        max-width: 400px;
+    .card {
+        min-height: 320px;
     }
     
-    canvas {
+    .card-body {
+        min-height: 260px;
+        padding: 10px;
+    }
+    
+    #graficoTiposArchivo,
+    #graficoAlmacenamientoPorEmpresa {
         max-height: 240px;
+        min-height: 220px;
     }
     
     #graficoDocumentosPorEmpresa {
-        max-height: 280px;
+        max-height: 400px;
+        min-height: 260px;
     }
 }
 
@@ -645,7 +706,7 @@ canvas {
     }
     
     .metric-value {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
     }
     
     .card-header {
@@ -653,23 +714,23 @@ canvas {
     }
     
     .card-header h5 {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
     
     .card-body {
-        padding: 12px;
+        padding: 10px;
+        min-height: 240px;
     }
     
-    .chart-container {
-        max-width: 350px;
-    }
-    
-    canvas {
+    #graficoTiposArchivo,
+    #graficoAlmacenamientoPorEmpresa {
         max-height: 220px;
+        min-height: 200px;
     }
     
     #graficoDocumentosPorEmpresa {
-        max-height: 260px;
+        max-height: 380px;
+        min-height: 240px;
     }
 }
 
@@ -680,71 +741,15 @@ canvas {
     }
     
     .page-header h1 {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
     }
     
     .header-description {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
     
     .metric-card {
-        padding: 0.8rem;
-    }
-    
-    .metric-value {
-        font-size: 1.2rem;
-    }
-    
-    .metric-title {
-        font-size: 0.7rem;
-    }
-    
-    .metric-icon {
-        font-size: 1.5rem;
-        right: 10px;
-    }
-    
-    .card-header {
-        padding: 8px 12px;
-    }
-    
-    .card-header h5 {
-        font-size: 0.7rem;
-    }
-    
-    .card-body {
-        padding: 10px;
-    }
-    
-    .chart-container {
-        max-width: 300px;
-    }
-    
-    canvas {
-        max-height: 200px;
-    }
-    
-    #graficoDocumentosPorEmpresa {
-        max-height: 240px;
-    }
-    
-    .table {
-        font-size: 10px;
-        min-width: 550px;
-    }
-    
-    .table th,
-    .table td {
-        padding: 6px 4px;
-    }
-}
-
-/* Móvil muy pequeño */
-@media (max-width: 380px) {
-    .page-header h1 {
-        font-size: 1.3rem;
-        flex-direction: column;
-        gap: 5px;
+        padding: 0.7rem;
     }
     
     .metric-value {
@@ -756,24 +761,42 @@ canvas {
     }
     
     .metric-icon {
-        display: none;
+        font-size: 1.3rem;
+        right: 10px;
     }
     
-    .chart-container {
-        max-width: 260px;
+    .card-header {
+        padding: 8px 12px;
     }
     
-    canvas {
-        max-height: 180px;
+    .card-header h5 {
+        font-size: 0.65rem;
+    }
+    
+    .card-body {
+        padding: 8px;
+        min-height: 220px;
+    }
+    
+    #graficoTiposArchivo,
+    #graficoAlmacenamientoPorEmpresa {
+        max-height: 200px;
+        min-height: 180px;
     }
     
     #graficoDocumentosPorEmpresa {
-        max-height: 220px;
+        max-height: 350px;
+        min-height: 220px;
     }
     
-    .fecha-info span,
-    .fecha-info strong {
-        font-size: 0.6rem;
+    .table {
+        font-size: 9px;
+        min-width: 500px;
+    }
+    
+    .table th,
+    .table td {
+        padding: 5px 4px;
     }
 }
 
