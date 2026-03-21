@@ -46,7 +46,7 @@ function obtenerUsuarioActual() {
                 email: adminData.correoElectronico || ''
             };
         }
-        
+
         // Intentar desde userData
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         if (userData && Object.keys(userData).length > 0) {
@@ -349,7 +349,7 @@ window.verPDF = async function (incidenciaId, event) {
                 title: 'PDF no disponible',
                 text: 'Esta incidencia aún no tiene un PDF generado. Se generará automáticamente en breve.'
             });
-            
+
             // Opcional: Generar el PDF si no existe
             if (generadorIPH && typeof generadorIPH.generarIPH === 'function') {
                 const confirm = await Swal.fire({
@@ -360,7 +360,7 @@ window.verPDF = async function (incidenciaId, event) {
                     confirmButtonText: 'SÍ, GENERAR',
                     cancelButtonText: 'CANCELAR'
                 });
-                
+
                 if (confirm.isConfirmed) {
                     await generadorIPH.generarIPH(incidencia);
                 }
@@ -439,8 +439,8 @@ async function cargarIncidencias() {
         console.log('📤 Cargando incidencias, usuario:', usuarioActual ? usuarioActual.nombreCompleto : 'NO HAY USUARIO');
 
         incidenciasCache = await incidenciaManager.getIncidenciasByOrganizacion(
-            organizacionActual.camelCase, 
-            {}, 
+            organizacionActual.camelCase,
+            {},
             usuarioActual // ← PASAR USUARIO PARA REGISTRAR LECTURA
         );
 
