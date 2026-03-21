@@ -1,9 +1,10 @@
 // consumoFirebase.js
 // Clase para contabilizar y PERSISTIR operaciones de Firebase
 // SOLO UN DOCUMENTO por empresa en colección "consumo"
+// MODIFICADO: Eliminada toda la funcionalidad de Autenticación (Auth)
 
 import { db } from '/config/firebase-config.js';
-import { doc, setDoc, updateDoc, increment, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { doc, setDoc, updateDoc, increment, serverTimestamp, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 class ConsumoFirebase {
     constructor() {
@@ -28,12 +29,6 @@ class ConsumoFirebase {
                 invocaciones: 0,
                 notificacionesPushEnviadas: 0,
                 usuariosNotificados: 0,
-                total: 0
-            },
-            autenticacion: {
-                iniciosSesion: 0,
-                cierresSesion: 0,
-                registros: 0,
                 total: 0
             },
             fcm: {
@@ -117,12 +112,6 @@ class ConsumoFirebase {
                     if (tipo === 'invocacion') campoRuta = 'functions.invocaciones';
                     break;
                     
-                case 'auth':
-                    if (tipo === 'login') campoRuta = 'autenticacion.iniciosSesion';
-                    else if (tipo === 'logout') campoRuta = 'autenticacion.cierresSesion';
-                    else if (tipo === 'registro') campoRuta = 'autenticacion.registros';
-                    break;
-                    
                 case 'fcm':
                     if (tipo === 'notificacion') campoRuta = 'fcm.notificacionesEnviadas';
                     else if (tipo === 'token_registro') campoRuta = 'fcm.tokensRegistrados';
@@ -171,12 +160,6 @@ class ConsumoFirebase {
             case 'functions':
                 if (tipo === 'invocacion') this.contadores.functions.invocaciones++;
                 this.contadores.functions.total++;
-                break;
-            case 'auth':
-                if (tipo === 'login') this.contadores.autenticacion.iniciosSesion++;
-                else if (tipo === 'logout') this.contadores.autenticacion.cierresSesion++;
-                else if (tipo === 'registro') this.contadores.autenticacion.registros++;
-                this.contadores.autenticacion.total++;
                 break;
             case 'fcm':
                 if (tipo === 'notificacion') this.contadores.fcm.notificacionesEnviadas++;
@@ -255,28 +238,6 @@ class ConsumoFirebase {
         try {
             const docRef = doc(db, 'consumo', idEmpresa);
             
-            // Preparamos los datos con campos específicos para push
-            const updateData = {
-                'functions.invocaciones': increment(1),
-                'functions.notificacionesPushEnviadas': increment(cantidadNotificaciones),
-                'functions.usuariosNotificados': increment(cantidadUsuarios),
-                'functions.total': increment(1),
-                totalOperaciones: increment(1),
-                ultimaActualizacion: serverTimestamp(),
-                nombreEmpresa: nombreEmpresa,
-                ultimaOperacion: {
-                    servicio: 'functions',
-                    tipo: 'notificacion_push',
-                    detalles: {
-                        nombreFuncion: nombreFuncion,
-                        notificacionesEnviadas: cantidadNotificaciones,
-                        usuariosNotificados: cantidadUsuarios,
-                        ...detalles
-                    },
-                    timestamp: serverTimestamp()
-                }
-            };
-
             await setDoc(docRef, {
                 functions: {
                     invocaciones: increment(1),
@@ -314,19 +275,6 @@ class ConsumoFirebase {
         this.contadores.totalOperaciones++;
     }
 
-    // Métodos para Auth
-    async registrarAuthLogin(usuarioId) {
-        await this.registrar('auth', 'login', { usuarioId });
-    }
-
-    async registrarAuthLogout(usuarioId) {
-        await this.registrar('auth', 'logout', { usuarioId });
-    }
-
-    async registrarAuthRegistro(usuarioId) {
-        await this.registrar('auth', 'registro', { usuarioId });
-    }
-
     // Métodos para FCM (Firebase Cloud Messaging)
     async registrarFCMNotificacion(usuarioId, titulo) {
         await this.registrar('fcm', 'notificacion', { usuarioId, titulo });
@@ -346,7 +294,6 @@ class ConsumoFirebase {
             firestore: { ...this.contadores.firestore },
             storage: { ...this.contadores.storage },
             functions: { ...this.contadores.functions },
-            autenticacion: { ...this.contadores.autenticacion },
             fcm: { ...this.contadores.fcm },
             totalOperaciones: this.contadores.totalOperaciones,
             ultimaActualizacion: this.contadores.ultimaActualizacion,
@@ -366,7 +313,6 @@ class ConsumoFirebase {
                 usuariosNotificados: 0, 
                 total: 0 
             },
-            autenticacion: { iniciosSesion: 0, cierresSesion: 0, registros: 0, total: 0 },
             fcm: { notificacionesEnviadas: 0, tokensRegistrados: 0, tokensEliminados: 0, total: 0 },
             totalOperaciones: 0,
             ultimaActualizacion: new Date()
@@ -393,6 +339,28 @@ class ConsumoFirebase {
         } catch (error) {
             console.error('❌ Error obteniendo consumo de empresa:', error);
             return null;
+        }
+    }
+
+    // NUEVO MÉTODO: Listar todas las empresas
+    async listarTodasLasEmpresas() {
+        try {
+            const consumoRef = collection(db, 'consumo');
+            const snapshot = await getDocs(consumoRef);
+            
+            const empresas = [];
+            snapshot.forEach(doc => {
+                empresas.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            console.log(`📋 Listadas ${empresas.length} empresas`);
+            return empresas;
+        } catch (error) {
+            console.error('❌ Error listando empresas:', error);
+            return [];
         }
     }
 }
