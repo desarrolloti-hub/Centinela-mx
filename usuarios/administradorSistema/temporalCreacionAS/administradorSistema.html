@@ -19,71 +19,7 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- SEO Básico -->
-    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
-    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
-    <meta name="author" content="Centinela-MX">
-    <link rel="canonical" href="https://centinela-mx.web.app/" />
-
     <style>
-        /* Estilos adicionales específicos para superadmin */
-        .setup-status {
-            margin-bottom: 2rem;
-            padding: 1rem;
-            border-radius: var(--border-radius-small);
-            background: var(--color-bg-tertiary);
-            border-left: 4px solid var(--color-accent-primary);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .setup-status i {
-            font-size: 2rem;
-            color: var(--color-accent-primary);
-        }
-
-        .setup-status.success {
-            border-left-color: #2ecc71;
-        }
-
-        .setup-status.success i {
-            color: #2ecc71;
-        }
-
-        .setup-status.error {
-            border-left-color: #e74c3c;
-        }
-
-        .setup-status.error i {
-            color: #e74c3c;
-        }
-
-        .setup-status.warning {
-            border-left-color: #f39c12;
-        }
-
-        .setup-status.warning i {
-            color: #f39c12;
-        }
-
-        .setup-status-content {
-            flex: 1;
-        }
-
-        .setup-status-content h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--color-text-primary);
-            margin-bottom: 0.25rem;
-            font-family: var(--font-family-primary);
-        }
-
-        .setup-status-content p {
-            font-size: 0.875rem;
-            color: var(--color-text-secondary);
-        }
-
         .info-box {
             background: var(--color-bg-tertiary);
             border-radius: var(--border-radius-small);
@@ -131,17 +67,6 @@
             margin-top: 0.5rem;
         }
 
-        /* Animación para el loader */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .fa-spin-custom {
-            animation: spin 1s linear infinite;
-        }
-
-        /* Estilos para los requisitos de contraseña */
         .requirements-list li.valid {
             color: #2ecc71;
         }
@@ -158,7 +83,6 @@
             color: #e74c3c;
         }
 
-        /* Estilos para el campo de imagen */
         .image-upload-container {
             display: flex;
             flex-direction: column;
@@ -227,10 +151,6 @@
             border-color: var(--color-accent-primary);
         }
 
-        .image-upload-btn i {
-            font-size: 1rem;
-        }
-
         .remove-image-btn {
             background: none;
             border: none;
@@ -246,7 +166,6 @@
             background: rgba(231, 76, 60, 0.1);
         }
 
-        /* Responsive */
         @media (max-width: 850px) {
             .edit-wrapper {
                 max-width: 550px;
@@ -254,11 +173,6 @@
         }
 
         @media (max-width: 600px) {
-            .setup-status {
-                flex-direction: column;
-                text-align: center;
-            }
-            
             .info-box {
                 flex-direction: column;
                 text-align: center;
@@ -274,14 +188,11 @@
 </head>
 
 <body>
-    <!-- Partículas de fondo -->
     <canvas id="particle-canvas"></canvas>
 
-    <!-- Contenedor principal -->
     <div class="edit-main-container">
         <div class="edit-wrapper">
             
-            <!-- Panel izquierdo: Información del SuperAdmin -->
             <div class="edit-left-panel">
                 <header class="edit-header">
                     <h1 class="edit-main-title">
@@ -290,27 +201,15 @@
                     <p class="edit-sub-title">Administrador del Sistema Centinela</p>
                 </header>
 
-                <!-- Estado de la colección -->
-                <div id="setupStatus" class="setup-status">
-                    <i class="fas fa-cog fa-spin-custom"></i>
-                    <div class="setup-status-content">
-                        <h3>Verificando configuración...</h3>
-                        <p>Revisando si existe la colección administradoresSistema</p>
-                    </div>
-                </div>
-
-                <!-- Información importante -->
                 <div class="info-box">
                     <i class="fas fa-shield-alt"></i>
                     <div class="info-box-content">
-                        <h4>⚠️ Herramienta de Configuración Inicial</h4>
-                        <p>Este formulario creará automáticamente la colección "administradoresSistema" si no existe.</p>
-                        <p>Úsalo SOLO para crear al primer SuperAdministrador del sistema.</p>
-                        <span class="badge">USO ÚNICO</span>
+                        <h4>⚠️ Herramienta de Configuración</h4>
+                        <p>Este formulario crea un SuperAdministrador del sistema.</p>
+                        <span class="badge">CREAR SUPERADMIN</span>
                     </div>
                 </div>
 
-                <!-- Características del SuperAdmin -->
                 <div class="info-box" style="margin-top: 0;">
                     <i class="fas fa-key"></i>
                     <div class="info-box-content">
@@ -325,7 +224,6 @@
                     </div>
                 </div>
 
-                <!-- Botón volver -->
                 <footer class="back-btn-container" style="margin-top: auto;">
                     <a href="/usuarios/visitantes/inicioSesion/inicioSesion.html" class="back-btn">
                         <i class="fas fa-arrow-left"></i>VOLVER AL LOGIN
@@ -333,16 +231,14 @@
                 </footer>
             </div>
 
-            <!-- Panel derecho: Formulario de creación -->
             <div class="edit-right-panel">
                 <header class="edit-header">
                     <h1 class="edit-main-title">CREAR SUPERADMIN</h1>
                     <p class="edit-sub-title">Completa los datos para crear el administrador del sistema</p>
                 </header>
 
-                <form class="edit-form-container" id="masterForm" style="display: none;">
+                <form class="edit-form-container" id="masterForm">
                     
-                    <!-- Campo de imagen de perfil -->
                     <div class="image-upload-container">
                         <div class="image-preview" id="imagePreview" onclick="document.getElementById('imageInput').click()">
                             <div class="placeholder">
@@ -364,7 +260,6 @@
                         </small>
                     </div>
 
-                    <!-- Nombre completo -->
                     <div class="form-field-group">
                         <label class="field-label" for="fullName">
                             <i class="fas fa-user"></i> NOMBRE COMPLETO
@@ -375,7 +270,6 @@
                         </div>
                     </div>
 
-                    <!-- Correo electrónico -->
                     <div class="form-field-group">
                         <label class="field-label" for="email">
                             <i class="fas fa-envelope"></i> CORREO ELECTRÓNICO
@@ -388,7 +282,6 @@
 
                     <div class="divider"></div>
 
-                    <!-- Contraseñas con toggle password -->
                     <div class="form-field-group">
                         <label class="field-label" for="password">
                             <i class="fas fa-key"></i> CONTRASEÑA
@@ -415,7 +308,6 @@
                         </div>
                     </div>
 
-                    <!-- Requisitos de contraseña -->
                     <div class="password-requirements">
                         <div class="requirements-title">REQUISITOS DE CONTRASEÑA SEGURA:</div>
                         <ul class="requirements-list" id="passwordRequirements">
@@ -428,10 +320,8 @@
                         </ul>
                     </div>
 
-                    <!-- Mensajes -->
                     <div class="message-container" id="mainMessage"></div>
 
-                    <!-- Botones de acción -->
                     <div class="action-buttons">
                         <button type="submit" class="action-btn save-btn" id="createBtn" disabled>
                             <i class="fas fa-crown"></i>CREAR SUPERADMIN
@@ -445,35 +335,12 @@
         </div>
     </div>
 
-    <!-- Scripts externos -->
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     
-    <!-- Script principal -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-        import { 
-            getAuth, 
-            signOut 
-        } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-        import { 
-            getFirestore,
-            collection,
-            getDocs,
-            doc,
-            setDoc,
-            deleteDoc,
-            query,
-            limit,
-            serverTimestamp
-        } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-        
-        // Importar tus clases
         import { UserManager } from '/clases/user.js';
-        import { db, auth } from '/config/firebase-config.js';
 
-        // Elementos del DOM
-        const setupStatus = document.getElementById('setupStatus');
         const masterForm = document.getElementById('masterForm');
         const fullNameInput = document.getElementById('fullName');
         const emailInput = document.getElementById('email');
@@ -485,16 +352,14 @@
         const reqLength = document.getElementById('reqLength');
         const reqMatch = document.getElementById('reqMatch');
         
-        // Elementos para la imagen
         const imageInput = document.getElementById('imageInput');
         const imagePreview = document.getElementById('imagePreview');
         const uploadImageBtn = document.getElementById('uploadImageBtn');
         const removeImageBtn = document.getElementById('removeImageBtn');
         
-        // Variable para almacenar la imagen en base64
         let imagenBase64 = '';
+        let userManager;
 
-        // Función para convertir imagen a base64
         function imagenToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -504,9 +369,8 @@
             });
         }
 
-        // Función para validar tamaño de imagen (máx 2MB)
         function validarTamañoImagen(file) {
-            const maxSize = 2 * 1024 * 1024; // 2MB
+            const maxSize = 2 * 1024 * 1024;
             if (file.size > maxSize) {
                 showMessage('La imagen no debe exceder los 2MB', 'error');
                 return false;
@@ -514,7 +378,6 @@
             return true;
         }
 
-        // Función para validar tipo de imagen
         function validarTipoImagen(file) {
             const tiposValidos = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
             if (!tiposValidos.includes(file.type)) {
@@ -524,7 +387,6 @@
             return true;
         }
 
-        // Función para actualizar la vista previa de la imagen
         function actualizarVistaPrevia(base64String) {
             if (base64String) {
                 imagePreview.innerHTML = `<img src="${base64String}" alt="Foto de perfil">`;
@@ -540,38 +402,28 @@
             }
         }
 
-        // Manejar selección de imagen
         async function handleImageSelect(file) {
             if (!file) return;
-            
-            if (!validarTipoImagen(file) || !validarTamañoImagen(file)) {
-                return;
-            }
-            
+            if (!validarTipoImagen(file) || !validarTamañoImagen(file)) return;
             try {
                 const base64 = await imagenToBase64(file);
                 imagenBase64 = base64;
                 actualizarVistaPrevia(imagenBase64);
                 showMessage('Imagen cargada correctamente', 'success');
             } catch (error) {
-                console.error('Error al convertir imagen:', error);
                 showMessage('Error al procesar la imagen', 'error');
             }
         }
 
-        // Evento para el input file
         imageInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files[0]) {
                 handleImageSelect(e.target.files[0]);
             }
         });
 
-        // Evento para el botón de subir imagen
-        uploadImageBtn.addEventListener('click', () => {
-            imageInput.click();
-        });
+        uploadImageBtn.addEventListener('click', () => imageInput.click());
+        imagePreview.addEventListener('click', () => imageInput.click());
 
-        // Evento para eliminar imagen
         removeImageBtn.addEventListener('click', () => {
             imagenBase64 = '';
             actualizarVistaPrevia('');
@@ -579,18 +431,11 @@
             showMessage('Imagen eliminada', 'info');
         });
 
-        // También permitir hacer clic en la vista previa para subir imagen
-        imagePreview.addEventListener('click', () => {
-            imageInput.click();
-        });
-
-        // Toggle para mostrar/ocultar contraseñas
         document.querySelectorAll('.toggle-password').forEach(button => {
             button.addEventListener('click', function() {
                 const targetId = this.getAttribute('data-target');
                 const input = document.getElementById(targetId);
                 const icon = this.querySelector('i');
-                
                 if (input.type === 'password') {
                     input.type = 'text';
                     icon.classList.remove('fa-eye');
@@ -603,12 +448,10 @@
             });
         });
 
-        // Función para mostrar mensajes
         function showMessage(message, type) {
             mainMessage.textContent = message;
             mainMessage.className = `message-container ${type}`;
             mainMessage.style.display = 'block';
-            
             setTimeout(() => {
                 mainMessage.style.animation = 'slideOut 0.3s ease';
                 setTimeout(() => {
@@ -618,12 +461,10 @@
             }, 5000);
         }
 
-        // Validar contraseña en tiempo real
         function validatePassword() {
             const password = passwordInput.value;
             const confirm = confirmInput.value;
             
-            // Requisito de longitud
             if (password.length >= 6) {
                 reqLength.className = 'valid';
                 reqLength.innerHTML = '<i class="fas fa-check-circle"></i> Mínimo 6 caracteres ✓';
@@ -632,7 +473,6 @@
                 reqLength.innerHTML = '<i class="fas fa-times-circle"></i> Mínimo 6 caracteres';
             }
             
-            // Requisito de coincidencia
             if (password && confirm && password === confirm) {
                 reqMatch.className = 'valid';
                 reqMatch.innerHTML = '<i class="fas fa-check-circle"></i> Las contraseñas coinciden ✓';
@@ -641,150 +481,34 @@
                 reqMatch.innerHTML = '<i class="fas fa-times-circle"></i> Las contraseñas coinciden';
             }
             
-            // Habilitar/deshabilitar botón
-            const isValid = password.length >= 6 && password === confirm && password.length > 0;
-            createBtn.disabled = !isValid;
+            createBtn.disabled = !(password.length >= 6 && password === confirm && password.length > 0);
         }
 
         passwordInput.addEventListener('input', validatePassword);
         confirmInput.addEventListener('input', validatePassword);
 
-        // Función para verificar/crear la colección
-        async function verificarYCrearColeccion() {
-            try {
-                console.log('🔍 Verificando colección administradoresSistema...');
-                
-                setupStatus.innerHTML = `
-                    <i class="fas fa-cog fa-spin-custom"></i>
-                    <div class="setup-status-content">
-                        <h3>Verificando configuración...</h3>
-                        <p>Revisando si existe la colección administradoresSistema</p>
-                    </div>
-                `;
-                
-                // Intentar acceder a la colección
-                const coleccionRef = collection(db, "administradoresSistema");
-                
-                // Hacer una consulta simple para ver si existe
-                const testQuery = query(coleccionRef, limit(1));
-                
-                try {
-                    await getDocs(testQuery);
-                    console.log('✅ Colección administradoresSistema existe');
-                    
-                    setupStatus.className = 'setup-status success';
-                    setupStatus.innerHTML = `
-                        <i class="fas fa-check-circle"></i>
-                        <div class="setup-status-content">
-                            <h3>¡Colección lista!</h3>
-                            <p>La colección administradoresSistema ya existe</p>
-                        </div>
-                    `;
-                    
-                    // Mostrar el formulario
-                    masterForm.style.display = 'block';
-                    
-                } catch (error) {
-                    // Si la colección no existe, crearla
-                    console.log('⚠️ Colección no existe, creando...');
-                    
-                    setupStatus.innerHTML = `
-                        <i class="fas fa-cog fa-spin-custom"></i>
-                        <div class="setup-status-content">
-                            <h3>Creando colección...</h3>
-                            <p>Generando administradoresSistema en Firestore</p>
-                        </div>
-                    `;
-                    
-                    // Crear un documento dummy para que Firestore cree la colección
-                    const dummyRef = doc(db, "administradoresSistema", "_dummy_");
-                    await setDoc(dummyRef, {
-                        _creado: serverTimestamp(),
-                        _temporal: true,
-                        _mensaje: "Documento temporal para crear colección"
-                    });
-                    
-                    // Eliminar el documento dummy
-                    await deleteDoc(dummyRef);
-                    
-                    console.log('✅ Colección administradoresSistema creada exitosamente');
-                    
-                    setupStatus.className = 'setup-status success';
-                    setupStatus.innerHTML = `
-                        <i class="fas fa-check-circle"></i>
-                        <div class="setup-status-content">
-                            <h3>¡Colección creada!</h3>
-                            <p>Se ha creado automáticamente la colección administradoresSistema</p>
-                        </div>
-                    `;
-                    
-                    // Mostrar el formulario
-                    masterForm.style.display = 'block';
-                }
-                
-            } catch (error) {
-                console.error('❌ Error con la colección:', error);
-                
-                setupStatus.className = 'setup-status error';
-                setupStatus.innerHTML = `
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <div class="setup-status-content">
-                        <h3>Error de configuración</h3>
-                        <p>${error.message}</p>
-                    </div>
-                `;
-                
-                showMessage('Error al configurar la colección: ' + error.message, 'error');
-            }
-        }
-
-        // Manejar envío del formulario
         masterForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             if (createBtn.disabled) {
-                showMessage('Por favor, cumple todos los requisitos de contraseña', 'error');
+                showMessage('Cumple los requisitos de contraseña', 'error');
                 return;
             }
 
-            // Validar nombre completo
-            if (!fullNameInput.value.trim()) {
-                showMessage('Por favor, ingresa tu nombre completo', 'error');
-                return;
-            }
-
-            // Validar email
-            if (!emailInput.value.trim()) {
-                showMessage('Por favor, ingresa tu correo electrónico', 'error');
-                return;
-            }
-
-            // Deshabilitar botón y mostrar loading
             createBtn.disabled = true;
             createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CREANDO...';
 
             try {
-                // Cerrar sesión existente
-                try {
-                    await signOut(auth);
-                } catch (signOutError) {
-                    // Ignorar si no había sesión
-                }
-
-                // Crear instancia de UserManager
-                const userManager = new UserManager();
-
-                // Preparar datos del master (incluyendo la imagen en base64)
+                userManager = new UserManager();
+                
                 const masterData = {
                     nombreCompleto: fullNameInput.value.trim(),
                     correoElectronico: emailInput.value.trim(),
-                    fotoUsuario: imagenBase64 // La imagen en base64
+                    fotoUsuario: imagenBase64
                 };
 
-                // Crear el master
                 const resultado = await userManager.createMaster(masterData, passwordInput.value);
 
-                // Mostrar éxito con SweetAlert
                 await Swal.fire({
                     title: '¡SUPERADMIN CREADO!',
                     html: `
@@ -793,7 +517,6 @@
                             <p><strong>Nombre:</strong> ${resultado.user.nombreCompleto}</p>
                             <p><strong>Email:</strong> ${resultado.user.correoElectronico}</p>
                             <p><strong>Rol:</strong> MASTER</p>
-                            <p><strong>Colección:</strong> administradoresSistema</p>
                             ${imagenBase64 ? '<p><strong>Foto:</strong> ✅ Imagen guardada</p>' : '<p><strong>Foto:</strong> ❌ Sin imagen</p>'}
                         </div>
                         <p style="margin-top: 15px; color: #e74c3c;">⚠️ GUARDA ESTOS DATOS</p>
@@ -805,12 +528,10 @@
                     color: 'var(--color-text-primary)'
                 });
 
-                // Limpiar formulario
                 masterForm.reset();
                 imagenBase64 = '';
                 actualizarVistaPrevia('');
                 
-                // Redirigir al login después de 3 segundos
                 setTimeout(() => {
                     window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
                 }, 3000);
@@ -833,14 +554,12 @@
                     color: 'var(--color-text-primary)'
                 });
             } finally {
-                // Restaurar botón
                 createBtn.innerHTML = '<i class="fas fa-crown"></i>CREAR SUPERADMIN';
                 createBtn.disabled = false;
                 validatePassword();
             }
         });
 
-        // Botón cancelar
         cancelBtn.addEventListener('click', () => {
             Swal.fire({
                 title: '¿Cancelar?',
@@ -864,10 +583,9 @@
             });
         });
 
-        // Iniciar verificación de colección
-        verificarYCrearColeccion();
         validatePassword();
     </script>
+      <script type="module" src="/components/navbarSysAdmin.js"></script>
 </body>
 
 </html>

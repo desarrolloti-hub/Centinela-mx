@@ -131,21 +131,6 @@
                     <p>Usado / Total</p>
                 </div>
 
-                <!-- Tarjeta 5: ANCHO DE BANDA -->
-                <div class="kpi-card" id="kpi-bandwidth">
-                    <i class="fa-solid fa-wifi" style="color: #ffcc00;"></i>
-                    <span class="kpi-number" id="total-bandwidth">0 GB</span>
-                    <h3>ANCHO BANDA</h3>
-                    <p>Este mes</p>
-                </div>
-
-                <!-- Tarjeta 6: PETICIONES API -->
-                <div class="kpi-card" id="kpi-api">
-                    <i class="fa-solid fa-cloud" style="color: #ff6b35;"></i>
-                    <span class="kpi-number" id="total-api">0</span>
-                    <h3>API REQUESTS</h3>
-                    <p>Este mes</p>
-                </div>
             </div>
         </div>
 
@@ -154,61 +139,6 @@
             <!-- Columna izquierda - Gráficas -->
             <div class="grid-left">
                 <!-- Distribución de Planes -->
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <i class="fa-solid fa-chart-pie"></i>
-                        <h3>DISTRIBUCIÓN DE PLANES</h3>
-                    </div>
-                    <canvas id="chartPlanes" class="chart-canvas"></canvas>
-                    <div class="chart-legend" id="planesLegend"></div>
-                </div>
-
-                <!-- Crecimiento Mensual (datos simulados) -->
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <i class="fa-solid fa-chart-line"></i>
-                        <h3>CRECIMIENTO MENSUAL</h3>
-                    </div>
-                    <canvas id="chartCrecimiento" class="chart-canvas"></canvas>
-                </div>
-            </div>
-
-            <!-- Columna derecha - Información -->
-            <div class="grid-right">
-                <!-- Top Empresas -->
-                <div class="info-container">
-                    <div class="info-header">
-                        <i class="fa-solid fa-trophy"></i>
-                        <h3>TOP EMPRESAS POR USUARIOS</h3>
-                    </div>
-                    <div class="top-empresas-list" id="topEmpresas">
-                        <!-- Se llena con JS -->
-                        <div class="loading-spinner">Cargando...</div>
-                    </div>
-                </div>
-
-                <!-- Alertas y Notificaciones -->
-                <div class="info-container">
-                    <div class="info-header">
-                        <i class="fa-solid fa-bell"></i>
-                        <h3>ALERTAS DEL SISTEMA</h3>
-                    </div>
-                    <div class="alertas-list" id="alertasList">
-                        <!-- Se llena con JS -->
-                        <div class="loading-spinner">Cargando...</div>
-                    </div>
-                </div>
-
-                <!-- Últimas Empresas Registradas -->
-                <div class="info-container">
-                    <div class="info-header">
-                        <i class="fa-solid fa-clock"></i>
-                        <h3>ÚLTIMAS EMPRESAS</h3>
-                    </div>
-                    <div class="ultimas-empresas-list" id="ultimasEmpresas">
-                        <!-- Se llena con JS -->
-                        <div class="loading-spinner">Cargando...</div>
-                    </div>
                 </div>
             </div>
         </section>
@@ -218,6 +148,7 @@
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script type="module" src="./panelAdministrador.js"></script>
+    <script src="/components/navbarSysAdmin.js"></script>
 
 </body>
 

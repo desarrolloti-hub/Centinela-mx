@@ -1,654 +1,711 @@
-// operaciones.js - Script principal para la vista de estadísticas de operaciones
-// VERSIÓN CORREGIDA CON TODAS LAS IMPORTACIONES
+// operaciones.js - VERSIÓN COMPLETA SIN "GLOBAL"
 
-import { operacionesManager } from '/clases/operacion.js';
-import { UserManager } from '/clases/user.js';
-import { db } from '/config/firebase-config.js';
-import {
-    collection,
-    getDocs,
-    getDoc,
-    doc,
-    query,
-    where,
-    orderBy,
-    limit
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import OperacionesEstadisticas from '/clases/operacion.js';
 
-// Variables globales
-let currentData = null;
-let currentEmpresa = 'global';
-let graficoTiposArchivo = null;
-let graficoFirestore = null;
-let graficoCarpetas = null;
-let userManager = null;
-let usuarioActual = null;
-
-// Formatear bytes a formato legible
-function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Formatear número con separadores de miles
-function formatNumber(num) {
-    if (num === undefined || num === null) return '0';
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-// Actualizar métricas de Firestore
-function actualizarMetricasFirestore(operacion) {
-    const firestore = operacion.conteos.firestore;
-    const auth = operacion.conteos.auth;
-    const coleccionesPersonalizadas = operacion.conteos.coleccionesPersonalizadas || {};
-    
-    // Calcular áreas desde coleccionesPersonalizadas
-    let areasCount = 0;
-    let cargosCount = 0;
-    
-    Object.keys(coleccionesPersonalizadas).forEach(key => {
-        if (key.includes('areas_')) {
-            areasCount = coleccionesPersonalizadas[key];
-        }
-        if (key.includes('cargos') || key.includes('roles')) {
-            cargosCount = coleccionesPersonalizadas[key];
-        }
-    });
-    
-    document.getElementById('metricColecciones').innerText = formatNumber(firestore.colecciones || 0);
-    document.getElementById('metricDocumentos').innerText = formatNumber(firestore.documentos || 0);
-    document.getElementById('metricAdministradores').innerText = formatNumber(auth.administradores || 0);
-    document.getElementById('metricAreas').innerText = formatNumber(areasCount);
-    
-    const empleados = (auth.usuarios || 0);
-    document.getElementById('metricEmpleados').innerHTML = `${formatNumber(empleados)} empleados`;
-    
-    const cargosTotal = cargosCount;
-    document.getElementById('metricRoles').innerHTML = `${formatNumber(cargosTotal)} cargos`;
-}
-
-// Actualizar métricas de Storage
-function actualizarMetricasStorage(operacion) {
-    const storage = operacion.conteos.storage;
-    const totalArchivos = storage.total || 0;
-    const totalSize = storage.totalSize || 0;
-    const pdf = storage.pdf || 0;
-    const imagenes = storage.imagenes || 0;
-    const documentos = storage.documentos || 0;
-    const multimedia = storage.multimedia || 0;
-    const otros = storage.otros || 0;
-    
-    document.getElementById('metricArchivosTotales').innerText = formatNumber(totalArchivos);
-    document.getElementById('metricTamanioTotal').innerHTML = `<i class="fas fa-hdd"></i> ${formatBytes(totalSize)}`;
-    document.getElementById('metricPDF').innerText = formatNumber(pdf);
-    document.getElementById('metricImagenes').innerText = formatNumber(imagenes);
-    document.getElementById('metricDocumentosStorage').innerText = formatNumber(documentos);
-    document.getElementById('metricMultimedia').innerText = formatNumber(multimedia);
-    
-    // Calcular porcentajes
-    if (totalArchivos > 0) {
-        document.getElementById('metricPDFPorcentaje').innerText = `${Math.round((pdf / totalArchivos) * 100)}%`;
-        document.getElementById('metricImagenesPorcentaje').innerText = `${Math.round((imagenes / totalArchivos) * 100)}%`;
-        document.getElementById('metricDocumentosPorcentaje').innerText = `${Math.round((documentos / totalArchivos) * 100)}%`;
-        document.getElementById('metricMultimediaPorcentaje').innerText = `${Math.round((multimedia / totalArchivos) * 100)}%`;
-    }
-}
-
-// Actualizar gráfica de tipos de archivo
-function actualizarGraficoTiposArchivo(operacion) {
-    const storage = operacion.conteos.storage;
-    const ctx = document.getElementById('graficoTiposArchivo').getContext('2d');
-    
-    const datos = {
-        labels: ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'],
-        datasets: [{
-            data: [
-                storage.pdf || 0,
-                storage.imagenes || 0,
-                storage.documentos || 0,
-                storage.multimedia || 0,
-                storage.otros || 0
-            ],
-            backgroundColor: [
-                '#ef4444',
-                '#8b5cf6',
-                '#10b981',
-                '#f59e0b',
-                '#6c757d'
-            ],
-            borderWidth: 0,
-            hoverOffset: 10
-        }]
-    };
-    
-    const config = {
-        type: 'pie',
-        data: datos,
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: '#ffffff',
-                        font: { family: 'Rajdhani', size: 12 }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.raw || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const porcentaje = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return `${label}: ${formatNumber(value)} (${porcentaje}%)`;
-                        }
-                    }
-                }
-            }
-        }
-    };
-    
-    if (graficoTiposArchivo) {
-        graficoTiposArchivo.destroy();
-    }
-    graficoTiposArchivo = new Chart(ctx, config);
-}
-
-// Actualizar gráfica de Firestore
-function actualizarGraficoFirestore(operacion) {
-    const firestore = operacion.conteos.firestore;
-    const auth = operacion.conteos.auth;
-    const coleccionesPersonalizadas = operacion.conteos.coleccionesPersonalizadas || {};
-    
-    let areasCount = 0;
-    let sucursalesCount = 0;
-    let incidenciasCount = 0;
-    
-    Object.keys(coleccionesPersonalizadas).forEach(key => {
-        if (key.includes('areas_')) areasCount = coleccionesPersonalizadas[key];
-        if (key.includes('sucursales_')) sucursalesCount = coleccionesPersonalizadas[key];
-        if (key.includes('incidencias_')) incidenciasCount = coleccionesPersonalizadas[key];
-    });
-    
-    const ctx = document.getElementById('graficoFirestore').getContext('2d');
-    
-    const datos = {
-        labels: ['Documentos', 'Usuarios', 'Administradores', 'Áreas', 'Sucursales', 'Incidencias'],
-        datasets: [{
-            label: 'Cantidad',
-            data: [
-                firestore.documentos || 0,
-                auth.usuarios || 0,
-                auth.administradores || 0,
-                areasCount,
-                sucursalesCount,
-                incidenciasCount
-            ],
-            backgroundColor: '#00cfff',
-            borderColor: '#ffffff',
-            borderWidth: 1,
-            borderRadius: 8
-        }]
-    };
-    
-    const config = {
-        type: 'bar',
-        data: datos,
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.raw.toLocaleString()} elementos`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255,255,255,0.1)' },
-                    ticks: { color: '#ffffff' }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#ffffff', font: { size: 11 } }
-                }
-            }
-        }
-    };
-    
-    if (graficoFirestore) {
-        graficoFirestore.destroy();
-    }
-    graficoFirestore = new Chart(ctx, config);
-}
-
-// Actualizar gráfica de carpetas
-function actualizarGraficoCarpetas(operacion) {
-    const coleccionesPersonalizadas = operacion.conteos.coleccionesPersonalizadas || {};
-    
-    const carpetas = [];
-    const valores = [];
-    const colores = ['#00cfff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ff6b6b', '#4ecdc4', '#45b7d1'];
-    
-    let colorIndex = 0;
-    Object.keys(coleccionesPersonalizadas).forEach(key => {
-        if (key !== 'operaciones' && !key.includes('historial') && !key.includes('notificaciones')) {
-            carpetas.push(key.replace(/_.*$/, ''));
-            valores.push(coleccionesPersonalizadas[key]);
-        }
-    });
-    
-    if (carpetas.length === 0) {
-        carpetas.push('No hay datos');
-        valores.push(0);
+class OperacionesController {
+    constructor() {
+        this.charts = {};
+        this.datosTodasEmpresas = null;
+        this.empresaSeleccionada = 'todas';
+        this.filtroActual = {
+            empresa: 'todas',
+            periodo: '',
+            fechaInicio: null,
+            fechaFin: null
+        };
+        
+        this.init();
     }
     
-    const ctx = document.getElementById('graficoCarpetas').getContext('2d');
-    
-    const datos = {
-        labels: carpetas,
-        datasets: [{
-            label: 'Documentos por colección',
-            data: valores,
-            backgroundColor: carpetas.map((_, i) => colores[i % colores.length]),
-            borderWidth: 0,
-            borderRadius: 8
-        }]
-    };
-    
-    const config = {
-        type: 'bar',
-        data: datos,
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            indexAxis: 'y',
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.raw.toLocaleString()} documentos`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { color: 'rgba(255,255,255,0.1)' },
-                    ticks: { color: '#ffffff' }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: { color: '#ffffff', font: { size: 11 } }
-                }
-            }
-        }
-    };
-    
-    if (graficoCarpetas) {
-        graficoCarpetas.destroy();
+    async init() {
+        this.bindEvents();
+        await this.cargarSelectores();
+        
+        OperacionesEstadisticas.onProgreso((progreso) => {
+            this.actualizarProgreso(progreso);
+        });
+        
+        await this.cargarDatosIniciales();
     }
-    graficoCarpetas = new Chart(ctx, config);
-}
-
-// Actualizar tabla de organizaciones
-async function actualizarTablaOrganizaciones() {
-    const tbody = document.getElementById('tablaOrganizacionesBody');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;"><div class="loading-spinner"></div> Cargando...</td></tr>';
     
-    try {
-        const estadisticasGlobales = await operacionesManager.getEstadisticasGlobales();
-        
-        if (!estadisticasGlobales) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Error al cargar datos</td></tr>';
-            return;
-        }
-        
-        // Obtener lista de organizaciones desde la colección operaciones
-        const operacionesCollectionRef = collection(db, 'operaciones');
-        const snapshot = await getDocs(operacionesCollectionRef);
-        
-        if (snapshot.empty) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay datos de organizaciones</td></tr>';
-            return;
-        }
-        
-        tbody.innerHTML = '';
-        
-        for (const doc of snapshot.docs) {
-            const data = doc.data();
-            const storage = data.conteos?.storage || {};
-            const firestore = data.conteos?.firestore || {};
+    async cargarDatosIniciales() {
+        try {
+            this.datosTodasEmpresas = await OperacionesEstadisticas.obtenerDatosTodasEmpresas();
             
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><strong>${doc.id}</strong></td>
-                <td>${formatNumber(firestore.documentos || 0)}</td>
-                <td>${formatNumber(storage.total || 0)}</td>
-                <td><span class="size-badge">${formatBytes(storage.totalSize || 0)}</span></td>
-                <td><span class="badge-value badge-danger">${formatNumber(storage.pdf || 0)}</span></td>
-                <td><span class="badge-value badge-purple">${formatNumber(storage.imagenes || 0)}</span></td>
-            `;
-            tbody.appendChild(row);
+            this.actualizarTabla(this.datosTodasEmpresas.porEmpresa);
+            this.actualizarGraficasComparativas(this.datosTodasEmpresas.porEmpresa);
+            await this.mostrarVistaTodasEmpresas();
+            
+            const fechaElement = document.getElementById('fechaActualizacion');
+            if (fechaElement && this.datosTodasEmpresas?.porEmpresa?.length > 0) {
+                const fechas = this.datosTodasEmpresas.porEmpresa.map(e => e.fechaActualizacion);
+                const masReciente = new Date(Math.max(...fechas));
+                fechaElement.textContent = masReciente.toLocaleString();
+            }
+        } catch (error) {
+            console.error('Error cargando datos iniciales:', error);
         }
-        
-    } catch (error) {
-        console.error('Error actualizando tabla de organizaciones:', error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Error al cargar datos</td></tr>';
-    }
-}
-
-// Actualizar tabla de carpetas
-function actualizarTablaCarpetas(operacion) {
-    const tbody = document.getElementById('tablaCarpetasBody');
-    const colecciones = operacion.conteos.coleccionesPersonalizadas || {};
-    
-    const carpetas = [];
-    Object.keys(colecciones).forEach(key => {
-        if (key !== 'operaciones' && !key.includes('historial') && !key.includes('notificaciones')) {
-            carpetas.push({
-                nombre: key,
-                documentos: colecciones[key]
-            });
-        }
-    });
-    
-    carpetas.sort((a, b) => b.documentos - a.documentos);
-    
-    const totalDocumentos = carpetas.reduce((sum, c) => sum + c.documentos, 0);
-    
-    if (carpetas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay datos disponibles</td></tr>';
-        return;
     }
     
-    tbody.innerHTML = '';
-    
-    carpetas.forEach(carpeta => {
-        const porcentaje = totalDocumentos > 0 ? ((carpeta.documentos / totalDocumentos) * 100).toFixed(1) : 0;
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><i class="fas fa-folder" style="color: #00cfff; margin-right: 8px;"></i>${carpeta.nombre}</td>
-            <td><strong>${formatNumber(carpeta.documentos)}</strong></td>
-            <td><span class="badge-value badge-info">${porcentaje}%</span></td>
-            <td style="width: 120px;">
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${porcentaje}%;"></div>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
-// Actualizar toda la vista
-async function actualizarVista(empresaId = null) {
-    const empresa = empresaId || currentEmpresa;
-    
-    try {
-        document.getElementById('fechaActualizacion').innerText = new Date().toLocaleString();
+    async mostrarVistaTodasEmpresas() {
+        if (!this.datosTodasEmpresas || !this.datosTodasEmpresas.totales) return;
         
-        if (empresa === 'global') {
-            document.getElementById('modoVisualizacion').innerHTML = '<i class="fas fa-globe"></i> <span>Vista: Global</span>';
+        this.mostrarContenido();
+        
+        const totales = this.datosTodasEmpresas.totales;
+        const totalArchivos = totales.storage.totalArchivos;
+        
+        this.actualizarElemento('metricDocumentos', totales.firestore.documentos);
+        this.actualizarElemento('metricAdministradores', totales.auth.administradores);
+        this.actualizarElemento('metricColaboradores', totales.auth.colaboradores);
+        this.actualizarElemento('metricTotalUsuarios', totales.auth.totalUsuarios);
+        this.actualizarElemento('metricArchivosTotales', totales.storage.totalArchivos);
+        
+        const tamanioElement = document.getElementById('metricTamanioTotal');
+        if (tamanioElement) {
+            tamanioElement.textContent = `${totales.storage.totalSizeMB.toFixed(2)} MB`;
+        }
+        
+        this.actualizarElemento('metricPDF', totales.storage.porTipo.pdf.cantidad);
+        this.actualizarElemento('metricPDFPorcentaje', totalArchivos > 0 ? `${((totales.storage.porTipo.pdf.cantidad / totalArchivos) * 100).toFixed(1)}%` : '0%');
+        this.actualizarElemento('metricImagenes', totales.storage.porTipo.imagenes.cantidad);
+        this.actualizarElemento('metricImagenesPorcentaje', totalArchivos > 0 ? `${((totales.storage.porTipo.imagenes.cantidad / totalArchivos) * 100).toFixed(1)}%` : '0%');
+        this.actualizarElemento('metricDocumentosStorage', totales.storage.porTipo.documentos.cantidad);
+        this.actualizarElemento('metricDocumentosPorcentaje', totalArchivos > 0 ? `${((totales.storage.porTipo.documentos.cantidad / totalArchivos) * 100).toFixed(1)}%` : '0%');
+        this.actualizarElemento('metricMultimedia', totales.storage.porTipo.multimedia.cantidad);
+        this.actualizarElemento('metricMultimediaPorcentaje', totalArchivos > 0 ? `${((totales.storage.porTipo.multimedia.cantidad / totalArchivos) * 100).toFixed(1)}%` : '0%');
+        
+        const labels = ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'];
+        const data = [
+            totales.storage.porTipo.pdf.cantidad,
+            totales.storage.porTipo.imagenes.cantidad,
+            totales.storage.porTipo.documentos.cantidad,
+            totales.storage.porTipo.multimedia.cantidad,
+            totales.storage.porTipo.otros.cantidad
+        ];
+        this.crearGraficaPastel('graficoTiposArchivo', labels, data);
+        
+        const modoVisualizacion = document.getElementById('modoVisualizacion');
+        if (modoVisualizacion) {
+            modoVisualizacion.innerHTML = `<i class="fas fa-chart-line"></i> <span>Todas las empresas</span>`;
+        }
+    }
+    
+    actualizarGraficasComparativas(empresas) {
+        if (!empresas || empresas.length === 0) return;
+        
+        const nombresEmpresas = empresas.map(e => e.nombreEmpresa || e.organizacion || e.id);
+        const almacenamiento = empresas.map(e => e.conteos.storage.totalSizeMB);
+        const documentos = empresas.map(e => e.conteos.firestore.documentos);
+        
+        this.crearGraficaPastel('graficoAlmacenamientoPorEmpresa', nombresEmpresas, almacenamiento);
+        this.crearGraficaBarras('graficoDocumentosPorEmpresa', nombresEmpresas, documentos, 'Documentos');
+    }
+    
+    actualizarProgreso(progreso) {
+        if (progreso.completado) {
+            const progressContainer = document.getElementById('progressContainer');
+            if (progressContainer) progressContainer.style.display = 'none';
             
-            const estadisticasGlobales = await operacionesManager.getEstadisticasGlobales();
-            
-            if (estadisticasGlobales) {
-                // Crear objeto de operación temporal para mostrar
-                const operacionTemp = {
-                    conteos: {
-                        firestore: estadisticasGlobales.firestore,
-                        storage: estadisticasGlobales.storage,
-                        auth: estadisticasGlobales.auth,
-                        coleccionesPersonalizadas: {}
-                    }
-                };
-                actualizarMetricasFirestore(operacionTemp);
-                actualizarMetricasStorage(operacionTemp);
-                actualizarGraficoTiposArchivo(operacionTemp);
-                actualizarGraficoFirestore(operacionTemp);
-                await actualizarTablaOrganizaciones();
+            if (progreso.error) {
+                this.mostrarError(progreso.mensaje);
+            } else if (progreso.exitosas !== undefined) {
+                this.mostrarExito(progreso.mensaje);
+                this.recargarDatos();
             }
-            
-            // Obtener datos globales para gráfica de carpetas
-            const operacionGlobal = await operacionesManager.getOperaciones('global');
-            if (operacionGlobal) {
-                actualizarGraficoCarpetas(operacionGlobal);
-                actualizarTablaCarpetas(operacionGlobal);
-            }
-            
         } else {
-            document.getElementById('modoVisualizacion').innerHTML = '<i class="fas fa-building"></i> <span>Vista: ' + empresa + '</span>';
+            this.mostrarBarraProgreso(progreso);
+        }
+    }
+    
+    mostrarBarraProgreso(progreso) {
+        let container = document.getElementById('progressContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'progressContainer';
+            document.body.appendChild(container);
+        }
+        
+        const porcentaje = progreso.porcentaje || Math.round((progreso.procesadas / progreso.total) * 100);
+        
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <i class="fas fa-sync-alt fa-spin" style="color: var(--color-accent-primary);"></i>
+                <strong style="color: var(--color-text-primary);">Actualizando estadísticas</strong>
+            </div>
+            <div style="margin-bottom: 5px;">
+                <div style="background: var(--color-bg-tertiary); border-radius: 10px; overflow: hidden;">
+                    <div style="width: ${porcentaje}%; background: var(--color-accent-primary); height: 6px; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--color-text-secondary);">
+                ${progreso.mensaje || `Procesando: ${progreso.procesadas} de ${progreso.total} empresas (${porcentaje}%)`}
+            </div>
+            ${progreso.actual ? `
+                <div style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px;">
+                    <i class="fas fa-building"></i> Actual: ${progreso.actual}
+                </div>
+            ` : ''}
+            ${progreso.error ? `
+                <div style="font-size: 0.7rem; color: #ef4444; margin-top: 5px;">
+                    <i class="fas fa-exclamation-triangle"></i> ${progreso.error}
+                </div>
+            ` : ''}
+        `;
+        
+        container.style.display = 'block';
+    }
+    
+    async recargarDatos() {
+        try {
+            this.datosTodasEmpresas = await OperacionesEstadisticas.obtenerDatosTodasEmpresas();
+            this.actualizarTabla(this.datosTodasEmpresas.porEmpresa);
+            this.actualizarGraficasComparativas(this.datosTodasEmpresas.porEmpresa);
             
-            const operacion = await operacionesManager.getOperaciones(empresa);
-            
-            if (operacion) {
-                actualizarMetricasFirestore(operacion);
-                actualizarMetricasStorage(operacion);
-                actualizarGraficoTiposArchivo(operacion);
-                actualizarGraficoFirestore(operacion);
-                actualizarGraficoCarpetas(operacion);
-                actualizarTablaCarpetas(operacion);
+            if (this.empresaSeleccionada === 'todas') {
+                await this.mostrarVistaTodasEmpresas();
             } else {
-                console.warn('No se encontraron datos para la empresa:', empresa);
+                const empresaData = this.datosTodasEmpresas.porEmpresa.find(
+                    e => e.id === this.empresaSeleccionada
+                );
+                if (empresaData) {
+                    await this.mostrarDatosEmpresa(empresaData);
+                }
             }
+            
+            const fechaElement = document.getElementById('fechaActualizacion');
+            if (fechaElement) {
+                fechaElement.textContent = new Date().toLocaleString();
+            }
+        } catch (error) {
+            console.error('Error recargando datos:', error);
+        }
+    }
+    
+    bindEvents() {
+        document.getElementById('btnAplicarFiltros')?.addEventListener('click', () => this.aplicarFiltros());
+        document.getElementById('btnLimpiarFiltros')?.addEventListener('click', () => this.limpiarFiltros());
+        document.getElementById('btnActualizar')?.addEventListener('click', () => this.actualizarDatos());
+        document.getElementById('btnExportarExcel')?.addEventListener('click', () => this.exportarExcel());
+        document.getElementById('btnDiagnostico')?.addEventListener('click', () => this.mostrarDiagnostico());
+        
+        const tipoFiltro = document.getElementById('tipoFiltro');
+        tipoFiltro?.addEventListener('change', (e) => this.toggleRangoFechas(e.target.value));
+    }
+    
+    async cargarSelectores() {
+        try {
+            const selector = document.getElementById('selectorEmpresa');
+            if (!selector) return;
+            
+            selector.innerHTML = '<option value="todas">🏢 Todas las empresas</option>';
+            
+            const organizaciones = await OperacionesEstadisticas.obtenerOrganizaciones();
+            
+            organizaciones.forEach(org => {
+                const option = document.createElement('option');
+                option.value = org.camelCase;
+                option.textContent = `${org.nombre || org.camelCase}`;
+                selector.appendChild(option);
+            });
+            
+        } catch (error) {
+            console.error('Error cargando selectores:', error);
+        }
+    }
+    
+    toggleRangoFechas(valor) {
+        const rangoGrupo = document.getElementById('rangoFechasGrupo');
+        if (rangoGrupo) {
+            rangoGrupo.style.display = valor === 'personalizado' ? 'flex' : 'none';
         }
         
-    } catch (error) {
-        console.error('Error actualizando vista:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudieron cargar los datos de operaciones'
-        });
-    }
-}
-
-// Cargar lista de empresas en el selector
-async function cargarListaEmpresas() {
-    const selector = document.getElementById('selectorEmpresa');
-    
-    try {
-        const operacionesCollectionRef = collection(db, 'operaciones');
-        const snapshot = await getDocs(operacionesCollectionRef);
-        
-        snapshot.forEach(doc => {
-            const option = document.createElement('option');
-            option.value = doc.id;
-            option.textContent = doc.id;
-            selector.appendChild(option);
-        });
-        
-    } catch (error) {
-        console.error('Error cargando lista de empresas:', error);
-    }
-}
-
-// Exportar a Excel
-function exportarAExcel() {
-    try {
-        const data = [];
-        
-        // Agregar encabezados
-        data.push(['Estadísticas de Operaciones - Centinela']);
-        data.push(['Fecha:', new Date().toLocaleString()]);
-        data.push([]);
-        
-        // Métricas Firestore
-        data.push(['MÉTRICAS FIRESTORE']);
-        data.push(['Colecciones', document.getElementById('metricColecciones').innerText]);
-        data.push(['Documentos', document.getElementById('metricDocumentos').innerText]);
-        data.push(['Administradores', document.getElementById('metricAdministradores').innerText]);
-        data.push(['Empleados', document.getElementById('metricEmpleados').innerText.replace(' empleados', '')]);
-        data.push([]);
-        
-        // Métricas Storage
-        data.push(['MÉTRICAS STORAGE']);
-        data.push(['Archivos Totales', document.getElementById('metricArchivosTotales').innerText]);
-        data.push(['Tamaño Total', document.getElementById('metricTamanioTotal').innerText.replace('📁 ', '')]);
-        data.push(['PDF', document.getElementById('metricPDF').innerText]);
-        data.push(['Imágenes', document.getElementById('metricImagenes').innerText]);
-        data.push(['Documentos', document.getElementById('metricDocumentosStorage').innerText]);
-        data.push(['Multimedia', document.getElementById('metricMultimedia').innerText]);
-        data.push([]);
-        
-        // Tabla de organizaciones
-        data.push(['ESTADÍSTICAS POR ORGANIZACIÓN']);
-        data.push(['Organización', 'Documentos', 'Archivos', 'Tamaño', 'PDF', 'Imágenes']);
-        
-        const tablaOrg = document.getElementById('tablaOrganizacionesBody');
-        tablaOrg.querySelectorAll('tr').forEach(row => {
-            if (row.cells.length === 6 && row.cells[0].innerText !== 'Cargando...' && row.cells[0].innerText !== 'Error al cargar datos') {
-                data.push([
-                    row.cells[0].innerText,
-                    row.cells[1].innerText,
-                    row.cells[2].innerText,
-                    row.cells[3].innerText,
-                    row.cells[4].innerText,
-                    row.cells[5].innerText
-                ]);
-            }
-        });
-        
-        // Crear libro de Excel
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Operaciones');
-        
-        // Ajustar anchos de columna
-        const colWidths = [{wch: 25}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 10}];
-        ws['!cols'] = colWidths;
-        
-        // Descargar
-        XLSX.writeFile(wb, `operaciones_${new Date().toISOString().slice(0, 19)}.xlsx`);
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Exportado',
-            text: 'Archivo Excel generado correctamente',
-            toast: true,
-            timer: 3000,
-            showConfirmButton: false
-        });
-        
-    } catch (error) {
-        console.error('Error exportando a Excel:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudo generar el archivo Excel'
-        });
-    }
-}
-
-// Inicializar suscripción en tiempo real
-function inicializarSuscripcion() {
-    if (currentEmpresa !== 'global') {
-        operacionesManager.suscribirACambios(currentEmpresa, (operacion) => {
-            if (operacion) {
-                actualizarMetricasFirestore(operacion);
-                actualizarMetricasStorage(operacion);
-                actualizarGraficoTiposArchivo(operacion);
-                actualizarGraficoFirestore(operacion);
-                actualizarGraficoCarpetas(operacion);
-                actualizarTablaCarpetas(operacion);
-                document.getElementById('fechaActualizacion').innerText = new Date().toLocaleString();
-            }
-        });
-    }
-}
-
-// Configurar event listeners
-function configurarEventListeners() {
-    const selectorEmpresa = document.getElementById('selectorEmpresa');
-    const btnActualizar = document.getElementById('btnActualizar');
-    const btnLimpiar = document.getElementById('btnLimpiar');
-    const btnExportarExcel = document.getElementById('btnExportarExcel');
-    const filtroTipoArchivo = document.getElementById('filtroTipoArchivo');
-    const filtroColeccion = document.getElementById('filtroColeccion');
-    const filtroFecha = document.getElementById('filtroFecha');
-    
-    selectorEmpresa.addEventListener('change', async (e) => {
-        currentEmpresa = e.target.value;
-        const badgeSpan = document.querySelector('#empresaSeleccionada span');
-        if (badgeSpan) {
-            badgeSpan.innerText = currentEmpresa === 'global' ? 'Global' : currentEmpresa;
+        if (valor !== 'personalizado') {
+            this.filtroActual.periodo = valor;
         }
-        await actualizarVista(currentEmpresa);
-        inicializarSuscripcion();
-    });
+    }
     
-    btnActualizar.addEventListener('click', async () => {
-        await actualizarVista(currentEmpresa);
+    async aplicarFiltros() {
+        const selector = document.getElementById('selectorEmpresa');
+        const tipoFiltro = document.getElementById('tipoFiltro');
+        
+        const empresaId = selector?.value || 'todas';
+        
+        this.filtroActual.empresa = empresaId;
+        this.filtroActual.periodo = tipoFiltro?.value || '';
+        
+        if (this.filtroActual.periodo === 'personalizado') {
+            const fechaInicio = document.getElementById('fechaInicio')?.value;
+            const fechaFin = document.getElementById('fechaFin')?.value;
+            
+            if (fechaInicio && fechaFin) {
+                this.filtroActual.fechaInicio = new Date(fechaInicio);
+                this.filtroActual.fechaFin = new Date(fechaFin);
+            }
+        } else {
+            this.filtroActual.fechaInicio = null;
+            this.filtroActual.fechaFin = null;
+        }
+        
+        this.empresaSeleccionada = empresaId;
+        
+        if (empresaId === 'todas') {
+            await this.mostrarVistaTodasEmpresas();
+        } else {
+            const empresaData = this.datosTodasEmpresas?.porEmpresa?.find(
+                e => e.id === empresaId
+            );
+            
+            if (empresaData) {
+                await this.mostrarDatosEmpresa(empresaData);
+            } else {
+                const instancia = await OperacionesEstadisticas.obtener(empresaId);
+                if (instancia) {
+                    await this.mostrarDatosEmpresa(instancia);
+                } else {
+                    this.mostrarError('No se encontraron datos para la organización seleccionada');
+                }
+            }
+        }
+    }
+    
+    async mostrarDatosEmpresa(empresaData) {
+        this.mostrarContenido();
+        
+        this.actualizarMetricasPorEmpresa(empresaData);
+        this.actualizarGraficaTiposArchivo(empresaData);
+        
+        const modoVisualizacion = document.getElementById('modoVisualizacion');
+        if (modoVisualizacion) {
+            modoVisualizacion.innerHTML = `
+                <i class="fas fa-building"></i> 
+                <span>${empresaData.nombreEmpresa || empresaData.id}</span>
+            `;
+        }
+    }
+    
+    actualizarMetricasPorEmpresa(empresaData) {
+        const resumen = empresaData.getResumen();
+        
+        this.actualizarElemento('metricDocumentos', empresaData.conteos.firestore.documentos);
+        this.actualizarElemento('metricAdministradores', empresaData.conteos.auth.administradores);
+        this.actualizarElemento('metricColaboradores', empresaData.conteos.auth.colaboradores);
+        this.actualizarElemento('metricTotalUsuarios', empresaData.conteos.auth.totalUsuarios);
+        this.actualizarElemento('metricArchivosTotales', resumen.archivosTotales);
+        
+        const tamanioElement = document.getElementById('metricTamanioTotal');
+        if (tamanioElement) {
+            tamanioElement.textContent = `${resumen.tamanioTotalMB} MB`;
+        }
+        
+        this.actualizarElemento('metricPDF', resumen.pdf.cantidad);
+        this.actualizarElemento('metricPDFPorcentaje', `${resumen.pdf.porcentaje}%`);
+        this.actualizarElemento('metricImagenes', resumen.imagenes.cantidad);
+        this.actualizarElemento('metricImagenesPorcentaje', `${resumen.imagenes.porcentaje}%`);
+        this.actualizarElemento('metricDocumentosStorage', resumen.documentos.cantidad);
+        this.actualizarElemento('metricDocumentosPorcentaje', `${resumen.documentos.porcentaje}%`);
+        this.actualizarElemento('metricMultimedia', resumen.multimedia.cantidad);
+        this.actualizarElemento('metricMultimediaPorcentaje', `${resumen.multimedia.porcentaje}%`);
+    }
+    
+    actualizarGraficaTiposArchivo(empresaData) {
+        const resumen = empresaData.getResumen();
+        
+        const labels = ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'];
+        const data = [
+            resumen.pdf.cantidad,
+            resumen.imagenes.cantidad,
+            resumen.documentos.cantidad,
+            resumen.multimedia.cantidad,
+            resumen.otros.cantidad
+        ];
+        
+        this.crearGraficaPastel('graficoTiposArchivo', labels, data);
+    }
+    
+    crearGraficaPastel(canvasId, labels, data) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+        
+        const total = data.reduce((a, b) => a + b, 0);
+        
+        const colores = [
+            '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
+            '#ec489a', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+        ];
+        
+        this.charts[canvasId] = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colores.slice(0, data.length),
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff',
+                            font: { size: 10, family: "'Rajdhani', sans-serif" },
+                            boxWidth: 12,
+                            padding: 8
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const label = context.label || '';
+                                const value = context.raw;
+                                const porcentaje = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                
+                                if (canvasId === 'graficoAlmacenamientoPorEmpresa') {
+                                    return `${label}: ${value.toFixed(2)} MB (${porcentaje}%)`;
+                                }
+                                return `${label}: ${value.toLocaleString()} (${porcentaje}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '50%',
+                radius: '70%'
+            }
+        });
+    }
+    
+    crearGraficaBarras(canvasId, labels, data, labelY) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+        
+        this.charts[canvasId] = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: labelY,
+                    data: data,
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 6,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff',
+                            font: { size: 11, family: "'Rajdhani', sans-serif" }
+                        },
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `${labelY}: ${context.raw.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)', drawBorder: false },
+                        ticks: {
+                            color: '#ffffff',
+                            stepSize: Math.ceil(Math.max(...data, 1) / 5),
+                            callback: (value) => value.toLocaleString()
+                        },
+                        title: {
+                            display: true,
+                            text: labelY,
+                            color: '#9ca3af',
+                            font: { size: 10, family: "'Rajdhani', sans-serif" }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: '#ffffff',
+                            maxRotation: 45,
+                            minRotation: 45,
+                            font: { size: 9, family: "'Rajdhani', sans-serif" }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Organización',
+                            color: '#9ca3af',
+                            font: { size: 10, family: "'Rajdhani', sans-serif" }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    limpiarFiltros() {
+        const selector = document.getElementById('selectorEmpresa');
+        const tipoFiltro = document.getElementById('tipoFiltro');
+        const fechaInicio = document.getElementById('fechaInicio');
+        const fechaFin = document.getElementById('fechaFin');
+        
+        if (selector) selector.value = 'todas';
+        if (tipoFiltro) tipoFiltro.value = '';
+        if (fechaInicio) fechaInicio.value = '';
+        if (fechaFin) fechaFin.value = '';
+        
+        const rangoGrupo = document.getElementById('rangoFechasGrupo');
+        if (rangoGrupo) rangoGrupo.style.display = 'none';
+        
+        this.filtroActual = {
+            empresa: 'todas',
+            periodo: '',
+            fechaInicio: null,
+            fechaFin: null
+        };
+        
+        this.empresaSeleccionada = 'todas';
+        this.mostrarVistaTodasEmpresas();
+        
+        const modoVisualizacion = document.getElementById('modoVisualizacion');
+        if (modoVisualizacion) {
+            modoVisualizacion.innerHTML = `<i class="fas fa-chart-line"></i> <span>Todas las empresas</span>`;
+        }
+    }
+    
+    async actualizarDatos() {
+        await OperacionesEstadisticas.actualizarTodas({
+            pausaEntreLotes: 800,
+            loteSize: 2,
+            skipCache: false
+        });
+    }
+    
+    actualizarElemento(id, valor) {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.textContent = typeof valor === 'number' ? valor.toLocaleString() : valor;
+        }
+    }
+    
+    actualizarTabla(empresas) {
+        const tbody = document.getElementById('tablaOrganizacionesBody');
+        if (!tbody) return;
+        
+        if (!empresas || empresas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;"><i class="fas fa-building" style="font-size:32px; opacity:0.3; margin-bottom:10px;"></i><br>No hay datos de organizaciones disponibles</td></tr>';
+            return;
+        }
+        
+        const totalDocs = empresas.reduce((sum, e) => sum + e.conteos.firestore.documentos, 0);
+        const totalArchivos = empresas.reduce((sum, e) => sum + e.getResumen().archivosTotales, 0);
+        
+        tbody.innerHTML = empresas.map(emp => {
+            const resumen = emp.getResumen();
+            const porcentajeDocs = totalDocs > 0 ? Math.round((resumen.totalDocumentos / totalDocs) * 100) : 0;
+            const porcentajeArchivos = totalArchivos > 0 ? Math.round((resumen.archivosTotales / totalArchivos) * 100) : 0;
+            
+            return `
+                <tr>
+                    <td><strong><i class="fas fa-building" style="color: #3b82f6; margin-right: 8px;"></i>${this.escapeHTML(emp.nombreEmpresa || emp.organizacion || emp.id)}</strong></td>
+                    <td><span class="badge-value badge-info">${resumen.totalDocumentos.toLocaleString()}</span><span class="porcentaje-badge">${porcentajeDocs}%</span></td>
+                    <td><span class="badge-value badge-warning">${resumen.archivosTotales.toLocaleString()}</span><span class="porcentaje-badge">${porcentajeArchivos}%</span></td>
+                    <td><span class="badge-value badge-success">${resumen.tamanioTotalMB} MB</span></td>
+                    <td><span class="badge-value badge-secondary">${emp.conteos.auth.administradores.toLocaleString()}</span></td>
+                    <td><span class="badge-value badge-secondary">${emp.conteos.auth.colaboradores.toLocaleString()}</span></td>
+                    <td><span class="badge-value badge-primary">${emp.conteos.auth.totalUsuarios.toLocaleString()}</span></td>
+                </tr>
+            `;
+        }).join('');
+        
+        this.agregarEstilosBadges();
+    }
+    
+    agregarEstilosBadges() {
+        if (!document.getElementById('estilos-badges')) {
+            const style = document.createElement('style');
+            style.id = 'estilos-badges';
+            style.textContent = `
+                .badge-value {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 0.7rem;
+                    font-weight: 500;
+                    margin-right: 6px;
+                }
+                .badge-info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+                .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+                .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+                .badge-secondary { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+                .badge-primary { background: rgba(0, 207, 255, 0.2); color: #00cfff; }
+                .porcentaje-badge { font-size: 0.6rem; color: #6c757d; margin-left: 4px; }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    escapeHTML(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    async exportarExcel() {
+        if (!this.datosTodasEmpresas || !this.datosTodasEmpresas.porEmpresa) {
+            this.mostrarError('No hay datos para exportar');
+            return;
+        }
+        
+        try {
+            const datosCSV = OperacionesEstadisticas.exportarACSV(this.datosTodasEmpresas.porEmpresa);
+            if (!datosCSV) return;
+            
+            const csvContent = datosCSV.map(row => row.join(',')).join('\n');
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.setAttribute('download', `estadisticas_${new Date().toISOString().slice(0, 19)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            this.mostrarExito('Exportación completada');
+        } catch (error) {
+            console.error('Error exportando:', error);
+            this.mostrarError('Error al exportar datos');
+        }
+    }
+    
+    async mostrarDiagnostico() {
+        const organizaciones = await OperacionesEstadisticas.obtenerOrganizaciones();
+        
+        const totales = this.datosTodasEmpresas?.totales || {
+            firestore: { documentos: 0 },
+            storage: { totalArchivos: 0, totalSizeMB: 0 },
+            auth: { totalUsuarios: 0 }
+        };
+        
+        const mensaje = `
+            📊 DIAGNÓSTICO DE ESTADÍSTICAS
+            ─────────────────────────────────
+            📁 Organizaciones encontradas: ${organizaciones.length}
+            📄 Documentos totales: ${totales.firestore.documentos}
+            💾 Archivos storage: ${totales.storage.totalArchivos}
+            📦 Tamaño total: ${totales.storage.totalSizeMB?.toFixed(2) || 0} MB
+            👥 Usuarios totales: ${totales.auth.totalUsuarios}
+            
+            🏢 Empresas con datos:
+            ${organizaciones.map(org => `  - ${org.nombre}: ${org.camelCase}`).join('\n')}
+            
+            🔄 Última actualización: ${new Date().toLocaleString()}
+            📊 Caché activa: ${OperacionesEstadisticas.cache?.size || 0} organizaciones
+            💾 Caché storage: ${OperacionesEstadisticas.storageCache?.size || 0} entradas
+            🏢 Vista actual: ${this.empresaSeleccionada === 'todas' ? 'Todas las empresas' : this.empresaSeleccionada}
+        `;
+        
         Swal.fire({
+            title: 'Diagnóstico del Sistema',
+            html: `<pre style="text-align:left; background:#1a1a2e; padding:15px; border-radius:8px; overflow-x:auto;">${mensaje}</pre>`,
+            icon: 'info',
+            confirmButtonText: 'Entendido',
+            background: '#1e1e2e',
+            color: '#ffffff'
+        });
+    }
+    
+    mostrarContenido() {
+        const contenido = document.getElementById('contenidoPrincipal');
+        const sinDatos = document.getElementById('sinDatosMensaje');
+        const seccionMetricas = document.getElementById('seccionMetricas');
+        const seccionStorage = document.getElementById('seccionStorage');
+        const seccionGraficas = document.getElementById('seccionGraficas');
+        const seccionTabla = document.getElementById('seccionTabla');
+        
+        if (contenido) contenido.style.display = 'block';
+        if (sinDatos) sinDatos.style.display = 'none';
+        if (seccionMetricas) seccionMetricas.style.display = 'block';
+        if (seccionStorage) seccionStorage.style.display = 'block';
+        if (seccionGraficas) seccionGraficas.style.display = 'block';
+        if (seccionTabla) seccionTabla.style.display = 'block';
+    }
+    
+    mostrarSinDatos() {
+        const contenido = document.getElementById('contenidoPrincipal');
+        const sinDatos = document.getElementById('sinDatosMensaje');
+        const sinDatosTexto = document.getElementById('sinDatosTexto');
+        
+        if (contenido) contenido.style.display = 'none';
+        if (sinDatos) sinDatos.style.display = 'flex';
+        if (sinDatosTexto) {
+            sinDatosTexto.textContent = 'No hay datos disponibles';
+        }
+        
+        const metricas = ['metricDocumentos', 'metricAdministradores', 'metricColaboradores', 'metricTotalUsuarios',
+                          'metricArchivosTotales', 'metricTamanioTotal', 'metricPDF', 'metricPDFPorcentaje',
+                          'metricImagenes', 'metricImagenesPorcentaje', 'metricDocumentosStorage', 
+                          'metricDocumentosPorcentaje', 'metricMultimedia', 'metricMultimediaPorcentaje'];
+        metricas.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = id.includes('Porcentaje') ? '0%' : '0';
+        });
+        
+        const graficas = ['graficoTiposArchivo', 'graficoAlmacenamientoPorEmpresa', 'graficoDocumentosPorEmpresa'];
+        graficas.forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '14px Arial';
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.textAlign = 'center';
+                ctx.fillText('📭 No hay datos disponibles', canvas.width / 2, canvas.height / 2);
+            }
+        });
+    }
+    
+    mostrarError(mensaje) {
+        Swal.fire({
+            title: 'Error',
+            text: mensaje,
+            icon: 'error',
+            confirmButtonText: 'OK',
+            background: '#1e1e2e',
+            color: '#ffffff'
+        });
+    }
+    
+    mostrarExito(mensaje) {
+        Swal.fire({
+            title: 'Éxito',
+            text: mensaje,
             icon: 'success',
-            title: 'Actualizado',
-            text: 'Datos actualizados correctamente',
-            toast: true,
             timer: 2000,
-            showConfirmButton: false
+            showConfirmButton: false,
+            background: '#1e1e2e',
+            color: '#ffffff'
         });
-    });
-    
-    btnLimpiar.addEventListener('click', () => {
-        filtroTipoArchivo.value = 'todos';
-        filtroColeccion.value = 'todas';
-        filtroFecha.value = '';
-        actualizarVista(currentEmpresa);
-    });
-    
-    btnExportarExcel.addEventListener('click', exportarAExcel);
-}
-
-// Verificar autenticación
-async function verificarAutenticacion() {
-    userManager = new UserManager();
-    
-    const checkUser = () => {
-        if (userManager.currentUser) {
-            usuarioActual = userManager.currentUser;
-            inicializar();
-        }
-    };
-    
-    if (userManager.currentUser) {
-        usuarioActual = userManager.currentUser;
-        inicializar();
-    } else {
-        const checkInterval = setInterval(() => {
-            if (userManager.currentUser) {
-                clearInterval(checkInterval);
-                usuarioActual = userManager.currentUser;
-                inicializar();
-            }
-        }, 500);
-        
-        setTimeout(() => {
-            clearInterval(checkInterval);
-            if (!userManager.currentUser) {
-                window.location.href = '/index.html';
-            }
-        }, 5000);
     }
 }
 
-// Inicialización principal
-async function inicializar() {
-    await cargarListaEmpresas();
-    await actualizarVista('global');
-    configurarEventListeners();
-}
-
-// Iniciar
-verificarAutenticacion();
+document.addEventListener('DOMContentLoaded', () => {
+    new OperacionesController();
+});

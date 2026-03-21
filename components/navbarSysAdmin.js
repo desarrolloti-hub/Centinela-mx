@@ -5,29 +5,21 @@ class NavbarComplete {
     constructor() {
         this.isMenuOpen = false;
         this.isAdminDropdownOpen = false;
-        this.isAdministracionDropdownOpen = false;
-        this.isIncidenciasDropdownOpen = false;
+        this.isGestionDropdownOpen = false;
         this.currentAdmin = null;
         this.userManager = null;
         this.notificacionManager = null;
         this.notificacionesNoLeidas = 0;
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
+        this.intervalNotificaciones = null;
         this.init();
     }
 
     init() {
-        if (window.NavbarCompleteLoaded) {
-            return;
-        }
-
+        if (window.NavbarCompleteLoaded) return;
         window.NavbarCompleteLoaded = true;
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.setup());
-        } else {
-            setTimeout(() => this.setup(), 100);
-        }
+        document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', () => this.setup()) : setTimeout(() => this.setup(), 100);
     }
 
     async setup() {
@@ -35,15 +27,12 @@ class NavbarComplete {
             this.removeOriginalNavbar();
             this.createNavbar();
             this.setupFunctionalities();
-
             this.loadAdminDataFromLocalStorage();
             this.updateNavbarWithAdminData();
-
             await this.loadAdminDataFromFirebase();
             await this._initNotificacionManager();
             await this._cargarNotificaciones();
             this._iniciarListenerNotificaciones();
-
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
         }
@@ -59,50 +48,32 @@ class NavbarComplete {
     }
 
     async _cargarNotificaciones() {
-        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
-            return;
-        }
-
+        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) return;
         try {
-            console.log('🔍 Cargando notificaciones para admin:', this.currentAdmin.id);
-
-            // Los admins ven TODAS las notificaciones de su organización
-            this.notificaciones = await this.notificacionManager.obtenerNotificaciones(
+            const todasNotificaciones = await this.notificacionManager.obtenerNotificaciones(
                 this.currentAdmin.id,
                 this.currentAdmin.organizacionCamelCase,
-                true, // solo no leídas para el badge
-                10
+                false,
+                20
             );
-
-            this.notificacionesNoLeidas = await this.notificacionManager.obtenerConteoNoLeidas(
-                this.currentAdmin.id,
-                this.currentAdmin.organizacionCamelCase
-            );
-
-            console.log(`📬 Notificaciones admin: ${this.notificaciones.length} (${this.notificacionesNoLeidas} no leídas)`);
-
+            this.notificaciones = todasNotificaciones;
+            this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
-
         } catch (error) {
             console.error('Error cargando notificaciones:', error);
         }
     }
 
     _iniciarListenerNotificaciones() {
-        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
-            return;
-        }
-
-        setInterval(() => {
-            this._cargarNotificaciones();
-        }, 30000);
+        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) return;
+        if (this.intervalNotificaciones) clearInterval(this.intervalNotificaciones);
+        this.intervalNotificaciones = setInterval(() => this._cargarNotificaciones(), 30000);
     }
 
     _actualizarBadgeNotificaciones() {
         const badge = document.getElementById('notificacionesBadge');
         if (!badge) return;
-
         if (this.notificacionesNoLeidas > 0) {
             badge.textContent = this.notificacionesNoLeidas > 99 ? '99+' : this.notificacionesNoLeidas;
             badge.style.display = 'flex';
@@ -114,88 +85,99 @@ class NavbarComplete {
     _renderizarNotificaciones() {
         const container = document.getElementById('notificacionesLista');
         if (!container) return;
-
         if (this.notificaciones.length === 0) {
-            container.innerHTML = `
-                <div class="notificaciones-vacia">
-                    <i class="fas fa-bell-slash"></i>
-                    <p>No hay notificaciones nuevas</p>
-                </div>
-            `;
+            container.innerHTML = `<div class="notificaciones-vacia"><i class="fas fa-bell-slash"></i><p>No hay notificaciones nuevas</p></div>`;
             return;
         }
-
         let html = '';
         this.notificaciones.slice(0, 5).forEach(notif => {
-            const notifUI = notif.toUI();
-            html += `
-                <div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
-                    <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
-                        <i class="fas ${notifUI.icono}"></i>
-                    </div>
-                    <div class="notificacion-contenido">
-                        <div class="notificacion-titulo">${notifUI.titulo}</div>
-                        <div class="notificacion-mensaje">${notifUI.mensaje}</div>
-                        <div class="notificacion-detalles">
-                            ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${notifUI.sucursalNombre}</span>` : ''}
-                            ${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}
-                        </div>
-                        <div class="notificacion-tiempo">${notifUI.tiempoRelativo}</div>
-                    </div>
-                    <div class="notificacion-estado ${notifUI.leida ? 'leida' : 'no-leida'}"></div>
-                </div>
-            `;
+            const notifUI = notif.toUI ? notif.toUI() : {
+                titulo: notif.titulo,
+                mensaje: notif.mensaje,
+                icono: notif.getIcono ? notif.getIcono() : 'fa-bell',
+                color: notif.getColor ? notif.getColor() : '#007bff',
+                sucursalNombre: notif.sucursalNombre,
+                nivelRiesgo: notif.nivelRiesgo,
+                tiempoRelativo: notif.getTiempoRelativo ? notif.getTiempoRelativo() : '',
+                urlDestino: notif.urlDestino || `/usuarios/administradorSistema/verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
+                leida: notif.leida || false
+            };
+            html += `<div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}"><div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}"><i class="fas ${notifUI.icono}"></i></div><div class="notificacion-contenido"><div class="notificacion-titulo">${this._escapeHTML(notifUI.titulo)}</div><div class="notificacion-mensaje">${this._escapeHTML(notifUI.mensaje)}</div><div class="notificacion-detalles">${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${this._escapeHTML(notifUI.sucursalNombre)}</span>` : ''}${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}</div><div class="notificacion-tiempo">${this._escapeHTML(notifUI.tiempoRelativo)}</div></div><div class="notificacion-estado ${notifUI.leida ? 'leida' : 'no-leida'}"></div></div>`;
         });
-
-        if (this.notificaciones.length > 5) {
-            html += `
-                <div class="notificaciones-ver-mas">
-                    <a href="/usuarios/administrador/notificaciones/notificaciones.html">Ver ${this.notificaciones.length - 5} más</a>
-                </div>
-            `;
-        }
-
+        if (this.notificaciones.length > 5) html += `<div class="notificaciones-ver-mas"><a href="#" class="ver-todas-notificaciones">Ver ${this.notificaciones.length - 5} más</a></div>`;
         container.innerHTML = html;
-
         container.querySelectorAll('.notificacion-item').forEach(item => {
             item.addEventListener('click', async (e) => {
-                const id = item.dataset.id;
-                const url = item.dataset.url;
-                
-                if (this.notificacionManager) {
-                    await this.notificacionManager.marcarComoLeida(
-                        this.currentAdmin.id,
-                        id,
-                        this.currentAdmin.organizacionCamelCase
-                    );
-                    
-                    this.notificacionesNoLeidas = Math.max(0, this.notificacionesNoLeidas - 1);
+                e.stopPropagation();
+                const id = item.dataset.id, url = item.dataset.url;
+                if (this.notificacionManager && id) {
+                    await this.notificacionManager.marcarComoLeida(this.currentAdmin.id, id, this.currentAdmin.organizacionCamelCase);
+                    const notifIndex = this.notificaciones.findIndex(n => n.id === id);
+                    if (notifIndex !== -1) this.notificaciones[notifIndex].leida = true;
+                    this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
                     this._actualizarBadgeNotificaciones();
+                    const estadoDiv = item.querySelector('.notificacion-estado');
+                    if (estadoDiv) estadoDiv.classList.remove('no-leida'), estadoDiv.classList.add('leida');
                 }
-                
-                if (url) {
-                    window.location.href = url;
-                }
+                if (url) window.location.href = url;
             });
         });
+        const verTodasLink = container.querySelector('.ver-todas-notificaciones');
+        if (verTodasLink) verTodasLink.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this._mostrarModalNotificaciones(); });
+    }
+
+    _mostrarModalNotificaciones() {
+        if (typeof Swal !== 'undefined') {
+            let notificacionesHtml = '<div style="max-height: 400px; overflow-y: auto;">';
+            this.notificaciones.forEach(notif => {
+                const notifUI = notif.toUI ? notif.toUI() : {
+                    titulo: notif.titulo,
+                    mensaje: notif.mensaje,
+                    icono: notif.getIcono ? notif.getIcono() : 'fa-bell',
+                    color: notif.getColor ? notif.getColor() : '#007bff',
+                    tiempoRelativo: notif.getTiempoRelativo ? notif.getTiempoRelativo() : '',
+                    urlDestino: notif.urlDestino || `/usuarios/administradorSistema/verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
+                    leida: notif.leida || false
+                };
+                notificacionesHtml += `<div class="notificacion-item-modal" data-id="${notif.id}" data-url="${notifUI.urlDestino}" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-bottom: 1px solid #333; cursor: pointer; background: ${notifUI.leida ? 'transparent' : 'rgba(0, 207, 255, 0.05)'};"><div class="notificacion-icono" style="width: 40px; height: 40px; border-radius: 50%; background-color: ${notifUI.color}20; color: ${notifUI.color}; display: flex; align-items: center; justify-content: center;"><i class="fas ${notifUI.icono}"></i></div><div style="flex: 1;"><div style="font-weight: 600; margin-bottom: 4px;">${this._escapeHTML(notifUI.titulo)}</div><div style="font-size: 13px; color: #aaa; margin-bottom: 4px;">${this._escapeHTML(notifUI.mensaje)}</div><div style="font-size: 11px; color: #666;">${this._escapeHTML(notifUI.tiempoRelativo)}</div></div>${!notifUI.leida ? '<div style="width: 8px; height: 8px; border-radius: 50%; background-color: #007bff;"></div>' : ''}</div>`;
+            });
+            notificacionesHtml += '</div>';
+            Swal.fire({ title: 'Todas las Notificaciones', html: notificacionesHtml, width: '500px', background: '#1a1a1a', color: '#fff', confirmButtonText: 'Cerrar', confirmButtonColor: '#00cfff', didOpen: () => {
+                document.querySelectorAll('.notificacion-item-modal').forEach(item => {
+                    item.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const id = item.dataset.id, url = item.dataset.url;
+                        if (this.notificacionManager && id) {
+                            await this.notificacionManager.marcarComoLeida(this.currentAdmin.id, id, this.currentAdmin.organizacionCamelCase);
+                            const notifIndex = this.notificaciones.findIndex(n => n.id === id);
+                            if (notifIndex !== -1) this.notificaciones[notifIndex].leida = true;
+                            this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
+                            this._actualizarBadgeNotificaciones();
+                            this._renderizarNotificaciones();
+                        }
+                        if (url) window.location.href = url;
+                        Swal.close();
+                    });
+                });
+            } });
+        } else {
+            window.location.href = '#';
+        }
+    }
+
+    _escapeHTML(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
     async _marcarTodasLeidas() {
-        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
-            return;
-        }
-
+        if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) return;
         try {
-            await this.notificacionManager.marcarTodasComoLeidas(
-                this.currentAdmin.id,
-                this.currentAdmin.organizacionCamelCase
-            );
-            
+            await this.notificacionManager.marcarTodasComoLeidas(this.currentAdmin.id, this.currentAdmin.organizacionCamelCase);
             this.notificacionesNoLeidas = 0;
-            this.notificaciones = [];
+            this.notificaciones.forEach(n => n.leida = true);
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
-            
         } catch (error) {
             console.error('Error marcando todas como leídas:', error);
         }
@@ -205,45 +187,31 @@ class NavbarComplete {
         const notificacionesBtn = document.getElementById('notificacionesBtn');
         const notificacionesDropdown = document.getElementById('notificacionesDropdown');
         const marcarTodasBtn = document.getElementById('marcarTodasBtn');
-
         if (!notificacionesBtn || !notificacionesDropdown) return;
-
         notificacionesBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.dropdownNotificacionesAbierto = !this.dropdownNotificacionesAbierto;
             notificacionesDropdown.classList.toggle('active', this.dropdownNotificacionesAbierto);
+            if (this.dropdownNotificacionesAbierto && this.notificacionesNoLeidas > 0) this._cargarNotificaciones();
         });
-
         document.addEventListener('click', (e) => {
             if (!notificacionesBtn.contains(e.target) && !notificacionesDropdown.contains(e.target)) {
                 this.dropdownNotificacionesAbierto = false;
                 notificacionesDropdown.classList.remove('active');
             }
         });
-
-        if (marcarTodasBtn) {
-            marcarTodasBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._marcarTodasLeidas();
-            });
-        }
+        if (marcarTodasBtn) marcarTodasBtn.addEventListener('click', (e) => { e.stopPropagation(); this._marcarTodasLeidas(); });
     }
 
-    removeOriginalNavbar() {
-        const originalHeader = document.getElementById('main-header');
-        originalHeader?.remove();
-    }
+    removeOriginalNavbar() { document.getElementById('main-header')?.remove(); }
 
-    createNavbar() {
-        this.addStyles();
-        this.insertHTML();
-        this.adjustBodyPadding();
-    }
+    createNavbar() { this.addStyles(); this.insertHTML(); this.adjustBodyPadding(); }
 
     addStyles() {
         if (document.getElementById('navbar-complete-styles')) return;
-
-        const styles = /*css*/`
+        
+        const styles = `
+            /* Estilos base del navbar */
             #complete-navbar {
                 position: fixed;
                 top: 0;
@@ -261,6 +229,7 @@ class NavbarComplete {
                 box-shadow: var(--navbar-scrolled-shadow);
             }
             
+            /* Top section - estructura principal */
             .navbar-top-section {
                 display: flex;
                 justify-content: space-between;
@@ -273,6 +242,7 @@ class NavbarComplete {
                 box-sizing: border-box;
             }
             
+            /* Contenedor izquierdo - logos */
             .navbar-left-container {
                 display: flex;
                 align-items: center;
@@ -282,6 +252,7 @@ class NavbarComplete {
                 margin-right: auto;
             }
             
+            /* Enlaces de logos */
             .navbar-logo-link {
                 display: flex;
                 align-items: center;
@@ -290,7 +261,8 @@ class NavbarComplete {
                 height: 70px;
                 flex: 0 0 auto;
             }
-
+            
+            /* Contenedor circular del logo */
             .logo-circle-container {
                 width: 50px;
                 height: 50px;
@@ -304,7 +276,7 @@ class NavbarComplete {
                 transition: all 0.3s ease;
                 flex-shrink: 0;
             }
-
+            
             .navbar-logo-img {
                 width: 100%;
                 height: 100%;
@@ -312,12 +284,13 @@ class NavbarComplete {
                 transition: transform var(--transition-default);
                 display: block;
             }
-
+            
             .navbar-logo-link:hover .logo-circle-container {
                 transform: scale(1.05);
                 border-color: var(--color-accent-secondary);
             }
             
+            /* Separador entre logos */
             .logo-separator {
                 width: 2px;
                 height: 45px;
@@ -333,6 +306,7 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
+            /* Logo de texto/organización */
             .org-text-logo {
                 display: none;
                 align-items: center;
@@ -349,6 +323,14 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
+            .org-text-logo img {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                object-fit: cover;
+            }
+            
+            /* Título CENTINELA */
             .navbar-title {
                 position: absolute;
                 left: 50%;
@@ -367,6 +349,7 @@ class NavbarComplete {
                 width: max-content;
             }
             
+            /* Contenedor derecho - notificaciones y menú hamburguesa */
             .navbar-right-container {
                 display: flex;
                 align-items: center;
@@ -375,7 +358,8 @@ class NavbarComplete {
                 margin-left: auto;
                 gap: 15px;
             }
-
+            
+            /* Notificaciones */
             .navbar-notificaciones-container {
                 position: relative;
             }
@@ -418,6 +402,7 @@ class NavbarComplete {
                 border: 2px solid var(--navbar-bg);
             }
             
+            /* Dropdown de notificaciones */
             .notificaciones-dropdown {
                 position: absolute;
                 top: 100%;
@@ -574,23 +559,27 @@ class NavbarComplete {
                 opacity: 0.5;
             }
             
-            .notificaciones-footer, .notificaciones-ver-mas {
+            .notificaciones-footer,
+            .notificaciones-ver-mas {
                 padding: 12px 15px;
                 border-top: 1px solid var(--color-border-light);
                 text-align: center;
             }
             
-            .notificaciones-footer a, .notificaciones-ver-mas a {
+            .notificaciones-footer a,
+            .notificaciones-ver-mas a {
                 color: var(--color-accent-primary);
                 text-decoration: none;
                 font-size: 13px;
                 font-weight: 500;
             }
             
-            .notificaciones-footer a:hover, .notificaciones-ver-mas a:hover {
+            .notificaciones-footer a:hover,
+            .notificaciones-ver-mas a:hover {
                 text-decoration: underline;
             }
             
+            /* Botón hamburguesa */
             .navbar-hamburger-btn {
                 display: flex;
                 flex-direction: column;
@@ -630,6 +619,7 @@ class NavbarComplete {
                 transform: rotate(-45deg) translate(6.3px, -6.3px);
             }
             
+            /* Menú lateral */
             .navbar-main-menu {
                 position: fixed;
                 top: 0;
@@ -648,6 +638,14 @@ class NavbarComplete {
                 visibility: hidden;
                 opacity: 0;
                 overflow-x: hidden;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            .navbar-main-menu::-webkit-scrollbar {
+                display: none;
+                width: 0;
+                background: transparent;
             }
             
             .navbar-main-menu.active {
@@ -656,6 +654,7 @@ class NavbarComplete {
                 opacity: 1;
             }
             
+            /* Perfil del administrador */
             .admin-profile-section {
                 padding: 30px 25px 20px;
                 background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-primary) 100%);
@@ -691,7 +690,7 @@ class NavbarComplete {
                 height: 100%;
                 object-fit: cover;
             }
-
+            
             .profile-placeholder {
                 width: 100%;
                 height: 100%;
@@ -702,7 +701,7 @@ class NavbarComplete {
                 color: var(--color-accent-primary);
                 font-size: 40px;
             }
-
+            
             .profile-placeholder span {
                 font-size: 12px;
                 margin-top: 5px;
@@ -764,7 +763,7 @@ class NavbarComplete {
                 color: var(--color-text-tertiary);
                 min-height: 20px;
             }
-
+            
             .admin-organization {
                 font-size: 13px;
                 color: var(--color-accent-primary);
@@ -772,7 +771,7 @@ class NavbarComplete {
                 font-weight: 600;
             }
             
-            /* ===== ESTILOS CORREGIDOS PARA DROPDOWNS ===== */
+            /* Secciones del menú */
             .nav-section {
                 padding: 10px 15px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -796,8 +795,8 @@ class NavbarComplete {
                 font-family: 'Orbitron', sans-serif;
             }
             
-            /* Botones principales de dropdown */
-            .administracion-dropdown-btn,
+            /* Botones desplegables */
+            .gestion-dropdown-btn,
             .admin-dropdown-btn {
                 display: flex;
                 align-items: center;
@@ -817,26 +816,26 @@ class NavbarComplete {
                 margin-bottom: 15px;
             }
             
-            .administracion-dropdown-btn:hover,
+            .gestion-dropdown-btn:hover,
             .admin-dropdown-btn:hover {
                 background-color: var(--color-bg-secondary);
                 transform: translateY(-2px);
                 box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
             }
             
-            .administracion-dropdown-btn i,
+            .gestion-dropdown-btn i,
             .admin-dropdown-btn i {
                 transition: transform 0.3s ease;
                 font-size: 14px;
             }
             
-            .administracion-dropdown-btn.active i,
+            .gestion-dropdown-btn.active i,
             .admin-dropdown-btn.active i {
                 transform: rotate(180deg);
             }
             
-            /* Contenedor de opciones - SIN LÍMITE DE ALTURA */
-            .administracion-dropdown-options,
+            /* Opciones desplegables */
+            .gestion-dropdown-options,
             .admin-dropdown-options {
                 display: none;
                 flex-direction: column;
@@ -851,20 +850,19 @@ class NavbarComplete {
                 box-sizing: border-box;
             }
             
-            .administracion-dropdown-options.active,
+            .gestion-dropdown-options.active,
             .admin-dropdown-options.active {
-                /* ELIMINA max-height: none */
+                display: flex;
                 opacity: 1;
                 overflow: visible;
                 margin-bottom: 15px;
                 position: static;
-                height: auto; /* AÑADE ESTO */
-                display: flex; /* AÑADE ESTO */
-                flex-direction: column; /* AÑADE ESTO */
+                height: auto;
+                flex-direction: column;
             }
             
-            /* Opciones individuales */
-            .administracion-dropdown-option,
+            /* Items de opciones */
+            .gestion-dropdown-option,
             .admin-dropdown-option {
                 display: flex;
                 align-items: center;
@@ -885,14 +883,14 @@ class NavbarComplete {
                 box-sizing: border-box;
             }
             
-            .administracion-dropdown-option:hover,
+            .gestion-dropdown-option:hover,
             .admin-dropdown-option:hover {
                 background-color: var(--color-bg-secondary);
                 transform: translateX(5px);
                 box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
             }
             
-            .administracion-dropdown-option i,
+            .gestion-dropdown-option i,
             .admin-dropdown-option i {
                 width: 20px;
                 text-align: center;
@@ -901,7 +899,7 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
-            .administracion-dropdown-option span,
+            .gestion-dropdown-option span,
             .admin-dropdown-option span {
                 flex: 1;
                 white-space: normal;
@@ -909,7 +907,7 @@ class NavbarComplete {
                 line-height: 1.4;
             }
             
-            /* Opción especial para cerrar sesión */
+            /* Botón cerrar sesión */
             .logout-option {
                 background: linear-gradient(135deg, #ff6b6b, #ff5252);
                 border-color: #ff5252;
@@ -925,7 +923,6 @@ class NavbarComplete {
                 color: white;
             }
             
-            /* Sección de espacios vacíos */
             .menu-section {
                 padding: 20px 25px;
                 border-bottom: 1px solid var(--color-border-light);
@@ -944,7 +941,6 @@ class NavbarComplete {
                 cursor: default;
             }
             
-            /* Sección de opciones al final */
             .admin-options-section {
                 padding: 20px 25px;
                 border-top: 1px solid var(--color-border-light);
@@ -952,6 +948,7 @@ class NavbarComplete {
                 flex-shrink: 0;
             }
             
+            /* Overlay móvil */
             .navbar-mobile-overlay {
                 position: fixed;
                 top: 0;
@@ -970,58 +967,117 @@ class NavbarComplete {
                 opacity: 1;
             }
             
+            .nav-section {
+                flex-shrink: 0;
+                overflow: visible !important;
+            }
+            
+            .gestion-dropdown-options,
+            .admin-dropdown-options {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+            
+            .gestion-dropdown-options.active,
+            .admin-dropdown-options.active {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+            }
+            
+            .navbar-main-menu {
+                overflow-y: auto !important;
+            }
+            
+            .navbar-main-menu * {
+                overflow-y: visible !important;
+            }
+            
+            /* ============================================ */
+            /* MEDIA QUERIES - RESPONSIVE DESIGN */
+            /* ============================================ */
+            
+            /* Tablets y pantallas medianas */
             @media (max-width: 992px) {
+                .navbar-top-section {
+                    padding: 5px 15px;
+                }
+                
+                .navbar-left-container {
+                    gap: 8px;
+                    max-width: 35%;
+                    overflow: hidden;
+                }
+                
+                .navbar-logo-link {
+                    height: 55px;
+                }
+                
+                .logo-circle-container {
+                    width: 45px;
+                    height: 45px;
+                }
+                
+                .org-text-logo {
+                    width: 45px;
+                    height: 45px;
+                    font-size: 12px;
+                }
+                
+                .logo-separator {
+                    height: 35px;
+                    margin: 0 4px;
+                }
+                
+                .navbar-title {
+                    position: relative;
+                    left: auto;
+                    top: auto;
+                    transform: none;
+                    font-size: 20px;
+                    white-space: nowrap;
+                    margin: 0 auto;
+                    text-align: center;
+                    flex: 1;
+                    pointer-events: auto;
+                }
+                
+                .navbar-right-container {
+                    gap: 10px;
+                }
+                
                 .navbar-main-menu {
                     width: 85%;
                 }
                 
-                .logo-circle-container {
-                    width: 50px;
-                    height: 50px;
-                }
-
-                .org-text-logo {
-                    width: 50px;
-                    height: 50px;
-                    font-size: 12px;
-                }
-
-                .logo-separator {
-                    height: 35px;
-                }
-                
-                .navbar-title {
-                    font-size: 22px;
-                }
-
                 body.menu-open {
                     overflow: hidden;
                 }
                 
                 .notificaciones-dropdown {
-                    width: 300px;
-                    right: -50px;
+                    width: 320px;
+                    right: -40px;
                 }
             }
-            
-            @media (max-width: 768px) {
-                .navbar-top-section {
-                    padding: 5px 15px;
+                .navbar-left-container {
+                    gap: 6px;
+                    max-width: 30%;
                 }
                 
-                .navbar-main-menu {
-                    width: 100%;
+                .navbar-logo-link {
+                    height: 45px;
                 }
-
+                
                 .logo-circle-container {
-                    width: 40px;
-                    height: 40px;
+                    width: 38px;
+                    height: 38px;
                 }
-
+                
                 .org-text-logo {
-                    width: 40px;
-                    height: 40px;
-                    font-size: 10px;
+                    width: 38px;
+                    height: 38px;
+                    font-size: 11px;
                 }
                 
                 .logo-separator {
@@ -1030,13 +1086,27 @@ class NavbarComplete {
                 }
                 
                 .navbar-title {
-                    font-size: 18px;
-                    white-space: normal;
-                    max-width: 150px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    max-width: 35%;
                 }
                 
+                .navbar-right-container {
+                    gap: 8px;
+                }
+                
+                .navbar-notificaciones-btn {
+                    padding: 6px;
+                    font-size: 18px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 36px;
+                    height: 36px;
+                }
                 .profile-photo-container {
                     width: 100px;
                     height: 100px;
@@ -1047,46 +1117,36 @@ class NavbarComplete {
                     height: 30px;
                 }
                 
-                .admin-dropdown-btn,
-                .administracion-dropdown-btn {
+                .gestion-dropdown-btn,
+                .admin-dropdown-btn {
                     padding: 12px 14px;
                     font-size: 15px;
                 }
                 
-                .navbar-hamburger-btn {
-                    width: 36px;
-                    height: 36px;
-                }
-                
-                .hamburger-line {
-                    width: 22px;
-                    height: 2.5px;
-                }
-                
-                .admin-dropdown-options,
-                .administracion-dropdown-options {
+                .gestion-dropdown-options,
+                .admin-dropdown-options {
                     padding: 12px;
                 }
                 
-                .admin-dropdown-options.active,
-                .administracion-dropdown-options.active {
+                .gestion-dropdown-options.active,
+                .admin-dropdown-options.active {
                     max-height: 1500px;
                 }
                 
-                .admin-dropdown-option,
-                .administracion-dropdown-option {
+                .gestion-dropdown-option,
+                .admin-dropdown-option {
                     padding: 14px 12px;
                     gap: 12px;
                 }
                 
-                .admin-dropdown-option i,
-                .administracion-dropdown-option i {
+                .gestion-dropdown-option i,
+                .admin-dropdown-option i {
                     font-size: 16px;
                     width: 24px;
                 }
                 
-                .admin-dropdown-option span,
-                .administracion-dropdown-option span {
+                .gestion-dropdown-option span,
+                .admin-dropdown-option span {
                     font-size: 15px;
                     line-height: 1.4;
                 }
@@ -1096,35 +1156,63 @@ class NavbarComplete {
                 }
                 
                 .notificaciones-dropdown {
-                    width: 280px;
-                    right: -70px;
+                    width: 300px;
+                    right: -50px;
                 }
             }
             
+            /* Móviles pequeños */
             @media (max-width: 480px) {
                 .navbar-top-section {
-                    padding: 5px 10px;
+                    padding: 5px 8px;
                 }
                 
-                .navbar-title {
-                    font-size: 16px;
-                    max-width: 120px;
+                .navbar-left-container {
+                    gap: 4px;
+                    max-width: 28%;
+                }
+                
+                .navbar-logo-link {
+                    height: 38px;
                 }
                 
                 .logo-circle-container {
-                    width: 36px;
-                    height: 36px;
+                    width: 32px;
+                    height: 32px;
+                    border-width: 2px;
                 }
                 
                 .org-text-logo {
-                    width: 36px;
-                    height: 36px;
+                    width: 32px;
+                    height: 32px;
                     font-size: 9px;
+                    border-width: 2px;
                 }
                 
                 .logo-separator {
-                    height: 28px;
+                    height: 24px;
                     margin: 0 2px;
+                }
+                
+                .navbar-title {
+                    font-size: 13px;
+                    font-weight: 600;
+                    max-width: 32%;
+                }
+                
+                .navbar-right-container {
+                    gap: 5px;
+                }
+                
+                .navbar-notificaciones-btn {
+                    padding: 5px;
+                    font-size: 16px;
+                }
+                
+                .notificaciones-badge {
+                    font-size: 9px;
+                    min-width: 15px;
+                    height: 15px;
                 }
                 
                 .navbar-hamburger-btn {
@@ -1132,27 +1220,65 @@ class NavbarComplete {
                     height: 32px;
                 }
                 
-                .hamburger-line {
-                    width: 20px;
-                    height: 2px;
-                }
+           
                 
-                .admin-dropdown-option,
-                .administracion-dropdown-option {
+                .gestion-dropdown-option,
+                .admin-dropdown-option {
                     padding: 12px 10px;
                 }
                 
-                .admin-dropdown-option span,
-                .administracion-dropdown-option span {
+                .gestion-dropdown-option span,
+                .admin-dropdown-option span {
                     font-size: 14px;
                 }
                 
                 .notificaciones-dropdown {
-                    width: 260px;
-                    right: -80px;
+                    width: 280px;
+                    right: -60px;
                 }
             }
             
+ 
+                .logo-circle-container {
+                    width: 28px;
+                    height: 28px;
+                }
+                
+                .org-text-logo {
+                    width: 28px;
+                    height: 28px;
+                    font-size: 8px;
+                }
+                
+                .logo-separator {
+                    height: 20px;
+                }
+                
+                .navbar-title {
+                    font-size: 11px;
+                    max-width: 30%;
+                }
+                
+                .navbar-notificaciones-btn {
+                    padding: 4px;
+                    font-size: 14px;
+                }
+                
+                .notificaciones-badge {
+                    font-size: 8px;
+                    min-width: 13px;
+                    height: 13px;
+                }
+                
+                .navbar-hamburger-btn {
+                    width: 28px;
+                    height: 28px;
+                }
+                
+           
+            }
+            
+            /* Pantallas muy grandes */
             @media (min-width: 1600px) {
                 .navbar-top-section {
                     padding: 5px 40px;
@@ -1173,58 +1299,8 @@ class NavbarComplete {
                     font-size: 16px;
                 }
             }
-
-            /* FORZAR QUE LOS DROPDOWNS NO TENGAN SCROLL */
-            .nav-section {
-                flex-shrink: 0;
-                overflow: visible !important;
-            }
-
-            .administracion-dropdown-options,
-            .admin-dropdown-options {
-                overflow: visible !important;
-                max-height: none !important;
-                height: auto !important;
-            }
-
-            .administracion-dropdown-options.active,
-            .admin-dropdown-options.active {
-                overflow: visible !important;
-                max-height: none !important;
-                height: auto !important;
-            }
-
-            /* ELIMINAR CUALQUIER SCROLL INTERNO */
-            *::-webkit-scrollbar {
-                width: 8px;
-            }
-
-            .navbar-main-menu::-webkit-scrollbar {
-                width: 8px;
-            }
-
-            /* ASEGURAR QUE SOLO EL MENÚ PRINCIPAL TENGA SCROLL */
-            .navbar-main-menu {
-                overflow-y: auto !important;
-            }
-
-            .navbar-main-menu * {
-                overflow-y: visible !important;
-            }
-
-            /* OCULTAR EL SCROLL VISUALMENTE PERO MANTENER LA FUNCIONALIDAD */
-            .navbar-main-menu {
-                scrollbar-width: none; /* Para Firefox */
-                -ms-overflow-style: none; /* Para IE y Edge */
-            }
-
-            .navbar-main-menu::-webkit-scrollbar {
-                display: none; /* Para Chrome, Safari y Opera */
-                width: 0;
-                background: transparent;
-}
         `;
-
+        
         const styleElement = document.createElement('style');
         styleElement.id = 'navbar-complete-styles';
         styleElement.textContent = styles;
@@ -1234,28 +1310,23 @@ class NavbarComplete {
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
-        navbar.innerHTML = /*html*/`
+        navbar.innerHTML = `
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
-                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link">
+                    <a href="/usuarios/administradorSistema/panelAdministrador/panelAdministrador.html" class="navbar-logo-link">
                         <div class="logo-circle-container">
                             <img src="/assets/images/logo.png" alt="Centinela Logo" class="navbar-logo-img">
                         </div>
                     </a>
-
                     <div class="logo-separator"></div>
-
-                    <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link" id="orgLogoLink">
+                    <a href="/usuarios/administradorSistema/panelAdministrador/panelAdministrador.html" class="navbar-logo-link" id="orgLogoLink">
                         <div class="logo-circle-container" id="orgLogoContainer">
-                            <img src="/assets/images/logo.png" alt="Logo Organización" 
-                                 class="navbar-logo-img" id="orgLogoImg">
-                            <div class="org-text-logo" id="orgTextLogo" style="display: none;">ORG</div>
+                            <img src="/assets/images/logo.png" alt="Logo Organización" class="navbar-logo-img" id="orgLogoImg">
+                            <div class="org-text-logo" id="orgTextLogo" style="display: none;"></div>
                         </div>
                     </a>
                 </div>
-
                 <h1 class="navbar-title">CENTINELA</h1>
-
                 <div class="navbar-right-container">
                     <div class="navbar-notificaciones-container">
                         <button class="navbar-notificaciones-btn" id="notificacionesBtn">
@@ -1276,11 +1347,10 @@ class NavbarComplete {
                                 </div>
                             </div>
                             <div class="notificaciones-footer">
-                                <a href="/usuarios/administrador/notificaciones/notificaciones.html">Ver todas</a>
+                                <a href="#" class="ver-todas-notificaciones-footer">Ver todas</a>
                             </div>
                         </div>
                     </div>
-
                     <button class="navbar-hamburger-btn" id="navbarHamburger" aria-label="Toggle menu">
                         <span class="hamburger-line"></span>
                         <span class="hamburger-line"></span>
@@ -1288,11 +1358,8 @@ class NavbarComplete {
                     </button>
                 </div>
             </div>
-
             <div class="navbar-mobile-overlay" id="navbarMobileOverlay"></div>
-
             <div class="navbar-main-menu" id="navbarMainMenu">
-
                 <div class="admin-profile-section">
                     <div class="profile-photo-container">
                         <div class="admin-profile-circle">
@@ -1302,11 +1369,10 @@ class NavbarComplete {
                                 <span>Admin</span>
                             </div>
                         </div>
-                        <a href="/usuarios/administrador/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
+                        <a href="/usuarios/administradorSistema/editarAdministrador/editarAdministrador.html" class="edit-profile-icon" id="editProfileIcon">
                             <i class="fas fa-pencil-alt"></i>
                         </a>
                     </div>
-
                     <div class="admin-info">
                         <div class="admin-name" id="adminName">Cargando...</div>
                         <div class="admin-role">Administrador</div>
@@ -1314,89 +1380,40 @@ class NavbarComplete {
                         <div class="admin-organization" id="adminOrganization"></div>
                     </div>
                 </div>
-
                 <div class="nav-section">
-                    <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
+                    <button class="gestion-dropdown-btn" id="gestionDropdownBtn">
                         <span>Gestionar</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
-
-                    <div class="administracion-dropdown-options" id="administracionDropdownOptions">
-                        <a href="/usuarios/administrador/areas/areas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-map"></i>
-                            <span>Áreas</span>
+                    <div class="gestion-dropdown-options" id="gestionDropdownOptions">
+                        <a href="/usuarios/administradorSistema/consumoGlobal/consumoGlobal.html" class="gestion-dropdown-option">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Consumo Global</span>
                         </a>
-
-                        <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-tags"></i>
-                            <span>Categorías</span>
+                        <a href="/usuarios/administradorSistema/cuentasPM/cuentasPM.html" class="gestion-dropdown-option">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Cuentas PM</span>
                         </a>
-
-                        <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-store"></i>
-                            <span>Sucursales</span>
+                        <a href="/usuarios/administradorSistema/registroPM/registroPM.html" class="gestion-dropdown-option">
+                            <i class="fa-solid fa-user-plus"></i>
+                            <span>Registro PM</span>
                         </a>
-
-                        <a href="/usuarios/administrador/regiones/regiones.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-location-dot"></i>
-                            <span>Regiones</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/permisos/permisos.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-lock"></i>
-                            <span>Permisos</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/usuarios/usuarios.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-users-gear"></i>
-                            <span>Usuarios</span>
+                        <a href="/usuarios/administradorSistema/temporalCreacionAS/temporalCreacionAS.html" class="gestion-dropdown-option">
+                            <i class="fa-solid fa-clock"></i>
+                            <span>Temporal Creación AS</span>
                         </a>
                     </div>
                 </div>
-
-                <div class="nav-section">
-                    <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
-                        <span>Incidencias</span>
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </button>
-
-                    <div class="administracion-dropdown-options" id="incidenciasDropdownOptions">
-                        <a href="/usuarios/administrador/incidencias/incidencias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-list"></i>
-                            <span>Lista de Incidencias</span>
-                        </a>
-
-                        <a href="/usuarios/administrador/crearIncidencias/crearIncidencias.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-plus-circle"></i>
-                            <span>Crear Incidencia</span>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="nav-section">
-                    <div class="nav-section-title">
-                        <i class="fa-solid fa-book"></i>
-                        <span>Bitácora</span>
-                    </div>
-
-                    <a href="/usuarios/administrador/bitacoraActividades/bitacoraActividades.html" class="admin-dropdown-option" style="width: 100%;">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                        <span>Bitácora de Actividades</span>
-                    </a>
-                </div>
-
                 <div class="admin-options-section">
                     <button class="admin-dropdown-btn" id="adminDropdownBtn">
                         <span>Configuración</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </button>
-
                     <div class="admin-dropdown-options" id="adminDropdownOptions">
-                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
+                        <a href="/usuarios/administradorSistema/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-palette"></i>
                             <span>Personalización</span>
                         </a>
-
                         <a href="#" class="admin-dropdown-option logout-option" id="logoutOption">
                             <i class="fa-solid fa-right-from-bracket"></i>
                             <span>Cerrar Sesión</span>
@@ -1405,158 +1422,66 @@ class NavbarComplete {
                 </div>
             </div>
         `;
-
         document.body.prepend(navbar);
     }
 
     adjustBodyPadding() {
         const navbar = document.getElementById('complete-navbar');
         if (!navbar) return;
-
-        const updatePadding = () => {
-            document.body.style.paddingTop = `${navbar.offsetHeight}px`;
-        };
-
+        const updatePadding = () => document.body.style.paddingTop = `${navbar.offsetHeight}px`;
         updatePadding();
-
-        const resizeObserver = new ResizeObserver(updatePadding);
-        resizeObserver.observe(navbar);
+        new ResizeObserver(updatePadding).observe(navbar);
     }
 
     loadAdminDataFromLocalStorage() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-
-            if (!isLoggedIn) {
-                return false;
-            }
-
+            if (!isLoggedIn) return false;
             const userDataString = localStorage.getItem('userData');
-
             if (userDataString) {
                 const userData = JSON.parse(userDataString);
-
-                let fotoUsuario = null;
-                let fotoOrganizacion = null;
-
-                if (userData.fotoUsuario && userData.fotoUsuario.length > 10) {
-                    fotoUsuario = userData.fotoUsuario;
-                } else {
-                    const userFotoKey = localStorage.getItem('userFoto');
-                    if (userFotoKey && userFotoKey.length > 10) {
-                        fotoUsuario = userFotoKey;
-                    }
-                }
-
-                if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) {
-                    fotoOrganizacion = userData.fotoOrganizacion;
-                } else {
-                    const orgLogoKey = localStorage.getItem('organizacionLogo');
-                    if (orgLogoKey && orgLogoKey.length > 10) {
-                        fotoOrganizacion = orgLogoKey;
-                    }
-                }
-
-                this.currentAdmin = {
-                    id: userData.id || localStorage.getItem('userId'),
-                    uid: userData.id,
-                    correoElectronico: userData.email || localStorage.getItem('userEmail'),
-                    nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'),
-                    rol: userData.rol || localStorage.getItem('userRole'),
-                    organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
-                    organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
-                    fotoUsuario: fotoUsuario,
-                    fotoOrganizacion: fotoOrganizacion,
-                    status: userData.status || 'activo',
-                    verificado: userData.verificado || true,
-                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
-                };
-
+                let fotoUsuario = null, fotoOrganizacion = null;
+                if (userData.fotoUsuario && userData.fotoUsuario.length > 10) fotoUsuario = userData.fotoUsuario;
+                else { const userFotoKey = localStorage.getItem('userFoto'); if (userFotoKey && userFotoKey.length > 10) fotoUsuario = userFotoKey; }
+                if (userData.fotoOrganizacion && userData.fotoOrganizacion.length > 10) fotoOrganizacion = userData.fotoOrganizacion;
+                else { const orgLogoKey = localStorage.getItem('organizacionLogo'); if (orgLogoKey && orgLogoKey.length > 10) fotoOrganizacion = orgLogoKey; }
+                this.currentAdmin = { id: userData.id || localStorage.getItem('userId'), uid: userData.id, correoElectronico: userData.email || localStorage.getItem('userEmail'), nombreCompleto: userData.nombreCompleto || localStorage.getItem('userNombre'), rol: userData.rol || localStorage.getItem('userRole'), organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'), organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'), fotoUsuario, fotoOrganizacion, status: userData.status || 'activo', verificado: userData.verificado || true, ultimoAcceso: userData.ultimoAcceso || userData.sessionStart };
                 return true;
             }
-
-            this.currentAdmin = {
-                id: localStorage.getItem('userId'),
-                correoElectronico: localStorage.getItem('userEmail'),
-                nombreCompleto: localStorage.getItem('userNombre'),
-                rol: localStorage.getItem('userRole'),
-                organizacion: localStorage.getItem('userOrganizacion'),
-                organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
-                fotoUsuario: localStorage.getItem('userFoto') || null,
-                fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
-            };
-
-            if (this.currentAdmin.nombreCompleto && this.currentAdmin.rol) {
-                return true;
-            }
-
-            return false;
-
-        } catch (error) {
-            return false;
-        }
+            this.currentAdmin = { id: localStorage.getItem('userId'), correoElectronico: localStorage.getItem('userEmail'), nombreCompleto: localStorage.getItem('userNombre'), rol: localStorage.getItem('userRole'), organizacion: localStorage.getItem('userOrganizacion'), organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'), fotoUsuario: localStorage.getItem('userFoto') || null, fotoOrganizacion: localStorage.getItem('organizacionLogo') || null };
+            return !!(this.currentAdmin.nombreCompleto && this.currentAdmin.rol);
+        } catch (error) { return false; }
     }
 
     async loadAdminDataFromFirebase() {
         try {
             const { UserManager } = await import('/clases/user.js');
             this.userManager = new UserManager();
-
             await new Promise(resolve => setTimeout(resolve, 1000));
-
             if (this.userManager.currentUser) {
                 const firebaseUser = this.userManager.currentUser;
-
                 let needsUpdate = false;
-
-                if (!this.currentAdmin) {
-                    needsUpdate = true;
-                } else {
-                    if (firebaseUser.nombreCompleto !== this.currentAdmin.nombreCompleto) needsUpdate = true;
-                    if (firebaseUser.fotoUsuario !== this.currentAdmin.fotoUsuario) needsUpdate = true;
-                    if (firebaseUser.fotoOrganizacion !== this.currentAdmin.fotoOrganizacion) needsUpdate = true;
-                    if (firebaseUser.organizacion !== this.currentAdmin.organizacion) needsUpdate = true;
-                    if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
-                    if (firebaseUser.rol !== this.currentAdmin.rol) needsUpdate = true;
-                }
-
+                if (!this.currentAdmin) needsUpdate = true;
+                else if (firebaseUser.nombreCompleto !== this.currentAdmin.nombreCompleto) needsUpdate = true;
+                else if (firebaseUser.fotoUsuario !== this.currentAdmin.fotoUsuario) needsUpdate = true;
+                else if (firebaseUser.fotoOrganizacion !== this.currentAdmin.fotoOrganizacion) needsUpdate = true;
+                else if (firebaseUser.organizacion !== this.currentAdmin.organizacion) needsUpdate = true;
+                else if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
+                else if (firebaseUser.rol !== this.currentAdmin.rol) needsUpdate = true;
                 if (needsUpdate) {
-                    this.currentAdmin = {
-                        ...this.currentAdmin,
-                        ...firebaseUser,
-                        rol: firebaseUser.rol
-                    };
-
+                    this.currentAdmin = { ...this.currentAdmin, ...firebaseUser, rol: firebaseUser.rol };
                     this.updateNavbarWithAdminData();
                     this.updateLocalStorageFromFirebase(firebaseUser);
                 }
             }
-
-        } catch (error) {
-        }
+        } catch (error) {}
     }
 
     updateLocalStorageFromFirebase(userData) {
         try {
             const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
-            const updatedUserData = {
-                ...currentUserData,
-                id: userData.id,
-                uid: userData.id,
-                email: userData.correoElectronico,
-                nombreCompleto: userData.nombreCompleto,
-                rol: userData.rol,
-                organizacion: userData.organizacion,
-                organizacionCamelCase: userData.organizacionCamelCase,
-                fotoUsuario: userData.fotoUsuario,
-                fotoOrganizacion: userData.fotoOrganizacion,
-                status: userData.status,
-                verificado: userData.verificado,
-                ultimoAcceso: userData.ultimoAcceso
-            };
-
+            const updatedUserData = { ...currentUserData, id: userData.id, uid: userData.id, email: userData.correoElectronico, nombreCompleto: userData.nombreCompleto, rol: userData.rol, organizacion: userData.organizacion, organizacionCamelCase: userData.organizacionCamelCase, fotoUsuario: userData.fotoUsuario, fotoOrganizacion: userData.fotoOrganizacion, status: userData.status, verificado: userData.verificado, ultimoAcceso: userData.ultimoAcceso };
             localStorage.setItem('userData', JSON.stringify(updatedUserData));
-
             if (userData.fotoUsuario) localStorage.setItem('userFoto', userData.fotoUsuario);
             if (userData.fotoOrganizacion) localStorage.setItem('organizacionLogo', userData.fotoOrganizacion);
             if (userData.nombreCompleto) localStorage.setItem('userNombre', userData.nombreCompleto);
@@ -1564,52 +1489,60 @@ class NavbarComplete {
             if (userData.rol) localStorage.setItem('userRole', userData.rol);
             if (userData.organizacion) localStorage.setItem('userOrganizacion', userData.organizacion);
             if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
-
-        } catch (error) {
-        }
+        } catch (error) {}
     }
 
     updateNavbarWithAdminData() {
         if (!this.currentAdmin) {
-            const adminName = document.getElementById('adminName');
-            const adminEmail = document.getElementById('adminEmail');
-            const adminOrganization = document.getElementById('adminOrganization');
-
+            const adminName = document.getElementById('adminName'), adminEmail = document.getElementById('adminEmail'), adminOrganization = document.getElementById('adminOrganization');
             if (adminName) adminName.textContent = 'No autenticado';
             if (adminEmail) adminEmail.textContent = 'Inicia sesión para continuar';
             if (adminOrganization) adminOrganization.textContent = '';
-
             return;
         }
-
         this.updateOrganizationLogo();
         this.updateAdminMenuInfo();
         this.setupAdminButtons();
     }
 
-    setupAdminButtons() {
-    }
+    setupAdminButtons() {}
 
     updateOrganizationLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
         const orgLogoLink = document.getElementById('orgLogoLink');
         const orgLogoContainer = document.getElementById('orgLogoContainer');
-
+        
         if (!organizationLogoImg || !orgTextLogo || !orgLogoLink || !orgLogoContainer) return;
-
-        if (this.currentAdmin?.fotoOrganizacion && this.currentAdmin.fotoOrganizacion.length > 10) {
-            organizationLogoImg.src = this.currentAdmin.fotoOrganizacion;
-            organizationLogoImg.alt = `Logo de ${this.currentAdmin.organizacion || 'Organización'}`;
-            organizationLogoImg.style.display = 'block';
-            orgTextLogo.style.display = 'none';
-            organizationLogoImg.title = this.currentAdmin.organizacion || 'Organización';
-            organizationLogoImg.setAttribute('data-organization', this.currentAdmin.organizacion || '');
+        
+        const fotoAdmin = this.currentAdmin?.fotoUsuario;
+        
+        if (fotoAdmin && fotoAdmin.length > 10) {
+            orgTextLogo.innerHTML = '';
+            const imgElement = document.createElement('img');
+            imgElement.src = fotoAdmin;
+            imgElement.alt = `Foto de ${this.currentAdmin?.nombreCompleto || 'Administrador'}`;
+            imgElement.style.width = '100%';
+            imgElement.style.height = '100%';
+            imgElement.style.borderRadius = '50%';
+            imgElement.style.objectFit = 'cover';
+            orgTextLogo.appendChild(imgElement);
+            orgTextLogo.style.display = 'flex';
+            organizationLogoImg.style.display = 'none';
+            orgTextLogo.style.backgroundColor = 'transparent';
+            orgTextLogo.style.border = '3px solid var(--color-accent-primary)';
         } else {
-            this.showOrgTextLogo();
+            orgTextLogo.innerHTML = '';
+            const orgName = this.currentAdmin?.organizacion || 'Organización';
+            const initials = orgName.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substring(0, 3);
+            orgTextLogo.textContent = initials;
+            orgTextLogo.style.display = 'flex';
+            organizationLogoImg.style.display = 'none';
+            orgTextLogo.style.backgroundColor = 'var(--color-accent-primary)';
+            orgTextLogo.style.color = 'white';
         }
-
-        orgLogoLink.href = '/usuarios/administrador/panelControl/panelControl.html';
+        
+        orgLogoLink.href = '/usuarios/administradorSistema/panelAdministrador/panelAdministrador.html';
         orgLogoContainer.style.borderRadius = '50%';
         orgLogoContainer.style.overflow = 'hidden';
     }
@@ -1617,72 +1550,60 @@ class NavbarComplete {
     showOrgTextLogo() {
         const organizationLogoImg = document.getElementById('orgLogoImg');
         const orgTextLogo = document.getElementById('orgTextLogo');
-
         if (!organizationLogoImg || !orgTextLogo) return;
-
-        organizationLogoImg.style.display = 'none';
+        
+        const fotoAdmin = this.currentAdmin?.fotoUsuario;
+        
+        if (fotoAdmin && fotoAdmin.length > 10) {
+            orgTextLogo.innerHTML = '';
+            const imgElement = document.createElement('img');
+            imgElement.src = fotoAdmin;
+            imgElement.alt = `Foto de ${this.currentAdmin?.nombreCompleto || 'Administrador'}`;
+            imgElement.style.width = '100%';
+            imgElement.style.height = '100%';
+            imgElement.style.borderRadius = '50%';
+            imgElement.style.objectFit = 'cover';
+            orgTextLogo.appendChild(imgElement);
+            orgTextLogo.style.backgroundColor = 'transparent';
+        } else {
+            orgTextLogo.innerHTML = '';
+            const orgName = this.currentAdmin?.organizacion || 'Organización';
+            const initials = orgName.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substring(0, 3);
+            orgTextLogo.textContent = initials;
+            orgTextLogo.style.backgroundColor = 'var(--color-accent-primary)';
+            orgTextLogo.style.color = 'white';
+        }
+        
         orgTextLogo.style.display = 'flex';
-
-        const orgName = this.currentAdmin?.organizacion || 'Organización';
-        const initials = orgName
-            .split(' ')
-            .map(word => word.charAt(0))
-            .join('')
-            .toUpperCase()
-            .substring(0, 3);
-
-        orgTextLogo.textContent = initials;
-        orgTextLogo.title = orgName;
+        organizationLogoImg.style.display = 'none';
     }
 
     updateAdminMenuInfo() {
         const adminName = document.getElementById('adminName');
-        if (adminName) {
-            adminName.textContent = this.currentAdmin?.nombreCompleto || 'Administrador';
-        }
-
+        if (adminName) adminName.textContent = this.currentAdmin?.nombreCompleto || 'Administrador';
         const adminEmail = document.getElementById('adminEmail');
-        if (adminEmail) {
-            adminEmail.textContent = this.currentAdmin?.correoElectronico || 'No especificado';
-        }
-
+        if (adminEmail) adminEmail.textContent = this.currentAdmin?.correoElectronico || 'No especificado';
         const adminOrganization = document.getElementById('adminOrganization');
-        if (adminOrganization) {
-            adminOrganization.textContent = this.currentAdmin?.organizacion || 'Sin organización';
-        }
-
-        const adminProfileImg = document.getElementById('adminProfileImg');
-        const profilePlaceholder = document.getElementById('profilePlaceholder');
-
+        if (adminOrganization) adminOrganization.textContent = this.currentAdmin?.organizacion || 'Sin organización';
+        const adminProfileImg = document.getElementById('adminProfileImg'), profilePlaceholder = document.getElementById('profilePlaceholder');
         if (adminProfileImg && profilePlaceholder) {
             if (this.currentAdmin?.fotoUsuario && this.currentAdmin.fotoUsuario.length > 10) {
                 adminProfileImg.src = this.currentAdmin.fotoUsuario;
                 adminProfileImg.style.display = 'block';
                 profilePlaceholder.style.display = 'none';
                 adminProfileImg.alt = `Foto de ${this.currentAdmin.nombreCompleto || 'Administrador'}`;
-            } else {
-                this.showProfilePlaceholder();
-            }
+            } else this.showProfilePlaceholder();
         }
     }
 
     showProfilePlaceholder() {
-        const adminProfileImg = document.getElementById('adminProfileImg');
-        const profilePlaceholder = document.getElementById('profilePlaceholder');
-
+        const adminProfileImg = document.getElementById('adminProfileImg'), profilePlaceholder = document.getElementById('profilePlaceholder');
         if (!adminProfileImg || !profilePlaceholder) return;
-
         adminProfileImg.style.display = 'none';
         profilePlaceholder.style.display = 'flex';
-
         const placeholderText = profilePlaceholder.querySelector('span');
         if (placeholderText && this.currentAdmin?.nombreCompleto) {
-            const initials = this.currentAdmin.nombreCompleto
-                .split(' ')
-                .map(word => word.charAt(0))
-                .join('')
-                .toUpperCase()
-                .substring(0, 2);
+            const initials = this.currentAdmin.nombreCompleto.split(' ').map(word => word.charAt(0)).join('').toUpperCase().substring(0, 2);
             placeholderText.textContent = initials;
         }
     }
@@ -1692,41 +1613,28 @@ class NavbarComplete {
         this.setupScroll();
         this.loadFontAwesome();
         this.setupAdminDropdown();
-        this.setupAdministracionDropdown();
-        this.setupIncidenciasDropdown();
+        this.setupGestionDropdown();
         this.loadOrbitronFont();
         this.setupLogout();
         this._configurarNotificacionesDropdown();
+        const verTodasFooter = document.querySelector('.ver-todas-notificaciones-footer');
+        if (verTodasFooter) verTodasFooter.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this._mostrarModalNotificaciones(); });
     }
 
     setupMenu() {
-        const hamburgerBtn = document.getElementById('navbarHamburger');
-        const mainMenu = document.getElementById('navbarMainMenu');
-        const overlay = document.getElementById('navbarMobileOverlay');
-
+        const hamburgerBtn = document.getElementById('navbarHamburger'), mainMenu = document.getElementById('navbarMainMenu'), overlay = document.getElementById('navbarMobileOverlay');
         if (!hamburgerBtn || !mainMenu || !overlay) return;
-
         const toggleMenu = () => {
             this.isMenuOpen = !this.isMenuOpen;
-
             mainMenu.classList.toggle('active', this.isMenuOpen);
             hamburgerBtn.classList.toggle('active', this.isMenuOpen);
             overlay.classList.toggle('active', this.isMenuOpen);
             document.body.classList.toggle('menu-open', this.isMenuOpen);
-
             if (!this.isMenuOpen) {
-                if (this.isAdminDropdownOpen) {
-                    this.toggleAdminDropdown(false);
-                }
-                if (this.isAdministracionDropdownOpen) {
-                    this.toggleAdministracionDropdown(false);
-                }
-                if (this.isIncidenciasDropdownOpen) {
-                    this.toggleIncidenciasDropdown(false);
-                }
+                if (this.isAdminDropdownOpen) this.toggleAdminDropdown(false);
+                if (this.isGestionDropdownOpen) this.toggleGestionDropdown(false);
             }
         };
-
         const closeMenu = () => {
             if (this.isMenuOpen) {
                 this.isMenuOpen = false;
@@ -1734,370 +1642,123 @@ class NavbarComplete {
                 hamburgerBtn.classList.remove('active');
                 overlay.classList.remove('active');
                 document.body.classList.remove('menu-open');
-
-                if (this.isAdminDropdownOpen) {
-                    this.toggleAdminDropdown(false);
-                }
-                if (this.isAdministracionDropdownOpen) {
-                    this.toggleAdministracionDropdown(false);
-                }
-                if (this.isIncidenciasDropdownOpen) {
-                    this.toggleIncidenciasDropdown(false);
-                }
+                if (this.isAdminDropdownOpen) this.toggleAdminDropdown(false);
+                if (this.isGestionDropdownOpen) this.toggleGestionDropdown(false);
             }
         };
-
         hamburgerBtn.addEventListener('click', toggleMenu);
         overlay.addEventListener('click', closeMenu);
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isMenuOpen) closeMenu();
-        });
-
-        window.addEventListener('resize', () => {
-            if (window.innerWidth > 992 && this.isMenuOpen) closeMenu();
-        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.isMenuOpen) closeMenu(); });
+        window.addEventListener('resize', () => { if (window.innerWidth > 992 && this.isMenuOpen) closeMenu(); });
     }
 
-    setupAdministracionDropdown() {
-        const dropdownBtn = document.getElementById('administracionDropdownBtn');
-        const dropdownOptions = document.getElementById('administracionDropdownOptions');
-
+    setupGestionDropdown() {
+        const dropdownBtn = document.getElementById('gestionDropdownBtn'), dropdownOptions = document.getElementById('gestionDropdownOptions');
         if (!dropdownBtn || !dropdownOptions) return;
-
         const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
-            if (this.isIncidenciasDropdownOpen) {
-                this.toggleIncidenciasDropdown(false);
-            }
-            if (this.isAdminDropdownOpen) {
-                this.toggleAdminDropdown(false);
-            }
-            
-            this.isAdministracionDropdownOpen = !this.isAdministracionDropdownOpen;
-            this.toggleAdministracionDropdown(this.isAdministracionDropdownOpen);
+            if (this.isAdminDropdownOpen) this.toggleAdminDropdown(false);
+            this.isGestionDropdownOpen = !this.isGestionDropdownOpen;
+            this.toggleGestionDropdown(this.isGestionDropdownOpen);
         };
-
-        dropdownBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleDropdown();
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!dropdownBtn.contains(e.target) &&
-                !dropdownOptions.contains(e.target) &&
-                this.isAdministracionDropdownOpen) {
-                this.toggleAdministracionDropdown(false);
-            }
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isAdministracionDropdownOpen) {
-                this.toggleAdministracionDropdown(false);
-            }
-        });
-
-        const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
-        options.forEach(option => {
-            option.addEventListener('click', () => {
-                setTimeout(() => {
-                    this.toggleAdministracionDropdown(false);
-                }, 100);
-            });
-        });
-    }
-
-    setupIncidenciasDropdown() {
-        const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
-        const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
-
-        if (!dropdownBtn || !dropdownOptions) return;
-
-        const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
-            if (this.isAdministracionDropdownOpen) {
-                this.toggleAdministracionDropdown(false);
-            }
-            if (this.isAdminDropdownOpen) {
-                this.toggleAdminDropdown(false);
-            }
-            
-            this.isIncidenciasDropdownOpen = !this.isIncidenciasDropdownOpen;
-            this.toggleIncidenciasDropdown(this.isIncidenciasDropdownOpen);
-        };
-
-        dropdownBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleDropdown();
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!dropdownBtn.contains(e.target) &&
-                !dropdownOptions.contains(e.target) &&
-                this.isIncidenciasDropdownOpen) {
-                this.toggleIncidenciasDropdown(false);
-            }
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isIncidenciasDropdownOpen) {
-                this.toggleIncidenciasDropdown(false);
-            }
-        });
-
-        const options = dropdownOptions.querySelectorAll('.administracion-dropdown-option');
-        options.forEach(option => {
-            option.addEventListener('click', () => {
-                setTimeout(() => {
-                    this.toggleIncidenciasDropdown(false);
-                }, 100);
-            });
-        });
+        dropdownBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
+        document.addEventListener('click', (e) => { if (!dropdownBtn.contains(e.target) && !dropdownOptions.contains(e.target) && this.isGestionDropdownOpen) this.toggleGestionDropdown(false); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.isGestionDropdownOpen) this.toggleGestionDropdown(false); });
+        dropdownOptions.querySelectorAll('.gestion-dropdown-option').forEach(option => { option.addEventListener('click', () => setTimeout(() => this.toggleGestionDropdown(false), 100)); });
     }
 
     setupAdminDropdown() {
-        const dropdownBtn = document.getElementById('adminDropdownBtn');
-        const dropdownOptions = document.getElementById('adminDropdownOptions');
-
+        const dropdownBtn = document.getElementById('adminDropdownBtn'), dropdownOptions = document.getElementById('adminDropdownOptions');
         if (!dropdownBtn || !dropdownOptions) return;
-
         const toggleDropdown = () => {
-            // Cerrar los otros dropdowns
-            if (this.isAdministracionDropdownOpen) {
-                this.toggleAdministracionDropdown(false);
-            }
-            if (this.isIncidenciasDropdownOpen) {
-                this.toggleIncidenciasDropdown(false);
-            }
-            
+            if (this.isGestionDropdownOpen) this.toggleGestionDropdown(false);
             this.isAdminDropdownOpen = !this.isAdminDropdownOpen;
             this.toggleAdminDropdown(this.isAdminDropdownOpen);
         };
-
-        dropdownBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleDropdown();
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!dropdownBtn.contains(e.target) &&
-                !dropdownOptions.contains(e.target) &&
-                this.isAdminDropdownOpen) {
-                this.toggleAdminDropdown(false);
-            }
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isAdminDropdownOpen) {
-                this.toggleAdminDropdown(false);
-            }
-        });
+        dropdownBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
+        document.addEventListener('click', (e) => { if (!dropdownBtn.contains(e.target) && !dropdownOptions.contains(e.target) && this.isAdminDropdownOpen) this.toggleAdminDropdown(false); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.isAdminDropdownOpen) this.toggleAdminDropdown(false); });
     }
 
     setupLogout() {
         const logoutOption = document.getElementById('logoutOption');
-
         if (!logoutOption) return;
-
-        logoutOption.addEventListener('click', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const confirmLogout = await this.showLogoutConfirmation();
-
-            if (confirmLogout) {
-                await this.performLogout();
-            }
-        });
+        logoutOption.addEventListener('click', async (e) => { e.preventDefault(); e.stopPropagation(); (await this.showLogoutConfirmation()) && await this.performLogout(); });
     }
 
     async showLogoutConfirmation() {
         return new Promise((resolve) => {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: '¿Cerrar sesión?',
-                    text: '¿Estás seguro de que deseas salir del sistema?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'CONFIRMAR',
-                    cancelButtonText: 'CANCELAR'
-                }).then((result) => {
-                    resolve(result.isConfirmed);
-                });
-            } else {
-                const confirmed = confirm('¿Estás seguro de que deseas cerrar sesión?');
-                resolve(confirmed);
-            }
+            if (typeof Swal !== 'undefined') Swal.fire({ title: '¿Cerrar sesión?', text: '¿Estás seguro de que deseas salir del sistema?', icon: 'warning', showCancelButton: true, confirmButtonText: 'CONFIRMAR', cancelButtonText: 'CANCELAR' }).then(result => resolve(result.isConfirmed));
+            else resolve(confirm('¿Estás seguro de que deseas cerrar sesión?'));
         });
     }
 
     async performLogout() {
         try {
-            if (this.userManager && typeof this.userManager.logout === 'function') {
-                await this.userManager.logout();
-            } else {
-                await this.signOutFirebaseDirectly();
-            }
-
+            if (this.intervalNotificaciones) clearInterval(this.intervalNotificaciones), this.intervalNotificaciones = null;
+            if (this.userManager && typeof this.userManager.logout === 'function') await this.userManager.logout();
+            else await this.signOutFirebaseDirectly();
             this.clearAllStorage();
-
             await this.showLogoutSuccessMessage();
-
             this.redirectToLogin();
-
-        } catch (error) {
-            this.clearAllStorage();
-            this.redirectToLogin();
-        }
+        } catch (error) { this.clearAllStorage(); this.redirectToLogin(); }
     }
 
     async signOutFirebaseDirectly() {
         try {
-            if (typeof firebase !== 'undefined' && firebase.auth) {
-                await firebase.auth().signOut();
-                return;
-            }
-
+            if (typeof firebase !== 'undefined' && firebase.auth) { await firebase.auth().signOut(); return; }
             const { getAuth, signOut } = await import('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js');
-
             const firebaseApps = typeof firebase !== 'undefined' ? firebase.apps : [];
-            if (firebaseApps && firebaseApps.length > 0) {
-                const auth = getAuth(firebaseApps[0]);
-                await signOut(auth);
-            }
-
-        } catch (error) {
-        }
+            if (firebaseApps && firebaseApps.length > 0) await signOut(getAuth(firebaseApps[0]));
+        } catch (error) {}
     }
 
     clearAllStorage() {
-        try {
-            localStorage.clear();
-            sessionStorage.clear();
-            this.clearSessionCookies();
-            this.clearIndexedDB();
-
-        } catch (error) {
-        }
+        try { localStorage.clear(); sessionStorage.clear(); this.clearSessionCookies(); this.clearIndexedDB(); } catch (error) {}
     }
 
     clearSessionCookies() {
         try {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i];
-                const eqPos = cookie.indexOf('=');
-                const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-
-                if (name.includes('session') || name.includes('auth') || name.includes('firebase')) {
-                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-                }
-            }
-        } catch (error) {
-        }
+            document.cookie.split(';').forEach(cookie => {
+                const name = cookie.indexOf('=') > -1 ? cookie.substr(0, cookie.indexOf('=')).trim() : cookie.trim();
+                if (name.includes('session') || name.includes('auth') || name.includes('firebase')) document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+            });
+        } catch (error) {}
     }
 
     async clearIndexedDB() {
-        try {
-            const databases = ['firebaseLocalStorageDb', 'firestore', 'centinela-db'];
-
-            for (const dbName of databases) {
-                try {
-                    await indexedDB.deleteDatabase(dbName);
-                } catch (e) {
-                }
-            }
-        } catch (error) {
-        }
+        try { for (const dbName of ['firebaseLocalStorageDb', 'firestore', 'centinela-db']) await indexedDB.deleteDatabase(dbName); } catch (error) {}
     }
 
     async showLogoutSuccessMessage() {
-        if (typeof Swal !== 'undefined') {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Sesión cerrada',
-                text: 'Has cerrado sesión exitosamente. Redirigiendo...',
-                timer: 2000,
-                showConfirmButton: false,
-                timerProgressBar: true,
-                willClose: () => {
-                    this.redirectToLogin();
-                }
-            });
-        } else {
-            alert('Sesión cerrada exitosamente. Redirigiendo...');
-        }
+        if (typeof Swal !== 'undefined') await Swal.fire({ icon: 'success', title: 'Sesión cerrada', text: 'Has cerrado sesión exitosamente. Redirigiendo...', timer: 2000, showConfirmButton: false, timerProgressBar: true, willClose: () => this.redirectToLogin() });
+        else alert('Sesión cerrada exitosamente. Redirigiendo...');
     }
 
     redirectToLogin() {
         const timestamp = new Date().getTime();
-        const loginUrl = `/usuarios/visitantes/inicioSesion/inicioSesion.html?logout=true&timestamp=${timestamp}&nocache=1`;
-        window.location.href = loginUrl;
-
-        setTimeout(() => {
-            window.location.replace(loginUrl);
-        }, 1000);
+        window.location.href = `/usuarios/visitantes/inicioSesion/inicioSesion.html?logout=true&timestamp=${timestamp}&nocache=1`;
+        setTimeout(() => window.location.replace(`/usuarios/visitantes/inicioSesion/inicioSesion.html?logout=true&timestamp=${timestamp}&nocache=1`), 1000);
     }
 
     toggleAdminDropdown(show) {
-        const dropdownBtn = document.getElementById('adminDropdownBtn');
-        const dropdownOptions = document.getElementById('adminDropdownOptions');
-
-        if (dropdownBtn && dropdownOptions) {
-            dropdownBtn.classList.toggle('active', show);
-            dropdownOptions.classList.toggle('active', show);
-            this.isAdminDropdownOpen = show;
-        }
+        const dropdownBtn = document.getElementById('adminDropdownBtn'), dropdownOptions = document.getElementById('adminDropdownOptions');
+        if (dropdownBtn && dropdownOptions) dropdownBtn.classList.toggle('active', show), dropdownOptions.classList.toggle('active', show), this.isAdminDropdownOpen = show;
     }
 
-    toggleAdministracionDropdown(show) {
-        const dropdownBtn = document.getElementById('administracionDropdownBtn');
-        const dropdownOptions = document.getElementById('administracionDropdownOptions');
-
-        if (dropdownBtn && dropdownOptions) {
-            dropdownBtn.classList.toggle('active', show);
-            dropdownOptions.classList.toggle('active', show);
-            this.isAdministracionDropdownOpen = show;
-        }
-    }
-
-    toggleIncidenciasDropdown(show) {
-        const dropdownBtn = document.getElementById('incidenciasDropdownBtn');
-        const dropdownOptions = document.getElementById('incidenciasDropdownOptions');
-
-        if (dropdownBtn && dropdownOptions) {
-            dropdownBtn.classList.toggle('active', show);
-            dropdownOptions.classList.toggle('active', show);
-            this.isIncidenciasDropdownOpen = show;
-        }
+    toggleGestionDropdown(show) {
+        const dropdownBtn = document.getElementById('gestionDropdownBtn'), dropdownOptions = document.getElementById('gestionDropdownOptions');
+        if (dropdownBtn && dropdownOptions) dropdownBtn.classList.toggle('active', show), dropdownOptions.classList.toggle('active', show), this.isGestionDropdownOpen = show;
     }
 
     setupScroll() {
         const navbar = document.getElementById('complete-navbar');
         if (!navbar) return;
-
-        window.addEventListener('scroll', () => {
-            navbar.classList.toggle('scrolled', window.scrollY > 50);
-        });
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
     }
 
-    loadFontAwesome() {
-        if (!document.querySelector('link[href*="font-awesome"]')) {
-            const faLink = document.createElement('link');
-            faLink.rel = 'stylesheet';
-            faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
-            document.head.appendChild(faLink);
-        }
-    }
+    loadFontAwesome() { if (!document.querySelector('link[href*="font-awesome"]')) { const faLink = document.createElement('link'); faLink.rel = 'stylesheet'; faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'; document.head.appendChild(faLink); } }
 
-    loadOrbitronFont() {
-        if (!document.querySelector('link[href*="orbitron"]')) {
-            const orbitronLink = document.createElement('link');
-            orbitronLink.rel = 'stylesheet';
-            orbitronLink.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap';
-            document.head.appendChild(orbitronLink);
-        }
-    }
+    loadOrbitronFont() { if (!document.querySelector('link[href*="orbitron"]')) { const orbitronLink = document.createElement('link'); orbitronLink.rel = 'stylesheet'; orbitronLink.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap'; document.head.appendChild(orbitronLink); } }
 }
 
 new NavbarComplete();

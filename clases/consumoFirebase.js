@@ -1,9 +1,10 @@
 // consumoFirebase.js
 // Clase para contabilizar y PERSISTIR operaciones de Firebase
 // SOLO UN DOCUMENTO por empresa en colección "consumo"
+// MODIFICADO: Eliminada toda la funcionalidad de Autenticación (Auth)
 
 import { db } from '/config/firebase-config.js';
-import { doc, setDoc, updateDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { doc, setDoc, updateDoc, increment, serverTimestamp, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 class ConsumoFirebase {
     constructor() {
@@ -26,12 +27,8 @@ class ConsumoFirebase {
             },
             functions: {
                 invocaciones: 0,
-                total: 0
-            },
-            autenticacion: {
-                iniciosSesion: 0,
-                cierresSesion: 0,
-                registros: 0,
+                notificacionesPushEnviadas: 0,
+                usuariosNotificados: 0,
                 total: 0
             },
             fcm: {
@@ -103,7 +100,6 @@ class ConsumoFirebase {
                     else if (tipo === 'escritura') campoRuta = 'firestore.escrituras';
                     else if (tipo === 'eliminacion') campoRuta = 'firestore.eliminaciones';
                     else if (tipo === 'actualizacion') campoRuta = 'firestore.actualizaciones';
-                    campoRuta = 'firestore.total'; // También incrementamos el total
                     break;
                     
                 case 'storage':
@@ -116,33 +112,12 @@ class ConsumoFirebase {
                     if (tipo === 'invocacion') campoRuta = 'functions.invocaciones';
                     break;
                     
-                case 'auth':
-                    if (tipo === 'login') campoRuta = 'autenticacion.iniciosSesion';
-                    else if (tipo === 'logout') campoRuta = 'autenticacion.cierresSesion';
-                    else if (tipo === 'registro') campoRuta = 'autenticacion.registros';
-                    break;
-                    
                 case 'fcm':
                     if (tipo === 'notificacion') campoRuta = 'fcm.notificacionesEnviadas';
                     else if (tipo === 'token_registro') campoRuta = 'fcm.tokensRegistrados';
                     else if (tipo === 'token_eliminacion') campoRuta = 'fcm.tokensEliminados';
                     break;
             }
-
-            // Preparamos los datos para actualizar
-            const updateData = {
-                [`${servicio}.${tipo}`]: increment(1),
-                [`${servicio}.total`]: increment(1),
-                totalOperaciones: increment(1),
-                ultimaActualizacion: serverTimestamp(),
-                nombreEmpresa: nombreEmpresa,
-                ultimaOperacion: {
-                    servicio,
-                    tipo,
-                    detalles,
-                    timestamp: serverTimestamp()
-                }
-            };
 
             // Usar set con merge para crear el documento si no existe
             await setDoc(docRef, {
@@ -185,12 +160,6 @@ class ConsumoFirebase {
             case 'functions':
                 if (tipo === 'invocacion') this.contadores.functions.invocaciones++;
                 this.contadores.functions.total++;
-                break;
-            case 'auth':
-                if (tipo === 'login') this.contadores.autenticacion.iniciosSesion++;
-                else if (tipo === 'logout') this.contadores.autenticacion.cierresSesion++;
-                else if (tipo === 'registro') this.contadores.autenticacion.registros++;
-                this.contadores.autenticacion.total++;
                 break;
             case 'fcm':
                 if (tipo === 'notificacion') this.contadores.fcm.notificacionesEnviadas++;
@@ -254,17 +223,56 @@ class ConsumoFirebase {
         await this.registrar('functions', 'invocacion', { nombreFuncion, parametros });
     }
 
-    // Métodos para Auth
-    async registrarAuthLogin(usuarioId) {
-        await this.registrar('auth', 'login', { usuarioId });
-    }
+    // 🆕 NUEVO: Método específico para registrar notificaciones push enviadas
+    async registrarNotificacionesPush(cantidadNotificaciones, cantidadUsuarios, nombreFuncion = 'sendPushNotification', detalles = {}) {
+        console.log(`📱 REGISTRO PUSH: ${cantidadNotificaciones} notificaciones push enviadas a ${cantidadUsuarios} usuarios`);
+        
+        if (!this.organizacionCamelCase) {
+            console.warn('⚠️ No hay organización definida, no se guarda en Firestore');
+            return;
+        }
 
-    async registrarAuthLogout(usuarioId) {
-        await this.registrar('auth', 'logout', { usuarioId });
-    }
+        const idEmpresa = this.organizacionCamelCase;
+        const nombreEmpresa = this.nombreEmpresa || idEmpresa;
+        
+        try {
+            const docRef = doc(db, 'consumo', idEmpresa);
+            
+            await setDoc(docRef, {
+                functions: {
+                    invocaciones: increment(1),
+                    notificacionesPushEnviadas: increment(cantidadNotificaciones),
+                    usuariosNotificados: increment(cantidadUsuarios),
+                    total: increment(1)
+                },
+                totalOperaciones: increment(1),
+                ultimaActualizacion: serverTimestamp(),
+                nombreEmpresa,
+                ultimaOperacion: {
+                    servicio: 'functions',
+                    tipo: 'notificacion_push',
+                    detalles: {
+                        nombreFuncion: nombreFuncion,
+                        notificacionesEnviadas: cantidadNotificaciones,
+                        usuariosNotificados: cantidadUsuarios,
+                        ...detalles
+                    },
+                    timestamp: serverTimestamp()
+                }
+            }, { merge: true });
 
-    async registrarAuthRegistro(usuarioId) {
-        await this.registrar('auth', 'registro', { usuarioId });
+            console.log(`💾 Registro push guardado: ${cantidadNotificaciones} notificaciones, ${cantidadUsuarios} usuarios`);
+
+        } catch (error) {
+            console.error('❌ Error registrando notificaciones push:', error);
+        }
+
+        // Actualizar contadores en memoria
+        this.contadores.functions.invocaciones++;
+        this.contadores.functions.notificacionesPushEnviadas += cantidadNotificaciones;
+        this.contadores.functions.usuariosNotificados += cantidadUsuarios;
+        this.contadores.functions.total++;
+        this.contadores.totalOperaciones++;
     }
 
     // Métodos para FCM (Firebase Cloud Messaging)
@@ -286,7 +294,6 @@ class ConsumoFirebase {
             firestore: { ...this.contadores.firestore },
             storage: { ...this.contadores.storage },
             functions: { ...this.contadores.functions },
-            autenticacion: { ...this.contadores.autenticacion },
             fcm: { ...this.contadores.fcm },
             totalOperaciones: this.contadores.totalOperaciones,
             ultimaActualizacion: this.contadores.ultimaActualizacion,
@@ -300,8 +307,12 @@ class ConsumoFirebase {
         this.contadores = {
             firestore: { lecturas: 0, escrituras: 0, eliminaciones: 0, actualizaciones: 0, total: 0 },
             storage: { subidas: 0, descargas: 0, eliminaciones: 0, total: 0 },
-            functions: { invocaciones: 0, total: 0 },
-            autenticacion: { iniciosSesion: 0, cierresSesion: 0, registros: 0, total: 0 },
+            functions: { 
+                invocaciones: 0, 
+                notificacionesPushEnviadas: 0, 
+                usuariosNotificados: 0, 
+                total: 0 
+            },
             fcm: { notificacionesEnviadas: 0, tokensRegistrados: 0, tokensEliminados: 0, total: 0 },
             totalOperaciones: 0,
             ultimaActualizacion: new Date()
@@ -328,6 +339,28 @@ class ConsumoFirebase {
         } catch (error) {
             console.error('❌ Error obteniendo consumo de empresa:', error);
             return null;
+        }
+    }
+
+    // NUEVO MÉTODO: Listar todas las empresas
+    async listarTodasLasEmpresas() {
+        try {
+            const consumoRef = collection(db, 'consumo');
+            const snapshot = await getDocs(consumoRef);
+            
+            const empresas = [];
+            snapshot.forEach(doc => {
+                empresas.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            console.log(`📋 Listadas ${empresas.length} empresas`);
+            return empresas;
+        } catch (error) {
+            console.error('❌ Error listando empresas:', error);
+            return [];
         }
     }
 }

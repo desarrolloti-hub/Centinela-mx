@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Mapa de Alertas - Sistema Centinela</title>
 
     <!-- Leaflet CSS -->
@@ -20,8 +20,8 @@
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
 
-    <!-- TU CSS -->
-    <link rel="stylesheet" href="mapaAlerta.css">
+    <!-- TU CSS - NOMBRE CORRECTO -->
+    <link rel="stylesheet" href="mapaAlertas.css">
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -30,7 +30,11 @@
 <body>
     <canvas id="particle-canvas"></canvas>
 
-    <div class="admin-container">
+    <!-- Navbar -->
+    <div id="navbar-container"></div>
+
+    <!-- Contenedor principal -->
+    <div class="main-content">
         <!-- Page Header -->
         <div class="page-header">
             <h1>
@@ -38,151 +42,132 @@
                 Mapa de Alertas en Vivo
             </h1>
             <div class="header-description">
-                Visualiza en tiempo real las alertas activas y todas las sucursales con el color de su región
+                Visualiza en tiempo real las incidencias activas y las sucursales con el color de su región
             </div>
         </div>
 
-        <!-- Filtros -->
-        <div class="filtros-container">
-            <div class="filtros-header">
-                <h5><i class="fas fa-filter"></i> Filtrar elementos:</h5>
-            </div>
-            <div class="filtros-body">
-                <div class="filtro-grupo">
-                    <label for="filtroSeveridad">Severidad</label>
-                    <select id="filtroSeveridad" class="filtro-input">
-                        <option value="todas">Todas las alertas</option>
-                        <option value="alta">Alta 🔴</option>
-                        <option value="media">Media 🟡</option>
-                        <option value="baja">Baja 🟢</option>
-                    </select>
-                </div>
-                <div class="filtro-grupo">
-                    <label for="buscarZona">Zona / Sucursal</label>
-                    <input type="text" id="buscarZona" class="filtro-input" placeholder="Ej: Centro, Chapultepec...">
-                </div>
-                <div class="filtro-acciones">
-                    <button class="btn-buscar" id="btnAplicarFiltros">
-                        <i class="fas fa-search"></i> Aplicar
-                    </button>
-                    <button class="btn-limpiar" id="btnLimpiarFiltros">
-                        <i class="fas fa-times"></i> Limpiar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Grid: Panel + Mapa -->
-        <div class="mapa-grid-container">
-            <!-- Panel lateral -->
-            <div class="panel-alertas-card">
-                <div class="card-header">
-                    <h5><i class="fas fa-bell"></i> Alertas activas <span class="contador-alertas"
-                            id="contadorAlertas">0</span></h5>
-                    <button class="btn-refrescar" id="btnCentrarMapa">
-                        <i class="fas fa-crosshairs"></i> Centrar
-                    </button>
-                </div>
-                <div class="lista-alertas-container" id="listaAlertas">
-                    <div class="loading-alertas">
-                        <i class="fas fa-spinner fa-spin"></i> Cargando...
-                    </div>
-                </div>
-                <div class="panel-footer">
-                    <div class="leyenda-colores">
-                        <span><i class="fas fa-circle" style="color: #ff4444;"></i> Alta</span>
-                        <span><i class="fas fa-circle" style="color: #ffbb33;"></i> Media</span>
-                        <span><i class="fas fa-circle" style="color: #00C851;"></i> Baja</span>
-                        <span><i class="fas fa-store" style="color: #2f8cff;"></i> Sucursal</span>
-                    </div>
-                    <small class="text-muted">⚡ Actualización en tiempo real</small>
-                </div>
-            </div>
-
+        <!-- Contenedor del mapa -->
+        <div class="map-fullscreen">
             <!-- Mapa -->
-            <div class="mapa-card">
-                <div class="card-header">
-                    <h5><i class="fas fa-map"></i> Visualización geográfica</h5>
-                    <div class="indicador-conexion" id="indicadorConexion">
-                        <i class="fas fa-wifi"></i> Conectado
+            <div id="mapa"></div>
+
+            <!-- Panel superior izquierdo - Título mini -->
+            <div class="map-header-panel">
+                <h1>
+                    <i class="fas fa-map-marked-alt"></i>
+                    CENTINELA
+                </h1>
+                <div class="stats-mini">
+                    <span><i class="fas fa-exclamation-triangle" style="color: #ff4444;"></i> <span
+                            id="statAltasMini">0</span></span>
+                    <span><i class="fas fa-exclamation-circle" style="color: #ffbb33;"></i> <span
+                            id="statMediasMini">0</span></span>
+                    <span><i class="fas fa-info-circle" style="color: #00C851;"></i> <span
+                            id="statBajasMini">0</span></span>
+                    <span><i class="fas fa-store" style="color: #2f8cff;"></i> <span
+                            id="statSucursalesMini">0</span></span>
+                </div>
+            </div>
+
+            <!-- Panel selector de región -->
+            <div class="region-selector-panel">
+                <button class="region-selector-btn" id="btnSeleccionarRegion">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Seleccionar una Región</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="region-dropdown" id="regionDropdown">
+                    <div class="dropdown-header">
+                        <i class="fas fa-palette"></i>
+                        <span>Regiones disponibles</span>
+                    </div>
+                    <div class="region-list" id="regionList">
+                        <div class="loading-regions">
+                            <i class="fas fa-spinner fa-spin"></i> Cargando regiones...
+                        </div>
+                    </div>
+                    <div class="dropdown-footer" id="limpiarFiltroRegion">
+                        <i class="fas fa-undo-alt"></i> Mostrar todas las sucursales
                     </div>
                 </div>
-                <div class="mapa-wrapper">
-                    <div id="mapa"></div>
+            </div>
+
+            <!-- Panel de incidencias -->
+            <div class="incidencias-panel" id="incidenciasPanel">
+                <div class="incidencias-header" id="toggleIncidencias">
+                    <h3>
+                        <i class="fas fa-bell"></i>
+                        Últimas Incidencias
+                        <span class="badge-count" id="incidenciasBadge">0</span>
+                    </h3>
+                    <i class="fas fa-chevron-down" id="incidenciasChevron"></i>
+                </div>
+                <div class="incidencias-list" id="listaIncidencias">
+                    <div class="no-incidencias">
+                        <i class="fas fa-check-circle"></i> Sin incidencias activas
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Estadísticas -->
-        <div class="stats-container">
-            <div class="stat-item">
-                <i class="fas fa-exclamation-triangle" style="color: #ff4444;"></i>
-                <span class="stat-label">Alertas Altas</span>
-                <span class="stat-value" id="statAltas">0</span>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-exclamation-circle" style="color: #ffbb33;"></i>
-                <span class="stat-label">Alertas Medias</span>
-                <span class="stat-value" id="statMedias">0</span>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-info-circle" style="color: #00C851;"></i>
-                <span class="stat-label">Alertas Bajas</span>
-                <span class="stat-value" id="statBajas">0</span>
-            </div>
-            <div class="stat-item">
-                <i class="fas fa-store" style="color: #2f8cff;"></i>
-                <span class="stat-label">Sucursales</span>
-                <span class="stat-value" id="statSucursales">0</span>
-            </div>
-        </div>
-
-        <!-- ============================================= -->
-        <!-- NUEVA TABLA DE REGIONES -->
-        <!-- ============================================= -->
-        <div class="card" style="margin-top: 30px;">
-            <div class="card-header">
-                <h5><i class="fas fa-palette"></i> Regiones y sus colores</h5>
-                <button class="btn-refrescar" id="btnRefrescarRegiones">
-                    <i class="fas fa-sync-alt"></i> Refrescar
+            <!-- Panel inferior derecho - Botones de control -->
+            <div class="control-panel">
+                <button class="control-btn" id="btnCentrarMapa">
+                    <i class="fas fa-crosshairs"></i>
+                    <span>Centrar</span>
+                </button>
+                <button class="control-btn" id="btnRefrescarRegiones">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Actualizar</span>
                 </button>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table" id="tablaRegiones">
-                        <thead>
-                            <tr>
-                                <th>Color</th>
-                                <th>Región</th>
-                                <th>Sucursales</th>
-                                <th>Fecha Creación</th>
-                            </tr>
-                        </thead>
-                        <tbody id="regionesTableBody">
-                            <tr>
-                                <td colspan="4" class="loading-state">
-                                    <div class="loading-content">
-                                        <div class="loading-spinner"></div>
-                                        <h3>Cargando regiones...</h3>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+            <!-- Leyenda -->
+            <div class="legend-panel">
+                <div class="legend-title">LEYENDA</div>
+                <div class="legend-colors">
+                    <div class="legend-item">
+                        <i class="fas fa-circle" style="color: #ff4444;"></i>
+                        <span>Crítica</span>
+                    </div>
+                    <div class="legend-item">
+                        <i class="fas fa-circle" style="color: #ff8844;"></i>
+                        <span>Alta</span>
+                    </div>
+                    <div class="legend-item">
+                        <i class="fas fa-circle" style="color: #ffbb33;"></i>
+                        <span>Media</span>
+                    </div>
+                    <div class="legend-item">
+                        <i class="fas fa-circle" style="color: #00C851;"></i>
+                        <span>Baja</span>
+                    </div>
+                    <div class="legend-item">
+                        <i class="fas fa-store" style="color: #2f8cff;"></i>
+                        <span>Sucursal</span>
+                    </div>
                 </div>
             </div>
+
+
         </div>
     </div>
 
     <!-- Scripts -->
+    <script type="module" src="/components/autenticador.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/components/navbarAdministrador.js"></script>
+    <script type="module" src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
 
-    <!-- TU JS -->
-    <script type="module" src="mapaAlerta.js"></script>
+    <!-- TU JS - NOMBRE CORRECTO -->
+    <script type="module" src="mapaAlertas.js"></script>
+
+    <!-- Protector de pagina -->
+    <script src="/components/protector-de-pagina.js" data-rol="administrador"
+        data-mensaje="Solo administradores pueden acceder a esta página."
+        data-titulo="Acceso de Administrador Requerido"
+        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
+        </script>
 </body>
 
 </html>

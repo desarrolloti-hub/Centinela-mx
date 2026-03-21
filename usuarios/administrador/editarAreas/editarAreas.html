@@ -6,10 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Área - Sistema Centinela</title>
 
-        <!-- Estilos -->
+    <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Icono en barra de titulo -->
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
@@ -22,8 +24,10 @@
 
 
     <!-- SEO Básico -->
-    <meta name="description" content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
-    <meta name="keywords" content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="description"
+        content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords"
+        content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
     <meta name="author" content="Centinela-MX">
     <link rel="canonical" href="https://centinela-mx.web.app/" />
 
@@ -31,7 +35,8 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://centinela-mx.web.app">
     <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
-    <meta property="og:description" content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:description"
+        content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
     <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
@@ -46,7 +51,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://centinela-mx.web.app">
     <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
-    <meta name="twitter:description" content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+    <meta name="twitter:description"
+        content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
     <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
     <meta name="twitter:creator" content="">
 
@@ -104,7 +110,7 @@
         <!-- Formulario de Edición -->
         <form id="formEditarArea">
             <input type="hidden" id="areaId">
-            
+
             <!-- Tarjeta 1: Información Principal del Área -->
             <div class="centinela-row">
                 <div class="centinela-col-12">
@@ -113,7 +119,8 @@
                             <h5 class="card-title">
                                 <i class="fas fa-edit me-2"></i>
                                 Información del Área
-                                <span id="nombreAreaTitulo" style="color: var(--color-accent-secondary); margin-left: 10px;">Cargando...</span>
+                                <span id="nombreAreaTitulo"
+                                    style="color: var(--color-accent-secondary); margin-left: 10px;">Cargando...</span>
                             </h5>
                             <button type="button" id="btnVolverLista" class="btn-volver">
                                 <i class="fas fa-arrow-left"></i>Volver a la lista
@@ -130,7 +137,8 @@
 
                                 <div class="col-md-6 mb-3">
                                     <label for="nombreArea" class="form-label">
-                                        <i class="fas fa-building me-1"></i>Nombre del Área <span class="required">*</span>
+                                        <i class="fas fa-building me-1"></i>Nombre del Área <span
+                                            class="required">*</span>
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-building"></i></span>
@@ -158,7 +166,8 @@
 
                                 <div class="col-md-12 mb-3">
                                     <label for="descripcionArea" class="form-label">
-                                        <i class="fas fa-align-left me-1"></i>Descripción del Área <span class="required">*</span>
+                                        <i class="fas fa-align-left me-1"></i>Descripción del Área <span
+                                            class="required">*</span>
                                     </label>
                                     <textarea class="form-control" id="descripcionArea" rows="4"
                                         placeholder="Describa las funciones principales, objetivos y responsabilidades del área..."
@@ -207,9 +216,10 @@
                             <!-- Mensaje informativo -->
                             <div class="alert alert-info mt-3">
                                 <i class="fas fa-info-circle me-2"></i>
-                                Los cargos que modifique aquí estarán disponibles para asignar a los empleados de esta área.
+                                Los cargos que modifique aquí estarán disponibles para asignar a los empleados de esta
+                                área.
                             </div>
-                            
+
                             <div class="d-flex justify-content-start gap-3 mt-4">
                                 <button type="submit" class="btn-success" id="btnGuardarCambios">
                                     <i class="fas fa-save me-2"></i>Guardar Cambios
@@ -227,11 +237,19 @@
     <br>
 
     <!-- Scripts -->
+    <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <script src="/components/navbarAdministrador.js"></script>
+    <script type="module" src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="editarAreas.js"></script>
+
+    <!-- Protector de pagina -->
+    <script src="/components/protector-de-pagina.js" data-rol="administrador"
+        data-mensaje="Solo administradores pueden acceder a esta página."
+        data-titulo="Acceso de Administrador Requerido"
+        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
+        </script>
 </body>
 
 </html>
