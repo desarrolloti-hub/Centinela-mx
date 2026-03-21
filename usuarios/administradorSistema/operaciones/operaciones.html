@@ -34,10 +34,10 @@
             </div>
         </div>
 
-        <!-- Selector de Empresa y Filtros -->
+        <!-- Filtros mejorados -->
         <div class="filtros-container">
             <div class="filtros-header">
-                <h5><i class="fas fa-sliders-h"></i> Controles:</h5>
+                <h5><i class="fas fa-sliders-h"></i> Filtros:</h5>
             </div>
             <div class="filtros-body">
                 <div class="filtro-grupo">
@@ -45,12 +45,43 @@
                         <i class="fas fa-building"></i> Organización:
                     </label>
                     <select id="selectorEmpresa" class="filtro-select">
-                        <option value="global">🌐 Todas las organizaciones (Global)</option>
+                        <option value="global">🌐 Todas las organizaciones</option>
                     </select>
                 </div>
+                
+                <div class="filtro-grupo">
+                    <label for="tipoFiltro">
+                        <i class="fas fa-calendar-alt"></i> Período:
+                    </label>
+                    <select id="tipoFiltro" class="filtro-select">
+                        <option value="">-- Seleccionar período --</option>
+                        <option value="semanal">📅 Semanal (últimos 7 días)</option>
+                        <option value="quincenal">📅 Quincenal (últimos 15 días)</option>
+                        <option value="mensual">📅 Mensual (últimos 30 días)</option>
+                        <option value="personalizado">📅 Personalizado</option>
+                    </select>
+                </div>
+                
+                <div class="filtro-grupo" id="rangoFechasGrupo" style="display: none;">
+                    <label for="fechaInicio">
+                        <i class="fas fa-calendar-day"></i> Rango personalizado:
+                    </label>
+                    <div class="filtro-rango">
+                        <input type="date" id="fechaInicio" class="filtro-input">
+                        <span>→</span>
+                        <input type="date" id="fechaFin" class="filtro-input">
+                    </div>
+                </div>
+                
                 <div class="filtro-acciones">
+                    <button class="btn-aplicar" id="btnAplicarFiltros">
+                        <i class="fas fa-check"></i> Aplicar Filtros
+                    </button>
+                    <button class="btn-limpiar" id="btnLimpiarFiltros">
+                        <i class="fas fa-eraser"></i> Limpiar
+                    </button>
                     <button class="btn-actualizar" id="btnActualizar">
-                        <i class="fas fa-sync-alt"></i> <span class="hidden-mobile">Actualizar</span>
+                        <i class="fas fa-sync-alt"></i> Actualizar Datos
                     </button>
                     <div class="fecha-info">
                         <i class="fas fa-clock"></i>
@@ -58,118 +89,157 @@
                         <strong id="fechaActualizacion">-</strong>
                     </div>
                     <button class="btn-excel" id="btnExportarExcel">
-                        <i class="fas fa-file-excel"></i> <span class="hidden-mobile">Exportar</span>
+                        <i class="fas fa-file-excel"></i> Exportar
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Métricas principales -->
-        <div class="metrics-grid">
-            <div class="metric-card firestore">
-                <div class="metric-title"><i class="fas fa-file-alt"></i> Documentos</div>
-                <div class="metric-value" id="metricDocumentos">0</div>
-                <div class="metric-subtitle"><i class="fas fa-database"></i> Total en Firestore</div>
-                <i class="fas fa-copy metric-icon"></i>
-            </div>
-            <div class="metric-card total">
-                <div class="metric-title"><i class="fas fa-user-tie"></i>Clientes</div>
-                <div class="metric-value" id="metricAdministradores">0</div>
-                <div class="metric-subtitle"><i class="fas fa-user-shield"></i> Total</div>
-                <i class="fas fa-user-shield metric-icon"></i>
-            </div>
-            <div class="metric-card total">
-                <div class="metric-title"><i class="fas fa-users"></i> Colaboradores</div>
-                <div class="metric-value" id="metricColaboradores">0</div>
-                <div class="metric-subtitle"><i class="fas fa-user-friends"></i> Total</div>
-                <i class="fas fa-user-plus metric-icon"></i>
-            </div>
-            <div class="metric-card total">
-                <div class="metric-title"><i class="fas fa-chart-line"></i> Total Usuarios</div>
-                <div class="metric-value" id="metricTotalUsuarios">0</div>
-                <div class="metric-subtitle"><i class="fas fa-users"></i> Colaboradores + Administradores</div>
-                <i class="fas fa-chart-line metric-icon"></i>
-            </div>
-        </div>
-
-        <!-- Métricas de Storage -->
-        <div class="storage-metrics-grid">
-            <div class="metric-card storage">
-                <div class="metric-title"><i class="fas fa-cloud-upload-alt"></i> Archivos Totales</div>
-                <div class="metric-value" id="metricArchivosTotales">0</div>
-                <div class="metric-subtitle" id="metricTamanioTotal">0 MB</div>
-                <i class="fas fa-cloud metric-icon"></i>
-            </div>
-            <div class="metric-card pdf">
-                <div class="metric-title"><i class="fas fa-file-pdf"></i> PDF</div>
-                <div class="metric-value" id="metricPDF">0</div>
-                <div class="metric-subtitle"><i class="fas fa-percent"></i> <span id="metricPDFPorcentaje">0%</span></div>
-                <i class="fas fa-file-pdf metric-icon"></i>
-            </div>
-            <div class="metric-card imagen">
-                <div class="metric-title"><i class="fas fa-image"></i> Imágenes</div>
-                <div class="metric-value" id="metricImagenes">0</div>
-                <div class="metric-subtitle"><i class="fas fa-percent"></i> <span id="metricImagenesPorcentaje">0%</span></div>
-                <i class="fas fa-image metric-icon"></i>
-            </div>
-            <div class="metric-card storage">
-                <div class="metric-title"><i class="fas fa-file-word"></i> Documentos</div>
-                <div class="metric-value" id="metricDocumentosStorage">0</div>
-                <div class="metric-subtitle"><i class="fas fa-percent"></i> <span id="metricDocumentosPorcentaje">0%</span></div>
-                <i class="fas fa-file-alt metric-icon"></i>
-            </div>
-            <div class="metric-card storage">
-                <div class="metric-title"><i class="fas fa-film"></i> Multimedia</div>
-                <div class="metric-value" id="metricMultimedia">0</div>
-                <div class="metric-subtitle"><i class="fas fa-percent"></i> <span id="metricMultimediaPorcentaje">0%</span></div>
-                <i class="fas fa-video metric-icon"></i>
-            </div>
-        </div>
-
-        <!-- Gráficas -->
-        <div class="charts-grid-2col">
-            <div class="card">
-                <div class="card-header"><h5><i class="fas fa-chart-pie"></i> Archivos en Storage</h5></div>
-                <div class="card-body"><canvas id="graficoTiposArchivo" style="width:100%; height:250px;"></canvas></div>
-            </div>
-            <div class="card">
-                <div class="card-header"><h5><i class="fas fa-chart-pie"></i> Almacenamiento por Empresa</h5></div>
-                <div class="card-body"><canvas id="graficoAlmacenamientoPorEmpresa" style="width:100%; height:250px;"></canvas></div>
-            </div>
-        </div>
-
-        <div class="charts-grid-1col">
-            <div class="card">
-                <div class="card-header"><h5><i class="fas fa-chart-bar"></i> Documentos por Empresa</h5></div>
-                <div class="card-body"><canvas id="graficoDocumentosPorEmpresa" style="width:100%; height:300px;"></canvas></div>
-            </div>
-        </div>
-
-        <!-- Tabla de empresas -->
-        <div class="tables-grid-1col">
-            <div class="card">
-                <div class="card-header"><h5><i class="fas fa-building"></i> Estadísticas por Organización</h5></div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Organización</th>
-                                    <th>Documentos</th>
-                                    <th>Archivos</th>
-                                    <th>Tamaño</th>
-                                    <th>Administradores</th>
-                                    <th>Colaboradores</th>
-                                    <th>Total Usuarios</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaOrganizacionesBody">
-                                <tr><td colspan="7" style="text-align:center;"><div class="loading-spinner"></div> Cargando...</td></tr>
-                            </tbody>
-                        </table>
+        <!-- Contenedor principal -->
+        <div id="contenidoPrincipal" style="display: none;">
+            <!-- Métricas principales - Se oculta si no hay datos -->
+            <div id="seccionMetricas" style="display: none;">
+                <div class="metrics-grid">
+                    <div class="metric-card firestore">
+                        <div class="metric-title"><i class="fas fa-file-alt"></i> Documentos</div>
+                        <div class="metric-value" id="metricDocumentos">0</div>
+                        <div class="metric-subtitle"><i class="fas fa-database"></i> Total en Firestore</div>
+                        <i class="fas fa-copy metric-icon"></i>
+                    </div>
+                    <div class="metric-card total">
+                        <div class="metric-title"><i class="fas fa-user-tie"></i>Clientes</div>
+                        <div class="metric-value" id="metricAdministradores">0</div>
+                        <div class="metric-subtitle"><i class="fas fa-user-shield"></i> Total</div>
+                        <i class="fas fa-user-shield metric-icon"></i>
+                    </div>
+                    <div class="metric-card total">
+                        <div class="metric-title"><i class="fas fa-users"></i> Colaboradores</div>
+                        <div class="metric-value" id="metricColaboradores">0</div>
+                        <div class="metric-subtitle"><i class="fas fa-user-friends"></i> Total</div>
+                        <i class="fas fa-user-plus metric-icon"></i>
+                    </div>
+                    <div class="metric-card total">
+                        <div class="metric-title"><i class="fas fa-chart-line"></i> Total Usuarios</div>
+                        <div class="metric-value" id="metricTotalUsuarios">0</div>
+                        <div class="metric-subtitle"><i class="fas fa-users"></i> Colaboradores + Administradores</div>
+                        <i class="fas fa-chart-line metric-icon"></i>
                     </div>
                 </div>
             </div>
+
+            <!-- Métricas de Storage - Se oculta si no hay datos -->
+            <div id="seccionStorage" style="display: none;">
+                <div class="storage-metrics-grid">
+                    <div class="metric-card storage">
+                        <div class="metric-title"><i class="fas fa-cloud-upload-alt"></i> Archivos Totales</div>
+                        <div class="metric-value" id="metricArchivosTotales">0</div>
+                        <div class="metric-subtitle" id="metricTamanioTotal">0 MB</div>
+                        <i class="fas fa-cloud metric-icon"></i>
+                    </div>
+                    <div class="metric-card pdf">
+                        <div class="metric-title"><i class="fas fa-file-pdf"></i> PDF</div>
+                        <div class="metric-value" id="metricPDF">0</div>
+                        <div class="metric-subtitle"><i class="fas fa-percent"></i> <span id="metricPDFPorcentaje">0%</span></div>
+                        <i class="fas fa-file-pdf metric-icon"></i>
+                    </div>
+                    <div class="metric-card imagen">
+                        <div class="metric-title"><i class="fas fa-image"></i> Imágenes</div>
+                        <div class="metric-value" id="metricImagenes">0</div>
+                        <div class="metric-subtitle"><i class="fas fa-percent"></i> <span id="metricImagenesPorcentaje">0%</span></div>
+                        <i class="fas fa-image metric-icon"></i>
+                    </div>
+                    <div class="metric-card storage">
+                        <div class="metric-title"><i class="fas fa-file-word"></i> Documentos</div>
+                        <div class="metric-value" id="metricDocumentosStorage">0</div>
+                        <div class="metric-subtitle"><i class="fas fa-percent"></i> <span id="metricDocumentosPorcentaje">0%</span></div>
+                        <i class="fas fa-file-alt metric-icon"></i>
+                    </div>
+                    <div class="metric-card storage">
+                        <div class="metric-title"><i class="fas fa-film"></i> Multimedia</div>
+                        <div class="metric-value" id="metricMultimedia">0</div>
+                        <div class="metric-subtitle"><i class="fas fa-percent"></i> <span id="metricMultimediaPorcentaje">0%</span></div>
+                        <i class="fas fa-video metric-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficas - Se ocultan si no hay datos -->
+            <div id="seccionGraficas" style="display: none;">
+                <div class="charts-grid-2col">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-pie"></i> Archivos en Storage</h5>
+                            <span id="badgeFiltro1" class="filtro-activo-badge"></span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grafica-wrapper">
+                                <canvas id="graficoTiposArchivo"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-pie"></i> Almacenamiento por Empresa</h5>
+                            <span id="badgeFiltro2" class="filtro-activo-badge"></span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grafica-wrapper">
+                                <canvas id="graficoAlmacenamientoPorEmpresa"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid-1col">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-bar"></i> Documentos por Empresa</h5>
+                            <span id="badgeFiltro3" class="filtro-activo-badge"></span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grafica-wrapper">
+                                <canvas id="graficoDocumentosPorEmpresa"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de empresas - Se oculta si no hay datos -->
+            <div id="seccionTabla" style="display: none;">
+                <div class="tables-grid-1col">
+                    <div class="card">
+                        <div class="card-header"><h5><i class="fas fa-building"></i> Estadísticas por Organización</h5></div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Organización</th>
+                                            <th>Documentos</th>
+                                            <th>Archivos</th>
+                                            <th>Tamaño</th>
+                                            <th>Administradores</th>
+                                            <th>Colaboradores</th>
+                                            <th>Total Usuarios</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaOrganizacionesBody">
+                                        <tr><td colspan="7" style="text-align:center;"><div class="loading-spinner"></div> Cargando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje sin datos -->
+        <div id="sinDatosMensaje" class="empty-data" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px;">
+            <i class="fas fa-chart-line" style="font-size: 4rem; opacity: 0.3;"></i>
+            <p id="sinDatosTexto" style="margin-top: 15px; font-size: 1rem;">No hay datos disponibles</p>
+            <p style="font-size: 0.8rem; opacity: 0.7;">Selecciona un período y presiona "Aplicar Filtros"</p>
         </div>
 
         <!-- Footer -->

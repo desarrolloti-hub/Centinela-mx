@@ -1,23 +1,30 @@
-// incidencias.js - VERSIÓN MODIFICADA CON CARGA ASÍNCRONA Y ACTUALIZACIÓN EN TIEMPO REAL
+// incidencias.js - CONTROLADOR
+// NO IMPORTA FIRESTORE DIRECTAMENTE
 
 import { generadorIPH } from '/components/iph-generator.js';
-import '/components/visualizadorPDF.js'; // Importar visualizador
+import '/components/visualizadorPDF.js';
+import { IncidenciaManager } from '/clases/incidencia.js';
 
 // =============================================
 // VARIABLES GLOBALES
 // =============================================
 let incidenciaManager = null;
 let organizacionActual = null;
-let incidenciasCache = [];
 let sucursalesCache = [];
 let categoriasCache = [];
 let subcategoriasCache = [];
 let usuariosCache = [];
-let authToken = null;
 
-// Configuración de paginación
+// Configuración de paginación REAL
 const ITEMS_POR_PAGINA = 10;
 let paginaActual = 1;
+let totalIncidencias = 0;
+let totalPaginas = 0;
+let incidenciasActuales = [];
+let cursoresPaginacion = {
+    ultimoDocumento: null,
+    primerDocumento: null
+};
 
 // Filtros activos
 let filtrosActivos = {
@@ -26,15 +33,11 @@ let filtrosActivos = {
     sucursalId: 'todos'
 };
 
-// Referencia a listener de Firebase (para limpiar después)
-let unsubscribeListener = null;
-
 // =============================================
-// FUNCIÓN PARA OBTENER USUARIO ACTUAL DESDE LOCALSTORAGE
+// FUNCIÓN PARA OBTENER USUARIO ACTUAL
 // =============================================
 function obtenerUsuarioActual() {
     try {
-        // Intentar desde adminInfo
         const adminInfo = localStorage.getItem('adminInfo');
         if (adminInfo) {
             const adminData = JSON.parse(adminInfo);
@@ -49,7 +52,6 @@ function obtenerUsuarioActual() {
             };
         }
 
-        // Intentar desde userData
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         if (userData && Object.keys(userData).length > 0) {
             return {
@@ -71,170 +73,295 @@ function obtenerUsuarioActual() {
 }
 
 // =============================================
-// INICIALIZACIÓN
-//==============================================
-async function inicializarIncidenciaManager() {
-    try {
-        await obtenerDatosOrganizacion();
-        await obtenerTokenAuth();
-
-        const { IncidenciaManager } = await import('/clases/incidencia.js');
-        incidenciaManager = new IncidenciaManager();
-
-        // Mostrar carga inicial
-        mostrarCargando();
-
-        // Cargar datos en paralelo
-        await Promise.all([
-            cargarSucursales().catch(() => { }),
-            cargarCategorias().catch(() => { }),
-            cargarSubcategorias().catch(() => { }),
-            cargarUsuarios().catch(() => { })
-        ]);
-
-        // Configurar generador IPH
-        if (generadorIPH && typeof generadorIPH.configurar === 'function') {
-            generadorIPH.configurar({
-                organizacionActual,
-                sucursalesCache,
-                categoriasCache,
-                subcategoriasCache,
-                usuariosCache,
-                authToken
-            });
-        }
-
-        // Configurar listener en tiempo real
-        configurarListenerTiempoReal();
-
-        configurarEventListeners();
-        agregarBotonIPHMultiple();
-
-        return true;
-    } catch (error) {
-        console.error('Error al inicializar incidencias:', error);
-        mostrarErrorInicializacion();
-        return false;
+// CARGAR INCIDENCIAS CON PAGINACIÓN REAL
+// =============================================
+async function cargarIncidenciasPagina(pagina) {
+    if (!organizacionActual?.camelCase) {
+        console.error('No hay organización configurada');
+        return;
     }
-}
 
-function mostrarCargando() {
-    const tbody = document.getElementById('tablaIncidenciasBody');
-    if (tbody) {
+    try {
+        const tbody = document.getElementById('tablaIncidenciasBody');
+        if (!tbody) return;
+
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" style="text-align:center; padding:40px;">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Cargando...</span>
                     </div>
-                    <p style="margin-top: 10px;">Cargando incidencias...</p>
+                    <p style="margin-top: 12px; color: var(--color-text-secondary);">Cargando incidencias...</p>
                 </td>
             </tr>
         `;
+
+        const resultado = await incidenciaManager.getIncidenciasPaginadas(
+            organizacionActual.camelCase,
+            filtrosActivos,
+            pagina,
+            ITEMS_POR_PAGINA,
+            cursoresPaginacion
+        );
+
+        cursoresPaginacion.ultimoDocumento = resultado.ultimoDocumento;
+        cursoresPaginacion.primerDocumento = resultado.primerDocumento;
+        
+        incidenciasActuales = resultado.incidencias;
+        totalIncidencias = resultado.total;
+        totalPaginas = resultado.totalPaginas;
+        paginaActual = resultado.paginaActual;
+        
+        if (incidenciasActuales.length === 0 && pagina === 1) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:60px 20px;">
+                        <div style="text-align:center;">
+                            <i class="fas fa-exclamation-triangle" style="font-size:48px; color:rgba(255,193,7,0.3); margin-bottom:16px;"></i>
+                            <h5 style="color:white;">No hay incidencias registradas</h5>
+                            <p style="color: var(--color-text-dim); margin-bottom: 20px;">Comienza registrando la primera incidencia de tu organización.</p>
+                            <a href="../crearIncidencias/crearIncidencias.html" class="btn-nueva-incidencia-header" style="display:inline-flex; margin-top:16px;">
+                                <i class="fas fa-plus-circle"></i> Crear Incidencia
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        renderizarIncidencias();
+        
+    } catch (error) {
+        console.error('Error cargando incidencias:', error);
+        mostrarError('Error al cargar incidencias: ' + error.message);
     }
 }
 
-// ✅ NUEVO: Configurar listener en tiempo real para actualizaciones automáticas
-function configurarListenerTiempoReal() {
-    if (!incidenciaManager || !organizacionActual.camelCase) {
-        console.warn('No se puede configurar listener sin organizacion');
+window.irPagina = async function (pagina) {
+    if (pagina < 1 || pagina > totalPaginas || pagina === paginaActual) return;
+    
+    try {
+        const tbody = document.getElementById('tablaIncidenciasBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:40px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p style="margin-top: 12px;">Cargando página ${pagina}...</p>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        let resultado;
+        
+        if (pagina > paginaActual) {
+            resultado = await incidenciaManager.getIncidenciasPaginadas(
+                organizacionActual.camelCase,
+                filtrosActivos,
+                pagina,
+                ITEMS_POR_PAGINA,
+                cursoresPaginacion
+            );
+        } else {
+            resultado = await incidenciaManager.getIncidenciasPaginaEspecifica(
+                organizacionActual.camelCase,
+                filtrosActivos,
+                pagina,
+                ITEMS_POR_PAGINA
+            );
+        }
+        
+        cursoresPaginacion.ultimoDocumento = resultado.ultimoDocumento;
+        cursoresPaginacion.primerDocumento = resultado.primerDocumento;
+        incidenciasActuales = resultado.incidencias;
+        totalIncidencias = resultado.total;
+        totalPaginas = resultado.totalPaginas;
+        paginaActual = pagina;
+        
+        renderizarIncidencias();
+        
+    } catch (error) {
+        console.error('Error navegando a página:', error);
+        mostrarError('Error al cambiar de página: ' + error.message);
+    }
+};
+
+function renderizarIncidencias() {
+    const tbody = document.getElementById('tablaIncidenciasBody');
+    if (!tbody) return;
+
+    const paginationInfo = document.getElementById('paginationInfo');
+    if (paginationInfo) {
+        const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA + 1;
+        const fin = Math.min(inicio + incidenciasActuales.length - 1, totalIncidencias);
+        
+        if (totalIncidencias > 0) {
+            paginationInfo.textContent = `Mostrando ${inicio}-${fin} de ${totalIncidencias} incidencias`;
+        } else {
+            paginationInfo.textContent = `Mostrando 0 de 0 incidencias`;
+        }
+    }
+
+    tbody.innerHTML = '';
+
+    incidenciasActuales.forEach(incidencia => {
+        crearFilaIncidencia(incidencia, tbody);
+    });
+
+    renderizarPaginacion();
+}
+
+function renderizarPaginacion() {
+    const pagination = document.getElementById('pagination');
+    if (!pagination) return;
+
+    if (totalPaginas <= 1) {
+        pagination.innerHTML = '';
         return;
     }
 
-    // Limpiar listener anterior si existe
-    if (unsubscribeListener && typeof unsubscribeListener === 'function') {
-        unsubscribeListener();
+    let html = '';
+    
+    html += `
+        <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="irPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </li>
+    `;
+    
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, paginaActual - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPaginas, startPage + maxPagesToShow - 1);
+    
+    if (endPage - startPage + 1 < maxPagesToShow) {
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-
-    // Configurar listener con el manager
-    if (typeof incidenciaManager.suscribirIncidencias === 'function') {
-        const usuarioActual = obtenerUsuarioActual();
-
-        unsubscribeListener = incidenciaManager.suscribirIncidencias(
-            organizacionActual.camelCase,
-            (nuevasIncidencias) => {
-                console.log('🔄 Actualización en tiempo real recibida:', nuevasIncidencias.length);
-
-                // Actualizar cache
-                incidenciasCache = nuevasIncidencias;
-
-                // Re-renderizar tabla
-                renderizarIncidencias();
-
-                // Mostrar notificación silenciosa (opcional)
-                if (document.hidden === false) {
-                    // Si la página está visible, solo actualiza sin notificar
-                    console.log('✅ Tabla actualizada automáticamente');
-                }
-            },
-            usuarioActual,
-            (error) => {
-                console.error('Error en listener de incidencias:', error);
-                // Si hay error, intentar recargar manualmente
-                setTimeout(() => cargarIncidencias(), 5000);
-            }
-        );
-    } else {
-        // Fallback: recargar cada 30 segundos si no hay listener
-        console.warn('⚠️ No hay método suscribirIncidencias, usando polling cada 30s');
-        setInterval(() => cargarIncidencias(), 30000);
+    
+    if (startPage > 1) {
+        html += `
+            <li class="page-item">
+                <button class="page-link" onclick="irPagina(1)">1</button>
+            </li>
+            ${startPage > 2 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
+        `;
     }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        html += `
+            <li class="page-item ${i === paginaActual ? 'active' : ''}">
+                <button class="page-link" onclick="irPagina(${i})">${i}</button>
+            </li>
+        `;
+    }
+    
+    if (endPage < totalPaginas) {
+        html += `
+            ${endPage < totalPaginas - 1 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
+            <li class="page-item">
+                <button class="page-link" onclick="irPagina(${totalPaginas})">${totalPaginas}</button>
+            </li>
+        `;
+    }
+    
+    html += `
+        <li class="page-item ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}">
+            <button class="page-link" onclick="irPagina(${paginaActual + 1})" ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}>
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </li>
+    `;
+    
+    pagination.innerHTML = html;
 }
 
-async function obtenerTokenAuth() {
+function aplicarFiltros() {
+    filtrosActivos.estado = document.getElementById('filtroEstado')?.value || 'todos';
+    filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo')?.value || 'todos';
+    filtrosActivos.sucursalId = document.getElementById('filtroSucursal')?.value || 'todos';
+    
+    paginaActual = 1;
+    cursoresPaginacion = { ultimoDocumento: null, primerDocumento: null };
+    
+    cargarIncidenciasPagina(1);
+}
+
+function limpiarFiltros() {
+    const filtroEstado = document.getElementById('filtroEstado');
+    const filtroRiesgo = document.getElementById('filtroRiesgo');
+    const filtroSucursal = document.getElementById('filtroSucursal');
+
+    if (filtroEstado) filtroEstado.value = 'todos';
+    if (filtroRiesgo) filtroRiesgo.value = 'todos';
+    if (filtroSucursal) filtroSucursal.value = 'todos';
+
+    filtrosActivos = {
+        estado: 'todos',
+        nivelRiesgo: 'todos',
+        sucursalId: 'todos'
+    };
+    
+    paginaActual = 1;
+    cursoresPaginacion = { ultimoDocumento: null, primerDocumento: null };
+    
+    cargarIncidenciasPagina(1);
+}
+
+window.verDetallesIncidencia = function (incidenciaId, event) {
+    event?.stopPropagation();
+    window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
+};
+
+window.seguimientoIncidencia = function (incidenciaId, event) {
+    event?.stopPropagation();
+    window.location.href = `../seguimientoIncidencias/seguimientoIncidencias.html?id=${incidenciaId}`;
+};
+
+window.verPDF = async function (incidenciaId, event) {
+    event?.stopPropagation();
+    
     try {
-        if (window.firebase) {
-            const user = firebase.auth().currentUser;
-            if (user) {
-                authToken = await user.getIdToken();
-            }
+        const incidencia = incidenciasActuales.find(i => i.id === incidenciaId);
+        
+        if (!incidencia) {
+            throw new Error('Incidencia no encontrada');
         }
-        if (!authToken) {
-            const token = localStorage.getItem('firebaseToken') ||
-                localStorage.getItem('authToken') ||
-                localStorage.getItem('token');
-            if (token) {
-                authToken = token;
-            }
+        
+        if (incidencia.pdfUrl) {
+            window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
+        } else {
+            Swal.fire({
+                icon: 'info',
+                title: 'PDF no disponible',
+                text: 'Esta incidencia aún no tiene un PDF generado.'
+            });
         }
     } catch (error) {
-        authToken = null;
+        console.error('Error al abrir PDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo abrir el PDF: ' + error.message
+        });
     }
-}
+};
 
-async function obtenerDatosOrganizacion() {
+window.generarIPHMultiple = async function () {
     try {
-        // Primero intentar con usuario actual de localStorage
-        const usuario = obtenerUsuarioActual();
-        if (usuario) {
-            organizacionActual = {
-                nombre: usuario.organizacion || 'Mi Empresa',
-                camelCase: usuario.organizacionCamelCase || ''
-            };
-            return;
-        }
-
-        // Si no, intentar con window.userManager
-        if (window.userManager && window.userManager.currentUser) {
-            const user = window.userManager.currentUser;
-            organizacionActual = {
-                nombre: user.organizacion || 'Mi Empresa',
-                camelCase: user.organizacionCamelCase || ''
-            };
-            return;
-        }
-
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
-
-        organizacionActual = {
-            nombre: userData.organizacion || adminInfo.organizacion || 'Mi Empresa',
-            camelCase: userData.organizacionCamelCase || adminInfo.organizacionCamelCase || ''
-        };
+        Swal.fire({
+            icon: 'info',
+            title: 'Información',
+            text: 'Los PDFs se generan automáticamente al crear o modificar incidencias.',
+            confirmButtonText: 'Entendido'
+        });
     } catch (error) {
-        organizacionActual = { nombre: 'Mi Empresa', camelCase: '' };
+        console.error('Error:', error);
     }
-}
+};
 
 async function cargarSucursales() {
     try {
@@ -246,7 +373,6 @@ async function cargarSucursales() {
 
             const filtroSucursal = document.getElementById('filtroSucursal');
             if (filtroSucursal) {
-                const valorActual = filtroSucursal.value;
                 filtroSucursal.innerHTML = '<option value="todos">Todas las sucursales</option>';
                 sucursalesCache.forEach(suc => {
                     const option = document.createElement('option');
@@ -254,15 +380,10 @@ async function cargarSucursales() {
                     option.textContent = suc.nombre;
                     filtroSucursal.appendChild(option);
                 });
-                // Restaurar valor si existía
-                if (valorActual && valorActual !== 'todos') {
-                    if (sucursalesCache.some(s => s.id === valorActual)) {
-                        filtroSucursal.value = valorActual;
-                    }
-                }
             }
         }
     } catch (error) {
+        console.error('Error cargando sucursales:', error);
         sucursalesCache = [];
     }
 }
@@ -273,6 +394,7 @@ async function cargarCategorias() {
         const categoriaManager = new CategoriaManager();
         categoriasCache = await categoriaManager.obtenerTodasCategorias();
     } catch (error) {
+        console.error('Error cargando categorías:', error);
         categoriasCache = [];
     }
 }
@@ -299,6 +421,7 @@ async function cargarSubcategorias() {
             subcategoriasCache = await subcategoriaManager.obtenerTodasSubcategorias?.() || [];
         }
     } catch (error) {
+        console.error('Error cargando subcategorías:', error);
         subcategoriasCache = [];
     }
 }
@@ -326,319 +449,22 @@ async function cargarUsuarios() {
             usuariosCache = [];
         }
     } catch (error) {
+        console.error('Error cargando usuarios:', error);
         usuariosCache = [];
     }
 }
 
-function configurarEventListeners() {
-    const btnFiltrar = document.getElementById('btnFiltrar');
-    const btnLimpiar = document.getElementById('btnLimpiarFiltros');
-
-    if (btnFiltrar) {
-        btnFiltrar.addEventListener('click', aplicarFiltros);
-    }
-
-    if (btnLimpiar) {
-        btnLimpiar.addEventListener('click', limpiarFiltros);
-    }
+function obtenerNombreSucursal(sucursalId) {
+    if (!sucursalId) return 'No especificada';
+    const sucursal = sucursalesCache.find(s => s.id === sucursalId);
+    return sucursal ? sucursal.nombre : 'No disponible';
 }
 
-// =============================================
-// FUNCIONES DE FILTRADO
-// =============================================
-function aplicarFiltros() {
-    filtrosActivos.estado = document.getElementById('filtroEstado')?.value || 'todos';
-    filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo')?.value || 'todos';
-    filtrosActivos.sucursalId = document.getElementById('filtroSucursal')?.value || 'todos';
-
-    paginaActual = 1;
-    renderizarIncidencias();
+function obtenerNombreCategoria(categoriaId) {
+    if (!categoriaId) return 'No especificada';
+    const categoria = categoriasCache.find(c => c.id === categoriaId);
+    return categoria ? categoria.nombre : 'No disponible';
 }
-
-function limpiarFiltros() {
-    const filtroEstado = document.getElementById('filtroEstado');
-    const filtroRiesgo = document.getElementById('filtroRiesgo');
-    const filtroSucursal = document.getElementById('filtroSucursal');
-
-    if (filtroEstado) filtroEstado.value = 'todos';
-    if (filtroRiesgo) filtroRiesgo.value = 'todos';
-    if (filtroSucursal) filtroSucursal.value = 'todos';
-
-    filtrosActivos = {
-        estado: 'todos',
-        nivelRiesgo: 'todos',
-        sucursalId: 'todos'
-    };
-
-    paginaActual = 1;
-    renderizarIncidencias();
-}
-
-function filtrarIncidencias(incidencias) {
-    return incidencias.filter(inc => {
-        if (filtrosActivos.estado !== 'todos' && inc.estado !== filtrosActivos.estado) {
-            return false;
-        }
-
-        if (filtrosActivos.nivelRiesgo !== 'todos' && inc.nivelRiesgo !== filtrosActivos.nivelRiesgo) {
-            return false;
-        }
-
-        if (filtrosActivos.sucursalId !== 'todos' && inc.sucursalId !== filtrosActivos.sucursalId) {
-            return false;
-        }
-
-        return true;
-    });
-}
-
-// =============================================
-// FUNCIONES DE ACCIÓN
-// =============================================
-window.verDetallesIncidencia = function (incidenciaId, event) {
-    event?.stopPropagation();
-    window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
-};
-
-window.seguimientoIncidencia = function (incidenciaId, event) {
-    event?.stopPropagation();
-    window.location.href = `../seguimientoIncidencias/seguimientoIncidencias.html?id=${incidenciaId}`;
-};
-
-window.verPDF = async function (incidenciaId, event) {
-    event?.stopPropagation();
-
-    try {
-        const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
-        if (!incidencia) {
-            throw new Error('Incidencia no encontrada');
-        }
-
-        if (incidencia.pdfUrl) {
-            window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
-        } else {
-            Swal.fire({
-                icon: 'info',
-                title: 'PDF no disponible',
-                text: 'Esta incidencia aún no tiene un PDF generado. Se generará automáticamente en breve.'
-            });
-
-            if (generadorIPH && typeof generadorIPH.generarIPH === 'function') {
-                const confirm = await Swal.fire({
-                    title: '¿Generar PDF?',
-                    text: '¿Deseas generar el PDF ahora?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'SÍ, GENERAR',
-                    cancelButtonText: 'CANCELAR'
-                });
-
-                if (confirm.isConfirmed) {
-                    await generadorIPH.generarIPH(incidencia);
-                    // Recargar incidencia para obtener el pdfUrl
-                    await cargarIncidencias();
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Error al abrir PDF:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudo abrir el PDF: ' + error.message
-        });
-    }
-};
-
-window.generarIPH = window.verPDF;
-
-window.generarIPHMultiple = async function () {
-    try {
-        const incidenciasVisibles = incidenciasCache.slice(0, 5);
-
-        if (incidenciasVisibles.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Sin incidencias',
-                text: 'No hay incidencias para generar informes.'
-            });
-            return;
-        }
-
-        const confirm = await Swal.fire({
-            icon: 'question',
-            title: 'Múltiples IPHs',
-            text: `Vas a generar ${incidenciasVisibles.length} informes. ¿Continuar?`,
-            showCancelButton: true,
-            confirmButtonText: 'SÍ, GENERAR',
-            cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#1a3b5d'
-        });
-
-        if (!confirm.isConfirmed) return;
-
-        if (generadorIPH && typeof generadorIPH.generarIPHMultiple === 'function') {
-            await generadorIPH.generarIPHMultiple(incidenciasVisibles);
-        }
-
-    } catch (error) {
-        console.error('Error generando IPHs múltiples:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: error.message
-        });
-    }
-};
-
-// =============================================
-// CARGAR INCIDENCIAS (carga inicial)
-// =============================================
-async function cargarIncidencias() {
-    if (!incidenciaManager || !organizacionActual.camelCase) {
-        mostrarError('No se pudo cargar el gestor de incidencias');
-        return;
-    }
-
-    try {
-        const tbody = document.getElementById('tablaIncidenciasBody');
-        if (!tbody) return;
-
-        const usuarioActual = obtenerUsuarioActual();
-
-        console.log('📤 Cargando incidencias, usuario:', usuarioActual ? usuarioActual.nombreCompleto : 'NO HAY USUARIO');
-
-        incidenciasCache = await incidenciaManager.getIncidenciasByOrganizacion(
-            organizacionActual.camelCase,
-            {},
-            usuarioActual
-        );
-
-        console.log('📥 Incidencias cargadas:', incidenciasCache.length);
-
-        if (!incidenciasCache || incidenciasCache.length === 0) {
-            mostrarSinIncidencias(tbody);
-            return;
-        }
-
-        renderizarIncidencias();
-
-    } catch (error) {
-        console.error('Error al cargar incidencias:', error);
-        mostrarError('Error al cargar incidencias: ' + error.message);
-    }
-}
-
-function mostrarSinIncidencias(tbody) {
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="7" style="text-align:center; padding:60px 20px;">
-                <div style="text-align:center;">
-                    <i class="fas fa-exclamation-triangle" style="font-size:48px; color:rgba(255,193,7,0.3); margin-bottom:16px;"></i>
-                    <h5 style="color:white;">No hay incidencias registradas</h5>
-                    <p style="color: var(--color-text-dim); margin-bottom: 20px;">Comienza registrando la primera incidencia de tu organización.</p>
-                    <a href="../crearIncidencias/crearIncidencias.html" class="btn-nueva-incidencia-header" style="display:inline-flex; margin-top:16px;">
-                        <i class="fas fa-plus-circle"></i> Crear Incidencia
-                    </a>
-                </div>
-            </td>
-        </tr>
-    `;
-}
-
-function renderizarIncidencias() {
-    const tbody = document.getElementById('tablaIncidenciasBody');
-    if (!tbody) return;
-
-    const incidenciasFiltradas = filtrarIncidencias(incidenciasCache);
-
-    incidenciasFiltradas.sort((a, b) => {
-        const fechaA = a.fechaCreacion ? new Date(a.fechaCreacion) : 0;
-        const fechaB = b.fechaCreacion ? new Date(b.fechaCreacion) : 0;
-        return fechaB - fechaA;
-    });
-
-    const totalItems = incidenciasFiltradas.length;
-    const totalPaginas = Math.ceil(totalItems / ITEMS_POR_PAGINA);
-    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
-    const fin = Math.min(inicio + ITEMS_POR_PAGINA, totalItems);
-    const incidenciasPagina = incidenciasFiltradas.slice(inicio, fin);
-
-    const paginationInfo = document.getElementById('paginationInfo');
-    if (paginationInfo) {
-        if (totalItems === 0) {
-            paginationInfo.textContent = `No hay incidencias`;
-        } else {
-            paginationInfo.textContent = `Mostrando ${inicio + 1}-${fin} de ${totalItems} incidencias`;
-        }
-    }
-
-    tbody.innerHTML = '';
-
-    if (incidenciasPagina.length === 0 && totalItems > 0) {
-        // Si no hay incidencias en esta página pero hay en total, resetear a página 1
-        if (paginaActual > 1) {
-            paginaActual = 1;
-            renderizarIncidencias();
-            return;
-        }
-    }
-
-    incidenciasPagina.forEach(incidencia => {
-        crearFilaIncidencia(incidencia, tbody);
-    });
-
-    renderizarPaginacion(totalPaginas);
-}
-
-function renderizarPaginacion(totalPaginas) {
-    const pagination = document.getElementById('pagination');
-    if (!pagination) return;
-
-    if (totalPaginas <= 1) {
-        pagination.innerHTML = '';
-        return;
-    }
-
-    let html = '';
-
-    // Botón anterior
-    if (paginaActual > 1) {
-        html += `
-            <li class="page-item">
-                <button class="page-link" onclick="irPagina(${paginaActual - 1})">«</button>
-            </li>
-        `;
-    }
-
-    // Números de página
-    const startPage = Math.max(1, paginaActual - 2);
-    const endPage = Math.min(totalPaginas, paginaActual + 2);
-
-    for (let i = startPage; i <= endPage; i++) {
-        html += `
-            <li class="page-item ${i === paginaActual ? 'active' : ''}">
-                <button class="page-link" onclick="irPagina(${i})">${i}</button>
-            </li>
-        `;
-    }
-
-    // Botón siguiente
-    if (paginaActual < totalPaginas) {
-        html += `
-            <li class="page-item">
-                <button class="page-link" onclick="irPagina(${paginaActual + 1})">»</button>
-            </li>
-        `;
-    }
-
-    pagination.innerHTML = html;
-}
-
-window.irPagina = function (pagina) {
-    paginaActual = pagina;
-    renderizarIncidencias();
-};
 
 function crearFilaIncidencia(incidencia, tbody) {
     const tr = document.createElement('tr');
@@ -657,7 +483,7 @@ function crearFilaIncidencia(incidencia, tbody) {
 
     tr.innerHTML = `
         <td data-label="ID / Folio">
-            <span class="incidencia-id" title="${incidencia.id}">${incidencia.id.substring(0, 8)}...</span>
+            <span class="incidencia-id" title="${incidencia.id}">${incidencia.id.substring(0, 12)}...</span>
         </td>
         <td data-label="Sucursal">
             <div style="display: flex; align-items: center;">
@@ -702,27 +528,25 @@ function crearFilaIncidencia(incidencia, tbody) {
 
     tbody.appendChild(tr);
 
-    // Agregar event listeners directamente
-    tr.querySelectorAll('[data-action]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const action = btn.dataset.action;
-            const id = btn.dataset.id;
-            if (action === 'ver') window.verDetallesIncidencia(id, e);
-            else if (action === 'pdf') window.verPDF(id, e);
-            else if (action === 'seguimiento') window.seguimientoIncidencia(id, e);
+    setTimeout(() => {
+        tr.querySelectorAll('[data-action]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                const id = btn.dataset.id;
+                if (action === 'ver') window.verDetallesIncidencia(id, e);
+                else if (action === 'pdf') window.verPDF(id, e);
+                else if (action === 'seguimiento') window.seguimientoIncidencia(id, e);
+            });
         });
-    });
+    }, 50);
 }
 
 function agregarBotonIPHMultiple() {
     const cardHeader = document.querySelector('.card-header');
     if (cardHeader) {
-        // Verificar si ya existe para no duplicar
-        if (cardHeader.querySelector('.btn-iph-multiple')) return;
-
         const btnIPHMultiple = document.createElement('button');
-        btnIPHMultiple.className = 'btn-nueva-incidencia-header btn-iph-multiple';
+        btnIPHMultiple.className = 'btn-nueva-incidencia-header';
         btnIPHMultiple.style.marginLeft = '10px';
         btnIPHMultiple.innerHTML = '<i class="fas fa-file-pdf"></i> IPH Múltiple';
         btnIPHMultiple.onclick = window.generarIPHMultiple;
@@ -736,40 +560,19 @@ function agregarBotonIPHMultiple() {
     }
 }
 
-// Funciones auxiliares para obtener nombres
-function obtenerNombreSucursal(sucursalId) {
-    if (!sucursalId) return 'No especificada';
-    const sucursal = sucursalesCache.find(s => s.id === sucursalId);
-    return sucursal ? sucursal.nombre : 'No disponible';
+function configurarEventListeners() {
+    const btnFiltrar = document.getElementById('btnFiltrar');
+    const btnLimpiar = document.getElementById('btnLimpiarFiltros');
+
+    if (btnFiltrar) {
+        btnFiltrar.addEventListener('click', aplicarFiltros);
+    }
+
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', limpiarFiltros);
+    }
 }
 
-function obtenerNombreCategoria(categoriaId) {
-    if (!categoriaId) return 'No especificada';
-    const categoria = categoriasCache.find(c => c.id === categoriaId);
-    return categoria ? categoria.nombre : 'No disponible';
-}
-
-function obtenerNombreSubcategoria(subcategoriaId) {
-    if (!subcategoriaId) return 'No especificada';
-    const subcategoria = subcategoriasCache.find(s => s.id === subcategoriaId);
-    return subcategoria ? subcategoria.nombre : 'No disponible';
-}
-
-function obtenerNombreUsuario(usuarioId) {
-    if (!usuarioId) return 'Sistema';
-    const usuario = usuariosCache.find(u => u.id === usuarioId);
-    return usuario ? usuario.nombreCompleto || usuario.email || 'Usuario' : 'Usuario desconocido';
-}
-
-function obtenerCargoUsuario(usuarioId) {
-    if (!usuarioId) return '';
-    const usuario = usuariosCache.find(u => u.id === usuarioId);
-    return usuario ? usuario.cargo || 'No especificado' : '';
-}
-
-// =============================================
-// UTILIDADES
-// =============================================
 function escapeHTML(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -817,9 +620,66 @@ function mostrarErrorInicializacion() {
     }
 }
 
-// =============================================
-// INICIALIZACIÓN
-// =============================================
+async function obtenerDatosOrganizacion() {
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (usuario) {
+            organizacionActual = {
+                nombre: usuario.organizacion || 'Mi Empresa',
+                camelCase: usuario.organizacionCamelCase || ''
+            };
+            console.log('📌 Organización:', organizacionActual);
+            return;
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+
+        organizacionActual = {
+            nombre: userData.organizacion || adminInfo.organizacion || 'Mi Empresa',
+            camelCase: userData.organizacionCamelCase || adminInfo.organizacionCamelCase || ''
+        };
+    } catch (error) {
+        organizacionActual = { nombre: 'Mi Empresa', camelCase: '' };
+    }
+}
+
+async function inicializarIncidenciaManager() {
+    try {
+        await obtenerDatosOrganizacion();
+
+        incidenciaManager = new IncidenciaManager();
+
+        await Promise.all([
+            cargarSucursales().catch(() => { console.warn('Error cargando sucursales'); }),
+            cargarCategorias().catch(() => { console.warn('Error cargando categorías'); }),
+            cargarSubcategorias().catch(() => { console.warn('Error cargando subcategorías'); }),
+            cargarUsuarios().catch(() => { console.warn('Error cargando usuarios'); })
+        ]);
+
+        if (generadorIPH && typeof generadorIPH.configurar === 'function') {
+            generadorIPH.configurar({
+                organizacionActual,
+                sucursalesCache,
+                categoriasCache,
+                subcategoriasCache,
+                usuariosCache
+            });
+        }
+
+        configurarEventListeners();
+        agregarBotonIPHMultiple();
+        
+        await cargarIncidenciasPagina(1);
+
+        return true;
+    } catch (error) {
+        console.error('Error al inicializar incidencias:', error);
+        mostrarErrorInicializacion();
+        return false;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
     await inicializarIncidenciaManager();
 });

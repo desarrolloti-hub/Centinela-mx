@@ -1,5 +1,6 @@
 // tarea.js - VERSIÓN MEJORADA CON NOTAS GENERALES Y RECORDATORIOS
 // UNA SOLA COLECCIÓN: tareas_[organizacion]
+// CON REGISTRO DE CONSUMO FIREBASE
 
 import {
     collection,
@@ -16,6 +17,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
+
+// [MODIFICACIÓN]: Importar la instancia de consumo
+import consumo from '/clases/consumoFirebase.js';
 
 class Tarea {
     constructor(id, data) {
@@ -369,6 +373,9 @@ class TareaManager {
                 tieneRecordatorio: tareaData.tieneRecordatorio || false
             };
 
+            // [MODIFICACIÓN]: Registrar ESCRITURA
+            await consumo.registrarFirestoreEscritura(collectionName, 'nueva tarea');
+
             const docRef = await addDoc(tareasCollection, tareaFirestoreData);
 
             const nuevaTarea = new Tarea(docRef.id, {
@@ -428,6 +435,10 @@ class TareaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const tareasCollection = collection(db, collectionName);
             const tareasQuery = query(tareasCollection, orderBy("fechaCreacion", "desc"));
+            
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(collectionName, 'lista tareas');
+            
             const snapshot = await getDocs(tareasQuery);
 
             const tareas = [];
@@ -458,6 +469,10 @@ class TareaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const tareaRef = doc(db, collectionName, tareaId);
+            
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(collectionName, tareaId);
+            
             const tareaSnap = await getDoc(tareaRef);
 
             if (tareaSnap.exists()) {
@@ -550,6 +565,9 @@ class TareaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const tareaRef = doc(db, collectionName, tareaId);
 
+            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
+            await consumo.registrarFirestoreActualizacion(collectionName, tareaId);
+            
             await updateDoc(tareaRef, {
                 items: tarea.items,
                 fechaActualizacion: serverTimestamp(),
@@ -575,6 +593,9 @@ class TareaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const tareaRef = doc(db, collectionName, tareaId);
 
+            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
+            await consumo.registrarFirestoreActualizacion(collectionName, tareaId);
+            
             await updateDoc(tareaRef, {
                 items: tarea.items,
                 fechaActualizacion: serverTimestamp(),
@@ -605,6 +626,9 @@ class TareaManager {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const tareaRef = doc(db, collectionName, tareaId);
 
+            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
+            await consumo.registrarFirestoreActualizacion(collectionName, tareaId);
+            
             await updateDoc(tareaRef, {
                 items: tarea.items,
                 fechaActualizacion: serverTimestamp(),
@@ -651,6 +675,9 @@ class TareaManager {
             delete datosActualizados.creadoPor;
             delete datosActualizados.creadoPorNombre;
 
+            // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
+            await consumo.registrarFirestoreActualizacion(collectionName, tareaId);
+            
             await updateDoc(tareaRef, datosActualizados);
             return true;
 
@@ -665,13 +692,17 @@ class TareaManager {
             const tarea = await this.getTareaById(tareaId, organizacionCamelCase);
             if (!tarea) throw new Error('Tarea no encontrada');
 
-            // Verificar permisos - CORREGIDO: usuarioActual en minúscula
+            // Verificar permisos
             if (!tarea.puedeEditar(usuarioActual.id, usuarioActual.esAdmin)) {
                 throw new Error('No tienes permiso para eliminar esta tarea');
             }
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const tareaRef = doc(db, collectionName, tareaId);
+            
+            // [MODIFICACIÓN]: Registrar ELIMINACIÓN
+            await consumo.registrarFirestoreEliminacion(collectionName, tareaId);
+            
             await deleteDoc(tareaRef);
 
             // Remover de la caché local
