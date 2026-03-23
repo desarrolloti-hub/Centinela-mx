@@ -78,7 +78,7 @@ async function cargarPlanesPersonalizados() {
         console.log('📡 Cargando planes desde Firestore - Colección: planes');
         
         // Obtener todos los planes desde Firestore usando PlanPersonalizadoManager
-        const planes = await planManager.obtenerTodos(true);
+        const planes = await planManager.obtenerTodos();
         
         console.log(`📋 Planes encontrados: ${planes.length}`);
         
@@ -86,23 +86,13 @@ async function cargarPlanesPersonalizados() {
             console.warn('⚠️ No se encontraron planes en la colección "planes"');
         } else {
             planes.forEach(plan => {
-                console.log(`  - ID: ${plan.id}, Nombre: ${plan.nombre}, Precio: ${plan.precio}, Tipo: ${plan.tipoBase}, Activo: ${plan.activo}`);
+                console.log(`  - ID: ${plan.id}, Nombre: ${plan.nombre}, Precio: ${plan.precio}`);
+                console.log(`    Mapas activos:`, plan.mapasActivos);
             });
         }
         
-        planesPersonalizados = planes.map(plan => ({
-            id: plan.id,
-            nombre: plan.nombre,
-            descripcion: plan.descripcion,
-            precio: plan.precio,
-            color: plan.color,
-            icono: plan.icono,
-            tipoBase: plan.tipoBase,
-            modulosIncluidos: plan.modulosIncluidos,
-            modulosActivos: plan.obtenerModulosActivos(),
-            totalModulosActivos: plan.contarModulosActivos(),
-            activo: plan.activo
-        }));
+        // Guardar los planes originales para uso posterior
+        planesPersonalizados = planes;
         
         console.log(`✅ Cargados ${planesPersonalizados.length} planes personalizados desde Firestore`);
         
@@ -224,9 +214,12 @@ function mostrarResultados(administradores) {
 
 // ========== OBTENER BADGE DEL PLAN ==========
 function getPlanBadge(plan, fechaVencimiento) {
-    // Plan personalizado (ID de documento)
+    // Buscar el plan en la lista de planes personalizados para mostrar nombre bonito
     if (plan && plan !== 'sin-plan' && plan !== 'gratis') {
-        let badgeHtml = `<span class="plan-badge personalizado"><i class="fas fa-cube"></i> ${escapeHTML(plan)}</span>`;
+        const planEncontrado = planesPersonalizados.find(p => p.id === plan);
+        const nombreMostrar = planEncontrado ? planEncontrado.nombre : plan;
+        
+        let badgeHtml = `<span class="plan-badge personalizado"><i class="fas fa-cube"></i> ${escapeHTML(nombreMostrar)}</span>`;
         
         // Mostrar fecha de vencimiento si existe
         if (fechaVencimiento) {
@@ -246,6 +239,68 @@ function getPlanBadge(plan, fechaVencimiento) {
     
     const info = planes[plan] || planes['sin-plan'];
     return `<span class="plan-badge ${info.clase}"><i class="fas ${info.icono}"></i> ${info.texto}</span>`;
+}
+
+// ========== OBTENER MAPAS ACTIVOS PARA MOSTRAR ==========
+function obtenerMapasActivosHtml(plan) {
+    if (!plan || !plan.mapasActivos) return '';
+    
+    const mapasHtml = [];
+    
+    if (plan.mapasActivos.incidencias) {
+        mapasHtml.push(`
+            <span class="modulo-tag activo" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                <i class="fas fa-exclamation-triangle"></i> Incidencias
+            </span>
+        `);
+    }
+    
+    if (plan.mapasActivos.alertas) {
+        mapasHtml.push(`
+            <span class="modulo-tag activo" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                <i class="fas fa-map-marker-alt"></i> Alertas (Mapa)
+            </span>
+        `);
+    }
+    
+    return mapasHtml.join('');
+}
+
+// ========== OBTENER PERMISOS ACTIVOS PARA MOSTRAR ==========
+function obtenerPermisosActivosHtml(plan) {
+    if (!plan) return '';
+    
+    const permisosHtml = [];
+    
+    // Permisos de Incidencias
+    if (plan.mapasActivos?.incidencias) {
+        const moduloIncidencias = MODULOS_SISTEMA.incidencias;
+        if (moduloIncidencias && moduloIncidencias.permisos) {
+            Object.values(moduloIncidencias.permisos).forEach(permiso => {
+                permisosHtml.push(`
+                    <span class="permiso-tag" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                        <i class="fas ${permiso.icono}"></i> ${permiso.nombre}
+                    </span>
+                `);
+            });
+        }
+    }
+    
+    // Permisos de Alertas
+    if (plan.mapasActivos?.alertas) {
+        const moduloAlertas = MODULOS_SISTEMA.alertas;
+        if (moduloAlertas && moduloAlertas.permisos) {
+            Object.values(moduloAlertas.permisos).forEach(permiso => {
+                permisosHtml.push(`
+                    <span class="permiso-tag" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">
+                        <i class="fas ${permiso.icono}"></i> ${permiso.nombre}
+                    </span>
+                `);
+            });
+        }
+    }
+    
+    return permisosHtml.join('');
 }
 
 // ========== ABRIR MODAL ASIGNAR PLAN ==========
@@ -291,6 +346,10 @@ async function abrirModalAsignarPlan(admin) {
         day: 'numeric'
     });
     
+    // Buscar el plan actual del admin para mostrar su nombre bonito
+    const planActualObj = planesPersonalizados.find(p => p.id === admin.planActual);
+    const nombrePlanActual = planActualObj ? planActualObj.nombre : (admin.planActual === 'sin-plan' ? 'Sin Plan' : admin.planActual === 'gratis' ? 'Gratis' : admin.planActual);
+    
     adminInfoDiv.innerHTML = `
         <div class="info-icon">
             ${admin.fotoUsuario ? 
@@ -307,7 +366,7 @@ async function abrirModalAsignarPlan(admin) {
         </div>
     `;
     
-    // Construir HTML de planes - SOLO PLANES PERSONALIZADOS DESDE FIRESTORE
+    // Construir HTML de planes - USANDO PlanPersonalizado CORRECTAMENTE
     let planesHTML = '';
     
     if (planesPersonalizados.length > 0) {
@@ -318,10 +377,13 @@ async function abrirModalAsignarPlan(admin) {
                 <h4>Planes Disponibles</h4>
                 <div class="planes-grid">
                     ${planesPersonalizados.map(plan => {
-                        const modulosHtml = (plan.modulosActivos || []).map(moduloId => {
-                            const modulo = MODULOS_SISTEMA[moduloId] || { nombre: moduloId, icono: 'fa-cube' };
-                            return `<span class="modulo-tag activo"><i class="fas ${modulo.icono}"></i> ${modulo.nombre}</span>`;
-                        }).join('');
+                        // Obtener mapas activos usando el método de la clase
+                        const mapasActivosLista = plan.obtenerMapasActivos();
+                        const totalMapas = plan.contarMapasActivos();
+                        const totalPermisos = plan.contarPermisosActivos();
+                        
+                        const mapasHtml = obtenerMapasActivosHtml(plan);
+                        const permisosHtml = obtenerPermisosActivosHtml(plan);
                         
                         return `
                             <div class="plan-opcion plan-personalizado" data-plan-id="${escapeHTML(plan.id)}">
@@ -330,21 +392,35 @@ async function abrirModalAsignarPlan(admin) {
                                     <div class="plan-header" style="border-left-color: ${plan.color || '#8b5cf6'};">
                                         <i class="fas ${plan.icono || 'fa-cube'}" style="color: ${plan.color || '#8b5cf6'};"></i>
                                         <h3>${escapeHTML(plan.nombre)}</h3>
-                                        <span class="plan-precio">$${plan.precio}/mes</span>
+                                        <span class="plan-precio">${plan.obtenerPrecioFormateado()}</span>
                                     </div>
                                     <div class="plan-descripcion">
                                         <p>${escapeHTML(plan.descripcion || 'Plan personalizado')}</p>
                                     </div>
                                     <div class="plan-stats">
                                         <span class="badge-modulos">
-                                            <i class="fas fa-cubes"></i> ${plan.totalModulosActivos} módulos activos
+                                            <i class="fas fa-cubes"></i> ${totalMapas} mapa(s) activo(s)
+                                        </span>
+                                        <span class="badge-permisos">
+                                            <i class="fas fa-key"></i> ${totalPermisos} permiso(s)
                                         </span>
                                         <span class="badge-vigencia">
                                             <i class="fas fa-calendar-check"></i> Vigencia: ${DIAS_VENCIMIENTO} días
                                         </span>
                                     </div>
                                     <div class="plan-modulos">
-                                        ${modulosHtml || '<span class="modulo-tag">Sin módulos configurados</span>'}
+                                        <div class="mapas-activos" style="margin-bottom: 10px;">
+                                            <strong>Mapas:</strong>
+                                            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px;">
+                                                ${mapasHtml || '<span class="modulo-tag inactivo">Sin mapas activos</span>'}
+                                            </div>
+                                        </div>
+                                        <div class="permisos-activos">
+                                            <strong>Permisos:</strong>
+                                            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px;">
+                                                ${permisosHtml || '<span class="permiso-tag">Sin permisos específicos</span>'}
+                                            </div>
+                                        </div>
                                     </div>
                                 </label>
                             </div>
@@ -409,7 +485,7 @@ async function abrirModalAsignarPlan(admin) {
 async function obtenerInfoPlan(planId) {
     console.log(`🔍 Buscando información del plan: ${planId}`);
     
-    // Buscar en planes personalizados (desde Firestore)
+    // Buscar en planes personalizados usando el manager
     try {
         const plan = await planManager.obtenerPorId(planId);
         if (plan) {
@@ -420,11 +496,12 @@ async function obtenerInfoPlan(planId) {
                 color: plan.color,
                 icono: plan.icono,
                 precio: plan.precio,
-                modulos: plan.obtenerModulosCompletos().map(m => ({
-                    id: m.id,
-                    nombre: m.nombre,
-                    activo: m.incluido
-                }))
+                precioFormateado: plan.obtenerPrecioFormateado(),
+                mapasActivos: plan.mapasActivos,
+                totalMapas: plan.contarMapasActivos(),
+                totalPermisos: plan.contarPermisosActivos(),
+                mapasActivosLista: plan.obtenerMapasActivos(),
+                permisosActivos: plan.obtenerPermisosActivos()
             };
         }
     } catch (error) {
@@ -441,11 +518,12 @@ async function obtenerInfoPlan(planId) {
             color: cachedPlan.color,
             icono: cachedPlan.icono,
             precio: cachedPlan.precio,
-            modulos: Object.entries(cachedPlan.modulosIncluidos || {}).map(([id, activo]) => ({
-                id: id,
-                nombre: MODULOS_SISTEMA[id]?.nombre || id,
-                activo: activo
-            }))
+            precioFormateado: cachedPlan.obtenerPrecioFormateado(),
+            mapasActivos: cachedPlan.mapasActivos,
+            totalMapas: cachedPlan.contarMapasActivos(),
+            totalPermisos: cachedPlan.contarPermisosActivos(),
+            mapasActivosLista: cachedPlan.obtenerMapasActivos(),
+            permisosActivos: cachedPlan.obtenerPermisosActivos()
         };
     }
     
@@ -509,24 +587,38 @@ async function asignarPlan() {
         return;
     }
     
+    // Generar HTML de mapas y permisos para confirmación
+    const mapasConfirmHtml = infoPlan.mapasActivosLista.map(mapa => `
+        <span style="background: ${mapa.color}20; color: ${mapa.color}; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem;">
+            <i class="fas ${mapa.icono}"></i> ${mapa.nombre}
+        </span>
+    `).join('');
+    
+    const permisosConfirmHtml = infoPlan.permisosActivos.map(permiso => `
+        <span style="background: rgba(16,185,129,0.15); color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem;">
+            <i class="fas ${permiso.icono}"></i> ${permiso.nombre}
+        </span>
+    `).join('');
+    
     confirmContenido.innerHTML = `
         <div style="padding: 10px 0;">
             <p><strong>Administrador:</strong> ${escapeHTML(administradorSeleccionado.nombreCompleto)}</p>
             <p><strong>Organización:</strong> ${escapeHTML(administradorSeleccionado.organizacion)}</p>
             <p><strong>Plan a asignar:</strong> ${infoPlan.nombre}</p>
             <p><strong>ID del Plan:</strong> ${planSeleccionado}</p>
-            <p><strong>Precio:</strong> $${infoPlan.precio}/mes</p>
-            <p><strong>Vigencia:</strong> ${DIAS_VENCIMIENTO} días</p>
-            <p><strong>Fecha de vencimiento:</strong> ${fechaVencimientoStr}</p>
+            <p><strong>Precio:</strong> ${infoPlan.precioFormateado}/mes</p>
+            <p><strong>Vigencia:</strong> ${DIAS_VENCIMIENTO} días (hasta ${fechaVencimientoStr})</p>
             <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
-            <div class="modulos-preview">
-                <p><strong>Módulos incluidos:</strong></p>
+            <div class="mapas-preview">
+                <p><strong>Mapas incluidos (${infoPlan.totalMapas}):</strong></p>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
-                    ${infoPlan.modulos.filter(m => m.activo).map(m => `
-                        <span style="background: rgba(16,185,129,0.15); color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem;">
-                            <i class="fas fa-check-circle"></i> ${m.nombre}
-                        </span>
-                    `).join('')}
+                    ${mapasConfirmHtml || '<span>Ningún mapa activo</span>'}
+                </div>
+            </div>
+            <div class="permisos-preview" style="margin-top: 15px;">
+                <p><strong>Permisos incluidos (${infoPlan.totalPermisos}):</strong></p>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                    ${permisosConfirmHtml || '<span>Sin permisos específicos</span>'}
                 </div>
             </div>
         </div>
@@ -564,13 +656,14 @@ async function asignarPlan() {
                 { 
                     plan: planSeleccionado,
                     fechaVencimiento: fechaVencimientoISO,
-                    planAsignadoEn: new Date().toISOString()
+                    planAsignadoEn: new Date().toISOString(),
+                    planNombre: infoPlan.nombre // Guardar también el nombre para fácil acceso
                 },
                 'administrador',
                 administradorSeleccionado.organizacionCamelCase
             );
             
-            console.log(`✅ Plan "${planSeleccionado}" asignado correctamente con vencimiento el ${fechaVencimientoStr}`);
+            console.log(`✅ Plan "${planSeleccionado}" (${infoPlan.nombre}) asignado correctamente con vencimiento el ${fechaVencimientoStr}`);
             
             Swal.fire({
                 icon: 'success',
@@ -580,6 +673,11 @@ async function asignarPlan() {
                     <p><strong>${escapeHTML(administradorSeleccionado.nombreCompleto)}</strong></p>
                     <p>de <strong>${escapeHTML(administradorSeleccionado.organizacion)}</strong></p>
                     <p>Vigencia: ${DIAS_VENCIMIENTO} días (hasta ${fechaVencimientoStr})</p>
+                    <hr style="border-color: rgba(255,255,255,0.1); margin: 10px 0;">
+                    <p style="font-size: 0.85rem; color: #aaa;">
+                        <i class="fas fa-cubes"></i> ${infoPlan.totalMapas} mapas activos<br>
+                        <i class="fas fa-key"></i> ${infoPlan.totalPermisos} permisos
+                    </p>
                 `,
                 background: '#1a1a1a',
                 color: '#fff',
