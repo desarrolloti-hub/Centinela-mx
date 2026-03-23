@@ -1,5 +1,5 @@
-// ========== panelControl.js - PANEL DE CONTROL CON DATOS REALES ==========
-// VERSIÓN LIMPIA - Sin logs de depuración
+// ========== panelControl.js - PANEL DE CONTROL CON DATOS REALES Y PERMISOS DINÁMICOS ==========
+// VERSIÓN LIMPIA - Con permisos del plan como el navbar
 
 import { UserManager } from '/clases/user.js';
 import { IncidenciaManager } from '/clases/incidencia.js';
@@ -11,6 +11,7 @@ import { AreaManager } from '/clases/area.js';
 let permisoManager = null;
 let usuarioActual = null;
 let permisosUsuario = null;
+let permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] }; // 🔥 PERMISOS DEL PLAN
 
 // Managers principales
 const userManager = new UserManager();
@@ -38,86 +39,118 @@ const KPI_NAVEGACION = {
     'kpi-incidencias': {
         url: '/usuarios/administrador/incidencias/incidencias.html',
         titulo: 'Incidencias',
-        modulo: 'incidencias'
+        modulo: 'incidencias',
+        permisoRequerido: 'incidencias'
     },
     'kpi-regiones': {
         url: '/usuarios/colaboradores/regiones/regiones.html',
         titulo: 'Regiones',
-        modulo: 'regiones'
+        modulo: 'regiones',
+        permisoRequerido: 'regiones'
     },
     'kpi-sucursales': {
         url: '/usuarios/administrador/sucursales/sucursales.html',
         titulo: 'Sucursales',
-        modulo: 'sucursales'
+        modulo: 'sucursales',
+        permisoRequerido: 'sucursales'
     },
     'kpi-areas': {
         url: '/usuarios/colaboradores/areas/areas.html',
         titulo: 'Áreas',
-        modulo: 'areas'
+        modulo: 'areas',
+        permisoRequerido: 'areas'
     },
     'kpi-cargos': {
         url: '/usuarios/colaboradores/areas/areas.html',
         titulo: 'Cargos',
-        modulo: 'areas'
+        modulo: 'areas',
+        permisoRequerido: 'areas'
     },
     'kpi-usuarios': {
         url: '/usuarios/administrador/usuarios/usuarios.html',
         titulo: 'Colaboradores',
-        modulo: 'usuarios'
+        modulo: 'usuarios',
+        permisoRequerido: 'usuarios'
     }
 };
 
-// Mapeo de módulos a sus respectivas tarjetas y rutas
+// ========== CONFIGURACIÓN DE TARJETAS DE ACCESO RÁPIDO ==========
 const MODULOS_CONFIG = {
     'areas': {
         modulo: 'areas',
         selector: '[data-modulo="areas"]',
         url: '/usuarios/colaboradores/areas/areas.html',
         titulo: 'Áreas',
-        descripcion: 'Gestionar áreas de la organización'
+        descripcion: 'Gestionar áreas de la organización',
+        permisoRequerido: 'areas'
     },
     'categorias': {
         modulo: 'categorias',
         selector: '[data-modulo="categorias"]',
         url: '/usuarios/administrador/categorias/categorias.html',
         titulo: 'Categorías',
-        descripcion: 'Administrar categorías y subcategorías'
+        descripcion: 'Administrar categorías y subcategorías',
+        permisoRequerido: 'categorias'
     },
     'sucursales': {
         modulo: 'sucursales',
         selector: '[data-modulo="sucursales"]',
         url: '/usuarios/administrador/sucursales/sucursales.html',
         titulo: 'Sucursales',
-        descripcion: 'Gestionar sucursales activas'
+        descripcion: 'Gestionar sucursales activas',
+        permisoRequerido: 'sucursales'
     },
     'regiones': {
         modulo: 'regiones',
         selector: '[data-modulo="regiones"]',
         url: '/usuarios/colaboradores/regiones/regiones.html',
         titulo: 'Regiones',
-        descripcion: 'Administrar regiones geográficas'
+        descripcion: 'Administrar regiones geográficas',
+        permisoRequerido: 'regiones'
     },
     'incidencias': {
         modulo: 'incidencias',
         selector: '[data-modulo="incidencias"]',
         url: '/usuarios/administrador/incidencias/incidencias.html',
         titulo: 'Incidencias',
-        descripcion: 'Gestionar reportes de incidencias'
+        descripcion: 'Gestionar reportes de incidencias',
+        permisoRequerido: 'incidencias',
+        subPermisoRequerido: 'listaIncidencias' // 🔥 Permiso específico dentro de incidencias
     },
     'nuevaIncidencia': {
         modulo: 'incidencias',
         selector: '#card-nueva-incidencia',
         url: '/usuarios/administrador/crearIncidencias/crearIncidencias.html',
         titulo: 'Nueva Incidencia',
-        descripcion: 'Crear nuevo reporte de incidencia'
+        descripcion: 'Crear nuevo reporte de incidencia',
+        permisoRequerido: 'incidencias',
+        subPermisoRequerido: 'crearIncidencias' // 🔥 Permiso específico
     },
     'nuevoUsuario': {
         modulo: 'usuarios',
         selector: '#card-nuevo-usuario',
         url: '/usuarios/administrador/crearUsuarios/crearUsuarios.html',
-        titulo: 'Nuevo Usuario',
+        titulo: 'Nuevo Colaborador',
         descripcion: 'Crear nueva cuenta de usuario',
+        permisoRequerido: 'usuarios',
         requiereAdmin: true
+    },
+    'bitacora': {
+        modulo: 'bitacora',
+        selector: '#card-bitacora',
+        url: '/usuarios/administrador/bitacoraActividades/bitacoraActividades.html',
+        titulo: 'Bitácora',
+        descripcion: 'Ver historial de actividades',
+        permisoRequerido: 'bitacora',
+        siempreVisible: true // Siempre visible para admins
+    },
+    'mapaAlertas': {
+        modulo: 'monitoreo',
+        selector: '#card-mapa-alertas',
+        url: '/usuarios/administrador/mapaAlertas/mapaAlertas.html',
+        titulo: 'Mapa de Alertas',
+        descripcion: 'Monitoreo en tiempo real',
+        permisoRequerido: 'monitoreo'
     },
     'estadisticas': {
         modulo: 'incidencias',
@@ -167,6 +200,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             return;
         }
 
+        // 🔥 CARGAR PERMISOS DEL PLAN (igual que en navbar)
+        await cargarPermisosDelPlan();
+
         try {
             const { PermisoManager } = await import('/clases/permiso.js');
             permisoManager = new PermisoManager();
@@ -193,6 +229,62 @@ document.addEventListener('DOMContentLoaded', async function () {
         mostrarError(error.message);
     }
 });
+
+// ========== 🔥 CARGAR PERMISOS DEL PLAN DESDE FIRESTORE ==========
+async function cargarPermisosDelPlan() {
+    try {
+        if (!usuarioActual || !usuarioActual.id) {
+            console.log('⚠️ No hay usuario cargado para obtener permisos');
+            permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
+            return;
+        }
+
+        const planId = usuarioActual.plan;
+        
+        if (!planId || planId === 'sin-plan' || planId === 'gratis') {
+            console.log('📋 Usuario sin plan asignado o con plan gratis');
+            permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
+            return;
+        }
+
+        const { PlanPersonalizadoManager } = await import('/clases/plan.js');
+        const planManager = new PlanPersonalizadoManager();
+        const plan = await planManager.obtenerPorId(planId);
+        
+        if (!plan) {
+            console.warn(`⚠️ Plan "${planId}" no encontrado`);
+            permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
+            return;
+        }
+
+        const mapasActivos = plan.mapasActivos;
+        const tieneIncidencias = mapasActivos.incidencias === true;
+        const tieneMonitoreo = mapasActivos.alertas === true;
+        
+        const permisosIncidencias = [];
+        
+        if (tieneIncidencias) {
+            const moduloIncidencias = plan.obtenerMapasCompletos?.().find(m => m.id === 'incidencias');
+            if (moduloIncidencias && moduloIncidencias.permisosActivos) {
+                moduloIncidencias.permisosActivos.forEach(permiso => {
+                    permisosIncidencias.push(permiso.id);
+                });
+            }
+        }
+        
+        permisosPlan = {
+            incidencias: tieneIncidencias,
+            monitoreo: tieneMonitoreo,
+            permisosIncidencias: permisosIncidencias
+        };
+        
+        console.log('🎯 Permisos del plan cargados en panel:', permisosPlan);
+        
+    } catch (error) {
+        console.error('❌ Error cargando permisos del plan:', error);
+        permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
+    }
+}
 
 // ========== ESPERAR AUTENTICACIÓN ==========
 async function esperarAutenticacion(timeout = 10000) {
@@ -342,7 +434,7 @@ async function obtenerPermisosUsuario() {
             permisosUsuario = {
                 areas: true, categorias: true, sucursales: true,
                 regiones: true, incidencias: true, usuarios: true,
-                permisos: true, admin: true
+                permisos: true, admin: true, monitoreo: true, bitacora: true
             };
             return;
         }
@@ -351,7 +443,7 @@ async function obtenerPermisosUsuario() {
             permisosUsuario = {
                 areas: false, categorias: false, sucursales: false,
                 regiones: false, incidencias: true, usuarios: false,
-                permisos: false, admin: false
+                permisos: false, admin: false, monitoreo: false, bitacora: false
             };
             return;
         }
@@ -371,7 +463,8 @@ async function obtenerPermisosUsuario() {
                         sucursales: permiso.puedeAcceder('sucursales'),
                         regiones: permiso.puedeAcceder('regiones'),
                         incidencias: permiso.puedeAcceder('incidencias'),
-                        usuarios: false, permisos: false, admin: false
+                        usuarios: false, permisos: false, admin: false,
+                        monitoreo: false, bitacora: false
                     };
                     return;
                 }
@@ -383,16 +476,58 @@ async function obtenerPermisosUsuario() {
         permisosUsuario = {
             areas: false, categorias: false, sucursales: false,
             regiones: false, incidencias: true, usuarios: false,
-            permisos: false, admin: false
+            permisos: false, admin: false, monitoreo: false, bitacora: false
         };
 
     } catch (error) {
         permisosUsuario = {
             areas: false, categorias: false, sucursales: false,
             regiones: false, incidencias: true, usuarios: false,
-            permisos: false, admin: false
+            permisos: false, admin: false, monitoreo: false, bitacora: false
         };
     }
+}
+
+// ========== 🔥 VERIFICAR PERMISO DE MÓDULO CON PERMISOS DEL PLAN ==========
+function tienePermisoModulo(config) {
+    // Admin o Master siempre tienen acceso
+    if (usuarioActual.rol === 'administrador' || usuarioActual.rol === 'master') {
+        return true;
+    }
+    
+    // Si requiere admin y no es admin, false
+    if (config.requiereAdmin) {
+        return false;
+    }
+    
+    // Si es siempre visible
+    if (config.siempreVisible) {
+        return true;
+    }
+    
+    const permisoRequerido = config.permisoRequerido;
+    
+    // Verificar permisos del plan (para módulos como incidencias y monitoreo)
+    if (permisoRequerido === 'incidencias') {
+        if (!permisosPlan.incidencias) return false;
+        
+        // Si tiene subpermiso específico, verificarlo
+        if (config.subPermisoRequerido) {
+            return permisosPlan.permisosIncidencias.includes(config.subPermisoRequerido);
+        }
+        return true;
+    }
+    
+    if (permisoRequerido === 'monitoreo') {
+        return permisosPlan.monitoreo === true;
+    }
+    
+    // Para otros módulos, usar permisosUsuario
+    if (permisoRequerido && permisosUsuario) {
+        return permisosUsuario[permisoRequerido] === true;
+    }
+    
+    return false;
 }
 
 // ========== FILTRAR TARJETAS POR PERMISOS ==========
@@ -403,7 +538,7 @@ function filtrarTarjetasPorPermisos() {
         const tarjeta = document.querySelector(config.selector);
         if (!tarjeta) return;
 
-        const debeMostrarse = verificarPermisoModulo(config);
+        const debeMostrarse = tienePermisoModulo(config);
 
         if (debeMostrarse) {
             tarjeta.style.display = 'flex';
@@ -417,20 +552,36 @@ function filtrarTarjetasPorPermisos() {
             tarjeta.style.display = 'none';
         }
     });
+    
+    // También filtrar KPI según permisos
+    filtrarKPIPorPermisos();
 }
 
-// ========== VERIFICAR PERMISO ==========
-function verificarPermisoModulo(config) {
-    if (usuarioActual.rol === 'administrador' || usuarioActual.rol === 'master') {
-        return true;
-    }
-    if (config.requiereAdmin) {
-        return false;
-    }
-    if (config.modulo && permisosUsuario) {
-        return permisosUsuario[config.modulo] === true;
-    }
-    return false;
+// ========== 🔥 FILTRAR KPI SEGÚN PERMISOS DEL PLAN ==========
+function filtrarKPIPorPermisos() {
+    Object.entries(KPI_NAVEGACION).forEach(([id, config]) => {
+        const kpiCard = document.getElementById(id);
+        if (!kpiCard) return;
+        
+        let debeMostrarse = false;
+        
+        // Admin o Master siempre ven todo
+        if (usuarioActual.rol === 'administrador' || usuarioActual.rol === 'master') {
+            debeMostrarse = true;
+        } else {
+            const permisoRequerido = config.permisoRequerido;
+            
+            if (permisoRequerido === 'incidencias') {
+                debeMostrarse = permisosPlan.incidencias === true;
+            } else if (permisoRequerido === 'monitoreo') {
+                debeMostrarse = permisosPlan.monitoreo === true;
+            } else if (permisoRequerido && permisosUsuario) {
+                debeMostrarse = permisosUsuario[permisoRequerido] === true;
+            }
+        }
+        
+        kpiCard.style.display = debeMostrarse ? 'flex' : 'none';
+    });
 }
 
 // ========== CONFIGURAR EVENTOS DE LAS TARJETAS ==========
@@ -468,12 +619,25 @@ function manejarClickKPI(e, config) {
     e.preventDefault();
     e.stopPropagation();
 
-    if (config.modulo && permisosUsuario) {
-        const tienePermiso = usuarioActual.rol === 'administrador' ||
-            usuarioActual.rol === 'master' ||
-            permisosUsuario[config.modulo] === true;
+    // Verificar permisos del plan para KPI
+    let tieneAcceso = false;
+    
+    if (usuarioActual.rol === 'administrador' || usuarioActual.rol === 'master') {
+        tieneAcceso = true;
+    } else {
+        const permisoRequerido = config.permisoRequerido;
+        
+        if (permisoRequerido === 'incidencias') {
+            tieneAcceso = permisosPlan.incidencias === true;
+        } else if (permisoRequerido === 'monitoreo') {
+            tieneAcceso = permisosPlan.monitoreo === true;
+        } else if (permisoRequerido && permisosUsuario) {
+            tieneAcceso = permisosUsuario[permisoRequerido] === true;
+        }
+    }
 
-        if (!tienePermiso) {
+    if (!tieneAcceso) {
+        if (typeof Swal !== 'undefined') {
             Swal.fire({
                 title: 'Acceso Denegado',
                 text: `No tienes permisos para acceder a ${config.titulo}. Contacta al administrador.`,
@@ -482,8 +646,8 @@ function manejarClickKPI(e, config) {
                 background: '#1a1a1a',
                 color: '#fff'
             });
-            return;
         }
+        return;
     }
 
     window.location.href = config.url;
@@ -582,7 +746,7 @@ function escapeHTML(text) {
     return div.innerHTML;
 }
 
-// Exponer para debugging (opcional, se puede eliminar)
+// Exponer para debugging
 window.panelDebug = {
     userManager,
     incidenciaManager,
@@ -592,5 +756,6 @@ window.panelDebug = {
     usuarioActual,
     estadisticas,
     permisosUsuario,
+    permisosPlan,
     KPI_NAVEGACION
 };

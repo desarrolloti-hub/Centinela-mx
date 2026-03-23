@@ -142,35 +142,119 @@
         </div>
 
         <section class="center-row">
-            <!-- PANEL ÚNICO - REGISTRO (SOLO 2 TARJETAS) -->
+            <!-- PANEL ÚNICO - ACCESO RÁPIDO (TARJETAS DINÁMICAS) -->
             <div class="side full-width">
                 <div class="section-container">
                     <div class="section-header">
-                        <h2 class="section-title"><i class="fa-solid fa-pen-to-square"></i> REGISTRO</h2>
-                        <p class="section-subtitle">Crear nuevos elementos en el sistema</p>
+                        <h2 class="section-title"><i class="fa-solid fa-bolt"></i> ACCESO RÁPIDO</h2>
+                        <p class="section-subtitle">Módulos disponibles según tu plan</p>
                     </div>
 
                     <div class="cards-grid-2">
-                        <!-- Tarjeta: Nueva Incidencia -->
+                        <!-- Tarjeta: Áreas -->
+                        <div class="dashboard-card" data-modulo="areas">
+                            <div class="card-icon purple">
+                                <i class="fa-solid fa-layer-group"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Áreas</h3>
+                                <p>Gestionar áreas</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
+                        <!-- Tarjeta: Categorías -->
+                        <div class="dashboard-card" data-modulo="categorias">
+                            <div class="card-icon blue">
+                                <i class="fa-solid fa-tags"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Categorías</h3>
+                                <p>Administrar categorías</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
+                        <!-- Tarjeta: Sucursales -->
+                        <div class="dashboard-card" data-modulo="sucursales">
+                            <div class="card-icon cyan">
+                                <i class="fa-solid fa-store"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Sucursales</h3>
+                                <p>Gestionar sucursales</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
+                        <!-- Tarjeta: Regiones -->
+                        <div class="dashboard-card" data-modulo="regiones">
+                            <div class="card-icon green">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Regiones</h3>
+                                <p>Administrar regiones</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
+                        <!-- Tarjeta: Incidencias (Lista) -->
+                        <div class="dashboard-card" data-modulo="incidencias">
+                            <div class="card-icon orange">
+                                <i class="fa-solid fa-list"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Incidencias</h3>
+                                <p>Ver lista de incidencias</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
+                        <!-- Tarjeta: Nueva Incidencia (Especial) -->
                         <div class="dashboard-card" id="card-nueva-incidencia">
                             <div class="card-icon cyan">
                                 <i class="fa-solid fa-triangle-exclamation"></i>
                             </div>
                             <div class="card-text">
                                 <h3>Nueva Incidencia</h3>
-                                <p>Crear nuevo reporte de incidencia</p>
+                                <p>Crear nuevo reporte</p>
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
 
-                        <!-- Tarjeta: Nuevo Usuario -->
+                        <!-- Tarjeta: Mapa de Alertas (Monitoreo) -->
+                        <div class="dashboard-card" id="card-mapa-alertas">
+                            <div class="card-icon cyan">
+                                <i class="fa-solid fa-map-marker-alt"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Mapa de Alertas</h3>
+                                <p>Monitoreo en tiempo real</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
+                        <!-- Tarjeta: Nuevo Colaborador -->
                         <div class="dashboard-card" id="card-nuevo-usuario">
                             <div class="card-icon purple">
                                 <i class="fa-solid fa-user-plus"></i>
                             </div>
                             <div class="card-text">
                                 <h3>Nuevo Colaborador</h3>
-                                <p>Crear nueva cuenta de usuario</p>
+                                <p>Crear nueva cuenta</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
+                        <!-- Tarjeta: Bitácora -->
+                        <div class="dashboard-card" id="card-bitacora">
+                            <div class="card-icon green">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Bitácora</h3>
+                                <p>Historial de actividades</p>
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
