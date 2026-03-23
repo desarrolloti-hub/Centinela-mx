@@ -8,6 +8,19 @@ const CLOUD_FUNCTION_BASE_URL = "https://us-central1-centinela-mx.cloudfunctions
 const ACTIONS = {
     SOLICITAR_CODIGO: 'solicitarCodigo',
     COMPLETAR_REGISTRO: 'completarRegistro',
+    ESTABLECER_CONTRASENA: 'establecerContraseña',
+    AUTENTICAR: 'autenticar',
+    LISTAR_PANELES: 'listarPaneles',
+    VINCULAR_PANEL: 'vincularPanel',
+    VERIFICAR_ACCESO_PANEL: 'verificarAccesoPanel',
+    OBTENER_INFO_PANEL: 'obtenerInfoPanel',
+    LOGIN_PANEL: 'loginPanel',  
+    OBTENER_ESTADO_PANEL: 'obtenerEstadoPanel',
+    LISTAR_ZONAS: 'listarZonas',
+    LISTAR_EVENTOS: 'listarEventos',
+    LISTAR_DISPOSITIVOS: 'listarDispositivos',
+    SET_ESTADO_PANEL: 'setEstadoPanel',
+    VERIFICAR_SESION: 'verificarSesion'
 };
 
 // Exportar configuración

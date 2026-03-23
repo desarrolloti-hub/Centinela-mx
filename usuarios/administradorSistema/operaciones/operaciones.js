@@ -1,980 +1,711 @@
-// operaciones.js - VERSIÓN CON FILTROS MEJORADOS Y SECCIONES OCULTABLES
+// operaciones.js - VERSIÓN COMPLETA SIN "GLOBAL"
 
-import { operacionesManager } from '/clases/operacion.js';
+import OperacionesEstadisticas from '/clases/operacion.js';
 
-let currentEmpresa = 'global';
-let charts = {
-    tipos: null,
-    almacenamientoEmpresas: null,
-    documentosEmpresas: null
-};
-let datosOriginales = [];
-let ultimaActualizacion = null;
-
-// Estado de filtros
-let filtroActivo = {
-    tipo: '',
-    fechaInicio: null,
-    fechaFin: null,
-    texto: ''
-};
-
-// =============================================
-// FUNCIONES DE UTILIDAD
-// =============================================
-
-function formatBytes(bytes) {
-    if (!bytes || bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function formatNumber(num) {
-    if (num === undefined || num === null) return '0';
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-function parseFecha(fecha) {
-    if (!fecha) return null;
-    if (fecha && typeof fecha.toDate === 'function') {
-        return fecha.toDate();
-    }
-    if (typeof fecha === 'string') {
-        return new Date(fecha);
-    }
-    if (fecha instanceof Date) {
-        return fecha;
-    }
-    return null;
-}
-
-// =============================================
-// FUNCIONES DE VISUALIZACIÓN DE SECCIONES
-// =============================================
-
-function mostrarSinDatos(mensaje = 'No hay datos disponibles para el período seleccionado') {
-    const contenido = document.getElementById('contenidoPrincipal');
-    const sinDatos = document.getElementById('sinDatosMensaje');
-    const textoElement = document.getElementById('sinDatosTexto');
-    
-    if (contenido) contenido.style.display = 'none';
-    if (sinDatos) {
-        sinDatos.style.display = 'flex';
-        if (textoElement) textoElement.innerHTML = mensaje;
-    }
-}
-
-function mostrarContenido() {
-    const contenido = document.getElementById('contenidoPrincipal');
-    const sinDatos = document.getElementById('sinDatosMensaje');
-    
-    if (contenido) contenido.style.display = 'block';
-    if (sinDatos) sinDatos.style.display = 'none';
-}
-
-function ocultarSeccionesSinDatos(datos) {
-    const seccionMetricas = document.getElementById('seccionMetricas');
-    const seccionStorage = document.getElementById('seccionStorage');
-    const seccionGraficas = document.getElementById('seccionGraficas');
-    const seccionTabla = document.getElementById('seccionTabla');
-    
-    if (!datos || datos.length === 0) {
-        if (seccionMetricas) seccionMetricas.style.display = 'none';
-        if (seccionStorage) seccionStorage.style.display = 'none';
-        if (seccionGraficas) seccionGraficas.style.display = 'none';
-        if (seccionTabla) seccionTabla.style.display = 'none';
-        return;
+class OperacionesController {
+    constructor() {
+        this.charts = {};
+        this.datosTodasEmpresas = null;
+        this.empresaSeleccionada = 'todas';
+        this.filtroActual = {
+            empresa: 'todas',
+            periodo: '',
+            fechaInicio: null,
+            fechaFin: null
+        };
+        
+        this.init();
     }
     
-    // Verificar si hay métricas con datos
-    const tieneMetricas = datos.some(d => d.documentos > 0 || d.archivos > 0);
-    const tieneStorage = datos.some(d => (d.storage?.total || 0) > 0);
-    const tieneGraficas = datos.some(d => d.documentos > 0 || d.archivos > 0);
-    const tieneTabla = datos.length > 0;
+    async init() {
+        this.bindEvents();
+        await this.cargarSelectores();
+        
+        OperacionesEstadisticas.onProgreso((progreso) => {
+            this.actualizarProgreso(progreso);
+        });
+        
+        await this.cargarDatosIniciales();
+    }
     
-    if (seccionMetricas) seccionMetricas.style.display = tieneMetricas ? 'block' : 'none';
-    if (seccionStorage) seccionStorage.style.display = tieneStorage ? 'block' : 'none';
-    if (seccionGraficas) seccionGraficas.style.display = tieneGraficas ? 'block' : 'none';
-    if (seccionTabla) seccionTabla.style.display = tieneTabla ? 'block' : 'none';
-}
-
-function actualizarBadgeFiltro() {
-    const badges = ['badgeFiltro1', 'badgeFiltro2', 'badgeFiltro3'];
-    badges.forEach(id => {
-        const badge = document.getElementById(id);
-        if (badge) {
-            if (filtroActivo.texto) {
-                badge.innerHTML = `<i class="fas fa-calendar-alt"></i> ${filtroActivo.texto}`;
-                badge.style.display = 'inline-flex';
+    async cargarDatosIniciales() {
+        try {
+            this.datosTodasEmpresas = await OperacionesEstadisticas.obtenerDatosTodasEmpresas();
+            
+            this.actualizarTabla(this.datosTodasEmpresas.porEmpresa);
+            this.actualizarGraficasComparativas(this.datosTodasEmpresas.porEmpresa);
+            await this.mostrarVistaTodasEmpresas();
+            
+            const fechaElement = document.getElementById('fechaActualizacion');
+            if (fechaElement && this.datosTodasEmpresas?.porEmpresa?.length > 0) {
+                const fechas = this.datosTodasEmpresas.porEmpresa.map(e => e.fechaActualizacion);
+                const masReciente = new Date(Math.max(...fechas));
+                fechaElement.textContent = masReciente.toLocaleString();
+            }
+        } catch (error) {
+            console.error('Error cargando datos iniciales:', error);
+        }
+    }
+    
+    async mostrarVistaTodasEmpresas() {
+        if (!this.datosTodasEmpresas || !this.datosTodasEmpresas.totales) return;
+        
+        this.mostrarContenido();
+        
+        const totales = this.datosTodasEmpresas.totales;
+        const totalArchivos = totales.storage.totalArchivos;
+        
+        this.actualizarElemento('metricDocumentos', totales.firestore.documentos);
+        this.actualizarElemento('metricAdministradores', totales.auth.administradores);
+        this.actualizarElemento('metricColaboradores', totales.auth.colaboradores);
+        this.actualizarElemento('metricTotalUsuarios', totales.auth.totalUsuarios);
+        this.actualizarElemento('metricArchivosTotales', totales.storage.totalArchivos);
+        
+        const tamanioElement = document.getElementById('metricTamanioTotal');
+        if (tamanioElement) {
+            tamanioElement.textContent = `${totales.storage.totalSizeMB.toFixed(2)} MB`;
+        }
+        
+        this.actualizarElemento('metricPDF', totales.storage.porTipo.pdf.cantidad);
+        this.actualizarElemento('metricPDFPorcentaje', totalArchivos > 0 ? `${((totales.storage.porTipo.pdf.cantidad / totalArchivos) * 100).toFixed(1)}%` : '0%');
+        this.actualizarElemento('metricImagenes', totales.storage.porTipo.imagenes.cantidad);
+        this.actualizarElemento('metricImagenesPorcentaje', totalArchivos > 0 ? `${((totales.storage.porTipo.imagenes.cantidad / totalArchivos) * 100).toFixed(1)}%` : '0%');
+        this.actualizarElemento('metricDocumentosStorage', totales.storage.porTipo.documentos.cantidad);
+        this.actualizarElemento('metricDocumentosPorcentaje', totalArchivos > 0 ? `${((totales.storage.porTipo.documentos.cantidad / totalArchivos) * 100).toFixed(1)}%` : '0%');
+        this.actualizarElemento('metricMultimedia', totales.storage.porTipo.multimedia.cantidad);
+        this.actualizarElemento('metricMultimediaPorcentaje', totalArchivos > 0 ? `${((totales.storage.porTipo.multimedia.cantidad / totalArchivos) * 100).toFixed(1)}%` : '0%');
+        
+        const labels = ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'];
+        const data = [
+            totales.storage.porTipo.pdf.cantidad,
+            totales.storage.porTipo.imagenes.cantidad,
+            totales.storage.porTipo.documentos.cantidad,
+            totales.storage.porTipo.multimedia.cantidad,
+            totales.storage.porTipo.otros.cantidad
+        ];
+        this.crearGraficaPastel('graficoTiposArchivo', labels, data);
+        
+        const modoVisualizacion = document.getElementById('modoVisualizacion');
+        if (modoVisualizacion) {
+            modoVisualizacion.innerHTML = `<i class="fas fa-chart-line"></i> <span>Todas las empresas</span>`;
+        }
+    }
+    
+    actualizarGraficasComparativas(empresas) {
+        if (!empresas || empresas.length === 0) return;
+        
+        const nombresEmpresas = empresas.map(e => e.nombreEmpresa || e.organizacion || e.id);
+        const almacenamiento = empresas.map(e => e.conteos.storage.totalSizeMB);
+        const documentos = empresas.map(e => e.conteos.firestore.documentos);
+        
+        this.crearGraficaPastel('graficoAlmacenamientoPorEmpresa', nombresEmpresas, almacenamiento);
+        this.crearGraficaBarras('graficoDocumentosPorEmpresa', nombresEmpresas, documentos, 'Documentos');
+    }
+    
+    actualizarProgreso(progreso) {
+        if (progreso.completado) {
+            const progressContainer = document.getElementById('progressContainer');
+            if (progressContainer) progressContainer.style.display = 'none';
+            
+            if (progreso.error) {
+                this.mostrarError(progreso.mensaje);
+            } else if (progreso.exitosas !== undefined) {
+                this.mostrarExito(progreso.mensaje);
+                this.recargarDatos();
+            }
+        } else {
+            this.mostrarBarraProgreso(progreso);
+        }
+    }
+    
+    mostrarBarraProgreso(progreso) {
+        let container = document.getElementById('progressContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'progressContainer';
+            document.body.appendChild(container);
+        }
+        
+        const porcentaje = progreso.porcentaje || Math.round((progreso.procesadas / progreso.total) * 100);
+        
+        container.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <i class="fas fa-sync-alt fa-spin" style="color: var(--color-accent-primary);"></i>
+                <strong style="color: var(--color-text-primary);">Actualizando estadísticas</strong>
+            </div>
+            <div style="margin-bottom: 5px;">
+                <div style="background: var(--color-bg-tertiary); border-radius: 10px; overflow: hidden;">
+                    <div style="width: ${porcentaje}%; background: var(--color-accent-primary); height: 6px; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--color-text-secondary);">
+                ${progreso.mensaje || `Procesando: ${progreso.procesadas} de ${progreso.total} empresas (${porcentaje}%)`}
+            </div>
+            ${progreso.actual ? `
+                <div style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px;">
+                    <i class="fas fa-building"></i> Actual: ${progreso.actual}
+                </div>
+            ` : ''}
+            ${progreso.error ? `
+                <div style="font-size: 0.7rem; color: #ef4444; margin-top: 5px;">
+                    <i class="fas fa-exclamation-triangle"></i> ${progreso.error}
+                </div>
+            ` : ''}
+        `;
+        
+        container.style.display = 'block';
+    }
+    
+    async recargarDatos() {
+        try {
+            this.datosTodasEmpresas = await OperacionesEstadisticas.obtenerDatosTodasEmpresas();
+            this.actualizarTabla(this.datosTodasEmpresas.porEmpresa);
+            this.actualizarGraficasComparativas(this.datosTodasEmpresas.porEmpresa);
+            
+            if (this.empresaSeleccionada === 'todas') {
+                await this.mostrarVistaTodasEmpresas();
             } else {
-                badge.style.display = 'none';
+                const empresaData = this.datosTodasEmpresas.porEmpresa.find(
+                    e => e.id === this.empresaSeleccionada
+                );
+                if (empresaData) {
+                    await this.mostrarDatosEmpresa(empresaData);
+                }
             }
+            
+            const fechaElement = document.getElementById('fechaActualizacion');
+            if (fechaElement) {
+                fechaElement.textContent = new Date().toLocaleString();
+            }
+        } catch (error) {
+            console.error('Error recargando datos:', error);
         }
-    });
-}
-
-// =============================================
-// ACTUALIZACIÓN DE MÉTRICAS EN EL DOM
-// =============================================
-
-function actualizarMetricas(conteos) {
-    if (!conteos) return;
-    
-    const firestore = conteos.firestore;
-    const storage = conteos.storage;
-    const auth = conteos.auth;
-    
-    const docElement = document.getElementById('metricDocumentos');
-    if (docElement) docElement.innerText = formatNumber(firestore.documentos || 0);
-    
-    const adminElement = document.getElementById('metricAdministradores');
-    if (adminElement) adminElement.innerText = formatNumber(auth.administradores || 0);
-    
-    const colabElement = document.getElementById('metricColaboradores');
-    if (colabElement) colabElement.innerText = formatNumber(auth.usuarios || 0);
-    
-    const totalUserElement = document.getElementById('metricTotalUsuarios');
-    if (totalUserElement) totalUserElement.innerText = formatNumber((auth.usuarios || 0) + (auth.administradores || 0));
-    
-    const archivosElement = document.getElementById('metricArchivosTotales');
-    if (archivosElement) archivosElement.innerText = formatNumber(storage.total || 0);
-    
-    const tamanioElement = document.getElementById('metricTamanioTotal');
-    if (tamanioElement) tamanioElement.innerHTML = `<i class="fas fa-hdd"></i> ${formatBytes(storage.totalSize || 0)}`;
-    
-    const pdfElement = document.getElementById('metricPDF');
-    if (pdfElement) pdfElement.innerText = formatNumber(storage.pdf || 0);
-    
-    const imagenesElement = document.getElementById('metricImagenes');
-    if (imagenesElement) imagenesElement.innerText = formatNumber(storage.imagenes || 0);
-    
-    const documentosElement = document.getElementById('metricDocumentosStorage');
-    if (documentosElement) documentosElement.innerText = formatNumber(storage.documentos || 0);
-    
-    const multimediaElement = document.getElementById('metricMultimedia');
-    if (multimediaElement) multimediaElement.innerText = formatNumber(storage.multimedia || 0);
-    
-    const total = storage.total || 1;
-    const pdfPctElement = document.getElementById('metricPDFPorcentaje');
-    if (pdfPctElement) pdfPctElement.innerText = `${Math.round(((storage.pdf || 0) / total) * 100)}%`;
-    
-    const imgPctElement = document.getElementById('metricImagenesPorcentaje');
-    if (imgPctElement) imgPctElement.innerText = `${Math.round(((storage.imagenes || 0) / total) * 100)}%`;
-    
-    const docPctElement = document.getElementById('metricDocumentosPorcentaje');
-    if (docPctElement) docPctElement.innerText = `${Math.round(((storage.documentos || 0) / total) * 100)}%`;
-    
-    const multiPctElement = document.getElementById('metricMultimediaPorcentaje');
-    if (multiPctElement) multiPctElement.innerText = `${Math.round(((storage.multimedia || 0) / total) * 100)}%`;
-}
-
-// =============================================
-// GRÁFICAS
-// =============================================
-
-function graficoTiposArchivo(storage) {
-    const canvas = document.getElementById('graficoTiposArchivo');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (charts.tipos) charts.tipos.destroy();
-    
-    const tieneDatos = (storage.pdf || 0) + (storage.imagenes || 0) + (storage.documentos || 0) + (storage.multimedia || 0) + (storage.otros || 0) > 0;
-    
-    if (!tieneDatos) {
-        charts.tipos = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: ['Sin datos'],
-                datasets: [{ data: [1], backgroundColor: ['#6c757d'] }]
-            },
-            options: {
-                responsive: false,
-                maintainAspectRatio: true,
-                plugins: { legend: { labels: { color: '#ffffff', font: { size: 10 } } } }
-            }
-        });
-        return;
     }
     
-    charts.tipos = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'],
-            datasets: [{
-                data: [storage.pdf || 0, storage.imagenes || 0, storage.documentos || 0, storage.multimedia || 0, storage.otros || 0],
-                backgroundColor: ['#ef4444', '#8b5cf6', '#10b981', '#f59e0b', '#6c757d'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: false,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { 
-                    position: 'bottom', 
-                    labels: { 
-                        color: '#ffffff',
-                        font: { size: 10 }
-                    } 
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label;
-                            const value = context.raw;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return `${label}: ${formatNumber(value)} (${pct}%)`;
-                        }
-                    }
+    bindEvents() {
+        document.getElementById('btnAplicarFiltros')?.addEventListener('click', () => this.aplicarFiltros());
+        document.getElementById('btnLimpiarFiltros')?.addEventListener('click', () => this.limpiarFiltros());
+        document.getElementById('btnActualizar')?.addEventListener('click', () => this.actualizarDatos());
+        document.getElementById('btnExportarExcel')?.addEventListener('click', () => this.exportarExcel());
+        document.getElementById('btnDiagnostico')?.addEventListener('click', () => this.mostrarDiagnostico());
+        
+        const tipoFiltro = document.getElementById('tipoFiltro');
+        tipoFiltro?.addEventListener('change', (e) => this.toggleRangoFechas(e.target.value));
+    }
+    
+    async cargarSelectores() {
+        try {
+            const selector = document.getElementById('selectorEmpresa');
+            if (!selector) return;
+            
+            selector.innerHTML = '<option value="todas">🏢 Todas las empresas</option>';
+            
+            const organizaciones = await OperacionesEstadisticas.obtenerOrganizaciones();
+            
+            organizaciones.forEach(org => {
+                const option = document.createElement('option');
+                option.value = org.camelCase;
+                option.textContent = `${org.nombre || org.camelCase}`;
+                selector.appendChild(option);
+            });
+            
+        } catch (error) {
+            console.error('Error cargando selectores:', error);
+        }
+    }
+    
+    toggleRangoFechas(valor) {
+        const rangoGrupo = document.getElementById('rangoFechasGrupo');
+        if (rangoGrupo) {
+            rangoGrupo.style.display = valor === 'personalizado' ? 'flex' : 'none';
+        }
+        
+        if (valor !== 'personalizado') {
+            this.filtroActual.periodo = valor;
+        }
+    }
+    
+    async aplicarFiltros() {
+        const selector = document.getElementById('selectorEmpresa');
+        const tipoFiltro = document.getElementById('tipoFiltro');
+        
+        const empresaId = selector?.value || 'todas';
+        
+        this.filtroActual.empresa = empresaId;
+        this.filtroActual.periodo = tipoFiltro?.value || '';
+        
+        if (this.filtroActual.periodo === 'personalizado') {
+            const fechaInicio = document.getElementById('fechaInicio')?.value;
+            const fechaFin = document.getElementById('fechaFin')?.value;
+            
+            if (fechaInicio && fechaFin) {
+                this.filtroActual.fechaInicio = new Date(fechaInicio);
+                this.filtroActual.fechaFin = new Date(fechaFin);
+            }
+        } else {
+            this.filtroActual.fechaInicio = null;
+            this.filtroActual.fechaFin = null;
+        }
+        
+        this.empresaSeleccionada = empresaId;
+        
+        if (empresaId === 'todas') {
+            await this.mostrarVistaTodasEmpresas();
+        } else {
+            const empresaData = this.datosTodasEmpresas?.porEmpresa?.find(
+                e => e.id === empresaId
+            );
+            
+            if (empresaData) {
+                await this.mostrarDatosEmpresa(empresaData);
+            } else {
+                const instancia = await OperacionesEstadisticas.obtener(empresaId);
+                if (instancia) {
+                    await this.mostrarDatosEmpresa(instancia);
+                } else {
+                    this.mostrarError('No se encontraron datos para la organización seleccionada');
                 }
             }
         }
-    });
-}
-
-function graficoAlmacenamientoPorEmpresa(datosEmpresas) {
-    const canvas = document.getElementById('graficoAlmacenamientoPorEmpresa');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (charts.almacenamientoEmpresas) charts.almacenamientoEmpresas.destroy();
-    
-    const empresasMostrar = datosEmpresas.slice(0, 6);
-    const empresas = empresasMostrar.map(e => e.nombre);
-    const tamanios = empresasMostrar.map(e => e.totalSize);
-    
-    const tieneDatos = tamanios.some(t => t > 0);
-    
-    if (!tieneDatos || empresas.length === 0) {
-        charts.almacenamientoEmpresas = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: ['Sin datos'],
-                datasets: [{ data: [1], backgroundColor: ['#6c757d'] }]
-            },
-            options: {
-                responsive: false,
-                maintainAspectRatio: true,
-                plugins: { legend: { labels: { color: '#ffffff', font: { size: 10 } } } }
-            }
-        });
-        return;
     }
     
-    charts.almacenamientoEmpresas = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: empresas,
-            datasets: [{
-                data: tamanios,
-                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec489a'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: false,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { 
-                    position: 'bottom', 
-                    labels: { 
-                        color: '#ffffff',
-                        font: { size: 10 }
-                    } 
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label;
-                            const value = context.raw;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return `${label}: ${formatBytes(value)} (${pct}%)`;
+    async mostrarDatosEmpresa(empresaData) {
+        this.mostrarContenido();
+        
+        this.actualizarMetricasPorEmpresa(empresaData);
+        this.actualizarGraficaTiposArchivo(empresaData);
+        
+        const modoVisualizacion = document.getElementById('modoVisualizacion');
+        if (modoVisualizacion) {
+            modoVisualizacion.innerHTML = `
+                <i class="fas fa-building"></i> 
+                <span>${empresaData.nombreEmpresa || empresaData.id}</span>
+            `;
+        }
+    }
+    
+    actualizarMetricasPorEmpresa(empresaData) {
+        const resumen = empresaData.getResumen();
+        
+        this.actualizarElemento('metricDocumentos', empresaData.conteos.firestore.documentos);
+        this.actualizarElemento('metricAdministradores', empresaData.conteos.auth.administradores);
+        this.actualizarElemento('metricColaboradores', empresaData.conteos.auth.colaboradores);
+        this.actualizarElemento('metricTotalUsuarios', empresaData.conteos.auth.totalUsuarios);
+        this.actualizarElemento('metricArchivosTotales', resumen.archivosTotales);
+        
+        const tamanioElement = document.getElementById('metricTamanioTotal');
+        if (tamanioElement) {
+            tamanioElement.textContent = `${resumen.tamanioTotalMB} MB`;
+        }
+        
+        this.actualizarElemento('metricPDF', resumen.pdf.cantidad);
+        this.actualizarElemento('metricPDFPorcentaje', `${resumen.pdf.porcentaje}%`);
+        this.actualizarElemento('metricImagenes', resumen.imagenes.cantidad);
+        this.actualizarElemento('metricImagenesPorcentaje', `${resumen.imagenes.porcentaje}%`);
+        this.actualizarElemento('metricDocumentosStorage', resumen.documentos.cantidad);
+        this.actualizarElemento('metricDocumentosPorcentaje', `${resumen.documentos.porcentaje}%`);
+        this.actualizarElemento('metricMultimedia', resumen.multimedia.cantidad);
+        this.actualizarElemento('metricMultimediaPorcentaje', `${resumen.multimedia.porcentaje}%`);
+    }
+    
+    actualizarGraficaTiposArchivo(empresaData) {
+        const resumen = empresaData.getResumen();
+        
+        const labels = ['PDF', 'Imágenes', 'Documentos', 'Multimedia', 'Otros'];
+        const data = [
+            resumen.pdf.cantidad,
+            resumen.imagenes.cantidad,
+            resumen.documentos.cantidad,
+            resumen.multimedia.cantidad,
+            resumen.otros.cantidad
+        ];
+        
+        this.crearGraficaPastel('graficoTiposArchivo', labels, data);
+    }
+    
+    crearGraficaPastel(canvasId, labels, data) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+        
+        const total = data.reduce((a, b) => a + b, 0);
+        
+        const colores = [
+            '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
+            '#ec489a', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+        ];
+        
+        this.charts[canvasId] = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colores.slice(0, data.length),
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff',
+                            font: { size: 10, family: "'Rajdhani', sans-serif" },
+                            boxWidth: 12,
+                            padding: 8
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const label = context.label || '';
+                                const value = context.raw;
+                                const porcentaje = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                
+                                if (canvasId === 'graficoAlmacenamientoPorEmpresa') {
+                                    return `${label}: ${value.toFixed(2)} MB (${porcentaje}%)`;
+                                }
+                                return `${label}: ${value.toLocaleString()} (${porcentaje}%)`;
+                            }
                         }
                     }
-                }
+                },
+                cutout: '50%',
+                radius: '70%'
             }
+        });
+    }
+    
+    crearGraficaBarras(canvasId, labels, data, labelY) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
         }
-    });
-}
-
-function graficoDocumentosPorEmpresa(datosEmpresas) {
-    const canvas = document.getElementById('graficoDocumentosPorEmpresa');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (charts.documentosEmpresas) charts.documentosEmpresas.destroy();
-    
-    const datosOrdenados = [...datosEmpresas].sort((a, b) => b.documentos - a.documentos);
-    const datosMostrar = datosOrdenados.slice(0, 10);
-    const empresas = datosMostrar.map(e => e.nombre);
-    const documentos = datosMostrar.map(e => e.documentos);
-    
-    const tieneDatos = documentos.some(d => d > 0);
-    
-    if (!tieneDatos || empresas.length === 0) {
-        charts.documentosEmpresas = new Chart(ctx, {
+        
+        this.charts[canvasId] = new Chart(canvas.getContext('2d'), {
             type: 'bar',
             data: {
-                labels: ['Sin datos'],
-                datasets: [{ label: 'Documentos', data: [0], backgroundColor: '#00cfff' }]
+                labels: labels,
+                datasets: [{
+                    label: labelY,
+                    data: data,
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 6,
+                    borderWidth: 0
+                }]
             },
             options: {
-                responsive: false,
-                maintainAspectRatio: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { color: '#ffffff' } },
-                    x: { ticks: { color: '#ffffff' } }
-                }
-            }
-        });
-        return;
-    }
-    
-    charts.documentosEmpresas = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: empresas,
-            datasets: [{
-                label: 'Documentos',
-                data: documentos,
-                backgroundColor: '#00cfff',
-                borderRadius: 4,
-                barPercentage: 0.8,
-                categoryPercentage: 0.9
-            }]
-        },
-        options: {
-            responsive: false,
-            maintainAspectRatio: true,
-            indexAxis: 'y',
-            plugins: { 
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${formatNumber(context.raw)} documentos`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: { 
-                    beginAtZero: true, 
-                    ticks: { 
-                        color: '#ffffff',
-                        font: { size: 9 },
-                        callback: function(value) {
-                            if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
-                            if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
-                            return value;
-                        }
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff',
+                            font: { size: 11, family: "'Rajdhani', sans-serif" }
+                        },
+                        position: 'top'
                     },
-                    grid: { color: 'rgba(255,255,255,0.1)' },
-                    title: {
-                        display: true,
-                        text: 'Cantidad de Documentos',
-                        color: '#ffffff',
-                        font: { size: 8 }
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `${labelY}: ${context.raw.toLocaleString()}`;
+                            }
+                        }
                     }
                 },
-                y: { 
-                    ticks: { 
-                        color: '#ffffff', 
-                        font: { size: 9 },
-                        callback: function(value, index) {
-                            let label = empresas[index] || value;
-                            if (label.length > 18) return label.substring(0, 15) + '...';
-                            return label;
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)', drawBorder: false },
+                        ticks: {
+                            color: '#ffffff',
+                            stepSize: Math.ceil(Math.max(...data, 1) / 5),
+                            callback: (value) => value.toLocaleString()
+                        },
+                        title: {
+                            display: true,
+                            text: labelY,
+                            color: '#9ca3af',
+                            font: { size: 10, family: "'Rajdhani', sans-serif" }
                         }
                     },
-                    grid: { display: false }
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: '#ffffff',
+                            maxRotation: 45,
+                            minRotation: 45,
+                            font: { size: 9, family: "'Rajdhani', sans-serif" }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Organización',
+                            color: '#9ca3af',
+                            font: { size: 10, family: "'Rajdhani', sans-serif" }
+                        }
+                    }
                 }
             }
-        }
-    });
-}
-
-// =============================================
-// TABLA DE ORGANIZACIONES
-// =============================================
-
-function tablaOrganizaciones(datos) {
-    const tbody = document.getElementById('tablaOrganizacionesBody');
-    if (!tbody) return;
-    
-    if (!datos || datos.length === 0) {
-        tbody.innerHTML = '发展<td colspan="7" style="text-align:center;">No hay datos disponibles</td></tr>';
-        return;
-    }
-    
-    const ordenados = [...datos].sort((a, b) => b.documentos - a.documentos);
-    
-    tbody.innerHTML = ordenados.map(emp => `
-        <tr>
-            <td><strong>${emp.nombre}</strong><br><small style="color: #888;">${emp.id}</small></td>
-            <td>${formatNumber(emp.documentos)}</td>
-            <td>${formatNumber(emp.archivos)}</td>
-            <td><span class="size-badge">${formatBytes(emp.totalSize)}</span></td>
-            <td>${formatNumber(emp.administradores)}</td>
-            <td>${formatNumber(emp.colaboradores)}</td>
-            <td>${formatNumber(emp.administradores + emp.colaboradores)}</td>
-        </tr>
-    `).join('');
-}
-
-// =============================================
-// FUNCIONES DE FILTRADO
-// =============================================
-
-function calcularFechasPorPeriodo(tipo) {
-    const hoy = new Date();
-    hoy.setHours(23, 59, 59, 999);
-    
-    let fechaInicio = null;
-    let texto = '';
-    
-    switch(tipo) {
-        case 'semanal':
-            fechaInicio = new Date(hoy);
-            fechaInicio.setDate(hoy.getDate() - 7);
-            fechaInicio.setHours(0, 0, 0, 0);
-            texto = 'Últimos 7 días';
-            break;
-        case 'quincenal':
-            fechaInicio = new Date(hoy);
-            fechaInicio.setDate(hoy.getDate() - 15);
-            fechaInicio.setHours(0, 0, 0, 0);
-            texto = 'Últimos 15 días';
-            break;
-        case 'mensual':
-            fechaInicio = new Date(hoy);
-            fechaInicio.setDate(hoy.getDate() - 30);
-            fechaInicio.setHours(0, 0, 0, 0);
-            texto = 'Últimos 30 días';
-            break;
-        default:
-            return null;
-    }
-    
-    return {
-        fechaInicio: fechaInicio,
-        fechaFin: hoy,
-        texto: texto
-    };
-}
-
-function filtrarDatosPorFecha(datos, fechaInicio, fechaFin) {
-    if (!fechaInicio && !fechaFin) return datos;
-    
-    return datos.filter(item => {
-        let fechaItem = null;
-        
-        if (item.fechaActualizacion) {
-            fechaItem = parseFecha(item.fechaActualizacion);
-        }
-        
-        if (!fechaItem) return true;
-        
-        if (fechaInicio && fechaItem < fechaInicio) return false;
-        if (fechaFin && fechaItem > fechaFin) return false;
-        
-        return true;
-    });
-}
-
-function actualizarVistaConDatos(datos, textoFiltro) {
-    if (!datos || datos.length === 0) {
-        mostrarSinDatos('No hay empresas actualizadas en el período seleccionado');
-        ocultarSeccionesSinDatos([]);
-        return;
-    }
-    
-    let datosAMostrar = datos;
-    if (currentEmpresa !== 'global') {
-        datosAMostrar = datos.filter(d => d.id === currentEmpresa);
-    }
-    
-    if (datosAMostrar.length === 0) {
-        mostrarSinDatos('No hay datos para la empresa seleccionada en este período');
-        ocultarSeccionesSinDatos([]);
-        return;
-    }
-    
-    mostrarContenido();
-    
-    // Calcular métricas globales con datos filtrados
-    const globalConteos = {
-        firestore: { documentos: 0 },
-        storage: { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
-        auth: { usuarios: 0, administradores: 0 }
-    };
-    
-    datosAMostrar.forEach(r => {
-        globalConteos.firestore.documentos += r.documentos;
-        globalConteos.storage.total += r.archivos;
-        globalConteos.storage.totalSize += r.totalSize;
-        globalConteos.storage.pdf += r.storage?.pdf || 0;
-        globalConteos.storage.imagenes += r.storage?.imagenes || 0;
-        globalConteos.storage.documentos += r.storage?.documentos || 0;
-        globalConteos.storage.multimedia += r.storage?.multimedia || 0;
-        globalConteos.storage.otros += r.storage?.otros || 0;
-        globalConteos.auth.usuarios += r.colaboradores;
-        globalConteos.auth.administradores += r.administradores;
-    });
-    
-    actualizarMetricas(globalConteos);
-    
-    // Datos para gráficas
-    const datosGraficas = datosAMostrar.map(r => ({
-        nombre: r.nombre,
-        documentos: r.documentos,
-        totalSize: r.totalSize
-    })).sort((a, b) => b.totalSize - a.totalSize);
-    
-    graficoTiposArchivo(globalConteos.storage);
-    graficoAlmacenamientoPorEmpresa(datosGraficas);
-    graficoDocumentosPorEmpresa(datosGraficas);
-    tablaOrganizaciones(datosAMostrar);
-    
-    // Ocultar secciones si no tienen datos
-    ocultarSeccionesSinDatos(datosAMostrar);
-    
-    // Actualizar badge
-    filtroActivo.texto = textoFiltro;
-    actualizarBadgeFiltro();
-    
-    console.log(`✅ Mostrando ${datosAMostrar.length} empresas - Período: ${textoFiltro || 'Todos'}`);
-}
-
-// =============================================
-// FUNCIONES DE FILTRO
-// =============================================
-
-function aplicarFiltros() {
-    const tipoFiltroSelect = document.getElementById('tipoFiltro');
-    const tipo = tipoFiltroSelect?.value || '';
-    const fechaInicioInput = document.getElementById('fechaInicio');
-    const fechaFinInput = document.getElementById('fechaFin');
-    
-    if (!tipo) {
-        Swal.fire({
-            icon: 'info',
-            title: 'Selecciona un período',
-            text: 'Por favor, selecciona un período para filtrar los datos.'
         });
-        return;
     }
     
-    if (tipo === 'personalizado') {
-        const inicio = fechaInicioInput?.value;
-        const fin = fechaFinInput?.value;
+    limpiarFiltros() {
+        const selector = document.getElementById('selectorEmpresa');
+        const tipoFiltro = document.getElementById('tipoFiltro');
+        const fechaInicio = document.getElementById('fechaInicio');
+        const fechaFin = document.getElementById('fechaFin');
         
-        if (!inicio || !fin) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Fechas incompletas',
-                text: 'Selecciona ambas fechas para el filtro personalizado.'
-            });
+        if (selector) selector.value = 'todas';
+        if (tipoFiltro) tipoFiltro.value = '';
+        if (fechaInicio) fechaInicio.value = '';
+        if (fechaFin) fechaFin.value = '';
+        
+        const rangoGrupo = document.getElementById('rangoFechasGrupo');
+        if (rangoGrupo) rangoGrupo.style.display = 'none';
+        
+        this.filtroActual = {
+            empresa: 'todas',
+            periodo: '',
+            fechaInicio: null,
+            fechaFin: null
+        };
+        
+        this.empresaSeleccionada = 'todas';
+        this.mostrarVistaTodasEmpresas();
+        
+        const modoVisualizacion = document.getElementById('modoVisualizacion');
+        if (modoVisualizacion) {
+            modoVisualizacion.innerHTML = `<i class="fas fa-chart-line"></i> <span>Todas las empresas</span>`;
+        }
+    }
+    
+    async actualizarDatos() {
+        await OperacionesEstadisticas.actualizarTodas({
+            pausaEntreLotes: 800,
+            loteSize: 2,
+            skipCache: false
+        });
+    }
+    
+    actualizarElemento(id, valor) {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.textContent = typeof valor === 'number' ? valor.toLocaleString() : valor;
+        }
+    }
+    
+    actualizarTabla(empresas) {
+        const tbody = document.getElementById('tablaOrganizacionesBody');
+        if (!tbody) return;
+        
+        if (!empresas || empresas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;"><i class="fas fa-building" style="font-size:32px; opacity:0.3; margin-bottom:10px;"></i><br>No hay datos de organizaciones disponibles</td></tr>';
             return;
         }
         
-        const fechaInicio = new Date(inicio);
-        fechaInicio.setHours(0, 0, 0, 0);
+        const totalDocs = empresas.reduce((sum, e) => sum + e.conteos.firestore.documentos, 0);
+        const totalArchivos = empresas.reduce((sum, e) => sum + e.getResumen().archivosTotales, 0);
         
-        const fechaFin = new Date(fin);
-        fechaFin.setHours(23, 59, 59, 999);
+        tbody.innerHTML = empresas.map(emp => {
+            const resumen = emp.getResumen();
+            const porcentajeDocs = totalDocs > 0 ? Math.round((resumen.totalDocumentos / totalDocs) * 100) : 0;
+            const porcentajeArchivos = totalArchivos > 0 ? Math.round((resumen.archivosTotales / totalArchivos) * 100) : 0;
+            
+            return `
+                <tr>
+                    <td><strong><i class="fas fa-building" style="color: #3b82f6; margin-right: 8px;"></i>${this.escapeHTML(emp.nombreEmpresa || emp.organizacion || emp.id)}</strong></td>
+                    <td><span class="badge-value badge-info">${resumen.totalDocumentos.toLocaleString()}</span><span class="porcentaje-badge">${porcentajeDocs}%</span></td>
+                    <td><span class="badge-value badge-warning">${resumen.archivosTotales.toLocaleString()}</span><span class="porcentaje-badge">${porcentajeArchivos}%</span></td>
+                    <td><span class="badge-value badge-success">${resumen.tamanioTotalMB} MB</span></td>
+                    <td><span class="badge-value badge-secondary">${emp.conteos.auth.administradores.toLocaleString()}</span></td>
+                    <td><span class="badge-value badge-secondary">${emp.conteos.auth.colaboradores.toLocaleString()}</span></td>
+                    <td><span class="badge-value badge-primary">${emp.conteos.auth.totalUsuarios.toLocaleString()}</span></td>
+                </tr>
+            `;
+        }).join('');
         
-        filtroActivo = {
-            tipo: 'personalizado',
-            fechaInicio: fechaInicio,
-            fechaFin: fechaFin,
-            texto: `${fechaInicio.toLocaleDateString()} - ${fechaFin.toLocaleDateString()}`
+        this.agregarEstilosBadges();
+    }
+    
+    agregarEstilosBadges() {
+        if (!document.getElementById('estilos-badges')) {
+            const style = document.createElement('style');
+            style.id = 'estilos-badges';
+            style.textContent = `
+                .badge-value {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 0.7rem;
+                    font-weight: 500;
+                    margin-right: 6px;
+                }
+                .badge-info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+                .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+                .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+                .badge-secondary { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+                .badge-primary { background: rgba(0, 207, 255, 0.2); color: #00cfff; }
+                .porcentaje-badge { font-size: 0.6rem; color: #6c757d; margin-left: 4px; }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    escapeHTML(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    async exportarExcel() {
+        if (!this.datosTodasEmpresas || !this.datosTodasEmpresas.porEmpresa) {
+            this.mostrarError('No hay datos para exportar');
+            return;
+        }
+        
+        try {
+            const datosCSV = OperacionesEstadisticas.exportarACSV(this.datosTodasEmpresas.porEmpresa);
+            if (!datosCSV) return;
+            
+            const csvContent = datosCSV.map(row => row.join(',')).join('\n');
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.setAttribute('download', `estadisticas_${new Date().toISOString().slice(0, 19)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            this.mostrarExito('Exportación completada');
+        } catch (error) {
+            console.error('Error exportando:', error);
+            this.mostrarError('Error al exportar datos');
+        }
+    }
+    
+    async mostrarDiagnostico() {
+        const organizaciones = await OperacionesEstadisticas.obtenerOrganizaciones();
+        
+        const totales = this.datosTodasEmpresas?.totales || {
+            firestore: { documentos: 0 },
+            storage: { totalArchivos: 0, totalSizeMB: 0 },
+            auth: { totalUsuarios: 0 }
         };
         
-    } else {
-        const periodo = calcularFechasPorPeriodo(tipo);
-        if (periodo) {
-            filtroActivo = {
-                tipo: tipo,
-                fechaInicio: periodo.fechaInicio,
-                fechaFin: periodo.fechaFin,
-                texto: periodo.texto
-            };
-        }
-    }
-    
-    const datosFiltrados = filtrarDatosPorFecha(datosOriginales, filtroActivo.fechaInicio, filtroActivo.fechaFin);
-    
-    if (datosFiltrados.length === 0) {
+        const mensaje = `
+            📊 DIAGNÓSTICO DE ESTADÍSTICAS
+            ─────────────────────────────────
+            📁 Organizaciones encontradas: ${organizaciones.length}
+            📄 Documentos totales: ${totales.firestore.documentos}
+            💾 Archivos storage: ${totales.storage.totalArchivos}
+            📦 Tamaño total: ${totales.storage.totalSizeMB?.toFixed(2) || 0} MB
+            👥 Usuarios totales: ${totales.auth.totalUsuarios}
+            
+            🏢 Empresas con datos:
+            ${organizaciones.map(org => `  - ${org.nombre}: ${org.camelCase}`).join('\n')}
+            
+            🔄 Última actualización: ${new Date().toLocaleString()}
+            📊 Caché activa: ${OperacionesEstadisticas.cache?.size || 0} organizaciones
+            💾 Caché storage: ${OperacionesEstadisticas.storageCache?.size || 0} entradas
+            🏢 Vista actual: ${this.empresaSeleccionada === 'todas' ? 'Todas las empresas' : this.empresaSeleccionada}
+        `;
+        
         Swal.fire({
+            title: 'Diagnóstico del Sistema',
+            html: `<pre style="text-align:left; background:#1a1a2e; padding:15px; border-radius:8px; overflow-x:auto;">${mensaje}</pre>`,
             icon: 'info',
-            title: 'Sin datos',
-            text: `No hay empresas actualizadas en el período seleccionado: ${filtroActivo.texto}`
+            confirmButtonText: 'Entendido',
+            background: '#1e1e2e',
+            color: '#ffffff'
         });
-        mostrarSinDatos(`No hay empresas actualizadas en ${filtroActivo.texto}`);
-        ocultarSeccionesSinDatos([]);
-        return;
     }
     
-    actualizarVistaConDatos(datosFiltrados, filtroActivo.texto);
-}
-
-function limpiarFiltros() {
-    filtroActivo = {
-        tipo: '',
-        fechaInicio: null,
-        fechaFin: null,
-        texto: ''
-    };
+    mostrarContenido() {
+        const contenido = document.getElementById('contenidoPrincipal');
+        const sinDatos = document.getElementById('sinDatosMensaje');
+        const seccionMetricas = document.getElementById('seccionMetricas');
+        const seccionStorage = document.getElementById('seccionStorage');
+        const seccionGraficas = document.getElementById('seccionGraficas');
+        const seccionTabla = document.getElementById('seccionTabla');
+        
+        if (contenido) contenido.style.display = 'block';
+        if (sinDatos) sinDatos.style.display = 'none';
+        if (seccionMetricas) seccionMetricas.style.display = 'block';
+        if (seccionStorage) seccionStorage.style.display = 'block';
+        if (seccionGraficas) seccionGraficas.style.display = 'block';
+        if (seccionTabla) seccionTabla.style.display = 'block';
+    }
     
-    const tipoFiltroSelect = document.getElementById('tipoFiltro');
-    const fechaInicioInput = document.getElementById('fechaInicio');
-    const fechaFinInput = document.getElementById('fechaFin');
-    const rangoGrupo = document.getElementById('rangoFechasGrupo');
+    mostrarSinDatos() {
+        const contenido = document.getElementById('contenidoPrincipal');
+        const sinDatos = document.getElementById('sinDatosMensaje');
+        const sinDatosTexto = document.getElementById('sinDatosTexto');
+        
+        if (contenido) contenido.style.display = 'none';
+        if (sinDatos) sinDatos.style.display = 'flex';
+        if (sinDatosTexto) {
+            sinDatosTexto.textContent = 'No hay datos disponibles';
+        }
+        
+        const metricas = ['metricDocumentos', 'metricAdministradores', 'metricColaboradores', 'metricTotalUsuarios',
+                          'metricArchivosTotales', 'metricTamanioTotal', 'metricPDF', 'metricPDFPorcentaje',
+                          'metricImagenes', 'metricImagenesPorcentaje', 'metricDocumentosStorage', 
+                          'metricDocumentosPorcentaje', 'metricMultimedia', 'metricMultimediaPorcentaje'];
+        metricas.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = id.includes('Porcentaje') ? '0%' : '0';
+        });
+        
+        const graficas = ['graficoTiposArchivo', 'graficoAlmacenamientoPorEmpresa', 'graficoDocumentosPorEmpresa'];
+        graficas.forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '14px Arial';
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.textAlign = 'center';
+                ctx.fillText('📭 No hay datos disponibles', canvas.width / 2, canvas.height / 2);
+            }
+        });
+    }
     
-    if (tipoFiltroSelect) tipoFiltroSelect.value = '';
-    if (fechaInicioInput) fechaInicioInput.value = '';
-    if (fechaFinInput) fechaFinInput.value = '';
-    if (rangoGrupo) rangoGrupo.style.display = 'none';
-    
-    if (datosOriginales.length > 0) {
-        actualizarVistaConDatos(datosOriginales, '');
+    mostrarError(mensaje) {
         Swal.fire({
+            title: 'Error',
+            text: mensaje,
+            icon: 'error',
+            confirmButtonText: 'OK',
+            background: '#1e1e2e',
+            color: '#ffffff'
+        });
+    }
+    
+    mostrarExito(mensaje) {
+        Swal.fire({
+            title: 'Éxito',
+            text: mensaje,
             icon: 'success',
-            title: 'Filtros limpiados',
-            text: 'Mostrando todos los datos disponibles.',
-            toast: true,
             timer: 2000,
-            showConfirmButton: false
-        });
-    } else {
-        mostrarSinDatos('No hay datos disponibles');
-        ocultarSeccionesSinDatos([]);
-    }
-}
-
-// =============================================
-// CARGA DE DATOS ORIGINALES
-// =============================================
-
-async function cargarDatosOriginales() {
-    console.log('📀 Cargando datos originales...');
-    
-    try {
-        const organizaciones = await operacionesManager.getOrganizaciones();
-        
-        if (organizaciones.length === 0) {
-            mostrarSinDatos('No hay organizaciones registradas');
-            ocultarSeccionesSinDatos([]);
-            return false;
-        }
-        
-        const statsPromises = organizaciones.map(async org => {
-            const op = await operacionesManager.getOperaciones(org.camelCase);
-            
-            let fechaActualizacion = null;
-            if (op?.fechaActualizacion) {
-                if (typeof op.fechaActualizacion.toDate === 'function') {
-                    fechaActualizacion = op.fechaActualizacion.toDate();
-                } else if (op.fechaActualizacion instanceof Date) {
-                    fechaActualizacion = op.fechaActualizacion;
-                } else if (typeof op.fechaActualizacion === 'string') {
-                    fechaActualizacion = new Date(op.fechaActualizacion);
-                }
-            }
-            
-            return {
-                id: org.camelCase,
-                nombre: org.nombre,
-                documentos: op?.conteos?.firestore?.documentos || 0,
-                archivos: op?.conteos?.storage?.total || 0,
-                totalSize: op?.conteos?.storage?.totalSize || 0,
-                administradores: op?.conteos?.auth?.administradores || 0,
-                colaboradores: op?.conteos?.auth?.usuarios || 0,
-                storage: op?.conteos?.storage || { total: 0, totalSize: 0, pdf: 0, imagenes: 0, documentos: 0, multimedia: 0, otros: 0 },
-                firestore: op?.conteos?.firestore || { documentos: 0 },
-                auth: op?.conteos?.auth || { usuarios: 0, administradores: 0 },
-                fechaActualizacion: fechaActualizacion,
-                fechaStr: fechaActualizacion ? fechaActualizacion.toLocaleDateString() : 'Sin fecha'
-            };
-        });
-        
-        datosOriginales = await Promise.all(statsPromises);
-        
-        datosOriginales = datosOriginales.filter(d => d.documentos > 0 || d.archivos > 0);
-        
-        const tieneDatos = datosOriginales.length > 0;
-        
-        if (!tieneDatos) {
-            mostrarSinDatos('No hay datos estadísticos disponibles');
-            ocultarSeccionesSinDatos([]);
-            return false;
-        }
-        
-        const fechasValidas = datosOriginales
-            .filter(d => d.fechaActualizacion)
-            .map(d => d.fechaActualizacion);
-        
-        if (fechasValidas.length > 0) {
-            const fechaMasReciente = new Date(Math.max(...fechasValidas));
-            ultimaActualizacion = fechaMasReciente;
-            const fechaElement = document.getElementById('fechaActualizacion');
-            if (fechaElement) fechaElement.innerText = fechaMasReciente.toLocaleString();
-        }
-        
-        console.log('📀 Datos originales cargados:', datosOriginales.length, 'empresas');
-        
-        return true;
-        
-    } catch (error) {
-        console.error('Error cargando datos originales:', error);
-        mostrarSinDatos('Error al cargar los datos');
-        ocultarSeccionesSinDatos([]);
-        return false;
-    }
-}
-
-// =============================================
-// ACTUALIZACIÓN DE DATOS REALES
-// =============================================
-
-async function actualizarDatosReales(mostrarProgress = true) {
-    console.log('🔄 Actualizando datos reales...');
-    
-    let progressInterval;
-    let startTime = Date.now();
-    
-    if (mostrarProgress) {
-        Swal.fire({
-            title: 'Actualizando estadísticas',
-            html: `
-                <div style="text-align: center;">
-                    <div class="loading-spinner" style="margin: 20px auto;"></div>
-                    <p id="progressText" style="margin-top: 15px;">Recopilando datos de Firestore y Storage...</p>
-                </div>
-            `,
-            allowOutsideClick: false,
             showConfirmButton: false,
-            didOpen: () => {
-                let elapsed = 0;
-                progressInterval = setInterval(() => {
-                    elapsed = Math.floor((Date.now() - startTime) / 1000);
-                    const progressText = document.getElementById('progressText');
-                    if (progressText) {
-                        if (elapsed < 5) progressText.innerHTML = '📡 Conectando con Firebase...';
-                        else if (elapsed < 10) progressText.innerHTML = '📁 Contando documentos en Firestore...';
-                        else if (elapsed < 15) progressText.innerHTML = '💾 Escaneando archivos en Storage...';
-                        else progressText.innerHTML = '📊 Procesando datos y generando estadísticas...';
-                    }
-                }, 1000);
-            }
-        });
-    }
-    
-    try {
-        await operacionesManager.recopilarTodasLasOrganizaciones();
-        await cargarDatosOriginales();
-        
-        if (filtroActivo.fechaInicio && filtroActivo.fechaFin) {
-            const datosFiltrados = filtrarDatosPorFecha(datosOriginales, filtroActivo.fechaInicio, filtroActivo.fechaFin);
-            if (datosFiltrados.length > 0) {
-                actualizarVistaConDatos(datosFiltrados, filtroActivo.texto);
-            } else {
-                mostrarSinDatos('Los datos actualizados no contienen información en el período seleccionado');
-                ocultarSeccionesSinDatos([]);
-            }
-        } else {
-            if (datosOriginales.length > 0) {
-                actualizarVistaConDatos(datosOriginales, '');
-            } else {
-                mostrarSinDatos('No hay datos disponibles después de la actualización');
-                ocultarSeccionesSinDatos([]);
-            }
-        }
-        
-        if (progressInterval) clearInterval(progressInterval);
-        
-        const totalTime = Math.floor((Date.now() - startTime) / 1000);
-        
-        if (mostrarProgress) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Actualización completada',
-                html: `Datos actualizados correctamente.<br>⏱️ Tiempo total: ${totalTime} segundos`,
-                timer: 3000,
-                showConfirmButton: true
-            });
-        }
-        
-        console.log(`✅ Actualización completada en ${totalTime} segundos`);
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Error actualizando datos:', error);
-        
-        if (progressInterval) clearInterval(progressInterval);
-        
-        if (mostrarProgress) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron actualizar los datos. Verifica tu conexión.'
-            });
-        }
-        
-        return false;
-    }
-}
-
-// =============================================
-// CARGA DE EMPRESAS EN SELECTOR
-// =============================================
-
-async function cargarEmpresas() {
-    const selector = document.getElementById('selectorEmpresa');
-    if (!selector) return;
-    
-    try {
-        const organizaciones = await operacionesManager.getOrganizaciones();
-        
-        while (selector.options.length > 1) selector.remove(1);
-        
-        organizaciones.forEach(org => {
-            if (org.camelCase) {
-                const option = document.createElement('option');
-                option.value = org.camelCase;
-                option.textContent = org.nombre;
-                selector.appendChild(option);
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error cargando empresas:', error);
-    }
-}
-
-// =============================================
-// CONFIGURACIÓN DE EVENTOS
-// =============================================
-
-function configurarEventos() {
-    const selector = document.getElementById('selectorEmpresa');
-    const btnActualizar = document.getElementById('btnActualizar');
-    const btnExportar = document.getElementById('btnExportarExcel');
-    const btnAplicar = document.getElementById('btnAplicarFiltros');
-    const btnLimpiar = document.getElementById('btnLimpiarFiltros');
-    const tipoFiltro = document.getElementById('tipoFiltro');
-    const rangoGrupo = document.getElementById('rangoFechasGrupo');
-    
-    if (selector) {
-        selector.addEventListener('change', async (e) => {
-            currentEmpresa = e.target.value;
-            const optionText = selector.options[selector.selectedIndex]?.text || currentEmpresa;
-            document.getElementById('modoVisualizacion').innerHTML = currentEmpresa === 'global' 
-                ? '<i class="fas fa-globe"></i> Vista: Global'
-                : `<i class="fas fa-building"></i> Vista: ${optionText}`;
-            
-            if (filtroActivo.fechaInicio && filtroActivo.fechaFin) {
-                const datosFiltrados = filtrarDatosPorFecha(datosOriginales, filtroActivo.fechaInicio, filtroActivo.fechaFin);
-                actualizarVistaConDatos(datosFiltrados, filtroActivo.texto);
-            } else if (datosOriginales.length > 0) {
-                actualizarVistaConDatos(datosOriginales, '');
-            }
-        });
-    }
-    
-    if (tipoFiltro) {
-        tipoFiltro.addEventListener('change', () => {
-            const valor = tipoFiltro.value;
-            if (rangoGrupo) {
-                rangoGrupo.style.display = valor === 'personalizado' ? 'block' : 'none';
-            }
-        });
-    }
-    
-    if (btnAplicar) {
-        btnAplicar.addEventListener('click', aplicarFiltros);
-    }
-    
-    if (btnLimpiar) {
-        btnLimpiar.addEventListener('click', limpiarFiltros);
-    }
-    
-    if (btnActualizar) {
-        btnActualizar.addEventListener('click', async () => {
-            await actualizarDatosReales(true);
-        });
-    }
-    
-    if (btnExportar) {
-        btnExportar.addEventListener('click', () => {
-            Swal.fire({ icon: 'info', title: 'Exportar', text: 'Función en desarrollo' });
+            background: '#1e1e2e',
+            color: '#ffffff'
         });
     }
 }
 
-// =============================================
-// INICIALIZACIÓN PRINCIPAL
-// =============================================
-
-async function inicializar() {
-    console.log('🚀 Inicializando página...');
-    
-    mostrarSinDatos('Selecciona un período y presiona "Aplicar Filtros"');
-    ocultarSeccionesSinDatos([]);
-    
-    const datosCargados = await cargarDatosOriginales();
-    
-    if (datosCargados && datosOriginales.length > 0) {
-        console.log('📀 Datos cargados:', datosOriginales.length, 'empresas');
-        
-        const fechasDisponibles = datosOriginales
-            .filter(d => d.fechaActualizacion)
-            .map(d => d.fechaStr);
-        
-        const fechasUnicas = [...new Set(fechasDisponibles)];
-        
-        Swal.fire({
-            icon: 'info',
-            title: 'Datos disponibles',
-            html: `<div style="text-align: left;">
-                <p>✅ <strong>${datosOriginales.length}</strong> empresas con datos</p>
-                <p>📅 Últimas actualizaciones:</p>
-                <ul style="margin: 5px 0 0 20px;">
-                    ${fechasUnicas.slice(0, 5).map(f => `<li>${f}</li>`).join('')}
-                </ul>
-                <p style="margin-top: 10px;">👇 Selecciona un período y presiona "Aplicar Filtros"</p>
-            </div>`,
-            showConfirmButton: true,
-            confirmButtonText: 'Entendido'
-        });
-        
-    } else {
-        console.log('📀 No hay datos');
-        Swal.fire({
-            icon: 'warning',
-            title: 'Sin datos',
-            html: 'No hay estadísticas guardadas.<br><br>Presiona "Actualizar Datos" para generar los datos.'
-        });
-    }
-    
-    await cargarEmpresas();
-    configurarEventos();
-    
-    if (ultimaActualizacion) {
-        document.getElementById('fechaActualizacion').innerText = ultimaActualizacion.toLocaleString();
-    } else {
-        document.getElementById('fechaActualizacion').innerText = 'No actualizado';
-    }
-    
-    console.log('✅ Inicialización completada');
-}
-
-// INICIAR APLICACIÓN
-inicializar();
+document.addEventListener('DOMContentLoaded', () => {
+    new OperacionesController();
+});
