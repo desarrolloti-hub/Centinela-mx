@@ -299,7 +299,7 @@ body {
 }
 
 /* =============================================
-   SECCIÓN REGISTRO - 2 TARJETAS (VERSIÓN COMPACTA Y PEGADAS A LA IZQUIERDA)
+   SECCIÓN REGISTRO - TARJETAS DINÁMICAS
    ============================================= */
 .center-row {
     display: flex;
@@ -352,7 +352,7 @@ body {
     color: var(--color-text-secondary);
 }
 
-/* Grid para 2 tarjetas - AHORA PEGADAS A LA IZQUIERDA */
+/* Grid para tarjetas - ALINEADAS A LA IZQUIERDA */
 .cards-grid-2 {
     display: flex !important;
     flex-direction: row !important;
@@ -360,11 +360,10 @@ body {
     gap: 1rem !important;
     margin-top: var(--spacing-sm, 0.5rem);
     justify-content: flex-start !important;
-    /* Alinear a la izquierda */
     align-items: center;
 }
 
-/* Tarjetas base - VERSIÓN COMPACTA Y SIN ANCHO MÁXIMO FIJO */
+/* Tarjetas base - VERSIÓN COMPACTA */
 .dashboard-card {
     display: flex !important;
     flex-direction: row !important;
@@ -373,11 +372,8 @@ body {
     height: 70px !important;
     min-height: 70px !important;
     width: auto !important;
-    /* Ancho automático según contenido */
     min-width: 200px !important;
-    /* Ancho mínimo */
     max-width: 280px !important;
-    /* Ancho máximo */
     padding: 0.5rem 0.75rem !important;
     position: relative;
     border: 1px solid var(--color-border-light);
@@ -387,7 +383,11 @@ body {
     backdrop-filter: blur(8px);
     gap: 0.5rem;
     flex-shrink: 0;
-    /* Evitar que se encojan */
+}
+
+/* Tarjeta oculta */
+.dashboard-card[style*="display: none"] {
+    display: none !important;
 }
 
 /* Hover general para tarjetas (excluyendo la de nueva incidencia) */
@@ -439,6 +439,14 @@ body {
     color: #b16bff;
 }
 
+.card-icon.green {
+    color: #28a745;
+}
+
+.card-icon.orange {
+    color: #fd7e14;
+}
+
 /* Texto truncado para no desbordar */
 .card-text {
     flex: 1;
@@ -478,6 +486,11 @@ body {
     transition: var(--transition-default);
 }
 
+/* Estilo para tarjeta de Bitácora */
+#card-bitacora .card-icon {
+    color: #9caba4;
+}
+
 /* =============================================
    RESPONSIVE - VERSIÓN COMPACTA PEGADA A LA IZQUIERDA
    ============================================= */
@@ -485,7 +498,6 @@ body {
     .cards-grid-2 {
         flex-direction: column !important;
         align-items: flex-start !important;
-        /* Alinear a la izquierda también en móviles */
         gap: 0.75rem !important;
     }
 

@@ -241,7 +241,7 @@ function getPlanBadge(plan, fechaVencimiento) {
     return `<span class="plan-badge ${info.clase}"><i class="fas ${info.icono}"></i> ${info.texto}</span>`;
 }
 
-// ========== OBTENER MAPAS ACTIVOS PARA MOSTRAR ==========
+// ========== OBTENER MAPAS ACTIVOS PARA MOSTRAR (usado en confirmación) ==========
 function obtenerMapasActivosHtml(plan) {
     if (!plan || !plan.mapasActivos) return '';
     
@@ -266,7 +266,7 @@ function obtenerMapasActivosHtml(plan) {
     return mapasHtml.join('');
 }
 
-// ========== OBTENER PERMISOS ACTIVOS PARA MOSTRAR ==========
+// ========== OBTENER PERMISOS ACTIVOS PARA MOSTRAR (usado en confirmación) ==========
 function obtenerPermisosActivosHtml(plan) {
     if (!plan) return '';
     
@@ -366,61 +366,37 @@ async function abrirModalAsignarPlan(admin) {
         </div>
     `;
     
-    // Construir HTML de planes - USANDO PlanPersonalizado CORRECTAMENTE
+    // Construir HTML de planes - VERSIÓN COMPACTA SIN INFO REDUNDANTE
     let planesHTML = '';
     
     if (planesPersonalizados.length > 0) {
-        console.log(`📋 Mostrando ${planesPersonalizados.length} planes personalizados`);
+        console.log(`📋 Mostrando ${planesPersonalizados.length} planes personalizados (vista compacta)`);
         
         planesHTML += `
             <div class="planes-section">
-                <h4>Planes Disponibles</h4>
                 <div class="planes-grid">
                     ${planesPersonalizados.map(plan => {
-                        // Obtener mapas activos usando el método de la clase
-                        const mapasActivosLista = plan.obtenerMapasActivos();
+                        // Calcular datos básicos para mostrar de forma compacta
                         const totalMapas = plan.contarMapasActivos();
                         const totalPermisos = plan.contarPermisosActivos();
-                        
-                        const mapasHtml = obtenerMapasActivosHtml(plan);
-                        const permisosHtml = obtenerPermisosActivosHtml(plan);
+                        const precioFormateado = plan.obtenerPrecioFormateado();
+                        const nombrePlan = escapeHTML(plan.nombre);
+                        const colorPlan = plan.color || '#8b5cf6';
+                        const iconoPlan = plan.icono || 'fa-cube';
                         
                         return `
                             <div class="plan-opcion plan-personalizado" data-plan-id="${escapeHTML(plan.id)}">
                                 <input type="radio" name="planSeleccionado" value="${escapeHTML(plan.id)}" id="plan_${escapeHTML(plan.id)}">
                                 <label for="plan_${escapeHTML(plan.id)}">
-                                    <div class="plan-header" style="border-left-color: ${plan.color || '#8b5cf6'};">
-                                        <i class="fas ${plan.icono || 'fa-cube'}" style="color: ${plan.color || '#8b5cf6'};"></i>
-                                        <h3>${escapeHTML(plan.nombre)}</h3>
-                                        <span class="plan-precio">${plan.obtenerPrecioFormateado()}</span>
-                                    </div>
-                                    <div class="plan-descripcion">
-                                        <p>${escapeHTML(plan.descripcion || 'Plan personalizado')}</p>
+                                    <div class="plan-header">
+                                        <i class="fas ${iconoPlan}" style="color: ${colorPlan};"></i>
+                                        <h3>${nombrePlan}</h3>
+                                        <span class="plan-precio">${precioFormateado}</span>
                                     </div>
                                     <div class="plan-stats">
-                                        <span class="badge-modulos">
-                                            <i class="fas fa-cubes"></i> ${totalMapas} mapa(s) activo(s)
-                                        </span>
-                                        <span class="badge-permisos">
-                                            <i class="fas fa-key"></i> ${totalPermisos} permiso(s)
-                                        </span>
-                                        <span class="badge-vigencia">
-                                            <i class="fas fa-calendar-check"></i> Vigencia: ${DIAS_VENCIMIENTO} días
-                                        </span>
-                                    </div>
-                                    <div class="plan-modulos">
-                                        <div class="mapas-activos" style="margin-bottom: 10px;">
-                                            <strong>Mapas:</strong>
-                                            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px;">
-                                                ${mapasHtml || '<span class="modulo-tag inactivo">Sin mapas activos</span>'}
-                                            </div>
-                                        </div>
-                                        <div class="permisos-activos">
-                                            <strong>Permisos:</strong>
-                                            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px;">
-                                                ${permisosHtml || '<span class="permiso-tag">Sin permisos específicos</span>'}
-                                            </div>
-                                        </div>
+                                        <span><i class="fas fa-cubes"></i> ${totalMapas} mapa(s)</span>
+                                        <span><i class="fas fa-key"></i> ${totalPermisos} permiso(s)</span>
+                                        <span><i class="fas fa-calendar-check"></i> ${DIAS_VENCIMIENTO} días</span>
                                     </div>
                                 </label>
                             </div>
@@ -433,7 +409,6 @@ async function abrirModalAsignarPlan(admin) {
         console.log('⚠️ No hay planes personalizados en la colección "planes"');
         planesHTML += `
             <div class="planes-section">
-                <h4>Planes Disponibles</h4>
                 <div class="empty-state-small">
                     <i class="fas fa-info-circle"></i>
                     <p>No hay planes creados. Puedes crearlos desde el panel de creación de planes.</p>
@@ -443,7 +418,7 @@ async function abrirModalAsignarPlan(admin) {
     }
     
     planesContainer.innerHTML = planesHTML;
-    console.log('✅ Planes cargados en el contenedor');
+    console.log('✅ Planes cargados en el contenedor (vista compacta)');
     
     // Resetear selección
     document.querySelectorAll('input[name="planSeleccionado"]').forEach(radio => {
