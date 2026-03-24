@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ===============================================================
-    // 🔥 FUNCIÓN CORREGIDA - Guarda usuario en localStorage con área y cargo
+    // 🔥 FUNCIÓN CORREGIDA - Guarda usuario en localStorage con área, cargo y PLAN
     // ===============================================================
     function saveUserToLocalStorage(user) {
         try {
@@ -164,7 +164,12 @@ document.addEventListener('DOMContentLoaded', function () {
             else if (user.organizacionLogo) fotoOrganizacion = user.organizacionLogo;
             else if (user.logoUrl) fotoOrganizacion = user.logoUrl;
 
-            // ✅ GUARDAR TODOS LOS DATOS DEL USUARIO INCLUYENDO ÁREA Y CARGO
+            // ✅ ✅ ✅ NUEVO: OBTENER EL PLAN DEL USUARIO
+            // El plan puede venir en user.plan (ID del documento en colección 'planes')
+            const planId = user.plan || user.planId || null;
+            console.log(`📋 Plan del usuario: ${planId || 'No asignado'}`);
+
+            // ✅ GUARDAR TODOS LOS DATOS DEL USUARIO INCLUYENDO ÁREA, CARGO Y PLAN
             const userData = {
                 id: user.id,
                 email: user.email || user.correoElectronico,
@@ -180,6 +185,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 // ✅ ✅ ✅ IMPORTANTE: GUARDAR ÁREA Y CARGO (SEGÚN LA CLASE USER)
                 areaAsignadaId: user.areaAsignadaId || '',
                 cargoId: user.cargoId || '',
+
+                // ✅ ✅ ✅ NUEVO: GUARDAR EL PLAN (ID del documento en colección 'planes')
+                plan: planId,
+                planId: planId, // Por compatibilidad
 
                 // ✅ GUARDAR ESTADO
                 status: user.status,
@@ -209,6 +218,17 @@ document.addEventListener('DOMContentLoaded', function () {
             localStorage.setItem('userOrganizacionCamelCase', organizacionCamelCase);
             localStorage.setItem('userNombre', user.nombreCompleto);
             localStorage.setItem('userEmail', user.email || user.correoElectronico || '');
+            
+            // ✅ ✅ ✅ NUEVO: Guardar el plan en localStorage para acceso rápido
+            if (planId) {
+                localStorage.setItem('userPlan', planId);
+                localStorage.setItem('plan', planId); // Por compatibilidad con navbar
+                console.log(`✅ Plan guardado en localStorage: ${planId}`);
+            } else {
+                localStorage.removeItem('userPlan');
+                localStorage.removeItem('plan');
+                console.log('⚠️ No se encontró plan para este usuario');
+            }
 
             // Guardar fotos si existen
             if (fotoUsuario) {
@@ -227,7 +247,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 nombre: user.nombreCompleto,
                 areaAsignadaId: user.areaAsignadaId || 'NO ASIGNADA',
                 cargoId: user.cargoId || 'NO ASIGNADO',
-                rol: user.rol
+                rol: user.rol,
+                plan: planId || 'NO ASIGNADO'
             });
 
             return true;
@@ -238,11 +259,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ===============================================================
-    // 🔥 FUNCIÓN MEJORADA - Guardar en sessionStorage con área y cargo
+    // 🔥 FUNCIÓN MEJORADA - Guardar en sessionStorage con área, cargo y PLAN
     // ===============================================================
     function saveUserToSessionStorage(user) {
         try {
             const organizacionCamelCase = toCamelCase(user.organizacion);
+            
+            // ✅ ✅ ✅ OBTENER EL PLAN
+            const planId = user.plan || user.planId || null;
 
             const sessionData = {
                 id: user.id,
@@ -257,6 +281,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 // ✅ GUARDAR ÁREA Y CARGO EN SESSION TAMBIÉN
                 areaAsignadaId: user.areaAsignadaId || '',
                 cargoId: user.cargoId || '',
+                
+                // ✅ ✅ ✅ NUEVO: GUARDAR PLAN EN SESSION TAMBIÉN
+                plan: planId,
+                planId: planId,
 
                 sessionId: 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 sessionStart: new Date().toISOString(),
@@ -273,6 +301,11 @@ document.addEventListener('DOMContentLoaded', function () {
             sessionStorage.setItem('sessionOrganizacionCamelCase', organizacionCamelCase);
             sessionStorage.setItem('sessionUser', user.nombreCompleto);
             sessionStorage.setItem('sessionRole', user.rol);
+            
+            // ✅ ✅ ✅ Guardar plan en sessionStorage
+            if (planId) {
+                sessionStorage.setItem('sessionPlan', planId);
+            }
 
             return true;
         } catch (error) {
@@ -296,6 +329,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     rol: userData.rol,
                     areaAsignadaId: userData.areaAsignadaId || 'NO ASIGNADA',
                     cargoId: userData.cargoId || 'NO ASIGNADO',
+                    plan: userData.plan || 'NO ASIGNADO',
                     tieneFotoUsuario: !!userData.fotoUsuario,
                     tieneFotoOrganizacion: !!userData.fotoOrganizacion
                 });
@@ -315,6 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // FUNCIÓN: Mostrar SweetAlert2 de éxito en login
     function mostrarSweetAlertExito(user) {
         const organizacionCamelCase = toCamelCase(user.organizacion);
+        const planId = user.plan || user.planId || 'No asignado';
 
         Swal.fire({
             title: '¡Bienvenido!',
@@ -326,6 +361,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div>
                         <p><strong>Organización:</strong> ${user.organizacion}</p>
                         <p><strong>Rol:</strong> ${user.rol === 'administrador' ? 'ADMINISTRADOR' : 'COLABORADOR'}</p>
+                        <p><strong>Plan:</strong> ${planId}</p>
                         <p><strong>Área ID:</strong> ${user.areaAsignadaId || 'No asignada'}</p>
                         <p><strong>Cargo ID:</strong> ${user.cargoId || 'No asignado'}</p>
                         <p><strong>Estado:</strong> ${user.verificado ? 'Verificado' : 'Pendiente'}</p>
@@ -609,6 +645,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 organizacion: user.organizacion,
                 areaAsignadaId: user.areaAsignadaId || 'NO ASIGNADA',
                 cargoId: user.cargoId || 'NO ASIGNADO',
+                plan: user.plan || 'NO ASIGNADO',
                 tieneFotoUsuario: !!(user.fotoUsuario || user.fotoURL),
                 tieneFotoOrganizacion: !!user.fotoOrganizacion
             });

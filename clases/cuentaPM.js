@@ -77,6 +77,7 @@ class CuentaPM {
         if (!doc.exists()) return null;
         
         const data = doc.data();
+        // Crear la cuenta con el constructor correcto
         const cuenta = new CuentaPM(data.email || doc.id, {
             userToken: data.userToken,
             appId: data.appId,
@@ -117,6 +118,103 @@ class CuentaPM {
         } catch (error) {
             console.error("❌ Error en persistencia Firestore:", error);
             throw error;
+        }
+    }
+    
+    static async obtenerPorOrganizacion(organizacionCamelCase) {
+        try {
+            const cuentasRef = collection(db, "cuentas_tecnicas_pm");
+            const q = query(cuentasRef, where("organizacionCamelCase", "==", organizacionCamelCase));
+            const querySnapshot = await getDocs(q);
+            
+            const cuentas = [];
+            querySnapshot.forEach((doc) => {
+                const cuenta = this._fromFirestore(doc);
+                if (cuenta) cuentas.push(cuenta);
+            });
+            
+            return cuentas;
+        } catch (error) {
+            console.error("❌ Error obteniendo cuentas por organización:", error);
+            return [];
+        }
+    }
+
+    /**
+     * Obtiene una cuenta de monitoreo por su App ID
+     * @param {string} appId - App ID de la cuenta
+     * @returns {Promise<CuentaPM|null>} - Instancia de CuentaPM o null si no existe
+     */
+    static async obtenerPorAppId(appId) {
+        try {
+            if (!appId) {
+                console.log('❌ App ID no proporcionado');
+                return null;
+            }
+            
+            console.log(`🔍 Buscando cuenta con App ID: "${appId}"`);
+            
+            // Usar la colección correcta: "cuentas_tecnicas_pm"
+            const cuentasRef = collection(db, "cuentas_tecnicas_pm");
+            
+            // Query para buscar donde el campo "appId" sea igual al appId proporcionado
+            const q = query(cuentasRef, where("appId", "==", appId));
+            
+            const querySnapshot = await getDocs(q);
+            
+            console.log(`📊 Documentos encontrados: ${querySnapshot.size}`);
+            
+            if (querySnapshot.empty) {
+                console.log(`❌ No se encontró ningún documento con appId = "${appId}"`);
+                
+                // Mostrar algunos appIds existentes para depuración
+                const todasQuery = query(cuentasRef);
+                const todasSnapshot = await getDocs(todasQuery);
+                console.log(`📋 Total de cuentas en Firestore: ${todasSnapshot.size}`);
+                
+                if (!todasSnapshot.empty) {
+                    console.log('📋 App IDs existentes:');
+                    const appIdsExistentes = [];
+                    todasSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.appId) {
+                            appIdsExistentes.push(data.appId);
+                            console.log(`   - ${data.appId} (${doc.id})`);
+                        }
+                    });
+                    
+                    // Verificar si el appId buscado está cerca de alguno existente
+                    const similar = appIdsExistentes.find(id => 
+                        id.toLowerCase().includes(appId.toLowerCase()) || 
+                        appId.toLowerCase().includes(id.toLowerCase())
+                    );
+                    if (similar) {
+                        console.log(`💡 Quizás quisiste decir: "${similar}"`);
+                    }
+                }
+                
+                return null;
+            }
+            
+            // Tomar el primer documento encontrado (debería ser único)
+            const docSnap = querySnapshot.docs[0];
+            const data = docSnap.data();
+            
+            console.log(`✅ Cuenta encontrada:`, {
+                id: docSnap.id,
+                email: data.email,
+                appId: data.appId,
+                status: data.status
+            });
+            
+            // Usar el método _fromFirestore para crear la instancia correctamente
+            const cuenta = this._fromFirestore(docSnap);
+            
+            return cuenta;
+            
+        } catch (error) {
+            console.error('❌ Error obteniendo cuenta por App ID:', error);
+            return null;
         }
     }
 

@@ -5,6 +5,10 @@ import { CLOUD_FUNCTION_BASE_URL, ACTIONS } from '/config/urlCloudFunction.js';
 // Nombre de la Cloud Function específica
 const POWER_MANAGE_FUNCTION = 'proxyPowerManage';
 
+// Variables para almacenar datos temporales
+let tempEmail = null;
+let tempResetCode = null;
+
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof Swal === 'undefined') {
@@ -27,10 +31,15 @@ function obtenerElementosDOM() {
         return {
             form: document.getElementById('pmRegisterForm'),
             btnSendCode: document.getElementById('btnSendCode'),
+            btnVerifyCode: document.getElementById('btnVerifyCode'),
+            btnSetPassword: document.getElementById('btnSetPassword'),
             step1: document.getElementById('step1'),
             step2: document.getElementById('step2'),
+            step3: document.getElementById('step3'),
             inputEmail: document.getElementById('pmEmail'),
-            inputCode: document.getElementById('pmCode')
+            inputCode: document.getElementById('pmCode'),
+            inputPassword: document.getElementById('newPassword'),
+            inputConfirmPassword: document.getElementById('confirmPassword')
         };
     } catch (error) {
         console.error('❌ Error obteniendo elementos DOM:', error);
@@ -39,7 +48,7 @@ function obtenerElementosDOM() {
 }
 
 function configurarEventos(elements) {
-    if (!elements.btnSendCode || !elements.form) return;
+    if (!elements.btnSendCode || !elements.btnVerifyCode || !elements.btnSetPassword) return;
     
     // PASO 1: Solicitar código
     elements.btnSendCode.addEventListener('click', async () => {
@@ -54,10 +63,23 @@ function configurarEventos(elements) {
         }
     });
     
-    // PASO 2: Completar registro
-    elements.form.addEventListener('submit', async (e) => {
+    // PASO 2: Verificar código
+    elements.btnVerifyCode.addEventListener('click', async () => {
+        await verificarCodigo(elements);
+    });
+    
+    // Permitir Enter en el código
+    elements.inputCode.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            elements.btnVerifyCode.click();
+        }
+    });
+    
+    // PASO 3: Establecer contraseña
+    elements.btnSetPassword.addEventListener('click', async (e) => {
         e.preventDefault();
-        await completarRegistro(elements);
+        await establecerContraseña(elements);
     });
     
     // Auto mayúsculas para el código
@@ -68,14 +90,12 @@ function configurarEventos(elements) {
     }
 }
 
-// ========== FUNCIÓN PARA VERIFICAR EMAIL DUPLICADO (USANDO LA CLASE) ==========
+// ========== FUNCIÓN PARA VERIFICAR EMAIL DUPLICADO ==========
 async function verificarEmailExistente(email) {
     try {
-        // Usar el método estático de la clase CuentaPM
         const existe = await CuentaPM.existe(email);
         
         if (existe) {
-            // Si existe, obtener la cuenta para saber su estado
             const cuenta = await CuentaPM.obtenerPorId(email);
             return {
                 existe: true,
@@ -91,11 +111,11 @@ async function verificarEmailExistente(email) {
     }
 }
 
-// Función para construir la URL completa con la función específica
 function getFunctionUrl() {
     return `${CLOUD_FUNCTION_BASE_URL}${POWER_MANAGE_FUNCTION}`;
 }
 
+// ========== PASO 1: SOLICITAR CÓDIGO ==========
 async function solicitarCodigo(elements) {
     const email = elements.inputEmail.value.trim();
     
@@ -119,7 +139,6 @@ async function solicitarCodigo(elements) {
         return;
     }
     
-    // Mostrar loader mientras verificamos
     Swal.fire({
         title: 'Verificando email...',
         text: 'Por favor espera',
@@ -128,7 +147,7 @@ async function solicitarCodigo(elements) {
     });
     
     try {
-        // VERIFICAR SI EL EMAIL YA EXISTE USANDO LA CLASE
+        // Verificar si el email ya existe
         const verificado = await verificarEmailExistente(email);
         
         if (verificado.existe) {
@@ -159,7 +178,7 @@ async function solicitarCodigo(elements) {
             return;
         }
         
-        // Si no existe, proceder a solicitar código
+        // Si no existe, solicitar código
         Swal.fire({
             title: 'Enviando código...',
             text: 'Por favor espera',
@@ -167,7 +186,6 @@ async function solicitarCodigo(elements) {
             didOpen: () => Swal.showLoading()
         });
         
-        // Construir URL completa con la función específica
         const url = getFunctionUrl();
         
         const response = await fetch(url, {
@@ -184,6 +202,8 @@ async function solicitarCodigo(elements) {
         Swal.close();
         
         if (response.ok) {
+            tempEmail = email;
+            
             await Swal.fire({
                 icon: 'success',
                 title: 'Código Enviado',
@@ -202,7 +222,6 @@ async function solicitarCodigo(elements) {
             elements.step1.style.display = 'none';
             elements.step2.style.display = 'block';
             
-            // Auto focus en el código
             setTimeout(() => elements.inputCode.focus(), 300);
             
         } else {
@@ -220,8 +239,9 @@ async function solicitarCodigo(elements) {
     }
 }
 
-async function completarRegistro(elements) {
-    const email = elements.inputEmail.value.trim();
+// ========== PASO 2: VERIFICAR CÓDIGO ==========
+async function verificarCodigo(elements) {
+    const email = tempEmail || elements.inputEmail.value.trim();
     const code = elements.inputCode.value.trim();
     
     if (!email || !code) {
@@ -245,31 +265,16 @@ async function completarRegistro(elements) {
     }
 
     Swal.fire({
-        title: 'Finalizando vinculación...',
-        text: 'Esto puede tomar unos segundos',
+        title: 'Verificando código...',
+        text: 'Por favor espera',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
     });
 
     try {
-        // VOLVER A VERIFICAR ANTES DE COMPLETAR (por si acaso)
-        const verificado = await verificarEmailExistente(email);
-        
-        if (verificado.existe) {
-            Swal.close();
-            Swal.fire({
-                icon: 'warning',
-                title: 'Email ya registrado',
-                text: 'Este email ya fue registrado durante el proceso. Intenta con otro email.',
-                confirmButtonText: 'ENTENDIDO'
-            });
-            return;
-        }
-        
-        // Crear instancia de CuentaPM
+        // Crear instancia de CuentaPM temporal
         const cuenta = new CuentaPM(email);
-
-        // Construir URL completa con la función específica
+        
         const url = getFunctionUrl();
         
         const response = await fetch(url, {
@@ -288,26 +293,141 @@ async function completarRegistro(elements) {
             throw new Error(resData.error_message || "Código inválido o expirado");
         }
 
-        // Actualizar datos con la respuesta exitosa usando setters
-        cuenta.userToken = resData.user_token;
-        cuenta.status = 'activa';
+        // Guardar el reset_password_code para el paso 3
+        tempResetCode = resData.reset_password_code;
         
-        // Persistir en Firestore usando el método de la clase
+        // Guardar datos temporales en la cuenta
+        cuenta.userToken = resData.user_token;
+        cuenta.status = 'pendiente'; // Pendiente hasta establecer contraseña
+        
+        // Guardar en Firestore
         await cuenta.guardarEnFirebase();
 
         Swal.close();
         
         await Swal.fire({
             icon: 'success',
-            title: '¡Vinculación Exitosa!',
+            title: 'Código verificado',
             html: `
                 <div style="text-align: center;">
-                    <p>Cuenta de monitoreo creada correctamente</p>
+                    <p>¡Código verificado correctamente!</p>
+                    <p style="margin-top: 10px; font-size: 0.9rem;">Ahora establece tu contraseña</p>
+                </div>
+            `,
+            confirmButtonText: 'CONTINUAR'
+        });
+        
+        elements.step2.style.display = 'none';
+        elements.step3.style.display = 'block';
+        
+        setTimeout(() => elements.inputPassword.focus(), 300);
+        
+    } catch (error) {
+        Swal.close();
+        console.error('❌ Error verificando código:', error);
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de verificación',
+            text: error.message,
+            confirmButtonText: 'REINTENTAR'
+        });
+    }
+}
+
+// ========== PASO 3: ESTABLECER CONTRASEÑA ==========
+async function establecerContraseña(elements) {
+    const password = elements.inputPassword.value.trim();
+    const confirmPassword = elements.inputConfirmPassword.value.trim();
+    
+    if (!password || !confirmPassword) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Contraseña requerida',
+            text: 'Debes establecer una contraseña',
+            confirmButtonText: 'ENTENDIDO'
+        });
+        return;
+    }
+    
+    if (password.length < 8) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Contraseña débil',
+            text: 'La contraseña debe tener al menos 8 caracteres',
+            confirmButtonText: 'ENTENDIDO'
+        });
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Contraseñas no coinciden',
+            text: 'Las contraseñas ingresadas no son iguales',
+            confirmButtonText: 'ENTENDIDO'
+        });
+        return;
+    }
+    
+    if (!tempResetCode) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No hay un código de recuperación válido. Por favor reinicia el proceso.',
+            confirmButtonText: 'REINTENTAR'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Estableciendo contraseña...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const url = getFunctionUrl();
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                action: 'establecerContraseña',
+                reset_password_code: tempResetCode,
+                new_password: password,
+                app_id: new CuentaPM(tempEmail).appId
+            })
+        });
+
+        const resData = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(resData.error_message || "Error al establecer la contraseña");
+        }
+        
+        // Actualizar la cuenta en Firestore
+        const cuenta = await CuentaPM.obtenerPorId(tempEmail);
+        if (cuenta) {
+            cuenta.status = 'activa';
+            await cuenta.guardarEnFirebase();
+        }
+
+        Swal.close();
+        
+        await Swal.fire({
+            icon: 'success',
+            title: '¡Registro completado!',
+            html: `
+                <div style="text-align: center;">
+                    <i class="fas fa-check-circle" style="font-size: 48px; color: #28a745;"></i>
+                    <p style="margin-top: 10px;">Cuenta de monitoreo creada correctamente</p>
                     <p style="margin-top: 10px; font-size: 0.85rem;">
-                        <strong>Token generado exitosamente</strong>
+                        <strong>Email:</strong> ${tempEmail}
                     </p>
-                    <p style="margin-top: 5px; font-size: 0.8rem; color: var(--color-text-secondary);">
-                        ID de App: ${cuenta.appId}
+                    <p style="font-size: 0.8rem; color: var(--color-text-secondary);">
+                        Ya puedes iniciar sesión en Power Manage con tus credenciales
                     </p>
                 </div>
             `,
@@ -318,11 +438,11 @@ async function completarRegistro(elements) {
         
     } catch (error) {
         Swal.close();
-        console.error('❌ Error en vinculación:', error);
+        console.error('❌ Error estableciendo contraseña:', error);
         
         Swal.fire({
             icon: 'error',
-            title: 'Error de vinculación',
+            title: 'Error al establecer contraseña',
             text: error.message,
             confirmButtonText: 'REINTENTAR'
         });

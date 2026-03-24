@@ -389,9 +389,11 @@ class TareasController {
         this._seleccionarTipoFormulario('personal');
 
         document.getElementById('formularioCreacion').style.display = 'block';
-        document.getElementById('formularioCreacion').scrollIntoView({ behavior: 'smooth' });
 
+        // Desplazar al formulario
         setTimeout(() => {
+            const formulario = document.getElementById('formularioCreacion');
+            formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
             document.getElementById('notaTitulo').focus();
         }, 100);
     }
@@ -528,7 +530,7 @@ class TareasController {
 
         switch (tipo) {
             case 'personal':
-                html = ''; // Prioridad eliminada
+                html = '';
                 break;
             case 'compartida':
                 html = this._getHTMLUsuariosCreacion();
@@ -1036,7 +1038,7 @@ class TareasController {
         }
     }
 
-    // ========== ABRIR FORMULARIO DE EDICIÓN (CON SCROLL FIX Y FOCUS SIN MOVER SCROLL) ==========
+    // ========== ABRIR FORMULARIO DE EDICIÓN (CON SCROLL AL FORMULARIO) ==========
 
     async _abrirFormularioEdicion(tareaId) {
         Swal.fire({
@@ -1099,28 +1101,26 @@ class TareasController {
 
             const formulario = document.getElementById('formularioCreacion');
             const tituloInput = document.getElementById('notaTitulo');
-            const scrollActual = window.scrollY;
 
+            // Mostrar el formulario
             formulario.style.display = 'block';
 
-            window.scrollTo({
-                top: scrollActual,
-                behavior: 'instant'
-            });
-
+            // Esperar a que el DOM se actualice y luego desplazar al formulario
             setTimeout(() => {
-                if (tituloInput) {
-                    const scrollPosAntes = window.scrollY;
-                    tituloInput.focus();
-                    tituloInput.select();
-                    if (window.scrollY !== scrollPosAntes) {
-                        window.scrollTo({
-                            top: scrollPosAntes,
-                            behavior: 'instant'
-                        });
+                formulario.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                    inline: 'nearest'
+                });
+
+                // Enfocar el título después del scroll
+                setTimeout(() => {
+                    if (tituloInput) {
+                        tituloInput.focus();
+                        tituloInput.select();
                     }
-                }
-            }, 50);
+                }, 500);
+            }, 100);
 
         } catch (error) {
             Swal.close();
@@ -1136,7 +1136,7 @@ class TareasController {
 
         switch (tipo) {
             case 'personal':
-                html = ''; // Prioridad eliminada
+                html = '';
                 break;
             case 'compartida':
                 html = this._getHTMLUsuariosEdicion(tareaData);

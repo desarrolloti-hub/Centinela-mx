@@ -245,9 +245,20 @@ function renderCuentasTable(cuentas) {
                         <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i>
                     </button>
                     <button type="button" class="btn btn-assign" 
-                            data-action="assign" data-id="${cuenta.id}" data-email="${escapeHTML(cuenta.email)}" 
+                            data-action="assign" 
+                            data-id="${cuenta.id}" 
+                            data-appid="${escapeHTML(cuenta.appId)}" 
+                            data-email="${escapeHTML(cuenta.email)}" 
                             title="Asignar a organización">
                         <i class="fas fa-building"></i>
+                    </button>
+                    <button type="button" class="btn btn-assign" 
+                            data-action="assignPanel" 
+                            data-id="${cuenta.id}" 
+                            data-appid="${escapeHTML(cuenta.appId)}" 
+                            data-email="${escapeHTML(cuenta.email)}" 
+                            title="Asignar paneles">
+                        <i class="fas fa-user-shield"></i>
                     </button>
                 </div>
             </td>
@@ -284,7 +295,14 @@ function setupEvents() {
                 await toggleCuentaStatus(cuentaId, cuentaEmail, !currentStatus);
             } 
             else if (action === 'assign') {
-                await assignToOrganization(cuentaId, cuentaEmail);
+                // Redirigir a la página de enlace con el appId como parámetro
+                const appId = button.getAttribute('data-appid');
+                window.location.href = `../enlaceCuentaMonitoreo/enlaceCuentaMonitoreo.html?id=${encodeURIComponent(appId)}`;
+            }
+            else if (action === 'assignPanel') {
+                // Redirigir a la página de enlace con el appId como parámetro
+                const appId = button.getAttribute('data-appid');
+                window.location.href = `../enlaceCuentaPaneles/enlaceCuentaPaneles.html?id=${encodeURIComponent(appId)}`;
             }
         });
     }
@@ -399,59 +417,6 @@ async function toggleCuentaStatus(cuentaId, cuentaEmail, enable) {
     }
 }
 
-// ========== ASIGNAR ORGANIZACIÓN ==========
-async function assignToOrganization(cuentaId, cuentaEmail) {
-    try {
-        const { value: orgNombre } = await Swal.fire({
-            title: 'Asignar organización',
-            input: 'text',
-            inputLabel: 'Nombre de la organización',
-            inputPlaceholder: 'Ej: Empresa SA de CV',
-            html: `<p><strong>Cuenta:</strong> ${escapeHTML(cuentaEmail)}</p>`,
-            showCancelButton: true,
-            confirmButtonText: 'ASIGNAR',
-            inputValidator: (value) => !value && 'El nombre es requerido'
-        });
-        
-        if (!orgNombre) return;
-        
-        const { value: orgCamelCase } = await Swal.fire({
-            title: 'Identificador único',
-            input: 'text',
-            inputLabel: 'Identificador (sin espacios)',
-            inputPlaceholder: 'empresa_sa',
-            showCancelButton: true,
-            confirmButtonText: 'ASIGNAR',
-            inputValidator: (value) => {
-                if (!value) return 'El identificador es requerido';
-                if (value.includes(' ')) return 'No puede contener espacios';
-            }
-        });
-        
-        if (!orgCamelCase) return;
-        
-        Swal.fire({ title: 'Asignando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        
-        const cuenta = await CuentaPM.obtenerPorId(cuentaId);
-        await cuenta.asignarOrganizacion(orgNombre, orgCamelCase);
-        
-        Swal.close();
-        await loadCuentasPM();
-        
-        Swal.fire({
-            icon: 'success',
-            title: '¡Asignación exitosa!',
-            text: `${cuentaEmail} asignada a ${orgNombre}`,
-            timer: 2000,
-            showConfirmButton: false
-        });
-        
-    } catch (error) {
-        Swal.close();
-        Swal.fire('Error', error.message, 'error');
-    }
-}
-
 // ========== FUNCIONES AUXILIARES ==========
 function escapeHTML(text) {
     if (!text) return '';
@@ -474,7 +439,10 @@ function showLoadingState() {
             </div>
         </td></tr>
     `;
-    document.querySelector('.pagination-container').style.display = 'none';
+    const paginationContainer = document.querySelector('.pagination-container');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+    }
 }
 
 function showEmptyState() {
@@ -495,7 +463,10 @@ function showEmptyState() {
     document.getElementById('addFirstCuenta')?.addEventListener('click', () => {
         window.location.href = '../registroPM/registroPM.html';
     });
-    document.querySelector('.pagination-container').style.display = 'none';
+    const paginationContainer = document.querySelector('.pagination-container');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+    }
 }
 
 function showError(message) {
@@ -510,7 +481,10 @@ function showError(message) {
             </div>
         </td></tr>
     `;
-    document.querySelector('.pagination-container').style.display = 'none';
+    const paginationContainer = document.querySelector('.pagination-container');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+    }
 }
 
 export { loadCuentasPM };
