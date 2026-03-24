@@ -1,7 +1,7 @@
 // /usuarios/administrador/pruebasNotificaciones/pruebasNotificaciones.js
 import { UserManager } from '/clases/user.js';
 import { fcmInitializer } from '/components/fcm-initializer.js';
-import { notificationSound } from '/clases/notificationSound.js'; // Asegurar esta importación
+import { notificationSound } from '/clases/notificationSound.js';
 
 const userManager = new UserManager();
 
@@ -12,34 +12,36 @@ const AppState = {
     fcmToken: null,
     isProcessing: false,
     soundEnabled: true,
-    selectedSound: 'ding-moderno',
+    selectedSound: null, // Se cargará dinámicamente
     soundVolume: 0.7,
-    audioInitialized: false // Nuevo: para saber si el audio está listo
+    audioInitialized: false,
+    availableSounds: [] // Lista de sonidos disponibles
 };
 
-// Función para inicializar audio con interacción del usuario
-async function initAudioOnUserInteraction() {
+// Función para inicializar audio
+async function initAudioSystem() {
     if (AppState.audioInitialized) return true;
     
     try {
-        // Inicializar el sistema de sonido
         await notificationSound.initialize();
+        await notificationSound.requestAudioPermission();
         
-        // Intentar activar el AudioContext
-        const activated = await notificationSound.requestAudioPermission();
+        // Obtener sonidos disponibles dinámicamente
+        AppState.availableSounds = notificationSound.getAvailableSounds();
         
-        if (activated) {
-            AppState.audioInitialized = true;
-            AppState.soundEnabled = true;
-            console.log('🔊 Sistema de audio inicializado correctamente');
-            
-            // Probar con un sonido suave para confirmar
-            await notificationSound.play('ding-moderno', 0.3);
-            
-            return true;
+        // Si hay sonidos disponibles, seleccionar el primero como predeterminado
+        if (AppState.availableSounds.length > 0 && !AppState.selectedSound) {
+            // Buscar ding-moderno si existe, sino el primero
+            const dingSound = AppState.availableSounds.find(s => s.id === 'ding-moderno');
+            AppState.selectedSound = dingSound ? dingSound.id : AppState.availableSounds[0].id;
         }
         
-        return false;
+        AppState.audioInitialized = true;
+        AppState.soundEnabled = true;
+        console.log('🔊 Sistema de audio inicializado correctamente');
+        console.log(`📋 Sonidos disponibles: ${AppState.availableSounds.length}`);
+        
+        return true;
         
     } catch (error) {
         console.error('❌ Error inicializando audio:', error);
@@ -47,23 +49,63 @@ async function initAudioOnUserInteraction() {
     }
 }
 
-// NUEVA FUNCIÓN: Reproducir sonido de notificación
+// Función para actualizar el selector de sonidos dinámicamente
+function actualizarSelectorSonidos() {
+    const soundTypeSelect = document.getElementById('soundType');
+    if (!soundTypeSelect) return;
+    
+    // Limpiar opciones existentes (excepto la primera)
+    while (soundTypeSelect.options.length > 1) {
+        soundTypeSelect.remove(1);
+    }
+    
+    // Agregar sonidos disponibles
+    AppState.availableSounds.forEach(sound => {
+        const option = document.createElement('option');
+        option.value = sound.id;
+        
+        // Mapear tipos de sonido para mostrar nombre amigable
+        const typeMap = {
+            'alarma-robo': '🚨 Alarma de Robo',
+            'alerta-critica': '⚠️ Alerta Crítica',
+            'alerta-urgente': '🔴 Alerta Urgente',
+            'notificacion-pendiente': '⏰ Notificación Pendiente',
+            'mensaje-recibido': '💬 Mensaje Recibido',
+            'campana-suave': '🔔 Campana Suave',
+            'ding-moderno': '✨ Ding Moderno',
+            'timbre-oficina': '🏢 Timbre Oficina',
+            'notificacion-movil': '📱 Notificación Móvil',
+            'sintetizador-alerta': '🎵 Alerta Sintetizada'
+        };
+        
+        option.textContent = typeMap[sound.id] || sound.name;
+        soundTypeSelect.appendChild(option);
+    });
+    
+    // Seleccionar el sonido actual si existe
+    if (AppState.selectedSound && AppState.availableSounds.some(s => s.id === AppState.selectedSound)) {
+        soundTypeSelect.value = AppState.selectedSound;
+    } else if (AppState.availableSounds.length > 0) {
+        soundTypeSelect.value = AppState.availableSounds[0].id;
+    }
+}
+
+// Función para reproducir sonido de notificación
 async function reproducirSonidoNotificacion(tipo = 'normal') {
     if (!AppState.soundEnabled) {
         console.log('🔇 Sonidos desactivados');
         return;
     }
     
-    // Si el audio no está inicializado, intentar inicializar
     if (!AppState.audioInitialized) {
-        await initAudioOnUserInteraction();
+        await initAudioSystem();
         if (!AppState.audioInitialized) {
             console.log('🔇 No se pudo inicializar audio');
             return;
         }
     }
     
-    // Mapear tipo de notificación a sonido
+    // Mapear tipo de notificación a sonido (usando solo los disponibles)
     const soundMap = {
         'critico': 'alarma-robo',
         'urgente': 'alerta-urgente',
@@ -77,136 +119,130 @@ async function reproducirSonidoNotificacion(tipo = 'normal') {
         'sintetizador': 'sintetizador-alerta'
     };
     
-    const soundName = soundMap[tipo] || AppState.selectedSound;
+    let soundName = soundMap[tipo] || AppState.selectedSound;
+    
+    // Verificar si el sonido está disponible
+    if (!AppState.availableSounds.some(s => s.id === soundName)) {
+        // Si no está disponible, usar el primer sonido disponible
+        soundName = AppState.availableSounds.length > 0 ? AppState.availableSounds[0].id : null;
+        if (!soundName) return;
+    }
     
     try {
         await notificationSound.play(soundName, AppState.soundVolume);
         console.log(`🔊 Sonido reproducido: ${soundName}`);
     } catch (error) {
-        console.error('Error reproduciendo sonido:', error);
+        console.debug('Error reproduciendo sonido:', error);
     }
 }
 
-// NUEVA FUNCIÓN: Solicitar permiso de audio
+// Función para solicitar activación de sonidos
 async function solicitarPermisoAudio() {
     try {
-        const resultado = await Swal.fire({
-            title: '🔊 Activar sonidos de notificaciones',
-            html: `
-                <div style="text-align: left;">
-                    <p>¿Quieres activar los sonidos para las notificaciones?</p>
-                    <p style="font-size: 13px; color: #888;">
-                        Esto permitirá que las notificaciones reproduzcan sonidos 
-                        cuando lleguen nuevas alertas.
-                    </p>
-                    <div style="margin-top: 15px; padding: 10px; background: rgba(0,207,255,0.1); border-radius: 8px;">
-                        <i class="fas fa-info-circle"></i>
-                        <small>Necesitarás hacer clic en algún lugar de la página para activar los sonidos.</small>
-                    </div>
-                </div>
-            `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, activar sonidos',
-            cancelButtonText: 'No, gracias',
-            confirmButtonColor: 'var(--color-accent-primary, #00cfff)'
-        });
+        const initSuccess = await initAudioSystem();
         
-        if (resultado.isConfirmed) {
-            // Mostrar mensaje de que debe hacer clic en la página
+        if (initSuccess && AppState.availableSounds.length > 0) {
             await Swal.fire({
-                title: '🎵 Haz clic en la página',
-                html: `
-                    <p>Para activar los sonidos, necesitas hacer clic en cualquier parte de la página.</p>
-                    <p style="font-size: 13px;">Esto es un requisito de seguridad del navegador.</p>
-                    <button id="clickToEnableAudio" style="margin-top: 15px; padding: 10px 20px; background: #00cfff; color: black; border: none; border-radius: 5px; cursor: pointer;">
-                        <i class="fas fa-volume-up"></i> Hacer clic aquí
-                    </button>
-                `,
-                showConfirmButton: false,
-                showCancelButton: true,
-                cancelButtonText: 'Cancelar',
-                didOpen: () => {
-                    const btn = document.getElementById('clickToEnableAudio');
-                    if (btn) {
-                        btn.onclick = async () => {
-                            const success = await initAudioOnUserInteraction();
-                            if (success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Sonidos activados',
-                                    text: 'Las notificaciones ahora reproducirán sonidos',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });
-                                actualizarUI();
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: 'No se pudieron activar los sonidos'
-                                });
-                            }
-                        };
-                    }
-                }
+                icon: 'success',
+                title: '✅ Sonidos activados',
+                html: `Se encontraron ${AppState.availableSounds.length} sonidos disponibles.<br>Las notificaciones reproducirán sonidos automáticamente.`,
+                timer: 3000,
+                showConfirmButton: false
+            });
+            actualizarUI();
+            actualizarSelectorSonidos();
+        } else if (initSuccess && AppState.availableSounds.length === 0) {
+            await Swal.fire({
+                icon: 'warning',
+                title: '⚠️ No hay sonidos',
+                text: 'No se encontraron archivos de sonido. Sube archivos MP3 a audios/notificaciones/ en Firebase Storage.',
+                timer: 4000,
+                showConfirmButton: false
+            });
+        } else {
+            await Swal.fire({
+                icon: 'error',
+                title: '❌ Error',
+                text: 'No se pudieron cargar los sonidos. Verifica tu conexión.',
+                timer: 3000,
+                showConfirmButton: false
             });
         }
         
         return AppState.soundEnabled;
         
     } catch (error) {
-        console.error('Error solicitando permiso de audio:', error);
+        console.error('Error activando sonidos:', error);
         return false;
     }
 }
 
-// NUEVA FUNCIÓN: Probar sonidos disponibles
+// Función para probar sonidos disponibles
 async function probarSonidos() {
-    // Asegurar que el audio está inicializado
     if (!AppState.audioInitialized) {
-        const init = await initAudioOnUserInteraction();
-        if (!init) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Necesitas activar los sonidos',
-                text: 'Haz clic en "Activar Sonidos" primero'
-            });
-            return;
-        }
+        await initAudioSystem();
     }
     
-    const sounds = notificationSound.getAvailableSounds();
+    if (AppState.availableSounds.length === 0) {
+        await Swal.fire({
+            icon: 'warning',
+            title: 'No hay sonidos disponibles',
+            text: 'Sube archivos MP3 a la carpeta "audios/notificaciones/" en Firebase Storage',
+            confirmButtonText: 'Entendido'
+        });
+        return;
+    }
     
-    const buttonsHtml = sounds.map(sound => `
-        <button class="sound-test-btn" data-sound="${sound.id}" style="
-            margin: 5px;
-            padding: 10px 15px;
-            background: var(--color-bg-secondary, #1a1a1a);
-            border: 1px solid var(--color-border-light, #333);
-            border-radius: 8px;
-            cursor: pointer;
-            color: var(--color-text-primary, #fff);
-            transition: all 0.3s ease;
-        ">
-            <i class="fas fa-music"></i>
-            ${sound.name}
-        </button>
-    `).join('');
+    const sounds = AppState.availableSounds;
     
-    const { isConfirmed } = await Swal.fire({
+    const buttonsHtml = sounds.map(sound => {
+        const typeMap = {
+            'alarma-robo': '🚨',
+            'alerta-critica': '⚠️',
+            'alerta-urgente': '🔴',
+            'notificacion-pendiente': '⏰',
+            'mensaje-recibido': '💬',
+            'campana-suave': '🔔',
+            'ding-moderno': '✨',
+            'timbre-oficina': '🏢',
+            'notificacion-movil': '📱',
+            'sintetizador-alerta': '🎵'
+        };
+        const icon = typeMap[sound.id] || '🎵';
+        
+        return `
+            <button class="sound-test-btn" data-sound="${sound.id}" style="
+                margin: 5px;
+                padding: 10px 15px;
+                background: var(--color-bg-secondary, #1a1a1a);
+                border: 1px solid var(--color-border-light, #333);
+                border-radius: 8px;
+                cursor: pointer;
+                color: var(--color-text-primary, #fff);
+                transition: all 0.3s ease;
+            ">
+                ${icon} ${sound.name}
+            </button>
+        `;
+    }).join('');
+    
+    await Swal.fire({
         title: '🎵 Probar Sonidos',
         html: `
-            <div style="max-height: 400px; overflow-y: auto; padding: 10px;">
-                <p style="margin-bottom: 15px;">Selecciona un sonido para probarlo:</p>
+            <div style="max-height: 450px; overflow-y: auto; padding: 10px;">
+                <p style="margin-bottom: 15px; text-align: center;">
+                    <i class="fas fa-info-circle"></i> 
+                    Sonidos encontrados: ${sounds.length}
+                </p>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
                     ${buttonsHtml}
                 </div>
-                <div style="margin-top: 20px;">
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333;">
                     <label style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                        <i class="fas fa-volume-up"></i>
+                        <i class="fas fa-volume-down"></i>
                         <input type="range" id="testVolumeSlider" min="0" max="100" value="${AppState.soundVolume * 100}" style="width: 200px;">
-                        <span id="volumeValue">${Math.round(AppState.soundVolume * 100)}%</span>
+                        <span id="testVolumeValue">${Math.round(AppState.soundVolume * 100)}%</span>
+                        <i class="fas fa-volume-up"></i>
                     </label>
                 </div>
                 <div style="margin-top: 15px;">
@@ -215,20 +251,22 @@ async function probarSonidos() {
                         <span>Repetir en bucle</span>
                     </label>
                 </div>
+                <div style="margin-top: 15px; font-size: 11px; color: #888; text-align: center;">
+                    <i class="fas fa-cloud-upload-alt"></i> 
+                    Los sonidos se cargan desde Firebase Storage
+                </div>
             </div>
         `,
-        width: '550px',
+        width: '600px',
         showConfirmButton: true,
         confirmButtonText: 'Cerrar',
         didOpen: () => {
-            // Configurar botones de prueba
             document.querySelectorAll('.sound-test-btn').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const soundId = btn.dataset.sound;
                     const volume = document.getElementById('testVolumeSlider').value / 100;
                     const loop = document.getElementById('testLoopCheckbox').checked;
                     
-                    // Detener sonidos anteriores si están en loop
                     if (loop) {
                         notificationSound.stopAll();
                     }
@@ -237,9 +275,8 @@ async function probarSonidos() {
                 });
             });
             
-            // Configurar slider de volumen
             const volumeSlider = document.getElementById('testVolumeSlider');
-            const volumeValue = document.getElementById('volumeValue');
+            const volumeValue = document.getElementById('testVolumeValue');
             
             volumeSlider.addEventListener('input', (e) => {
                 const vol = e.target.value;
@@ -249,22 +286,47 @@ async function probarSonidos() {
     });
 }
 
-// NUEVA FUNCIÓN: Configurar selector de sonido predeterminado
+// Función para configurar selector de sonido predeterminado
 async function configurarSonidoPredeterminado() {
     if (!AppState.audioInitialized) {
-        await initAudioOnUserInteraction();
+        await initAudioSystem();
     }
     
-    const sounds = notificationSound.getAvailableSounds();
+    if (AppState.availableSounds.length === 0) {
+        await Swal.fire({
+            icon: 'warning',
+            title: 'No hay sonidos disponibles',
+            text: 'Sube archivos MP3 a la carpeta "audios/notificaciones/" en Firebase Storage',
+            confirmButtonText: 'Entendido'
+        });
+        return;
+    }
+    
+    const sounds = AppState.availableSounds;
+    
+    const inputOptions = {};
+    sounds.forEach(sound => {
+        const typeMap = {
+            'alarma-robo': '🚨',
+            'alerta-critica': '⚠️',
+            'alerta-urgente': '🔴',
+            'notificacion-pendiente': '⏰',
+            'mensaje-recibido': '💬',
+            'campana-suave': '🔔',
+            'ding-moderno': '✨',
+            'timbre-oficina': '🏢',
+            'notificacion-movil': '📱',
+            'sintetizador-alerta': '🎵'
+        };
+        const icon = typeMap[sound.id] || '🎵';
+        inputOptions[sound.id] = `${icon} ${sound.name}`;
+    });
     
     const { value: selectedSound } = await Swal.fire({
         title: '🎵 Sonido Predeterminado',
         text: 'Selecciona el sonido que se usará para las notificaciones',
         input: 'select',
-        inputOptions: sounds.reduce((opts, sound) => {
-            opts[sound.id] = sound.name;
-            return opts;
-        }, {}),
+        inputOptions: inputOptions,
         inputValue: AppState.selectedSound,
         showCancelButton: true,
         confirmButtonText: 'Guardar',
@@ -274,16 +336,23 @@ async function configurarSonidoPredeterminado() {
     if (selectedSound) {
         AppState.selectedSound = selectedSound;
         
-        // Probar el sonido seleccionado
         await notificationSound.play(selectedSound, AppState.soundVolume);
+        
+        const selectedSoundName = sounds.find(s => s.id === selectedSound)?.name || selectedSound;
         
         Swal.fire({
             icon: 'success',
             title: 'Sonido guardado',
-            text: `Se usará "${sounds.find(s => s.id === selectedSound)?.name}" para las notificaciones`,
+            text: `Se usará "${selectedSoundName}" para las notificaciones`,
             timer: 2000,
             showConfirmButton: false
         });
+        
+        actualizarUI();
+        
+        if (AppState.currentUser && fcmInitializer.isEnabled && fcmInitializer.isEnabled()) {
+            await guardarEstadoNotificaciones(true, fcmInitializer.getCurrentToken());
+        }
     }
 }
 
@@ -299,7 +368,6 @@ function mostrarMensaje(tipo, titulo, mensaje, timer = 3000) {
         position: 'top-end'
     });
     
-    // Reproducir sonido según el tipo de mensaje
     if (tipo === 'success') {
         reproducirSonidoNotificacion('normal');
     } else if (tipo === 'error') {
@@ -321,7 +389,6 @@ function actualizarUI() {
     const volumeSlider = document.getElementById('volumeSlider');
     const volumeValue = document.getElementById('volumeValue');
     
-    // Actualizar información del entorno
     if (window.location.protocol === 'https:') {
         entornoInfo.innerHTML = '🌐 Entorno de PRODUCCIÓN - Notificaciones disponibles';
         entornoInfo.style.color = '#28a745';
@@ -330,8 +397,8 @@ function actualizarUI() {
         entornoInfo.style.color = '#ffc107';
     }
     
-    // Actualizar estado de notificaciones
-    if (fcmInitializer.isEnabled && fcmInitializer.isEnabled()) {
+    const fcmEnabled = fcmInitializer.isEnabled ? fcmInitializer.isEnabled() : false;
+    if (fcmEnabled) {
         statusBadge.textContent = 'Activadas';
         statusBadge.className = 'badge-enabled';
         const token = fcmInitializer.getCurrentToken ? fcmInitializer.getCurrentToken() : null;
@@ -346,20 +413,43 @@ function actualizarUI() {
         if (disableBtn) disableBtn.disabled = true;
     }
     
-    // Actualizar estado de sonido
     if (soundStatus) {
-        const soundIcon = AppState.soundEnabled && AppState.audioInitialized ? 'fa-volume-up' : 'fa-volume-mute';
-        soundStatus.innerHTML = `<i class="fas ${soundIcon}"></i> ${AppState.soundEnabled && AppState.audioInitialized ? 'Sonidos activados' : 'Sonidos desactivados'}`;
-        soundStatus.style.color = (AppState.soundEnabled && AppState.audioInitialized) ? '#28a745' : '#ffc107';
+        const hasSounds = AppState.availableSounds.length > 0;
+        const soundIcon = AppState.soundEnabled && AppState.audioInitialized && hasSounds ? 'fa-volume-up' : 'fa-volume-mute';
+        let statusText = '';
+        if (!hasSounds) {
+            statusText = '⚠️ Sin sonidos disponibles';
+            soundStatus.style.color = '#ffc107';
+        } else if (AppState.soundEnabled && AppState.audioInitialized) {
+            statusText = '✅ Sonidos activados';
+            soundStatus.style.color = '#28a745';
+        } else {
+            statusText = '🔇 Sonidos desactivados';
+            soundStatus.style.color = '#ffc107';
+        }
+        soundStatus.innerHTML = `<i class="fas ${soundIcon}"></i> ${statusText}`;
     }
     
-    // Mostrar sonido seleccionado
-    if (selectedSoundSpan) {
-        const soundName = notificationSound.getAvailableSounds().find(s => s.id === AppState.selectedSound)?.name || 'Ding Moderno';
-        selectedSoundSpan.textContent = `🎵 ${soundName}`;
+    if (selectedSoundSpan && AppState.selectedSound) {
+        const sound = AppState.availableSounds.find(s => s.id === AppState.selectedSound);
+        const typeMap = {
+            'alarma-robo': '🚨',
+            'alerta-critica': '⚠️',
+            'alerta-urgente': '🔴',
+            'notificacion-pendiente': '⏰',
+            'mensaje-recibido': '💬',
+            'campana-suave': '🔔',
+            'ding-moderno': '✨',
+            'timbre-oficina': '🏢',
+            'notificacion-movil': '📱',
+            'sintetizador-alerta': '🎵'
+        };
+        const icon = typeMap[AppState.selectedSound] || '🎵';
+        selectedSoundSpan.textContent = `${icon} ${sound?.name || AppState.selectedSound}`;
+    } else if (selectedSoundSpan) {
+        selectedSoundSpan.textContent = '🎵 Sin sonidos';
     }
     
-    // Actualizar slider de volumen
     if (volumeSlider && !volumeSlider.hasListener) {
         volumeSlider.value = AppState.soundVolume * 100;
         volumeSlider.hasListener = true;
@@ -369,7 +459,7 @@ function actualizarUI() {
     }
 }
 
-// Función para guardar el estado de notificaciones en el objeto User (dispositivos)
+// Función para guardar el estado de notificaciones
 async function guardarEstadoNotificaciones(habilitadas, token = null) {
     if (!AppState.currentUser) return false;
     
@@ -400,7 +490,6 @@ async function guardarEstadoNotificaciones(habilitadas, token = null) {
     }
 }
 
-// Función para manejar la finalización del proceso
 function manejarFinalizacion(exito = true, permisoDenegado = false) {
     if (exito) {
         console.log("✅ Proceso completado exitosamente");
@@ -415,7 +504,6 @@ function manejarFinalizacion(exito = true, permisoDenegado = false) {
     actualizarUI();
 }
 
-// Función principal de suscripción
 async function suscribirANotificaciones() {
     if (AppState.isProcessing) return;
     
@@ -423,10 +511,6 @@ async function suscribirANotificaciones() {
     console.log("🚀 Iniciando proceso de suscripción a notificaciones...");
     
     try {
-        // Verificar soporte
-        console.log("📋 Verificando soporte del navegador...");
-        
-        // Solicitar permiso y token
         const token = await fcmInitializer.enableNotifications();
         
         if (!token) {
@@ -435,7 +519,6 @@ async function suscribirANotificaciones() {
         
         AppState.fcmToken = token;
         
-        // Guardar en Firestore
         let saved = false;
         for (let i = 1; i <= 3; i++) {
             try {
@@ -458,7 +541,8 @@ async function suscribirANotificaciones() {
         console.log("🎉 ¡PROCESO COMPLETADO! Notificaciones configuradas correctamente");
         console.log("📱 Token FCM:", token);
         
-        // Reproducir sonido de éxito
+        await initAudioSystem();
+        
         await reproducirSonidoNotificacion('normal');
         
         manejarFinalizacion(true);
@@ -466,7 +550,6 @@ async function suscribirANotificaciones() {
     } catch (error) {
         console.error("❌ Error crítico en el proceso:", error);
         
-        // Reproducir sonido de error
         await reproducirSonidoNotificacion('alerta');
         
         try {
@@ -482,7 +565,6 @@ async function suscribirANotificaciones() {
     }
 }
 
-// Función para preguntar al usuario si quiere activar notificaciones
 async function preguntarPermisoNotificaciones() {
     const result = await Swal.fire({
         title: '🔔 ¿Activar notificaciones?',
@@ -526,14 +608,12 @@ async function preguntarPermisoNotificaciones() {
     });
 
     if (result.isConfirmed) {
-        // Preguntar por sonidos después de activar notificaciones
-        await solicitarPermisoAudio();
+        await initAudioSystem();
     }
 
     return result.isConfirmed;
 }
 
-// Verificar configuración actual al cargar la página
 async function verificarConfiguracionActual() {
     if (!AppState.currentUser) return;
 
@@ -552,7 +632,6 @@ async function verificarConfiguracionActual() {
             }
             localStorage.setItem(`fcm_enabled_${fcmInitializer.deviceId}`, 'true');
             
-            // Cargar preferencias de sonido
             if (dispositivoActual.soundEnabled !== undefined) {
                 AppState.soundEnabled = dispositivoActual.soundEnabled;
             }
@@ -561,19 +640,23 @@ async function verificarConfiguracionActual() {
             }
             if (dispositivoActual.soundVolume) {
                 AppState.soundVolume = dispositivoActual.soundVolume;
+                notificationSound.setGlobalVolume(AppState.soundVolume);
             }
+            
+            await initAudioSystem();
         } else {
             console.log("ℹ️ Este dispositivo no tiene notificaciones configuradas");
+            await initAudioSystem();
         }
         
         actualizarUI();
+        actualizarSelectorSonidos();
         
     } catch (error) {
         console.error('Error al verificar configuración:', error);
     }
 }
 
-// Escuchar notificaciones push con sonido
 function setupPushListener() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', async (event) => {
@@ -595,7 +678,6 @@ function setupPushListener() {
                 
                 await reproducirSonidoNotificacion(soundType);
                 
-                // Mostrar notificación del sistema
                 if (Notification.permission === 'granted') {
                     const systemNotif = new Notification(notification.titulo, {
                         body: notification.mensaje,
@@ -618,34 +700,13 @@ function setupPushListener() {
     }
 }
 
-// Función para inicializar la página
 async function init() {
     try {
         console.log('🚀 Inicializando página de pruebas...');
         
-        // Inicializar sistema de sonido (sin activar aún)
-        await notificationSound.initialize();
+        await initAudioSystem();
+        actualizarSelectorSonidos();
         
-        // Detectar clic en cualquier parte para activar audio
-        const activateAudioOnClick = async () => {
-            if (!AppState.audioInitialized && AppState.soundEnabled) {
-                const success = await notificationSound.requestAudioPermission();
-                if (success) {
-                    AppState.audioInitialized = true;
-                    console.log('🔊 Audio activado por interacción del usuario');
-                    actualizarUI();
-                    
-                    // Remover el listener después de la primera activación
-                    document.removeEventListener('click', activateAudioOnClick);
-                    document.removeEventListener('touchstart', activateAudioOnClick);
-                }
-            }
-        };
-        
-        document.addEventListener('click', activateAudioOnClick);
-        document.addEventListener('touchstart', activateAudioOnClick);
-        
-        // Esperar a que UserManager tenga el usuario actual
         const checkUser = setInterval(async () => {
             if (userManager.currentUser) {
                 clearInterval(checkUser);
@@ -653,14 +714,12 @@ async function init() {
                 console.log('👤 Usuario:', userManager.currentUser.nombreCompleto);
                 AppState.currentUser = userManager.currentUser;
                 
-                // Inicializar FCM
                 if (fcmInitializer.init) {
                     await fcmInitializer.init(userManager);
                 }
                 
                 await verificarConfiguracionActual();
                 
-                // Configurar botones
                 const enableBtn = document.getElementById('enableNotificationsBtn');
                 const disableBtn = document.getElementById('disableNotificationsBtn');
                 
@@ -696,13 +755,13 @@ async function init() {
                     });
                 }
                 
-                // Configurar botón de activar/desactivar sonidos
                 const toggleSoundBtn = document.getElementById('toggleSoundBtn');
                 if (toggleSoundBtn) {
                     toggleSoundBtn.addEventListener('click', async () => {
-                        if (AppState.soundEnabled && AppState.audioInitialized) {
+                        if (AppState.soundEnabled) {
                             AppState.soundEnabled = false;
                             notificationSound.stopAll();
+                            notificationSound.setEnabled(false);
                             Swal.fire({
                                 icon: 'info',
                                 title: 'Sonidos desactivados',
@@ -711,24 +770,16 @@ async function init() {
                                 showConfirmButton: false
                             });
                         } else {
-                            const success = await initAudioOnUserInteraction();
-                            if (success) {
-                                AppState.soundEnabled = true;
-                                await reproducirSonidoNotificacion('normal');
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Sonidos activados',
-                                    text: 'Las notificaciones ahora reproducirán sonidos',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });
-                            } else {
-                                Swal.fire({
-                                    icon: 'warning',
-                                    title: 'Necesitas interactuar',
-                                    text: 'Haz clic en la página para activar los sonidos'
-                                });
-                            }
+                            AppState.soundEnabled = true;
+                            notificationSound.setEnabled(true);
+                            await reproducirSonidoNotificacion('normal');
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Sonidos activados',
+                                text: 'Las notificaciones ahora reproducirán sonidos',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
                         }
                         actualizarUI();
                         
@@ -738,7 +789,6 @@ async function init() {
                     });
                 }
                 
-                // Configurar botón de probar sonidos
                 const testSoundsBtn = document.getElementById('testSoundsBtn');
                 if (testSoundsBtn) {
                     testSoundsBtn.addEventListener('click', async () => {
@@ -746,12 +796,12 @@ async function init() {
                     });
                 }
                 
-                // Configurar botón de seleccionar sonido
                 const selectSoundBtn = document.getElementById('selectSoundBtn');
                 if (selectSoundBtn) {
                     selectSoundBtn.addEventListener('click', async () => {
                         await configurarSonidoPredeterminado();
                         actualizarUI();
+                        actualizarSelectorSonidos();
                         
                         if (fcmInitializer.isEnabled && fcmInitializer.isEnabled()) {
                             await guardarEstadoNotificaciones(true, fcmInitializer.getCurrentToken());
@@ -759,7 +809,6 @@ async function init() {
                     });
                 }
                 
-                // Configurar slider de volumen
                 const volumeSlider = document.getElementById('volumeSlider');
                 if (volumeSlider) {
                     volumeSlider.addEventListener('input', async (e) => {
@@ -776,7 +825,6 @@ async function init() {
                     });
                 }
                 
-                // Configurar formulario de envío de notificaciones de prueba
                 const notificationForm = document.getElementById('notificationForm');
                 if (notificationForm) {
                     notificationForm.addEventListener('submit', async (e) => {
@@ -884,5 +932,4 @@ async function init() {
     }
 }
 
-// Iniciar
 init();

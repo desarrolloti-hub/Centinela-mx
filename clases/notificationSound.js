@@ -1,541 +1,336 @@
 // /clases/notificationSound.js
+// Sistema de sonidos que detecta dinámicamente los archivos disponibles en Firebase Storage
 
-/**
- * Clase para manejar sonidos de notificaciones usando Web Audio API
- * No requiere archivos externos, genera los sonidos sintéticamente
- */
+import { storage } from '/config/firebase-config.js';
+import { ref, listAll, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js";
+
 export class NotificationSound {
     constructor() {
-        this.audioContext = null;
-        this.sounds = new Map();
+        this.audioElements = new Map();
+        this.soundUrls = new Map();
+        this.soundConfigs = new Map(); // Configuración dinámica
         this.initialized = false;
-        this.audioPermissionGranted = false;
+        this.audioPermissionGranted = true;
         this.activeSources = new Map();
         this.defaultVolume = 0.7;
+        this.availableSounds = []; // Lista de sonidos disponibles
         
-        // Configuración de sonidos
-        this.soundConfigs = {
-            'alarma-robo': {
-                name: 'Alarma de Robo',
-                type: 'web-audio',
-                volume: 0.9,
-                loopable: true,
-                duration: 3000
-            },
-            'alerta-critica': {
-                name: 'Alerta Crítica',
-                type: 'web-audio',
-                volume: 0.85,
-                loopable: true,
-                duration: 2000
-            },
-            'notificacion-pendiente': {
-                name: 'Notificación Pendiente',
-                type: 'web-audio',
-                volume: 0.6,
-                loopable: false,
-                duration: 800
-            },
-            'mensaje-recibido': {
-                name: 'Mensaje Recibido',
-                type: 'web-audio',
-                volume: 0.5,
-                loopable: false,
-                duration: 600
-            },
-            'campana-suave': {
-                name: 'Campana Suave',
-                type: 'web-audio',
-                volume: 0.5,
-                loopable: false,
-                duration: 1200
-            },
-            'ding-moderno': {
-                name: 'Ding Moderno',
-                type: 'web-audio',
-                volume: 0.55,
-                loopable: false,
-                duration: 400
-            },
-            'alerta-urgente': {
-                name: 'Alerta Urgente',
-                type: 'web-audio',
-                volume: 0.8,
-                loopable: true,
-                duration: 2500
-            },
-            'timbre-oficina': {
-                name: 'Timbre Oficina',
-                type: 'web-audio',
-                volume: 0.6,
-                loopable: false,
-                duration: 1000
-            },
-            'notificacion-movil': {
-                name: 'Notificación Móvil',
-                type: 'web-audio',
-                volume: 0.5,
-                loopable: false,
-                duration: 500
-            },
-            'sintetizador-alerta': {
-                name: 'Alerta Sintetizada',
-                type: 'web-audio',
-                volume: 0.7,
-                loopable: false,
-                duration: 800
-            }
+        // Configuración base de volúmenes (se aplicará a los sonidos encontrados)
+        this.volumeConfig = {
+            'alarma-robo': 0.9,
+            'alerta-critica': 0.85,
+            'alerta-urgente': 0.8,
+            'notificacion-pendiente': 0.6,
+            'mensaje-recibido': 0.5,
+            'campana-suave': 0.5,
+            'ding-moderno': 0.55,
+            'timbre-oficina': 0.6,
+            'notificacion-movil': 0.5,
+            'sintetizador-alerta': 0.7
         };
+        
+        this.loopableConfig = {
+            'alarma-robo': true,
+            'alerta-critica': true,
+            'alerta-urgente': true,
+            'notificacion-pendiente': false,
+            'mensaje-recibido': false,
+            'campana-suave': false,
+            'ding-moderno': false,
+            'timbre-oficina': false,
+            'notificacion-movil': false,
+            'sintetizador-alerta': false
+        };
+        
+        this.namesConfig = {
+            'alarma-robo': 'Alarma de Robo',
+            'alerta-critica': 'Alerta Crítica',
+            'alerta-urgente': 'Alerta Urgente',
+            'notificacion-pendiente': 'Notificación Pendiente',
+            'mensaje-recibido': 'Mensaje Recibido',
+            'campana-suave': 'Campana Suave',
+            'ding-moderno': 'Ding Moderno',
+            'timbre-oficina': 'Timbre Oficina',
+            'notificacion-movil': 'Notificación Móvil',
+            'sintetizador-alerta': 'Alerta Sintetizada'
+        };
+        
+        this.init();
+    }
+
+    async init() {
+        if (this.initialized) return;
+        
+        console.log('🎵 Buscando sonidos disponibles en Firebase Storage...');
+        
+        // Escanear la carpeta de Firebase Storage
+        await this.scanAvailableSounds();
+        
+        this.initialized = true;
+        console.log(`✅ Sistema de sonidos listo. Sonidos encontrados: ${this.availableSounds.length}`);
     }
 
     /**
-     * Inicializar el sistema de sonido
+     * Escanear Firebase Storage para encontrar todos los sonidos disponibles
      */
-    async initialize() {
-        if (this.initialized) return true;
-        
+    async scanAvailableSounds() {
         try {
-            // Crear AudioContext (inicialmente suspendido)
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const folderRef = ref(storage, 'audios/notificaciones/');
             
-            // Generar todos los sonidos
-            await this.generateAllSounds();
+            // Listar todos los archivos en la carpeta
+            const result = await listAll(folderRef);
             
-            this.initialized = true;
-            console.log('🔊 NotificationSound inicializado correctamente');
+            console.log(`📁 Escaneando carpeta: audios/notificaciones/`);
+            console.log(`📁 Encontrados ${result.items.length} archivos`);
+            
+            // Procesar cada archivo encontrado
+            for (const itemRef of result.items) {
+                const fullPath = itemRef.fullPath;
+                const fileName = fullPath.split('/').pop();
+                const soundName = fileName.replace('.mp3', '').replace('.wav', '').replace('.ogg', '');
+                
+                // Obtener URL de descarga
+                const url = await getDownloadURL(itemRef);
+                this.soundUrls.set(soundName, url);
+                
+                // Crear elemento de audio
+                const audio = new Audio();
+                audio.preload = 'auto';
+                audio.src = url;
+                
+                // Configurar volumen según nombre del sonido
+                const volume = this.volumeConfig[soundName] || 0.6;
+                audio.volume = volume;
+                audio.load();
+                
+                this.audioElements.set(soundName, audio);
+                
+                // Guardar configuración
+                this.soundConfigs.set(soundName, {
+                    name: this.namesConfig[soundName] || this.formatSoundName(soundName),
+                    path: fullPath,
+                    volume: volume,
+                    loopable: this.loopableConfig[soundName] || false,
+                    url: url
+                });
+                
+                this.availableSounds.push(soundName);
+                
+                console.log(`✅ Sonido encontrado: ${soundName} (${this.namesConfig[soundName] || soundName})`);
+            }
+            
+            // Si no se encontraron sonidos, mostrar advertencia
+            if (this.availableSounds.length === 0) {
+                console.warn('⚠️ No se encontraron archivos de sonido en audios/notificaciones/');
+                console.warn('💡 Sube archivos MP3 a Firebase Storage en la carpeta: audios/notificaciones/');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error escaneando sonidos:', error);
+            console.warn('💡 Verifica que la carpeta "audios/notificaciones/" exista en Firebase Storage');
+        }
+    }
+
+    /**
+     * Formatear nombre de sonido para mostrar
+     */
+    formatSoundName(soundName) {
+        return soundName
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
+    async initialize() {
+        await this.init();
+        return true;
+    }
+
+    async preloadSound(soundName) {
+        // Este método se mantiene para compatibilidad, pero los sonidos ya se precargaron en scan
+        if (this.audioElements.has(soundName)) {
+            return true;
+        }
+        
+        // Si el sonido no está en la lista, intentar cargarlo individualmente
+        try {
+            const url = `/audios/notificaciones/${soundName}.mp3`;
+            const audio = new Audio();
+            audio.preload = 'auto';
+            audio.src = url;
+            audio.volume = this.volumeConfig[soundName] || 0.6;
+            audio.load();
+            
+            this.audioElements.set(soundName, audio);
+            this.availableSounds.push(soundName);
+            
+            console.log(`✅ Sonido cargado individualmente: ${soundName}`);
             return true;
             
         } catch (error) {
-            console.error('❌ Error inicializando AudioContext:', error);
+            console.debug(`⚠️ No se pudo cargar sonido: ${soundName}`);
             return false;
         }
     }
 
-    /**
-     * Solicitar permiso para reproducir audio (requiere interacción del usuario)
-     */
     async requestAudioPermission() {
         try {
-            if (!this.audioContext) {
-                await this.initialize();
+            const testAudio = new Audio();
+            testAudio.volume = 0;
+            const playPromise = testAudio.play();
+            if (playPromise !== undefined) {
+                await playPromise;
+                testAudio.pause();
             }
-            
-            if (this.audioContext && this.audioContext.state === 'suspended') {
-                await this.audioContext.resume();
-                this.audioPermissionGranted = true;
-                console.log('🔊 Permiso de audio concedido, AudioContext activo');
-                return true;
-            }
-            
-            if (this.audioContext && this.audioContext.state === 'running') {
-                this.audioPermissionGranted = true;
-                return true;
-            }
-            
-            return false;
-            
+            this.audioPermissionGranted = true;
+            return true;
         } catch (error) {
-            console.error('❌ Error solicitando permiso de audio:', error);
-            return false;
+            this.audioPermissionGranted = true;
+            return true;
         }
     }
 
-    /**
-     * Verificar si el audio está listo para reproducir
-     */
     isReady() {
-        return this.initialized && this.audioPermissionGranted && this.audioContext?.state === 'running';
+        return this.initialized;
     }
 
-    /**
-     * Generar todos los sonidos
-     */
-    async generateAllSounds() {
-        const soundNames = Object.keys(this.soundConfigs);
-        
-        for (const soundName of soundNames) {
-            await this.generateSound(soundName);
-        }
-    }
-
-    /**
-     * Generar un sonido específico
-     */
-    async generateSound(soundName) {
-        const config = this.soundConfigs[soundName];
-        if (!config) return null;
-        
-        const buffer = this.createSoundBuffer(soundName);
-        if (buffer) {
-            this.sounds.set(soundName, buffer);
-        }
-        
-        return buffer;
-    }
-
-    /**
-     * Crear buffer de audio según el tipo de sonido
-     */
-    createSoundBuffer(soundName) {
-        if (!this.audioContext) return null;
-        
-        const sampleRate = this.audioContext.sampleRate;
-        const duration = this.soundConfigs[soundName].duration / 1000;
-        const frameCount = sampleRate * duration;
-        const buffer = this.audioContext.createBuffer(2, frameCount, sampleRate);
-        
-        const leftChannel = buffer.getChannelData(0);
-        const rightChannel = buffer.getChannelData(1);
-        
-        // Generar el sonido según el tipo
-        switch(soundName) {
-            case 'alarma-robo':
-                this.generateAlarmaRobo(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'alerta-critica':
-                this.generateAlertaCritica(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'notificacion-pendiente':
-                this.generateNotificacionPendiente(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'mensaje-recibido':
-                this.generateMensajeRecibido(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'campana-suave':
-                this.generateCampanaSuave(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'ding-moderno':
-                this.generateDingModerno(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'alerta-urgente':
-                this.generateAlertaUrgente(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'timbre-oficina':
-                this.generateTimbreOficina(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'notificacion-movil':
-                this.generateNotificacionMovil(leftChannel, rightChannel, sampleRate);
-                break;
-            case 'sintetizador-alerta':
-                this.generateSintetizadorAlerta(leftChannel, rightChannel, sampleRate);
-                break;
-            default:
-                this.generateDefaultSound(leftChannel, rightChannel, sampleRate);
-        }
-        
-        return buffer;
-    }
-
-    /**
-     * Alarma de robo - Sonido pulsante agudo
-     */
-    generateAlarmaRobo(left, right, sampleRate) {
-        const duration = left.length;
-        const frequency1 = 880;
-        const frequency2 = 440;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const freq = Math.floor(t / 0.3) % 2 === 0 ? frequency1 : frequency2;
-            const value = Math.sin(2 * Math.PI * freq * t) * 
-                         Math.exp(-t * 2) *
-                         (Math.sin(2 * Math.PI * 5 * t) * 0.5 + 0.5);
-            
-            left[i] = value * 0.8;
-            right[i] = value * 0.8;
-        }
-    }
-
-    /**
-     * Alerta crítica - Sirena ascendente
-     */
-    generateAlertaCritica(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const freq = 300 + (t * 500);
-            const value = Math.sin(2 * Math.PI * freq * t) * 
-                         Math.exp(-t * 1.5) *
-                         (Math.sin(2 * Math.PI * 8 * t) * 0.3 + 0.7);
-            
-            left[i] = value * 0.85;
-            right[i] = value * 0.85;
-        }
-    }
-
-    /**
-     * Notificación pendiente - Sonido suave
-     */
-    generateNotificacionPendiente(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const value = (Math.sin(2 * Math.PI * 523.25 * t) * 0.4 +
-                          Math.sin(2 * Math.PI * 783.99 * t) * 0.3) *
-                          Math.exp(-t * 3);
-            
-            left[i] = value * 0.6;
-            right[i] = value * 0.6;
-        }
-    }
-
-    /**
-     * Mensaje recibido - Sonido tipo pop
-     */
-    generateMensajeRecibido(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const envelope = Math.exp(-t * 15);
-            const value = (Math.sin(2 * Math.PI * 880 * t) * 0.3 +
-                          Math.sin(2 * Math.PI * 440 * t) * 0.2) * envelope;
-            
-            left[i] = value * 0.5;
-            right[i] = value * 0.5;
-        }
-    }
-
-    /**
-     * Campana suave
-     */
-    generateCampanaSuave(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const harmonics = [1, 2, 3, 4].map((n, idx) => 
-                Math.sin(2 * Math.PI * 523.25 * n * t) * (1 / (n * 1.5))
-            ).reduce((a, b) => a + b, 0);
-            
-            const value = harmonics * Math.exp(-t * 4);
-            
-            left[i] = value * 0.55;
-            right[i] = value * 0.55;
-        }
-    }
-
-    /**
-     * Ding moderno
-     */
-    generateDingModerno(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const freq = 1046.5 + (t * 500);
-            const value = Math.sin(2 * Math.PI * freq * t) * 
-                         Math.exp(-t * 12) *
-                         (Math.sin(2 * Math.PI * 20 * t) * 0.2 + 0.8);
-            
-            left[i] = value * 0.55;
-            right[i] = value * 0.55;
-        }
-    }
-
-    /**
-     * Alerta urgente
-     */
-    generateAlertaUrgente(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const pulse = Math.floor(t * 8) % 2 === 0 ? 1 : 0.3;
-            const value = Math.sin(2 * Math.PI * 659.25 * t) * pulse * 
-                         Math.exp(-t * 2.5);
-            
-            left[i] = value * 0.8;
-            right[i] = value * 0.8;
-        }
-    }
-
-    /**
-     * Timbre de oficina
-     */
-    generateTimbreOficina(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const freq = Math.floor(t / 0.2) % 2 === 0 ? 523.25 : 659.25;
-            const value = Math.sin(2 * Math.PI * freq * t) * 
-                         Math.exp(-t * 3) *
-                         (Math.sin(2 * Math.PI * 4 * t) * 0.2 + 0.8);
-            
-            left[i] = value * 0.6;
-            right[i] = value * 0.6;
-        }
-    }
-
-    /**
-     * Notificación móvil
-     */
-    generateNotificacionMovil(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const envelope = Math.sin(Math.PI * t / 0.15) * Math.exp(-t * 8);
-            const value = (Math.sin(2 * Math.PI * 698.46 * t) * 0.5 +
-                          Math.sin(2 * Math.PI * 1396.92 * t) * 0.3) * envelope;
-            
-            left[i] = value * 0.5;
-            right[i] = value * 0.5;
-        }
-    }
-
-    /**
-     * Alerta sintetizada
-     */
-    generateSintetizadorAlerta(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const freq = 440 + Math.sin(t * Math.PI * 2) * 200;
-            const value = Math.sin(2 * Math.PI * freq * t) * 
-                         Math.exp(-t * 5) *
-                         (Math.sin(2 * Math.PI * 5 * t) * 0.3 + 0.7);
-            
-            left[i] = value * 0.7;
-            right[i] = value * 0.7;
-        }
-    }
-
-    /**
-     * Sonido por defecto
-     */
-    generateDefaultSound(left, right, sampleRate) {
-        const duration = left.length;
-        
-        for (let i = 0; i < duration; i++) {
-            const t = i / sampleRate;
-            const value = Math.sin(2 * Math.PI * 440 * t) * Math.exp(-t * 5);
-            left[i] = value * 0.5;
-            right[i] = value * 0.5;
-        }
-    }
-
-    /**
-     * Reproducir un sonido
-     * @param {string} soundName - Nombre del sonido
-     * @param {number} volume - Volumen (0-1)
-     * @param {boolean} loop - Si debe repetirse
-     * @returns {string|null} ID del sonido para poder detenerlo
-     */
     async play(soundName, volume = null, loop = false) {
-        if (!this.isReady()) {
-            console.warn('🔇 Audio no disponible. Asegúrate de que el usuario haya interactuado con la página.');
+        if (!this.initialized) {
+            await this.init();
+        }
+        
+        // Verificar si el sonido está disponible
+        let audio = this.audioElements.get(soundName);
+        
+        // Si no está disponible, intentar cargarlo
+        if (!audio && !this.availableSounds.includes(soundName)) {
+            await this.preloadSound(soundName);
+            audio = this.audioElements.get(soundName);
+        }
+        
+        if (!audio) {
+            console.debug(`🔇 Sonido no disponible: ${soundName}`);
             return null;
         }
         
-        const buffer = this.sounds.get(soundName);
-        if (!buffer) {
-            console.warn(`Sonido no encontrado: ${soundName}`);
-            // Intentar generar el sonido sobre la marcha
-            await this.generateSound(soundName);
-            const newBuffer = this.sounds.get(soundName);
-            if (!newBuffer) return null;
-        }
-        
         try {
-            const source = this.audioContext.createBufferSource();
-            source.buffer = this.sounds.get(soundName);
-            source.loop = loop;
-            
-            const gainNode = this.audioContext.createGain();
-            const targetVolume = volume !== null ? volume : this.soundConfigs[soundName]?.volume || this.defaultVolume;
-            gainNode.gain.value = targetVolume;
-            
-            source.connect(gainNode);
-            gainNode.connect(this.audioContext.destination);
+            const config = this.soundConfigs.get(soundName);
+            const targetVolume = volume !== null ? volume : (config?.volume || this.defaultVolume);
+            audio.volume = Math.min(1, Math.max(0, targetVolume));
+            audio.loop = loop;
+            audio.currentTime = 0;
             
             const soundId = `${soundName}_${Date.now()}`;
-            this.activeSources.set(soundId, { source, gainNode });
             
-            source.onended = () => {
-                this.activeSources.delete(soundId);
+            const playPromise = audio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        this.activeSources.set(soundId, audio);
+                        const soundConfig = this.soundConfigs.get(soundName);
+                        console.log(`🔊 Reproduciendo: ${soundConfig?.name || soundName}`);
+                    })
+                    .catch(error => {
+                        console.debug('Error reproduciendo sonido:', error.message);
+                    });
+            }
+            
+            audio.onended = () => {
+                if (this.activeSources.get(soundId) === audio) {
+                    this.activeSources.delete(soundId);
+                }
             };
-            
-            source.start();
-            console.log(`🔊 Reproduciendo: ${this.soundConfigs[soundName]?.name || soundName} (volumen: ${targetVolume})`);
             
             return soundId;
             
         } catch (error) {
-            console.error('❌ Error reproduciendo sonido:', error);
+            console.debug('Error reproduciendo sonido:', error);
             return null;
         }
     }
 
-    /**
-     * Detener un sonido específico
-     */
     stop(soundId) {
-        const sound = this.activeSources.get(soundId);
-        if (sound) {
+        const audio = this.activeSources.get(soundId);
+        if (audio) {
             try {
-                sound.source.stop();
+                audio.pause();
+                audio.currentTime = 0;
                 this.activeSources.delete(soundId);
             } catch (e) {
-                console.warn('Error deteniendo sonido:', e);
+                console.debug('Error deteniendo sonido:', e);
             }
         }
     }
 
-    /**
-     * Detener todos los sonidos
-     */
     stopAll() {
-        this.activeSources.forEach((sound, id) => {
+        this.activeSources.forEach((audio, id) => {
             try {
-                sound.source.stop();
+                audio.pause();
+                audio.currentTime = 0;
             } catch (e) {}
             this.activeSources.delete(id);
         });
     }
 
-    /**
-     * Configurar volumen global
-     */
     setGlobalVolume(volume) {
         this.defaultVolume = Math.max(0, Math.min(1, volume));
+        this.audioElements.forEach(audio => {
+            audio.volume = this.defaultVolume;
+        });
+    }
+    
+    setEnabled(enabled) {
+        if (!enabled) {
+            this.stopAll();
+        }
     }
 
-    /**
-     * Verificar si el audio está disponible
-     */
     isAvailable() {
-        return this.audioPermissionGranted && this.initialized && this.audioContext?.state === 'running';
+        return this.initialized;
     }
 
     /**
-     * Obtener lista de sonidos disponibles
+     * Obtener lista de sonidos disponibles dinámicamente
      */
     getAvailableSounds() {
-        return Object.keys(this.soundConfigs).map(key => ({
-            id: key,
-            name: this.soundConfigs[key].name,
-            volume: this.soundConfigs[key].volume,
-            loopable: this.soundConfigs[key].loopable
-        }));
+        return this.availableSounds.map(soundName => {
+            const config = this.soundConfigs.get(soundName);
+            return {
+                id: soundName,
+                name: config?.name || this.formatSoundName(soundName),
+                volume: config?.volume || 0.6,
+                loopable: config?.loopable || false,
+                exists: true
+            };
+        });
     }
 
     /**
-     * Prueba rápida de todos los sonidos
+     * Verificar si un sonido específico existe
      */
+    hasSound(soundName) {
+        return this.availableSounds.includes(soundName);
+    }
+
+    /**
+     * Obtener el primer sonido disponible (para fallback)
+     */
+    getFirstAvailableSound() {
+        return this.availableSounds.length > 0 ? this.availableSounds[0] : null;
+    }
+
     async testAllSounds(delay = 1000) {
-        const sounds = Object.keys(this.soundConfigs);
+        if (this.availableSounds.length === 0) {
+            console.warn('⚠️ No hay sonidos disponibles para probar');
+            return;
+        }
         
-        for (const sound of sounds) {
+        for (const sound of this.availableSounds) {
             await this.play(sound, 0.5);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
 }
 
-// Exportar instancia única
 export const notificationSound = new NotificationSound();
