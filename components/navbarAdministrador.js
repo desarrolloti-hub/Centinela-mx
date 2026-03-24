@@ -12,11 +12,16 @@ class NavbarComplete {
         this.userManager = null;
         this.notificacionManager = null;
         this.planManager = null;
-        this.permisosPlan = null; // Permisos cargados desde Firestore
+        this.permisosPlan = null;
         this.notificacionesNoLeidas = 0;
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
         this.intervalNotificaciones = null;
+        this.notificationSound = null;
+        this.soundEnabled = true;
+        this.soundVolume = 0.7;
+        this.lastNotificationCount = 0;
+        this.availableSounds = []; // Lista de sonidos disponibles dinámicamente
         this.init();
     }
 
@@ -44,14 +49,223 @@ class NavbarComplete {
             this.updateNavbarWithAdminData();
 
             await this.loadAdminDataFromFirebase();
-            await this.cargarPermisosDelPlan(); // 🔥 CARGAR PERMISOS DEL PLAN
+            await this.cargarPermisosDelPlan();
             await this._initNotificacionManager();
+            
+            await this._initNotificationSound();
+            
             await this._cargarNotificaciones();
             this._iniciarListenerNotificaciones();
+
+            // No requiere interacción de usuario para audio
 
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
         }
+    }
+
+    /**
+     * 🔥 Inicializar sistema de sonido (versión dinámica - detecta sonidos automáticamente)
+     */
+    async _initNotificationSound() {
+        try {
+            const { notificationSound } = await import('/clases/notificationSound.js');
+            this.notificationSound = notificationSound;
+            
+            await this.notificationSound.initialize();
+            
+            // Obtener sonidos disponibles dinámicamente
+            this.availableSounds = this.notificationSound.getAvailableSounds();
+            
+            if (this.availableSounds.length > 0) {
+                console.log(`🔊 Sistema de sonido inicializado. Sonidos encontrados: ${this.availableSounds.length}`);
+                this.availableSounds.forEach(s => console.log(`   - ${s.name} (${s.id})`));
+            } else {
+                console.warn('⚠️ No se encontraron archivos de sonido en Firebase Storage');
+            }
+            
+            // Cargar preferencias de sonido del usuario
+            if (this.currentAdmin) {
+                const deviceId = this._getDeviceId();
+                const dispositivoActual = this.currentAdmin.dispositivos?.find(
+                    d => d.deviceId === deviceId
+                );
+                
+                if (dispositivoActual) {
+                    if (dispositivoActual.soundEnabled !== undefined) {
+                        this.soundEnabled = dispositivoActual.soundEnabled;
+                        this.notificationSound.setEnabled(this.soundEnabled);
+                    }
+                    if (dispositivoActual.selectedSound) {
+                        localStorage.setItem('selectedSound', dispositivoActual.selectedSound);
+                    }
+                    if (dispositivoActual.soundVolume) {
+                        this.soundVolume = dispositivoActual.soundVolume;
+                        this.notificationSound.setGlobalVolume(this.soundVolume);
+                        localStorage.setItem('soundVolume', this.soundVolume);
+                    }
+                } else {
+                    const savedSoundEnabled = localStorage.getItem('soundEnabled');
+                    if (savedSoundEnabled !== null) {
+                        this.soundEnabled = savedSoundEnabled === 'true';
+                        this.notificationSound.setEnabled(this.soundEnabled);
+                    }
+                    const savedVolume = localStorage.getItem('soundVolume');
+                    if (savedVolume !== null) {
+                        this.soundVolume = parseFloat(savedVolume);
+                        this.notificationSound.setGlobalVolume(this.soundVolume);
+                    }
+                }
+            }
+            
+        } catch (error) {
+            console.warn('⚠️ No se pudo inicializar sistema de sonido:', error);
+            this.notificationSound = null;
+        }
+    }
+
+    /**
+     * 🔥 Obtener sonido disponible para un tipo (usa solo los que existen)
+     */
+    _getSoundForType(tipo) {
+        const soundMap = {
+            'critico': 'alarma-robo',
+            'urgente': 'alerta-urgente',
+            'alerta': 'alerta-critica',
+            'pendiente': 'notificacion-pendiente',
+            'mensaje': 'mensaje-recibido',
+            'normal': 'ding-moderno',
+            'campana': 'campana-suave',
+            'oficina': 'timbre-oficina',
+            'movil': 'notificacion-movil',
+            'sintetizador': 'sintetizador-alerta'
+        };
+        
+        const desiredSound = soundMap[tipo] || 'ding-moderno';
+        
+        // Verificar si el sonido deseado está disponible
+        const soundExists = this.availableSounds.some(s => s.id === desiredSound);
+        
+        if (soundExists) {
+            return desiredSound;
+        }
+        
+        // Si no existe, usar el primer sonido disponible
+        if (this.availableSounds.length > 0) {
+            console.log(`🔄 Sonido "${desiredSound}" no disponible, usando "${this.availableSounds[0].id}" como fallback`);
+            return this.availableSounds[0].id;
+        }
+        
+        return null;
+    }
+
+    /**
+     * 🔥 Reproducir sonido de notificación
+     */
+    async _reproducirSonido(tipo = 'normal', volumen = null) {
+        if (!this.soundEnabled || !this.notificationSound) return;
+        
+        const soundName = this._getSoundForType(tipo);
+        if (!soundName) return;
+        
+        const vol = volumen !== null ? volumen : this.soundVolume;
+        
+        try {
+            await this.notificationSound.play(soundName, vol);
+            console.log(`🔊 Sonido reproducido: ${soundName} (para tipo: ${tipo})`);
+        } catch (error) {
+            console.debug('Error reproduciendo sonido:', error);
+        }
+    }
+
+    /**
+     * 🔥 Detectar nuevas notificaciones y reproducir sonido
+     */
+    async _detectarYReproducirSonido(nuevasNotificaciones) {
+        if (!this.soundEnabled || !this.notificationSound) return;
+        
+        const nuevasNoLeidas = nuevasNotificaciones.filter(n => !n.leida);
+        
+        if (nuevasNoLeidas.length > 0) {
+            let maxImportance = 0;
+            let soundType = 'normal';
+            
+            nuevasNoLeidas.forEach(notif => {
+                let importance = 0;
+                let tipo = 'normal';
+                
+                if (notif.nivelRiesgo === 'critico') {
+                    importance = 4;
+                    tipo = 'critico';
+                } else if (notif.nivelRiesgo === 'alto') {
+                    importance = 3;
+                    tipo = 'urgente';
+                } else if (notif.nivelRiesgo === 'medio') {
+                    importance = 2;
+                    tipo = 'alerta';
+                } else if (notif.tipo === 'canalizacion') {
+                    importance = 2;
+                    tipo = 'pendiente';
+                }
+                
+                if (importance > maxImportance) {
+                    maxImportance = importance;
+                    soundType = tipo;
+                }
+            });
+            
+            await this._reproducirSonido(soundType);
+            
+            // Mostrar notificación del sistema si hay permiso
+            if (Notification.permission === 'granted' && nuevasNoLeidas.length === 1) {
+                const primera = nuevasNoLeidas[0];
+                const notifUI = primera.toUI ? primera.toUI() : {
+                    titulo: primera.titulo,
+                    mensaje: primera.mensaje
+                };
+                
+                const systemNotif = new Notification(notifUI.titulo, {
+                    body: notifUI.mensaje,
+                    icon: '/assets/images/logo.png',
+                    badge: '/assets/images/logo.png',
+                    silent: false,
+                    vibrate: [200, 100, 200]
+                });
+                
+                systemNotif.onclick = () => {
+                    window.focus();
+                    if (primera.urlDestino) {
+                        window.location.href = primera.urlDestino;
+                    }
+                    systemNotif.close();
+                };
+            } else if (Notification.permission === 'granted' && nuevasNoLeidas.length > 1) {
+                const systemNotif = new Notification(`📬 ${nuevasNoLeidas.length} nuevas notificaciones`, {
+                    body: `Tienes ${nuevasNoLeidas.length} notificaciones sin leer`,
+                    icon: '/assets/images/logo.png',
+                    badge: '/assets/images/logo.png',
+                    silent: false
+                });
+                
+                systemNotif.onclick = () => {
+                    window.focus();
+                    this._mostrarModalNotificaciones();
+                    systemNotif.close();
+                };
+            }
+        }
+    }
+
+    /**
+     * 🔥 Obtener ID del dispositivo
+     */
+    _getDeviceId() {
+        let deviceId = localStorage.getItem('fcm_device_id');
+        if (!deviceId) {
+            deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('fcm_device_id', deviceId);
+        }
+        return deviceId;
     }
 
     /**
@@ -66,7 +280,6 @@ class NavbarComplete {
                 return;
             }
 
-            // Obtener el ID del plan del administrador (string guardado en el campo 'plan')
             const planId = this.currentAdmin.plan;
             
             if (!planId || planId === 'sin-plan' || planId === 'gratis') {
@@ -78,11 +291,9 @@ class NavbarComplete {
 
             console.log(`🔍 Buscando plan con ID: "${planId}" en Firestore`);
 
-            // Importar el PlanPersonalizadoManager
             const { PlanPersonalizadoManager } = await import('/clases/plan.js');
             this.planManager = new PlanPersonalizadoManager();
             
-            // Obtener el plan desde Firestore por ID
             const plan = await this.planManager.obtenerPorId(planId);
             
             if (!plan) {
@@ -95,21 +306,14 @@ class NavbarComplete {
             console.log(`✅ Plan encontrado: ${plan.nombre}`);
             console.log('📦 Mapas activos:', plan.mapasActivos);
 
-            // Extraer permisos del plan
             const mapasActivos = plan.mapasActivos;
             
-            // Verificar si tiene acceso al módulo de incidencias
             const tieneIncidencias = mapasActivos.incidencias === true;
-            
-            // Verificar si tiene acceso al módulo de monitoreo (mapa de alertas)
             const tieneMonitoreo = mapasActivos.alertas === true;
             
-            // Obtener permisos específicos dentro de incidencias
             const permisosIncidencias = [];
             
             if (tieneIncidencias) {
-                // Si tiene acceso a incidencias, obtenemos los permisos específicos
-                // Los permisos disponibles son: listaIncidencias, crearIncidencias, incidenciasCanalizadas
                 const moduloIncidencias = plan.obtenerMapasCompletos?.().find(m => m.id === 'incidencias');
                 
                 if (moduloIncidencias && moduloIncidencias.permisosActivos) {
@@ -127,7 +331,6 @@ class NavbarComplete {
             
             console.log('🎯 Permisos cargados:', this.permisosPlan);
             
-            // Actualizar el navbar según los permisos
             this.actualizarNavbarSegunPermisos();
             
         } catch (error) {
@@ -137,48 +340,31 @@ class NavbarComplete {
         }
     }
 
-    /**
-     * 🔥 ACTUALIZA EL NAVBAR SEGÚN LOS PERMISOS DEL PLAN
-     */
     actualizarNavbarSegunPermisos() {
-        // 1. Mostrar/ocultar la sección de INCIDENCIAS completa
         const incidenciasSection = document.getElementById('incidenciasSection');
-        const incidenciasDropdownBtn = document.getElementById('incidenciasDropdownBtn');
         const incidenciasDropdownOptions = document.getElementById('incidenciasDropdownOptions');
         
         if (incidenciasSection) {
             incidenciasSection.style.display = this.permisosPlan.incidencias ? 'block' : 'none';
         }
         
-        // 2. Mostrar/ocultar la sección de MONITOREO
         const monitoreoSection = document.getElementById('monitoreoSection');
-        
         if (monitoreoSection) {
             monitoreoSection.style.display = this.permisosPlan.monitoreo ? 'block' : 'none';
         }
         
-        // 3. Si tiene incidencias, filtrar los permisos específicos
         if (this.permisosPlan.incidencias && incidenciasDropdownOptions) {
             const opcionesIncidencias = incidenciasDropdownOptions.querySelectorAll('.incidencia-option');
             
             opcionesIncidencias.forEach(opcion => {
                 const permisoId = opcion.dataset.permisoId;
                 const tienePermiso = this.permisosPlan.permisosIncidencias.includes(permisoId);
-                
-                if (!tienePermiso) {
-                    opcion.style.display = 'none';
-                } else {
-                    opcion.style.display = 'flex';
-                }
+                opcion.style.display = tienePermiso ? 'flex' : 'none';
             });
             
-            // Verificar si hay al menos una opción visible
             const opcionesVisibles = Array.from(opcionesIncidencias).some(opt => opt.style.display !== 'none');
-            
-            // Si no hay opciones visibles, ocultar toda la sección
             if (!opcionesVisibles) {
                 incidenciasSection.style.display = 'none';
-                console.log('⚠️ El plan tiene incidencias pero ningún permiso específico');
             }
         }
         
@@ -190,7 +376,6 @@ class NavbarComplete {
             const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
             this.notificacionManager = new NotificacionAreaManager();
             
-            // Actualizar el usuario actual con el rol de admin
             if (this.notificacionManager && this.currentAdmin) {
                 this.notificacionManager.usuarioActual = {
                     ...this.notificacionManager.usuarioActual,
@@ -211,7 +396,6 @@ class NavbarComplete {
         }
 
         try {
-            // Para administradores, obtener TODAS las notificaciones de su organización
             const todasNotificaciones = await this.notificacionManager.obtenerNotificaciones(
                 this.currentAdmin.id,
                 this.currentAdmin.organizacionCamelCase,
@@ -221,7 +405,17 @@ class NavbarComplete {
 
             console.log(`📬 Admin cargó ${todasNotificaciones.length} notificaciones`);
 
-            // Los admins ven TODAS las notificaciones
+            const nuevasNoLeidas = todasNotificaciones.filter(n => !n.leida);
+            const nuevas = nuevasNoLeidas.filter(n => {
+                const existe = this.notificaciones.some(old => old.id === n.id);
+                return !existe;
+            });
+            
+            if (nuevas.length > 0) {
+                console.log(`🔔 ${nuevas.length} nuevas notificaciones detectadas`);
+                await this._detectarYReproducirSonido(nuevas);
+            }
+
             this.notificaciones = todasNotificaciones;
             this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
 
@@ -242,7 +436,6 @@ class NavbarComplete {
             clearInterval(this.intervalNotificaciones);
         }
 
-        // Actualizar cada 30 segundos
         this.intervalNotificaciones = setInterval(() => {
             this._cargarNotificaciones();
         }, 30000);
@@ -288,7 +481,6 @@ class NavbarComplete {
                 leida: notif.leida || false
             };
 
-            // Mostrar áreas destino para contexto
             const areasTexto = notif.areasDestino && notif.areasDestino.length > 0 
                 ? notif.areasDestino.map(a => a.nombre).join(', ')
                 : '';
@@ -1504,7 +1696,7 @@ class NavbarComplete {
                 }
             }
         `;
-
+        
         const styleElement = document.createElement('style');
         styleElement.id = 'navbar-complete-styles';
         styleElement.textContent = styles;
@@ -1595,8 +1787,6 @@ class NavbarComplete {
                     </div>
                 </div>
 
-        
-
                 <!-- ========== SECCIÓN GESTIONAR (Administración) ========== -->
                 <div class="nav-section">
                     <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
@@ -1640,7 +1830,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
-                <!-- ========== SECCIÓN INCIDENCIAS (Dinámica - se oculta si no tiene permiso) ========== -->
+                <!-- ========== SECCIÓN INCIDENCIAS ========== -->
                 <div class="nav-section" id="incidenciasSection">
                     <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
                         <span><i class="fa-solid fa-exclamation-triangle"></i> Incidencias</span>
@@ -1663,7 +1853,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
-                <!-- ========== SECCIÓN MONITOREO (Dinámica - se oculta si no tiene permiso) ========== -->
+                <!-- ========== SECCIÓN MONITOREO ========== -->
                 <div class="nav-section" id="monitoreoSection">
                     <button class="administracion-dropdown-btn" id="monitoreoDropdownBtn">
                         <span><i class="fa-solid fa-map-marker-alt"></i> Monitoreo</span>
@@ -1678,7 +1868,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
-                <!-- ========== SECCIÓN BITÁCORA (Fija) ========== -->
+                <!-- ========== SECCIÓN BITÁCORA ========== -->
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <i class="fa-solid fa-book"></i>
@@ -1690,7 +1880,7 @@ class NavbarComplete {
                     </a>
                 </div>
 
-                <!-- ========== SECCIÓN CONFIGURACIÓN (Fija) ========== -->
+                <!-- ========== SECCIÓN CONFIGURACIÓN ========== -->
                 <div class="admin-options-section">
                     <button class="admin-dropdown-btn" id="adminDropdownBtn">
                         <span><i class="fa-solid fa-user-gear"></i> Configuración</span>
@@ -1710,7 +1900,6 @@ class NavbarComplete {
                 </div>
             </div>
         `;
-
         document.body.prepend(navbar);
     }
 
@@ -1770,13 +1959,14 @@ class NavbarComplete {
                     rol: userData.rol || localStorage.getItem('userRole'),
                     organizacion: userData.organizacion || localStorage.getItem('userOrganizacion'),
                     organizacionCamelCase: userData.organizacionCamelCase || localStorage.getItem('userOrganizacionCamelCase'),
-                    plan: userData.plan || localStorage.getItem('userPlan'), // 🔥 OBTENER EL PLAN DEL ADMIN
+                    plan: userData.plan || localStorage.getItem('userPlan'),
                     fechaVencimiento: userData.fechaVencimiento || localStorage.getItem('userFechaVencimiento'),
                     fotoUsuario: fotoUsuario,
                     fotoOrganizacion: fotoOrganizacion,
                     status: userData.status || 'activo',
                     verificado: userData.verificado || true,
-                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
+                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart,
+                    dispositivos: userData.dispositivos || []
                 };
 
                 return true;
@@ -1789,10 +1979,11 @@ class NavbarComplete {
                 rol: localStorage.getItem('userRole'),
                 organizacion: localStorage.getItem('userOrganizacion'),
                 organizacionCamelCase: localStorage.getItem('userOrganizacionCamelCase'),
-                plan: localStorage.getItem('userPlan'), // 🔥 OBTENER EL PLAN DEL ADMIN
+                plan: localStorage.getItem('userPlan'),
                 fechaVencimiento: localStorage.getItem('userFechaVencimiento'),
                 fotoUsuario: localStorage.getItem('userFoto') || null,
-                fotoOrganizacion: localStorage.getItem('organizacionLogo') || null
+                fotoOrganizacion: localStorage.getItem('organizacionLogo') || null,
+                dispositivos: []
             };
 
             if (this.currentAdmin.nombreCompleto && this.currentAdmin.rol) {
@@ -1827,7 +2018,7 @@ class NavbarComplete {
                     if (firebaseUser.organizacion !== this.currentAdmin.organizacion) needsUpdate = true;
                     if (firebaseUser.correoElectronico !== this.currentAdmin.correoElectronico) needsUpdate = true;
                     if (firebaseUser.rol !== this.currentAdmin.rol) needsUpdate = true;
-                    if (firebaseUser.plan !== this.currentAdmin.plan) needsUpdate = true; // 🔥 ACTUALIZAR PLAN
+                    if (firebaseUser.plan !== this.currentAdmin.plan) needsUpdate = true;
                 }
 
                 if (needsUpdate) {
@@ -1835,13 +2026,13 @@ class NavbarComplete {
                         ...this.currentAdmin,
                         ...firebaseUser,
                         rol: firebaseUser.rol,
-                        plan: firebaseUser.plan // 🔥 GUARDAR PLAN
+                        plan: firebaseUser.plan,
+                        dispositivos: firebaseUser.dispositivos || []
                     };
 
                     this.updateNavbarWithAdminData();
                     this.updateLocalStorageFromFirebase(firebaseUser);
                     
-                    // Actualizar notificacionManager con el usuario actualizado
                     if (this.notificacionManager) {
                         this.notificacionManager.usuarioActual = {
                             ...this.notificacionManager.usuarioActual,
@@ -1869,13 +2060,14 @@ class NavbarComplete {
                 rol: userData.rol,
                 organizacion: userData.organizacion,
                 organizacionCamelCase: userData.organizacionCamelCase,
-                plan: userData.plan, // 🔥 GUARDAR PLAN EN LOCALSTORAGE
+                plan: userData.plan,
                 fechaVencimiento: userData.fechaVencimiento,
                 fotoUsuario: userData.fotoUsuario,
                 fotoOrganizacion: userData.fotoOrganizacion,
                 status: userData.status,
                 verificado: userData.verificado,
-                ultimoAcceso: userData.ultimoAcceso
+                ultimoAcceso: userData.ultimoAcceso,
+                dispositivos: userData.dispositivos || []
             };
 
             localStorage.setItem('userData', JSON.stringify(updatedUserData));
@@ -1887,7 +2079,7 @@ class NavbarComplete {
             if (userData.rol) localStorage.setItem('userRole', userData.rol);
             if (userData.organizacion) localStorage.setItem('userOrganizacion', userData.organizacion);
             if (userData.organizacionCamelCase) localStorage.setItem('userOrganizacionCamelCase', userData.organizacionCamelCase);
-            if (userData.plan) localStorage.setItem('userPlan', userData.plan); // 🔥 GUARDAR PLAN
+            if (userData.plan) localStorage.setItem('userPlan', userData.plan);
             if (userData.fechaVencimiento) localStorage.setItem('userFechaVencimiento', userData.fechaVencimiento);
 
         } catch (error) {
@@ -2019,7 +2211,7 @@ class NavbarComplete {
         this.setupAdminDropdown();
         this.setupAdministracionDropdown();
         this.setupIncidenciasDropdown();
-        this.setupMonitoreoDropdown(); // 🔥 NUEVO DROPDOWN PARA MONITOREO
+        this.setupMonitoreoDropdown();
         this.loadOrbitronFont();
         this.setupLogout();
         this._configurarNotificacionesDropdown();
@@ -2200,9 +2392,6 @@ class NavbarComplete {
         });
     }
 
-    /**
-     * 🔥 NUEVO DROPDOWN PARA MONITOREO
-     */
     setupMonitoreoDropdown() {
         const dropdownBtn = document.getElementById('monitoreoDropdownBtn');
         const dropdownOptions = document.getElementById('monitoreoDropdownOptions');
@@ -2477,9 +2666,6 @@ class NavbarComplete {
         }
     }
 
-    /**
-     * 🔥 TOGGLE PARA MONITOREO
-     */
     toggleMonitoreoDropdown(show) {
         const dropdownBtn = document.getElementById('monitoreoDropdownBtn');
         const dropdownOptions = document.getElementById('monitoreoDropdownOptions');

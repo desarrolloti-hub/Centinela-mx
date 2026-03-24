@@ -1,6 +1,7 @@
 /**
  * CATEGORIAS - Sistema Centinela
  * VERSIÓN ACTUALIZADA - Con paginación y búsqueda en base de datos
+ * AHORA CON REGISTRO DE BITÁCORA
  */
 
 // =============================================
@@ -11,6 +12,7 @@ let categoriaExpandidaId = null;
 let empresaActual = null;
 let categoriasCache = [];
 let todasLasCategorias = []; // Almacena todas las categorías para búsqueda
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 // Configuración de paginación
 const ITEMS_POR_PAGINA = 10;
@@ -26,16 +28,128 @@ async function inicializarCategoriaManager() {
     try {
         obtenerDatosEmpresa();
 
+        // ✅ NUEVO: Inicializar historialManager
+        await inicializarHistorial();
+
         const { CategoriaManager } = await import('/clases/categoria.js');
         categoriaManager = new CategoriaManager();
 
         await cargarTodasLasCategorias(); // Carga todas para búsqueda
         configurarEventListeners();
+        
+        // ✅ NUEVO: Registrar acceso a la vista de categorías
+        await registrarAccesoVistaCategorias();
+        
         return true;
     } catch (error) {
         console.error('Error al inicializar categorías:', error);
         mostrarErrorInicializacion();
         return false;
+    }
+}
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar acceso a la vista de categorías
+async function registrarAccesoVistaCategorias() {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'categorias',
+            descripcion: 'Accedió a la vista de categorías',
+            detalles: {
+                totalCategorias: todasLasCategorias.length || 0
+            }
+        });
+        console.log('✅ Acceso a categorías registrado en bitácora');
+    } catch (error) {
+        console.error('Error registrando acceso a categorías:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar visualización de detalles de categoría
+async function registrarVisualizacionCategoria(categoria, tipo = 'verDetalles') {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        let numSub = 0;
+        if (categoria.subcategorias) {
+            if (categoria.subcategorias.size !== undefined) {
+                numSub = categoria.subcategorias.size;
+            } else {
+                numSub = Object.keys(categoria.subcategorias).length;
+            }
+        }
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'categorias',
+            descripcion: `Visualizó detalles de categoría: ${categoria.nombre}`,
+            detalles: {
+                categoriaId: categoria.id,
+                categoriaNombre: categoria.nombre,
+                numeroSubcategorias: numSub,
+                accion: tipo
+            }
+        });
+        console.log(`✅ Visualización de categoría "${categoria.nombre}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando visualización de categoría:', error);
+    }
+}
+
+// ✅ NUEVO: Obtener usuario actual
+function obtenerUsuarioActual() {
+    try {
+        const adminInfo = localStorage.getItem('adminInfo');
+        if (adminInfo) {
+            const adminData = JSON.parse(adminInfo);
+            return {
+                id: adminData.id || adminData.uid,
+                uid: adminData.uid || adminData.id,
+                nombreCompleto: adminData.nombreCompleto || 'Administrador',
+                organizacion: adminData.organizacion,
+                organizacionCamelCase: adminData.organizacionCamelCase,
+                correo: adminData.correoElectronico || '',
+                email: adminData.correoElectronico || ''
+            };
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa,
+                organizacionCamelCase: userData.organizacionCamelCase,
+                correo: userData.correo || userData.email || '',
+                email: userData.correo || userData.email || ''
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error obteniendo usuario actual:', error);
+        return null;
     }
 }
 
@@ -424,7 +538,7 @@ window.editarSubcategoria = function (catId, subId, event) {
 };
 
 // =============================================
-// VER DETALLES - SweetAlert
+// VER DETALLES - SweetAlert CON REGISTRO EN BITÁCORA
 // =============================================
 window.verDetalles = async function (categoriaId, event) {
     event?.stopPropagation();
@@ -432,6 +546,9 @@ window.verDetalles = async function (categoriaId, event) {
     const categoria = categoriasCache.find(c => c.id === categoriaId) || 
                      todasLasCategorias.find(c => c.id === categoriaId);
     if (!categoria) return;
+
+    // ✅ NUEVO: Registrar visualización de categoría
+    await registrarVisualizacionCategoria(categoria, 'verDetalles');
 
     // Obtener subcategorías como array
     let subcategoriasArray = [];
@@ -519,7 +636,7 @@ window.verDetalles = async function (categoriaId, event) {
 };
 
 // =============================================
-// VER DETALLES DE SUBCATEGORÍA
+// VER DETALLES DE SUBCATEGORÍA CON REGISTRO EN BITÁCORA
 // =============================================
 window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId, event) {
     event?.stopPropagation();
@@ -549,6 +666,32 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId, ev
             text: 'Subcategoría no encontrada'
         });
         return;
+    }
+
+    subcategoriaNombre = subcategoria.nombre || 'Sin nombre';
+
+    // ✅ NUEVO: Registrar visualización de subcategoría
+    if (historialManager) {
+        try {
+            const usuario = obtenerUsuarioActual();
+            if (usuario) {
+                await historialManager.registrarActividad({
+                    usuario: usuario,
+                    tipo: 'leer',
+                    modulo: 'categorias',
+                    descripcion: `Visualizó detalles de subcategoría: ${subcategoriaNombre} (categoría: ${categoria.nombre})`,
+                    detalles: {
+                        categoriaId: categoriaId,
+                        categoriaNombre: categoria.nombre,
+                        subcategoriaId: subcategoriaId,
+                        subcategoriaNombre: subcategoriaNombre
+                    }
+                });
+                console.log(`✅ Visualización de subcategoría "${subcategoriaNombre}" registrada en bitácora`);
+            }
+        } catch (error) {
+            console.error('Error registrando visualización de subcategoría:', error);
+        }
     }
 
     const colorSub = subcategoria.color || categoria.color || '#2f8cff';
@@ -618,7 +761,7 @@ window.verDetallesSubcategoria = async function (categoriaId, subcategoriaId, ev
 };
 
 // =============================================
-// ELIMINAR CATEGORÍA
+// ELIMINAR CATEGORÍA (se mantiene igual)
 // =============================================
 window.eliminarCategoria = async function (categoriaId, event) {
     event?.stopPropagation();
@@ -700,7 +843,7 @@ window.eliminarCategoria = async function (categoriaId, event) {
 };
 
 // =============================================
-// ELIMINAR SUBCATEGORÍA
+// ELIMINAR SUBCATEGORÍA (se mantiene igual)
 // =============================================
 window.eliminarSubcategoria = async function (categoriaId, subcategoriaId, event) {
     event?.stopPropagation();
