@@ -1028,17 +1028,18 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
                 });
 
                 try {
-                    // USAR EL MANAGER PARA AGREGAR CANALIZACIÓN
+                    // USAR EL MÉTODO CORRECTO DEL MANAGER
                     const resultado = await incidenciaManager.agregarCanalizacion(
                         incidenciaId,
                         area.id,
                         area.nombreArea,
                         usuarioActual.id,
                         usuarioActual.nombreCompleto,
-                        'Canalización desde seguimiento'
+                        'Canalización desde seguimiento',
+                        usuarioActual.organizacionCamelCase
                     );
 
-                    if (resultado) {
+                    if (resultado && resultado.success) {
                         await Swal.fire({
                             icon: 'success',
                             title: 'Área agregada',
@@ -1047,7 +1048,7 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
                             showConfirmButton: false
                         });
                     } else {
-                        throw new Error('Error al guardar canalización');
+                        throw new Error(resultado?.message || 'Error al guardar canalización');
                     }
 
                 } catch (error) {
@@ -1055,7 +1056,7 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
                     await Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'No se pudo canalizar a esta área'
+                        text: error.message || 'No se pudo canalizar a esta área'
                     });
                 }
             }
