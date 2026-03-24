@@ -106,12 +106,12 @@ async function cargarIncidenciasPagina(pagina) {
 
         cursoresPaginacion.ultimoDocumento = resultado.ultimoDocumento;
         cursoresPaginacion.primerDocumento = resultado.primerDocumento;
-        
+
         incidenciasActuales = resultado.incidencias;
         totalIncidencias = resultado.total;
         totalPaginas = resultado.totalPaginas;
         paginaActual = resultado.paginaActual;
-        
+
         if (incidenciasActuales.length === 0 && pagina === 1) {
             tbody.innerHTML = `
                 <tr>
@@ -129,9 +129,9 @@ async function cargarIncidenciasPagina(pagina) {
             `;
             return;
         }
-        
+
         renderizarIncidencias();
-        
+
     } catch (error) {
         console.error('Error cargando incidencias:', error);
         mostrarError('Error al cargar incidencias: ' + error.message);
@@ -140,7 +140,7 @@ async function cargarIncidenciasPagina(pagina) {
 
 window.irPagina = async function (pagina) {
     if (pagina < 1 || pagina > totalPaginas || pagina === paginaActual) return;
-    
+
     try {
         const tbody = document.getElementById('tablaIncidenciasBody');
         if (tbody) {
@@ -155,9 +155,9 @@ window.irPagina = async function (pagina) {
                 </tr>
             `;
         }
-        
+
         let resultado;
-        
+
         if (pagina > paginaActual) {
             resultado = await incidenciaManager.getIncidenciasPaginadas(
                 organizacionActual.camelCase,
@@ -174,16 +174,16 @@ window.irPagina = async function (pagina) {
                 ITEMS_POR_PAGINA
             );
         }
-        
+
         cursoresPaginacion.ultimoDocumento = resultado.ultimoDocumento;
         cursoresPaginacion.primerDocumento = resultado.primerDocumento;
         incidenciasActuales = resultado.incidencias;
         totalIncidencias = resultado.total;
         totalPaginas = resultado.totalPaginas;
         paginaActual = pagina;
-        
+
         renderizarIncidencias();
-        
+
     } catch (error) {
         console.error('Error navegando a página:', error);
         mostrarError('Error al cambiar de página: ' + error.message);
@@ -198,7 +198,7 @@ function renderizarIncidencias() {
     if (paginationInfo) {
         const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA + 1;
         const fin = Math.min(inicio + incidenciasActuales.length - 1, totalIncidencias);
-        
+
         if (totalIncidencias > 0) {
             paginationInfo.textContent = `Mostrando ${inicio}-${fin} de ${totalIncidencias} incidencias`;
         } else {
@@ -225,7 +225,7 @@ function renderizarPaginacion() {
     }
 
     let html = '';
-    
+
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="irPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
@@ -233,15 +233,15 @@ function renderizarPaginacion() {
             </button>
         </li>
     `;
-    
+
     const maxPagesToShow = 5;
     let startPage = Math.max(1, paginaActual - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPaginas, startPage + maxPagesToShow - 1);
-    
+
     if (endPage - startPage + 1 < maxPagesToShow) {
         startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-    
+
     if (startPage > 1) {
         html += `
             <li class="page-item">
@@ -250,7 +250,7 @@ function renderizarPaginacion() {
             ${startPage > 2 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
         `;
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
         html += `
             <li class="page-item ${i === paginaActual ? 'active' : ''}">
@@ -258,7 +258,7 @@ function renderizarPaginacion() {
             </li>
         `;
     }
-    
+
     if (endPage < totalPaginas) {
         html += `
             ${endPage < totalPaginas - 1 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
@@ -267,7 +267,7 @@ function renderizarPaginacion() {
             </li>
         `;
     }
-    
+
     html += `
         <li class="page-item ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}">
             <button class="page-link" onclick="irPagina(${paginaActual + 1})" ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}>
@@ -275,7 +275,7 @@ function renderizarPaginacion() {
             </button>
         </li>
     `;
-    
+
     pagination.innerHTML = html;
 }
 
@@ -283,10 +283,10 @@ function aplicarFiltros() {
     filtrosActivos.estado = document.getElementById('filtroEstado')?.value || 'todos';
     filtrosActivos.nivelRiesgo = document.getElementById('filtroRiesgo')?.value || 'todos';
     filtrosActivos.sucursalId = document.getElementById('filtroSucursal')?.value || 'todos';
-    
+
     paginaActual = 1;
     cursoresPaginacion = { ultimoDocumento: null, primerDocumento: null };
-    
+
     cargarIncidenciasPagina(1);
 }
 
@@ -304,10 +304,10 @@ function limpiarFiltros() {
         nivelRiesgo: 'todos',
         sucursalId: 'todos'
     };
-    
+
     paginaActual = 1;
     cursoresPaginacion = { ultimoDocumento: null, primerDocumento: null };
-    
+
     cargarIncidenciasPagina(1);
 }
 
@@ -323,14 +323,14 @@ window.seguimientoIncidencia = function (incidenciaId, event) {
 
 window.verPDF = async function (incidenciaId, event) {
     event?.stopPropagation();
-    
+
     try {
         const incidencia = incidenciasActuales.find(i => i.id === incidenciaId);
-        
+
         if (!incidencia) {
             throw new Error('Incidencia no encontrada');
         }
-        
+
         if (incidencia.pdfUrl) {
             window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
         } else {
@@ -481,9 +481,10 @@ function crearFilaIncidencia(incidencia, tbody) {
             new Date(incidencia.fechaInicio).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })) :
         'N/A';
 
+    // ID COMPLETO - sin truncar
     tr.innerHTML = `
-        <td data-label="ID / Folio">
-            <span class="incidencia-id" title="${incidencia.id}">${incidencia.id.substring(0, 12)}...</span>
+        <td data-label="ID / Folio" class="id-cell">
+            <span class="incidencia-id" title="${incidencia.id}">${incidencia.id}</span>
         </td>
         <td data-label="Sucursal">
             <div style="display: flex; align-items: center;">
@@ -669,7 +670,7 @@ async function inicializarIncidenciaManager() {
 
         configurarEventListeners();
         agregarBotonIPHMultiple();
-        
+
         await cargarIncidenciasPagina(1);
 
         return true;
