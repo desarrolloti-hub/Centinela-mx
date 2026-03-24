@@ -27,13 +27,12 @@
             </h1>
             <div class="header-description">
                 Crea y administra los planes disponibles para tu sistema.
-                Cada plan define qué módulos estarán disponibles.
+                Cada plan define qué mapas estarán disponibles.
             </div>
         </div>
 
-        <!-- Contenedor principal de dos columnas (responsive) -->
-        <div class="planes-dashboard">
-            <!-- Columna Izquierda: Formulario -->
+        <!-- Contenedor principal - Formulario centrado -->
+        <div class="formulario-wrapper">
             <div class="formulario-col">
                 <div class="card">
                     <div class="card-header">
@@ -57,7 +56,7 @@
                                 <textarea id="planDescripcion" class="form-control" rows="3" placeholder="Describe las características del plan..."></textarea>
                             </div>
 
-                            <!-- Precio -->
+                            <!-- Precio y Color -->
                             <div class="form-row">
                                 <div class="form-group half">
                                     <label for="planPrecio">
@@ -76,54 +75,32 @@
                                 </div>
                             </div>
 
-                            <!-- Selección de Ícono -->
-                            <div class="form-group">
-                                <label for="planIcono">
-                                    <i class="fas fa-icons"></i> Ícono del Plan
-                                </label>
-                                <div class="icon-selector">
-                                    <select id="planIcono" class="form-control icon-select">
-                                        <option value="fa-chart-line">📊 Monitoreo</option>
-                                        <option value="fa-exclamation-triangle">🚨 Incidencias</option>
-                                        <option value="fa-crown">👑 Completo</option>
-                                        <option value="fa-star">⭐ Estrella</option>
-                                        <option value="fa-rocket">🚀 Rocket</option>
-                                        <option value="fa-shield-alt">🛡️ Shield</option>
-                                        <option value="fa-database">💾 Database</option>
-                                        <option value="fa-cloud">☁️ Cloud</option>
-                                    </select>
-                                    <div class="icon-preview" id="iconPreview">
-                                        <i class="fas fa-chart-line"></i>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Selección de Módulos (Checkboxes Monitoreo/Incidencias) -->
+                            <!-- Selección de Mapas (Incidencias y Alertas) - MISMO TAMAÑO -->
                             <div class="form-group">
                                 <label class="label-block">
-                                    <i class="fas fa-puzzle-piece"></i> Selecciona los tipos de módulos
+                                    <i class="fas fa-puzzle-piece"></i> Selecciona los mapas del plan
                                 </label>
                                 <div class="modulos-checkboxes">
-                                    <label class="checkbox-card" id="checkboxMonitoreo">
-                                        <input type="checkbox" id="moduloMonitoreo" value="monitoreo">
-                                        <span class="checkbox-content">
-                                            <i class="fas fa-chart-line"></i>
-                                            <strong>Módulo Monitoreo</strong>
-                                            <small>Todos los módulos excepto Incidencias</small>
-                                        </span>
-                                    </label>
-                                    <label class="checkbox-card" id="checkboxIncidencias">
-                                        <input type="checkbox" id="moduloIncidencias" value="incidencias">
+                                    <label class="checkbox-card">
+                                        <input type="checkbox" id="mapaIncidencias" value="incidencias">
                                         <span class="checkbox-content">
                                             <i class="fas fa-exclamation-triangle"></i>
-                                            <strong>Módulo Incidencias</strong>
-                                            <small>Todos los módulos excepto Mapeo</small>
+                                            <strong>Mapa Incidencias</strong>
+                                            <small>Lista de incidencias, Crear incidencias, Incidencias canalizadas</small>
+                                        </span>
+                                    </label>
+                                    <label class="checkbox-card">
+                                        <input type="checkbox" id="mapaAlertas" value="alertas">
+                                        <span class="checkbox-content">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <strong>Mapa Alertas</strong>
+                                            <small>Mapa de alertas</small>
                                         </span>
                                     </label>
                                 </div>
                                 <div class="info-tip" id="combinacionInfo">
                                     <i class="fas fa-info-circle"></i>
-                                    <span>Selecciona una o ambas opciones para definir el plan</span>
+                                    <span>Selecciona uno o ambos mapas para definir el plan</span>
                                 </div>
                             </div>
 
@@ -140,38 +117,13 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Columna Derecha: Vista Previa de Módulos -->
-            <div class="preview-col">
-                <div class="card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-eye"></i> Vista Previa de Módulos</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="preview-info" id="previewInfo">
-                            <p class="text-muted">Selecciona una combinación para ver qué módulos incluye el plan</p>
-                        </div>
-                        
-                        <div class="modulos-preview" id="modulosPreview">
-                            <div class="modulos-incluidos">
-                                <h6><i class="fas fa-check-circle text-success"></i> Módulos Incluidos</h6>
-                                <div id="modulosIncluidosList" class="modulos-list"></div>
-                            </div>
-                            <div class="modulos-excluidos">
-                                <h6><i class="fas fa-times-circle text-danger"></i> Módulos Excluidos</h6>
-                                <div id="modulosExcluidosList" class="modulos-list"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Listado de Planes Existentes -->
         <div class="planes-listado">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-list"></i> Planes Creados <span id="planesCount">(0/3)</span></h5>
+                    <h5><i class="fas fa-list"></i> Planes Creados <span id="planesCount">(0)</span></h5>
                 </div>
                 <div class="card-body">
                     <div id="planesContainer" class="planes-grid">
@@ -192,6 +144,7 @@
     </div>
 
     <!-- Scripts -->
+    <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script type="module" src="/components/navbarSysAdmin.js"></script>
