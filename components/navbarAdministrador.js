@@ -12,15 +12,16 @@ class NavbarComplete {
         this.userManager = null;
         this.notificacionManager = null;
         this.planManager = null;
-        this.permisosPlan = null; // Permisos cargados desde Firestore
+        this.permisosPlan = null;
         this.notificacionesNoLeidas = 0;
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
         this.intervalNotificaciones = null;
-        this.notificationSound = null; // Referencia al sistema de sonido
-        this.soundEnabled = true; // Estado de sonido
-        this.soundVolume = 0.7; // Volumen por defecto
-        this.lastNotificationCount = 0; // Para detectar nuevas notificaciones
+        this.notificationSound = null;
+        this.soundEnabled = true;
+        this.soundVolume = 0.7;
+        this.lastNotificationCount = 0;
+        this.availableSounds = []; // Lista de sonidos disponibles dinámicamente
         this.init();
     }
 
@@ -51,14 +52,12 @@ class NavbarComplete {
             await this.cargarPermisosDelPlan();
             await this._initNotificacionManager();
             
-            // Inicializar sistema de sonido
             await this._initNotificationSound();
             
             await this._cargarNotificaciones();
             this._iniciarListenerNotificaciones();
 
-            // Configurar interacción de usuario para activar audio
-            this._setupAudioActivation();
+            // No requiere interacción de usuario para audio
 
         } catch (error) {
             console.error('❌ Error en inicialización:', error);
@@ -66,17 +65,27 @@ class NavbarComplete {
     }
 
     /**
-     * 🔥 Inicializar sistema de sonido
+     * 🔥 Inicializar sistema de sonido (versión dinámica - detecta sonidos automáticamente)
      */
     async _initNotificationSound() {
         try {
             const { notificationSound } = await import('/clases/notificationSound.js');
             this.notificationSound = notificationSound;
+            
             await this.notificationSound.initialize();
+            
+            // Obtener sonidos disponibles dinámicamente
+            this.availableSounds = this.notificationSound.getAvailableSounds();
+            
+            if (this.availableSounds.length > 0) {
+                console.log(`🔊 Sistema de sonido inicializado. Sonidos encontrados: ${this.availableSounds.length}`);
+                this.availableSounds.forEach(s => console.log(`   - ${s.name} (${s.id})`));
+            } else {
+                console.warn('⚠️ No se encontraron archivos de sonido en Firebase Storage');
+            }
             
             // Cargar preferencias de sonido del usuario
             if (this.currentAdmin) {
-                // Buscar dispositivo actual para obtener preferencias de sonido
                 const deviceId = this._getDeviceId();
                 const dispositivoActual = this.currentAdmin.dispositivos?.find(
                     d => d.deviceId === deviceId
@@ -85,9 +94,9 @@ class NavbarComplete {
                 if (dispositivoActual) {
                     if (dispositivoActual.soundEnabled !== undefined) {
                         this.soundEnabled = dispositivoActual.soundEnabled;
+                        this.notificationSound.setEnabled(this.soundEnabled);
                     }
                     if (dispositivoActual.selectedSound) {
-                        // Guardar en localStorage para que otras páginas lo usen
                         localStorage.setItem('selectedSound', dispositivoActual.selectedSound);
                     }
                     if (dispositivoActual.soundVolume) {
@@ -96,10 +105,10 @@ class NavbarComplete {
                         localStorage.setItem('soundVolume', this.soundVolume);
                     }
                 } else {
-                    // Cargar desde localStorage
                     const savedSoundEnabled = localStorage.getItem('soundEnabled');
                     if (savedSoundEnabled !== null) {
                         this.soundEnabled = savedSoundEnabled === 'true';
+                        this.notificationSound.setEnabled(this.soundEnabled);
                     }
                     const savedVolume = localStorage.getItem('soundVolume');
                     if (savedVolume !== null) {
@@ -109,7 +118,6 @@ class NavbarComplete {
                 }
             }
             
-            console.log('🔊 Sistema de sonido inicializado');
         } catch (error) {
             console.warn('⚠️ No se pudo inicializar sistema de sonido:', error);
             this.notificationSound = null;
@@ -117,34 +125,9 @@ class NavbarComplete {
     }
 
     /**
-     * 🔥 Configurar activación de audio por interacción del usuario
+     * 🔥 Obtener sonido disponible para un tipo (usa solo los que existen)
      */
-    _setupAudioActivation() {
-        const activateAudio = async () => {
-            if (this.notificationSound && !this.notificationSound.isReady()) {
-                const activated = await this.notificationSound.requestAudioPermission();
-                if (activated && this.soundEnabled) {
-                    console.log('🔊 Audio activado por interacción del usuario');
-                    // Probar sonido de activación
-                    await this._reproducirSonido('ding-moderno', 0.3);
-                }
-                // Remover listeners después de la primera activación
-                document.removeEventListener('click', activateAudio);
-                document.removeEventListener('touchstart', activateAudio);
-            }
-        };
-        
-        document.addEventListener('click', activateAudio);
-        document.addEventListener('touchstart', activateAudio);
-    }
-
-    /**
-     * 🔥 Reproducir sonido de notificación
-     */
-    async _reproducirSonido(tipo = 'normal', volumen = null) {
-        if (!this.soundEnabled || !this.notificationSound) return;
-        
-        // Mapear tipo de notificación a sonido
+    _getSoundForType(tipo) {
         const soundMap = {
             'critico': 'alarma-robo',
             'urgente': 'alerta-urgente',
@@ -158,13 +141,39 @@ class NavbarComplete {
             'sintetizador': 'sintetizador-alerta'
         };
         
-        const soundName = soundMap[tipo] || 'ding-moderno';
-        const volume = volumen !== null ? volumen : this.soundVolume;
+        const desiredSound = soundMap[tipo] || 'ding-moderno';
+        
+        // Verificar si el sonido deseado está disponible
+        const soundExists = this.availableSounds.some(s => s.id === desiredSound);
+        
+        if (soundExists) {
+            return desiredSound;
+        }
+        
+        // Si no existe, usar el primer sonido disponible
+        if (this.availableSounds.length > 0) {
+            console.log(`🔄 Sonido "${desiredSound}" no disponible, usando "${this.availableSounds[0].id}" como fallback`);
+            return this.availableSounds[0].id;
+        }
+        
+        return null;
+    }
+
+    /**
+     * 🔥 Reproducir sonido de notificación
+     */
+    async _reproducirSonido(tipo = 'normal', volumen = null) {
+        if (!this.soundEnabled || !this.notificationSound) return;
+        
+        const soundName = this._getSoundForType(tipo);
+        if (!soundName) return;
+        
+        const vol = volumen !== null ? volumen : this.soundVolume;
         
         try {
-            await this.notificationSound.play(soundName, volume);
+            await this.notificationSound.play(soundName, vol);
+            console.log(`🔊 Sonido reproducido: ${soundName} (para tipo: ${tipo})`);
         } catch (error) {
-            // Silenciar errores para no afectar la funcionalidad principal
             console.debug('Error reproduciendo sonido:', error);
         }
     }
@@ -175,11 +184,9 @@ class NavbarComplete {
     async _detectarYReproducirSonido(nuevasNotificaciones) {
         if (!this.soundEnabled || !this.notificationSound) return;
         
-        // Filtrar solo las no leídas
         const nuevasNoLeidas = nuevasNotificaciones.filter(n => !n.leida);
         
         if (nuevasNoLeidas.length > 0) {
-            // Determinar el nivel de importancia de la notificación más importante
             let maxImportance = 0;
             let soundType = 'normal';
             
@@ -207,7 +214,6 @@ class NavbarComplete {
                 }
             });
             
-            // Reproducir sonido según la importancia
             await this._reproducirSonido(soundType);
             
             // Mostrar notificación del sistema si hay permiso
@@ -399,7 +405,6 @@ class NavbarComplete {
 
             console.log(`📬 Admin cargó ${todasNotificaciones.length} notificaciones`);
 
-            // Detectar nuevas notificaciones para reproducir sonido
             const nuevasNoLeidas = todasNotificaciones.filter(n => !n.leida);
             const nuevas = nuevasNoLeidas.filter(n => {
                 const existe = this.notificaciones.some(old => old.id === n.id);
@@ -1691,7 +1696,7 @@ class NavbarComplete {
                 }
             }
         `;
-
+        
         const styleElement = document.createElement('style');
         styleElement.id = 'navbar-complete-styles';
         styleElement.textContent = styles;
@@ -1895,7 +1900,6 @@ class NavbarComplete {
                 </div>
             </div>
         `;
-
         document.body.prepend(navbar);
     }
 
