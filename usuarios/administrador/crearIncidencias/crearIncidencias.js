@@ -191,7 +191,7 @@ class CrearIncidenciaController {
             if (this.usuarioActual && this.usuarioActual.organizacionCamelCase) {
                 const areasObtenidas = await this.AreaManager.getAreasByOrganizacion(
                     this.usuarioActual.organizacionCamelCase,
-                    true // solo activas
+                    true
                 );
 
                 this.areas = areasObtenidas.filter(area => area.estado === 'activa');
@@ -618,23 +618,44 @@ class CrearIncidenciaController {
         if (!files || files.length === 0) return;
 
         const nuevosArchivos = Array.from(files);
-        const maxSize = 5 * 1024 * 1024;
+        const maxSize = 10 * 1024 * 1024;
+        const maxImages = 20;
+
+        if (this.imagenesSeleccionadas.length + nuevosArchivos.length > maxImages) {
+            this._mostrarError(`Máximo ${maxImages} imágenes permitidas`);
+            return;
+        }
 
         const archivosValidos = nuevosArchivos.filter(file => {
             if (file.size > maxSize) {
-                this._mostrarNotificacion(`La imagen ${file.name} excede 5MB`, 'warning');
+                this._mostrarNotificacion(`La imagen ${file.name} excede ${maxSize / 1024 / 1024}MB`, 'warning');
                 return false;
             }
+
+            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                this._mostrarNotificacion(`Formato no válido: ${file.name}. Usa JPG, PNG, GIF o WEBP`, 'warning');
+                return false;
+            }
+
             return true;
         });
 
         archivosValidos.forEach(file => {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 8);
+            const cleanFileName = file.name
+                .replace(/[^a-zA-Z0-9.]/g, '_')
+                .replace(/\s+/g, '_');
+            const generatedName = `${timestamp}_${random}_${cleanFileName}`;
+
             this.imagenesSeleccionadas.push({
                 file: file,
                 preview: URL.createObjectURL(file),
                 comentario: '',
                 elementos: [],
-                edited: false
+                edited: false,
+                generatedName: generatedName
             });
         });
 
@@ -861,9 +882,6 @@ class CrearIncidenciaController {
         }
     }
 
-    /**
-     * Método mejorado: Canalizar áreas con notificaciones
-     */
     async _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
         let continuar = true;
         let areasCanalizadas = [];
@@ -871,7 +889,7 @@ class CrearIncidenciaController {
         while (continuar) {
             const { value: areaId, isConfirmed } = await Swal.fire({
                 title: areasCanalizadas.length === 0 ? '¿Canalizar a un área?' : 'Canalizar a otra área',
-                text: areasCanalizadas.length === 0 
+                text: areasCanalizadas.length === 0
                     ? 'Selecciona el área a la que deseas canalizar esta incidencia'
                     : `Áreas actuales: ${areasCanalizadas.map(a => a.nombre).join(', ')}\n\nSelecciona otra área (o cancela para terminar)`,
                 input: 'select',
@@ -951,38 +969,34 @@ class CrearIncidenciaController {
         return areasCanalizadas;
     }
 
-    /**
-     * Enviar notificaciones a áreas canalizadas - VERSIÓN MEJORADA
-     */
     async _enviarNotificacionesCanalizacion(areas, incidenciaId, incidenciaTitulo) {
         try {
             const notificacionManager = await this._initNotificacionManager();
-            
+
             if (!notificacionManager) {
                 console.error('No se pudo inicializar notificacionManager');
                 return;
             }
-        
+
             const sucursalInput = document.getElementById('sucursalIncidencia');
             const categoriaInput = document.getElementById('categoriaIncidencia');
             const riesgoSelect = document.getElementById('nivelRiesgo');
-        
+
             const areasFormateadas = areas.map(area => ({
                 id: area.id,
                 nombre: area.nombre
             }));
-        
+
             console.log('📨 Enviando notificaciones a áreas:', areasFormateadas);
             console.log('👑 Administradores recibirán automáticamente la notificación');
-        
+
             Swal.fire({
                 title: 'Enviando notificaciones...',
                 text: 'Notificando a colaboradores de las áreas y administradores',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
-        
-            // El método notificarMultiplesAreas AHORA incluye automáticamente a administradores
+
             const resultado = await notificacionManager.notificarMultiplesAreas({
                 areas: areasFormateadas,
                 incidenciaId: incidenciaId,
@@ -999,20 +1013,20 @@ class CrearIncidenciaController {
                 organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
                 enviarPush: true
             });
-        
+
             Swal.close();
-        
+
             if (resultado.success) {
                 let mensaje = `✅ Notificaciones enviadas:`;
                 mensaje += `<br>👥 ${resultado.totalColaboradores} colaboradores en ${resultado.areas} áreas`;
                 mensaje += `<br>👑 ${resultado.totalAdministradores} administradores`;
-                
+
                 if (resultado.push && resultado.push.enviados > 0) {
                     mensaje += `<br>📱 Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
                 }
-                
+
                 console.log(mensaje);
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Notificaciones enviadas',
@@ -1028,7 +1042,7 @@ class CrearIncidenciaController {
                     text: 'No se pudieron enviar las notificaciones'
                 });
             }
-        
+
         } catch (error) {
             console.error('Error en _enviarNotificacionesCanalizacion:', error);
             Swal.close();
@@ -1038,8 +1052,14 @@ class CrearIncidenciaController {
                 text: error.message
             });
         }
-}
+    }
 
+    /**
+     * GUARDAR INCIDENCIA - FLUJO OPTIMIZADO:
+     * 1. Crear incidencia (que ya sube todas las imágenes)
+     * 2. Generar PDF (ya tiene acceso a las URLs de imágenes)
+     * 3. Actualizar incidencia con URL del PDF
+     */
     async _guardarIncidencia(datos) {
         const btnCrear = document.getElementById('btnCrearIncidencia');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
@@ -1052,7 +1072,7 @@ class CrearIncidenciaController {
 
             Swal.fire({
                 title: 'Creando incidencia...',
-                text: 'Por favor espere, esto puede tomar unos segundos.',
+                text: 'Subiendo imágenes y guardando información...',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
@@ -1075,18 +1095,39 @@ class CrearIncidenciaController {
             };
 
             const archivos = datos.imagenes.map(img => img.file);
+            const imagenesConDatos = datos.imagenes.map(img => ({
+                comentario: img.comentario,
+                elementos: img.elementos,
+                generatedName: img.generatedName
+            }));
 
+            // PASO 1: Crear incidencia (sube imágenes y guarda en Firestore)
             const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
                 incidenciaData,
                 this.usuarioActual,
                 archivos,
-                datos.imagenes
+                imagenesConDatos
             );
+
+            console.log('✅ Incidencia creada con', nuevaIncidencia.imagenes.length, 'imágenes');
+
+            // PASO 2: Generar PDF (ahora ya tiene las URLs de las imágenes)
+            Swal.update({
+                title: 'Generando PDF...',
+                text: 'Creando documento de la incidencia...'
+            });
 
             const pdfGenerado = await this._generarYSubirPDF(nuevaIncidencia);
 
+            if (pdfGenerado) {
+                console.log('✅ PDF generado y guardado correctamente');
+            } else {
+                console.warn('⚠️ PDF no se pudo generar, pero la incidencia ya está guardada');
+            }
+
             Swal.close();
 
+            // PASO 3: Preguntar si quiere canalizar
             const quiereCanalizar = await Swal.fire({
                 icon: 'question',
                 title: '¿Canalizar esta incidencia?',
@@ -1108,12 +1149,20 @@ class CrearIncidenciaController {
                 ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
                 : 'No se canalizó a ninguna área.';
 
+            const mensajePDF = pdfGenerado
+                ? '✅ El PDF se ha generado correctamente.'
+                : '⚠️ El PDF no se pudo generar, pero la incidencia se guardó.';
+
             await Swal.fire({
                 icon: 'success',
                 title: '¡Incidencia creada!',
-                text: pdfGenerado
-                    ? `La incidencia y su PDF se han guardado correctamente. ${mensajeCanalizacion}`
-                    : `La incidencia se creó pero hubo un problema con el PDF. ${mensajeCanalizacion}`,
+                html: `
+                    <div style="text-align: left;">
+                        <p>✅ Incidencia guardada con ${nuevaIncidencia.imagenes.length} imagen(es).</p>
+                        <p>${mensajePDF}</p>
+                        <p>${mensajeCanalizacion}</p>
+                    </div>
+                `,
                 confirmButtonText: 'Ver incidencias',
                 confirmButtonColor: '#28a745'
             });
@@ -1135,6 +1184,7 @@ class CrearIncidenciaController {
     async _generarYSubirPDF(incidencia) {
         try {
             console.log('📄 Iniciando generación automática de PDF para:', incidencia.id);
+            console.log('📸 Imágenes disponibles para PDF:', incidencia.imagenes.length);
 
             const { generadorIPH } = await import('/components/iph-generator.js');
 
@@ -1148,8 +1198,10 @@ class CrearIncidenciaController {
                 authToken: localStorage.getItem('authToken')
             });
 
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // Esperar un momento para asegurar que Firestore esté actualizado
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
+            // Recargar la incidencia para asegurar que tenemos las URLs más recientes
             const incidenciaActualizada = await this.incidenciaManager.getIncidenciaById(
                 incidencia.id,
                 this.usuarioActual.organizacionCamelCase
@@ -1158,6 +1210,8 @@ class CrearIncidenciaController {
             if (!incidenciaActualizada) {
                 throw new Error('No se pudo recargar la incidencia');
             }
+
+            console.log('📸 Imágenes en incidencia recargada:', incidenciaActualizada.imagenes.length);
 
             const pdfBlob = await generadorIPH.generarIPH(incidenciaActualizada, {
                 mostrarAlerta: false,
@@ -1173,20 +1227,18 @@ class CrearIncidenciaController {
             const pdfFile = new File([pdfBlob], `incidencia_${incidencia.id}.pdf`, { type: 'application/pdf' });
 
             const rutaPDF = incidencia.getRutaPDF();
-            console.log('📤 Subiendo a:', rutaPDF);
+            console.log('📤 Subiendo PDF a:', rutaPDF);
 
             const resultado = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
 
-            const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-            const { db } = await import('/config/firebase-config.js');
-
-            const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
-            const incidenciaRef = doc(db, collectionName, incidencia.id);
-
-            await updateDoc(incidenciaRef, {
-                pdfUrl: resultado.url,
-                fechaActualizacion: serverTimestamp()
-            });
+            // Actualizar la incidencia con la URL del PDF
+            await this.incidenciaManager.actualizarPDFIncidencia(
+                incidencia.id,
+                resultado.url,
+                this.usuarioActual.organizacionCamelCase,
+                this.usuarioActual.id,
+                this.usuarioActual.nombreCompleto
+            );
 
             console.log('✅ PDF subido exitosamente:', resultado.url);
             return true;
