@@ -63,12 +63,118 @@ class CrearIncidenciaController {
             this._inicializarDateTimePicker();
             this._configurarEventos();
             this._inicializarValidaciones();
+            this._inicializarValidacionSecuencial();
 
             this.imageEditorModal = new window.ImageEditorModal();
 
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
+        }
+    }
+
+    _inicializarValidacionSecuencial() {
+        const camposDependientes = [
+            { id: 'categoriaIncidencia', nombre: 'Categoría' },
+            { id: 'nivelRiesgo', nombre: 'Nivel de Riesgo' },
+            { id: 'subcategoriaIncidencia', nombre: 'Subcategoría' },
+            { id: 'detallesIncidencia', nombre: 'Descripción' },
+            { id: 'fechaHoraIncidencia', nombre: 'Fecha y Hora' }
+        ];
+
+        camposDependientes.forEach(campo => {
+            const element = document.getElementById(campo.id);
+            if (element) {
+                element.disabled = true;
+                element.classList.add('field-disabled');
+
+                const parent = element.closest('.full-width');
+                if (parent) {
+                    let hint = parent.querySelector('.field-required-hint');
+                    if (!hint) {
+                        hint = document.createElement('div');
+                        hint.className = 'field-required-hint';
+                        hint.innerHTML = '<i class="fas fa-exclamation-circle"></i> Primero debes seleccionar una sucursal';
+                        hint.style.color = 'var(--color-warning)';
+                        hint.style.fontSize = '11px';
+                        hint.style.marginTop = '5px';
+                        hint.style.display = 'flex';
+                        hint.style.alignItems = 'center';
+                        hint.style.gap = '5px';
+                        parent.appendChild(hint);
+                    }
+                }
+            }
+        });
+
+        const sucursalInput = document.getElementById('sucursalIncidencia');
+        if (sucursalInput) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-selected-id') {
+                        const tieneSucursal = sucursalInput.dataset.selectedId && sucursalInput.dataset.selectedId !== '';
+                        this._habilitarCamposPorSucursal(tieneSucursal);
+                    }
+                });
+            });
+
+            observer.observe(sucursalInput, { attributes: true });
+
+            sucursalInput.addEventListener('blur', () => {
+                const tieneSucursal = sucursalInput.dataset.selectedId && sucursalInput.dataset.selectedId !== '';
+                this._habilitarCamposPorSucursal(tieneSucursal);
+            });
+        }
+    }
+
+    _habilitarCamposPorSucursal(habilitar) {
+        const camposDependientes = [
+            'categoriaIncidencia',
+            'nivelRiesgo',
+            'subcategoriaIncidencia',
+            'detallesIncidencia',
+            'fechaHoraIncidencia'
+        ];
+
+        camposDependientes.forEach(campoId => {
+            const campo = document.getElementById(campoId);
+            if (campo) {
+                if (habilitar) {
+                    campo.disabled = false;
+                    campo.classList.remove('field-disabled');
+
+                    const parent = campo.closest('.full-width');
+                    const hint = parent?.querySelector('.field-required-hint');
+                    if (hint) {
+                        hint.style.display = 'none';
+                    }
+                } else {
+                    campo.disabled = true;
+                    campo.classList.add('field-disabled');
+                    campo.value = campo.tagName === 'SELECT' ? '' : '';
+
+                    const parent = campo.closest('.full-width');
+                    const hint = parent?.querySelector('.field-required-hint');
+                    if (hint) {
+                        hint.style.display = 'flex';
+                    }
+                }
+            }
+        });
+
+        if (!habilitar) {
+            const categoriaInput = document.getElementById('categoriaIncidencia');
+            if (categoriaInput) {
+                delete categoriaInput.dataset.selectedId;
+                delete categoriaInput.dataset.selectedName;
+            }
+
+            const subcategoriaSelect = document.getElementById('subcategoriaIncidencia');
+            if (subcategoriaSelect) {
+                subcategoriaSelect.innerHTML = '<option value="">-- Selecciona una subcategoría (opcional) --</option>';
+            }
+
+            this.categoriaSeleccionada = null;
         }
     }
 
@@ -94,6 +200,16 @@ class CrearIncidenciaController {
         if (fechaInput && typeof flatpickr !== 'undefined') {
             try {
                 const ahora = new Date();
+
+                // Formatear la fecha y hora actual para el placeholder visual
+                const fechaFormateada = ahora.toLocaleString('es-MX', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
 
                 this.flatpickrInstance = flatpickr(fechaInput, {
                     enableTime: true,
@@ -124,14 +240,18 @@ class CrearIncidenciaController {
             } catch (error) {
                 console.error('Error inicializando Flatpickr:', error);
                 fechaInput.type = 'datetime-local';
-                fechaInput.max = this._formatearFechaParaInput(new Date());
+                const ahora = new Date();
+                fechaInput.value = this._formatearFechaParaInput(ahora);
+                fechaInput.max = this._formatearFechaParaInput(ahora);
             }
         } else {
             console.warn('Flatpickr no está disponible, usando input nativo');
             const fechaInput = document.getElementById('fechaHoraIncidencia');
             if (fechaInput) {
                 fechaInput.type = 'datetime-local';
-                fechaInput.max = this._formatearFechaParaInput(new Date());
+                const ahora = new Date();
+                fechaInput.value = this._formatearFechaParaInput(ahora);
+                fechaInput.max = this._formatearFechaParaInput(ahora);
             }
         }
     }
@@ -512,6 +632,11 @@ class CrearIncidenciaController {
         input.dataset.selectedName = nombre;
 
         document.getElementById('sugerenciasSucursal').innerHTML = '';
+
+        // Habilitar campos dependientes
+        this._habilitarCamposPorSucursal(true);
+
+        // SweetAlert eliminado - ya no muestra mensaje de confirmación
     }
 
     _seleccionarCategoria(id, nombre) {
@@ -772,7 +897,7 @@ class CrearIncidenciaController {
         const categoriaId = categoriaInput.dataset.selectedId;
 
         if (!sucursalId) {
-            this._mostrarError('Debe seleccionar una sucursal válida de la lista');
+            this._mostrarError('⚠️ Es necesario seleccionar una sucursal primero');
             sucursalInput.focus();
             return;
         }
@@ -1054,12 +1179,6 @@ class CrearIncidenciaController {
         }
     }
 
-    /**
-     * GUARDAR INCIDENCIA - FLUJO OPTIMIZADO:
-     * 1. Crear incidencia (que ya sube todas las imágenes)
-     * 2. Generar PDF (ya tiene acceso a las URLs de imágenes)
-     * 3. Actualizar incidencia con URL del PDF
-     */
     async _guardarIncidencia(datos) {
         const btnCrear = document.getElementById('btnCrearIncidencia');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
@@ -1101,7 +1220,6 @@ class CrearIncidenciaController {
                 generatedName: img.generatedName
             }));
 
-            // PASO 1: Crear incidencia (sube imágenes y guarda en Firestore)
             const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
                 incidenciaData,
                 this.usuarioActual,
@@ -1111,7 +1229,6 @@ class CrearIncidenciaController {
 
             console.log('✅ Incidencia creada con', nuevaIncidencia.imagenes.length, 'imágenes');
 
-            // PASO 2: Generar PDF (ahora ya tiene las URLs de las imágenes)
             Swal.update({
                 title: 'Generando PDF...',
                 text: 'Creando documento de la incidencia...'
@@ -1127,7 +1244,6 @@ class CrearIncidenciaController {
 
             Swal.close();
 
-            // PASO 3: Preguntar si quiere canalizar
             const quiereCanalizar = await Swal.fire({
                 icon: 'question',
                 title: '¿Canalizar esta incidencia?',
@@ -1198,10 +1314,8 @@ class CrearIncidenciaController {
                 authToken: localStorage.getItem('authToken')
             });
 
-            // Esperar un momento para asegurar que Firestore esté actualizado
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            // Recargar la incidencia para asegurar que tenemos las URLs más recientes
             const incidenciaActualizada = await this.incidenciaManager.getIncidenciaById(
                 incidencia.id,
                 this.usuarioActual.organizacionCamelCase
@@ -1231,7 +1345,6 @@ class CrearIncidenciaController {
 
             const resultado = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
 
-            // Actualizar la incidencia con la URL del PDF
             await this.incidenciaManager.actualizarPDFIncidencia(
                 incidencia.id,
                 resultado.url,

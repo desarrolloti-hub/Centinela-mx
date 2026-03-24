@@ -1587,3 +1587,64 @@ body {
 .sugerencia-vacia p {
     font-size: 14px;
 }
+
+/* =============================================
+   ESTILOS PARA CAMPOS DESHABILITADOS POR VALIDACIÓN SECUENCIAL
+   ============================================= */
+.field-disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    filter: grayscale(0.1);
+}
+
+.field-disabled:focus,
+.field-disabled:hover {
+    border-color: var(--color-border-light) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* Hint de campo requerido */
+.field-required-hint {
+    animation: fadeInUp 0.3s ease;
+    padding: 6px 10px;
+    background: rgba(255, 193, 7, 0.1);
+    border-radius: var(--border-radius-small);
+    border-left: 3px solid var(--color-warning);
+    margin-top: 8px;
+}
+
+.field-required-hint i {
+    color: var(--color-warning);
+}
+
+/* Animación para el hint */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Estilo especial para el campo de sucursal cuando está seleccionado */
+#sucursalIncidencia[data-selected-id] {
+    border-color: var(--color-success);
+    background: rgba(40, 167, 69, 0.05);
+}
+
+/* Efecto de transición cuando se habilitan campos */
+.form-control:not(.field-disabled),
+select:not(.field-disabled) {
+    transition: all 0.3s ease;
+}
+
+.form-control:not(.field-disabled):focus,
+select:not(.field-disabled):focus {
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 2px rgba(0, 207, 255, 0.2);
+}
