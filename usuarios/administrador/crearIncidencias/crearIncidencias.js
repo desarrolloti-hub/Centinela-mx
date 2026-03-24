@@ -1202,16 +1202,41 @@ class CrearIncidenciaController {
 
             const fechaObj = new Date(datos.fechaHora);
 
-            const incidenciaData = {
-                sucursalId: datos.sucursalId,
-                categoriaId: datos.categoriaId,
-                subcategoriaId: datos.subcategoriaId || '',
-                nivelRiesgo: datos.nivelRiesgo,
-                estado: datos.estado,
-                fechaInicio: fechaObj,
-                detalles: datos.detalles,
-                reportadoPorId: this.usuarioActual.id
-            };
+            // En la función _guardarIncidencia, busca donde se crea incidenciaData y modifícalo así:
+
+const incidenciaData = {
+    sucursalId: datos.sucursalId,
+    sucursalNombre: document.getElementById('sucursalIncidencia')?.value || '',
+    categoriaId: datos.categoriaId,
+    categoriaNombre: document.getElementById('categoriaIncidencia')?.value || '',
+    subcategoriaId: datos.subcategoriaId || '',
+    subcategoriaNombre: datos.subcategoriaId ? 
+        document.getElementById('subcategoriaIncidencia')?.options[
+            document.getElementById('subcategoriaIncidencia')?.selectedIndex
+        ]?.text || '' : '',
+    nivelRiesgo: datos.nivelRiesgo,
+    estado: datos.estado,
+    fechaInicio: fechaObj,
+    detalles: datos.detalles,
+    reportadoPorId: this.usuarioActual.id,
+    reportadoPorNombre: this.usuarioActual.nombreCompleto,  // <-- AGREGAR ESTO
+    reportadoPorCargo: this.usuarioActual.cargo || '',      // <-- AGREGAR ESTO
+    reportadoPorCorreo: this.usuarioActual.correo || this.usuarioActual.email || '', // <-- AGREGAR ESTO
+    organizacion: this.usuarioActual.organizacion,          // <-- AGREGAR ESTO
+    organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
+    fechaCreacion: new Date(),
+    imagenes: datos.imagenes.map((img, idx) => ({
+        id: `${Date.now()}_${idx}`,
+        nombre: img.generatedName || `imagen_${idx}.jpg`,
+        comentario: img.comentario || '',
+        elementos: img.elementos || [],
+        edited: img.edited || false,
+        orden: idx,
+        archivo: img.file,
+        preview: img.preview
+    })),
+    tieneImagenes: datos.imagenes.length > 0
+};
 
             const archivos = datos.imagenes.map(img => img.file);
             const imagenesConDatos = datos.imagenes.map(img => ({
@@ -1304,15 +1329,25 @@ class CrearIncidenciaController {
 
             const { generadorIPH } = await import('/components/iph-generator.js');
 
-            generadorIPH.configurar({
-                organizacionActual: {
-                    nombre: this.usuarioActual.organizacion,
-                    camelCase: this.usuarioActual.organizacionCamelCase
-                },
-                sucursalesCache: this.sucursales,
-                categoriasCache: this.categorias,
-                authToken: localStorage.getItem('authToken')
-            });
+            // En _generarYSubirPDF, modifica la configuración:
+
+generadorIPH.configurar({
+    organizacionActual: {
+        nombre: this.usuarioActual.organizacion,
+        camelCase: this.usuarioActual.organizacionCamelCase
+    },
+    sucursalesCache: this.sucursales,
+    categoriasCache: this.categorias,
+    usuariosCache: [{
+        id: this.usuarioActual.id,
+        uid: this.usuarioActual.uid,
+        nombreCompleto: this.usuarioActual.nombreCompleto,
+        nombre: this.usuarioActual.nombreCompleto,
+        cargo: this.usuarioActual.cargo || '',
+        correo: this.usuarioActual.correo || this.usuarioActual.email
+    }],
+    authToken: localStorage.getItem('authToken')
+});
 
             await new Promise(resolve => setTimeout(resolve, 1000));
 

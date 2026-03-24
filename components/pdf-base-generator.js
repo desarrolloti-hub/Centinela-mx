@@ -1,6 +1,6 @@
 /**
  * PDF BASE GENERATOR - Sistema Centinela
- * VERSIÓN: 1.0 - Clase base para todos los generadores de PDF
+ * VERSIÓN: 2.0 - Corregida para manejo directo de imágenes
  */
 
 // =============================================
@@ -33,6 +33,9 @@ export class PDFBaseGenerator {
         this.totalPaginas = 1;
         this.paginaActualReal = 1;
 
+        // Cache de imágenes convertidas a base64
+        this.imagenesBase64Cache = new Map();
+
         this.fonts = {
             tituloPrincipal: 16,
             titulo: 14,
@@ -49,7 +52,6 @@ export class PDFBaseGenerator {
         };
 
         this.alturaEncabezado = 42;
-        this.imagenesCache = new Map();
     }
 
     // =============================================
@@ -77,6 +79,122 @@ export class PDFBaseGenerator {
             script.onerror = reject;
             document.head.appendChild(script);
         });
+    }
+
+    // =============================================
+    // CONVERSIÓN DE IMÁGENES A BASE64 (DIRECTA)
+    // =============================================
+    
+    /**
+     * Convierte un objeto imagen (File o objeto con datos) a base64
+     */
+    async convertirImagenABase64(imagen) {
+        try {
+            // Si ya es un string base64, retornarlo
+            if (typeof imagen === 'string') {
+                if (imagen.startsWith('data:image') || imagen.startsWith('blob:')) {
+                    return imagen;
+                }
+                // Podría ser una URL de Firebase, pero usamos la imagen directa
+                return imagen;
+            }
+
+            // Si es un objeto File o Blob
+            if (imagen instanceof File || imagen instanceof Blob) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(imagen);
+                });
+            }
+
+            // Si es un objeto con propiedad file
+            if (imagen.file instanceof File || imagen.file instanceof Blob) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(imagen.file);
+                });
+            }
+
+            // Si es un objeto con propiedad preview (URL de objeto)
+            if (imagen.preview && typeof imagen.preview === 'string') {
+                return await this.fetchearImagenDesdeURL(imagen.preview);
+            }
+
+            // Si tiene una URL directa
+            if (imagen.url && typeof imagen.url === 'string') {
+                return await this.fetchearImagenDesdeURL(imagen.url);
+            }
+
+            console.warn('No se pudo convertir imagen:', imagen);
+            return null;
+        } catch (error) {
+            console.error('Error convirtiendo imagen a base64:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Obtiene una imagen desde una URL (para previews de blob)
+     */
+    async fetchearImagenDesdeURL(url) {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error('Error fetcheando imagen desde URL:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Extrae la imagen del objeto de incidencia
+     */
+    extraerImagenDeObjeto(imagenObj) {
+        // Si es directamente un File
+        if (imagenObj instanceof File || imagenObj instanceof Blob) {
+            return imagenObj;
+        }
+
+        // Si tiene propiedad file
+        if (imagenObj.file instanceof File || imagenObj.file instanceof Blob) {
+            return imagenObj.file;
+        }
+
+        // Si tiene preview
+        if (imagenObj.preview) {
+            return imagenObj.preview;
+        }
+
+        // Si tiene url
+        if (imagenObj.url) {
+            return imagenObj.url;
+        }
+
+        return null;
+    }
+
+    /**
+     * Obtiene el comentario de una imagen
+     */
+    obtenerComentarioImagen(imagenObj) {
+        if (!imagenObj) return '';
+        if (typeof imagenObj === 'object' && imagenObj.comentario) {
+            return imagenObj.comentario;
+        }
+        if (typeof imagenObj === 'object' && imagenObj.descripcion) {
+            return imagenObj.descripcion;
+        }
+        return '';
     }
 
     // =============================================
@@ -176,15 +294,6 @@ export class PDFBaseGenerator {
         });
     }
 
-    blobToBase64(blob) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
-
     // =============================================
     // FORMATEO DE FECHAS
     // =============================================
@@ -225,19 +334,33 @@ export class PDFBaseGenerator {
     }
 
     formatearFechaVisualizacion(fecha) {
-        return fecha.toLocaleDateString('es-MX', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
+        if (!fecha) return 'Fecha no disponible';
+        try {
+            const fechaObj = fecha instanceof Date ? fecha : new Date(fecha);
+            if (isNaN(fechaObj.getTime())) return 'Fecha no disponible';
+            return fechaObj.toLocaleDateString('es-MX', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } catch {
+            return 'Fecha no disponible';
+        }
     }
 
     formatearHoraVisualizacion(fecha) {
-        return fecha.toLocaleTimeString('es-MX', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+        if (!fecha) return 'Hora no disponible';
+        try {
+            const fechaObj = fecha instanceof Date ? fecha : new Date(fecha);
+            if (isNaN(fechaObj.getTime())) return 'Hora no disponible';
+            return fechaObj.toLocaleTimeString('es-MX', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch {
+            return 'Hora no disponible';
+        }
     }
 
     // =============================================
@@ -245,8 +368,10 @@ export class PDFBaseGenerator {
     // =============================================
     dividirTextoEnLineas(pdf, texto, anchoMaximo) {
         if (!texto) return [''];
-        const parrafos = texto.toString().split('\n');
+        const textoStr = String(texto);
+        const parrafos = textoStr.split('\n');
         const todasLasLineas = [];
+        
         for (const parrafo of parrafos) {
             if (parrafo.trim() === '') {
                 todasLasLineas.push('');
@@ -316,7 +441,6 @@ export class PDFBaseGenerator {
     }
 
     _dibujarLogos(pdf, xCentinela, xOrganizacion, yLogo, radio) {
-        // Logo Centinela
         if (this.logoCentinelaCircular) {
             try {
                 pdf.setFillColor(255, 255, 255);
@@ -335,7 +459,6 @@ export class PDFBaseGenerator {
             this._dibujarPlaceholderCircular(pdf, xCentinela + radio, yLogo, radio, 'C');
         }
 
-        // Logo Organización
         if (this.logoOrganizacionCircular) {
             try {
                 pdf.setFillColor(255, 255, 255);
@@ -354,7 +477,6 @@ export class PDFBaseGenerator {
             this._dibujarPlaceholderCircular(pdf, xOrganizacion + radio, yLogo, radio, 'ORG');
         }
 
-        // Línea separadora
         if (this.logoCentinelaCircular || this.logoOrganizacionCircular) {
             const xLineaVertical = xCentinela + this.dimensionesLogo.diametro + (this.dimensionesLogo.separacion / 2);
             pdf.setDrawColor(coloresBase.borde);
