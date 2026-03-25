@@ -1,9 +1,15 @@
 // editUser.js - Editor de colaboradores (VERSIÓN FINAL - TODO CON SWEETALERT2)
+// CON REGISTRO DE BITÁCORA
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
 
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
+
 document.addEventListener('DOMContentLoaded', async function() {    
     try {
+        // ✅ NUEVO: Inicializar historialManager
+        await inicializarHistorial();
+        
         const userManager = new UserManager();
         
         iniciarEditor(userManager);
@@ -13,6 +19,116 @@ document.addEventListener('DOMContentLoaded', async function() {
         mostrarErrorConfiguracion(error);
     }
 });
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+        console.log('📋 HistorialManager inicializado para editar usuarios');
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar edición de colaborador
+async function registrarEdicionColaborador(colaboradorOriginal, datosActualizados, cambios, usuarioActual) {
+    if (!historialManager) return;
+    
+    try {
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'editar',
+            modulo: 'usuarios',
+            descripcion: `Editó colaborador: ${colaboradorOriginal.nombreCompleto || colaboradorOriginal.nombre}`,
+            detalles: {
+                colaboradorId: colaboradorOriginal.id,
+                colaboradorNombre: colaboradorOriginal.nombreCompleto || colaboradorOriginal.nombre,
+                colaboradorEmail: colaboradorOriginal.correoElectronico,
+                cambios: cambios,
+                fechaEdicion: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Edición de colaborador "${colaboradorOriginal.nombreCompleto}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando edición de colaborador:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar cambio de estado de colaborador
+async function registrarCambioEstadoColaborador(colaborador, nuevoEstado, estadoAnterior, usuarioActual) {
+    if (!historialManager) return;
+    
+    try {
+        const nuevoEstadoTexto = nuevoEstado ? 'activo' : 'inactivo';
+        const estadoAnteriorTexto = estadoAnterior ? 'activo' : 'inactivo';
+        
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'editar',
+            modulo: 'usuarios',
+            descripcion: `${nuevoEstado ? 'Habilitó' : 'Inhabilitó'} colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            detalles: {
+                colaboradorId: colaborador.id,
+                colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
+                colaboradorEmail: colaborador.correoElectronico,
+                estadoAnterior: estadoAnteriorTexto,
+                estadoNuevo: nuevoEstadoTexto,
+                fechaCambio: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Cambio de estado de colaborador "${colaborador.nombreCompleto}" registrado en bitácora`);
+    } catch (error) {
+        console.error('Error registrando cambio de estado de colaborador:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar inhabilitación de colaborador
+async function registrarInhabilitacionColaborador(colaborador, usuarioActual) {
+    if (!historialManager) return;
+    
+    try {
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'eliminar',
+            modulo: 'usuarios',
+            descripcion: `Inhabilitó colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            detalles: {
+                colaboradorId: colaborador.id,
+                colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
+                colaboradorEmail: colaborador.correoElectronico,
+                fechaInhabilitacion: new Date().toISOString(),
+                razon: 'Inhabilitado desde el panel de edición'
+            }
+        });
+        console.log(`✅ Inhabilitación de colaborador "${colaborador.nombreCompleto}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando inhabilitación de colaborador:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar cambio de foto de perfil
+async function registrarCambioFotoPerfil(colaborador, usuarioActual) {
+    if (!historialManager) return;
+    
+    try {
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'editar',
+            modulo: 'usuarios',
+            descripcion: `Cambió foto de perfil de colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            detalles: {
+                colaboradorId: colaborador.id,
+                colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
+                colaboradorEmail: colaborador.correoElectronico,
+                fechaCambio: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Cambio de foto de perfil de colaborador "${colaborador.nombreCompleto}" registrado en bitácora`);
+    } catch (error) {
+        console.error('Error registrando cambio de foto de perfil:', error);
+    }
+}
 
 // ==================== VARIABLES GLOBALES ====================
 let selectedFile = null;
@@ -48,7 +164,7 @@ async function iniciarEditor(userManager) {
         
         await cargarDatosColaborador(userManager, collaboratorId, elements);
         configurarHandlersBasicos(elements);
-        configurarFotoPerfil(elements);
+        configurarFotoPerfil(elements, userManager);
         configurarGuardado(elements, userManager);
         configurarCambioPassword(elements, userManager);
         configurarEliminacion(elements, userManager);
@@ -218,6 +334,8 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
         }
         
         window.currentCollaborator = collaborator;
+        // ✅ NUEVO: Guardar copia original para comparar cambios
+        window.colaboradorOriginal = JSON.parse(JSON.stringify(collaborator));
         
         actualizarInterfaz(elements, collaborator);
         deshabilitarLogoOrganizacion(elements);
@@ -558,7 +676,7 @@ function configurarSelectorStatus(elements) {
 
 // ========== HANDLER DE FOTO CON SWEETALERT2 ==========
 
-function configurarFotoPerfil(elements) {
+function configurarFotoPerfil(elements, userManager) {
     if (!elements.profileCircle) return;
     
     elements.profileCircle.addEventListener('click', () => {
@@ -575,13 +693,13 @@ function configurarFotoPerfil(elements) {
     if (elements.profileInput) {
         elements.profileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (file) mostrarModalFotoConSwal(file, elements);
+            if (file) mostrarModalFotoConSwal(file, elements, userManager);
             this.value = '';
         });
     }
 }
 
-function mostrarModalFotoConSwal(file, elements) {
+function mostrarModalFotoConSwal(file, elements, userManager) {
     const maxSize = 5;
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
     
@@ -615,7 +733,7 @@ function mostrarModalFotoConSwal(file, elements) {
             reverseButtons: false
         }).then(async (result) => {
             if (result.isConfirmed) {
-                await guardarFotoPerfil(imageBase64, elements);
+                await guardarFotoPerfil(imageBase64, elements, userManager);
             }
         });
     };
@@ -623,7 +741,7 @@ function mostrarModalFotoConSwal(file, elements) {
     reader.readAsDataURL(file);
 }
 
-async function guardarFotoPerfil(imageBase64, elements) {
+async function guardarFotoPerfil(imageBase64, elements, userManager) {
     if (!window.currentCollaborator) return;
     
     Swal.fire({
@@ -653,6 +771,9 @@ async function guardarFotoPerfil(imageBase64, elements) {
             }
             
             collaborator.fotoUsuario = imageBase64;
+            
+            // ✅ NUEVO: Registrar cambio de foto de perfil
+            await registrarCambioFotoPerfil(collaborator, usuarioActual);
             
             Swal.close();
             Swal.fire({
@@ -686,6 +807,7 @@ function configurarGuardado(elements, userManager) {
         }
         
         const collaborator = window.currentCollaborator;
+        const colaboradorOriginal = window.colaboradorOriginal;
         const usuarioActual = window.usuarioActual;
         
         let areaNombre = 'No asignada';
@@ -711,6 +833,92 @@ function configurarGuardado(elements, userManager) {
             };
         }
         
+        // ✅ NUEVO: Detectar cambios
+        const cambios = [];
+        const nuevosDatos = {
+            nombreCompleto: elements.fullName.value.trim(),
+            status: elements.statusInput.value === 'active',
+            areaAsignadaId: elements.areaSelect?.value || null,
+            cargo: cargoObjeto
+        };
+        
+        // Detectar cambios en nombre
+        if (colaboradorOriginal.nombreCompleto !== nuevosDatos.nombreCompleto) {
+            cambios.push({
+                campo: 'nombre',
+                anterior: colaboradorOriginal.nombreCompleto,
+                nuevo: nuevosDatos.nombreCompleto
+            });
+        }
+        
+        // Detectar cambios en estado
+        const estadoOriginal = colaboradorOriginal.status === true || colaboradorOriginal.status === 'active';
+        if (estadoOriginal !== nuevosDatos.status) {
+            cambios.push({
+                campo: 'estado',
+                anterior: estadoOriginal ? 'activo' : 'inactivo',
+                nuevo: nuevosDatos.status ? 'activo' : 'inactivo'
+            });
+        }
+        
+        // Detectar cambios en área
+        if (colaboradorOriginal.areaAsignadaId !== nuevosDatos.areaAsignadaId) {
+            cambios.push({
+                campo: 'área',
+                anterior: colaboradorOriginal.areaAsignadaNombre || 'No asignada',
+                nuevo: areaNombre
+            });
+        }
+        
+        // Detectar cambios en cargo
+        const cargoOriginalNombre = colaboradorOriginal.cargo?.nombre || 'No asignado';
+        if (cargoOriginalNombre !== cargoNombre) {
+            cambios.push({
+                campo: 'cargo',
+                anterior: cargoOriginalNombre,
+                nuevo: cargoNombre
+            });
+        }
+        
+        // Detectar cambios en permisos
+        const permisosOriginales = colaboradorOriginal.permisosPersonalizados || {};
+        const nuevosPermisos = {};
+        if (elements.permissionCheckboxes) {
+            elements.permissionCheckboxes.forEach(checkbox => {
+                nuevosPermisos[checkbox.value] = checkbox.checked;
+            });
+        }
+        
+        const permisosCambiados = [];
+        Object.keys(nuevosPermisos).forEach(permiso => {
+            if (permisosOriginales[permiso] !== nuevosPermisos[permiso]) {
+                permisosCambiados.push({
+                    permiso: permiso,
+                    anterior: permisosOriginales[permiso] ? 'activado' : 'desactivado',
+                    nuevo: nuevosPermisos[permiso] ? 'activado' : 'desactivado'
+                });
+            }
+        });
+        
+        if (permisosCambiados.length > 0) {
+            cambios.push({
+                campo: 'permisos',
+                detalles: permisosCambiados
+            });
+        }
+        
+        // Si no hay cambios, mostrar mensaje
+        if (cambios.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Sin cambios',
+                text: 'No se detectaron cambios en los datos del colaborador',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            return;
+        }
+        
         const result = await Swal.fire({
             title: '¿Guardar cambios?',
             html: `
@@ -719,6 +927,12 @@ function configurarGuardado(elements, userManager) {
                     <p><strong>Área asignada:</strong> ${areaNombre}</p>
                     <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
                     <p><strong>Status:</strong> ${elements.statusInput.value === 'active' ? 'Activo' : elements.statusInput.value === 'inactive' ? 'Inactivo' : 'Pendiente'}</p>
+                    ${cambios.length > 0 ? `
+                        <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; text-align: left;">
+                            <strong>Cambios detectados:</strong>
+                            ${cambios.map(c => `<p style="margin: 5px 0; font-size: 0.9rem;">• ${c.campo}: ${c.anterior} → ${c.nuevo}</p>`).join('')}
+                        </div>
+                    ` : ''}
                 </div>
             `,
             icon: 'question',
@@ -758,6 +972,9 @@ function configurarGuardado(elements, userManager) {
                 collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase
             );
             
+            // ✅ NUEVO: Registrar edición en bitácora
+            await registrarEdicionColaborador(colaboradorOriginal, nuevosDatos, cambios, usuarioActual);
+            
             Object.assign(collaborator, updateData);
             if (cargoObjeto) {
                 collaborator.cargoAsignadoId = cargoObjeto.id;
@@ -776,6 +993,9 @@ function configurarGuardado(elements, userManager) {
                     minute: '2-digit' 
                 });
             }
+            
+            // Actualizar copia original
+            window.colaboradorOriginal = JSON.parse(JSON.stringify(collaborator));
             
             Swal.close();
             Swal.fire({
@@ -980,6 +1200,9 @@ function configurarEliminacion(elements, userManager) {
                 'colaborador',
                 collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase
             );
+            
+            // ✅ NUEVO: Registrar inhabilitación en bitácora
+            await registrarInhabilitacionColaborador(collaborator, usuarioActual);
             
             elements.statusInput.value = 'inactive';
             elements.statusOptions.forEach(opt => {
