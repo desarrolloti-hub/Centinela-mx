@@ -1,5 +1,5 @@
 // editarPermisos.js - EDICIÓN DE PERMISOS
-// CON MÓDULOS FIJOS + INCIDENCIAS Y MAPA DE ALERTAS DINÁMICOS SEGÚN EL PLAN
+// CON MÓDULOS COMPLETOS (Áreas, Categorías, Sucursales, Regiones, Incidencias, Mapa Alertas, Usuarios, Estadísticas, Tareas)
 
 // =============================================
 // CLASE PRINCIPAL - EditarPermisoController
@@ -224,6 +224,9 @@ class EditarPermisoController {
                 console.log('❌ Módulo Mapa de Alertas oculto (plan no lo incluye)');
             }
         }
+
+        // Los módulos Usuarios, Estadísticas y Tareas siempre están visibles
+        console.log('✅ Módulos Usuarios, Estadísticas y Tareas siempre visibles');
     }
 
     // ========== CARGA DE ÁREAS ==========
@@ -346,6 +349,27 @@ class EditarPermisoController {
             chkMonitoreo.checked = permisos.monitoreo || false;
             this._actualizarEstiloCard(document.getElementById('permisoMonitoreoCard'), chkMonitoreo.checked);
         }
+
+        // NUEVO Módulo: Usuarios
+        const chkUsuarios = document.getElementById('permisoUsuarios');
+        if (chkUsuarios) {
+            chkUsuarios.checked = permisos.usuarios || false;
+            this._actualizarEstiloCard(document.getElementById('permisoUsuariosCard'), chkUsuarios.checked);
+        }
+
+        // NUEVO Módulo: Estadísticas
+        const chkEstadisticas = document.getElementById('permisoEstadisticas');
+        if (chkEstadisticas) {
+            chkEstadisticas.checked = permisos.estadisticas || false;
+            this._actualizarEstiloCard(document.getElementById('permisoEstadisticasCard'), chkEstadisticas.checked);
+        }
+
+        // NUEVO Módulo: Tareas
+        const chkTareas = document.getElementById('permisoTareas');
+        if (chkTareas) {
+            chkTareas.checked = permisos.tareas || false;
+            this._actualizarEstiloCard(document.getElementById('permisoTareasCard'), chkTareas.checked);
+        }
     }
 
     // ========== CONFIGURACIÓN DE ORGANIZACIÓN ==========
@@ -389,11 +413,8 @@ class EditarPermisoController {
     }
 
     _configurarCheckboxesPermisos() {
-        // Módulos fijos (siempre visibles)
-        const modulosFijos = ['Areas', 'Categorias', 'Sucursales', 'Regiones'];
-        // Módulos dinámicos
-        const modulosDinamicos = ['Incidencias', 'Monitoreo'];
-        const todosModulos = [...modulosFijos, ...modulosDinamicos];
+        // TODOS los módulos disponibles
+        const todosModulos = ['Areas', 'Categorias', 'Sucursales', 'Regiones', 'Incidencias', 'Monitoreo', 'Usuarios', 'Estadisticas', 'Tareas'];
 
         todosModulos.forEach(modulo => {
             const checkbox = document.getElementById(`permiso${modulo}`);
@@ -467,7 +488,11 @@ class EditarPermisoController {
             sucursales: document.getElementById('permisoSucursales')?.checked || false,
             regiones: document.getElementById('permisoRegiones')?.checked || false,
             incidencias: document.getElementById('permisoIncidencias')?.checked || false,
-            monitoreo: document.getElementById('permisoMonitoreo')?.checked || false
+            monitoreo: document.getElementById('permisoMonitoreo')?.checked || false,
+            // NUEVOS MÓDULOS
+            usuarios: document.getElementById('permisoUsuarios')?.checked || false,
+            estadisticas: document.getElementById('permisoEstadisticas')?.checked || false,
+            tareas: document.getElementById('permisoTareas')?.checked || false
         };
 
         return permisos;
