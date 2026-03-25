@@ -1,6 +1,6 @@
 /**
  * IPH GENERATOR - Sistema Centinela
- * VERSIÓN: 6.1 - CORREGIDO MANEJO DE IMÁGENES
+ * VERSIÓN: 7.0 - INTEGRADO CON SISTEMA DE CARGA DE IMÁGENES VÍA PROXY
  */
 
 import { PDFBaseGenerator, coloresBase } from './pdf-base-generator.js';
@@ -30,6 +30,7 @@ class IPHGenerator extends PDFBaseGenerator {
         this.categoriasCache = [];
         this.usuariosCache = [];
         this.incidenciaActual = null;
+        this.imagenesCache = new Map(); // Cache de imágenes cargadas
         
         this.alturasContenedores = {
             identificacion: 38,
@@ -72,7 +73,6 @@ class IPHGenerator extends PDFBaseGenerator {
     
     obtenerNombreSubcategoria(subcategoriaId, categoriaId) {
         if (!subcategoriaId) return 'No especificada';
-        
         const categoria = this.categoriasCache.find(c => c.id === categoriaId);
         if (categoria && categoria.subcategorias) {
             let subcategorias = [];
@@ -81,7 +81,6 @@ class IPHGenerator extends PDFBaseGenerator {
             } else if (typeof categoria.subcategorias === 'object') {
                 subcategorias = Object.values(categoria.subcategorias);
             }
-            
             const sub = subcategorias.find(s => s.id === subcategoriaId || s._id === subcategoriaId);
             if (sub) return sub.nombre || sub.descripcion || 'Subcategoría';
         }
@@ -108,62 +107,186 @@ class IPHGenerator extends PDFBaseGenerator {
     }
 
     // =============================================
-    // MANEJO DE IMÁGENES - VERSIÓN MEJORADA
+    // EXTRACCIÓN DE DATOS DE IMAGEN
     // =============================================
     
-    async extraerImagenDeIncidencia(imagenObj, index) {
-        try {
-            console.log(`🔍 Procesando imagen ${index + 1}:`);
-            
-            // Caso 1: Tiene archivo File directamente
-            if (imagenObj?.file instanceof File) {
-                console.log(`  ✅ Imagen ${index + 1}: usando file directo`);
-                return await this.convertirArchivoABase64(imagenObj.file);
+    extraerUrlImagen(item) {
+        if (!item) return null;
+        
+        if (typeof item === 'string') {
+            const trimmed = item.trim();
+            if (trimmed.startsWith('http') || trimmed.startsWith('data:image') || trimmed.startsWith('blob:')) {
+                return trimmed;
             }
-            
-            // Caso 2: Tiene propiedad archivo (File)
-            if (imagenObj?.archivo instanceof File) {
-                console.log(`  ✅ Imagen ${index + 1}: usando archivo`);
-                return await this.convertirArchivoABase64(imagenObj.archivo);
-            }
-            
-            // Caso 3: Tiene propiedad data (base64)
-            if (imagenObj?.data && typeof imagenObj.data === 'string' && imagenObj.data.startsWith('data:image')) {
-                console.log(`  ✅ Imagen ${index + 1}: usando data base64`);
-                return imagenObj.data;
-            }
-            
-            // Caso 4: Tiene preview (URL de objeto)
-            if (imagenObj?.preview && typeof imagenObj.preview === 'string') {
-                console.log(`  ✅ Imagen ${index + 1}: usando preview URL`);
-                return await this.fetchearImagenDesdeURL(imagenObj.preview);
-            }
-            
-            // Caso 5: Tiene url directa
-            if (imagenObj?.url && typeof imagenObj.url === 'string') {
-                console.log(`  ✅ Imagen ${index + 1}: usando url`);
-                return await this.fetchearImagenDesdeURL(imagenObj.url);
-            }
-            
-            // Caso 6: Es un File directamente
-            if (imagenObj instanceof File) {
-                console.log(`  ✅ Imagen ${index + 1}: es File`);
-                return await this.convertirArchivoABase64(imagenObj);
-            }
-            
-            // Caso 7: Tiene downloadURL
-            if (imagenObj?.downloadURL && typeof imagenObj.downloadURL === 'string') {
-                console.log(`  ✅ Imagen ${index + 1}: usando downloadURL`);
-                return await this.fetchearImagenDesdeURL(imagenObj.downloadURL);
-            }
-            
-            console.warn(`⚠️ No se pudo extraer imagen ${index + 1}`);
-            return null;
-            
-        } catch (error) {
-            console.error(`❌ Error extrayendo imagen ${index + 1}:`, error);
             return null;
         }
+        
+        if (typeof item === 'object') {
+            // Propiedades de Firebase/Storage
+            const firebaseProps = ['url', 'downloadURL', 'storageUrl', 'firebaseUrl', 'urlDescarga'];
+            for (const prop of firebaseProps) {
+                if (item[prop] && typeof item[prop] === 'string') {
+                    return item[prop].trim();
+                }
+            }
+            
+            // Propiedades comunes de imagen
+            const props = ['src', 'path', 'imageUrl', 'foto', 'imagen', 'evidencia', 'fotoUrl', 'imagenUrl', 'preview'];
+            for (const prop of props) {
+                if (item[prop] && typeof item[prop] === 'string') {
+                    const valor = item[prop].trim();
+                    if (valor.startsWith('http') || valor.startsWith('data:image') || valor.startsWith('blob:')) {
+                        return valor;
+                    }
+                }
+            }
+            
+            // Si tiene file (objeto File)
+            if (item.file instanceof File) {
+                return item.file;
+            }
+            
+            // Si tiene archivo
+            if (item.archivo instanceof File) {
+                return item.archivo;
+            }
+        }
+        
+        return null;
+    }
+
+    extraerComentario(item) {
+        if (!item) return '';
+        if (typeof item === 'string') return '';
+        if (typeof item === 'object') {
+            const props = ['comentario', 'descripcion', 'nombre', 'titulo', 'caption', 'texto', 'nota', 'observacion', 'detalle', 'comentarios', 'description'];
+            for (const prop of props) {
+                if (item[prop] && typeof item[prop] === 'string') {
+                    return item[prop].trim();
+                }
+            }
+            if (item.metadata && item.metadata.comentario) return item.metadata.comentario;
+        }
+        return '';
+    }
+
+    // =============================================
+    // CARGA DE IMÁGENES CON PROXY
+    // =============================================
+    
+    async cargarImagenConProxy(item) {
+        const url = this.extraerUrlImagen(item);
+        if (!url) return null;
+        
+        // Si es un File, convertirlo directamente
+        if (url instanceof File || (url && typeof url === 'object' && url instanceof File)) {
+            return await this.convertirArchivoABase64(url);
+        }
+        
+        const urlLimpia = url.trim();
+        
+        // Verificar cache
+        if (this.imagenesCache.has(urlLimpia)) {
+            return this.imagenesCache.get(urlLimpia);
+        }
+        
+        // Estrategias de carga
+        const estrategias = [
+            () => this.cargarConFetch(urlLimpia),
+            () => this.cargarConProxyCors(urlLimpia),
+            () => this.cargarConImage(urlLimpia)
+        ];
+        
+        for (const estrategia of estrategias) {
+            try {
+                const imgData = await estrategia();
+                if (imgData) {
+                    this.imagenesCache.set(urlLimpia, imgData);
+                    return imgData;
+                }
+            } catch (error) {
+                console.warn(`Estrategia falló para ${urlLimpia}:`, error);
+            }
+        }
+        
+        return null;
+    }
+    
+    async cargarConFetch(url) {
+        try {
+            const headers = {};
+            if (this.authToken) {
+                headers['Authorization'] = `Bearer ${this.authToken}`;
+            }
+            
+            const response = await fetch(url, {
+                headers: headers,
+                mode: 'cors',
+                cache: 'force-cache'
+            });
+            
+            if (!response.ok) return null;
+            const blob = await response.blob();
+            if (!blob.type.startsWith('image/')) return null;
+            return await this.blobToBase64(blob);
+        } catch {
+            return null;
+        }
+    }
+    
+    async cargarConProxyCors(url) {
+        const proxies = [
+            'https://corsproxy.io/?' + encodeURIComponent(url),
+            'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+            'https://cors-anywhere.herokuapp.com/' + url,
+            'https://proxy.cors.sh/' + url
+        ];
+        
+        for (const proxyUrl of proxies) {
+            try {
+                const response = await fetch(proxyUrl);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    if (blob.type.startsWith('image/')) {
+                        return await this.blobToBase64(blob);
+                    }
+                }
+            } catch {
+                continue;
+            }
+        }
+        return null;
+    }
+    
+    cargarConImage(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const maxDimension = 1024;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = (height * maxDimension) / width;
+                        width = maxDimension;
+                    } else {
+                        width = (width * maxDimension) / height;
+                        height = maxDimension;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => resolve(null);
+            img.src = url;
+        });
     }
     
     async convertirArchivoABase64(file) {
@@ -171,47 +294,28 @@ class IPHGenerator extends PDFBaseGenerator {
         
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => {
-                const base64 = reader.result;
-                resolve(base64);
-            };
+            reader.onload = () => resolve(reader.result);
             reader.onerror = reject;
             reader.readAsDataURL(file);
         });
     }
     
-    async fetchearImagenDesdeURL(url) {
-        if (!url) return null;
-        
-        try {
-            // Si es una URL de objeto local (blob:)
-            if (url.startsWith('blob:')) {
-                const response = await fetch(url);
-                const blob = await response.blob();
-                return await this.convertirArchivoABase64(blob);
-            }
-            
-            // Para URLs regulares
-            const response = await fetch(url);
-            if (response.ok) {
-                const blob = await response.blob();
-                return await this.convertirArchivoABase64(blob);
-            }
-            
-            return null;
-            
-        } catch (error) {
-            console.error('Error fetcheando imagen:', error);
-            return null;
-        }
+    async blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
     }
 
+    // =============================================
+    // DIBUJAR IMAGEN EN PDF
+    // =============================================
+    
     async dibujarImagen(pdf, imagenObj, x, y, ancho, alto, numero) {
         try {
-            let imgData = null;
-            
-            // Intentar obtener la imagen
-            imgData = await this.extraerImagenDeIncidencia(imagenObj, numero - 1);
+            const imgData = await this.cargarImagenConProxy(imagenObj);
             
             if (imgData) {
                 // Dibujar fondo blanco
@@ -258,7 +362,7 @@ class IPHGenerator extends PDFBaseGenerator {
             }
             
             // Dibujar comentario si existe
-            const comentario = this.obtenerComentarioImagen(imagenObj);
+            const comentario = this.extraerComentario(imagenObj);
             if (comentario && comentario.trim() !== '') {
                 pdf.setFont('helvetica', 'italic');
                 pdf.setFontSize(this.fonts.mini - 1);
@@ -277,14 +381,6 @@ class IPHGenerator extends PDFBaseGenerator {
             console.error(`Error dibujando imagen ${numero}:`, error);
             this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero);
         }
-    }
-    
-    obtenerComentarioImagen(imagenObj) {
-        if (!imagenObj) return '';
-        if (typeof imagenObj === 'object') {
-            return imagenObj.comentario || imagenObj.descripcion || '';
-        }
-        return '';
     }
 
     dibujarPlaceholder(pdf, x, y, ancho, alto, numero) {
@@ -317,7 +413,7 @@ class IPHGenerator extends PDFBaseGenerator {
                 tituloAlerta = 'Generando Informe...', 
                 onProgress = null,
                 returnBlob = false,
-                diagnosticar = true  // Activamos diagnóstico para ver qué pasa
+                diagnosticar = true
             } = opciones;
             
             if (diagnosticar) {
@@ -328,19 +424,9 @@ class IPHGenerator extends PDFBaseGenerator {
                 
                 if (incidencia.imagenes && incidencia.imagenes.length > 0) {
                     incidencia.imagenes.forEach((img, i) => {
-                        console.log(`  Imagen ${i + 1}:`);
-                        console.log(`    - Tipo: ${typeof img}`);
-                        console.log(`    - Tiene file: ${!!(img.file instanceof File)}`);
-                        console.log(`    - Tiene archivo: ${!!(img.archivo instanceof File)}`);
-                        console.log(`    - Tiene preview: ${!!img.preview}`);
-                        console.log(`    - Tiene url: ${!!img.url}`);
-                        console.log(`    - Tiene data: ${!!(img.data && img.data.startsWith('data:'))}`);
-                        console.log(`    - id: ${img.id}`);
-                        console.log(`    - nombre: ${img.nombre}`);
-                        console.log(`    - comentario: ${img.comentario?.substring(0, 30) || 'ninguno'}`);
+                        const url = this.extraerUrlImagen(img);
+                        console.log(`  Imagen ${i + 1}: URL extraída:`, url ? (url.substring(0, 80) + '...') : 'NO URL');
                     });
-                } else {
-                    console.log('  ⚠️ No hay imágenes en la incidencia');
                 }
             }
             
@@ -388,7 +474,7 @@ class IPHGenerator extends PDFBaseGenerator {
                 
                 for (let i = 0; i < imagenes.length; i++) {
                     const img = imagenes[i];
-                    await this.extraerImagenDeIncidencia(img, i);
+                    await this.cargarImagenConProxy(img);
                     const progress = 20 + (i / imagenes.length) * 30;
                     actualizarProgreso(progress, `Imagen ${i + 1} de ${imagenes.length}`);
                 }
@@ -404,7 +490,6 @@ class IPHGenerator extends PDFBaseGenerator {
                 format: 'letter'
             });
             
-            // Calcular páginas correctamente
             const imagenesPorPagina = 4;
             const paginasImagenes = imagenes.length > 0 ? Math.ceil(imagenes.length / imagenesPorPagina) : 0;
             this.totalPaginas = 1 + paginasImagenes;

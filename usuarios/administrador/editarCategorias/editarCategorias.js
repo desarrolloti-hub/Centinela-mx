@@ -1,6 +1,7 @@
 /**
  * EDITAR CATEGORÍAS - Sistema Centinela
  * VERSIÓN CORREGIDA - IDÉNTICO A CREAR CATEGORÍAS
+ * CON REGISTRO DE BITÁCORA
  */
 
 // =============================================
@@ -10,6 +11,7 @@ let categoriaManager = null;
 let categoriaActual = null;
 let subcategorias = [];
 let empresaActual = null;
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 // Variable global para debugging
 window.editarCategoriaDebug = {
@@ -31,6 +33,9 @@ const LIMITES = {
 async function inicializarCategoriaManager() {
     try {
         obtenerDatosEmpresa();
+
+        // ✅ NUEVO: Inicializar historialManager
+        await inicializarHistorial();
 
         const { CategoriaManager } = await import('/clases/categoria.js');
         categoriaManager = new CategoriaManager();
@@ -59,6 +64,219 @@ async function inicializarCategoriaManager() {
 
         return false;
     }
+}
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+        console.log('📋 HistorialManager inicializado para editar categorías');
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
+
+// ✅ NUEVO: Obtener usuario actual
+function obtenerUsuarioActual() {
+    try {
+        const adminInfo = localStorage.getItem('adminInfo');
+        if (adminInfo) {
+            const adminData = JSON.parse(adminInfo);
+            return {
+                id: adminData.id || adminData.uid,
+                uid: adminData.uid || adminData.id,
+                nombreCompleto: adminData.nombreCompleto || 'Administrador',
+                organizacion: adminData.organizacion,
+                organizacionCamelCase: adminData.organizacionCamelCase,
+                correo: adminData.correoElectronico || '',
+                email: adminData.correoElectronico || ''
+            };
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion || userData.empresa,
+                organizacionCamelCase: userData.organizacionCamelCase,
+                correo: userData.correo || userData.email || '',
+                email: userData.correo || userData.email || ''
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error obteniendo usuario actual:', error);
+        return null;
+    }
+}
+
+// ✅ NUEVO: Registrar edición de categoría
+async function registrarEdicionCategoria(categoriaOriginal, categoriaActualizada) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        // Detectar cambios
+        const cambios = [];
+        
+        if (categoriaOriginal.nombre !== categoriaActualizada.nombre) {
+            cambios.push({
+                campo: 'nombre',
+                anterior: categoriaOriginal.nombre,
+                nuevo: categoriaActualizada.nombre
+            });
+        }
+        
+        if (categoriaOriginal.descripcion !== categoriaActualizada.descripcion) {
+            cambios.push({
+                campo: 'descripcion',
+                anterior: categoriaOriginal.descripcion?.substring(0, 50) + (categoriaOriginal.descripcion?.length > 50 ? '...' : ''),
+                nuevo: categoriaActualizada.descripcion?.substring(0, 50) + (categoriaActualizada.descripcion?.length > 50 ? '...' : '')
+            });
+        }
+        
+        if (categoriaOriginal.color !== categoriaActualizada.color) {
+            cambios.push({
+                campo: 'color',
+                anterior: categoriaOriginal.color,
+                nuevo: categoriaActualizada.color
+            });
+        }
+        
+        // Detectar cambios en subcategorías
+        const cambiosSubcategorias = detectarCambiosSubcategorias(categoriaOriginal.subcategorias, categoriaActualizada.subcategorias);
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'editar',
+            modulo: 'categorias',
+            descripcion: `Editó categoría: ${categoriaActualizada.nombre}`,
+            detalles: {
+                categoriaId: categoriaActualizada.id,
+                categoriaNombre: categoriaActualizada.nombre,
+                cambios: cambios,
+                cambiosSubcategorias: cambiosSubcategorias,
+                fechaEdicion: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Edición de categoría "${categoriaActualizada.nombre}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando edición de categoría:', error);
+    }
+}
+
+// ✅ NUEVO: Detectar cambios en subcategorías
+function detectarCambiosSubcategorias(originales, actualizadas) {
+    const cambios = {
+        agregadas: [],
+        eliminadas: [],
+        modificadas: []
+    };
+    
+    // Convertir a arrays para comparar
+    const originalArray = [];
+    const actualArray = [];
+    
+    if (originales && typeof originales === 'object') {
+        Object.keys(originales).forEach(key => {
+            if (originales[key] && typeof originales[key] === 'object') {
+                originalArray.push({
+                    id: key,
+                    ...originales[key]
+                });
+            }
+        });
+    }
+    
+    if (actualizadas && typeof actualizadas === 'object') {
+        Object.keys(actualizadas).forEach(key => {
+            if (actualizadas[key] && typeof actualizadas[key] === 'object') {
+                actualArray.push({
+                    id: key,
+                    ...actualizadas[key]
+                });
+            }
+        });
+    }
+    
+    // Detectar agregadas
+    actualArray.forEach(actual => {
+        const existe = originalArray.some(orig => orig.id === actual.id);
+        if (!existe && actual.nombre) {
+            cambios.agregadas.push({
+                id: actual.id,
+                nombre: actual.nombre,
+                descripcion: actual.descripcion?.substring(0, 50) || ''
+            });
+        }
+    });
+    
+    // Detectar eliminadas
+    originalArray.forEach(original => {
+        const existe = actualArray.some(actual => actual.id === original.id);
+        if (!existe && original.nombre) {
+            cambios.eliminadas.push({
+                id: original.id,
+                nombre: original.nombre
+            });
+        }
+    });
+    
+    // Detectar modificadas
+    actualArray.forEach(actual => {
+        const original = originalArray.find(orig => orig.id === actual.id);
+        if (original && actual.nombre) {
+            const cambiosSub = [];
+            
+            if (original.nombre !== actual.nombre) {
+                cambiosSub.push({
+                    campo: 'nombre',
+                    anterior: original.nombre,
+                    nuevo: actual.nombre
+                });
+            }
+            
+            if (original.descripcion !== actual.descripcion) {
+                cambiosSub.push({
+                    campo: 'descripcion',
+                    anterior: original.descripcion?.substring(0, 50) || '',
+                    nuevo: actual.descripcion?.substring(0, 50) || ''
+                });
+            }
+            
+            if (original.heredaColor !== actual.heredaColor) {
+                cambiosSub.push({
+                    campo: 'heredaColor',
+                    anterior: original.heredaColor,
+                    nuevo: actual.heredaColor
+                });
+            }
+            
+            if (!actual.heredaColor && original.color !== actual.color) {
+                cambiosSub.push({
+                    campo: 'color',
+                    anterior: original.color,
+                    nuevo: actual.color
+                });
+            }
+            
+            if (cambiosSub.length > 0) {
+                cambios.modificadas.push({
+                    id: actual.id,
+                    nombre: actual.nombre,
+                    cambios: cambiosSub
+                });
+            }
+        }
+    });
+    
+    return cambios;
 }
 
 function obtenerDatosEmpresa() {
@@ -148,6 +366,9 @@ async function cargarCategoria(id) {
             setTimeout(() => window.location.href = '../categorias/categorias.html', 2000);
             return;
         }
+
+        // ✅ NUEVO: Guardar copia original para comparar cambios
+        window.categoriaOriginal = JSON.parse(JSON.stringify(categoriaActual));
 
         // Convertir objeto de subcategorías a array
         subcategorias = [];
@@ -535,6 +756,15 @@ async function guardarCategoria(datos) {
             btnGuardar.disabled = true;
         }
 
+        // ✅ NUEVO: Crear objeto con los datos actualizados para registrar cambios
+        const categoriaActualizada = {
+            id: datos.id,
+            nombre: datos.nombre,
+            descripcion: datos.descripcion,
+            color: datos.color,
+            subcategorias: datos.subcategorias
+        };
+
         // Actualizar categoría
         await categoriaManager.actualizarCategoria(datos.id, {
             nombre: datos.nombre,
@@ -542,6 +772,11 @@ async function guardarCategoria(datos) {
             color: datos.color,
             subcategorias: datos.subcategorias
         });
+
+        // ✅ NUEVO: Registrar edición en bitácora
+        if (window.categoriaOriginal) {
+            await registrarEdicionCategoria(window.categoriaOriginal, categoriaActualizada);
+        }
 
         // Mostrar éxito
         await Swal.fire({

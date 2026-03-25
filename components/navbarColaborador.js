@@ -16,6 +16,13 @@ class NavbarComplete {
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
         this.intervalNotificaciones = null;
+        
+        // Sistema de sonidos
+        this.sonidoNotificacion = null;
+        this.soundEnabled = true;
+        this.soundVolume = 0.7;
+        this.availableSounds = [];
+        
         this.init();
     }
 
@@ -46,11 +53,197 @@ class NavbarComplete {
             this.filterMenuByPermissions();
 
             await this._initNotificacionManager();
+            await this._initSonidoNotificacion();
             await this._cargarNotificaciones();
             this._iniciarListenerNotificaciones();
 
         } catch (error) {
             console.error('Error en navbar:', error);
+        }
+    }
+
+    /**
+     * 🔥 Inicializar sistema de sonido para colaborador
+     */
+    async _initSonidoNotificacion() {
+        try {
+            const { sonidoNotificacion } = await import('/clases/sonidoNotificacion.js');
+            this.sonidoNotificacion = sonidoNotificacion;
+            
+            await this.sonidoNotificacion.initialize();
+            
+            this.availableSounds = this.sonidoNotificacion.getAvailableSounds();
+            
+            if (this.availableSounds.length > 0) {
+                console.log(`🔊 Sistema de sonido inicializado para colaborador. Sonidos encontrados: ${this.availableSounds.length}`);
+            } else {
+                console.warn('⚠️ No se encontraron archivos de sonido en Firebase Storage');
+            }
+            
+            // Cargar preferencias de sonido del usuario si existen
+            if (this.currentUser) {
+                const deviceId = this._getDeviceId();
+                const dispositivoActual = this.currentUser.dispositivos?.find(
+                    d => d.deviceId === deviceId
+                );
+                
+                if (dispositivoActual) {
+                    if (dispositivoActual.soundEnabled !== undefined) {
+                        this.soundEnabled = dispositivoActual.soundEnabled;
+                        this.sonidoNotificacion.setEnabled(this.soundEnabled);
+                    }
+                    if (dispositivoActual.selectedSound) {
+                        localStorage.setItem('selectedSound', dispositivoActual.selectedSound);
+                    }
+                    if (dispositivoActual.soundVolume) {
+                        this.soundVolume = dispositivoActual.soundVolume;
+                        this.sonidoNotificacion.setGlobalVolume(this.soundVolume);
+                        localStorage.setItem('soundVolume', this.soundVolume);
+                    }
+                } else {
+                    const savedSoundEnabled = localStorage.getItem('soundEnabled');
+                    if (savedSoundEnabled !== null) {
+                        this.soundEnabled = savedSoundEnabled === 'true';
+                        this.sonidoNotificacion.setEnabled(this.soundEnabled);
+                    }
+                    const savedVolume = localStorage.getItem('soundVolume');
+                    if (savedVolume !== null) {
+                        this.soundVolume = parseFloat(savedVolume);
+                        this.sonidoNotificacion.setGlobalVolume(this.soundVolume);
+                    }
+                }
+            }
+            
+        } catch (error) {
+            console.warn('⚠️ No se pudo inicializar sistema de sonido para colaborador:', error);
+            this.sonidoNotificacion = null;
+        }
+    }
+
+    /**
+     * 🔥 Obtener ID del dispositivo
+     */
+    _getDeviceId() {
+        let deviceId = localStorage.getItem('fcm_device_id');
+        if (!deviceId) {
+            deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('fcm_device_id', deviceId);
+        }
+        return deviceId;
+    }
+
+    /**
+     * 🔥 Determinar qué sonido usar según la notificación
+     */
+    _determinarSonidoPorNotificacion(notificacion) {
+        // Prioridad máxima: nivel de riesgo crítico
+        if (notificacion.nivelRiesgo === 'critico') {
+            if (this.availableSounds.some(s => s.id === 'alarma-robo')) {
+                return 'alarma-robo';
+            }
+        }
+        
+        // Según el tipo de notificación
+        if (notificacion.tipo === 'incidencia') {
+            if (this.availableSounds.some(s => s.id === 'incidencia')) {
+                return 'incidencia';
+            }
+        }
+        
+        if (notificacion.tipo === 'seguimiento' || notificacion.tipo === 'actualizacion') {
+            if (this.availableSounds.some(s => s.id === 'actualizacion')) {
+                return 'actualizacion';
+            }
+        }
+        
+        if (notificacion.tipo === 'canalizacion') {
+            if (this.availableSounds.some(s => s.id === 'canalizacion')) {
+                return 'canalizacion';
+            }
+        }
+        
+        if (notificacion.tipo === 'comentario') {
+            if (this.availableSounds.some(s => s.id === 'comentario')) {
+                return 'comentario';
+            }
+        }
+        
+        // Fallback: usar el primer sonido disponible
+        if (this.availableSounds.length > 0) {
+            return this.availableSounds[0].id;
+        }
+        
+        return null;
+    }
+
+    /**
+     * 🔥 Reproducir sonido de notificación
+     */
+    async _reproducirSonido(notificacion) {
+        if (!this.soundEnabled || !this.sonidoNotificacion) return;
+        
+        const sonidoId = this._determinarSonidoPorNotificacion(notificacion);
+        if (!sonidoId) {
+            return;
+        }
+        
+        try {
+            await this.sonidoNotificacion.play(sonidoId, this.soundVolume);
+            console.log(`🔊 Sonido reproducido para colaborador: ${sonidoId} (tipo: ${notificacion.tipo || 'desconocido'}, riesgo: ${notificacion.nivelRiesgo || 'ninguno'})`);
+        } catch (error) {
+            console.debug('Error reproduciendo sonido:', error);
+        }
+    }
+
+    /**
+     * 🔥 Detectar nuevas notificaciones y reproducir sonido
+     */
+    async _detectarYReproducirSonido(nuevasNotificaciones) {
+        if (!this.soundEnabled || !this.sonidoNotificacion) return;
+        
+        const nuevasNoLeidas = nuevasNotificaciones.filter(n => !n.leida);
+        
+        if (nuevasNoLeidas.length > 0) {
+            const primeraNotificacion = nuevasNoLeidas[0];
+            await this._reproducirSonido(primeraNotificacion);
+            
+            // Mostrar notificación del sistema (opcional)
+            if (Notification.permission === 'granted' && nuevasNoLeidas.length === 1) {
+                const primera = nuevasNoLeidas[0];
+                const notifUI = primera.toUI ? primera.toUI() : {
+                    titulo: primera.titulo,
+                    mensaje: primera.mensaje
+                };
+                
+                const systemNotif = new Notification(notifUI.titulo, {
+                    body: notifUI.mensaje,
+                    icon: '/assets/images/logo.png',
+                    badge: '/assets/images/logo.png',
+                    silent: false,
+                    vibrate: [200, 100, 200]
+                });
+                
+                systemNotif.onclick = () => {
+                    window.focus();
+                    if (primera.urlDestino) {
+                        window.location.href = primera.urlDestino;
+                    }
+                    systemNotif.close();
+                };
+            } else if (Notification.permission === 'granted' && nuevasNoLeidas.length > 1) {
+                const systemNotif = new Notification(`📬 ${nuevasNoLeidas.length} nuevas notificaciones`, {
+                    body: `Tienes ${nuevasNoLeidas.length} notificaciones sin leer`,
+                    icon: '/assets/images/logo.png',
+                    badge: '/assets/images/logo.png',
+                    silent: false
+                });
+                
+                systemNotif.onclick = () => {
+                    window.focus();
+                    this._mostrarModalNotificaciones();
+                    systemNotif.close();
+                };
+            }
         }
     }
 
@@ -82,7 +275,8 @@ class NavbarComplete {
                 this.notificaciones = [];
                 this.notificacionesNoLeidas = 0;
             } else {
-                this.notificaciones = todasNotificaciones.filter(notif => {
+                // Filtrar notificaciones por área del usuario
+                const notificacionesFiltradas = todasNotificaciones.filter(notif => {
                     if (notif.areasIds && Array.isArray(notif.areasIds) && notif.areasIds.length > 0) {
                         return notif.areasIds.includes(areaUsuario);
                     }
@@ -91,7 +285,20 @@ class NavbarComplete {
                     }
                     return false;
                 });
+                
+                // Detectar nuevas notificaciones
+                const nuevasNoLeidas = notificacionesFiltradas.filter(n => !n.leida);
+                const nuevas = nuevasNoLeidas.filter(n => {
+                    const existe = this.notificaciones.some(old => old.id === n.id);
+                    return !existe;
+                });
+                
+                if (nuevas.length > 0) {
+                    console.log(`🔔 ${nuevas.length} nuevas notificaciones detectadas para colaborador`);
+                    await this._detectarYReproducirSonido(nuevas);
+                }
 
+                this.notificaciones = notificacionesFiltradas;
                 this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
             }
 
@@ -366,27 +573,6 @@ class NavbarComplete {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
-    }
-
-    async _marcarTodasLeidas() {
-        if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
-            return;
-        }
-
-        try {
-            await this.notificacionManager.marcarTodasComoLeidas(
-                this.currentUser.id,
-                this.currentUser.organizacionCamelCase
-            );
-            
-            this.notificacionesNoLeidas = 0;
-            this.notificaciones.forEach(n => n.leida = true);
-            this._actualizarBadgeNotificaciones();
-            this._renderizarNotificaciones();
-            
-        } catch (error) {
-            console.error('Error marcando todas como leídas:', error);
-        }
     }
 
     _configurarNotificacionesDropdown() {
@@ -1666,7 +1852,8 @@ class NavbarComplete {
                     cargoId: userData.cargoId || localStorage.getItem('userCargoId') || '',
                     status: userData.status || 'activo',
                     verificado: userData.verificado || true,
-                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
+                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart,
+                    dispositivos: userData.dispositivos || []
                 };
 
                 this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
@@ -1684,7 +1871,8 @@ class NavbarComplete {
                 fotoUsuario: localStorage.getItem('userFoto') || null,
                 fotoOrganizacion: localStorage.getItem('organizacionLogo') || null,
                 areaId: localStorage.getItem('userAreaId') || '',
-                cargoId: localStorage.getItem('userCargoId') || ''
+                cargoId: localStorage.getItem('userCargoId') || '',
+                dispositivos: []
             };
 
             if (this.currentUser.nombreCompleto && this.currentUser.rol) {
