@@ -1,10 +1,9 @@
-// editarSucursales.js - VERSIÓN CORREGIDA CON ACTUALIZACIÓN FUNCIONAL
-
-// Variable global para debugging
 window.editarSucursalDebug = {
     estado: 'iniciando',
     controller: null
 };
+
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 // LÍMITES DE CARACTERES
 const LIMITES = {
@@ -26,6 +25,7 @@ class EditarSucursalController {
         this.regionManager = null;
         this.usuarioActual = null;
         this.sucursalActual = null;
+        this.sucursalOriginal = null; // ✅ NUEVO: Copia original para comparar cambios
         this.loadingOverlay = null;
         this.notificacionActual = null;
 
@@ -62,7 +62,10 @@ class EditarSucursalController {
                 };
             }
 
-            // 2. Obtener ID de la URL
+            // 2. Inicializar historialManager
+            await this._initHistorial();
+
+            // 3. Obtener ID de la URL
             const urlParams = new URLSearchParams(window.location.search);
             const sucursalId = urlParams.get('id');
             const orgFromUrl = urlParams.get('org');
@@ -78,28 +81,28 @@ class EditarSucursalController {
 
             this.sucursalId = sucursalId;
 
-            // 3. Cargar managers
+            // 4. Cargar managers
             await this._cargarManagers();
 
-            // 4. Cargar regiones
+            // 5. Cargar regiones
             await this._cargarRegiones();
 
-            // 5. Cargar estados de México
+            // 6. Cargar estados de México
             this._cargarEstados();
 
-            // 6. Cargar datos de la sucursal
+            // 7. Cargar datos de la sucursal
             await this._cargarDatosSucursal();
 
-            // 7. Aplicar límites de caracteres
+            // 8. Aplicar límites de caracteres
             this._aplicarLimitesCaracteres();
 
-            // 8. Configurar listener de coordenadas
+            // 9. Configurar listener de coordenadas
             this._configurarListenerCoordenadas();
 
-            // 9. Configurar eventos
+            // 10. Configurar eventos
             this._configurarEventos();
 
-            // 10. Inicializar mapa (después de cargar los datos)
+            // 11. Inicializar mapa (después de cargar los datos)
             setTimeout(() => this._inicializarMapa(), 1000);
 
             window.editarSucursalDebug.controller = this;
@@ -108,6 +111,57 @@ class EditarSucursalController {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
             // NO redirigir automáticamente
+        }
+    }
+
+    // ✅ NUEVO: Inicializar historialManager
+    async _initHistorial() {
+        try {
+            const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+            historialManager = new HistorialUsuarioManager();
+            console.log('📋 HistorialManager inicializado para editar sucursales');
+        } catch (error) {
+            console.error('Error inicializando historialManager:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar edición de sucursal
+    async _registrarEdicionSucursal(sucursalOriginal, sucursalActualizada, cambios) {
+        if (!historialManager) return;
+        
+        try {
+            // Obtener nombre de la región
+            let regionNombre = '';
+            if (sucursalActualizada.regionId) {
+                try {
+                    const region = await this.regionManager.getRegionById(
+                        sucursalActualizada.regionId, 
+                        this.usuarioActual.organizacionCamelCase
+                    );
+                    regionNombre = region?.nombre || 'No especificada';
+                } catch (e) {
+                    regionNombre = 'No especificada';
+                }
+            }
+
+            await historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'editar',
+                modulo: 'sucursales',
+                descripcion: `Editó sucursal: ${sucursalActualizada.nombre}`,
+                detalles: {
+                    sucursalId: sucursalActualizada.id,
+                    sucursalNombreOriginal: sucursalOriginal.nombre,
+                    sucursalNombreActualizado: sucursalActualizada.nombre,
+                    regionId: sucursalActualizada.regionId,
+                    regionNombre: regionNombre,
+                    cambios: cambios,
+                    fechaEdicion: new Date().toISOString()
+                }
+            });
+            console.log(`✅ Edición de sucursal "${sucursalOriginal.nombre}" registrada en bitácora`);
+        } catch (error) {
+            console.error('Error registrando edición de sucursal:', error);
         }
     }
 
@@ -284,6 +338,8 @@ class EditarSucursalController {
             }
 
             this.sucursalActual = sucursal;
+            // ✅ NUEVO: Guardar copia original para comparar cambios
+            this.sucursalOriginal = JSON.parse(JSON.stringify(sucursal));
 
             // Llenar campos del formulario
             this._llenarFormulario(sucursal);
@@ -552,8 +608,121 @@ class EditarSucursalController {
             return;
         }
 
+        // Detectar cambios
+        const cambios = this._detectarCambios();
+
+        if (cambios.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Sin cambios',
+                text: 'No se detectaron cambios en los datos de la sucursal',
+                timer: 2000,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)'
+            });
+            return;
+        }
+
         // Confirmar actualización
-        this._confirmarActualizacion();
+        this._confirmarActualizacion(cambios);
+    }
+
+    // ✅ NUEVO: Detectar cambios en la sucursal
+    _detectarCambios() {
+        const cambios = [];
+
+        // Obtener valores actuales
+        const valoresActuales = {
+            nombre: document.getElementById('nombreSucursal').value.trim(),
+            tipo: document.getElementById('tipoSucursal').value.trim(),
+            regionId: document.getElementById('regionSucursal').value,
+            estado: document.getElementById('estadoSucursal').value,
+            ciudad: document.getElementById('ciudadSucursal').value.trim(),
+            direccion: document.getElementById('direccionSucursal').value.trim(),
+            zona: document.getElementById('zonaSucursal').value.trim(),
+            contacto: document.getElementById('contactoSucursal').value.trim(),
+            latitud: document.getElementById('latitudSucursal').value.trim(),
+            longitud: document.getElementById('longitudSucursal').value.trim()
+        };
+
+        // Comparar con original
+        if (valoresActuales.nombre !== (this.sucursalOriginal.nombre || '')) {
+            cambios.push({
+                campo: 'nombre',
+                anterior: this.sucursalOriginal.nombre || '',
+                nuevo: valoresActuales.nombre
+            });
+        }
+
+        if (valoresActuales.tipo !== (this.sucursalOriginal.tipo || '')) {
+            cambios.push({
+                campo: 'tipo',
+                anterior: this.sucursalOriginal.tipo || '',
+                nuevo: valoresActuales.tipo
+            });
+        }
+
+        if (valoresActuales.regionId !== (this.sucursalOriginal.regionId || '')) {
+            cambios.push({
+                campo: 'región',
+                anterior: 'Región anterior',
+                nuevo: valoresActuales.regionId
+            });
+        }
+
+        if (valoresActuales.estado !== (this.sucursalOriginal.estado || '')) {
+            cambios.push({
+                campo: 'estado',
+                anterior: this.sucursalOriginal.estado || '',
+                nuevo: valoresActuales.estado
+            });
+        }
+
+        if (valoresActuales.ciudad !== (this.sucursalOriginal.ciudad || '')) {
+            cambios.push({
+                campo: 'ciudad',
+                anterior: this.sucursalOriginal.ciudad || '',
+                nuevo: valoresActuales.ciudad
+            });
+        }
+
+        if (valoresActuales.direccion !== (this.sucursalOriginal.direccion || '')) {
+            cambios.push({
+                campo: 'dirección',
+                anterior: this.sucursalOriginal.direccion?.substring(0, 50) || '',
+                nuevo: valoresActuales.direccion?.substring(0, 50) || ''
+            });
+        }
+
+        if (valoresActuales.zona !== (this.sucursalOriginal.zona || '')) {
+            cambios.push({
+                campo: 'zona',
+                anterior: this.sucursalOriginal.zona || '',
+                nuevo: valoresActuales.zona
+            });
+        }
+
+        if (valoresActuales.contacto !== (this.sucursalOriginal.contacto || '')) {
+            cambios.push({
+                campo: 'contacto',
+                anterior: this.sucursalOriginal.contacto || '',
+                nuevo: valoresActuales.contacto
+            });
+        }
+
+        const latOriginal = this.sucursalOriginal.latitud?.toString() || '';
+        const lngOriginal = this.sucursalOriginal.longitud?.toString() || '';
+
+        if (valoresActuales.latitud !== latOriginal || valoresActuales.longitud !== lngOriginal) {
+            cambios.push({
+                campo: 'coordenadas',
+                anterior: `${latOriginal}, ${lngOriginal}`,
+                nuevo: `${valoresActuales.latitud}, ${valoresActuales.longitud}`
+            });
+        }
+
+        return cambios;
     }
 
     _mostrarErrorValidacion(errores) {
@@ -567,21 +736,30 @@ class EditarSucursalController {
         });
     }
 
-    _confirmarActualizacion() {
+    _confirmarActualizacion(cambios) {
         const regionSelect = document.getElementById('regionSucursal');
         const regionOption = regionSelect.options[regionSelect.selectedIndex];
         const regionNombre = regionOption.getAttribute('data-region-nombre') || regionOption.textContent;
 
         const nombre = document.getElementById('nombreSucursal').value.trim();
         const tipo = document.getElementById('tipoSucursal').value.trim();
-        const regionId = regionSelect.value;
         const estado = document.getElementById('estadoSucursal').value;
         const ciudad = document.getElementById('ciudadSucursal').value.trim();
         const direccion = document.getElementById('direccionSucursal').value.trim();
-        const zona = document.getElementById('zonaSucursal').value.trim();
-        const contacto = document.getElementById('contactoSucursal').value.trim();
         const latitud = document.getElementById('latitudSucursal').value.trim();
         const longitud = document.getElementById('longitudSucursal').value.trim();
+
+        // Generar HTML de cambios
+        let cambiosHTML = '';
+        cambios.forEach(cambio => {
+            cambiosHTML += `
+                <div style="margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                    <strong style="color: var(--color-accent-primary);">${cambio.campo}:</strong><br>
+                    <span style="color: var(--color-text-dim);">Anterior: ${cambio.anterior || '(vacío)'}</span><br>
+                    <span style="color: var(--color-accent-secondary);">Nuevo: ${cambio.nuevo || '(vacío)'}</span>
+                </div>
+            `;
+        });
 
         // Mostrar confirmación con SweetAlert2
         Swal.fire({
@@ -595,6 +773,10 @@ class EditarSucursalController {
                     <p><strong>Ciudad:</strong> ${ciudad}</p>
                     <p><strong>Dirección:</strong> ${direccion}</p>
                     <p><strong>Coordenadas:</strong> ${latitud}, ${longitud}</p>
+                    <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <strong>Cambios detectados:</strong>
+                        ${cambiosHTML}
+                    </div>
                 </div>
             `,
             icon: 'question',
@@ -605,12 +787,12 @@ class EditarSucursalController {
             color: 'var(--color-text-primary)'
         }).then((result) => {
             if (result.isConfirmed) {
-                this._actualizarSucursal();
+                this._actualizarSucursal(cambios);
             }
         });
     }
 
-    async _actualizarSucursal() {
+    async _actualizarSucursal(cambios) {
         const btnActualizar = document.getElementById('btnActualizarSucursal');
         const originalHTML = btnActualizar ? btnActualizar.innerHTML : '<i class="fas fa-save"></i>Actualizar Sucursal';
 
@@ -648,6 +830,9 @@ class EditarSucursalController {
                 this.usuarioActual.id,
                 this.usuarioActual.organizacionCamelCase
             );
+
+            // ✅ NUEVO: Registrar edición en bitácora
+            await this._registrarEdicionSucursal(this.sucursalOriginal, sucursalActualizada, cambios);
 
             this._ocultarCargando();
 
