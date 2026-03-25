@@ -1,30 +1,20 @@
-// protector-de-pagina.js - Sistema de protección con página de acceso denegado integrada
-// Ubicación: /components/protector-de-pagina.js
-// Uso: <script src="/components/protector-de-pagina.js" data-modulo="incidencias"></script>
+// protector-admin.js - Protección exclusiva para páginas de administradores
+// Ubicación: /components/protector-admin.js
+// Uso: <script src="/components/protector-admin.js"></script>
 
 (function () {
     // ========== CONFIGURACIÓN ==========
-    let requiredModule = null;
-    let requiredRole = null;
     let customMessage = null;
     let customTitle = null;
 
     // Obtener configuración del script
     const scripts = document.getElementsByTagName('script');
     for (let script of scripts) {
-        if (script.src && script.src.includes('protector-de-pagina.js')) {
-            requiredModule = script.getAttribute('data-modulo');
-            requiredRole = script.getAttribute('data-rol');
+        if (script.src && script.src.includes('protector-admin.js')) {
             customMessage = script.getAttribute('data-mensaje');
             customTitle = script.getAttribute('data-titulo');
             break;
         }
-    }
-
-    // Si no hay módulo ni rol requerido, no hay restricción
-    if (!requiredModule && !requiredRole) {
-        console.log('[Protector] Página pública - sin restricciones');
-        return;
     }
 
     let validated = false;
@@ -34,22 +24,20 @@
     // ========== FUNCIONES ==========
 
     /**
-     * Muestra la página de acceso denegado integrada con estilo moderno
+     * Muestra la página de acceso denegado
      */
-    function showAccessDeniedPage(userRole, reason) {
+    function showAccessDeniedPage(userRole) {
         if (validated) return;
         validated = true;
 
-        console.log('[Protector] ❌ Acceso DENEGADO');
-        if (requiredModule) console.log('[Protector] Módulo requerido:', requiredModule);
-        if (requiredRole) console.log('[Protector] Rol requerido:', requiredRole);
-        console.log('[Protector] Rol actual:', userRole || 'No autenticado');
-        console.log('[Protector] URL:', window.location.pathname);
+        console.log('[Protector-Admin] ❌ Acceso DENEGADO');
+        console.log('[Protector-Admin] Rol actual:', userRole || 'No autenticado');
+        console.log('[Protector-Admin] URL:', window.location.pathname);
 
         // Limpiar todo el contenido actual
         document.body.innerHTML = '';
 
-        // Agregar metatags y favicon
+        // Metatags
         const meta = document.createElement('meta');
         meta.setAttribute('charset', 'UTF-8');
         document.head.appendChild(meta);
@@ -59,14 +47,12 @@
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
         document.head.appendChild(viewport);
 
-        // Título de la página
-        document.title = 'Centinela-MX | Acceso Denegado';
+        document.title = 'Centinela-MX | Acceso Denegado - Administradores';
 
         // Favicon
         const favicon = document.createElement('link');
         favicon.rel = 'icon';
         favicon.href = '/assets/images/logo.png';
-        favicon.type = 'image/png';
         document.head.appendChild(favicon);
 
         // Fuentes
@@ -99,7 +85,6 @@
                 overflow-x: hidden;
             }
 
-            /* Fondo de partículas animado */
             .particle-bg {
                 position: fixed;
                 top: 0;
@@ -107,36 +92,9 @@
                 width: 100%;
                 height: 100%;
                 z-index: 0;
-                background: radial-gradient(circle at 20% 50%, rgba(100, 100, 255, 0.1) 0%, transparent 50%),
-                          radial-gradient(circle at 80% 20%, rgba(255, 100, 100, 0.05) 0%, transparent 50%);
+                background: radial-gradient(circle at 20% 50%, rgba(220, 38, 38, 0.15) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 20%, rgba(220, 38, 38, 0.1) 0%, transparent 50%);
                 pointer-events: none;
-            }
-            
-            .particle-bg::before {
-                content: '';
-                position: absolute;
-                width: 200%;
-                height: 200%;
-                top: -50%;
-                left: -50%;
-                background: repeating-linear-gradient(
-                    45deg,
-                    transparent,
-                    transparent 40px,
-                    rgba(255, 255, 255, 0.03) 40px,
-                    rgba(255, 255, 255, 0.03) 80px
-                );
-                animation: particleMove 60s linear infinite;
-                pointer-events: none;
-            }
-            
-            @keyframes particleMove {
-                0% {
-                    transform: translate(0, 0) rotate(0deg);
-                }
-                100% {
-                    transform: translate(50px, 50px) rotate(360deg);
-                }
             }
 
             .denied-container {
@@ -152,7 +110,7 @@
             .denied-card {
                 background: rgba(0, 0, 0, 0.85);
                 backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.15);
+                border: 1px solid rgba(220, 38, 38, 0.5);
                 border-radius: 24px;
                 padding: 48px 40px;
                 max-width: 550px;
@@ -164,12 +122,12 @@
 
             @keyframes glowPulse {
                 0%, 100% {
-                    box-shadow: 0 0 20px rgba(220, 38, 38, 0.2);
-                    border-color: rgba(220, 38, 38, 0.3);
+                    box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+                    border-color: rgba(220, 38, 38, 0.5);
                 }
                 50% {
-                    box-shadow: 0 0 40px rgba(220, 38, 38, 0.5);
-                    border-color: rgba(220, 38, 38, 0.6);
+                    box-shadow: 0 0 40px rgba(220, 38, 38, 0.6);
+                    border-color: rgba(220, 38, 38, 0.8);
                 }
             }
 
@@ -209,7 +167,6 @@
                 margin-bottom: 16px;
                 text-transform: uppercase;
                 letter-spacing: 2px;
-                text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
             }
 
             .denied-subtitle {
@@ -217,7 +174,6 @@
                 color: rgba(255, 255, 255, 0.7);
                 margin-bottom: 24px;
                 font-weight: 500;
-                font-family: 'Poppins', sans-serif;
             }
 
             .denied-message {
@@ -245,15 +201,8 @@
                 padding: 12px;
                 border-radius: 8px;
                 margin-top: 12px;
-                font-family: monospace;
                 font-size: 13px;
-                color: #94a3b8;
                 border: 1px solid rgba(239, 68, 68, 0.3);
-            }
-
-            .module-info i {
-                color: #ef4444;
-                margin-right: 8px;
             }
 
             code {
@@ -284,9 +233,7 @@
                 display: inline-flex;
                 align-items: center;
                 gap: 8px;
-                text-decoration: none;
                 font-family: 'Orbitron', sans-serif;
-                letter-spacing: 0.5px;
             }
 
             .btn-primary {
@@ -298,7 +245,6 @@
             .btn-primary:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.5);
-                background: linear-gradient(135deg, #ef4444, #dc2626);
             }
 
             .btn-secondary {
@@ -327,7 +273,6 @@
                 background: rgba(0, 0, 0, 0.5);
                 padding: 2px 8px;
                 border-radius: 20px;
-                margin: 0 4px;
             }
 
             @media (max-width: 640px) {
@@ -335,45 +280,19 @@
                     padding: 32px 24px;
                     margin: 20px;
                 }
-                
                 .denied-title {
                     font-size: 24px;
                 }
-                
-                .denied-subtitle {
-                    font-size: 16px;
-                }
-                
                 .denied-actions {
                     flex-direction: column;
-                }
-                
-                .btn {
-                    justify-content: center;
-                }
-                
-                .denied-message p {
-                    font-size: 12px;
                 }
             }
         `;
         document.head.appendChild(style);
 
-        // Determinar mensaje personalizado
-        let message = customMessage || '';
-        if (!message) {
-            if (requiredModule) {
-                message = `No tienes permisos para acceder al módulo de <strong>"${requiredModule}"</strong>.`;
-            } else if (requiredRole) {
-                message = `Esta página está restringida para usuarios con rol <strong>"${requiredRole}"</strong>.`;
-            } else {
-                message = 'No tienes permiso para acceder a esta página.';
-            }
-        }
+        let message = customMessage || 'Esta área es exclusiva para Administradores del sistema.';
+        let title = customTitle || '👑 Área de Administradores';
 
-        let title = customTitle || 'Acceso Denegado';
-
-        // Construir HTML de la página de denegado
         const deniedHtml = `
             <div class="particle-bg"></div>
             <div class="denied-container">
@@ -392,14 +311,12 @@
                     
                     <div class="denied-message">
                         <p><i class="fas fa-shield-alt"></i> <strong>Información del intento:</strong></p>
-                        ${requiredModule ? `<p><i class="fas fa-cube"></i> <strong>Módulo requerido:</strong> <code>${requiredModule}</code></p>` : ''}
-                        ${requiredRole ? `<p><i class="fas fa-user-tag"></i> <strong>Rol requerido:</strong> <code>${requiredRole}</code></p>` : ''}
+                        <p><i class="fas fa-user-tag"></i> <strong>Rol requerido:</strong> <code>administrador</code> o <code>master</code></p>
                         <p><i class="fas fa-user-circle"></i> <strong>Tu rol actual:</strong> <code>${userRole || 'No autenticado'}</code></p>
                         <p><i class="fas fa-link"></i> <strong>URL intentada:</strong> <code>${window.location.pathname}</code></p>
-                        ${previousPage && previousPage.includes(window.location.hostname) ? `<p><i class="fas fa-arrow-left"></i> <strong>Página anterior:</strong> <code>${previousPage.split('/').pop() || previousPage}</code></p>` : ''}
                         <div class="module-info">
                             <i class="fas fa-info-circle"></i>
-                            <strong>¿Necesitas acceso?</strong> Contacta al administrador del sistema para solicitar permisos.
+                            <strong>¿Eres administrador?</strong> Inicia sesión con tu cuenta de administrador para acceder.
                         </div>
                     </div>
                     
@@ -419,10 +336,8 @@
             </div>
         `;
 
-        // Reemplazar el contenido del body
         document.body.innerHTML = deniedHtml;
 
-        // Funciones de redirección
         function goBack() {
             if (previousPage && previousPage.includes(window.location.hostname)) {
                 window.location.href = previousPage;
@@ -439,35 +354,26 @@
                     window.location.href = '/adminSistema/dashboard/dashboard.html';
                 } else if (userRoleLocal === 'administrador') {
                     window.location.href = '/usuarios/administrador/dashboard/dashboard.html';
-                } else if (userRoleLocal === 'colaborador') {
-                    window.location.href = '/usuarios/colaborador/dashboardGeneral/dashboardGeneral.html';
                 } else {
-                    window.location.href = '/login.html';
+                    window.location.href = '/usuarios/colaborador/dashboardGeneral/dashboardGeneral.html';
                 }
             } else {
                 window.location.href = '/login.html';
             }
         }
 
-        // Agregar eventos después de que el DOM esté listo
         setTimeout(() => {
             const backBtn = document.getElementById('protector-go-back');
             const homeBtn = document.getElementById('protector-go-home');
-
             if (backBtn) backBtn.onclick = goBack;
             if (homeBtn) homeBtn.onclick = goToHome;
         }, 100);
 
-        // Contador regresivo
         let countdown = 5;
         const countdownElement = document.getElementById('protector-countdown');
-
         const timer = setInterval(() => {
             countdown--;
-            if (countdownElement) {
-                countdownElement.textContent = countdown;
-            }
-
+            if (countdownElement) countdownElement.textContent = countdown;
             if (countdown <= 0) {
                 clearInterval(timer);
                 if (previousPage && previousPage.includes(window.location.hostname)) {
@@ -477,14 +383,8 @@
                 }
             }
         }, 1000);
-
-        // Registrar en consola para auditoría
-        console.warn('[Seguridad] Acceso denegado - Módulo:', requiredModule, 'Rol:', userRole, 'URL:', window.location.pathname);
     }
 
-    /**
-     * Obtiene datos del usuario sincrónicamente
-     */
     function getUserDataSync() {
         try {
             const sources = ['currentUser', 'userData'];
@@ -492,39 +392,28 @@
                 const data = localStorage.getItem(source);
                 if (data) {
                     const user = JSON.parse(data);
-                    if (user && (user.rol || user.role)) {
-                        return user;
-                    }
+                    if (user && (user.rol || user.role)) return user;
                 }
             }
-
             const sessionUser = sessionStorage.getItem('currentUser');
             if (sessionUser) {
                 const user = JSON.parse(sessionUser);
-                if (user && (user.rol || user.role)) {
-                    return user;
-                }
+                if (user && (user.rol || user.role)) return user;
             }
-
             return null;
         } catch (err) {
             return null;
         }
     }
 
-    /**
-     * Obtiene datos del usuario asincrónicamente
-     */
     async function getUserData() {
         try {
             const syncUser = getUserDataSync();
             if (syncUser) return syncUser;
-
             try {
                 const module = await import('/clases/user.js');
                 const { UserManager } = module;
                 userManager = new UserManager();
-
                 return new Promise((resolve) => {
                     let attempts = 0;
                     const checkInterval = setInterval(() => {
@@ -539,163 +428,56 @@
                     }, 100);
                 });
             } catch (err) {
-                console.log('[Protector] UserManager no disponible');
                 return null;
             }
         } catch (err) {
-            console.error('[Protector] Error obteniendo usuario:', err);
             return null;
         }
     }
 
-    /**
-     * Verifica permiso por rol
-     */
-    async function checkRolePermission(userRole) {
-        if (!requiredRole) return true;
-        if (userRole === requiredRole) return true;
-        if (userRole === 'master') return true;
-        if (requiredRole === 'colaborador' && userRole === 'administrador') return true;
-        return false;
-    }
-
-    /**
-     * Verifica permiso por módulo
-     */
-    async function checkModulePermission(userRole, moduleId) {
-        try {
-            console.log('[Protector] Verificando módulo:', moduleId, 'Rol:', userRole);
-
-            // Master y administrador tienen acceso a todos los módulos
-            if (userRole === 'master' || userRole === 'administrador') {
-                console.log('[Protector] ✅ Acceso total por rol:', userRole);
-                return true;
-            }
-
-            // Colaborador necesita verificar permisos específicos
-            if (userRole === 'colaborador') {
-                try {
-                    let PermissionManager;
-                    let module;
-
-                    const paths = [
-                        '../classes/permission.js',
-                        '/clases/permission.js',
-                        '/js/classes/permission.js',
-                        '/components/classes/permission.js'
-                    ];
-
-                    for (const path of paths) {
-                        try {
-                            module = await import(path);
-                            PermissionManager = module.PermissionManager || module.default;
-                            if (PermissionManager) break;
-                        } catch (e) {
-                            continue;
-                        }
-                    }
-
-                    if (!PermissionManager) {
-                        console.error('[Protector] No se pudo cargar PermissionManager');
-                        return false;
-                    }
-
-                    const permissionManager = new PermissionManager();
-                    if (permissionManager.cargarTodosPermisos) {
-                        await permissionManager.cargarTodosPermisos();
-                    } else if (permissionManager.loadPermissions) {
-                        await permissionManager.loadPermissions();
-                    }
-
-                    const hasPermission = permissionManager.verificarPermiso ?
-                        await permissionManager.verificarPermiso(userRole, moduleId) :
-                        await permissionManager.checkPermission(userRole, moduleId);
-
-                    console.log('[Protector] Resultado verificación:', hasPermission);
-                    return hasPermission;
-
-                } catch (err) {
-                    console.error('[Protector] Error en PermissionManager:', err);
-                    return false;
-                }
-            }
-
-            return false;
-
-        } catch (err) {
-            console.error('[Protector] Error en checkModulePermission:', err);
-            return false;
-        }
-    }
-
-    /**
-     * Validación principal de acceso
-     */
     async function validateAccess() {
         try {
-            console.log('[Protector] ==========================================');
-            console.log('[Protector] Iniciando validación de acceso');
-            console.log('[Protector] URL:', window.location.pathname);
-            if (requiredModule) console.log('[Protector] Módulo requerido:', requiredModule);
-            if (requiredRole) console.log('[Protector] Rol requerido:', requiredRole);
-            console.log('[Protector] ==========================================');
+            console.log('[Protector-Admin] ==========================================');
+            console.log('[Protector-Admin] Verificando acceso a página de administrador');
+            console.log('[Protector-Admin] URL:', window.location.pathname);
 
-            // Obtener usuario actual
             const currentUser = await getUserData();
             let userRole = null;
 
             if (currentUser) {
                 userRole = currentUser.rol || currentUser.role;
-                console.log('[Protector] Usuario autenticado:', {
-                    email: currentUser.correoElectronico || currentUser.email,
-                    rol: userRole
-                });
+                console.log('[Protector-Admin] Usuario:', { email: currentUser.correoElectronico || currentUser.email, rol: userRole });
             } else {
-                console.log('[Protector] No hay usuario autenticado');
+                console.log('[Protector-Admin] No hay usuario autenticado');
             }
 
-            // Verificar autenticación
             if (!currentUser || !userRole) {
-                showAccessDeniedPage('No autenticado', 'no-auth');
+                showAccessDeniedPage('No autenticado');
                 return;
             }
 
-            // Verificar estado del usuario
             if (currentUser.status === false || currentUser.activo === false) {
-                console.log('[Protector] Usuario inactivo');
-                showAccessDeniedPage(userRole, 'inactive');
+                console.log('[Protector-Admin] Usuario inactivo');
+                showAccessDeniedPage(userRole);
                 return;
             }
 
-            // Verificar por rol específico
-            if (requiredRole) {
-                const hasRole = await checkRolePermission(userRole);
-                if (!hasRole) {
-                    console.log('[Protector] Rol no autorizado');
-                    showAccessDeniedPage(userRole, 'role');
-                    return;
-                }
+            // VERIFICACIÓN EXCLUSIVA PARA ADMINISTRADORES
+            // Solo administrador o master pueden acceder
+            if (userRole === 'administrador' || userRole === 'master') {
+                console.log('[Protector-Admin] ✅ Acceso CONCEDIDO - Rol:', userRole);
+                return;
             }
 
-            // Verificar por módulo específico
-            if (requiredModule) {
-                const hasModule = await checkModulePermission(userRole, requiredModule);
-                if (!hasModule) {
-                    console.log('[Protector] Módulo no autorizado');
-                    showAccessDeniedPage(userRole, 'module');
-                    return;
-                }
-            }
-
-            // TODO CORRECTO - Mostrar la página normal
-            console.log('[Protector] ✅ Acceso CONCEDIDO');
+            // Si es colaborador, DENEGAR ACCESO
+            console.log('[Protector-Admin] ❌ Acceso DENEGADO - Rol no autorizado:', userRole);
+            showAccessDeniedPage(userRole);
 
         } catch (error) {
-            console.error('[Protector] Error en validación:', error);
-            showAccessDeniedPage(null, 'error');
+            console.error('[Protector-Admin] Error:', error);
+            showAccessDeniedPage(null);
         }
     }
 
-    // Ejecutar validación inmediatamente
     validateAccess();
 })();
