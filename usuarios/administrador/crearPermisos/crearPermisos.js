@@ -1,4 +1,4 @@
-// crearPermiso.js - VERSIÓN CON MÓDULOS FIJOS + INCIDENCIAS Y MAPA DE ALERTAS DINÁMICOS
+// crearPermiso.js - VERSIÓN CON MÓDULOS COMPLETOS (Áreas, Categorías, Sucursales, Regiones, Incidencias, Mapa Alertas, Usuarios, Estadísticas, Tareas)
 
 // =============================================
 // CLASE PRINCIPAL - CrearPermisoController
@@ -212,6 +212,9 @@ class CrearPermisoController {
                 console.log('❌ Módulo Mapa de Alertas oculto (plan no lo incluye)');
             }
         }
+
+        // Los módulos Usuarios, Estadísticas y Tareas siempre están visibles
+        console.log('✅ Módulos Usuarios, Estadísticas y Tareas siempre visibles');
     }
 
     // ========== CARGA DE ÁREAS ==========
@@ -358,11 +361,8 @@ class CrearPermisoController {
     }
 
     _configurarCheckboxesPermisos() {
-        // Módulos fijos (siempre visibles)
-        const modulosFijos = ['Areas', 'Categorias', 'Sucursales', 'Regiones'];
-        // Módulos dinámicos
-        const modulosDinamicos = ['Incidencias', 'Monitoreo'];
-        const todosModulos = [...modulosFijos, ...modulosDinamicos];
+        // TODOS los módulos disponibles (siempre visibles o dinámicos según plan)
+        const todosModulos = ['Areas', 'Categorias', 'Sucursales', 'Regiones', 'Incidencias', 'Monitoreo', 'Usuarios', 'Estadisticas', 'Tareas'];
 
         todosModulos.forEach(modulo => {
             const checkbox = document.getElementById(`permiso${modulo}`);
@@ -434,7 +434,11 @@ class CrearPermisoController {
             sucursales: document.getElementById('permisoSucursales')?.checked || false,
             regiones: document.getElementById('permisoRegiones')?.checked || false,
             incidencias: document.getElementById('permisoIncidencias')?.checked || false,
-            monitoreo: document.getElementById('permisoMonitoreo')?.checked || false
+            monitoreo: document.getElementById('permisoMonitoreo')?.checked || false,
+            // NUEVOS MÓDULOS
+            usuarios: document.getElementById('permisoUsuarios')?.checked || false,
+            estadisticas: document.getElementById('permisoEstadisticas')?.checked || false,
+            tareas: document.getElementById('permisoTareas')?.checked || false
         };
 
         return permisos;
@@ -577,7 +581,10 @@ class CrearPermisoController {
                 sucursales: 'Sucursales',
                 regiones: 'Regiones',
                 incidencias: 'Incidencias',
-                monitoreo: 'Mapa de Alertas'
+                monitoreo: 'Mapa de Alertas',
+                usuarios: 'Usuarios',
+                estadisticas: 'Estadísticas',
+                tareas: 'Tareas'
             };
 
             Swal.close();

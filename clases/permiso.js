@@ -1,4 +1,5 @@
 // permiso.js - VERSIÓN COMPLETA CON HISTORIAL DE ACTIVIDADES Y REGISTRO DE CONSUMO
+// AGREGADOS MÓDULOS: USUARIOS, ESTADÍSTICAS, TAREAS
 
 import {
     collection,
@@ -24,12 +25,17 @@ class Permiso {
         this.areaId = data.areaId || '';
         this.cargoId = data.cargoId || '';
 
+        // MÓDULOS ACTUALIZADOS: Agregados usuarios, estadisticas, tareas
         this.permisos = data.permisos || {
             areas: false,
             categorias: false,
             sucursales: false,
             regiones: false,
-            incidencias: false
+            incidencias: false,
+            // NUEVOS MÓDULOS
+            usuarios: false,
+            estadisticas: false,
+            tareas: false
         };
 
         this.organizacionCamelCase = data.organizacionCamelCase || '';
@@ -82,6 +88,7 @@ class Permiso {
         return this.contarModulosActivos() > 0;
     }
 
+    // Módulos existentes
     puedeAccederAreas() {
         return this.puedeAcceder('areas');
     }
@@ -100,6 +107,19 @@ class Permiso {
 
     puedeAccederIncidencias() {
         return this.puedeAcceder('incidencias');
+    }
+
+    // NUEVOS MÓDULOS
+    puedeAccederUsuarios() {
+        return this.puedeAcceder('usuarios');
+    }
+
+    puedeAccederEstadisticas() {
+        return this.puedeAcceder('estadisticas');
+    }
+
+    puedeAccederTareas() {
+        return this.puedeAcceder('tareas');
     }
 
     toFirestore() {
@@ -147,7 +167,11 @@ class Permiso {
             organizacion: this.organizacionCamelCase,
             fechaCreacion: this._formatearFecha(this.fechaCreacion),
             fechaActualizacion: this._formatearFecha(this.fechaActualizacion),
-            creadoPor: this.creadoPor
+            creadoPor: this.creadoPor,
+            // NUEVOS: acceso específico por módulo
+            accesoUsuarios: this.puedeAccederUsuarios(),
+            accesoEstadisticas: this.puedeAccederEstadisticas(),
+            accesoTareas: this.puedeAccederTareas()
         };
     }
 
@@ -272,12 +296,16 @@ class PermisoManager {
                 console.warn('No se pudo obtener nombres de área/cargo:', e);
             }
 
+            // MÓDULOS ACTUALIZADOS: Incluir nuevos módulos en permisos iniciales
             const permisosIniciales = permisoData.permisos || {
                 areas: false,
                 categorias: false,
                 sucursales: false,
                 regiones: false,
-                incidencias: false
+                incidencias: false,
+                usuarios: false,
+                estadisticas: false,
+                tareas: false
             };
 
             const permisoFirestoreData = {
@@ -291,10 +319,10 @@ class PermisoManager {
             };
 
             const permisosCollection = collection(db, collectionName);
-            
+
             // [MODIFICACIÓN]: Registrar ESCRITURA
             await consumo.registrarFirestoreEscritura(collectionName, 'nuevo permiso');
-            
+
             const docRef = await addDoc(permisosCollection, permisoFirestoreData);
             const permisoId = docRef.id;
 
@@ -410,10 +438,10 @@ class PermisoManager {
         try {
             const collectionName = this._getCollectionName(orgId);
             const permisoRef = doc(db, collectionName, id);
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(collectionName, id);
-            
+
             const permisoSnap = await getDoc(permisoRef);
 
             if (permisoSnap.exists()) {
@@ -445,10 +473,10 @@ class PermisoManager {
             const permisosCollection = collection(db, collectionName);
 
             const q = query(permisosCollection, where("areaId", "==", areaId));
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(collectionName, `permisos por área ${areaId}`);
-            
+
             const querySnapshot = await getDocs(q);
             const permisos = [];
 
@@ -529,7 +557,7 @@ class PermisoManager {
 
             // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
             await consumo.registrarFirestoreActualizacion(collectionName, id);
-            
+
             await updateDoc(permisoRef, datosActualizados);
 
             const permisoIndex = this.permisos.findIndex(p => p.id === id);
@@ -597,7 +625,7 @@ class PermisoManager {
 
             // [MODIFICACIÓN]: Registrar ELIMINACIÓN
             await consumo.registrarFirestoreEliminacion(collectionName, id);
-            
+
             await deleteDoc(permisoRef);
 
             const permisoIndex = this.permisos.findIndex(p => p.id === id);
@@ -674,8 +702,10 @@ class PermisoManager {
         const conAcceso = permisos.filter(p => p.tieneAlgunModulo()).length;
         const sinAcceso = total - conAcceso;
 
+        // MÓDULOS ACTUALIZADOS: Incluir todos los módulos
+        const modulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias', 'usuarios', 'estadisticas', 'tareas'];
+
         const estadisticasPorModulo = {};
-        const modulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias'];
 
         modulos.forEach(modulo => {
             const conPermiso = permisos.filter(p => p.puedeAcceder(modulo)).length;
