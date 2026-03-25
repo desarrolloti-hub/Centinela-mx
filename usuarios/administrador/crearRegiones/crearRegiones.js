@@ -1,4 +1,5 @@
-// crearRegiones.js - VERSIÓN MEJORADA (BASADA EN CREAR CATEGORÍAS)
+// crearRegiones.js - VERSIÓN MEJORADA CON REGISTRO DE BITÁCORA
+// BASADA EN CREAR CATEGORÍAS
 
 // LÍMITES DE CARACTERES
 const LIMITES = {
@@ -13,6 +14,7 @@ class CrearRegionController {
         this.regionManager = null;
         this.usuarioActual = null;
         this.loadingOverlay = null;
+        this.historialManager = null; // ✅ NUEVO: Para registrar actividades
 
         // Inicializar
         this._init();
@@ -28,24 +30,61 @@ class CrearRegionController {
                 throw new Error('No se pudo cargar información del usuario');
             }
 
-            // 2. Cargar RegionManager
+            // 2. Inicializar historialManager
+            await this._initHistorialManager();
+
+            // 3. Cargar RegionManager
             await this._cargarRegionManager();
 
-            // 3. Configurar eventos
+            // 4. Configurar eventos
             this._configurarEventos();
 
-            // 4. Configurar organización automática
+            // 5. Configurar organización automática
             this._configurarOrganizacion();
 
-            // 5. Inicializar validaciones
+            // 6. Inicializar validaciones
             this._inicializarValidaciones();
 
-            // 6. Actualizar UI con información de la organización
+            // 7. Actualizar UI con información de la organización
             this._actualizarInfoOrganizacion();
 
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
+        }
+    }
+
+    // ✅ NUEVO: Inicializar historialManager
+    async _initHistorialManager() {
+        try {
+            const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+            this.historialManager = new HistorialUsuarioManager();
+            console.log('📋 HistorialManager inicializado para regiones');
+        } catch (error) {
+            console.error('Error inicializando historialManager:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar creación de región
+    async _registrarCreacionRegion(region, datos) {
+        if (!this.historialManager) return;
+        
+        try {
+            await this.historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'crear',
+                modulo: 'regiones',
+                descripcion: `Creó región: ${datos.nombre}`,
+                detalles: {
+                    regionId: region.id,
+                    regionNombre: datos.nombre,
+                    regionColor: datos.color,
+                    fechaCreacion: new Date().toISOString()
+                }
+            });
+            console.log(`✅ Creación de región "${datos.nombre}" registrada en bitácora`);
+        } catch (error) {
+            console.error('Error registrando creación de región:', error);
         }
     }
 
@@ -130,6 +169,18 @@ class CrearRegionController {
 
     _actualizarInfoOrganizacion() {
         // Podrías mostrar información adicional si lo deseas
+        const container = document.getElementById('headerDescription');
+        if (container) {
+            const coleccion = `regiones_${this.usuarioActual.organizacionCamelCase}`;
+            container.innerHTML = `
+                <div style="margin-bottom: 8px;">
+                    <strong>Organización:</strong> ${this.usuarioActual.organizacion}
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">
+                    <i class="fas fa-database"></i> Colección: ${coleccion}
+                </div>
+            `;
+        }
     }
 
     // ========== CONFIGURACIÓN DE EVENTOS ==========
@@ -278,6 +329,17 @@ class CrearRegionController {
                 btnCrear.disabled = true;
             }
 
+            // Mostrar loading
+            Swal.fire({
+                title: 'Creando región...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
 
             // Crear región
             const resultado = await this.regionManager.createRegion(
@@ -291,6 +353,11 @@ class CrearRegionController {
             );
 
             Swal.close();
+
+            // ✅ NUEVO: Registrar creación en bitácora
+            if (resultado && resultado.id) {
+                await this._registrarCreacionRegion(resultado, datos);
+            }
 
             // Mostrar éxito
             await Swal.fire({

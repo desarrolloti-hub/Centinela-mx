@@ -1,5 +1,6 @@
 // [file name]: navbarColaborador.js
 // [file path]: /components/navbarColaborador.js
+// VERSIÓN ACTUALIZADA - Incluye módulos: Usuarios, Estadísticas, Tareas, Mapa de Alertas, Permisos
 
 class NavbarComplete {
     constructor() {
@@ -16,6 +17,13 @@ class NavbarComplete {
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
         this.intervalNotificaciones = null;
+
+        // Sistema de sonidos
+        this.sonidoNotificacion = null;
+        this.soundEnabled = true;
+        this.soundVolume = 0.7;
+        this.availableSounds = [];
+
         this.init();
     }
 
@@ -46,11 +54,181 @@ class NavbarComplete {
             this.filterMenuByPermissions();
 
             await this._initNotificacionManager();
+            await this._initSonidoNotificacion();
             await this._cargarNotificaciones();
             this._iniciarListenerNotificaciones();
 
         } catch (error) {
             console.error('Error en navbar:', error);
+        }
+    }
+
+    /**
+     * 🔥 Inicializar sistema de sonido para colaborador
+     */
+    async _initSonidoNotificacion() {
+        try {
+            const { sonidoNotificacion } = await import('/clases/sonidoNotificacion.js');
+            this.sonidoNotificacion = sonidoNotificacion;
+
+            await this.sonidoNotificacion.initialize();
+
+            this.availableSounds = this.sonidoNotificacion.getAvailableSounds();
+
+            if (this.availableSounds.length > 0) {
+                console.log(`🔊 Sistema de sonido inicializado para colaborador. Sonidos encontrados: ${this.availableSounds.length}`);
+            } else {
+                console.warn('⚠️ No se encontraron archivos de sonido en Firebase Storage');
+            }
+
+            // Cargar preferencias de sonido del usuario si existen
+            if (this.currentUser) {
+                const deviceId = this._getDeviceId();
+                const dispositivoActual = this.currentUser.dispositivos?.find(
+                    d => d.deviceId === deviceId
+                );
+
+                if (dispositivoActual) {
+                    if (dispositivoActual.soundEnabled !== undefined) {
+                        this.soundEnabled = dispositivoActual.soundEnabled;
+                        this.sonidoNotificacion.setEnabled(this.soundEnabled);
+                    }
+                    if (dispositivoActual.selectedSound) {
+                        localStorage.setItem('selectedSound', dispositivoActual.selectedSound);
+                    }
+                    if (dispositivoActual.soundVolume) {
+                        this.soundVolume = dispositivoActual.soundVolume;
+                        this.sonidoNotificacion.setGlobalVolume(this.soundVolume);
+                        localStorage.setItem('soundVolume', this.soundVolume);
+                    }
+                } else {
+                    const savedSoundEnabled = localStorage.getItem('soundEnabled');
+                    if (savedSoundEnabled !== null) {
+                        this.soundEnabled = savedSoundEnabled === 'true';
+                        this.sonidoNotificacion.setEnabled(this.soundEnabled);
+                    }
+                    const savedVolume = localStorage.getItem('soundVolume');
+                    if (savedVolume !== null) {
+                        this.soundVolume = parseFloat(savedVolume);
+                        this.sonidoNotificacion.setGlobalVolume(this.soundVolume);
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.warn('⚠️ No se pudo inicializar sistema de sonido para colaborador:', error);
+            this.sonidoNotificacion = null;
+        }
+    }
+
+    _getDeviceId() {
+        let deviceId = localStorage.getItem('fcm_device_id');
+        if (!deviceId) {
+            deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('fcm_device_id', deviceId);
+        }
+        return deviceId;
+    }
+
+    _determinarSonidoPorNotificacion(notificacion) {
+        if (notificacion.nivelRiesgo === 'critico') {
+            if (this.availableSounds.some(s => s.id === 'alarma-robo')) {
+                return 'alarma-robo';
+            }
+        }
+
+        if (notificacion.tipo === 'incidencia') {
+            if (this.availableSounds.some(s => s.id === 'incidencia')) {
+                return 'incidencia';
+            }
+        }
+
+        if (notificacion.tipo === 'seguimiento' || notificacion.tipo === 'actualizacion') {
+            if (this.availableSounds.some(s => s.id === 'actualizacion')) {
+                return 'actualizacion';
+            }
+        }
+
+        if (notificacion.tipo === 'canalizacion') {
+            if (this.availableSounds.some(s => s.id === 'canalizacion')) {
+                return 'canalizacion';
+            }
+        }
+
+        if (notificacion.tipo === 'comentario') {
+            if (this.availableSounds.some(s => s.id === 'comentario')) {
+                return 'comentario';
+            }
+        }
+
+        if (this.availableSounds.length > 0) {
+            return this.availableSounds[0].id;
+        }
+
+        return null;
+    }
+
+    async _reproducirSonido(notificacion) {
+        if (!this.soundEnabled || !this.sonidoNotificacion) return;
+
+        const sonidoId = this._determinarSonidoPorNotificacion(notificacion);
+        if (!sonidoId) {
+            return;
+        }
+
+        try {
+            await this.sonidoNotificacion.play(sonidoId, this.soundVolume);
+            console.log(`🔊 Sonido reproducido para colaborador: ${sonidoId}`);
+        } catch (error) {
+            console.debug('Error reproduciendo sonido:', error);
+        }
+    }
+
+    async _detectarYReproducirSonido(nuevasNotificaciones) {
+        if (!this.soundEnabled || !this.sonidoNotificacion) return;
+
+        const nuevasNoLeidas = nuevasNotificaciones.filter(n => !n.leida);
+
+        if (nuevasNoLeidas.length > 0) {
+            const primeraNotificacion = nuevasNoLeidas[0];
+            await this._reproducirSonido(primeraNotificacion);
+
+            if (Notification.permission === 'granted' && nuevasNoLeidas.length === 1) {
+                const primera = nuevasNoLeidas[0];
+                const notifUI = primera.toUI ? primera.toUI() : {
+                    titulo: primera.titulo,
+                    mensaje: primera.mensaje
+                };
+
+                const systemNotif = new Notification(notifUI.titulo, {
+                    body: notifUI.mensaje,
+                    icon: '/assets/images/logo.png',
+                    badge: '/assets/images/logo.png',
+                    silent: false,
+                    vibrate: [200, 100, 200]
+                });
+
+                systemNotif.onclick = () => {
+                    window.focus();
+                    if (primera.urlDestino) {
+                        window.location.href = primera.urlDestino;
+                    }
+                    systemNotif.close();
+                };
+            } else if (Notification.permission === 'granted' && nuevasNoLeidas.length > 1) {
+                const systemNotif = new Notification(`📬 ${nuevasNoLeidas.length} nuevas notificaciones`, {
+                    body: `Tienes ${nuevasNoLeidas.length} notificaciones sin leer`,
+                    icon: '/assets/images/logo.png',
+                    badge: '/assets/images/logo.png',
+                    silent: false
+                });
+
+                systemNotif.onclick = () => {
+                    window.focus();
+                    this._mostrarModalNotificaciones();
+                    systemNotif.close();
+                };
+            }
         }
     }
 
@@ -82,7 +260,7 @@ class NavbarComplete {
                 this.notificaciones = [];
                 this.notificacionesNoLeidas = 0;
             } else {
-                this.notificaciones = todasNotificaciones.filter(notif => {
+                const notificacionesFiltradas = todasNotificaciones.filter(notif => {
                     if (notif.areasIds && Array.isArray(notif.areasIds) && notif.areasIds.length > 0) {
                         return notif.areasIds.includes(areaUsuario);
                     }
@@ -92,6 +270,18 @@ class NavbarComplete {
                     return false;
                 });
 
+                const nuevasNoLeidas = notificacionesFiltradas.filter(n => !n.leida);
+                const nuevas = nuevasNoLeidas.filter(n => {
+                    const existe = this.notificaciones.some(old => old.id === n.id);
+                    return !existe;
+                });
+
+                if (nuevas.length > 0) {
+                    console.log(`🔔 ${nuevas.length} nuevas notificaciones detectadas para colaborador`);
+                    await this._detectarYReproducirSonido(nuevas);
+                }
+
+                this.notificaciones = notificacionesFiltradas;
                 this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
             }
 
@@ -113,12 +303,12 @@ class NavbarComplete {
                 this.currentUser.id,
                 this.currentUser.organizacionCamelCase
             );
-            
+
             this.notificacionesNoLeidas = 0;
             this.notificaciones.forEach(n => n.leida = true);
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
-            
+
         } catch (error) {
             // Error silencioso
         }
@@ -134,12 +324,12 @@ class NavbarComplete {
                 this.currentUser.id,
                 this.currentUser.organizacionCamelCase
             );
-            
+
             this.notificaciones = [];
             this.notificacionesNoLeidas = 0;
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
-            
+
         } catch (error) {
             // Error silencioso
         }
@@ -233,29 +423,29 @@ class NavbarComplete {
                 e.stopPropagation();
                 const id = item.dataset.id;
                 const url = item.dataset.url;
-                
+
                 if (this.notificacionManager && id) {
                     await this.notificacionManager.marcarComoLeida(
                         this.currentUser.id,
                         id,
                         this.currentUser.organizacionCamelCase
                     );
-                    
+
                     const notifIndex = this.notificaciones.findIndex(n => n.id === id);
                     if (notifIndex !== -1) {
                         this.notificaciones[notifIndex].leida = true;
                     }
-                    
+
                     this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
                     this._actualizarBadgeNotificaciones();
-                    
+
                     const estadoDiv = item.querySelector('.notificacion-estado');
                     if (estadoDiv) {
                         estadoDiv.classList.remove('no-leida');
                         estadoDiv.classList.add('leida');
                     }
                 }
-                
+
                 if (url) {
                     window.location.href = url;
                 }
@@ -275,7 +465,7 @@ class NavbarComplete {
     _mostrarModalNotificaciones() {
         if (typeof Swal !== 'undefined') {
             let notificacionesHtml = '<div style="max-height: 400px; overflow-y: auto;">';
-            
+
             this.notificaciones.forEach(notif => {
                 const notifUI = notif.toUI ? notif.toUI() : {
                     titulo: notif.titulo,
@@ -286,7 +476,7 @@ class NavbarComplete {
                     urlDestino: notif.urlDestino || `../verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
                     leida: notif.leida || false
                 };
-                
+
                 notificacionesHtml += `
                     <div class="notificacion-item-modal" data-id="${notif.id}" data-url="${notifUI.urlDestino}" style="
                         display: flex;
@@ -309,9 +499,9 @@ class NavbarComplete {
                     </div>
                 `;
             });
-            
+
             notificacionesHtml += '</div>';
-            
+
             Swal.fire({
                 title: 'Todas las Notificaciones',
                 html: notificacionesHtml,
@@ -326,28 +516,28 @@ class NavbarComplete {
                             e.stopPropagation();
                             const id = item.dataset.id;
                             const url = item.dataset.url;
-                            
+
                             if (this.notificacionManager && id) {
                                 await this.notificacionManager.marcarComoLeida(
                                     this.currentUser.id,
                                     id,
                                     this.currentUser.organizacionCamelCase
                                 );
-                                
+
                                 const notifIndex = this.notificaciones.findIndex(n => n.id === id);
                                 if (notifIndex !== -1) {
                                     this.notificaciones[notifIndex].leida = true;
                                 }
-                                
+
                                 this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
                                 this._actualizarBadgeNotificaciones();
                                 this._renderizarNotificaciones();
                             }
-                            
+
                             if (url) {
                                 window.location.href = url;
                             }
-                            
+
                             Swal.close();
                         });
                     });
@@ -368,27 +558,6 @@ class NavbarComplete {
             .replace(/'/g, '&#039;');
     }
 
-    async _marcarTodasLeidas() {
-        if (!this.notificacionManager || !this.currentUser?.id || !this.currentUser?.organizacionCamelCase) {
-            return;
-        }
-
-        try {
-            await this.notificacionManager.marcarTodasComoLeidas(
-                this.currentUser.id,
-                this.currentUser.organizacionCamelCase
-            );
-            
-            this.notificacionesNoLeidas = 0;
-            this.notificaciones.forEach(n => n.leida = true);
-            this._actualizarBadgeNotificaciones();
-            this._renderizarNotificaciones();
-            
-        } catch (error) {
-            console.error('Error marcando todas como leídas:', error);
-        }
-    }
-
     _configurarNotificacionesDropdown() {
         const notificacionesBtn = document.getElementById('notificacionesBtn');
         const notificacionesDropdown = document.getElementById('notificacionesDropdown');
@@ -400,7 +569,7 @@ class NavbarComplete {
             e.stopPropagation();
             this.dropdownNotificacionesAbierto = !this.dropdownNotificacionesAbierto;
             notificacionesDropdown.classList.toggle('active', this.dropdownNotificacionesAbierto);
-            
+
             if (this.dropdownNotificacionesAbierto && this.notificacionesNoLeidas > 0) {
                 this._cargarNotificaciones();
             }
@@ -1505,6 +1674,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
+                <!-- SECCIÓN GESTIONAR -->
                 <div class="nav-section">
                     <button class="gestionar-dropdown-btn" id="gestionarDropdownBtn">
                         <span>Gestionar</span>
@@ -1512,28 +1682,57 @@ class NavbarComplete {
                     </button>
 
                     <div class="gestionar-dropdown-options" id="gestionarDropdownOptions">
+                        <!-- Áreas -->
                         <a href="../areas/areas.html" class="gestionar-dropdown-option" id="areasBtn">
-                            <i class="fa-solid fa-map"></i>
+                            <i class="fa-solid fa-sitemap"></i>
                             <span>Áreas</span>
                         </a>
 
+                        <!-- Categorías -->
                         <a href="../categorias/categorias.html" class="gestionar-dropdown-option" id="categoriasBtn">
                             <i class="fa-solid fa-tags"></i>
                             <span>Categorías</span>
                         </a>
 
+                        <!-- Sucursales -->
                         <a href="../sucursales/sucursales.html" class="gestionar-dropdown-option" id="sucursalesBtn">
                             <i class="fa-solid fa-store"></i>
                             <span>Sucursales</span>
                         </a>
 
+                        <!-- Regiones -->
                         <a href="../regiones/regiones.html" class="gestionar-dropdown-option" id="regionesBtn">
-                            <i class="fa-solid fa-location-dot"></i>
+                            <i class="fa-solid fa-map-marked-alt"></i>
                             <span>Regiones</span>
+                        </a>
+
+                        <!-- NUEVO: Usuarios -->
+                        <a href="../usuarios/usuarios.html" class="gestionar-dropdown-option" id="usuariosBtn">
+                            <i class="fa-solid fa-users"></i>
+                            <span>Usuarios</span>
+                        </a>
+
+                        <!-- NUEVO: Tareas -->
+                        <a href="../tareas/tareas.html" class="gestionar-dropdown-option" id="tareasBtn">
+                            <i class="fa-solid fa-tasks"></i>
+                            <span>Tareas</span>
+                        </a>
+
+                        <!-- NUEVO: Mapa de Alertas -->
+                        <a href="../mapa/mapa.html" class="gestionar-dropdown-option" id="mapaBtn">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <span>Mapa de Alertas</span>
+                        </a>
+
+                        <!-- NUEVO: Estadísticas -->
+                        <a href="../estadisticas/estadisticas.html" class="gestionar-dropdown-option" id="estadisticasBtn">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Estadísticas</span>
                         </a>
                     </div>
                 </div>
 
+                <!-- SECCIÓN INCIDENCIAS -->
                 <div class="nav-section">
                     <button class="incidencias-dropdown-btn" id="incidenciasDropdownBtn">
                         <span>Incidencias</span>
@@ -1558,6 +1757,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
+                <!-- SECCIÓN BITÁCORA -->
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <i class="fa-solid fa-book"></i>
@@ -1570,6 +1770,7 @@ class NavbarComplete {
                     </a>
                 </div>
 
+                <!-- SECCIÓN CONFIGURACIÓN -->
                 <div class="configuracion-options-section">
                     <button class="configuracion-dropdown-btn" id="configuracionDropdownBtn">
                         <span>Configuración</span>
@@ -1590,6 +1791,12 @@ class NavbarComplete {
                         <a href="../ayuda/ayuda.html" class="configuracion-dropdown-option">
                             <i class="fa-solid fa-circle-question"></i>
                             <span>Ayuda</span>
+                        </a>
+
+                        <!-- NUEVO: Roles y Permisos (solo admin) -->
+                        <a href="../permisos/permisos.html" class="configuracion-dropdown-option" id="permisosBtn">
+                            <i class="fa-solid fa-user-gear"></i>
+                            <span>Roles y Permisos</span>
                         </a>
 
                         <a href="#" class="configuracion-dropdown-option logout-option" id="logoutOption">
@@ -1666,7 +1873,8 @@ class NavbarComplete {
                     cargoId: userData.cargoId || localStorage.getItem('userCargoId') || '',
                     status: userData.status || 'activo',
                     verificado: userData.verificado || true,
-                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart
+                    ultimoAcceso: userData.ultimoAcceso || userData.sessionStart,
+                    dispositivos: userData.dispositivos || []
                 };
 
                 this.userRole = this.currentUser.rol?.toLowerCase() || 'colaborador';
@@ -1684,7 +1892,8 @@ class NavbarComplete {
                 fotoUsuario: localStorage.getItem('userFoto') || null,
                 fotoOrganizacion: localStorage.getItem('organizacionLogo') || null,
                 areaId: localStorage.getItem('userAreaId') || '',
-                cargoId: localStorage.getItem('userCargoId') || ''
+                cargoId: localStorage.getItem('userCargoId') || '',
+                dispositivos: []
             };
 
             if (this.currentUser.nombreCompleto && this.currentUser.rol) {
@@ -1713,17 +1922,24 @@ class NavbarComplete {
         }
     }
 
+    // ========== OBTENER PERMISOS REALES DESDE FIRESTORE ==========
     async obtenerPermisosReales() {
         try {
             const esAdmin = this.userRole === 'administrador' || this.userRole === 'master';
-            
+
             if (esAdmin) {
+                // Administrador tiene TODOS los permisos
                 this.permisos = {
                     areas: true,
                     categorias: true,
                     sucursales: true,
                     regiones: true,
                     incidencias: true,
+                    usuarios: true,
+                    estadisticas: true,
+                    tareas: true,
+                    monitoreo: true,
+                    permisos: true,
                     crearIncidencias: true,
                     incidenciasCanalizadas: true,
                     verIncidencias: true,
@@ -1732,16 +1948,24 @@ class NavbarComplete {
                     configuracion: true,
                     ayuda: true
                 };
+                console.log('👑 Admin - todos los módulos visibles');
                 return;
             }
 
+            // Para colaboradores, verificar si tienen área y cargo
             if (!this.currentUser?.areaId || !this.currentUser?.cargoId) {
+                console.log('ℹ️ Usuario sin área/cargo - solo módulos básicos');
                 this.permisos = {
                     areas: false,
                     categorias: false,
                     sucursales: false,
                     regiones: false,
                     incidencias: true,
+                    usuarios: false,
+                    estadisticas: false,
+                    tareas: false,
+                    monitoreo: false,
+                    permisos: false,
                     crearIncidencias: true,
                     incidenciasCanalizadas: true,
                     verIncidencias: true,
@@ -1753,6 +1977,7 @@ class NavbarComplete {
                 return;
             }
 
+            // Buscar permiso en Firebase usando el PermisoManager
             if (this.permisoManager) {
                 try {
                     const permiso = await this.permisoManager.obtenerPorCargoYArea(
@@ -1762,20 +1987,31 @@ class NavbarComplete {
                     );
 
                     if (permiso) {
+                        // Obtener permisos DIRECTAMENTE del objeto permiso
                         this.permisos = {
+                            // Módulos principales
                             areas: permiso.puedeAcceder('areas'),
                             categorias: permiso.puedeAcceder('categorias'),
                             sucursales: permiso.puedeAcceder('sucursales'),
                             regiones: permiso.puedeAcceder('regiones'),
-                            incidencias: permiso.puedeAcceder('incidencias') || true,
-                            crearIncidencias: true,
-                            incidenciasCanalizadas: true,
-                            verIncidencias: true,
+                            incidencias: permiso.puedeAcceder('incidencias'),
+                            // NUEVOS MÓDULOS
+                            usuarios: permiso.puedeAcceder('usuarios'),
+                            estadisticas: permiso.puedeAcceder('estadisticas'),
+                            tareas: permiso.puedeAcceder('tareas'),
+                            monitoreo: permiso.puedeAcceder('monitoreo'),
+                            // Módulos adicionales
+                            permisos: false,  // Solo admin
+                            crearIncidencias: permiso.puedeAcceder('incidencias') || true,
+                            incidenciasCanalizadas: permiso.puedeAcceder('incidencias') || true,
+                            verIncidencias: permiso.puedeAcceder('incidencias') || true,
                             bitacora: true,
                             perfil: true,
                             configuracion: true,
                             ayuda: true
                         };
+
+                        console.log('✅ Permisos cargados desde Firestore:', this.permisos);
                         return;
                     }
                 } catch (error) {
@@ -1783,12 +2019,19 @@ class NavbarComplete {
                 }
             }
 
+            // Permisos por defecto (solo incidencias)
+            console.log('ℹ️ Usando permisos por defecto');
             this.permisos = {
                 areas: false,
                 categorias: false,
                 sucursales: false,
                 regiones: false,
                 incidencias: true,
+                usuarios: false,
+                estadisticas: false,
+                tareas: false,
+                monitoreo: false,
+                permisos: false,
                 crearIncidencias: true,
                 incidenciasCanalizadas: true,
                 verIncidencias: true,
@@ -1806,6 +2049,11 @@ class NavbarComplete {
                 sucursales: false,
                 regiones: false,
                 incidencias: true,
+                usuarios: false,
+                estadisticas: false,
+                tareas: false,
+                monitoreo: false,
+                permisos: false,
                 crearIncidencias: true,
                 incidenciasCanalizadas: true,
                 verIncidencias: true,
@@ -1817,68 +2065,31 @@ class NavbarComplete {
         }
     }
 
+    // ========== FILTRAR MENÚ POR PERMISOS ==========
     filterMenuByPermissions() {
         if (!this.permisos) {
             return;
         }
 
         const menuItems = [
-            {
-                id: 'areasBtn',
-                modulo: 'areas',
-                elemento: document.getElementById('areasBtn'),
-                texto: 'Áreas',
-                siempreVisible: false
-            },
-            {
-                id: 'categoriasBtn',
-                modulo: 'categorias',
-                elemento: document.getElementById('categoriasBtn'),
-                texto: 'Categorías',
-                siempreVisible: false
-            },
-            {
-                id: 'sucursalesBtn',
-                modulo: 'sucursales',
-                elemento: document.getElementById('sucursalesBtn'),
-                texto: 'Sucursales',
-                siempreVisible: false
-            },
-            {
-                id: 'regionesBtn',
-                modulo: 'regiones',
-                elemento: document.getElementById('regionesBtn'),
-                texto: 'Regiones',
-                siempreVisible: false
-            },
-            {
-                id: 'incidenciasBtn',
-                modulo: 'incidencias',
-                elemento: document.getElementById('incidenciasBtn'),
-                texto: 'Incidencias',
-                siempreVisible: true
-            },
-            {
-                id: 'crearIncidenciasBtn',
-                modulo: 'crearIncidencias',
-                elemento: document.getElementById('crearIncidenciasBtn'),
-                texto: 'Crear Incidencia',
-                siempreVisible: true
-            },
-            {
-                id: 'incidenciasCanalizadasBtn',
-                modulo: 'incidenciasCanalizadas',
-                elemento: document.getElementById('incidenciasCanalizadasBtn'),
-                texto: 'Incidencias Canalizadas',
-                siempreVisible: true
-            },
-            {
-                id: 'verIncidenciasBtn',
-                modulo: 'verIncidencias',
-                elemento: document.getElementById('verIncidenciasBtn'),
-                texto: 'Ver Incidencia',
-                siempreVisible: true
-            }
+            // Módulos de Gestionar
+            { id: 'areasBtn', modulo: 'areas', elemento: document.getElementById('areasBtn'), texto: 'Áreas', siempreVisible: false },
+            { id: 'categoriasBtn', modulo: 'categorias', elemento: document.getElementById('categoriasBtn'), texto: 'Categorías', siempreVisible: false },
+            { id: 'sucursalesBtn', modulo: 'sucursales', elemento: document.getElementById('sucursalesBtn'), texto: 'Sucursales', siempreVisible: false },
+            { id: 'regionesBtn', modulo: 'regiones', elemento: document.getElementById('regionesBtn'), texto: 'Regiones', siempreVisible: false },
+            // NUEVOS MÓDULOS
+            { id: 'usuariosBtn', modulo: 'usuarios', elemento: document.getElementById('usuariosBtn'), texto: 'Usuarios', siempreVisible: false },
+            { id: 'tareasBtn', modulo: 'tareas', elemento: document.getElementById('tareasBtn'), texto: 'Tareas', siempreVisible: false },
+            { id: 'mapaBtn', modulo: 'monitoreo', elemento: document.getElementById('mapaBtn'), texto: 'Mapa de Alertas', siempreVisible: false },
+            { id: 'estadisticasBtn', modulo: 'estadisticas', elemento: document.getElementById('estadisticasBtn'), texto: 'Estadísticas', siempreVisible: false },
+
+            // Módulos de Incidencias
+            { id: 'incidenciasBtn', modulo: 'incidencias', elemento: document.getElementById('incidenciasBtn'), texto: 'Lista de Incidencias', siempreVisible: false },
+            { id: 'crearIncidenciasBtn', modulo: 'crearIncidencias', elemento: document.getElementById('crearIncidenciasBtn'), texto: 'Crear Incidencia', siempreVisible: false },
+            { id: 'incidenciasCanalizadasBtn', modulo: 'incidenciasCanalizadas', elemento: document.getElementById('incidenciasCanalizadasBtn'), texto: 'Incidencias Canalizadas', siempreVisible: false },
+
+            // Módulos de Configuración
+            { id: 'permisosBtn', modulo: 'permisos', elemento: document.getElementById('permisosBtn'), texto: 'Roles y Permisos', siempreVisible: false },
         ];
 
         let itemsVisibles = 0;
@@ -1897,8 +2108,10 @@ class NavbarComplete {
             if (debeMostrarse) {
                 item.elemento.style.display = 'flex';
                 itemsVisibles++;
+                console.log(`✅ Mostrando: ${item.texto}`);
             } else {
                 item.elemento.style.display = 'none';
+                console.log(`❌ Ocultando: ${item.texto}`);
             }
         });
 
@@ -1907,7 +2120,7 @@ class NavbarComplete {
 
     verificarPermiso(modulo) {
         const esAdmin = this.userRole === 'administrador' || this.userRole === 'master';
-        
+
         if (esAdmin) {
             return true;
         }
@@ -2053,7 +2266,7 @@ class NavbarComplete {
         this.loadOrbitronFont();
         this.setupLogout();
         this._configurarNotificacionesDropdown();
-        
+
         const verTodasFooter = document.querySelector('.ver-todas-notificaciones-footer');
         if (verTodasFooter) {
             verTodasFooter.addEventListener('click', (e) => {
@@ -2137,7 +2350,7 @@ class NavbarComplete {
             if (this.isConfiguracionDropdownOpen) {
                 this.toggleConfiguracionDropdown(false);
             }
-            
+
             this.isGestionarDropdownOpen = !this.isGestionarDropdownOpen;
             this.toggleGestionarDropdown(this.isGestionarDropdownOpen);
         };
@@ -2151,7 +2364,7 @@ class NavbarComplete {
             if (!dropdownBtn.contains(e.target) &&
                 !dropdownOptions.contains(e.target) &&
                 this.isGestionarDropdownOpen) {
-                this.toggleGestionarDropdown(false); 
+                this.toggleGestionarDropdown(false);
             }
         });
 
@@ -2184,7 +2397,7 @@ class NavbarComplete {
             if (this.isConfiguracionDropdownOpen) {
                 this.toggleConfiguracionDropdown(false);
             }
-            
+
             this.isIncidenciasDropdownOpen = !this.isIncidenciasDropdownOpen;
             this.toggleIncidenciasDropdown(this.isIncidenciasDropdownOpen);
         };
@@ -2231,7 +2444,7 @@ class NavbarComplete {
             if (this.isIncidenciasDropdownOpen) {
                 this.toggleIncidenciasDropdown(false);
             }
-            
+
             this.isConfiguracionDropdownOpen = !this.isConfiguracionDropdownOpen;
             this.toggleConfiguracionDropdown(this.isConfiguracionDropdownOpen);
         };

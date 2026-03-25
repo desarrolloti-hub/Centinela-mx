@@ -20,8 +20,10 @@ body {
     margin: 0;
     padding: 20px;
     padding-top: 80px;
-    /* Espacio para el navbar fijo */
+    padding-bottom: 40px;
+    /* Reducido para no interferir con footer */
     line-height: 1.5;
+    position: relative;
 }
 
 /* =============================================
@@ -29,12 +31,13 @@ body {
    ============================================= */
 .custom-container {
     max-width: min(800px, 95vw);
-    /* Mismo ancho que crear regiones */
     margin: 0 auto;
     padding: 25px;
     background: transparent;
     border-radius: var(--border-radius-large);
     animation: fadeInUp 0.5s ease;
+    position: relative;
+    z-index: 10;
 }
 
 /* =============================================
@@ -142,7 +145,9 @@ body {
     border-radius: var(--border-radius-large) !important;
     box-shadow: var(--shadow-normal) !important;
     margin-bottom: 20px !important;
-    overflow: hidden;
+    overflow: visible !important;
+    position: relative;
+    z-index: 20;
 }
 
 .card-header {
@@ -176,6 +181,8 @@ body {
 
 .card-body {
     padding: 30px !important;
+    overflow: visible !important;
+    position: relative;
 }
 
 /* =============================================
@@ -207,6 +214,7 @@ body {
 .form-row {
     width: 100%;
     margin-bottom: 20px;
+    overflow: visible !important;
 }
 
 .form-grid {
@@ -218,6 +226,7 @@ body {
 .full-width {
     grid-column: 1 / -1;
     width: 100%;
+    overflow: visible !important;
 }
 
 /* =============================================
@@ -324,8 +333,10 @@ body {
 }
 
 /* =============================================
-   SELECTORES (SELECT)
+   SELECTORES (SELECT) - SOLUCIÓN MEJORADA RESPONSIVA
    ============================================= */
+
+/* Estilo base para todos los selects */
 select.form-control {
     appearance: none;
     -webkit-appearance: none;
@@ -335,11 +346,46 @@ select.form-control {
     background-position: right 15px center;
     background-size: 16px;
     padding-right: 45px !important;
+    position: relative;
+    z-index: 5;
 }
 
+/* Forzar que las opciones se muestren correctamente */
 select.form-control option {
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
+    padding: 12px 15px;
+}
+
+/* Contenedores con espacio dinámico para dropdowns */
+.full-width:has(select) {
+    position: relative;
+    z-index: 30;
+}
+
+/* Espacio específico para el select de áreas */
+.full-width:has(#areaSelect) {
+    margin-bottom: 20px;
+    padding-bottom: 0;
+}
+
+/* Espacio específico para el select de cargos */
+.full-width:has(#cargoSelect) {
+    margin-bottom: 20px;
+    padding-bottom: 0;
+}
+
+/* SOLUCIÓN: Usar posición fixed para dropdowns nativos */
+/* Esto evita que el dropdown toque el footer */
+select.form-control:focus {
+    position: relative;
+}
+
+/* Para pantallas donde hay poco espacio, el dropdown se ajusta */
+@media (min-height: 700px) {
+    select.form-control {
+        max-height: 48px;
+    }
 }
 
 /* =============================================
@@ -484,6 +530,8 @@ select.form-control option {
     padding-top: 20px;
     border-top: 1px solid var(--color-border-light);
     margin-top: 20px;
+    position: relative;
+    z-index: 10;
 }
 
 .btn {
@@ -551,6 +599,26 @@ select.form-control option {
 }
 
 /* =============================================
+   FOOTER - Ajustes para evitar superposición
+   ============================================= */
+footer {
+    position: relative;
+    z-index: 5;
+    margin-top: 40px;
+    clear: both;
+}
+
+/* Espacio adicional para el footer cuando el dropdown está abierto */
+body:has(select:focus) {
+    padding-bottom: 300px;
+}
+
+/* Transición suave para el espacio extra */
+body {
+    transition: padding-bottom 0.2s ease;
+}
+
+/* =============================================
    ANIMACIONES
    ============================================= */
 @keyframes fadeInUp {
@@ -566,11 +634,14 @@ select.form-control option {
 }
 
 /* =============================================
-   RESPONSIVE
+   RESPONSIVE - MEJORADO
    ============================================= */
+
+/* Tablets */
 @media (max-width: 1023px) {
     body {
         padding-top: 70px;
+        padding-bottom: 30px;
     }
 
     .custom-container {
@@ -617,12 +688,19 @@ select.form-control option {
     .permisos-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    /* Ajuste para dropdowns en tablets */
+    body:has(select:focus) {
+        padding-bottom: 250px;
+    }
 }
 
+/* Móviles */
 @media (max-width: 768px) {
     body {
         padding: 10px !important;
         padding-top: 70px !important;
+        padding-bottom: 20px !important;
     }
 
     .custom-container {
@@ -674,12 +752,23 @@ select.form-control option {
         width: 100%;
         justify-content: center;
     }
+
+    /* Espacio adicional para dropdowns en móviles */
+    .full-width:has(select) {
+        margin-bottom: 15px;
+    }
+
+    body:has(select:focus) {
+        padding-bottom: 200px !important;
+    }
 }
 
+/* Móviles pequeños */
 @media (max-width: 480px) {
     body {
         padding: 8px !important;
         padding-top: 65px !important;
+        padding-bottom: 15px !important;
     }
 
     .custom-container {
@@ -709,11 +798,17 @@ select.form-control option {
         font-size: 13px !important;
         min-width: auto !important;
     }
+
+    body:has(select:focus) {
+        padding-bottom: 180px !important;
+    }
 }
 
+/* Móviles muy pequeños */
 @media (max-width: 360px) {
     body {
         padding-top: 60px !important;
+        padding-bottom: 10px !important;
     }
 
     .main-title {
@@ -726,5 +821,23 @@ select.form-control option {
 
     .header-description-text {
         font-size: 0.9rem !important;
+    }
+
+    body:has(select:focus) {
+        padding-bottom: 160px !important;
+    }
+}
+
+/* Pantallas altas (para evitar que el dropdown se salga) */
+@media (min-height: 900px) {
+    .full-width:has(select) {
+        margin-bottom: 30px;
+    }
+}
+
+/* Pantallas muy altas */
+@media (min-height: 1000px) {
+    .full-width:has(select) {
+        margin-bottom: 50px;
     }
 }

@@ -10,6 +10,7 @@ class EditarRegionController {
         this.regionManager = null;
         this.usuarioActual = null;
         this.regionOriginal = null;
+        this.historialManager = null; // ✅ NUEVO: Para registrar actividades
 
         // Inicializar
         this._init();
@@ -36,23 +37,63 @@ class EditarRegionController {
                     id: `usuario_${Date.now()}`,
                     nombreCompleto: 'Usuario',
                     organizacion: 'Mi Organización',
-                    organizacionCamelCase: orgCamelCase, // Usar la organización de la URL
+                    organizacionCamelCase: orgCamelCase,
                     correo: 'usuario@ejemplo.com'
                 };
             }
 
-            // 3. Cargar RegionManager
+            // 3. Inicializar historialManager
+            await this._initHistorialManager();
+
+            // 4. Cargar RegionManager
             await this._cargarRegionManager();
 
-            // 4. Configurar eventos básicos
+            // 5. Configurar eventos básicos
             this._configurarEventos();
 
-            // 5. Cargar datos de la región
+            // 6. Cargar datos de la región
             await this._cargarDatosRegion(regionId, orgCamelCase);
 
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError(error.message, true);
+        }
+    }
+
+    // ✅ NUEVO: Inicializar historialManager
+    async _initHistorialManager() {
+        try {
+            const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+            this.historialManager = new HistorialUsuarioManager();
+            console.log('📋 HistorialManager inicializado para editar regiones');
+        } catch (error) {
+            console.error('Error inicializando historialManager:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar edición de región
+    async _registrarEdicionRegion(datosActualizados, cambios) {
+        if (!this.historialManager) return;
+        
+        try {
+            await this.historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'editar',
+                modulo: 'regiones',
+                descripcion: `Editó región: ${datosActualizados.nombre || this.regionOriginal?.nombre}`,
+                detalles: {
+                    regionId: this.regionOriginal?.id,
+                    regionNombreOriginal: this.regionOriginal?.nombre,
+                    regionNombreActualizado: datosActualizados.nombre,
+                    regionColorOriginal: this.regionOriginal?.color,
+                    regionColorActualizado: datosActualizados.color,
+                    cambios: cambios,
+                    fechaEdicion: new Date().toISOString()
+                }
+            });
+            console.log(`✅ Edición de región "${datosActualizados.nombre || this.regionOriginal?.nombre}" registrada en bitácora`);
+        } catch (error) {
+            console.error('Error registrando edición de región:', error);
         }
     }
 
@@ -306,30 +347,68 @@ class EditarRegionController {
         const colorOriginal = elements.colorRegion.defaultValue;
         const colorNuevo = elements.colorRegion.value;
 
-        if (nombre === nombreOriginal && colorNuevo === colorOriginal) {
+        // Detectar cambios
+        const cambios = [];
+        
+        if (nombre !== nombreOriginal) {
+            cambios.push({
+                campo: 'nombre',
+                anterior: nombreOriginal,
+                nuevo: nombre
+            });
+        }
+        
+        if (colorNuevo !== colorOriginal) {
+            cambios.push({
+                campo: 'color',
+                anterior: colorOriginal,
+                nuevo: colorNuevo
+            });
+        }
+
+        if (cambios.length === 0) {
             this._mostrarInfo('No se detectaron cambios en la región');
             return;
         }
 
-        // Mostrar confirmación
+        // Mostrar confirmación con los cambios
         this._confirmarActualizacion({
             nombre: nombre,
-            color: colorNuevo
+            color: colorNuevo,
+            cambios: cambios
         });
     }
 
     async _confirmarActualizacion(nuevosDatos) {
         const elements = this._obtenerElementosDOM();
 
+        // Generar HTML de cambios
+        let cambiosHTML = '';
+        nuevosDatos.cambios.forEach(cambio => {
+            cambiosHTML += `
+                <div style="margin-bottom: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                    <strong style="color: var(--color-accent-primary);">${cambio.campo}:</strong><br>
+                    <span style="color: var(--color-text-dim);">Anterior: ${cambio.anterior || '(vacío)'}</span><br>
+                    <span style="color: var(--color-accent-secondary);">Nuevo: ${cambio.nuevo || '(vacío)'}</span>
+                </div>
+            `;
+        });
+
         const result = await Swal.fire({
             title: 'Actualizar región',
             html: `
                 <div style="text-align: left; padding: 10px 0;">
-                    <p><strong>Nombre:</strong> ${nuevosDatos.nombre}</p>
-                    <p><strong>Color:</strong> 
-                        <span style="display: inline-block; width: 20px; height: 20px; background: ${nuevosDatos.color}; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span>
-                        ${nuevosDatos.color}
-                    </p>
+                    <div style="margin-bottom: 15px;">
+                        <p><strong>Nombre:</strong> ${nuevosDatos.nombre}</p>
+                        <p><strong>Color:</strong> 
+                            <span style="display: inline-block; width: 20px; height: 20px; background: ${nuevosDatos.color}; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span>
+                            ${nuevosDatos.color}
+                        </p>
+                    </div>
+                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                        <strong>Cambios detectados:</strong>
+                        ${cambiosHTML}
+                    </div>
                 </div>
             `,
             icon: 'warning',
@@ -383,6 +462,9 @@ class EditarRegionController {
                 elements.organizacionCamelCase.value,
                 this.usuarioActual.id
             );
+
+            // ✅ NUEVO: Registrar edición en bitácora
+            await this._registrarEdicionRegion(nuevosDatos, nuevosDatos.cambios);
 
             Swal.close();
 

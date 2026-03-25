@@ -1,4 +1,4 @@
-// crearCategorias.js - VERSIÓN CON VALIDACIONES DE CARACTERES
+// crearCategorias.js - VERSIÓN CON VALIDACIONES DE CARACTERES Y REGISTRO DE BITÁCORA
 // SIN empresaId/estado, con herencia de color configurable
 
 // Variable global para debugging
@@ -26,6 +26,7 @@ class CrearCategoriaController {
         this.categoriaCreadaReciente = null;
         this.loadingOverlay = null;
         this.notificacionActual = null;
+        this.historialManager = null; // ✅ NUEVO: Para registrar actividades
 
         // Array para almacenar subcategorías
         this.subcategorias = [];
@@ -45,25 +46,28 @@ class CrearCategoriaController {
                 throw new Error('No se pudo cargar información del usuario');
             }
 
-            // 2. Cargar CategoriaManager
+            // 2. Inicializar historialManager
+            await this._initHistorialManager();
+
+            // 3. Cargar CategoriaManager
             await this._cargarCategoriaManager();
 
-            // 3. Configurar eventos
+            // 4. Configurar eventos
             this._configurarEventos();
 
-            // 4. Configurar organización automática
+            // 5. Configurar organización automática
             this._configurarOrganizacion();
 
-            // 5. Inicializar validaciones
+            // 6. Inicializar validaciones
             this._inicializarValidaciones();
 
-            // 6. Inicializar gestión de subcategorías
+            // 7. Inicializar gestión de subcategorías
             this._inicializarGestionSubcategorias();
 
-            // 7. Aplicar límites de caracteres
+            // 8. Aplicar límites de caracteres
             this._aplicarLimitesCaracteres();
 
-            // 8. Actualizar UI con información de la organización (en el header)
+            // 9. Actualizar UI con información de la organización (en el header)
             this._actualizarInfoOrganizacion();
 
             window.crearCategoriaDebug.controller = this;
@@ -72,6 +76,75 @@ class CrearCategoriaController {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
         }
+    }
+
+    // ✅ NUEVO: Inicializar historialManager
+    async _initHistorialManager() {
+        try {
+            const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+            this.historialManager = new HistorialUsuarioManager();
+            console.log('📋 HistorialManager inicializado para categorías');
+        } catch (error) {
+            console.error('Error inicializando historialManager:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar creación de categoría
+    async _registrarCreacionCategoria(categoria) {
+        if (!this.historialManager) return;
+        
+        try {
+            const numSubcategorias = categoria.subcategorias ? 
+                (categoria.subcategorias.size || Object.keys(categoria.subcategorias).length) : 0;
+            
+            await this.historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'crear',
+                modulo: 'categorias',
+                descripcion: `Creó categoría: ${categoria.nombre}`,
+                detalles: {
+                    categoriaId: categoria.id,
+                    categoriaNombre: categoria.nombre,
+                    categoriaColor: categoria.color,
+                    numeroSubcategorias: numSubcategorias,
+                    subcategorias: this._getSubcategoriasNombres(categoria.subcategorias)
+                }
+            });
+            console.log(`✅ Creación de categoría "${categoria.nombre}" registrada en bitácora`);
+        } catch (error) {
+            console.error('Error registrando creación de categoría:', error);
+        }
+    }
+
+    // ✅ NUEVO: Obtener nombres de subcategorías para detalles
+    _getSubcategoriasNombres(subcategorias) {
+        if (!subcategorias) return [];
+        
+        const nombres = [];
+        try {
+            if (subcategorias.forEach) {
+                subcategorias.forEach((value, key) => {
+                    if (value && typeof value === 'object') {
+                        nombres.push({
+                            id: key,
+                            nombre: value.nombre || 'Sin nombre'
+                        });
+                    }
+                });
+            } else {
+                Object.keys(subcategorias).forEach(key => {
+                    if (subcategorias[key] && subcategorias[key].nombre) {
+                        nombres.push({
+                            id: key,
+                            nombre: subcategorias[key].nombre
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error obteniendo nombres de subcategorías:', e);
+        }
+        return nombres;
     }
 
     // ========== CARGA DE DEPENDENCIAS ==========
@@ -666,6 +739,9 @@ class CrearCategoriaController {
             const nuevaCategoria = await this.categoriaManager.crearCategoria(datos);
 
             this.categoriaCreadaReciente = nuevaCategoria;
+
+            // ✅ NUEVO: Registrar creación en bitácora
+            await this._registrarCreacionCategoria(nuevaCategoria);
 
             // Mostrar éxito
             await Swal.fire({

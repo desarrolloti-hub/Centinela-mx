@@ -1,6 +1,6 @@
 /**
  * IPH GENERATOR - Sistema Centinela
- * VERSIÓN: 4.8 - PAGINACIÓN CORREGIDA + DATOS COMPLETOS
+ * VERSIÓN: 7.0 - INTEGRADO CON SISTEMA DE CARGA DE IMÁGENES VÍA PROXY
  */
 
 import { PDFBaseGenerator, coloresBase } from './pdf-base-generator.js';
@@ -13,32 +13,13 @@ export const coloresIPH = {
     riesgoBajo: '#10b981'
 };
 
-// =============================================
-// CONFIGURACIÓN DE IMÁGENES
-// =============================================
-const IMAGEN_CONFIG = {
-    TIMEOUT: 15000,
-    MAX_RETRIES: 2,
-    RETRY_DELAY: 1000,
-    MAX_PARALLEL: 3,
-    CACHE_DURATION: 300000,
-    MAX_IMAGE_SIZE: 5 * 1024 * 1024,
-    SUPPORTED_FORMATS: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
-    TAMANIOS: {
-        IMAGEN_PRINCIPAL: {
-            ancho: 85,
-            alto: 70
-        },
-        EVIDENCIA_SEGUIMIENTO: {
-            ancho: 85,
-            alto: 70
-        }
-    },
-    GRID: {
-        columnas: 2,
-        espaciadoColumnas: 15,
-        espaciadoFilas: 15
-    }
+const CONFIG = {
+    IMAGENES_POR_PAGINA: 4,
+    ANCHO_IMAGEN: 85,
+    ALTO_IMAGEN: 70,
+    ESPACIADO_COLUMNAS: 15,
+    ESPACIADO_FILAS: 15,
+    MARGEN: 15
 };
 
 class IPHGenerator extends PDFBaseGenerator {
@@ -47,22 +28,17 @@ class IPHGenerator extends PDFBaseGenerator {
         
         this.sucursalesCache = [];
         this.categoriasCache = [];
-        this.subcategoriasCache = [];
         this.usuariosCache = [];
         this.incidenciaActual = null;
-        
-        this.imageCache = new Map();
-        this.pendingImages = new Map();
-        this.imageLoadStats = new Map();
+        this.imagenesCache = new Map(); // Cache de imágenes cargadas
         
         this.alturasContenedores = {
-            identificacion: 20,      // Aumentado para incluir usuario
+            identificacion: 38,
             datosGenerales: 20,
-            clasificacion: 45,
-            reportadoPor: 15,
-            descripcion: 45,
-            anexos: 110,
-            tarjetaSeguimiento: 150,
+            clasificacion: 56,
+            reportadoPor: 20,
+            descripcion: 70,
+            anexos: 120,
             avisoPrivacidad: 25
         };
         
@@ -79,15 +55,10 @@ class IPHGenerator extends PDFBaseGenerator {
         if (config.organizacionActual) this.organizacionActual = config.organizacionActual;
         if (config.sucursalesCache) this.sucursalesCache = config.sucursalesCache;
         if (config.categoriasCache) this.categoriasCache = config.categoriasCache;
-        if (config.subcategoriasCache) this.subcategoriasCache = config.subcategoriasCache;
         if (config.usuariosCache) this.usuariosCache = config.usuariosCache;
         if (config.authToken) this.authToken = config.authToken;
     }
 
-    // =============================================
-    // MÉTODOS DE UTILIDAD
-    // =============================================
-    
     obtenerNombreSucursal(sucursalId) {
         if (!sucursalId) return 'No especificada';
         const sucursal = this.sucursalesCache.find(s => s.id === sucursalId);
@@ -100,71 +71,43 @@ class IPHGenerator extends PDFBaseGenerator {
         return categoria ? categoria.nombre : 'No disponible';
     }
     
-    obtenerNombreSubcategoria(subcategoriaId) {
+    obtenerNombreSubcategoria(subcategoriaId, categoriaId) {
         if (!subcategoriaId) return 'No especificada';
-        const subcategoria = this.subcategoriasCache.find(s =>
-            s.id === subcategoriaId || s._id === subcategoriaId || s.uid === subcategoriaId
-        );
-        return subcategoria ? (subcategoria.nombre || subcategoria.descripcion || 'Subcategoría') : 'No disponible';
+        const categoria = this.categoriasCache.find(c => c.id === categoriaId);
+        if (categoria && categoria.subcategorias) {
+            let subcategorias = [];
+            if (categoria.subcategorias instanceof Map) {
+                subcategorias = Array.from(categoria.subcategorias.values());
+            } else if (typeof categoria.subcategorias === 'object') {
+                subcategorias = Object.values(categoria.subcategorias);
+            }
+            const sub = subcategorias.find(s => s.id === subcategoriaId || s._id === subcategoriaId);
+            if (sub) return sub.nombre || sub.descripcion || 'Subcategoría';
+        }
+        return 'No disponible';
     }
     
     obtenerNombreUsuario(usuarioId) {
         if (!usuarioId) return 'No especificado';
         const usuario = this.usuariosCache.find(u =>
-            u.id === usuarioId || u.uid === usuarioId || u._id === usuarioId || u.usuarioId === usuarioId
+            u.id === usuarioId || u.uid === usuarioId || u._id === usuarioId
         );
-        return usuario ? (usuario.nombreCompleto || usuario.nombre || usuario.email || usuario.displayName || 'Usuario') : 'No especificado';
+        if (usuario) {
+            return usuario.nombreCompleto || usuario.nombre || usuario.displayName || 'Usuario';
+        }
+        return 'No especificado';
     }
     
     obtenerCargoUsuario(usuarioId) {
         if (!usuarioId) return '';
         const usuario = this.usuariosCache.find(u =>
-            u.id === usuarioId || u.uid === usuarioId || u._id === usuarioId || u.usuarioId === usuarioId
+            u.id === usuarioId || u.uid === usuarioId || u._id === usuarioId
         );
-        return usuario ? (usuario.cargo || usuario.rol || usuario.puesto || '') : '';
-    }
-    
-    blobToBase64(blob) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
-    
-    formatearFechaVisualizacion(fecha) {
-        if (!fecha) return 'Fecha no disponible';
-        try {
-            const fechaObj = fecha instanceof Date ? fecha : new Date(fecha);
-            if (isNaN(fechaObj.getTime())) return 'Fecha no disponible';
-            return fechaObj.toLocaleDateString('es-MX', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
-        } catch {
-            return 'Fecha no disponible';
-        }
-    }
-    
-    formatearHoraVisualizacion(fecha) {
-        if (!fecha) return 'Hora no disponible';
-        try {
-            const fechaObj = fecha instanceof Date ? fecha : new Date(fecha);
-            if (isNaN(fechaObj.getTime())) return 'Hora no disponible';
-            return fechaObj.toLocaleTimeString('es-MX', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
-        } catch {
-            return 'Hora no disponible';
-        }
+        return usuario ? (usuario.cargo || usuario.rol || '') : '';
     }
 
     // =============================================
-    // SISTEMA DE IMÁGENES (mismo código anterior)
+    // EXTRACCIÓN DE DATOS DE IMAGEN
     // =============================================
     
     extraerUrlImagen(item) {
@@ -172,15 +115,6 @@ class IPHGenerator extends PDFBaseGenerator {
         
         if (typeof item === 'string') {
             const trimmed = item.trim();
-            if (trimmed.includes('firebasestorage.googleapis.com') || 
-                trimmed.includes('firebaseio.com') ||
-                trimmed.includes('firebase')) {
-                if (this.authToken && !trimmed.includes('token=')) {
-                    const separator = trimmed.includes('?') ? '&' : '?';
-                    return `${trimmed}${separator}token=${this.authToken}`;
-                }
-                return trimmed;
-            }
             if (trimmed.startsWith('http') || trimmed.startsWith('data:image') || trimmed.startsWith('blob:')) {
                 return trimmed;
             }
@@ -188,19 +122,16 @@ class IPHGenerator extends PDFBaseGenerator {
         }
         
         if (typeof item === 'object') {
+            // Propiedades de Firebase/Storage
             const firebaseProps = ['url', 'downloadURL', 'storageUrl', 'firebaseUrl', 'urlDescarga'];
             for (const prop of firebaseProps) {
                 if (item[prop] && typeof item[prop] === 'string') {
-                    let url = item[prop].trim();
-                    if ((url.includes('firebase') || url.includes('googleapis')) && this.authToken && !url.includes('token=')) {
-                        const separator = url.includes('?') ? '&' : '?';
-                        url = `${url}${separator}token=${this.authToken}`;
-                    }
-                    return url;
+                    return item[prop].trim();
                 }
             }
             
-            const props = ['src', 'path', 'imageUrl', 'foto', 'imagen', 'evidencia', 'fotoUrl', 'imagenUrl'];
+            // Propiedades comunes de imagen
+            const props = ['src', 'path', 'imageUrl', 'foto', 'imagen', 'evidencia', 'fotoUrl', 'imagenUrl', 'preview'];
             for (const prop of props) {
                 if (item[prop] && typeof item[prop] === 'string') {
                     const valor = item[prop].trim();
@@ -210,14 +141,20 @@ class IPHGenerator extends PDFBaseGenerator {
                 }
             }
             
-            if (item.url && typeof item.url === 'object' && item.url.url) {
-                return item.url.url;
+            // Si tiene file (objeto File)
+            if (item.file instanceof File) {
+                return item.file;
+            }
+            
+            // Si tiene archivo
+            if (item.archivo instanceof File) {
+                return item.archivo;
             }
         }
         
         return null;
     }
-    
+
     extraerComentario(item) {
         if (!item) return '';
         if (typeof item === 'string') return '';
@@ -225,46 +162,57 @@ class IPHGenerator extends PDFBaseGenerator {
             const props = ['comentario', 'descripcion', 'nombre', 'titulo', 'caption', 'texto', 'nota', 'observacion', 'detalle', 'comentarios', 'description'];
             for (const prop of props) {
                 if (item[prop] && typeof item[prop] === 'string') {
-                    let comentario = item[prop].trim();
-                    comentario = comentario.replace(/[Ø=ÜÝ]/g, '');
-                    return comentario;
+                    return item[prop].trim();
                 }
             }
-            if (item.metadata && item.metadata.comentario) {
-                let comentario = item.metadata.comentario.trim();
-                comentario = comentario.replace(/[Ø=ÜÝ]/g, '');
-                return comentario;
-            }
+            if (item.metadata && item.metadata.comentario) return item.metadata.comentario;
         }
         return '';
     }
+
+    // =============================================
+    // CARGA DE IMÁGENES CON PROXY
+    // =============================================
     
-    esUrlValida(url) {
-        if (!url || typeof url !== 'string') return false;
-        const trimmed = url.trim();
-        if (trimmed === '') return false;
-        if (trimmed.startsWith('data:image')) return true;
-        if (trimmed.startsWith('blob:')) return true;
-        try {
-            const urlObj = new URL(trimmed);
-            return ['http:', 'https:', 'ftp:'].includes(urlObj.protocol);
-        } catch {
-            return false;
-        }
-    }
-    
-    normalizarUrl(url) {
+    async cargarImagenConProxy(item) {
+        const url = this.extraerUrlImagen(item);
         if (!url) return null;
-        let normalized = url.trim();
-        normalized = normalized.replace(/[?&](utm_|fbclid|gclid|_ga|_gl)[^&]*/g, '');
-        normalized = normalized.replace(/[?&]$/, '');
-        return normalized;
+        
+        // Si es un File, convertirlo directamente
+        if (url instanceof File || (url && typeof url === 'object' && url instanceof File)) {
+            return await this.convertirArchivoABase64(url);
+        }
+        
+        const urlLimpia = url.trim();
+        
+        // Verificar cache
+        if (this.imagenesCache.has(urlLimpia)) {
+            return this.imagenesCache.get(urlLimpia);
+        }
+        
+        // Estrategias de carga
+        const estrategias = [
+            () => this.cargarConFetch(urlLimpia),
+            () => this.cargarConProxyCors(urlLimpia),
+            () => this.cargarConImage(urlLimpia)
+        ];
+        
+        for (const estrategia of estrategias) {
+            try {
+                const imgData = await estrategia();
+                if (imgData) {
+                    this.imagenesCache.set(urlLimpia, imgData);
+                    return imgData;
+                }
+            } catch (error) {
+                console.warn(`Estrategia falló para ${urlLimpia}:`, error);
+            }
+        }
+        
+        return null;
     }
     
-    async cargarImagenConTimeout(url, timeoutMs = IMAGEN_CONFIG.TIMEOUT) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        
+    async cargarConFetch(url) {
         try {
             const headers = {};
             if (this.authToken) {
@@ -272,226 +220,115 @@ class IPHGenerator extends PDFBaseGenerator {
             }
             
             const response = await fetch(url, {
-                signal: controller.signal,
                 headers: headers,
                 mode: 'cors',
                 cache: 'force-cache'
             });
             
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
+            if (!response.ok) return null;
             const blob = await response.blob();
-            
-            if (!IMAGEN_CONFIG.SUPPORTED_FORMATS.includes(blob.type)) {
-                throw new Error(`Formato no soportado: ${blob.type}`);
-            }
-            
-            if (blob.size > IMAGEN_CONFIG.MAX_IMAGE_SIZE) {
-                throw new Error(`Imagen demasiado grande: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
-            }
-            
+            if (!blob.type.startsWith('image/')) return null;
             return await this.blobToBase64(blob);
-            
-        } catch (error) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                throw new Error(`Timeout después de ${timeoutMs}ms`);
-            }
-            throw error;
-        }
-    }
-    
-    async cargarImagenMultiEstrategia(url, intento = 0) {
-        const urlNormalizada = this.normalizarUrl(url);
-        if (!this.esUrlValida(urlNormalizada)) {
-            throw new Error('URL inválida');
-        }
-        
-        const cacheKey = `${urlNormalizada}_${intento}`;
-        if (this.imageCache.has(cacheKey)) {
-            return this.imageCache.get(cacheKey);
-        }
-        
-        if (this.pendingImages.has(cacheKey)) {
-            return await this.pendingImages.get(cacheKey);
-        }
-        
-        const estrategias = [
-            async () => this.cargarImagenConTimeout(urlNormalizada),
-            async () => {
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(urlNormalizada)}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlNormalizada)}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                const proxyUrl = `https://cors-anywhere.herokuapp.com/${urlNormalizada}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    const timeoutId = setTimeout(() => {
-                        reject(new Error('Image element timeout'));
-                    }, IMAGEN_CONFIG.TIMEOUT);
-                    
-                    img.onload = () => {
-                        clearTimeout(timeoutId);
-                        const canvas = document.createElement('canvas');
-                        const maxDimension = 1024;
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        if (width > maxDimension || height > maxDimension) {
-                            if (width > height) {
-                                height = (height * maxDimension) / width;
-                                width = maxDimension;
-                            } else {
-                                width = (width * maxDimension) / height;
-                                height = maxDimension;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.85));
-                    };
-                    
-                    img.onerror = () => {
-                        clearTimeout(timeoutId);
-                        reject(new Error('Failed to load image'));
-                    };
-                    
-                    img.crossOrigin = 'Anonymous';
-                    img.src = urlNormalizada;
-                });
-            }
-        ];
-        
-        const cargaPromise = (async () => {
-            let lastError = null;
-            
-            for (let i = 0; i < estrategias.length; i++) {
-                try {
-                    const resultado = await estrategias[i]();
-                    if (resultado) {
-                        this.imageCache.set(cacheKey, resultado);
-                        setTimeout(() => {
-                            this.imageCache.delete(cacheKey);
-                        }, IMAGEN_CONFIG.CACHE_DURATION);
-                        return resultado;
-                    }
-                } catch (error) {
-                    lastError = error;
-                    console.warn(`Estrategia ${i + 1} falló para ${urlNormalizada}:`, error.message);
-                    await new Promise(r => setTimeout(r, 200));
-                }
-            }
-            
-            throw lastError || new Error('Todas las estrategias fallaron');
-        })();
-        
-        this.pendingImages.set(cacheKey, cargaPromise);
-        
-        try {
-            return await cargaPromise;
-        } finally {
-            setTimeout(() => {
-                this.pendingImages.delete(cacheKey);
-            }, 1000);
-        }
-    }
-    
-    async cargarImagenConReintentos(url, maxRetries = IMAGEN_CONFIG.MAX_RETRIES) {
-        let lastError = null;
-        
-        for (let intento = 0; intento <= maxRetries; intento++) {
-            try {
-                if (intento > 0) {
-                    const delay = IMAGEN_CONFIG.RETRY_DELAY * Math.pow(2, intento - 1);
-                    await new Promise(r => setTimeout(r, delay));
-                }
-                return await this.cargarImagenMultiEstrategia(url, intento);
-            } catch (error) {
-                lastError = error;
-                console.warn(`Intento ${intento + 1}/${maxRetries + 1} falló:`, error.message);
-            }
-        }
-        
-        throw lastError || new Error('No se pudo cargar la imagen después de múltiples reintentos');
-    }
-    
-    async preCargarImagenes(urls, onProgress) {
-        const urlsValidas = urls.filter(url => this.esUrlValida(this.extraerUrlImagen(url)));
-        const resultados = new Map();
-        let completadas = 0;
-        
-        const procesarImagen = async (item) => {
-            try {
-                const imagenUrl = this.extraerUrlImagen(item);
-                if (!imagenUrl) {
-                    completadas++;
-                    return null;
-                }
-                const imgData = await this.cargarImagenConReintentos(imagenUrl);
-                resultados.set(imagenUrl, imgData);
-                completadas++;
-                if (onProgress) {
-                    onProgress(completadas / urlsValidas.length);
-                }
-                return imgData;
-            } catch (error) {
-                console.error('Error precargando imagen:', error);
-                completadas++;
-                return null;
-            }
-        };
-        
-        const lotes = [];
-        for (let i = 0; i < urlsValidas.length; i += IMAGEN_CONFIG.MAX_PARALLEL) {
-            lotes.push(urlsValidas.slice(i, i + IMAGEN_CONFIG.MAX_PARALLEL));
-        }
-        
-        for (const lote of lotes) {
-            await Promise.all(lote.map(item => procesarImagen(item)));
-        }
-        
-        return resultados;
-    }
-    
-    async obtenerImagen(item) {
-        const url = this.extraerUrlImagen(item);
-        if (!url) return null;
-        
-        const cacheKey = this.normalizarUrl(url);
-        for (const [key, value] of this.imageCache.entries()) {
-            if (key.includes(cacheKey) || cacheKey.includes(key)) {
-                return value;
-            }
-        }
-        
-        try {
-            return await this.cargarImagenConReintentos(url);
-        } catch (error) {
-            console.error('Error obteniendo imagen:', error);
+        } catch {
             return null;
         }
     }
     
-    async dibujarImagenEnPDF(pdf, imagen, x, y, ancho, alto, numero, esEvidencia = false) {
+    async cargarConProxyCors(url) {
+        const proxies = [
+            'https://corsproxy.io/?' + encodeURIComponent(url),
+            'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+            'https://cors-anywhere.herokuapp.com/' + url,
+            'https://proxy.cors.sh/' + url
+        ];
+        
+        for (const proxyUrl of proxies) {
+            try {
+                const response = await fetch(proxyUrl);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    if (blob.type.startsWith('image/')) {
+                        return await this.blobToBase64(blob);
+                    }
+                }
+            } catch {
+                continue;
+            }
+        }
+        return null;
+    }
+    
+    cargarConImage(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const maxDimension = 1024;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = (height * maxDimension) / width;
+                        width = maxDimension;
+                    } else {
+                        width = (width * maxDimension) / height;
+                        height = maxDimension;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => resolve(null);
+            img.src = url;
+        });
+    }
+    
+    async convertirArchivoABase64(file) {
+        if (!file) return null;
+        
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    async blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    // =============================================
+    // DIBUJAR IMAGEN EN PDF
+    // =============================================
+    
+    async dibujarImagen(pdf, imagenObj, x, y, ancho, alto, numero) {
         try {
-            const imgData = await this.obtenerImagen(imagen);
+            const imgData = await this.cargarImagenConProxy(imagenObj);
             
             if (imgData) {
+                // Dibujar fondo blanco
+                pdf.setFillColor(255, 255, 255);
+                pdf.rect(x, y, ancho, alto, 'F');
+                
+                // Dibujar borde
+                pdf.setDrawColor(coloresBase.borde);
+                pdf.setLineWidth(0.5);
+                pdf.rect(x, y, ancho, alto, 'S');
+                
                 try {
+                    // Calcular dimensiones manteniendo aspecto
                     const tempImg = new Image();
                     await new Promise((resolve, reject) => {
                         tempImg.onload = resolve;
@@ -500,8 +337,8 @@ class IPHGenerator extends PDFBaseGenerator {
                     });
                     
                     const aspectRatio = tempImg.width / tempImg.height;
-                    let drawWidth = ancho - 4;
-                    let drawHeight = alto - 4;
+                    let drawWidth = ancho - 8;
+                    let drawHeight = alto - 8;
                     
                     if (aspectRatio > 1) {
                         drawHeight = drawWidth / aspectRatio;
@@ -512,67 +349,41 @@ class IPHGenerator extends PDFBaseGenerator {
                     const xOffset = (ancho - drawWidth) / 2;
                     const yOffset = (alto - drawHeight) / 2;
                     
-                    pdf.addImage(imgData, 'JPEG', x + 2 + xOffset, y + 2 + yOffset, drawWidth, drawHeight, undefined, 'FAST');
-                } catch {
-                    pdf.addImage(imgData, 'JPEG', x + 2, y + 2, ancho - 4, alto - 4, undefined, 'FAST');
+                    pdf.addImage(imgData, 'JPEG', x + xOffset, y + yOffset, drawWidth, drawHeight, undefined, 'FAST');
+                    console.log(`✅ Imagen ${numero} dibujada correctamente`);
+                    
+                } catch (imgError) {
+                    console.warn(`Error renderizando imagen ${numero}, método alternativo:`, imgError);
+                    pdf.addImage(imgData, 'JPEG', x + 4, y + 4, ancho - 8, alto - 8, undefined, 'FAST');
                 }
             } else {
-                this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
+                console.warn(`⚠️ Imagen ${numero} no disponible, dibujando placeholder`);
+                this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero);
             }
-        } catch (error) {
-            console.error(`Error dibujando imagen #${numero}:`, error);
-            this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
-        }
-    }
-    
-    async procesarImagenVertical(pdf, imagen, x, y, ancho, alto, numero, esEvidencia, onProgress) {
-        try {
-            await this.dibujarImagenEnPDF(pdf, imagen, x, y, ancho, alto, numero, esEvidencia);
             
-            const comentario = this.extraerComentario(imagen);
-            const yComentario = y + alto + 4;
-            
+            // Dibujar comentario si existe
+            const comentario = this.extraerComentario(imagenObj);
             if (comentario && comentario.trim() !== '') {
-                pdf.setFillColor(248, 248, 248);
-                pdf.rect(x, yComentario, ancho, 24, 'F');
-                
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(this.fonts.mini);
-                pdf.setTextColor(coloresBase.secundario);
-                pdf.text('Comentario:', x + 4, yComentario + 5);
-                
                 pdf.setFont('helvetica', 'italic');
                 pdf.setFontSize(this.fonts.mini - 1);
                 pdf.setTextColor(coloresBase.textoClaro);
                 
-                const anchoTextoComentario = ancho - 8;
-                const lineasComentario = this.dividirTextoEnLineas(pdf, comentario, anchoTextoComentario);
-                const lineasMaximas = 3;
+                const lineas = this.dividirTextoEnLineas(pdf, comentario, ancho - 8);
+                let yComentario = y + alto + 3;
                 
-                let yLinea = yComentario + 9;
-                for (let i = 0; i < Math.min(lineasComentario.length, lineasMaximas); i++) {
-                    pdf.text(lineasComentario[i], x + 4, yLinea);
-                    yLinea += 4;
-                }
-                
-                if (lineasComentario.length > lineasMaximas) {
-                    pdf.setFont('helvetica', 'italic');
-                    pdf.setFontSize(this.fonts.mini - 2);
-                    pdf.setTextColor(coloresBase.textoClaro);
-                    pdf.text('... (más texto)', x + 4, yLinea);
+                for (let i = 0; i < Math.min(lineas.length, 2); i++) {
+                    pdf.text(lineas[i], x + 4, yComentario);
+                    yComentario += 3.5;
                 }
             }
             
-            if (onProgress) {
-                onProgress(Math.min(95, 50 + (Math.random() * 30)));
-            }
         } catch (error) {
-            console.error(`Error procesando imagen #${numero}:`, error);
-            this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
+            console.error(`Error dibujando imagen ${numero}:`, error);
+            this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero);
         }
     }
-    
-    dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia) {
+
+    dibujarPlaceholder(pdf, x, y, ancho, alto, numero) {
         pdf.setFillColor(245, 245, 245);
         pdf.rect(x + 2, y + 2, ancho - 4, alto - 4, 'F');
         
@@ -583,448 +394,16 @@ class IPHGenerator extends PDFBaseGenerator {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.small);
         pdf.setTextColor(coloresBase.textoClaro);
-        
-        const texto = esEvidencia ? `📎 Evidencia ${numero}` : `📷 Foto ${numero}`;
-        pdf.text(texto, x + (ancho / 2), y + (alto / 2) - 3, { align: 'center' });
+        pdf.text(`📷 Foto ${numero}`, x + (ancho / 2), y + (alto / 2) - 3, { align: 'center' });
         
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(this.fonts.mini);
         pdf.setTextColor(coloresBase.textoClaro);
         pdf.text('(no disponible)', x + (ancho / 2), y + (alto / 2) + 5, { align: 'center' });
     }
-    
+
     // =============================================
-    // MÉTODOS DE GENERACIÓN DE PÁGINAS - CON PAGINACIÓN CORREGIDA
-    // =============================================
-    
-    async calcularTotalPaginasReal(incidencia) {
-        let total = 1; // Página principal
-        
-        let imagenes = [];
-        if (incidencia.imagenes && Array.isArray(incidencia.imagenes)) imagenes = incidencia.imagenes;
-        else if (incidencia.evidencias && Array.isArray(incidencia.evidencias)) imagenes = incidencia.evidencias;
-        else if (incidencia.fotos && Array.isArray(incidencia.fotos)) imagenes = incidencia.fotos;
-        else if (incidencia.anexos && Array.isArray(incidencia.anexos)) imagenes = incidencia.anexos;
-        
-        // Calcular páginas para imágenes principales (4 por página)
-        const imagenesPorPagina = 4;
-        if (imagenes.length > imagenesPorPagina) {
-            total += Math.ceil((imagenes.length - imagenesPorPagina) / imagenesPorPagina);
-        }
-        
-        // Calcular páginas para seguimientos
-        let seguimientos = [];
-        if (incidencia.getSeguimientosArray && typeof incidencia.getSeguimientosArray === 'function') {
-            seguimientos = incidencia.getSeguimientosArray() || [];
-        } else if (incidencia.seguimientos && Array.isArray(incidencia.seguimientos)) {
-            seguimientos = incidencia.seguimientos;
-        } else if (incidencia.historial && Array.isArray(incidencia.historial)) {
-            seguimientos = incidencia.historial;
-        }
-        
-        for (const seg of seguimientos) {
-            let evidenciasSeg = [];
-            if (seg.evidencias && Array.isArray(seg.evidencias)) evidenciasSeg = seg.evidencias;
-            else if (seg.imagenes && Array.isArray(seg.imagenes)) evidenciasSeg = seg.imagenes;
-            else if (seg.fotos && Array.isArray(seg.fotos)) evidenciasSeg = seg.fotos;
-            else if (seg.anexos && Array.isArray(seg.anexos)) evidenciasSeg = seg.anexos;
-            
-            if (evidenciasSeg.length > imagenesPorPagina) {
-                total += Math.ceil((evidenciasSeg.length - imagenesPorPagina) / imagenesPorPagina);
-            } else if (evidenciasSeg.length > 0) {
-                total += 1;
-            }
-        }
-        
-        console.log(`📄 Cálculo de páginas: Total=${total}, Imágenes=${imagenes.length}, Seguimientos=${seguimientos.length}`);
-        return Math.max(total, 1);
-    }
-    
-    async generarPaginaIPH(pdf, incidencia, onProgress) {
-        const margen = 15;
-        const anchoPagina = this.configuracionCarta.ancho;
-        const altoPagina = this.configuracionCarta.alto;
-        const anchoContenido = anchoPagina - (margen * 2);
-        let yPos = this.alturaEncabezado + 5;
-        
-        this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', incidencia.id);
-        
-        // =============================================
-        // IDENTIFICACIÓN DE LA UNIDAD (con nombre de usuario)
-        // =============================================
-        pdf.setFillColor(coloresBase.fondo);
-        pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.identificacion, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(this.fonts.normal);
-        pdf.setTextColor(coloresBase.primario);
-        pdf.text('IDENTIFICACIÓN DE LA UNIDAD', margen + 2, yPos);
-        yPos += 5;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.small);
-        pdf.setTextColor(coloresBase.texto);
-        pdf.text(`ORGANIZACIÓN: ${this.organizacionActual?.nombre || 'No especificada'}`, margen + 2, yPos);
-        yPos += 4;
-        pdf.text(`SUCURSAL: ${this.obtenerNombreSucursal(incidencia.sucursalId)}`, margen + 2, yPos);
-        yPos += 4;
-        
-        // NOMBRE DE QUIEN REPORTÓ (usuario)
-        const nombreReportante = this.obtenerNombreUsuario(incidencia.reportadoPorId);
-        pdf.text(`REPORTADO POR: ${nombreReportante}`, margen + 2, yPos);
-        yPos += this.alturasContenedores.identificacion - 12;
-        
-        // =============================================
-        // DATOS GENERALES
-        // =============================================
-        pdf.setFillColor(coloresBase.fondo);
-        pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.datosGenerales, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(this.fonts.normal);
-        pdf.setTextColor(coloresBase.primario);
-        pdf.text('DATOS GENERALES', margen + 2, yPos);
-        yPos += 5;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.small);
-        pdf.setTextColor(coloresBase.texto);
-        
-        const fechaReporte = incidencia.fechaCreacion ? new Date(incidencia.fechaCreacion) : new Date();
-        const fechaStr = this.formatearFechaVisualizacion(fechaReporte);
-        const horaStr = this.formatearHoraVisualizacion(fechaReporte);
-        
-        pdf.text(`FECHA DEL REPORTE: ${fechaStr}`, margen + 2, yPos);
-        pdf.text(`HORA: ${horaStr}`, margen + 100, yPos);
-        yPos += 4;
-        yPos += this.alturasContenedores.datosGenerales - 12;
-        
-        // =============================================
-        // CLASIFICACIÓN DE LA INCIDENCIA
-        // =============================================
-        pdf.setFillColor(coloresBase.fondo);
-        pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.clasificacion, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(this.fonts.normal);
-        pdf.setTextColor(coloresBase.primario);
-        pdf.text('CLASIFICACIÓN DE LA INCIDENCIA', margen + 2, yPos);
-        yPos += 5;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.small);
-        pdf.setTextColor(coloresBase.texto);
-        
-        const categoriaNombre = this.obtenerNombreCategoria(incidencia.categoriaId);
-        pdf.text(`CATEGORÍA: ${categoriaNombre}`, margen + 2, yPos);
-        yPos += 4;
-        
-        const subcategoriaNombre = this.obtenerNombreSubcategoria(incidencia.subcategoriaId);
-        pdf.text(`SUBCATEGORÍA: ${subcategoriaNombre}`, margen + 2, yPos);
-        yPos += 4;
-        
-        const nivelRiesgo = incidencia.getNivelRiesgoTexto ? incidencia.getNivelRiesgoTexto() : incidencia.nivelRiesgo;
-        pdf.text(`NIVEL DE RIESGO: ${nivelRiesgo?.toUpperCase() || 'NO ESPECIFICADO'}`, margen + 2, yPos);
-        yPos += 4;
-        
-        const estado = incidencia.getEstadoTexto ? incidencia.getEstadoTexto() : incidencia.estado;
-        pdf.text(`ESTADO (Actual): ${estado?.toUpperCase() || 'NO ESPECIFICADO'}`, margen + 2, yPos);
-        yPos += 4;
-        
-        const fechaInicio = incidencia.fechaInicio ? new Date(incidencia.fechaInicio) : new Date();
-        const fechaInicioStr = this.formatearFechaVisualizacion(fechaInicio);
-        const horaInicioStr = this.formatearHoraVisualizacion(fechaInicio);
-        
-        pdf.text(`FECHA INCIDENCIA: ${fechaInicioStr}`, margen + 2, yPos);
-        pdf.text(`HORA: ${horaInicioStr}`, margen + 100, yPos);
-        yPos += this.alturasContenedores.clasificacion - 16;
-        
-        // =============================================
-        // REPORTADO POR (detalles adicionales)
-        // =============================================
-        const cargoReportadoPor = this.obtenerCargoUsuario(incidencia.reportadoPorId);
-        
-        if (cargoReportadoPor) {
-            if (!this.verificarEspacio(pdf, yPos, this.alturasContenedores.reportadoPor + 5)) {
-                this.dibujarPiePagina(pdf);
-                pdf.addPage();
-                this.paginaActualReal++;
-                this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
-                yPos = this.alturaEncabezado + 5;
-            }
-            
-            pdf.setFillColor(coloresBase.fondo);
-            pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.reportadoPor, 'F');
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(this.fonts.normal);
-            pdf.setTextColor(coloresBase.primario);
-            pdf.text('DATOS DEL REPORTANTE', margen + 2, yPos);
-            yPos += 5;
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(this.fonts.small);
-            pdf.setTextColor(coloresBase.texto);
-            pdf.text(`CARGO / PUESTO: ${cargoReportadoPor}`, margen + 2, yPos);
-            yPos += this.alturasContenedores.reportadoPor - 7;
-        }
-        
-        // =============================================
-        // DESCRIPCIÓN
-        // =============================================
-        const lineasDesc = this.dividirTextoEnLineas(pdf, incidencia.detalles || 'No hay descripción disponible.', anchoContenido - 10);
-        const espacioNecesarioDesc = 15 + (lineasDesc.length * 4);
-        
-        if (!this.verificarEspacio(pdf, yPos, espacioNecesarioDesc)) {
-            this.dibujarPiePagina(pdf);
-            pdf.addPage();
-            this.paginaActualReal++;
-            this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
-            yPos = this.alturaEncabezado + 5;
-        }
-        
-        const alturaContenedorDesc = Math.max(this.alturasContenedores.descripcion, espacioNecesarioDesc + 10);
-        pdf.setFillColor(coloresBase.fondo);
-        pdf.rect(margen, yPos - 3, anchoContenido, alturaContenedorDesc, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(this.fonts.normal);
-        pdf.setTextColor(coloresBase.primario);
-        pdf.text('DESCRIPCIÓN DE LA INCIDENCIA:', margen + 2, yPos);
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.small);
-        pdf.setTextColor(coloresBase.texto);
-        
-        let yTextoDesc = yPos + 5;
-        for (let i = 0; i < lineasDesc.length; i++) {
-            if (lineasDesc[i] === '') {
-                yTextoDesc += 4;
-            } else {
-                pdf.text(lineasDesc[i], margen + 5, yTextoDesc);
-                yTextoDesc += 4;
-            }
-        }
-        
-        yPos = yTextoDesc + 8;
-        
-        // =============================================
-        // ANEXOS - IMÁGENES EN 2 COLUMNAS
-        // =============================================
-        
-        let imagenesPrincipales = [];
-        if (incidencia.imagenes && Array.isArray(incidencia.imagenes)) imagenesPrincipales = incidencia.imagenes;
-        else if (incidencia.evidencias && Array.isArray(incidencia.evidencias)) imagenesPrincipales = incidencia.evidencias;
-        else if (incidencia.fotos && Array.isArray(incidencia.fotos)) imagenesPrincipales = incidencia.fotos;
-        else if (incidencia.anexos && Array.isArray(incidencia.anexos)) imagenesPrincipales = incidencia.anexos;
-        
-        if (imagenesPrincipales.length > 0) {
-            if (!this.verificarEspacio(pdf, yPos, 20)) {
-                this.dibujarPiePagina(pdf);
-                pdf.addPage();
-                this.paginaActualReal++;
-                this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
-                yPos = this.alturaEncabezado + 5;
-            }
-            
-            pdf.setFillColor(coloresBase.fondo);
-            pdf.rect(margen, yPos - 3, anchoContenido, 12, 'F');
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(this.fonts.normal);
-            pdf.setTextColor(coloresBase.primario);
-            pdf.text('ANEXOS - EVIDENCIAS FOTOGRÁFICAS', margen + 2, yPos);
-            yPos += 10;
-            
-            const imgWidth = IMAGEN_CONFIG.TAMANIOS.IMAGEN_PRINCIPAL.ancho;
-            const imgHeight = IMAGEN_CONFIG.TAMANIOS.IMAGEN_PRINCIPAL.alto;
-            const alturaTotalPorItem = imgHeight + 32;
-            const espaciadoColumnas = IMAGEN_CONFIG.GRID.espaciadoColumnas;
-            const espaciadoFilas = IMAGEN_CONFIG.GRID.espaciadoFilas;
-            
-            const col1X = margen + 2;
-            const col2X = col1X + imgWidth + espaciadoColumnas;
-            
-            let imagenIndex = 0;
-            
-            while (imagenIndex < imagenesPrincipales.length) {
-                if (!this.verificarEspacio(pdf, yPos, alturaTotalPorItem)) {
-                    this.dibujarPiePagina(pdf);
-                    pdf.addPage();
-                    this.paginaActualReal++;
-                    this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
-                    yPos = this.alturaEncabezado + 5;
-                    
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(this.fonts.normal);
-                    pdf.setTextColor(coloresBase.primario);
-                    pdf.text('ANEXOS - EVIDENCIAS FOTOGRÁFICAS (CONTINUACIÓN)', margen, yPos);
-                    yPos += 10;
-                }
-                
-                for (let col = 0; col < 2 && imagenIndex < imagenesPrincipales.length; col++) {
-                    const xPos = col === 0 ? col1X : col2X;
-                    const imagen = imagenesPrincipales[imagenIndex];
-                    const numeroImagen = imagenIndex + 1;
-                    
-                    await this.procesarImagenVertical(pdf, imagen, xPos, yPos, imgWidth, imgHeight, numeroImagen, false, onProgress);
-                    
-                    imagenIndex++;
-                }
-                
-                yPos += alturaTotalPorItem + espaciadoFilas;
-            }
-            
-            yPos += 5;
-        }
-        
-        // =============================================
-        // SEGUIMIENTOS
-        // =============================================
-        
-        let seguimientos = [];
-        if (incidencia.getSeguimientosArray && typeof incidencia.getSeguimientosArray === 'function') {
-            seguimientos = incidencia.getSeguimientosArray() || [];
-        } else if (incidencia.seguimientos && Array.isArray(incidencia.seguimientos)) {
-            seguimientos = incidencia.seguimientos;
-        } else if (incidencia.historial && Array.isArray(incidencia.historial)) {
-            seguimientos = incidencia.historial;
-        }
-        
-        if (seguimientos && seguimientos.length > 0) {
-            for (let s = 0; s < seguimientos.length; s++) {
-                const seg = seguimientos[s];
-                
-                const lineasSeg = this.dividirTextoEnLineas(pdf, seg.descripcion || seg.comentario || 'Sin descripción', anchoContenido - 10);
-                const alturaTexto = lineasSeg.length * 4;
-                
-                let evidenciasSeg = [];
-                if (seg.evidencias && Array.isArray(seg.evidencias)) evidenciasSeg = seg.evidencias;
-                else if (seg.imagenes && Array.isArray(seg.imagenes)) evidenciasSeg = seg.imagenes;
-                else if (seg.fotos && Array.isArray(seg.fotos)) evidenciasSeg = seg.fotos;
-                else if (seg.anexos && Array.isArray(seg.anexos)) evidenciasSeg = seg.anexos;
-                
-                const imgWidth = IMAGEN_CONFIG.TAMANIOS.EVIDENCIA_SEGUIMIENTO.ancho;
-                const imgHeight = IMAGEN_CONFIG.TAMANIOS.EVIDENCIA_SEGUIMIENTO.alto;
-                const alturaTotalPorItem = imgHeight + 32;
-                
-                let alturaEvidencias = 0;
-                if (evidenciasSeg.length > 0) {
-                    const filasNecesarias = Math.ceil(evidenciasSeg.length / 2);
-                    alturaEvidencias = 15 + (filasNecesarias * (alturaTotalPorItem + 10));
-                }
-                
-                const alturaNecesaria = 28 + alturaTexto + alturaEvidencias;
-                
-                if (!this.verificarEspacio(pdf, yPos, alturaNecesaria + 10)) {
-                    this.dibujarPiePagina(pdf);
-                    pdf.addPage();
-                    this.paginaActualReal++;
-                    this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
-                    yPos = this.alturaEncabezado + 5;
-                }
-                
-                pdf.setFillColor(coloresBase.fondo);
-                pdf.rect(margen, yPos - 3, anchoContenido, alturaNecesaria, 'F');
-                
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(this.fonts.small);
-                pdf.setTextColor(coloresBase.primario);
-                
-                let fechaSeg = seg.fecha || seg.fechaCreacion || seg.createdAt || null;
-                const fechaStrSeg = this.formatearFecha(fechaSeg);
-                
-                pdf.text(`Seguimiento #${s + 1} - ${fechaStrSeg}`, margen + 2, yPos);
-                
-                pdf.setFont('helvetica', 'italic');
-                pdf.setFontSize(this.fonts.mini);
-                pdf.setTextColor(coloresBase.texto);
-                
-                const nombreUsuario = seg.usuarioNombre || seg.usuario || this.obtenerNombreUsuario(seg.usuarioId) || 'Usuario';
-                pdf.text(`por: ${nombreUsuario}`, margen + 2, yPos + 5);
-                
-                pdf.setFont('helvetica', 'normal');
-                pdf.setFontSize(this.fonts.small);
-                pdf.setTextColor(coloresBase.texto);
-                
-                let yTexto = yPos + 12;
-                for (let i = 0; i < lineasSeg.length; i++) {
-                    if (lineasSeg[i] === '') {
-                        yTexto += 4;
-                    } else {
-                        pdf.text(lineasSeg[i], margen + 5, yTexto);
-                        yTexto += 4;
-                    }
-                }
-                
-                if (evidenciasSeg.length > 0) {
-                    yTexto += 8;
-                    
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(this.fonts.small);
-                    pdf.setTextColor(coloresBase.primario);
-                    pdf.text(`Evidencias del seguimiento #${s + 1}:`, margen, yTexto);
-                    yTexto += 8;
-                    
-                    const espaciadoColumnas = IMAGEN_CONFIG.GRID.espaciadoColumnas;
-                    const col1X = margen + 2;
-                    const col2X = col1X + imgWidth + espaciadoColumnas;
-                    
-                    let evidenciaIndex = 0;
-                    let filaY = yTexto;
-                    
-                    while (evidenciaIndex < evidenciasSeg.length) {
-                        if (!this.verificarEspacio(pdf, filaY, alturaTotalPorItem)) {
-                            break;
-                        }
-                        
-                        for (let col = 0; col < 2 && evidenciaIndex < evidenciasSeg.length; col++) {
-                            const xPos = col === 0 ? col1X : col2X;
-                            const evidencia = evidenciasSeg[evidenciaIndex];
-                            const numeroEvidencia = evidenciaIndex + 1;
-                            
-                            await this.procesarImagenVertical(pdf, evidencia, xPos, filaY, imgWidth, imgHeight, numeroEvidencia, true, onProgress);
-                            
-                            evidenciaIndex++;
-                        }
-                        
-                        filaY += alturaTotalPorItem + 12;
-                    }
-                    
-                    yPos = filaY + 5;
-                } else {
-                    yPos = yTexto + 5;
-                }
-            }
-        }
-        
-        // AVISO DE PRIVACIDAD
-        const espacioRestante = altoPagina - yPos - 25;
-        
-        if (espacioRestante < this.alturasContenedores.avisoPrivacidad + 5) {
-            this.dibujarPiePagina(pdf);
-            pdf.addPage();
-            this.paginaActualReal++;
-            this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
-            yPos = this.alturaEncabezado + 5;
-        }
-        
-        yPos = altoPagina - 25 - this.alturasContenedores.avisoPrivacidad;
-        
-        pdf.setFillColor(245, 245, 245);
-        pdf.rect(margen, yPos, anchoContenido, this.alturasContenedores.avisoPrivacidad, 'F');
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(this.fonts.mini);
-        pdf.setTextColor(coloresBase.primario);
-        pdf.text('AVISO DE PRIVACIDAD', margen + 2, yPos + 4);
-        
-        pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(this.fonts.mini);
-        pdf.setTextColor(coloresBase.textoClaro);
-        
-        const aviso = 'La información contenida en este documento es responsabilidad exclusiva de quien utiliza el Sistema Centinela y de la persona que ingresó los datos.';
-        const lineasAviso = this.dividirTextoEnLineas(pdf, aviso, anchoContenido - 10);
-        
-        for (let i = 0; i < lineasAviso.length; i++) {
-            pdf.text(lineasAviso[i], margen + 2, yPos + 8 + (i * 3));
-        }
-        
-        this.dibujarPiePagina(pdf);
-    }
-    
-    // =============================================
-    // MÉTODO PRINCIPAL DE GENERACIÓN
+    // MÉTODO PRINCIPAL
     // =============================================
     
     async generarIPH(incidencia, opciones = {}) {
@@ -1034,12 +413,21 @@ class IPHGenerator extends PDFBaseGenerator {
                 tituloAlerta = 'Generando Informe...', 
                 onProgress = null,
                 returnBlob = false,
-                diagnosticar = false
+                diagnosticar = true
             } = opciones;
             
             if (diagnosticar) {
-                console.log('🔍 Ejecutando diagnóstico de imágenes...');
-                await this.diagnosticarEstructuraImagen(incidencia);
+                console.log('🔍 DIAGNÓSTICO DE INCIDENCIA:');
+                console.log('  ID:', incidencia.id);
+                console.log('  Reportado Por:', incidencia.reportadoPorNombre);
+                console.log('  Imágenes en incidencia:', incidencia.imagenes?.length || 0);
+                
+                if (incidencia.imagenes && incidencia.imagenes.length > 0) {
+                    incidencia.imagenes.forEach((img, i) => {
+                        const url = this.extraerUrlImagen(img);
+                        console.log(`  Imagen ${i + 1}: URL extraída:`, url ? (url.substring(0, 80) + '...') : 'NO URL');
+                    });
+                }
             }
             
             if (mostrarAlerta) {
@@ -1077,60 +465,37 @@ class IPHGenerator extends PDFBaseGenerator {
             
             this.incidenciaActual = incidencia;
             
-            actualizarProgreso(15, 'Analizando imágenes...');
+            actualizarProgreso(15, 'Procesando imágenes...');
             
-            const todasLasImagenes = [];
+            const imagenes = incidencia.imagenes || [];
             
-            let imagenesPrincipales = [];
-            if (incidencia.imagenes && Array.isArray(incidencia.imagenes)) imagenesPrincipales = incidencia.imagenes;
-            else if (incidencia.evidencias && Array.isArray(incidencia.evidencias)) imagenesPrincipales = incidencia.evidencias;
-            else if (incidencia.fotos && Array.isArray(incidencia.fotos)) imagenesPrincipales = incidencia.fotos;
-            else if (incidencia.anexos && Array.isArray(incidencia.anexos)) imagenesPrincipales = incidencia.anexos;
-            
-            todasLasImagenes.push(...imagenesPrincipales);
-            
-            let seguimientos = [];
-            if (incidencia.getSeguimientosArray && typeof incidencia.getSeguimientosArray === 'function') {
-                seguimientos = incidencia.getSeguimientosArray() || [];
-            } else if (incidencia.seguimientos && Array.isArray(incidencia.seguimientos)) {
-                seguimientos = incidencia.seguimientos;
-            } else if (incidencia.historial && Array.isArray(incidencia.historial)) {
-                seguimientos = incidencia.historial;
-            }
-            
-            for (const seg of seguimientos) {
-                let evidenciasSeg = [];
-                if (seg.evidencias && Array.isArray(seg.evidencias)) evidenciasSeg = seg.evidencias;
-                else if (seg.imagenes && Array.isArray(seg.imagenes)) evidenciasSeg = seg.imagenes;
-                else if (seg.fotos && Array.isArray(seg.fotos)) evidenciasSeg = seg.fotos;
-                else if (seg.anexos && Array.isArray(seg.anexos)) evidenciasSeg = seg.anexos;
+            if (imagenes.length > 0) {
+                actualizarProgreso(20, `Procesando ${imagenes.length} imágenes...`);
                 
-                todasLasImagenes.push(...evidenciasSeg);
-            }
-            
-            if (todasLasImagenes.length > 0) {
-                actualizarProgreso(20, `Precargando ${todasLasImagenes.length} imágenes...`);
-                
-                await this.preCargarImagenes(todasLasImagenes, (progress) => {
-                    const porcentaje = 20 + (progress * 30);
-                    actualizarProgreso(porcentaje, `Cargando imágenes... ${Math.round(progress * 100)}%`);
-                });
+                for (let i = 0; i < imagenes.length; i++) {
+                    const img = imagenes[i];
+                    await this.cargarImagenConProxy(img);
+                    const progress = 20 + (i / imagenes.length) * 30;
+                    actualizarProgreso(progress, `Imagen ${i + 1} de ${imagenes.length}`);
+                }
+            } else {
+                console.log('⚠️ No hay imágenes para procesar');
             }
             
             actualizarProgreso(50, 'Generando páginas...');
             
-            // CREAR PDF EN FORMATO CARTA
             const pdf = new this.jsPDF({ 
                 orientation: 'portrait', 
                 unit: 'mm', 
                 format: 'letter'
             });
             
-            // CALCULAR TOTAL DE PÁGINAS CORRECTAMENTE
-            this.totalPaginas = await this.calcularTotalPaginasReal(incidencia);
+            const imagenesPorPagina = 4;
+            const paginasImagenes = imagenes.length > 0 ? Math.ceil(imagenes.length / imagenesPorPagina) : 0;
+            this.totalPaginas = 1 + paginasImagenes;
             this.paginaActualReal = 1;
             
-            console.log(`📄 Iniciando generación: Total de páginas = ${this.totalPaginas}`);
+            console.log(`📄 Iniciando generación: Total de páginas = ${this.totalPaginas}, Imágenes = ${imagenes.length}`);
             
             await this.generarPaginaIPH(pdf, incidencia, actualizarProgreso);
             
@@ -1158,92 +523,239 @@ class IPHGenerator extends PDFBaseGenerator {
                 Swal.fire({ 
                     icon: 'error', 
                     title: 'Error', 
-                    text: error.message || 'Error al generar el informe',
-                    footer: 'Verifica tu conexión a internet y que las imágenes sean accesibles.'
+                    text: error.message || 'Error al generar el informe'
                 });
             }
             throw error;
         }
     }
     
-    async diagnosticarEstructuraImagen(incidencia) {
-        console.log('===== DIAGNÓSTICO DE IMÁGENES =====');
+    async generarPaginaIPH(pdf, incidencia, onProgress) {
+        const margen = CONFIG.MARGEN;
+        const anchoPagina = this.configuracionCarta.ancho;
+        const altoPagina = this.configuracionCarta.alto;
+        const anchoContenido = anchoPagina - (margen * 2);
+        let yPos = this.alturaEncabezado + 5;
         
-        let imagenes = [];
-        let propiedadOrigen = null;
+        this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', incidencia.id || 'Nueva Incidencia');
         
-        if (incidencia.imagenes && Array.isArray(incidencia.imagenes)) {
-            imagenes = incidencia.imagenes;
-            propiedadOrigen = 'imagenes';
-        } else if (incidencia.evidencias && Array.isArray(incidencia.evidencias)) {
-            imagenes = incidencia.evidencias;
-            propiedadOrigen = 'evidencias';
-        } else if (incidencia.fotos && Array.isArray(incidencia.fotos)) {
-            imagenes = incidencia.fotos;
-            propiedadOrigen = 'fotos';
-        } else if (incidencia.anexos && Array.isArray(incidencia.anexos)) {
-            imagenes = incidencia.anexos;
-            propiedadOrigen = 'anexos';
+        // IDENTIFICACIÓN DE LA UNIDAD
+        pdf.setFillColor(coloresBase.fondo);
+        pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.identificacion, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(this.fonts.normal);
+        pdf.setTextColor(coloresBase.primario);
+        pdf.text('IDENTIFICACIÓN DE LA UNIDAD', margen + 2, yPos);
+        yPos += 5;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(this.fonts.small);
+        pdf.setTextColor(coloresBase.texto);
+        
+        const organizacion = this.organizacionActual?.nombre || incidencia.organizacion || 'No especificada';
+        pdf.text(`ORGANIZACIÓN: ${organizacion}`, margen + 2, yPos);
+        yPos += 4;
+        
+        const sucursalNombre = incidencia.sucursalNombre || this.obtenerNombreSucursal(incidencia.sucursalId);
+        pdf.text(`SUCURSAL: ${sucursalNombre}`, margen + 2, yPos);
+        yPos += 4;
+        
+        const nombreReportante = incidencia.reportadoPorNombre || this.obtenerNombreUsuario(incidencia.reportadoPorId);
+        pdf.text(`REPORTADO POR: ${nombreReportante}`, margen + 2, yPos);
+        yPos += 4;
+        
+        yPos += this.alturasContenedores.identificacion - 16;
+        
+        // DATOS GENERALES
+        pdf.setFillColor(coloresBase.fondo);
+        pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.datosGenerales, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(this.fonts.normal);
+        pdf.setTextColor(coloresBase.primario);
+        pdf.text('DATOS GENERALES', margen + 2, yPos);
+        yPos += 5;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(this.fonts.small);
+        pdf.setTextColor(coloresBase.texto);
+        
+        const fechaReporte = incidencia.fechaCreacion ? new Date(incidencia.fechaCreacion) : new Date();
+        const fechaStr = this.formatearFechaVisualizacion(fechaReporte);
+        const horaStr = this.formatearHoraVisualizacion(fechaReporte);
+        
+        pdf.text(`FECHA DEL REPORTE: ${fechaStr}`, margen + 2, yPos);
+        pdf.text(`HORA: ${horaStr}`, margen + 100, yPos);
+        yPos += this.alturasContenedores.datosGenerales - 8;
+        
+        // CLASIFICACIÓN DE LA INCIDENCIA
+        pdf.setFillColor(coloresBase.fondo);
+        pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.clasificacion, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(this.fonts.normal);
+        pdf.setTextColor(coloresBase.primario);
+        pdf.text('CLASIFICACIÓN DE LA INCIDENCIA', margen + 2, yPos);
+        yPos += 5;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(this.fonts.small);
+        pdf.setTextColor(coloresBase.texto);
+        
+        const categoriaNombre = incidencia.categoriaNombre || this.obtenerNombreCategoria(incidencia.categoriaId);
+        pdf.text(`CATEGORÍA: ${categoriaNombre}`, margen + 2, yPos);
+        yPos += 4;
+        
+        const subcategoriaNombre = incidencia.subcategoriaNombre || this.obtenerNombreSubcategoria(incidencia.subcategoriaId, incidencia.categoriaId);
+        pdf.text(`SUBCATEGORÍA: ${subcategoriaNombre}`, margen + 2, yPos);
+        yPos += 4;
+        
+        const nivelRiesgo = incidencia.nivelRiesgo || 'No especificado';
+        const riesgoTexto = typeof nivelRiesgo === 'string' ? nivelRiesgo.toUpperCase() : String(nivelRiesgo);
+        pdf.text(`NIVEL DE RIESGO: ${riesgoTexto}`, margen + 2, yPos);
+        yPos += 4;
+        
+        const estado = incidencia.estado || 'No especificado';
+        const estadoTexto = typeof estado === 'string' ? estado.toUpperCase() : String(estado);
+        pdf.text(`ESTADO (Actual): ${estadoTexto}`, margen + 2, yPos);
+        yPos += 4;
+        
+        const fechaInicio = incidencia.fechaInicio ? new Date(incidencia.fechaInicio) : new Date();
+        const fechaInicioStr = this.formatearFechaVisualizacion(fechaInicio);
+        const horaInicioStr = this.formatearHoraVisualizacion(fechaInicio);
+        
+        pdf.text(`FECHA INCIDENCIA: ${fechaInicioStr}`, margen + 2, yPos);
+        pdf.text(`HORA: ${horaInicioStr}`, margen + 100, yPos);
+        yPos += this.alturasContenedores.clasificacion - 16;
+        
+        // DESCRIPCIÓN
+        const detalles = incidencia.detalles || 'No hay descripción disponible.';
+        const lineasDesc = this.dividirTextoEnLineas(pdf, detalles, anchoContenido - 10);
+        const espacioNecesarioDesc = 15 + (lineasDesc.length * 4);
+        const alturaDesc = Math.max(this.alturasContenedores.descripcion, Math.min(espacioNecesarioDesc + 10, 120));
+        
+        if (!this.verificarEspacio(pdf, yPos, alturaDesc)) {
+            this.dibujarPiePagina(pdf);
+            pdf.addPage();
+            this.paginaActualReal++;
+            this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
+            yPos = this.alturaEncabezado + 5;
         }
         
-        console.log(`📸 Total imágenes encontradas: ${imagenes.length}`);
-        if (propiedadOrigen) {
-            console.log(`📁 Propiedad donde se encontraron: ${propiedadOrigen}`);
-        }
+        pdf.setFillColor(coloresBase.fondo);
+        pdf.rect(margen, yPos - 3, anchoContenido, alturaDesc, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(this.fonts.normal);
+        pdf.setTextColor(coloresBase.primario);
+        pdf.text('DESCRIPCIÓN DE LA INCIDENCIA:', margen + 2, yPos);
         
-        for (let i = 0; i < Math.min(imagenes.length, 5); i++) {
-            const img = imagenes[i];
-            console.log(`\n🔍 Imagen #${i + 1}:`);
-            console.log(`   Tipo: ${typeof img}`);
-            
-            const urlExtraida = this.extraerUrlImagen(img);
-            if (urlExtraida) {
-                const preview = urlExtraida.length > 100 ? urlExtraida.substring(0, 100) + '...' : urlExtraida;
-                console.log(`   URL extraída: ${preview}`);
-                
-                const comentario = this.extraerComentario(img);
-                if (comentario) {
-                    console.log(`   Comentario: ${comentario.substring(0, 50)}...`);
-                }
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(this.fonts.small);
+        pdf.setTextColor(coloresBase.texto);
+        
+        let yTextoDesc = yPos + 5;
+        for (let i = 0; i < lineasDesc.length; i++) {
+            if (lineasDesc[i] === '') {
+                yTextoDesc += 4;
             } else {
-                console.log(`   ❌ No se pudo extraer URL de la imagen`);
+                pdf.text(lineasDesc[i], margen + 5, yTextoDesc);
+                yTextoDesc += 4;
             }
         }
         
-        console.log('\n===== FIN DIAGNÓSTICO =====');
+        yPos = yTextoDesc + 8;
         
-        return {
-            totalImagenes: imagenes.length,
-            propiedadOrigen: propiedadOrigen
-        };
-    }
-    
-    async generarIPHMultiple(incidencias, opciones = {}) {
-        try {
-            if (!incidencias || incidencias.length === 0) return;
-            const { mostrarAlerta = true, tituloAlerta = 'Generando Informes...', diagnosticar = false } = opciones;
-            if (mostrarAlerta) {
-                Swal.fire({ title: tituloAlerta, html: `<div>Procesando ${incidencias.length} incidencia(s)...</div>`, allowOutsideClick: false, showConfirmButton: false });
+        // ANEXOS - IMÁGENES
+        const imagenesPrincipales = incidencia.imagenes || [];
+        
+        if (imagenesPrincipales.length > 0) {
+            const imgWidth = CONFIG.ANCHO_IMAGEN;
+            const imgHeight = CONFIG.ALTO_IMAGEN;
+            const alturaTotalPorItem = imgHeight + 28;
+            
+            const col1X = margen + 2;
+            const col2X = col1X + imgWidth + CONFIG.ESPACIADO_COLUMNAS;
+            
+            let imagenIndex = 0;
+            let esPrimeraPaginaImagenes = true;
+            
+            while (imagenIndex < imagenesPrincipales.length) {
+                if (!this.verificarEspacio(pdf, yPos, alturaTotalPorItem)) {
+                    this.dibujarPiePagina(pdf);
+                    pdf.addPage();
+                    this.paginaActualReal++;
+                    this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
+                    yPos = this.alturaEncabezado + 5;
+                    esPrimeraPaginaImagenes = true;
+                }
+                
+                if (esPrimeraPaginaImagenes) {
+                    pdf.setFillColor(coloresBase.fondo);
+                    pdf.rect(margen, yPos - 3, anchoContenido, 12, 'F');
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(this.fonts.normal);
+                    pdf.setTextColor(coloresBase.primario);
+                    
+                    if (imagenIndex === 0) {
+                        pdf.text('ANEXOS - EVIDENCIAS FOTOGRÁFICAS', margen + 2, yPos);
+                    } else {
+                        pdf.text('ANEXOS - EVIDENCIAS FOTOGRÁFICAS (CONTINUACIÓN)', margen, yPos);
+                    }
+                    yPos += 10;
+                    esPrimeraPaginaImagenes = false;
+                }
+                
+                for (let col = 0; col < 2 && imagenIndex < imagenesPrincipales.length; col++) {
+                    const xPos = col === 0 ? col1X : col2X;
+                    const imagen = imagenesPrincipales[imagenIndex];
+                    const numeroImagen = imagenIndex + 1;
+                    
+                    await this.dibujarImagen(pdf, imagen, xPos, yPos, imgWidth, imgHeight, numeroImagen);
+                    
+                    if (onProgress) {
+                        const progress = 50 + (imagenIndex / imagenesPrincipales.length) * 30;
+                        onProgress(Math.min(progress, 85));
+                    }
+                    
+                    imagenIndex++;
+                }
+                
+                yPos += alturaTotalPorItem + CONFIG.ESPACIADO_FILAS;
             }
-            for (let i = 0; i < incidencias.length; i++) {
-                if (mostrarAlerta) Swal.update({ html: `<div>Procesando incidencia ${i + 1} de ${incidencias.length}...</div>` });
-                await this.generarIPH(incidencias[i], { mostrarAlerta: false, diagnosticar });
-            }
-            if (mostrarAlerta) {
-                Swal.close();
-                Swal.fire({ icon: 'success', title: '¡Completado!', text: `Se generaron ${incidencias.length} informes correctamente.`, timer: 2000, showConfirmButton: false });
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            if (mostrarAlerta) {
-                Swal.close();
-                Swal.fire({ icon: 'error', title: 'Error', text: error.message });
-            }
-            throw error;
+            
+            yPos += 5;
         }
+        
+        // AVISO DE PRIVACIDAD
+        const espacioRestante = altoPagina - yPos - 25;
+        
+        if (espacioRestante < this.alturasContenedores.avisoPrivacidad + 5) {
+            this.dibujarPiePagina(pdf);
+            pdf.addPage();
+            this.paginaActualReal++;
+            this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
+            yPos = this.alturaEncabezado + 5;
+        }
+        
+        yPos = altoPagina - 25 - this.alturasContenedores.avisoPrivacidad;
+        
+        pdf.setFillColor(245, 245, 245);
+        pdf.rect(margen, yPos, anchoContenido, this.alturasContenedores.avisoPrivacidad, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(this.fonts.mini);
+        pdf.setTextColor(coloresBase.primario);
+        pdf.text('AVISO DE PRIVACIDAD', margen + 2, yPos + 4);
+        
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(this.fonts.mini);
+        pdf.setTextColor(coloresBase.textoClaro);
+        
+        const aviso = 'La información contenida en este documento es responsabilidad exclusiva de quien utiliza el Sistema Centinela y de la persona que ingresó los datos.';
+        const lineasAviso = this.dividirTextoEnLineas(pdf, aviso, anchoContenido - 10);
+        
+        for (let i = 0; i < Math.min(lineasAviso.length, 3); i++) {
+            pdf.text(lineasAviso[i], margen + 2, yPos + 8 + (i * 3));
+        }
+        
+        this.dibujarPiePagina(pdf);
     }
 }
 
-// Crear una instancia única para exportar
 export const generadorIPH = new IPHGenerator();
 export default generadorIPH;

@@ -69,7 +69,7 @@
 
             <div class="cards-grid-modulos">
                 <!-- ÁREAS -->
-                <div class="dashboard-card" data-modulo="areas">
+                <div class="dashboard-card" data-modulo="areas" data-url="/usuarios/colaboradores/areas/areas.html">
                     <div class="card-icon blue">
                         <i class="fa-solid fa-sitemap"></i>
                     </div>
@@ -81,7 +81,8 @@
                 </div>
 
                 <!-- CATEGORÍAS -->
-                <div class="dashboard-card" data-modulo="categorias">
+                <div class="dashboard-card" data-modulo="categorias"
+                    data-url="/usuarios/colaboradores/categorias/categorias.html">
                     <div class="card-icon cyan">
                         <i class="fa-solid fa-tags"></i>
                     </div>
@@ -93,7 +94,8 @@
                 </div>
 
                 <!-- SUCURSALES -->
-                <div class="dashboard-card" data-modulo="sucursales">
+                <div class="dashboard-card" data-modulo="sucursales"
+                    data-url="/usuarios/colaboradores/sucursales/sucursales.html">
                     <div class="card-icon yellow">
                         <i class="fa-solid fa-store"></i>
                     </div>
@@ -105,7 +107,8 @@
                 </div>
 
                 <!-- REGIONES -->
-                <div class="dashboard-card" data-modulo="regiones">
+                <div class="dashboard-card" data-modulo="regiones"
+                    data-url="/usuarios/colaboradores/regiones/regiones.html">
                     <div class="card-icon purple">
                         <i class="fa-solid fa-map-marked-alt"></i>
                     </div>
@@ -117,7 +120,8 @@
                 </div>
 
                 <!-- INCIDENCIAS -->
-                <div class="dashboard-card" data-modulo="incidencias">
+                <div class="dashboard-card" data-modulo="incidencias"
+                    data-url="/usuarios/colaboradores/incidencias/incidencias.html">
                     <div class="card-icon danger">
                         <i class="fa-solid fa-exclamation-triangle"></i>
                     </div>
@@ -127,25 +131,74 @@
                     </div>
                     <div class="card-arrow">→</div>
                 </div>
+
+                <!-- NUEVO: USUARIOS -->
+                <div class="dashboard-card" data-modulo="usuarios"
+                    data-url="/usuarios/colaboradores/usuarios/usuarios.html">
+                    <div class="card-icon" style="color: #00cfff;">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="card-text">
+                        <h3>Usuarios</h3>
+                        <p>Gestionar usuarios del sistema</p>
+                    </div>
+                    <div class="card-arrow">→</div>
+                </div>
+
+                <!-- NUEVO: ESTADÍSTICAS -->
+                <div class="dashboard-card" data-modulo="estadisticas"
+                    data-url="/usuarios/colaboradores/estadisticas/estadisticas.html">
+                    <div class="card-icon" style="color: #b16bff;">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div class="card-text">
+                        <h3>Estadísticas</h3>
+                        <p>Visualizar estadísticas y reportes</p>
+                    </div>
+                    <div class="card-arrow">→</div>
+                </div>
+
+                <!-- NUEVO: TAREAS -->
+                <div class="dashboard-card" data-modulo="tareas" data-url="/usuarios/colaboradores/tareas/tareas.html">
+                    <div class="card-icon" style="color: #ffcc00;">
+                        <i class="fa-solid fa-tasks"></i>
+                    </div>
+                    <div class="card-text">
+                        <h3>Tareas</h3>
+                        <p>Gestionar tareas asignadas</p>
+                    </div>
+                    <div class="card-arrow">→</div>
+                </div>
+
+                <!-- NUEVO: MAPA DE ALERTAS (Monitoreo) -->
+                <div class="dashboard-card" data-modulo="monitoreo" data-url="/usuarios/colaboradores/mapa/mapa.html">
+                    <div class="card-icon" style="color: #ff4d00;">
+                        <i class="fa-solid fa-map-marker-alt"></i>
+                    </div>
+                    <div class="card-text">
+                        <h3>Mapa de Alertas</h3>
+                        <p>Visualización de alertas en mapa</p>
+                    </div>
+                    <div class="card-arrow">→</div>
+                </div>
             </div>
         </div>
 
         </div>
         </div>
-        </div>
-        </div>
-        </section>
     </main>
 
     <!-- COMPONENTES -->
     <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <script src="/components/navbarColaborador.js"></script> <!-- ← CAMBIADO -->
-    <script src="/components/footerColaborador.js"></script> <!-- ← CAMBIADO -->
+    <script src="/components/navbarColaborador.js"></script>
+    <script src="/components/footerColaborador.js"></script>
     <script type="module" src="panelControl.js"></script>
 
+
     <!-- Protector de pagina -->
+    <script src="/components/protector-colaborador.js" data-modulo="panelControl"></script>
 
 </body>
 
