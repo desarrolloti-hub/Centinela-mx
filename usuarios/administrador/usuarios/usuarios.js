@@ -1,6 +1,7 @@
 // ========== VARIABLES GLOBALES ==========
 let userManager = null;
 let usuarioActual = null;
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 // Configuración de paginación
 const ITEMS_POR_PAGINA = 10;
@@ -12,6 +13,9 @@ let colaboradoresFiltrados = []; // Colaboradores filtrados para mostrar
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function() {    
     try {
+        // ✅ NUEVO: Inicializar historialManager
+        await inicializarHistorial();
+        
         const { UserManager } = await import('/clases/user.js');
         userManager = new UserManager();
         
@@ -47,11 +51,122 @@ document.addEventListener('DOMContentLoaded', async function() {
         configurarBusqueda();
         setupEvents();
         
+        // ✅ NUEVO: Registrar acceso a la vista de usuarios
+        await registrarAccesoVistaUsuarios();
+        
     } catch (error) {
         console.error('❌ Error inicializando:', error);
         showError(error.message || 'Error al cargar la página');
     }
 });
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+        console.log('📋 HistorialManager inicializado para usuarios');
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar acceso a la vista de usuarios
+async function registrarAccesoVistaUsuarios() {
+    if (!historialManager) return;
+    
+    try {
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'leer',
+            modulo: 'usuarios',
+            descripcion: 'Accedió a la vista de colaboradores',
+            detalles: {
+                totalColaboradores: todosLosColaboradores.length || 0,
+                organizacion: usuarioActual?.organizacion
+            }
+        });
+        console.log('✅ Acceso a usuarios registrado en bitácora');
+    } catch (error) {
+        console.error('Error registrando acceso a usuarios:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar visualización de detalles de colaborador
+async function registrarVisualizacionColaborador(colaborador) {
+    if (!historialManager) return;
+    
+    try {
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'leer',
+            modulo: 'usuarios',
+            descripcion: `Visualizó detalles de colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            detalles: {
+                colaboradorId: colaborador.id,
+                colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
+                colaboradorEmail: colaborador.correoElectronico,
+                colaboradorRol: colaborador.rol,
+                colaboradorStatus: colaborador.status === true || colaborador.status === 'active' ? 'activo' : 'inactivo'
+            }
+        });
+        console.log(`✅ Visualización de colaborador "${colaborador.nombreCompleto}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando visualización de colaborador:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar cambio de estado de colaborador
+async function registrarCambioEstadoColaborador(colaborador, nuevoEstado, estadoAnterior) {
+    if (!historialManager) return;
+    
+    try {
+        const nuevoEstadoTexto = nuevoEstado ? 'activo' : 'inactivo';
+        const estadoAnteriorTexto = estadoAnterior ? 'activo' : 'inactivo';
+        
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'editar',
+            modulo: 'usuarios',
+            descripcion: `${nuevoEstado ? 'Habilitó' : 'Inhabilitó'} colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            detalles: {
+                colaboradorId: colaborador.id,
+                colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
+                colaboradorEmail: colaborador.correoElectronico,
+                estadoAnterior: estadoAnteriorTexto,
+                estadoNuevo: nuevoEstadoTexto,
+                fechaCambio: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Cambio de estado de colaborador "${colaborador.nombreCompleto}" registrado en bitácora`);
+    } catch (error) {
+        console.error('Error registrando cambio de estado de colaborador:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar eliminación de colaborador
+async function registrarEliminacionColaborador(colaborador) {
+    if (!historialManager) return;
+    
+    try {
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'eliminar',
+            modulo: 'usuarios',
+            descripcion: `Eliminó colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            detalles: {
+                colaboradorId: colaborador.id,
+                colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
+                colaboradorEmail: colaborador.correoElectronico,
+                colaboradorRol: colaborador.rol,
+                fechaEliminacion: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Eliminación de colaborador "${colaborador.nombreCompleto}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando eliminación de colaborador:', error);
+    }
+}
 
 // ========== OBTENER USUARIO ACTUAL (TEMP) ==========
 function obtenerUsuarioActual() {
@@ -252,7 +367,7 @@ function renderizarConPaginacion() {
                             <h3>No se encontraron colaboradores</h3>
                             <p>${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}</p>
                         </div>
-                    </td>
+                    </div>
                 </tr>
             `;
         }
@@ -324,7 +439,7 @@ function renderCollaboratorsTable(collaborators) {
                         <span class="user-name">${escapeHTML(fullName)}</span>
                     </div>
                 </div>
-            </td>
+             </td>
             <td data-label="ROL">${escapeHTML(col.rol || 'Colaborador')}</td>
             <td data-label="CORREO">${escapeHTML(col.correoElectronico || 'No disponible')}</td>
             <td data-label="ESTADO">
@@ -332,7 +447,7 @@ function renderCollaboratorsTable(collaborators) {
                     <i class="fas ${isActive ? 'fa-check-circle' : 'fa-ban'}"></i> 
                     ${isActive ? 'Activo' : 'Inactivo'}
                 </span>
-            </td>
+             </td>
             <td data-label="ACCIONES">
                 <div class="btn-group">
                     <button type="button" class="btn ${isActive ? 'btn-disable' : 'btn-enable'}" 
@@ -349,7 +464,7 @@ function renderCollaboratorsTable(collaborators) {
                         <i class="fas fa-eye"></i>
                     </button>
                 </div>
-            </td>
+             </td>
         `;
         
         tbody.appendChild(row);
@@ -393,8 +508,11 @@ function setupEvents() {
 // ========== CAMBIAR ESTADO DEL COLABORADOR ==========
 async function toggleUserStatus(collaboratorId, collaboratorName, enable) {
     try {
+        // Obtener el colaborador completo antes de cambiar su estado
         const collaborator = await userManager.getUserById(collaboratorId);
         if (!collaborator) throw new Error('Colaborador no encontrado');
+        
+        const estadoAnterior = collaborator.status === true || collaborator.status === 'active';
         
         const actionText = enable ? 'Habilitar' : 'Inhabilitar';
         const statusText = enable ? 'habilitado' : 'inhabilitado';
@@ -452,6 +570,9 @@ async function toggleUserStatus(collaboratorId, collaboratorName, enable) {
             usuarioActual.organizacionCamelCase
         );
         
+        // ✅ NUEVO: Registrar cambio de estado en bitácora
+        await registrarCambioEstadoColaborador(collaborator, enable, estadoAnterior);
+        
         Swal.close();
         await loadCollaborators();
         
@@ -505,6 +626,9 @@ async function viewUserDetails(collaboratorId, collaboratorName) {
         if (!collaborator) {
             throw new Error('Colaborador no encontrado');
         }
+        
+        // ✅ NUEVO: Registrar visualización de colaborador
+        await registrarVisualizacionColaborador(collaborator);
         
         showCollaboratorDetails(collaborator, collaboratorName);
         
@@ -612,8 +736,8 @@ function showEmptyState() {
                         <i class="fas fa-plus"></i> Agregar Colaborador
                     </button>
                 </div>
-            </td>
-        </tr>
+             </td>
+         </tr>
     `;
     
     document.getElementById('addFirstCollaborator')?.addEventListener('click', () => {
@@ -640,8 +764,8 @@ function showLoadingState() {
                     <h3>Cargando colaboradores...</h3>
                     <p>Obteniendo datos de Firebase</p>
                 </div>
-            </td>
-        </tr>
+             </td>
+         </tr>
     `;
 
     // Ocultar paginación mientras carga
@@ -668,8 +792,8 @@ function showFirebaseError(error) {
                         <i class="fas fa-sync-alt"></i> Recargar página
                     </button>
                 </div>
-            </td>
-        </tr>
+             </td>
+         </tr>
     `;
 
     // Ocultar paginación
@@ -693,8 +817,8 @@ function showError(message) {
                         <i class="fas fa-sync-alt"></i> Reintentar
                     </button>
                 </div>
-            </td>
-        </tr>
+             </td>
+         </tr>
     `;
 
     // Ocultar paginación
