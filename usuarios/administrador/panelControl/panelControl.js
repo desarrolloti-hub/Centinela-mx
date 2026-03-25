@@ -1,5 +1,6 @@
 // ========== panelControl.js - PANEL DE CONTROL CON DATOS REALES Y PERMISOS DINÁMICOS ==========
 // VERSIÓN COMPLETA: KPI funcionando + Acceso Rápido dinámico según permisos del plan
+// MODIFICADO: La tarjeta de Cargos NO es clickeable
 
 import { UserManager } from '/clases/user.js';
 import { IncidenciaManager } from '/clases/incidencia.js';
@@ -57,6 +58,7 @@ const MODULOS_CONFIG = {
 };
 
 // ========== CONFIGURACIÓN DE NAVEGACIÓN PARA TARJETAS KPI ==========
+// NOTA: La tarjeta de CARGOS (kpi-cargos) NO tiene evento de click
 const KPI_NAVEGACION = {
     'kpi-incidencias': {
         url: '/usuarios/administrador/incidencias/incidencias.html',
@@ -78,11 +80,7 @@ const KPI_NAVEGACION = {
         titulo: 'Áreas',
         permisoRequerido: 'areas'
     },
-    'kpi-cargos': {
-        url: '/usuarios/colaboradores/areas/areas.html',
-        titulo: 'Cargos',
-        permisoRequerido: 'areas'
-    },
+    // kpi-cargos NO está incluido en la navegación (no es clickeable)
     'kpi-usuarios': {
         url: '/usuarios/administrador/usuarios/usuarios.html',
         titulo: 'Colaboradores',
@@ -325,11 +323,8 @@ async function refrescarEstadisticas() {
     actualizarUI();
 }
 
-// ========== VERIFICAR PERMISO DE MÓDULO (MISMA LÓGICA QUE NAVBAR) ==========
+// ========== VERIFICAR PERMISO DE MÓDULO ==========
 function tienePermisoModulo(config) {
-    // 🔥 IMPORTANTE: Incluso admin/master deben respetar los permisos del plan
-    // porque el plan determina qué módulos tiene disponibles
-
     const permisoRequerido = config.permisoRequerido;
 
     if (permisoRequerido === 'incidencias') {
@@ -391,8 +386,6 @@ function filtrarKPIPorPermisos() {
             debeMostrarse = permisosPlan.monitoreo === true;
         } else {
             // Para módulos que no están en el plan (regiones, sucursales, áreas, usuarios)
-            // solo se muestran si el usuario es admin/master (para mantener compatibilidad)
-            // pero como el plan no controla estos, los mostramos igual
             debeMostrarse = true;
         }
 
@@ -402,6 +395,14 @@ function filtrarKPIPorPermisos() {
             console.log(`❌ KPI OCULTO: ${id} (${config.titulo})`);
         }
     });
+
+    // ========== TARJETA DE CARGOS - NO CLICKEABLE ==========
+    const tarjetaCargos = document.getElementById('kpi-cargos');
+    if (tarjetaCargos) {
+        // Remover cursor pointer
+        tarjetaCargos.style.cursor = 'default';
+        // Remover evento de click si existe (se configura después en configurarEventosKPI)
+    }
 }
 
 // ========== CONFIGURAR EVENTOS DE LAS TARJETAS ==========
@@ -433,6 +434,20 @@ function configurarEventosKPI() {
             tarjeta.addEventListener('click', (e) => manejarClickKPI(e, config));
         }
     });
+
+    // ========== TARJETA DE CARGOS - SIN EVENTO DE CLICK ==========
+    const tarjetaCargos = document.getElementById('kpi-cargos');
+    if (tarjetaCargos) {
+        tarjetaCargos.style.cursor = 'default';
+        // Asegurar que no tenga evento de click
+        tarjetaCargos.removeEventListener('click', manejarClickKPI);
+        // También prevenir cualquier click que pueda propagarse
+        tarjetaCargos.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // No hacer nada, solo evitar la navegación
+        });
+    }
 }
 
 function manejarClickKPI(e, config) {
