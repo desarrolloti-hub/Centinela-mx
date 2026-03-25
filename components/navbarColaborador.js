@@ -1,6 +1,7 @@
 // [file name]: navbarColaborador.js
 // [file path]: /components/navbarColaborador.js
-// VERSIÓN ACTUALIZADA - Incluye módulos: Usuarios, Estadísticas, Tareas, Mapa de Alertas, Permisos
+// VERSIÓN CORREGIDA - Lee permisos REALES desde Firestore SIN FORZAR NADA
+// La sección de Incidencias se oculta completamente si el usuario no tiene permisos
 
 class NavbarComplete {
     constructor() {
@@ -63,9 +64,7 @@ class NavbarComplete {
         }
     }
 
-    /**
-     * 🔥 Inicializar sistema de sonido para colaborador
-     */
+    // ========== SISTEMA DE SONIDO ==========
     async _initSonidoNotificacion() {
         try {
             const { sonidoNotificacion } = await import('/clases/sonidoNotificacion.js');
@@ -76,12 +75,11 @@ class NavbarComplete {
             this.availableSounds = this.sonidoNotificacion.getAvailableSounds();
 
             if (this.availableSounds.length > 0) {
-                console.log(`🔊 Sistema de sonido inicializado para colaborador. Sonidos encontrados: ${this.availableSounds.length}`);
+                console.log(`🔊 Sistema de sonido inicializado. Sonidos encontrados: ${this.availableSounds.length}`);
             } else {
-                console.warn('⚠️ No se encontraron archivos de sonido en Firebase Storage');
+                console.warn('⚠️ No se encontraron archivos de sonido');
             }
 
-            // Cargar preferencias de sonido del usuario si existen
             if (this.currentUser) {
                 const deviceId = this._getDeviceId();
                 const dispositivoActual = this.currentUser.dispositivos?.find(
@@ -116,7 +114,7 @@ class NavbarComplete {
             }
 
         } catch (error) {
-            console.warn('⚠️ No se pudo inicializar sistema de sonido para colaborador:', error);
+            console.warn('⚠️ No se pudo inicializar sistema de sonido:', error);
             this.sonidoNotificacion = null;
         }
     }
@@ -178,7 +176,7 @@ class NavbarComplete {
 
         try {
             await this.sonidoNotificacion.play(sonidoId, this.soundVolume);
-            console.log(`🔊 Sonido reproducido para colaborador: ${sonidoId}`);
+            console.log(`🔊 Sonido reproducido: ${sonidoId}`);
         } catch (error) {
             console.debug('Error reproduciendo sonido:', error);
         }
@@ -232,6 +230,7 @@ class NavbarComplete {
         }
     }
 
+    // ========== NOTIFICACIONES ==========
     async _initNotificacionManager() {
         try {
             const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
@@ -277,7 +276,7 @@ class NavbarComplete {
                 });
 
                 if (nuevas.length > 0) {
-                    console.log(`🔔 ${nuevas.length} nuevas notificaciones detectadas para colaborador`);
+                    console.log(`🔔 ${nuevas.length} nuevas notificaciones detectadas`);
                     await this._detectarYReproducirSonido(nuevas);
                 }
 
@@ -590,6 +589,7 @@ class NavbarComplete {
         }
     }
 
+    // ========== NAVBAR HTML Y ESTILOS ==========
     removeOriginalNavbar() {
         const originalHeader = document.getElementById('main-header');
         originalHeader?.remove();
@@ -1706,25 +1706,25 @@ class NavbarComplete {
                             <span>Regiones</span>
                         </a>
 
-                        <!-- NUEVO: Usuarios -->
+                        <!-- Usuarios -->
                         <a href="../usuarios/usuarios.html" class="gestionar-dropdown-option" id="usuariosBtn">
                             <i class="fa-solid fa-users"></i>
                             <span>Usuarios</span>
                         </a>
 
-                        <!-- NUEVO: Tareas -->
+                        <!-- Tareas -->
                         <a href="../tareas/tareas.html" class="gestionar-dropdown-option" id="tareasBtn">
                             <i class="fa-solid fa-tasks"></i>
                             <span>Tareas</span>
                         </a>
 
-                        <!-- NUEVO: Mapa de Alertas -->
+                        <!-- Mapa de Alertas -->
                         <a href="../mapa/mapa.html" class="gestionar-dropdown-option" id="mapaBtn">
                             <i class="fa-solid fa-map-location-dot"></i>
                             <span>Mapa de Alertas</span>
                         </a>
 
-                        <!-- NUEVO: Estadísticas -->
+                        <!-- Estadísticas -->
                         <a href="../estadisticas/estadisticas.html" class="gestionar-dropdown-option" id="estadisticasBtn">
                             <i class="fa-solid fa-chart-line"></i>
                             <span>Estadísticas</span>
@@ -1733,7 +1733,7 @@ class NavbarComplete {
                 </div>
 
                 <!-- SECCIÓN INCIDENCIAS -->
-                <div class="nav-section">
+                <div class="nav-section" id="incidenciasNavSection">
                     <button class="incidencias-dropdown-btn" id="incidenciasDropdownBtn">
                         <span>Incidencias</span>
                         <i class="fa-solid fa-chevron-down"></i>
@@ -1793,7 +1793,7 @@ class NavbarComplete {
                             <span>Ayuda</span>
                         </a>
 
-                        <!-- NUEVO: Roles y Permisos (solo admin) -->
+                        <!-- Roles y Permisos (solo admin) -->
                         <a href="../permisos/permisos.html" class="configuracion-dropdown-option" id="permisosBtn">
                             <i class="fa-solid fa-user-gear"></i>
                             <span>Roles y Permisos</span>
@@ -1825,6 +1825,7 @@ class NavbarComplete {
         resizeObserver.observe(navbar);
     }
 
+    // ========== CARGA DE USUARIO ==========
     loadUserDataFromLocalStorage() {
         try {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -1922,13 +1923,12 @@ class NavbarComplete {
         }
     }
 
-    // ========== OBTENER PERMISOS REALES DESDE FIRESTORE ==========
+    // ========== OBTENER PERMISOS REALES DESDE FIRESTORE (SIN FORZAR NADA) ==========
     async obtenerPermisosReales() {
         try {
             const esAdmin = this.userRole === 'administrador' || this.userRole === 'master';
 
             if (esAdmin) {
-                // Administrador tiene TODOS los permisos
                 this.permisos = {
                     areas: true,
                     categorias: true,
@@ -1954,22 +1954,22 @@ class NavbarComplete {
 
             // Para colaboradores, verificar si tienen área y cargo
             if (!this.currentUser?.areaId || !this.currentUser?.cargoId) {
-                console.log('ℹ️ Usuario sin área/cargo - solo módulos básicos');
+                console.log('ℹ️ Usuario sin área/cargo - sin permisos');
                 this.permisos = {
                     areas: false,
                     categorias: false,
                     sucursales: false,
                     regiones: false,
-                    incidencias: true,
+                    incidencias: false,
                     usuarios: false,
                     estadisticas: false,
                     tareas: false,
                     monitoreo: false,
                     permisos: false,
-                    crearIncidencias: true,
-                    incidenciasCanalizadas: true,
-                    verIncidencias: true,
-                    bitacora: true,
+                    crearIncidencias: false,
+                    incidenciasCanalizadas: false,
+                    verIncidencias: false,
+                    bitacora: false,
                     perfil: true,
                     configuracion: true,
                     ayuda: true
@@ -1987,24 +1987,22 @@ class NavbarComplete {
                     );
 
                     if (permiso) {
-                        // Obtener permisos DIRECTAMENTE del objeto permiso
+                        const tieneIncidencias = permiso.puedeAcceder('incidencias');
+
                         this.permisos = {
-                            // Módulos principales
                             areas: permiso.puedeAcceder('areas'),
                             categorias: permiso.puedeAcceder('categorias'),
                             sucursales: permiso.puedeAcceder('sucursales'),
                             regiones: permiso.puedeAcceder('regiones'),
-                            incidencias: permiso.puedeAcceder('incidencias'),
-                            // NUEVOS MÓDULOS
+                            incidencias: tieneIncidencias,
                             usuarios: permiso.puedeAcceder('usuarios'),
                             estadisticas: permiso.puedeAcceder('estadisticas'),
                             tareas: permiso.puedeAcceder('tareas'),
                             monitoreo: permiso.puedeAcceder('monitoreo'),
-                            // Módulos adicionales
-                            permisos: false,  // Solo admin
-                            crearIncidencias: permiso.puedeAcceder('incidencias') || true,
-                            incidenciasCanalizadas: permiso.puedeAcceder('incidencias') || true,
-                            verIncidencias: permiso.puedeAcceder('incidencias') || true,
+                            permisos: false,
+                            crearIncidencias: tieneIncidencias,
+                            incidenciasCanalizadas: tieneIncidencias,
+                            verIncidencias: tieneIncidencias,
                             bitacora: true,
                             perfil: true,
                             configuracion: true,
@@ -2019,23 +2017,23 @@ class NavbarComplete {
                 }
             }
 
-            // Permisos por defecto (solo incidencias)
-            console.log('ℹ️ Usando permisos por defecto');
+            // Permisos por defecto
+            console.log('ℹ️ Usando permisos por defecto - sin módulos');
             this.permisos = {
                 areas: false,
                 categorias: false,
                 sucursales: false,
                 regiones: false,
-                incidencias: true,
+                incidencias: false,
                 usuarios: false,
                 estadisticas: false,
                 tareas: false,
                 monitoreo: false,
                 permisos: false,
-                crearIncidencias: true,
-                incidenciasCanalizadas: true,
-                verIncidencias: true,
-                bitacora: true,
+                crearIncidencias: false,
+                incidenciasCanalizadas: false,
+                verIncidencias: false,
+                bitacora: false,
                 perfil: true,
                 configuracion: true,
                 ayuda: true
@@ -2048,16 +2046,16 @@ class NavbarComplete {
                 categorias: false,
                 sucursales: false,
                 regiones: false,
-                incidencias: true,
+                incidencias: false,
                 usuarios: false,
                 estadisticas: false,
                 tareas: false,
                 monitoreo: false,
                 permisos: false,
-                crearIncidencias: true,
-                incidenciasCanalizadas: true,
-                verIncidencias: true,
-                bitacora: true,
+                crearIncidencias: false,
+                incidenciasCanalizadas: false,
+                verIncidencias: false,
+                bitacora: false,
                 perfil: true,
                 configuracion: true,
                 ayuda: true
@@ -2077,7 +2075,6 @@ class NavbarComplete {
             { id: 'categoriasBtn', modulo: 'categorias', elemento: document.getElementById('categoriasBtn'), texto: 'Categorías', siempreVisible: false },
             { id: 'sucursalesBtn', modulo: 'sucursales', elemento: document.getElementById('sucursalesBtn'), texto: 'Sucursales', siempreVisible: false },
             { id: 'regionesBtn', modulo: 'regiones', elemento: document.getElementById('regionesBtn'), texto: 'Regiones', siempreVisible: false },
-            // NUEVOS MÓDULOS
             { id: 'usuariosBtn', modulo: 'usuarios', elemento: document.getElementById('usuariosBtn'), texto: 'Usuarios', siempreVisible: false },
             { id: 'tareasBtn', modulo: 'tareas', elemento: document.getElementById('tareasBtn'), texto: 'Tareas', siempreVisible: false },
             { id: 'mapaBtn', modulo: 'monitoreo', elemento: document.getElementById('mapaBtn'), texto: 'Mapa de Alertas', siempreVisible: false },
@@ -2085,8 +2082,8 @@ class NavbarComplete {
 
             // Módulos de Incidencias
             { id: 'incidenciasBtn', modulo: 'incidencias', elemento: document.getElementById('incidenciasBtn'), texto: 'Lista de Incidencias', siempreVisible: false },
-            { id: 'crearIncidenciasBtn', modulo: 'crearIncidencias', elemento: document.getElementById('crearIncidenciasBtn'), texto: 'Crear Incidencia', siempreVisible: false },
-            { id: 'incidenciasCanalizadasBtn', modulo: 'incidenciasCanalizadas', elemento: document.getElementById('incidenciasCanalizadasBtn'), texto: 'Incidencias Canalizadas', siempreVisible: false },
+            { id: 'crearIncidenciasBtn', modulo: 'incidencias', elemento: document.getElementById('crearIncidenciasBtn'), texto: 'Crear Incidencia', siempreVisible: false },
+            { id: 'incidenciasCanalizadasBtn', modulo: 'incidencias', elemento: document.getElementById('incidenciasCanalizadasBtn'), texto: 'Incidencias Canalizadas', siempreVisible: false },
 
             // Módulos de Configuración
             { id: 'permisosBtn', modulo: 'permisos', elemento: document.getElementById('permisosBtn'), texto: 'Roles y Permisos', siempreVisible: false },
@@ -2116,6 +2113,25 @@ class NavbarComplete {
         });
 
         this.checkEmptySections(itemsVisibles);
+
+        // Ocultar la sección completa de Incidencias si no tiene permisos
+        this.ocultarSeccionIncidencias();
+    }
+
+    // ========== OCULTAR SECCIÓN DE INCIDENCIAS SI NO HAY PERMISOS ==========
+    ocultarSeccionIncidencias() {
+        const tienePermisoIncidencias = this.verificarPermiso('incidencias');
+        const incidenciasSection = document.getElementById('incidenciasNavSection');
+
+        if (incidenciasSection) {
+            if (!tienePermisoIncidencias) {
+                incidenciasSection.style.display = 'none';
+                console.log('❌ Sección de Incidencias oculta (sin permisos)');
+            } else {
+                incidenciasSection.style.display = 'block';
+                console.log('✅ Sección de Incidencias visible (con permisos)');
+            }
+        }
     }
 
     verificarPermiso(modulo) {
@@ -2256,6 +2272,7 @@ class NavbarComplete {
         }
     }
 
+    // ========== CONFIGURACIÓN DE DROPDOWNS Y FUNCIONALIDADES ==========
     setupFunctionalities() {
         this.setupMenu();
         this.setupScroll();
