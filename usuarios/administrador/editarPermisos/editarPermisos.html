@@ -97,7 +97,6 @@
                     Editar Permiso
                 </h1>
                 <div class="header-description-text">
-
                     "Modifica los módulos a los que tiene acceso el cargo"
                 </div>
             </div>
@@ -245,6 +244,20 @@
                                             </div>
                                             <input type="checkbox" class="permiso-checkbox" id="permisoIncidencias">
                                         </div>
+
+                                        <!-- Módulo: Mapa de Alertas (Monitoreo) - DINÁMICO -->
+                                        <div class="permiso-card" id="permisoMonitoreoCard" style="display: none;">
+                                            <div class="permiso-icon cyan">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                            </div>
+                                            <div class="permiso-contenido">
+                                                <span class="permiso-nombre">Mapa de Alertas</span>
+                                                <span class="permiso-descripcion">Visualización de alertas en
+                                                    mapa</span>
+                                            </div>
+                                            <input type="checkbox" class="permiso-checkbox" id="permisoMonitoreo"
+                                                data-modulo="monitoreo">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -254,7 +267,8 @@
                         <div class="alert alert-info" style="margin-top: 20px;">
                             <i class="fas fa-info-circle"></i>
                             Modifica los módulos a los que tendrá acceso este cargo. Los cambios se guardarán
-                            automáticamente.
+                            automáticamente. El módulo "Mapa de Alertas" solo está disponible si el plan de la
+                            organización lo incluye.
                         </div>
 
                         <!-- BOTONES DE ACCIÓN -->
