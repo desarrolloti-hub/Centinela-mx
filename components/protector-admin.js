@@ -8,10 +8,7 @@ import { PlanPersonalizadoManager } from '/clases/plan.js';
 // Configuración de rutas para administradores
 const RUTAS_ADMIN = {
     // ========== PANEL PRINCIPAL ==========
-    '/usuarios/administrador/panelControl/panelControl.html': {
-        modulo: 'dashboard',
-        nombre: 'Panel Principal'
-    },
+  
     
     // ========== ÁREAS ==========
     '/usuarios/administrador/areas/areas.html': {
@@ -121,11 +118,7 @@ const RUTAS_ADMIN = {
         nombre: 'Estadísticas'
     },
     
-    // ========== TAREAS ==========
-    '/usuarios/administrador/tareas/tareas.html': {
-        modulo: 'tareas',
-        nombre: 'Lista de Tareas'
-    }
+   
 };
 
 class ProtectorAdmin {
@@ -326,8 +319,8 @@ class ProtectorAdmin {
         
         divError.innerHTML = `
             <div style="background: white; border-radius: 24px; padding: 40px; max-width: 450px; text-align: center;">
-                <div style="font-size: 56px; margin-bottom: 20px;">👑</div>
-                <h2 style="margin: 0 0 12px 0; color: #f59e0b;">Acceso Restringido por Plan</h2>
+                <div style="font-size: 56px; margin-bottom: 20px;"></div>
+                <h2 style="margin: 0 0 12px 0; color: #f59e0b;">Acceso Restringido por Plan. Contáctate con RSI Enterprise</h2>
                 <p style="color: #4b5563; margin-bottom: 28px; line-height: 1.5;">${mensaje}</p>
                 <button id="btn-dashboard" style="background: #2563eb; color: white; border: none; padding: 12px 28px; border-radius: 10px; cursor: pointer; font-weight: 500;">
                     Ir al Panel Principal
