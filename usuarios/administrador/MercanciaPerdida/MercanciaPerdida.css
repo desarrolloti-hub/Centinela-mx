@@ -348,16 +348,17 @@
     background: rgba(47, 140, 255, 0.1) !important;
 }
 
-/* ID / Folio styling */
+/* ID / Folio styling - Ahora muestra el ID completo */
 .registro-id {
     font-family: 'Orbitron', monospace;
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     color: var(--color-text-primary) !important;
     padding: 4px 8px;
     border-radius: 4px;
     display: inline-block;
-    word-break: break-word;
+    word-break: break-all;
     max-width: 100%;
+    background: rgba(0, 0, 0, 0.3);
 }
 
 /* =============================================
@@ -930,6 +931,12 @@
     .evidencias-grid {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     }
+    
+    /* ID completo en móvil */
+    .registro-id {
+        font-size: 0.6rem;
+        word-break: break-all;
+    }
 }
 
 @media (max-width: 480px) {
@@ -945,6 +952,7 @@
     .registro-id {
         font-size: 0.55rem;
         padding: 2px 4px;
+        word-break: break-all;
     }
 
     .estado-badge,

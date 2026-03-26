@@ -739,7 +739,7 @@ class CrearMercanciaPerdidaController {
 
             document.getElementById('btnCrearRegistro')?.addEventListener('click', (e) => {
                 e.preventDefault();
-                this._validarYMostrarPreview();
+                this._validarYMostrarOpciones(); // Cambiado: ahora muestra opciones primero
             });
 
             document.getElementById('btnAgregarImagen')?.addEventListener('click', () => {
@@ -750,7 +750,7 @@ class CrearMercanciaPerdidaController {
 
             document.getElementById('formMercanciaPrincipal')?.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this._validarYMostrarPreview();
+                this._validarYMostrarOpciones(); // Cambiado: ahora muestra opciones primero
             });
 
             this._configurarSugerencias();
@@ -998,9 +998,10 @@ class CrearMercanciaPerdidaController {
     }
 
     // =============================================
-    // VALIDAR Y MOSTRAR PREVIEW
+    // NUEVO MÉTODO: VALIDAR Y MOSTRAR OPCIONES (SweetAlert con 3 botones)
     // =============================================
-    async _validarYMostrarPreview() {
+    async _validarYMostrarOpciones() {
+        // Primero validar todos los campos
         const empresaInput = document.getElementById('nombreEmpresaCC');
         const nombreEmpresaCC = empresaInput.value.trim();
 
@@ -1070,6 +1071,7 @@ class CrearMercanciaPerdidaController {
         const ubicacion = document.getElementById('ubicacion').value.trim();
         const responsableAsignado = document.getElementById('responsableAsignado').value.trim();
 
+        // Guardar datos validados
         const datos = {
             nombreEmpresaCC,
             tipoEvento,
@@ -1083,27 +1085,50 @@ class CrearMercanciaPerdidaController {
             imagenes: this.imagenesSeleccionadas
         };
 
-        // Mostrar loading
-        Swal.fire({
-            title: 'Generando vista previa...',
-            text: 'Preparando el reporte PDF con tus evidencias',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
+        // Mostrar SweetAlert con opciones
+        const result = await Swal.fire({
+            title: 'Confirmar registro',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong><i class="fas fa-store"></i> Empresa:</strong> ${this._escapeHTML(nombreEmpresaCC)}</p>
+                    <p><strong><i class="fas fa-exclamation-triangle"></i> Tipo:</strong> ${this._getTipoEventoTexto(tipoEvento)}</p>
+                    <p><strong><i class="fas fa-dollar-sign"></i> Monto perdido:</strong> $${montoPerdido.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>
+                    ${montoRecuperado > 0 ? `<p><strong><i class="fas fa-undo-alt"></i> Monto recuperado:</strong> $${montoRecuperado.toLocaleString('es-MX', {minimumFractionDigits: 2})}</p>` : ''}
+                    <p><strong><i class="fas fa-calendar"></i> Fecha:</strong> ${new Date(fechaHora).toLocaleString('es-MX')}</p>
+                    <p><strong><i class="fas fa-images"></i> Evidencias:</strong> ${this.imagenesSeleccionadas.length} imagen(es)</p>
+                </div>
+                <hr>
+                <p style="font-size: 12px; color: #aaa;">Selecciona una opción:</p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: '<i class="fas fa-check-circle"></i> Aceptar',
+            denyButtonText: '<i class="fas fa-file-pdf"></i> Ver PDF',
+            cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
+            confirmButtonColor: '#28a745',
+            denyButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: false
         });
-        
-        // Generar y mostrar vista previa
-        await this._mostrarVistaPreviaPDF(datos);
-        
-        Swal.close();
+
+        // Manejar la opción seleccionada
+        if (result.isConfirmed) {
+            // Aceptar - guardar directamente
+            await this._guardarRegistroDirecto(datos);
+        } else if (result.isDenied) {
+            // Ver PDF - mostrar vista previa
+            await this._generarYMostrarPDFPreview(datos);
+        } else {
+            // Cerrar - no hacer nada
+            console.log('Usuario canceló');
+        }
     }
 
     // =============================================
-    // GUARDAR REGISTRO CON PDF GENERADO
+    // GUARDAR REGISTRO DIRECTAMENTE (sin vista previa)
     // =============================================
-    async _guardarRegistroConPDF(datos, pdfBlob) {
+    async _guardarRegistroDirecto(datos) {
         const btnCrear = document.getElementById('btnCrearRegistro');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Registrar Evento';
 
@@ -1117,7 +1142,7 @@ class CrearMercanciaPerdidaController {
 
             Swal.fire({
                 title: 'Guardando registro...',
-                text: 'Subiendo evidencias y guardando información...',
+                text: 'Generando reporte y subiendo evidencias...',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
@@ -1128,6 +1153,18 @@ class CrearMercanciaPerdidaController {
 
             const fechaObj = new Date(datos.fechaHora);
             const hora = fechaObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+            // Generar PDF en segundo plano
+            const registroTemporal = this._crearRegistroTemporal(datos);
+            const pdfBlob = await this.pdfGenerator.generarReporte(registroTemporal, {
+                mostrarAlerta: false,
+                returnBlob: true,
+                diagnosticar: false
+            });
+
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('No se pudo generar el PDF');
+            }
 
             // PASO 1: CREAR REGISTRO EN FIRESTORE
             const registroData = {
@@ -1175,7 +1212,7 @@ class CrearMercanciaPerdidaController {
                 console.log(`✅ ${evidenciasUrls.length} evidencias actualizadas`);
             }
 
-            // PASO 4: SUBIR EL PDF GENERADO (el de la vista previa)
+            // PASO 4: SUBIR EL PDF GENERADO
             Swal.update({
                 title: 'Subiendo PDF...',
                 text: 'Guardando el reporte PDF...'
@@ -1256,6 +1293,27 @@ class CrearMercanciaPerdidaController {
                 btnCrear.disabled = false;
             }
         }
+    }
+
+    // =============================================
+    // GENERAR Y MOSTRAR VISTA PREVIA DEL PDF (sin guardar aún)
+    // =============================================
+    async _generarYMostrarPDFPreview(datos) {
+        // Mostrar loading
+        Swal.fire({
+            title: 'Generando vista previa...',
+            text: 'Preparando el reporte PDF con tus evidencias',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        // Generar y mostrar vista previa
+        await this._mostrarVistaPreviaPDF(datos);
+        
+        Swal.close();
     }
 
     async _subirEvidencias(registroId, imagenes) {

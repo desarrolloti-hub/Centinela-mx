@@ -8,7 +8,6 @@ import { doc, setDoc, updateDoc, increment, serverTimestamp, getDoc, collection,
 
 class ConsumoFirebase {
     constructor() {
-        console.log('🔧 Inicializando ConsumoFirebase (documento único por empresa)...');
         
         // Contadores en memoria (para visualización rápida)
         this.contadores = {
@@ -47,11 +46,9 @@ class ConsumoFirebase {
         this.nombreEmpresa = null;
         this._cargarOrganizacion();
         
-        console.log('✅ ConsumoFirebase inicializado. Empresa:', this.nombreEmpresa || this.organizacionCamelCase);
     }
 
     _cargarOrganizacion() {
-        console.log('📂 Cargando datos de empresa desde localStorage...');
         try {
             // Intentar obtener nombre real de la empresa
             const adminInfo = localStorage.getItem('adminInfo');
@@ -59,14 +56,12 @@ class ConsumoFirebase {
                 const adminData = JSON.parse(adminInfo);
                 this.organizacionCamelCase = adminData.organizacionCamelCase;
                 this.nombreEmpresa = adminData.organizacion || adminData.organizacionCamelCase;
-                console.log('📌 Empresa (admin):', this.nombreEmpresa);
                 return;
             }
             
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             this.organizacionCamelCase = userData.organizacionCamelCase;
             this.nombreEmpresa = userData.organizacion || userData.organizacionCamelCase;
-            console.log('📌 Empresa (user):', this.nombreEmpresa);
             
         } catch (error) {
             console.error('❌ Error cargando organización:', error);
@@ -76,7 +71,6 @@ class ConsumoFirebase {
 
     // Método genérico para registrar cualquier operación
     async registrar(servicio, tipo, detalles = {}) {
-        console.log(`📝 REGISTRO: ${servicio} - ${tipo}`, detalles);
         
         if (!this.organizacionCamelCase) {
             console.warn('⚠️ No hay organización definida, no se guarda en Firestore');
@@ -136,7 +130,6 @@ class ConsumoFirebase {
                 }
             }, { merge: true });
 
-            console.log(`💾 Documento de empresa actualizado en Firestore: ${idEmpresa}`);
 
         } catch (error) {
             console.error('❌ Error actualizando documento en Firestore:', error);
@@ -185,7 +178,6 @@ class ConsumoFirebase {
             this.historial.shift();
         }
         
-        console.log(`✅ Registro completado. Total operaciones: ${this.contadores.totalOperaciones}`);
     }
 
     // Métodos específicos para Firestore
@@ -225,7 +217,6 @@ class ConsumoFirebase {
 
     // 🆕 NUEVO: Método específico para registrar notificaciones push enviadas
     async registrarNotificacionesPush(cantidadNotificaciones, cantidadUsuarios, nombreFuncion = 'sendPushNotification', detalles = {}) {
-        console.log(`📱 REGISTRO PUSH: ${cantidadNotificaciones} notificaciones push enviadas a ${cantidadUsuarios} usuarios`);
         
         if (!this.organizacionCamelCase) {
             console.warn('⚠️ No hay organización definida, no se guarda en Firestore');
@@ -261,7 +252,6 @@ class ConsumoFirebase {
                 }
             }, { merge: true });
 
-            console.log(`💾 Registro push guardado: ${cantidadNotificaciones} notificaciones, ${cantidadUsuarios} usuarios`);
 
         } catch (error) {
             console.error('❌ Error registrando notificaciones push:', error);
@@ -303,7 +293,6 @@ class ConsumoFirebase {
 
     // Resetear contadores en memoria (no afecta Firestore)
     resetearContadores() {
-        console.log('🔄 Resetando contadores en memoria...');
         this.contadores = {
             firestore: { lecturas: 0, escrituras: 0, eliminaciones: 0, actualizaciones: 0, total: 0 },
             storage: { subidas: 0, descargas: 0, eliminaciones: 0, total: 0 },
@@ -318,7 +307,6 @@ class ConsumoFirebase {
             ultimaActualizacion: new Date()
         };
         this.historial = [];
-        console.log('✅ Contadores en memoria reseteados');
     }
 
     // Obtener datos de Firestore para una empresa específica
@@ -333,7 +321,6 @@ class ConsumoFirebase {
             if (docSnap.exists()) {
                 return docSnap.data();
             } else {
-                console.log('📭 No hay datos de consumo para esta empresa');
                 return null;
             }
         } catch (error) {
@@ -356,7 +343,6 @@ class ConsumoFirebase {
                 });
             });
             
-            console.log(`📋 Listadas ${empresas.length} empresas`);
             return empresas;
         } catch (error) {
             console.error('❌ Error listando empresas:', error);

@@ -21,7 +21,7 @@ class NavbarComplete {
         this.soundEnabled = true;
         this.soundVolume = 0.7;
         this.lastNotificationCount = 0;
-        this.availableSounds = []; 
+        this.availableSounds = [];
         this.init();
     }
 
@@ -51,9 +51,9 @@ class NavbarComplete {
             await this.loadAdminDataFromFirebase();
             await this.cargarPermisosDelPlan();
             await this._initNotificacionManager();
-            
+
             await this._initSonidoNotificacion();
-            
+
             await this._cargarNotificaciones();
             this._iniciarListenerNotificaciones();
 
@@ -69,15 +69,15 @@ class NavbarComplete {
         try {
             const { sonidoNotificacion } = await import('/clases/sonidoNotificacion.js');
             this.sonidoNotificacion = sonidoNotificacion;
-            
+
             await this.sonidoNotificacion.initialize();
-            
+
             this.availableSounds = this.sonidoNotificacion.getAvailableSounds();
-            
+
             if (this.availableSounds.length > 0) {
                 console.log(`🔊 Sistema de sonido inicializado. Sonidos encontrados: ${this.availableSounds.length}`);
                 this.availableSounds.forEach(s => console.log(`   - ${s.name} (${s.id})`));
-                
+
                 const sonidosEsperados = ['incidencia', 'actualizacion', 'canalizacion', 'comentario', 'alarma-robo'];
                 sonidosEsperados.forEach(sonido => {
                     if (this.availableSounds.some(s => s.id === sonido)) {
@@ -89,13 +89,13 @@ class NavbarComplete {
             } else {
                 console.warn('⚠️ No se encontraron archivos de sonido en Firebase Storage');
             }
-            
+
             if (this.currentAdmin) {
                 const deviceId = this._getDeviceId();
                 const dispositivoActual = this.currentAdmin.dispositivos?.find(
                     d => d.deviceId === deviceId
                 );
-                
+
                 if (dispositivoActual) {
                     if (dispositivoActual.soundEnabled !== undefined) {
                         this.soundEnabled = dispositivoActual.soundEnabled;
@@ -122,7 +122,7 @@ class NavbarComplete {
                     }
                 }
             }
-            
+
         } catch (error) {
             console.warn('⚠️ No se pudo inicializar sistema de sonido:', error);
             this.sonidoNotificacion = null;
@@ -139,38 +139,38 @@ class NavbarComplete {
                 return 'alarma-robo';
             }
         }
-        
+
         // Según el tipo de notificación
         if (notificacion.tipo === 'incidencia') {
             if (this.availableSounds.some(s => s.id === 'incidencia')) {
                 return 'incidencia';
             }
         }
-        
+
         if (notificacion.tipo === 'seguimiento' || notificacion.tipo === 'actualizacion') {
             if (this.availableSounds.some(s => s.id === 'actualizacion')) {
                 return 'actualizacion';
             }
         }
-        
+
         if (notificacion.tipo === 'canalizacion') {
             if (this.availableSounds.some(s => s.id === 'canalizacion')) {
                 return 'canalizacion';
             }
         }
-        
+
         if (notificacion.tipo === 'comentario') {
             if (this.availableSounds.some(s => s.id === 'comentario')) {
                 return 'comentario';
             }
         }
-        
+
         // Fallback: usar el primer sonido disponible
         if (this.availableSounds.length > 0) {
             console.log(`🔄 Usando sonido fallback: ${this.availableSounds[0].id}`);
             return this.availableSounds[0].id;
         }
-        
+
         return null;
     }
 
@@ -179,13 +179,13 @@ class NavbarComplete {
      */
     async _reproducirSonido(notificacion) {
         if (!this.soundEnabled || !this.sonidoNotificacion) return;
-        
+
         const sonidoId = this._determinarSonidoPorNotificacion(notificacion);
         if (!sonidoId) {
             console.debug('🔇 No hay sonidos disponibles');
             return;
         }
-        
+
         try {
             await this.sonidoNotificacion.play(sonidoId, this.soundVolume);
             console.log(`🔊 Sonido reproducido: ${sonidoId} (tipo: ${notificacion.tipo || 'desconocido'}, riesgo: ${notificacion.nivelRiesgo || 'ninguno'})`);
@@ -199,20 +199,20 @@ class NavbarComplete {
      */
     async _detectarYReproducirSonido(nuevasNotificaciones) {
         if (!this.soundEnabled || !this.sonidoNotificacion) return;
-        
+
         const nuevasNoLeidas = nuevasNotificaciones.filter(n => !n.leida);
-        
+
         if (nuevasNoLeidas.length > 0) {
             const primeraNotificacion = nuevasNoLeidas[0];
             await this._reproducirSonido(primeraNotificacion);
-            
+
             if (Notification.permission === 'granted' && nuevasNoLeidas.length === 1) {
                 const primera = nuevasNoLeidas[0];
                 const notifUI = primera.toUI ? primera.toUI() : {
                     titulo: primera.titulo,
                     mensaje: primera.mensaje
                 };
-                
+
                 const systemNotif = new Notification(notifUI.titulo, {
                     body: notifUI.mensaje,
                     icon: '/assets/images/logo.png',
@@ -220,7 +220,7 @@ class NavbarComplete {
                     silent: false,
                     vibrate: [200, 100, 200]
                 });
-                
+
                 systemNotif.onclick = () => {
                     window.focus();
                     if (primera.urlDestino) {
@@ -235,7 +235,7 @@ class NavbarComplete {
                     badge: '/assets/images/logo.png',
                     silent: false
                 });
-                
+
                 systemNotif.onclick = () => {
                     window.focus();
                     this._mostrarModalNotificaciones();
@@ -257,71 +257,68 @@ class NavbarComplete {
         return deviceId;
     }
 
-    /**
-     * 🔥 CARGA LOS PERMISOS DEL PLAN DEL ADMINISTRADOR DESDE FIRESTORE
-     */
     async cargarPermisosDelPlan() {
         try {
             if (!this.currentAdmin || !this.currentAdmin.id) {
-                console.log('⚠️ No hay administrador cargado para obtener permisos');
+                console.log(' No hay administrador cargado para obtener permisos');
                 this.permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
                 this.actualizarNavbarSegunPermisos();
                 return;
             }
 
             const planId = this.currentAdmin.plan;
-            
+
             if (!planId || planId === 'sin-plan' || planId === 'gratis') {
-                console.log('📋 Administrador sin plan asignado o con plan gratis');
+                console.log('Administrador sin plan asignado o con plan gratis');
                 this.permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
                 this.actualizarNavbarSegunPermisos();
                 return;
             }
 
-            console.log(`🔍 Buscando plan con ID: "${planId}" en Firestore`);
+            console.log(` Buscando plan con ID: "${planId}" en Firestore`);
 
             const { PlanPersonalizadoManager } = await import('/clases/plan.js');
             this.planManager = new PlanPersonalizadoManager();
-            
+
             const plan = await this.planManager.obtenerPorId(planId);
-            
+
             if (!plan) {
-                console.warn(`⚠️ Plan "${planId}" no encontrado en Firestore`);
+                console.warn(` Plan "${planId}" no encontrado en Firestore`);
                 this.permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
                 this.actualizarNavbarSegunPermisos();
                 return;
             }
 
-            console.log(`✅ Plan encontrado: ${plan.nombre}`);
-            console.log('📦 Mapas activos:', plan.mapasActivos);
+            console.log(` Plan encontrado: ${plan.nombre}`);
+            console.log(' Mapas activos:', plan.mapasActivos);
 
             const mapasActivos = plan.mapasActivos;
-            
+
             const tieneIncidencias = mapasActivos.incidencias === true;
             const tieneMonitoreo = mapasActivos.alertas === true;
-            
+
             const permisosIncidencias = [];
-            
+
             if (tieneIncidencias) {
                 const moduloIncidencias = plan.obtenerMapasCompletos?.().find(m => m.id === 'incidencias');
-                
+
                 if (moduloIncidencias && moduloIncidencias.permisosActivos) {
                     moduloIncidencias.permisosActivos.forEach(permiso => {
                         permisosIncidencias.push(permiso.id);
                     });
                 }
             }
-            
+
             this.permisosPlan = {
                 incidencias: tieneIncidencias,
                 monitoreo: tieneMonitoreo,
                 permisosIncidencias: permisosIncidencias
             };
-            
+
             console.log('🎯 Permisos cargados:', this.permisosPlan);
-            
+
             this.actualizarNavbarSegunPermisos();
-            
+
         } catch (error) {
             console.error('❌ Error cargando permisos del plan:', error);
             this.permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
@@ -332,31 +329,31 @@ class NavbarComplete {
     actualizarNavbarSegunPermisos() {
         const incidenciasSection = document.getElementById('incidenciasSection');
         const incidenciasDropdownOptions = document.getElementById('incidenciasDropdownOptions');
-        
+
         if (incidenciasSection) {
             incidenciasSection.style.display = this.permisosPlan.incidencias ? 'block' : 'none';
         }
-        
+
         const monitoreoSection = document.getElementById('monitoreoSection');
         if (monitoreoSection) {
             monitoreoSection.style.display = this.permisosPlan.monitoreo ? 'block' : 'none';
         }
-        
+
         if (this.permisosPlan.incidencias && incidenciasDropdownOptions) {
             const opcionesIncidencias = incidenciasDropdownOptions.querySelectorAll('.incidencia-option');
-            
+
             opcionesIncidencias.forEach(opcion => {
                 const permisoId = opcion.dataset.permisoId;
                 const tienePermiso = this.permisosPlan.permisosIncidencias.includes(permisoId);
                 opcion.style.display = tienePermiso ? 'flex' : 'none';
             });
-            
+
             const opcionesVisibles = Array.from(opcionesIncidencias).some(opt => opt.style.display !== 'none');
             if (!opcionesVisibles) {
                 incidenciasSection.style.display = 'none';
             }
         }
-        
+
         console.log('✅ Navbar actualizado según permisos del plan');
     }
 
@@ -364,7 +361,7 @@ class NavbarComplete {
         try {
             const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
             this.notificacionManager = new NotificacionAreaManager();
-            
+
             if (this.notificacionManager && this.currentAdmin) {
                 this.notificacionManager.usuarioActual = {
                     ...this.notificacionManager.usuarioActual,
@@ -380,7 +377,7 @@ class NavbarComplete {
 
     async _cargarNotificaciones() {
         if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
-            console.log('⚠️ No se pueden cargar notificaciones: falta información');
+            console.log(' No se pueden cargar notificaciones: falta información');
             return;
         }
 
@@ -392,16 +389,16 @@ class NavbarComplete {
                 50
             );
 
-            console.log(`📬 Admin cargó ${todasNotificaciones.length} notificaciones`);
+            console.log(` Admin cargó ${todasNotificaciones.length} notificaciones`);
 
             const nuevasNoLeidas = todasNotificaciones.filter(n => !n.leida);
             const nuevas = nuevasNoLeidas.filter(n => {
                 const existe = this.notificaciones.some(old => old.id === n.id);
                 return !existe;
             });
-            
+
             if (nuevas.length > 0) {
-                console.log(`🔔 ${nuevas.length} nuevas notificaciones detectadas`);
+                console.log(` ${nuevas.length} nuevas notificaciones detectadas`);
                 await this._detectarYReproducirSonido(nuevas);
             }
 
@@ -470,7 +467,7 @@ class NavbarComplete {
                 leida: notif.leida || false
             };
 
-            const areasTexto = notif.areasDestino && notif.areasDestino.length > 0 
+            const areasTexto = notif.areasDestino && notif.areasDestino.length > 0
                 ? notif.areasDestino.map(a => a.nombre).join(', ')
                 : '';
 
@@ -509,29 +506,29 @@ class NavbarComplete {
                 e.stopPropagation();
                 const id = item.dataset.id;
                 const url = item.dataset.url;
-                
+
                 if (this.notificacionManager && id) {
                     await this.notificacionManager.marcarComoLeida(
                         this.currentAdmin.id,
                         id,
                         this.currentAdmin.organizacionCamelCase
                     );
-                    
+
                     const notifIndex = this.notificaciones.findIndex(n => n.id === id);
                     if (notifIndex !== -1) {
                         this.notificaciones[notifIndex].leida = true;
                     }
-                    
+
                     this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
                     this._actualizarBadgeNotificaciones();
-                    
+
                     const estadoDiv = item.querySelector('.notificacion-estado');
                     if (estadoDiv) {
                         estadoDiv.classList.remove('no-leida');
                         estadoDiv.classList.add('leida');
                     }
                 }
-                
+
                 if (url) {
                     window.location.href = url;
                 }
@@ -551,7 +548,7 @@ class NavbarComplete {
     _mostrarModalNotificaciones() {
         if (typeof Swal !== 'undefined') {
             let notificacionesHtml = '<div style="max-height: 400px; overflow-y: auto;">';
-            
+
             this.notificaciones.forEach(notif => {
                 const notifUI = notif.toUI ? notif.toUI() : {
                     titulo: notif.titulo,
@@ -562,11 +559,11 @@ class NavbarComplete {
                     urlDestino: notif.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
                     leida: notif.leida || false
                 };
-                
-                const areasTexto = notif.areasDestino && notif.areasDestino.length > 0 
+
+                const areasTexto = notif.areasDestino && notif.areasDestino.length > 0
                     ? notif.areasDestino.map(a => a.nombre).join(', ')
                     : '';
-                
+
                 notificacionesHtml += `
                     <div class="notificacion-item-modal" data-id="${notif.id}" data-url="${notifUI.urlDestino}" style="
                         display: flex;
@@ -590,9 +587,9 @@ class NavbarComplete {
                     </div>
                 `;
             });
-            
+
             notificacionesHtml += '</div>';
-            
+
             Swal.fire({
                 title: 'Todas las Notificaciones',
                 html: notificacionesHtml,
@@ -607,28 +604,28 @@ class NavbarComplete {
                             e.stopPropagation();
                             const id = item.dataset.id;
                             const url = item.dataset.url;
-                            
+
                             if (this.notificacionManager && id) {
                                 await this.notificacionManager.marcarComoLeida(
                                     this.currentAdmin.id,
                                     id,
                                     this.currentAdmin.organizacionCamelCase
                                 );
-                                
+
                                 const notifIndex = this.notificaciones.findIndex(n => n.id === id);
                                 if (notifIndex !== -1) {
                                     this.notificaciones[notifIndex].leida = true;
                                 }
-                                
+
                                 this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
                                 this._actualizarBadgeNotificaciones();
                                 this._renderizarNotificaciones();
                             }
-                            
+
                             if (url) {
                                 window.location.href = url;
                             }
-                            
+
                             Swal.close();
                         });
                     });
@@ -659,12 +656,12 @@ class NavbarComplete {
                 this.currentAdmin.id,
                 this.currentAdmin.organizacionCamelCase
             );
-            
+
             this.notificacionesNoLeidas = 0;
             this.notificaciones.forEach(n => n.leida = true);
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
-            
+
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'success',
@@ -674,7 +671,7 @@ class NavbarComplete {
                     showConfirmButton: false
                 });
             }
-            
+
         } catch (error) {
             console.error('Error marcando todas como leídas:', error);
         }
@@ -691,7 +688,7 @@ class NavbarComplete {
             e.stopPropagation();
             this.dropdownNotificacionesAbierto = !this.dropdownNotificacionesAbierto;
             notificacionesDropdown.classList.toggle('active', this.dropdownNotificacionesAbierto);
-            
+
             if (this.dropdownNotificacionesAbierto) {
                 this._cargarNotificaciones();
             }
@@ -1685,7 +1682,7 @@ class NavbarComplete {
                 }
             }
         `;
-        
+
         const styleElement = document.createElement('style');
         styleElement.id = 'navbar-complete-styles';
         styleElement.textContent = styles;
@@ -1695,7 +1692,7 @@ class NavbarComplete {
     insertHTML() {
         const navbar = document.createElement('header');
         navbar.id = 'complete-navbar';
-         navbar.innerHTML = /*html*/`
+        navbar.innerHTML = /*html*/`
             <div class="navbar-top-section">
                 <div class="navbar-left-container">
                     <a href="/usuarios/administrador/panelControl/panelControl.html" class="navbar-logo-link">
@@ -2021,7 +2018,7 @@ class NavbarComplete {
 
                     this.updateNavbarWithAdminData();
                     this.updateLocalStorageFromFirebase(firebaseUser);
-                    
+
                     if (this.notificacionManager) {
                         this.notificacionManager.usuarioActual = {
                             ...this.notificacionManager.usuarioActual,
@@ -2204,7 +2201,7 @@ class NavbarComplete {
         this.loadOrbitronFont();
         this.setupLogout();
         this._configurarNotificacionesDropdown();
-        
+
         const verTodasFooter = document.querySelector('.ver-todas-notificaciones-footer');
         if (verTodasFooter) {
             verTodasFooter.addEventListener('click', (e) => {
@@ -2297,7 +2294,7 @@ class NavbarComplete {
             if (this.isAdminDropdownOpen) {
                 this.toggleAdminDropdown(false);
             }
-            
+
             this.isAdministracionDropdownOpen = !this.isAdministracionDropdownOpen;
             this.toggleAdministracionDropdown(this.isAdministracionDropdownOpen);
         };
@@ -2347,7 +2344,7 @@ class NavbarComplete {
             if (this.isAdminDropdownOpen) {
                 this.toggleAdminDropdown(false);
             }
-            
+
             this.isIncidenciasDropdownOpen = !this.isIncidenciasDropdownOpen;
             this.toggleIncidenciasDropdown(this.isIncidenciasDropdownOpen);
         };
@@ -2397,7 +2394,7 @@ class NavbarComplete {
             if (this.isAdminDropdownOpen) {
                 this.toggleAdminDropdown(false);
             }
-            
+
             this.isMonitoreoDropdownOpen = !this.isMonitoreoDropdownOpen;
             this.toggleMonitoreoDropdown(this.isMonitoreoDropdownOpen);
         };
@@ -2447,7 +2444,7 @@ class NavbarComplete {
             if (this.isMonitoreoDropdownOpen) {
                 this.toggleMonitoreoDropdown(false);
             }
-            
+
             this.isAdminDropdownOpen = !this.isAdminDropdownOpen;
             this.toggleAdminDropdown(this.isAdminDropdownOpen);
         };

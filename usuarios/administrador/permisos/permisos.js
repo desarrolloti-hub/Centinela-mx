@@ -106,26 +106,17 @@ async function cargarPermisosDelPlan() {
             adminActual.plan = planId;
         }
 
-        console.log(`🔍 Plan ID obtenido: "${planId}"`);
-
         if (!planId || planId === 'sin-plan' || planId === 'gratis' || planId === 'null' || planId === 'undefined') {
-            console.log('📋 Administrador sin plan asignado - Incidencias y Mapa de Alertas NO disponibles');
             permisosPlan = { incidencias: false, monitoreo: false };
             return;
         }
-
-        console.log(`🔍 Buscando plan con ID: "${planId}" en Firestore`);
 
         const plan = await planManager.obtenerPorId(planId);
 
         if (!plan) {
-            console.warn(`⚠️ Plan "${planId}" no encontrado en Firestore`);
             permisosPlan = { incidencias: false, monitoreo: false };
             return;
         }
-
-        console.log(`✅ Plan encontrado: ${plan.nombre}`);
-        console.log('📦 Mapas activos:', plan.mapasActivos);
 
         const mapasActivos = plan.mapasActivos || {};
 
@@ -134,10 +125,7 @@ async function cargarPermisosDelPlan() {
             monitoreo: mapasActivos.alertas === true
         };
 
-        console.log('🎯 Módulos dinámicos disponibles:', permisosPlan);
-
     } catch (error) {
-        console.error('❌ Error cargando permisos del plan:', error);
         permisosPlan = { incidencias: false, monitoreo: false };
     }
 }
@@ -216,7 +204,7 @@ async function loadAreas() {
             });
         });
     } catch (error) {
-        console.error('Error cargando áreas:', error);
+        // Error handling without console
     }
 }
 

@@ -101,12 +101,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             return;
         }
 
-        console.log('👤 Usuario actual:', {
-            nombre: usuarioActual.nombreCompleto,
-            rol: usuarioActual.rol,
-            plan: usuarioActual.plan
-        });
-
         // Cargar permisos del plan (igual que en navbar)
         await cargarPermisosDelPlan();
 
@@ -133,17 +127,13 @@ document.addEventListener('DOMContentLoaded', async function () {
 async function cargarPermisosDelPlan() {
     try {
         if (!usuarioActual || !usuarioActual.id) {
-            console.log('⚠️ No hay usuario cargado para obtener permisos');
             permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
             return;
         }
 
         const planId = usuarioActual.plan;
 
-        console.log(`🔍 Plan ID del usuario: "${planId}"`);
-
         if (!planId || planId === 'sin-plan' || planId === 'gratis') {
-            console.log('📋 Usuario sin plan asignado o con plan gratis');
             permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
             return;
         }
@@ -153,13 +143,9 @@ async function cargarPermisosDelPlan() {
         const plan = await planManager.obtenerPorId(planId);
 
         if (!plan) {
-            console.warn(`⚠️ Plan "${planId}" no encontrado en Firestore`);
             permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
             return;
         }
-
-        console.log(`✅ Plan encontrado: ${plan.nombre}`);
-        console.log('📦 Mapas activos:', plan.mapasActivos);
 
         const mapasActivos = plan.mapasActivos;
         const tieneIncidencias = mapasActivos.incidencias === true;
@@ -182,10 +168,7 @@ async function cargarPermisosDelPlan() {
             permisosIncidencias: permisosIncidencias
         };
 
-        console.log('🎯 Permisos del plan cargados en panel:', permisosPlan);
-
     } catch (error) {
-        console.error('❌ Error cargando permisos del plan:', error);
         permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
     }
 }
@@ -344,8 +327,6 @@ function tienePermisoModulo(config) {
 
 // ========== FILTRAR TARJETAS DE ACCESO RÁPIDO POR PERMISOS ==========
 function filtrarTarjetasPorPermisos() {
-    console.log('🎯 Filtrando tarjetas según permisos del plan:', permisosPlan);
-
     let tarjetasVisibles = 0;
 
     Object.entries(MODULOS_CONFIG).forEach(([key, config]) => {
@@ -358,14 +339,10 @@ function filtrarTarjetasPorPermisos() {
             tarjeta.style.display = 'flex';
             tarjeta.dataset.url = config.url;
             tarjetasVisibles++;
-            console.log(`✅ TARJETA VISIBLE: ${key} (${config.titulo})`);
         } else {
             tarjeta.style.display = 'none';
-            console.log(`❌ TARJETA OCULTA: ${key} (${config.titulo})`);
         }
     });
-
-    console.log(`📊 Tarjetas visibles en acceso rápido: ${tarjetasVisibles}`);
 
     // También filtrar KPI según permisos
     filtrarKPIPorPermisos();
@@ -390,10 +367,6 @@ function filtrarKPIPorPermisos() {
         }
 
         kpiCard.style.display = debeMostrarse ? 'flex' : 'none';
-
-        if (!debeMostrarse) {
-            console.log(`❌ KPI OCULTO: ${id} (${config.titulo})`);
-        }
     });
 
     // ========== TARJETA DE CARGOS - NO CLICKEABLE ==========
