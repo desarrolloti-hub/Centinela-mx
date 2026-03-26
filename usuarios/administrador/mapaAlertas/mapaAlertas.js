@@ -1,9 +1,13 @@
 // mapaAlertas.js - VERSIÓN COMPLETA CON MODAL FULLSCREEN, VISOR DE PDF, ID EN NOTIFICACIONES, PANEL CERRADO Y HEATMAP
+// CON REGISTRO DE BITÁCORA
 
 import { SucursalManager } from '/clases/sucursal.js';
 import { RegionManager } from '/clases/region.js';
 import { IncidenciaManager } from '/clases/incidencia.js';
 import { generadorIPH } from '/components/iph-generator.js';
+
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
+let accesoVistaRegistrado = false; // ✅ NUEVO: Para evitar registros duplicados
 
 // =============================================
 // CONFIGURACIÓN DEL MAPA
@@ -90,6 +94,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Iniciando mapa con listener real, PDF y Heatmap...');
 
     try {
+        // ✅ NUEVO: Inicializar historialManager
+        await inicializarHistorial();
+        
         if (!inicializarMapa()) return;
         await cargarUsuario();
         sucursalManager = new SucursalManager();
@@ -106,6 +113,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         configurarPaneles();
         configurarSelectorRegion();
         agregarBotonHeatmap();
+        
+        // ✅ NUEVO: Registrar acceso al mapa de alertas
+        await registrarAccesoMapaAlertas();
+        
         console.log('✅ Todo listo!');
 
     } catch (error) {
@@ -113,6 +124,193 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarError(error.message);
     }
 });
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+        console.log('📋 HistorialManager inicializado para mapa de alertas');
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
+
+// ✅ NUEVO: Obtener usuario actual
+function obtenerUsuarioActual() {
+    try {
+        const adminInfo = localStorage.getItem('adminInfo');
+        if (adminInfo) {
+            const data = JSON.parse(adminInfo);
+            return {
+                id: data.id || data.uid,
+                uid: data.uid || data.id,
+                nombreCompleto: data.nombreCompleto || 'Administrador',
+                organizacion: data.organizacion,
+                organizacionCamelCase: data.organizacionCamelCase || 'pollosRay',
+                correoElectronico: data.correoElectronico || ''
+            };
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion,
+                organizacionCamelCase: userData.organizacionCamelCase || 'pollosRay',
+                correoElectronico: userData.correo || userData.email || ''
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error obteniendo usuario actual:', error);
+        return null;
+    }
+}
+
+// ✅ NUEVO: Registrar acceso al mapa de alertas
+async function registrarAccesoMapaAlertas() {
+    if (!historialManager) return;
+    if (accesoVistaRegistrado) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'mapa',
+            descripcion: 'Accedió al mapa de alertas',
+            detalles: {
+                totalSucursales: sucursales.length,
+                totalRegiones: regiones.length,
+                totalIncidencias: incidencias.length,
+                incidenciasCriticas: incidencias.filter(i => i.nivelRiesgo === 'critico').length,
+                organizacion: organizacionActual?.nombre
+            }
+        });
+        accesoVistaRegistrado = true;
+        console.log('✅ Acceso al mapa de alertas registrado en bitácora');
+    } catch (error) {
+        console.error('Error registrando acceso al mapa:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar visualización de incidencia en mapa
+async function registrarVisualizacionIncidencia(incidencia, sucursal) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        const nivel = CONFIG.nivelesRiesgo[incidencia.nivelRiesgo] || CONFIG.nivelesRiesgo.bajo;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'mapa',
+            descripcion: `Visualizó incidencia en mapa: ${incidencia.id}`,
+            detalles: {
+                incidenciaId: incidencia.id,
+                titulo: incidencia.titulo,
+                nivelRiesgo: incidencia.nivelRiesgo,
+                nivelTexto: nivel.texto,
+                estado: incidencia.estado,
+                sucursalId: sucursal?.id,
+                sucursalNombre: sucursal?.nombre,
+                ubicacion: sucursal ? `${sucursal.ciudad}, ${sucursal.estado}` : null,
+                fecha: incidencia.fecha
+            }
+        });
+        console.log(`✅ Visualización de incidencia "${incidencia.id}" en mapa registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando visualización de incidencia:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar generación de PDF desde mapa
+async function registrarGeneracionPDF(incidenciaId, tipo, incidencia) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'mapa',
+            descripcion: `Generó/visualizó PDF de incidencia: ${incidenciaId}`,
+            detalles: {
+                incidenciaId: incidenciaId,
+                titulo: incidencia?.titulo || 'Sin título',
+                nivelRiesgo: incidencia?.nivelRiesgo || 'No especificado',
+                tipo: tipo,
+                origen: 'mapa_alertas',
+                fecha: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Generación de PDF para incidencia "${incidenciaId}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando generación de PDF:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar activación de heatmap
+async function registrarActivacionHeatmap(activado, puntos) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'mapa',
+            descripcion: activado ? 'Activó el mapa de calor' : 'Desactivó el mapa de calor',
+            detalles: {
+                accion: activado ? 'activar' : 'desactivar',
+                puntosHeatmap: activado ? puntos.length : 0,
+                fecha: new Date().toISOString()
+            }
+        });
+        console.log(`✅ ${activado ? 'Activación' : 'Desactivación'} de heatmap registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando heatmap:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar filtro por región
+async function registrarFiltroRegion(regionId, regionNombre, sucursalesMostradas) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'mapa',
+            descripcion: `Filtró mapa por región: ${regionNombre}`,
+            detalles: {
+                regionId: regionId,
+                regionNombre: regionNombre,
+                sucursalesMostradas: sucursalesMostradas,
+                fechaFiltro: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Filtro por región "${regionNombre}" registrado en bitácora`);
+    } catch (error) {
+        console.error('Error registrando filtro por región:', error);
+    }
+}
 
 // =============================================
 // AGREGAR BOTÓN DE HEATMAP AL PANEL DE CONTROL
@@ -233,6 +431,9 @@ async function toggleHeatmap() {
                 btn.style.boxShadow = '0 0 15px rgba(255, 68, 68, 0.5)';
                 btn.innerHTML = '<i class="fas fa-fire"></i><span>Ocultar Calor</span>';
                 
+                // ✅ NUEVO: Registrar activación de heatmap
+                await registrarActivacionHeatmap(true, puntosHeatmap);
+                
                 Swal.fire({
                     icon: 'success',
                     title: 'Mapa de Calor Activado',
@@ -265,6 +466,9 @@ async function toggleHeatmap() {
         btn.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
         btn.style.boxShadow = 'none';
         btn.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
+        
+        // ✅ NUEVO: Registrar desactivación de heatmap
+        await registrarActivacionHeatmap(false, []);
         
         Swal.fire({
             icon: 'info',
@@ -991,6 +1195,8 @@ window.verPDFIncidencia = async function(incidenciaId) {
             });
             
             if (result.isConfirmed) {
+                // ✅ NUEVO: Registrar visualización de PDF existente
+                await registrarGeneracionPDF(incidenciaId, 'existente', incidencia);
                 abrirModalPDF(incidencia.pdfUrl, incidencia.id, `Incidencia ${incidencia.id}`);
                 return;
             }
@@ -1003,6 +1209,8 @@ window.verPDFIncidencia = async function(incidenciaId) {
             
             if (pdfBlob) {
                 const url = URL.createObjectURL(pdfBlob);
+                // ✅ NUEVO: Registrar generación de PDF
+                await registrarGeneracionPDF(incidenciaId, 'nuevo', incidencia);
                 abrirModalPDF(url, incidencia.id, `Incidencia ${incidencia.id}`);
                 window.currentPDFBlob = pdfBlob;
                 window.currentPDFUrl = url;
@@ -1021,6 +1229,8 @@ window.verPDFIncidencia = async function(incidenciaId) {
             const pdfSimpleBlob = await generarPDFSimple(incidencia);
             if (pdfSimpleBlob) {
                 const url = URL.createObjectURL(pdfSimpleBlob);
+                // ✅ NUEVO: Registrar generación de PDF simple
+                await registrarGeneracionPDF(incidenciaId, 'simple', incidencia);
                 abrirModalPDF(url, incidencia.id, `Incidencia ${incidencia.id} (Básico)`);
                 window.currentPDFBlob = pdfSimpleBlob;
                 window.currentPDFUrl = url;
@@ -1137,9 +1347,11 @@ function mostrarNotificacionIncidencia(incidencia, sucursal) {
         customClass: {
             popup: 'notification-swal'
         }
-    }).then((result) => {
+    }).then(async (result) => {
         if (result.isConfirmed && sucursal) {
             centrarEnSucursal(sucursal.id);
+            // ✅ NUEVO: Registrar visualización de incidencia desde notificación
+            await registrarVisualizacionIncidencia(incidencia, sucursal);
         } else if (result.dismiss === Swal.DismissReason.cancel) {
             window.verPDFIncidencia(incidencia.id);
         }
@@ -1290,7 +1502,7 @@ async function cargarRegionesEnLista() {
 // =============================================
 // FILTRAR POR REGIÓN
 // =============================================
-function filtrarPorRegion(regionId, regionName, regionColor) {
+async function filtrarPorRegion(regionId, regionName, regionColor) {
     filtros.regionId = regionId;
     filtros.regionNombre = regionName;
     
@@ -1307,6 +1519,7 @@ function filtrarPorRegion(regionId, regionName, regionColor) {
     
     mostrarBadgeRegionActiva(regionName, regionColor);
     
+    let sucursalesMostradas = 0;
     Object.keys(marcadores.sucursales).forEach(id => {
         const s = sucursales.find(x => x.id === id);
         if (s) {
@@ -1314,6 +1527,7 @@ function filtrarPorRegion(regionId, regionName, regionColor) {
                 if (!mapa.hasLayer(marcadores.sucursales[id])) {
                     marcadores.sucursales[id].addTo(mapa);
                 }
+                sucursalesMostradas++;
             } else {
                 if (mapa.hasLayer(marcadores.sucursales[id])) {
                     mapa.removeLayer(marcadores.sucursales[id]);
@@ -1321,6 +1535,9 @@ function filtrarPorRegion(regionId, regionName, regionColor) {
             }
         }
     });
+    
+    // ✅ NUEVO: Registrar filtro por región
+    await registrarFiltroRegion(regionId, regionName, sucursalesMostradas);
     
     const sucursalesRegion = Object.values(marcadores.sucursales).filter((m, idx) => {
         const s = sucursales.find(x => x.id === Object.keys(marcadores.sucursales)[idx]);

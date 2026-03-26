@@ -1,483 +1,385 @@
-// protector-admin.js - Protección exclusiva para páginas de administradores
-// Ubicación: /components/protector-admin.js
-// Uso: <script src="/components/protector-admin.js"></script>
+// protector-admin.js - Protector para Administradores
+// SOLO valida acceso según el PLAN del administrador (módulos activos)
+// Asume que el usuario ya está autenticado y validado
 
-(function () {
-    // ========== CONFIGURACIÓN ==========
-    let customMessage = null;
-    let customTitle = null;
+import { UserManager } from '/clases/user.js';
+import { PlanPersonalizadoManager } from '/clases/plan.js';
 
-    // Obtener configuración del script
-    const scripts = document.getElementsByTagName('script');
-    for (let script of scripts) {
-        if (script.src && script.src.includes('protector-admin.js')) {
-            customMessage = script.getAttribute('data-mensaje');
-            customTitle = script.getAttribute('data-titulo');
-            break;
-        }
+// Configuración de rutas para administradores
+const RUTAS_ADMIN = {
+    // ========== PANEL PRINCIPAL ==========
+  
+    
+    // ========== ÁREAS ==========
+    '/usuarios/administrador/areas/areas.html': {
+        modulo: 'areas',
+        nombre: 'Gestión de Áreas'
+    },
+    '/usuarios/administrador/crearAreas/crearAreas.html': {
+        modulo: 'areas',
+        nombre: 'Crear Área'
+    },
+    '/usuarios/administrador/editarAreas/editarAreas.html': {
+        modulo: 'areas',
+        nombre: 'Editar Área'
+    },
+    
+    // ========== CATEGORÍAS ==========
+    '/usuarios/administrador/categorias/categorias.html': {
+        modulo: 'categorias',
+        nombre: 'Gestión de Categorías'
+    },
+    '/usuarios/administrador/crearCategorias/crearCategorias.html': {
+        modulo: 'categorias',
+        nombre: 'Crear Categoría'
+    },
+    '/usuarios/administrador/editarCategorias/editarCategorias.html': {
+        modulo: 'categorias',
+        nombre: 'Editar Categoría'
+    },
+    
+    // ========== SUCURSALES ==========
+    '/usuarios/administrador/sucursales/sucursales.html': {
+        modulo: 'sucursales',
+        nombre: 'Gestión de Sucursales'
+    },
+    '/usuarios/administrador/crearSucursales/crearSucursales.html': {
+        modulo: 'sucursales',
+        nombre: 'Crear Sucursal'
+    },
+    '/usuarios/administrador/editarSucursales/editarSucursales.html': {
+        modulo: 'sucursales',
+        nombre: 'Editar Sucursal'
+    },
+    
+    // ========== REGIONES ==========
+    '/usuarios/administrador/regiones/regiones.html': {
+        modulo: 'regiones',
+        nombre: 'Gestión de Regiones'
+    },
+    '/usuarios/administrador/crearRegiones/crearRegiones.html': {
+        modulo: 'regiones',
+        nombre: 'Crear Región'
+    },
+    '/usuarios/administrador/editarRegiones/editarRegiones.html': {
+        modulo: 'regiones',
+        nombre: 'Editar Región'
+    },
+    
+    // ========== INCIDENCIAS ==========
+    '/usuarios/administrador/incidencias/incidencias.html': {
+        modulo: 'incidencias',
+        nombre: 'Lista de Incidencias'
+    },
+    '/usuarios/administrador/crearIncidencias/crearIncidencias.html': {
+        modulo: 'incidencias',
+        nombre: 'Crear Incidencia'
+    },
+    '/usuarios/administrador/incidenciasCanalizadas/incidenciasCanalizadas.html': {
+        modulo: 'incidencias',
+        nombre: 'Incidencias Canalizadas'
+    },
+    '/usuarios/administrador/verIncidencias/verIncidencias.html': {
+        modulo: 'incidencias',
+        nombre: 'Detalle de Incidencia'
+    },
+    
+    // ========== ALERTAS ==========
+    '/usuarios/administrador/mapaAlertas/mapaAlertas.html': {
+        modulo: 'alertas',
+        nombre: 'Mapa de Alertas'
+    },
+    
+    // ========== USUARIOS ==========
+    '/usuarios/administrador/usuarios/usuarios.html': {
+        modulo: 'usuarios',
+        nombre: 'Gestión de Usuarios'
+    },
+    '/usuarios/administrador/crearUsuarios/crearUsuarios.html': {
+        modulo: 'usuarios',
+        nombre: 'Crear Usuario'
+    },
+    '/usuarios/administrador/editarUsuarios/editarUsuarios.html': {
+        modulo: 'usuarios',
+        nombre: 'Editar Usuario'
+    },
+    '/usuarios/administrador/permisos/permisos.html': {
+        modulo: 'usuarios',
+        nombre: 'Ver/Asignar Permisos'
+    },
+    '/usuarios/administrador/editarPermisos/editarPermisos.html': {
+        modulo: 'usuarios',
+        nombre: 'Editar Permisos'
+    },
+    
+    // ========== ESTADÍSTICAS ==========
+    '/usuarios/administrador/estadisticas/estadisticas.html': {
+        modulo: 'estadisticas',
+        nombre: 'Estadísticas'
+    },
+    
+   
+};
+
+class ProtectorAdmin {
+    constructor() {
+        this.gestorUsuarios = null;
+        this.gestorPlanes = null;
+        this.inicializado = false;
     }
-
-    let validated = false;
-    let userManager = null;
-    let previousPage = document.referrer;
-
-    // ========== FUNCIONES ==========
-
-    /**
-     * Muestra la página de acceso denegado
-     */
-    function showAccessDeniedPage(userRole) {
-        if (validated) return;
-        validated = true;
-
-        console.log('[Protector-Admin] ❌ Acceso DENEGADO');
-        console.log('[Protector-Admin] Rol actual:', userRole || 'No autenticado');
-        console.log('[Protector-Admin] URL:', window.location.pathname);
-
-        // Limpiar todo el contenido actual
-        document.body.innerHTML = '';
-
-        // Metatags
-        const meta = document.createElement('meta');
-        meta.setAttribute('charset', 'UTF-8');
-        document.head.appendChild(meta);
-
-        const viewport = document.createElement('meta');
-        viewport.setAttribute('name', 'viewport');
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-        document.head.appendChild(viewport);
-
-        document.title = 'Centinela-MX | Acceso Denegado - Administradores';
-
-        // Favicon
-        const favicon = document.createElement('link');
-        favicon.rel = 'icon';
-        favicon.href = '/assets/images/logo.png';
-        document.head.appendChild(favicon);
-
-        // Fuentes
-        const fontsLink = document.createElement('link');
-        fontsLink.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&family=Poppins:wght@300;400;500;600;700&display=swap';
-        fontsLink.rel = 'stylesheet';
-        document.head.appendChild(fontsLink);
-
-        // Font Awesome
-        const faLink = document.createElement('link');
-        faLink.rel = 'stylesheet';
-        faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
-        document.head.appendChild(faLink);
-
-        // Estilos
-        const style = document.createElement('style');
-        style.textContent = `
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-
-            body {
-                background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
-                color: rgba(255, 255, 255, 0.8);
-                font-family: 'Rajdhani', sans-serif;
-                min-height: 100vh;
-                position: relative;
-                overflow-x: hidden;
-            }
-
-            .particle-bg {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 0;
-                background: radial-gradient(circle at 20% 50%, rgba(220, 38, 38, 0.15) 0%, transparent 50%),
-                          radial-gradient(circle at 80% 20%, rgba(220, 38, 38, 0.1) 0%, transparent 50%);
-                pointer-events: none;
-            }
-
-            .denied-container {
-                position: relative;
-                z-index: 1;
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 40px;
-            }
-
-            .denied-card {
-                background: rgba(0, 0, 0, 0.85);
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(220, 38, 38, 0.5);
-                border-radius: 24px;
-                padding: 48px 40px;
-                max-width: 550px;
-                width: 100%;
-                text-align: center;
-                animation: glowPulse 6s infinite, fadeInUp 0.6s ease-out;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            }
-
-            @keyframes glowPulse {
-                0%, 100% {
-                    box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
-                    border-color: rgba(220, 38, 38, 0.5);
-                }
-                50% {
-                    box-shadow: 0 0 40px rgba(220, 38, 38, 0.6);
-                    border-color: rgba(220, 38, 38, 0.8);
-                }
-            }
-
-            @keyframes fadeInUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(30px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                25% { transform: translateX(-8px); }
-                75% { transform: translateX(8px); }
-            }
-
-            .denied-icon {
-                margin-bottom: 24px;
-                animation: shake 0.5s ease-in-out;
-            }
-
-            .denied-icon svg {
-                width: 100px;
-                height: 100px;
-                filter: drop-shadow(0 0 15px rgba(220, 38, 38, 0.5));
-            }
-
-            .denied-title {
-                font-family: 'Orbitron', sans-serif;
-                font-size: 32px;
-                font-weight: 700;
-                color: #ef4444;
-                margin-bottom: 16px;
-                text-transform: uppercase;
-                letter-spacing: 2px;
-            }
-
-            .denied-subtitle {
-                font-size: 18px;
-                color: rgba(255, 255, 255, 0.7);
-                margin-bottom: 24px;
-                font-weight: 500;
-            }
-
-            .denied-message {
-                background: rgba(239, 68, 68, 0.1);
-                border-left: 4px solid #ef4444;
-                padding: 20px;
-                border-radius: 12px;
-                margin: 24px 0;
-                text-align: left;
-            }
-
-            .denied-message p {
-                color: rgba(255, 255, 255, 0.9);
-                margin: 10px 0;
-                font-size: 14px;
-                line-height: 1.6;
-            }
-
-            .denied-message strong {
-                color: #ef4444;
-            }
-
-            .module-info {
-                background: rgba(0, 0, 0, 0.5);
-                padding: 12px;
-                border-radius: 8px;
-                margin-top: 12px;
-                font-size: 13px;
-                border: 1px solid rgba(239, 68, 68, 0.3);
-            }
-
-            code {
-                background: rgba(0, 0, 0, 0.6);
-                padding: 2px 8px;
-                border-radius: 6px;
-                font-size: 12px;
-                color: #fbbf24;
-                font-family: monospace;
-            }
-
-            .denied-actions {
-                display: flex;
-                gap: 12px;
-                justify-content: center;
-                margin-top: 32px;
-                flex-wrap: wrap;
-            }
-
-            .btn {
-                padding: 12px 28px;
-                border-radius: 40px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s;
-                border: none;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                font-family: 'Orbitron', sans-serif;
-            }
-
-            .btn-primary {
-                background: linear-gradient(135deg, #dc2626, #b91c1c);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-            }
-
-            .btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.5);
-            }
-
-            .btn-secondary {
-                background: rgba(255, 255, 255, 0.1);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-            }
-
-            .btn-secondary:hover {
-                background: rgba(255, 255, 255, 0.2);
-                transform: translateY(-2px);
-            }
-
-            .denied-footer {
-                margin-top: 24px;
-                font-size: 13px;
-                color: rgba(255, 255, 255, 0.5);
-            }
-
-            .counter {
-                font-weight: bold;
-                color: #ef4444;
-                font-size: 18px;
-                display: inline-block;
-                min-width: 30px;
-                background: rgba(0, 0, 0, 0.5);
-                padding: 2px 8px;
-                border-radius: 20px;
-            }
-
-            @media (max-width: 640px) {
-                .denied-card {
-                    padding: 32px 24px;
-                    margin: 20px;
-                }
-                .denied-title {
-                    font-size: 24px;
-                }
-                .denied-actions {
-                    flex-direction: column;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-
-        let message = customMessage || 'Esta área es exclusiva para Administradores del sistema.';
-        let title = customTitle || '👑 Área de Administradores';
-
-        const deniedHtml = `
-            <div class="particle-bg"></div>
-            <div class="denied-container">
-                <div class="denied-card">
-                    <div class="denied-icon">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 13c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z" fill="#FEE2E2"/>
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 13c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z" fill="#EF4444" fill-opacity="0.9"/>
-                            <path d="M12 8c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z" fill="#EF4444"/>
-                            <circle cx="12" cy="16" r="1.5" fill="#EF4444"/>
-                        </svg>
-                    </div>
-                    
-                    <h1 class="denied-title">🚫 ${title}</h1>
-                    <p class="denied-subtitle">${message}</p>
-                    
-                    <div class="denied-message">
-                        <p><i class="fas fa-shield-alt"></i> <strong>Información del intento:</strong></p>
-                        <p><i class="fas fa-user-tag"></i> <strong>Rol requerido:</strong> <code>administrador</code> o <code>master</code></p>
-                        <p><i class="fas fa-user-circle"></i> <strong>Tu rol actual:</strong> <code>${userRole || 'No autenticado'}</code></p>
-                        <p><i class="fas fa-link"></i> <strong>URL intentada:</strong> <code>${window.location.pathname}</code></p>
-                        <div class="module-info">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>¿Eres administrador?</strong> Inicia sesión con tu cuenta de administrador para acceder.
-                        </div>
-                    </div>
-                    
-                    <div class="denied-actions">
-                        <button class="btn btn-primary" id="protector-go-back">
-                            <i class="fas fa-arrow-left"></i> Volver Atrás
-                        </button>
-                        <button class="btn btn-secondary" id="protector-go-home">
-                            <i class="fas fa-home"></i> Ir al Inicio
-                        </button>
-                    </div>
-                    
-                    <div class="denied-footer">
-                        <i class="fas fa-clock"></i> Serás redirigido en <span id="protector-countdown" class="counter">5</span> segundos
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.innerHTML = deniedHtml;
-
-        function goBack() {
-            if (previousPage && previousPage.includes(window.location.hostname)) {
-                window.location.href = previousPage;
-            } else {
-                goToHome();
-            }
-        }
-
-        function goToHome() {
-            const userData = getUserDataSync();
-            if (userData) {
-                const userRoleLocal = userData.rol || userData.role;
-                if (userRoleLocal === 'master') {
-                    window.location.href = '/adminSistema/dashboard/dashboard.html';
-                } else if (userRoleLocal === 'administrador') {
-                    window.location.href = '/usuarios/administrador/dashboard/dashboard.html';
-                } else {
-                    window.location.href = '/usuarios/colaborador/dashboardGeneral/dashboardGeneral.html';
-                }
-            } else {
-                window.location.href = '/login.html';
-            }
-        }
-
-        setTimeout(() => {
-            const backBtn = document.getElementById('protector-go-back');
-            const homeBtn = document.getElementById('protector-go-home');
-            if (backBtn) backBtn.onclick = goBack;
-            if (homeBtn) homeBtn.onclick = goToHome;
-        }, 100);
-
-        let countdown = 5;
-        const countdownElement = document.getElementById('protector-countdown');
-        const timer = setInterval(() => {
-            countdown--;
-            if (countdownElement) countdownElement.textContent = countdown;
-            if (countdown <= 0) {
-                clearInterval(timer);
-                if (previousPage && previousPage.includes(window.location.hostname)) {
-                    window.location.href = previousPage;
-                } else {
-                    goToHome();
-                }
-            }
-        }, 1000);
-    }
-
-    function getUserDataSync() {
+    
+    async inicializar() {
+        if (this.inicializado) return this;
+        
         try {
-            const sources = ['currentUser', 'userData'];
-            for (const source of sources) {
-                const data = localStorage.getItem(source);
-                if (data) {
-                    const user = JSON.parse(data);
-                    if (user && (user.rol || user.role)) return user;
-                }
-            }
-            const sessionUser = sessionStorage.getItem('currentUser');
-            if (sessionUser) {
-                const user = JSON.parse(sessionUser);
-                if (user && (user.rol || user.role)) return user;
-            }
-            return null;
-        } catch (err) {
-            return null;
-        }
-    }
-
-    async function getUserData() {
-        try {
-            const syncUser = getUserDataSync();
-            if (syncUser) return syncUser;
-            try {
-                const module = await import('/clases/user.js');
-                const { UserManager } = module;
-                userManager = new UserManager();
-                return new Promise((resolve) => {
-                    let attempts = 0;
-                    const checkInterval = setInterval(() => {
-                        attempts++;
-                        if (userManager.currentUser) {
-                            clearInterval(checkInterval);
-                            resolve(userManager.currentUser);
-                        } else if (attempts > 30) {
-                            clearInterval(checkInterval);
-                            resolve(null);
+            this.gestorUsuarios = new UserManager();
+            this.gestorPlanes = new PlanPersonalizadoManager();
+            
+            // Esperar a que se cargue el usuario actual (sin validar si existe)
+            if (!this.gestorUsuarios.usuarioActual) {
+                await new Promise((resolver) => {
+                    const verificar = setInterval(() => {
+                        if (this.gestorUsuarios.usuarioActual) {
+                            clearInterval(verificar);
+                            resolver();
                         }
                     }, 100);
+                    setTimeout(() => {
+                        clearInterval(verificar);
+                        resolver();
+                    }, 5000);
                 });
-            } catch (err) {
-                return null;
             }
-        } catch (err) {
+            
+            this.inicializado = true;
+            console.log('✅ Protector de administradores inicializado');
+            return this;
+            
+        } catch (error) {
+            console.error('❌ Error inicializando protector de administradores:', error);
+            throw error;
+        }
+    }
+    
+    obtenerConfiguracionRuta(ruta) {
+        if (RUTAS_ADMIN[ruta]) {
+            return RUTAS_ADMIN[ruta];
+        }
+        
+        for (const [rutaConfig, config] of Object.entries(RUTAS_ADMIN)) {
+            if (ruta.includes(rutaConfig) && rutaConfig !== '/') {
+                return config;
+            }
+        }
+        
+        return null;
+    }
+    
+    async verificarPermiso() {
+        await this.inicializar();
+        
+        const rutaActual = window.location.pathname;
+        const configRuta = this.obtenerConfiguracionRuta(rutaActual);
+        
+        // Si la ruta no está en la lista, permitir acceso (no requiere validación)
+        if (!configRuta) {
+            return { permitido: true, mensaje: '', redirigirA: null };
+        }
+        
+        const usuario = this.gestorUsuarios.usuarioActual;
+        
+        // Si no hay usuario o no es administrador, denegar acceso
+        if (!usuario || !usuario.esAdministrador()) {
+            return {
+                permitido: false,
+                mensaje: 'No tienes permisos de administrador para acceder a esta página.',
+                redirigirA: '/usuarios/administrador/panelControl/panelControl.html'
+            };
+        }
+        
+        // Verificar según el PLAN del administrador
+        return await this.verificarPorPlan(usuario, configRuta);
+    }
+    
+    async verificarPorPlan(usuario, configRuta) {
+        try {
+            let infoPlan = this.obtenerPlanLocal();
+            
+            if (!infoPlan || !infoPlan.mapasActivos) {
+                const plan = await this.gestorPlanes.obtenerPorId(usuario.plan || 'gratis');
+                if (plan) {
+                    infoPlan = plan.paraInterfaz();
+                    localStorage.setItem('plan-usuario', JSON.stringify(infoPlan));
+                }
+            }
+            
+            const tieneModulo = infoPlan?.mapasActivos?.[configRuta.modulo] === true;
+            
+            if (!tieneModulo) {
+                const nombrePlan = infoPlan?.nombre || usuario.plan || 'tu plan actual';
+                return {
+                    permitido: false,
+                    mensaje: `No tienes acceso a "${configRuta.nombre}". Tu plan "${nombrePlan}" no incluye este módulo. Contacta a RSI para actualizar tu plan.`,
+                    redirigirA: '/usuarios/administrador/panelControl/panelControl.html'
+                };
+            }
+            
+            return { permitido: true, mensaje: '', redirigirA: null };
+            
+        } catch (error) {
+            console.error('Error verificando plan:', error);
+            return {
+                permitido: false,
+                mensaje: 'Error al verificar tu plan. Contacta a soporte.',
+                redirigirA: '/usuarios/administrador/panelControl/panelControl.html'
+            };
+        }
+    }
+    
+    obtenerPlanLocal() {
+        try {
+            const planStr = localStorage.getItem('plan-usuario');
+            if (planStr) {
+                return JSON.parse(planStr);
+            }
+            return null;
+        } catch {
             return null;
         }
     }
-
-    async function validateAccess() {
+    
+    async obtenerMenusAccesibles() {
+        await this.inicializar();
+        
+        const usuario = this.gestorUsuarios.usuarioActual;
+        if (!usuario || !usuario.esAdministrador()) return [];
+        
+        const todosLosMenus = [
+            { id: 'dashboard', nombre: 'Panel Principal', icono: 'fa-chart-line', url: '/usuarios/administrador/panelControl/panelControl.html' },
+            { id: 'incidencias', nombre: 'Incidencias', icono: 'fa-exclamation-triangle', url: '/usuarios/administrador/incidencias/incidencias.html' },
+            { id: 'alertas', nombre: 'Alertas', icono: 'fa-bell', url: '/usuarios/administrador/mapaAlertas/mapaAlertas.html' },
+            { id: 'tareas', nombre: 'Tareas', icono: 'fa-tasks', url: '/usuarios/administrador/tareas/tareas.html' },
+            { id: 'estadisticas', nombre: 'Estadísticas', icono: 'fa-chart-bar', url: '/usuarios/administrador/estadisticas/estadisticas.html' },
+            { id: 'areas', nombre: 'Áreas', icono: 'fa-building', url: '/usuarios/administrador/areas/areas.html' },
+            { id: 'categorias', nombre: 'Categorías', icono: 'fa-tags', url: '/usuarios/administrador/categorias/categorias.html' },
+            { id: 'sucursales', nombre: 'Sucursales', icono: 'fa-store', url: '/usuarios/administrador/sucursales/sucursales.html' },
+            { id: 'regiones', nombre: 'Regiones', icono: 'fa-map', url: '/usuarios/administrador/regiones/regiones.html' },
+            { id: 'usuarios', nombre: 'Usuarios', icono: 'fa-users', url: '/usuarios/administrador/usuarios/usuarios.html' }
+        ];
+        
+        const infoPlan = await this.obtenerInfoPlan(usuario);
+        const menusAccesibles = [];
+        
+        for (const menu of todosLosMenus) {
+            if (infoPlan.mapasActivos?.[menu.id] === true) {
+                menusAccesibles.push(menu);
+            }
+        }
+        
+        return menusAccesibles;
+    }
+    
+    async obtenerInfoPlan(usuario) {
+        const planLocal = this.obtenerPlanLocal();
+        if (planLocal && planLocal.mapasActivos) return planLocal;
+        
         try {
-            console.log('[Protector-Admin] ==========================================');
-            console.log('[Protector-Admin] Verificando acceso a página de administrador');
-            console.log('[Protector-Admin] URL:', window.location.pathname);
-
-            const currentUser = await getUserData();
-            let userRole = null;
-
-            if (currentUser) {
-                userRole = currentUser.rol || currentUser.role;
-                console.log('[Protector-Admin] Usuario:', { email: currentUser.correoElectronico || currentUser.email, rol: userRole });
-            } else {
-                console.log('[Protector-Admin] No hay usuario autenticado');
+            const plan = await this.gestorPlanes.obtenerPorId(usuario.plan || 'gratis');
+            if (plan) {
+                const infoPlan = plan.paraInterfaz();
+                localStorage.setItem('plan-usuario', JSON.stringify(infoPlan));
+                return infoPlan;
             }
-
-            if (!currentUser || !userRole) {
-                showAccessDeniedPage('No autenticado');
-                return;
-            }
-
-            if (currentUser.status === false || currentUser.activo === false) {
-                console.log('[Protector-Admin] Usuario inactivo');
-                showAccessDeniedPage(userRole);
-                return;
-            }
-
-            // VERIFICACIÓN EXCLUSIVA PARA ADMINISTRADORES
-            // Solo administrador o master pueden acceder
-            if (userRole === 'administrador' || userRole === 'master') {
-                console.log('[Protector-Admin] ✅ Acceso CONCEDIDO - Rol:', userRole);
-                return;
-            }
-
-            // Si es colaborador, DENEGAR ACCESO
-            console.log('[Protector-Admin] ❌ Acceso DENEGADO - Rol no autorizado:', userRole);
-            showAccessDeniedPage(userRole);
-
-        } catch (error) {
-            console.error('[Protector-Admin] Error:', error);
-            showAccessDeniedPage(null);
+        } catch (error) {}
+        
+        return { id: usuario.plan || 'gratis', nombre: usuario.plan || 'gratis', mapasActivos: {} };
+    }
+    
+    mostrarErrorAcceso(mensaje) {
+        // Verificar si ya existe un mensaje de error para no duplicar
+        if (document.querySelector('.protector-admin-error')) {
+            return;
+        }
+        
+        const divError = document.createElement('div');
+        divError.className = 'protector-admin-error';
+        divError.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999;
+            font-family: system-ui, sans-serif;
+        `;
+        
+        divError.innerHTML = `
+            <div style="background: white; border-radius: 24px; padding: 40px; max-width: 450px; text-align: center;">
+                <div style="font-size: 56px; margin-bottom: 20px;"></div>
+                <h2 style="margin: 0 0 12px 0; color: #f59e0b;">Acceso Restringido por Plan. Contáctate con RSI Enterprise</h2>
+                <p style="color: #4b5563; margin-bottom: 28px; line-height: 1.5;">${mensaje}</p>
+                <button id="btn-dashboard" style="background: #2563eb; color: white; border: none; padding: 12px 28px; border-radius: 10px; cursor: pointer; font-weight: 500;">
+                    Ir al Panel Principal
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(divError);
+        
+        const btnDashboard = document.getElementById('btn-dashboard');
+        if (btnDashboard) {
+            btnDashboard.addEventListener('click', () => {
+                window.location.href = '/usuarios/administrador/panelControl/panelControl.html';
+            });
         }
     }
+    
+    async protegerRuta() {
+        const resultado = await this.verificarPermiso();
+        
+        if (resultado.permitido) {
+            // Disparar evento para que la página sepa que tiene acceso
+            window.dispatchEvent(new CustomEvent('admin-acceso-concedido', {
+                detail: {
+                    usuario: this.gestorUsuarios.usuarioActual,
+                    menus: await this.obtenerMenusAccesibles()
+                }
+            }));
+            return true;
+        } else {
+            this.mostrarErrorAcceso(resultado.mensaje);
+            return false;
+        }
+    }
+    
+    /**
+     * Método para verificar si el administrador tiene acceso a un módulo específico
+     * Útil para usar en la página después de que el protector ya validó
+     */
+    async tieneAccesoModulo(moduloId) {
+        await this.inicializar();
+        
+        const usuario = this.gestorUsuarios.usuarioActual;
+        if (!usuario || !usuario.esAdministrador()) return false;
+        
+        const infoPlan = await this.obtenerInfoPlan(usuario);
+        return infoPlan.mapasActivos?.[moduloId] === true;
+    }
+}
 
-    validateAccess();
+const protectorAdmin = new ProtectorAdmin();
+
+// Auto-ejecutar - solo valida permisos, no valida sesión
+(async () => {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => protectorAdmin.protegerRuta());
+    } else {
+        await protectorAdmin.protegerRuta();
+    }
 })();
+
+export { ProtectorAdmin, protectorAdmin };
