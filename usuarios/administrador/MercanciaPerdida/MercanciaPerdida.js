@@ -1,5 +1,5 @@
 // mercanciaPerdida.js - CONTROLADOR
-// VERSIÓN ACTUALIZADA CON BOTÓN DE PDF Y ESTADO DE GENERACIÓN
+// VERSIÓN ACTUALIZADA - SIN BOTÓN DE ELIMINAR, SIN COLUMNA ESTADO Y CON ID COMPLETO
 
 import { MercanciaPerdidaManager } from '/clases/mercanciaPerdida.js';
 import '/components/visualizadorPDF.js';
@@ -83,13 +83,13 @@ async function cargarRegistrosPagina(pagina) {
 
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align:center; padding:40px;">
+                <td colspan="6" style="text-align:center; padding:40px;">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Cargando...</span>
                     </div>
                     <p style="margin-top: 12px; color: var(--color-text-secondary);">Cargando registros...</p>
-                <\/td>
-            <\/tr>
+                </td>
+            </tr>
         `;
 
         const resultado = await mercanciaManager.getRegistrosPaginados(
@@ -111,7 +111,7 @@ async function cargarRegistrosPagina(pagina) {
         if (registrosActuales.length === 0 && pagina === 1) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align:center; padding:60px 20px;">
+                    <td colspan="6" style="text-align:center; padding:60px 20px;">
                         <div style="text-align:center;">
                             <i class="fas fa-box-open" style="font-size:48px; color:rgba(0,207,255,0.3); margin-bottom:16px;"></i>
                             <h5 style="color:white;">No hay registros de mercancía perdida</h5>
@@ -120,8 +120,8 @@ async function cargarRegistrosPagina(pagina) {
                                 <i class="fas fa-plus-circle"></i> Nuevo Registro
                             </a>
                         </div>
-                    <\/td>
-                <\/tr>
+                    </td>
+                </tr>
             `;
             return;
         }
@@ -142,13 +142,13 @@ window.irPagina = async function (pagina) {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align:center; padding:40px;">
+                    <td colspan="6" style="text-align:center; padding:40px;">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Cargando...</span>
                         </div>
                         <p style="margin-top: 12px;">Cargando página ${pagina}...</p>
-                    <\/td>
-                <\/tr>
+                    </td>
+                </tr>
             `;
         }
         
@@ -383,56 +383,6 @@ window.registrarRecuperacion = function (registroId, event) {
     }
 };
 
-window.eliminarRegistro = async function (registroId, event) {
-    event?.stopPropagation();
-    
-    const result = await Swal.fire({
-        title: '¿Eliminar registro?',
-        text: 'Esta acción no se puede deshacer. Los archivos adjuntos también se eliminarán.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    });
-    
-    if (result.isConfirmed) {
-        try {
-            Swal.fire({
-                title: 'Eliminando...',
-                text: 'Por favor espere',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-            
-            await mercanciaManager.eliminarRegistro(
-                registroId,
-                organizacionActual.camelCase,
-                true,
-                obtenerUsuarioActual()
-            );
-            
-            Swal.close();
-            Swal.fire({
-                icon: 'success',
-                title: 'Eliminado',
-                text: 'El registro ha sido eliminado correctamente'
-            });
-            
-            await cargarRegistrosPagina(paginaActual);
-            
-        } catch (error) {
-            console.error('Error eliminando registro:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message || 'No se pudo eliminar el registro'
-            });
-        }
-    }
-};
-
 function mostrarModalDetalles(registro) {
     const modal = document.getElementById('modalDetalles');
     const body = document.getElementById('modalDetallesBody');
@@ -482,7 +432,7 @@ function mostrarModalDetalles(registro) {
         <div class="detalles-grid">
             <div class="detalle-card">
                 <p><strong>ID / Folio</strong></p>
-                <p><span>${escapeHTML(uiData.id)}</span></p>
+                <p><span style="font-family: monospace; word-break: break-all;">${escapeHTML(uiData.id)}</span></p>
             </div>
             <div class="detalle-card">
                 <p><strong>Empresa / Centro Comercial</strong></p>
@@ -676,8 +626,8 @@ function crearFilaRegistro(registro, tbody) {
     
     tr.innerHTML = `
         <td data-label="ID / Folio">
-            <span class="registro-id" title="${registro.id}">${registro.id.substring(0, 12)}...</span>
-        <\/td>
+            <span class="registro-id" title="${registro.id}">${escapeHTML(registro.id)}</span>
+        </td>
         <td data-label="Empresa/CC">
             <div style="display: flex; align-items: center;">
                 <div style="width:4px; height:24px; background:#00cfff; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
@@ -685,28 +635,22 @@ function crearFilaRegistro(registro, tbody) {
                     <strong title="${escapeHTML(uiData.nombreEmpresaCC)}">${escapeHTML(uiData.nombreEmpresaCC.substring(0, 30))}${uiData.nombreEmpresaCC.length > 30 ? '...' : ''}</strong>
                 </div>
             </div>
-        <\/td>
+        </td>
         <td data-label="Tipo">
             <span class="tipo-badge ${uiData.tipoEvento}">
                 <i class="fas ${uiData.tipoEvento === 'robo' ? 'fa-mask' : uiData.tipoEvento === 'extravio' ? 'fa-question-circle' : uiData.tipoEvento === 'accidente' ? 'fa-car-crash' : 'fa-ellipsis-h'}"></i>
                 ${uiData.tipoEventoTexto || uiData.tipoEvento}
             </span>
-        <\/td>
+        </td>
         <td data-label="Monto Perdido">
             <span class="monto-text monto-perdido">${perdidoFormateado}</span>
-        <\/td>
+        </td>
         <td data-label="Monto Recuperado">
             <span class="monto-text monto-recuperado">${recuperadoFormateado}</span>
-        <\/td>
-        <td data-label="Estado">
-            <span class="estado-badge ${uiData.estado}">
-                <i class="fas ${uiData.estado === 'activo' ? 'fa-clock' : uiData.estado === 'recuperado' ? 'fa-check-circle' : 'fa-ban'}"></i>
-                ${uiData.estadoTexto || uiData.estado}
-            </span>
-        <\/td>
+        </td>
         <td data-label="Fecha">
             ${fechaFormateada}
-        <\/td>
+        </td>
         <td data-label="Acciones">
             <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <button type="button" class="btn" data-action="ver" data-id="${registro.id}" title="Ver detalles">
@@ -720,11 +664,8 @@ function crearFilaRegistro(registro, tbody) {
                     <i class="fas fa-undo-alt" style="color: #28a745;"></i>
                 </button>
                 ` : ''}
-                <button type="button" class="btn" data-action="eliminar" data-id="${registro.id}" title="Eliminar">
-                    <i class="fas fa-trash" style="color: #dc3545;"></i>
-                </button>
             </div>
-        <\/td>
+        </td>
     `;
     
     tbody.appendChild(tr);
@@ -738,7 +679,6 @@ function crearFilaRegistro(registro, tbody) {
                 if (action === 'ver') window.verDetallesRegistro(id, e);
                 else if (action === 'pdf') window.verPDF(id, e);
                 else if (action === 'recuperar') window.registrarRecuperacion(id, e);
-                else if (action === 'eliminar') window.eliminarRegistro(id, e);
             });
         });
         
@@ -799,7 +739,7 @@ function mostrarError(mensaje) {
     if (tbody) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align:center; padding:40px;">
+                <td colspan="6" style="text-align:center; padding:40px;">
                     <div style="color: #ef4444;">
                         <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
                         <h5>Error</h5>
@@ -808,8 +748,8 @@ function mostrarError(mensaje) {
                             <i class="fas fa-sync-alt"></i> Reintentar
                         </button>
                     </div>
-                <\/td>
-            <\/tr>
+                </td>
+            </tr>
         `;
     }
 }
