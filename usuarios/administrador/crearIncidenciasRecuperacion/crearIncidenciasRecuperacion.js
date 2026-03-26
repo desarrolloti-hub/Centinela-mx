@@ -1,6 +1,6 @@
 // crearIncidenciasRecuperacion.js - CONTROLADOR COMPLETO
-// ESTRUCTURA IDÉNTICA A crearIncidencias.js PERO PARA MERCANCÍA PERDIDA
-// CON GENERACIÓN AUTOMÁTICA DE PDF
+// VERSIÓN OPTIMIZADA CON VISTA PREVIA DE PDF QUE SE SUBA DIRECTAMENTE
+// SIN DEPENDENCIA DE manejadorPDFSegundoPlano.js
 
 const LIMITES = {
     NARRACION_EVENTOS: 2000,
@@ -20,6 +20,11 @@ class CrearMercanciaPerdidaController {
         
         this.pdfGenerator = null;
         this.isInitialized = false;
+        
+        // Para vista previa de PDF
+        this.pdfPreviewModal = null;
+        this.pdfBlobGenerado = null;
+        this.datosActuales = null;
 
         this._init();
     }
@@ -36,21 +41,442 @@ class CrearMercanciaPerdidaController {
         return this.historialManager;
     }
 
-        async _initPDFGenerator() {
-            if (!this.pdfGenerator) {
-                try {
-                    // ✅ Ruta correcta (misma carpeta)
-                    const { generadorMercanciaPDF } = await import('/components/mercanciaPDF.js');
-                    this.pdfGenerator = generadorMercanciaPDF;
-                    console.log('✅ PDFGenerator inicializado correctamente');
-                    return true;
-                } catch (error) {
-                    console.error('Error inicializando PDFGenerator:', error);
-                    return false;
-                }
+    async _initPDFGenerator() {
+        if (!this.pdfGenerator) {
+            try {
+                const { generadorMercanciaPDF } = await import('/components/mercanciaPDF.js');
+                this.pdfGenerator = generadorMercanciaPDF;
+                console.log('✅ PDFGenerator inicializado correctamente');
+                return true;
+            } catch (error) {
+                console.error('Error inicializando PDFGenerator:', error);
+                return false;
             }
-            return true;
         }
+        return true;
+    }
+    
+    // =============================================
+    // INICIALIZAR MODAL DE VISTA PREVIA PDF
+    // =============================================
+    _initPDFPreviewModal() {
+        if (document.getElementById('pdfPreviewModal')) return;
+        
+        const modalHTML = `
+            <div id="pdfPreviewModal" class="pdf-preview-modal">
+                <div class="pdf-preview-header">
+                    <h3><i class="fas fa-file-pdf"></i> Vista Previa del Reporte</h3>
+                    <button class="pdf-preview-btn pdf-close-btn" id="pdfCloseBtn" title="Cerrar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="pdf-preview-content">
+                    <div class="pdf-preview-loading" id="pdfPreviewLoading">
+                        <div class="spinner"></div>
+                        <p>Generando vista previa del reporte...</p>
+                        <p class="small">Esto puede tomar unos segundos dependiendo de las imágenes</p>
+                    </div>
+                    <iframe id="pdfPreviewIframe" class="pdf-preview-iframe" style="display: none;"></iframe>
+                </div>
+                <div class="pdf-preview-footer">
+                    <button class="btn btn-secondary" id="pdfCancelBtn">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="btn btn-warning" id="pdfViewOnlyBtn">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn btn-success" id="pdfAcceptBtn">
+                        <i class="fas fa-check-circle"></i> Aceptar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Agregar estilos del modal
+        this._addPDFPreviewStyles();
+        
+        // Referencias
+        this.pdfPreviewModal = document.getElementById('pdfPreviewModal');
+        this.pdfPreviewIframe = document.getElementById('pdfPreviewIframe');
+        this.pdfPreviewLoading = document.getElementById('pdfPreviewLoading');
+        
+        // Event listeners
+        document.getElementById('pdfCloseBtn').addEventListener('click', () => this._closePDFPreview());
+        document.getElementById('pdfCancelBtn').addEventListener('click', () => this._closePDFPreview());
+        document.getElementById('pdfViewOnlyBtn').addEventListener('click', () => this._downloadPreviewPDF());
+        document.getElementById('pdfAcceptBtn').addEventListener('click', () => this._acceptAndUpload());
+        
+        // Cerrar al hacer click fuera
+        this.pdfPreviewModal.addEventListener('click', (e) => {
+            if (e.target === this.pdfPreviewModal) {
+                this._closePDFPreview();
+            }
+        });
+        
+        // Escapar con ESC
+        document.addEventListener('keydown', (e) => {
+            if (this.pdfPreviewModal && this.pdfPreviewModal.style.display === 'flex' && e.key === 'Escape') {
+                this._closePDFPreview();
+            }
+        });
+    }
+    
+    _addPDFPreviewStyles() {
+        if (document.getElementById('pdfPreviewStyles')) return;
+        
+        const styles = `
+            <style id="pdfPreviewStyles">
+                .pdf-preview-modal {
+                    display: none;
+                    position: fixed;
+                    z-index: 10000;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.95);
+                    flex-direction: column;
+                    animation: pdfPreviewFadeIn 0.3s ease;
+                }
+                
+                @keyframes pdfPreviewFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                
+                .pdf-preview-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 16px 24px;
+                    background: linear-gradient(135deg, #1a3b5d 0%, #0f2a44 100%);
+                    color: white;
+                    border-bottom: 2px solid #c9a03d;
+                }
+                
+                .pdf-preview-header h3 {
+                    margin: 0;
+                    font-size: 18px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                
+                .pdf-preview-header h3 i {
+                    color: #e74c3c;
+                }
+                
+                .pdf-preview-close-btn {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: none;
+                    color: white;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 18px;
+                    transition: all 0.3s ease;
+                }
+                
+                .pdf-preview-close-btn:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    transform: scale(1.1);
+                }
+                
+                .pdf-preview-content {
+                    flex: 1;
+                    padding: 20px;
+                    background: #1a1a1a;
+                    position: relative;
+                    min-height: 0;
+                }
+                
+                .pdf-preview-iframe {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                }
+                
+                .pdf-preview-loading {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    text-align: center;
+                    color: white;
+                }
+                
+                .pdf-preview-loading .spinner {
+                    width: 50px;
+                    height: 50px;
+                    border: 3px solid rgba(255, 255, 255, 0.3);
+                    border-top-color: #c9a03d;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin: 0 auto 15px;
+                }
+                
+                .pdf-preview-loading p {
+                    margin: 10px 0;
+                    font-size: 14px;
+                }
+                
+                .pdf-preview-loading .small {
+                    font-size: 12px;
+                    color: #aaa;
+                }
+                
+                .pdf-preview-footer {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 15px;
+                    padding: 16px 24px;
+                    background: #2d2d2d;
+                    border-top: 1px solid #444;
+                }
+                
+                .pdf-preview-footer .btn {
+                    padding: 10px 24px;
+                    font-family: var(--font-family-secondary);
+                    font-weight: 600;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    border: none;
+                }
+                
+                .pdf-preview-footer .btn-secondary {
+                    background: #6c757d;
+                    color: white;
+                }
+                
+                .pdf-preview-footer .btn-secondary:hover {
+                    background: #5a6268;
+                    transform: translateY(-2px);
+                }
+                
+                .pdf-preview-footer .btn-warning {
+                    background: #ffc107;
+                    color: #000;
+                }
+                
+                .pdf-preview-footer .btn-warning:hover {
+                    background: #e0a800;
+                    transform: translateY(-2px);
+                }
+                
+                .pdf-preview-footer .btn-success {
+                    background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
+                    border: 1px solid #28a745;
+                    color: white;
+                }
+                
+                .pdf-preview-footer .btn-success:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+                }
+                
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                
+                @media (max-width: 768px) {
+                    .pdf-preview-header {
+                        padding: 12px 16px;
+                    }
+                    .pdf-preview-header h3 {
+                        font-size: 16px;
+                    }
+                    .pdf-preview-footer {
+                        padding: 12px 16px;
+                    }
+                    .pdf-preview-footer .btn {
+                        padding: 8px 16px;
+                        font-size: 14px;
+                    }
+                }
+            </style>
+        `;
+        
+        document.head.insertAdjacentHTML('beforeend', styles);
+    }
+    
+    // =============================================
+    // MOSTRAR VISTA PREVIA DEL PDF
+    // =============================================
+    async _mostrarVistaPreviaPDF(datos) {
+        try {
+            // Mostrar modal
+            this.pdfPreviewModal.style.display = 'flex';
+            this.pdfPreviewIframe.style.display = 'none';
+            this.pdfPreviewLoading.style.display = 'block';
+            
+            // Guardar datos para después
+            this.datosActuales = datos;
+            
+            // Crear un objeto de registro temporal para el PDF
+            const registroTemporal = this._crearRegistroTemporal(datos);
+            
+            console.log('📄 Generando vista previa del PDF...');
+            console.log('📸 Evidencias para vista previa:', registroTemporal.evidencias?.length || 0);
+            
+            // Generar PDF como blob
+            const pdfBlob = await this.pdfGenerator.generarReporte(registroTemporal, {
+                mostrarAlerta: false,
+                returnBlob: true,
+                diagnosticar: false
+            });
+            
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('El PDF generado está vacío');
+            }
+            
+            console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
+            
+            // Guardar el blob para usarlo después
+            this.pdfBlobGenerado = pdfBlob;
+            
+            // Crear URL para el iframe
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            
+            // Mostrar en iframe
+            this.pdfPreviewIframe.src = pdfUrl;
+            this.pdfPreviewIframe.style.display = 'block';
+            this.pdfPreviewLoading.style.display = 'none';
+            
+            console.log('✅ Vista previa PDF cargada correctamente');
+            
+        } catch (error) {
+            console.error('❌ Error generando vista previa:', error);
+            this._closePDFPreview();
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al generar vista previa',
+                text: error.message || 'No se pudo generar la vista previa del reporte',
+                footer: 'Por favor, verifica tu conexión y las imágenes seleccionadas.'
+            });
+        }
+    }
+    
+    _crearRegistroTemporal(datos) {
+        // Crear un objeto que simule la estructura de MercanciaPerdida
+        const fechaObj = new Date(datos.fechaHora);
+        
+        // Procesar evidencias para el formato que espera el PDF
+        const evidenciasProcesadas = datos.imagenes.map((img, index) => {
+            return {
+                id: `temp_${Date.now()}_${index}`,
+                file: img.file,
+                preview: img.preview,
+                url: img.preview,
+                comentario: img.comentario || '',
+                elementos: img.elementos || [],
+                generatedName: img.generatedName
+            };
+        });
+        
+        return {
+            id: `PREVIEW_${Date.now()}`,
+            nombreEmpresaCC: datos.nombreEmpresaCC,
+            tipoEvento: datos.tipoEvento,
+            montoPerdido: datos.montoPerdido,
+            montoRecuperado: datos.montoRecuperado,
+            fecha: fechaObj,
+            hora: fechaObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            narracionEventos: datos.narracionEventos,
+            detallesPerdida: datos.detallesPerdida,
+            ubicacion: datos.ubicacion,
+            responsableAsignado: datos.responsableAsignado,
+            reportadoPorNombre: this.usuarioActual.nombreCompleto,
+            evidencias: evidenciasProcesadas,
+            estado: 'activo',
+            getMontoNeto: () => datos.montoPerdido - (datos.montoRecuperado || 0),
+            getPorcentajeRecuperado: () => datos.montoPerdido > 0 ? ((datos.montoRecuperado || 0) / datos.montoPerdido) * 100 : 0,
+            getEstadoTexto: () => 'Activo',
+            getTipoEventoTexto: () => this._getTipoEventoTexto(datos.tipoEvento)
+        };
+    }
+    
+    _closePDFPreview() {
+        if (this.pdfPreviewModal) {
+            this.pdfPreviewModal.style.display = 'none';
+            
+            // Limpiar iframe
+            if (this.pdfPreviewIframe) {
+                this.pdfPreviewIframe.src = '';
+                this.pdfPreviewIframe.style.display = 'none';
+            }
+            
+            // Limpiar loading
+            if (this.pdfPreviewLoading) {
+                this.pdfPreviewLoading.style.display = 'block';
+            }
+            
+            this.pdfPreviewLoading.style.display = 'block';
+        }
+    }
+    
+    async _downloadPreviewPDF() {
+        if (this.pdfBlobGenerado) {
+            const url = URL.createObjectURL(this.pdfBlobGenerado);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `preview_reporte_${Date.now()}.pdf`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Descarga iniciada',
+                text: 'El reporte se está descargando',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No hay PDF generado',
+                text: 'Por favor, espera a que se genere la vista previa',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+    }
+    
+    async _acceptAndUpload() {
+        // Cerrar modal
+        this._closePDFPreview();
+        
+        // Verificar que tenemos el PDF generado
+        if (!this.pdfBlobGenerado) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo generar el PDF. Por favor, intenta de nuevo.'
+            });
+            return;
+        }
+        
+        // Guardar el registro con el PDF generado
+        await this._guardarRegistroConPDF(this.datosActuales, this.pdfBlobGenerado);
+    }
+    
+    // =============================================
+    // MÉTODOS EXISTENTES
+    // =============================================
+    
     async _init() {
         try {
             this._cargarUsuario();
@@ -67,7 +493,7 @@ class CrearMercanciaPerdidaController {
             const pdfOk = await this._initPDFGenerator();
             
             if (!pdfOk) {
-                console.warn('⚠️ PDFGenerator no disponible, no se generará PDF automático');
+                console.warn('⚠️ PDFGenerator no disponible');
             }
 
             this._configurarOrganizacion();
@@ -77,6 +503,8 @@ class CrearMercanciaPerdidaController {
             this._configurarMontoPreview();
 
             this.imageEditorModal = new window.ImageEditorModal();
+            this._initPDFPreviewModal();
+            
             this.isInitialized = true;
 
         } catch (error) {
@@ -311,7 +739,7 @@ class CrearMercanciaPerdidaController {
 
             document.getElementById('btnCrearRegistro')?.addEventListener('click', (e) => {
                 e.preventDefault();
-                this._validarYGuardar();
+                this._validarYMostrarPreview();
             });
 
             document.getElementById('btnAgregarImagen')?.addEventListener('click', () => {
@@ -322,7 +750,7 @@ class CrearMercanciaPerdidaController {
 
             document.getElementById('formMercanciaPrincipal')?.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this._validarYGuardar();
+                this._validarYMostrarPreview();
             });
 
             this._configurarSugerencias();
@@ -425,23 +853,42 @@ class CrearMercanciaPerdidaController {
         if (!files || files.length === 0) return;
 
         const nuevosArchivos = Array.from(files);
-        const maxSize = 5 * 1024 * 1024;
+        const maxSize = 10 * 1024 * 1024;
+        const maxImages = 20;
+
+        if (this.imagenesSeleccionadas.length + nuevosArchivos.length > maxImages) {
+            this._mostrarError(`Máximo ${maxImages} imágenes permitidas`);
+            return;
+        }
 
         const archivosValidos = nuevosArchivos.filter(file => {
             if (file.size > maxSize) {
-                this._mostrarNotificacion(`La imagen ${file.name} excede 5MB`, 'warning');
+                this._mostrarNotificacion(`La imagen ${file.name} excede 10MB`, 'warning');
                 return false;
             }
+
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                this._mostrarNotificacion(`Formato no válido: ${file.name}. Usa JPG, PNG, GIF o WEBP`, 'warning');
+                return false;
+            }
+
             return true;
         });
 
         archivosValidos.forEach(file => {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 8);
+            const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+            const generatedName = `${timestamp}_${random}_${cleanFileName}`;
+
             this.imagenesSeleccionadas.push({
                 file: file,
                 preview: URL.createObjectURL(file),
                 comentario: '',
                 elementos: [],
-                edited: false
+                edited: false,
+                generatedName: generatedName
             });
         });
 
@@ -550,7 +997,10 @@ class CrearMercanciaPerdidaController {
         });
     }
 
-    _validarYGuardar() {
+    // =============================================
+    // VALIDAR Y MOSTRAR PREVIEW
+    // =============================================
+    async _validarYMostrarPreview() {
         const empresaInput = document.getElementById('nombreEmpresaCC');
         const nombreEmpresaCC = empresaInput.value.trim();
 
@@ -633,165 +1083,27 @@ class CrearMercanciaPerdidaController {
             imagenes: this.imagenesSeleccionadas
         };
 
-        this._confirmarYGuardar(datos);
-    }
-
-    async _confirmarYGuardar(datos) {
-        const perdidoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(datos.montoPerdido);
-        const recuperadoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(datos.montoRecuperado);
-
-        const confirmResult = await Swal.fire({
-            title: '¿Registrar evento?',
-            html: `
-                <div style="text-align: left;">
-                    <p><strong>Empresa/CC:</strong> ${this._escapeHTML(datos.nombreEmpresaCC)}</p>
-                    <p><strong>Tipo:</strong> ${this._getTipoEventoTexto(datos.tipoEvento)}</p>
-                    <p><strong>Monto Perdido:</strong> ${perdidoFormateado}</p>
-                    <p><strong>Monto Recuperado:</strong> ${recuperadoFormateado}</p>
-                    <p><strong>Fecha:</strong> ${new Date(datos.fechaHora).toLocaleString()}</p>
-                    <p><strong>Evidencias:</strong> ${datos.imagenes.length}</p>
-                </div>
-            `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'REGISTRAR EVENTO',
-            cancelButtonText: 'CANCELAR',
-            confirmButtonColor: '#28a745',
-            reverseButtons: false
+        // Mostrar loading
+        Swal.fire({
+            title: 'Generando vista previa...',
+            text: 'Preparando el reporte PDF con tus evidencias',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
         });
-
-        if (confirmResult.isConfirmed) {
-            await this._guardarRegistro(datos);
-        }
-    }
-
-    _getTipoEventoTexto(tipo) {
-        const tipos = {
-            'robo': 'Robo',
-            'extravio': 'Extravío',
-            'accidente': 'Accidente',
-            'otro': 'Otro'
-        };
-        return tipos[tipo] || tipo;
-    }
-
-    // =============================================
-    // SUBIDA DE EVIDENCIAS (usando MercanciaPerdidaManager)
-    // =============================================
-    async _subirEvidencias(registroId, imagenes) {
-        if (!imagenes || imagenes.length === 0) return [];
         
-        const resultados = [];
+        // Generar y mostrar vista previa
+        await this._mostrarVistaPreviaPDF(datos);
         
-        for (let i = 0; i < imagenes.length; i++) {
-            const img = imagenes[i];
-            const comentario = img.comentario || '';
-            
-            const timestamp = Date.now();
-            const random = Math.random().toString(36).substring(2, 8);
-            const nombreArchivo = `${timestamp}_${random}_${img.file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-            const rutaStorage = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registroId}/evidencias/${nombreArchivo}`;
-            
-            try {
-                console.log(`📤 Subiendo evidencia ${i + 1}/${imagenes.length}: ${rutaStorage}`);
-                const resultado = await this.mercanciaManager.subirArchivo(img.file, rutaStorage);
-                
-                resultados.push({
-                    id: `EVD${Date.now()}_${i}_${random}`,
-                    url: resultado.url,
-                    comentario: comentario,
-                    fechaAgregada: new Date()
-                });
-                console.log(`✅ Evidencia ${i + 1} subida correctamente`);
-            } catch (error) {
-                console.error(`❌ Error subiendo evidencia ${i + 1}:`, error);
-            }
-        }
-        
-        return resultados;
+        Swal.close();
     }
 
     // =============================================
-    // GENERACIÓN AUTOMÁTICA DE PDF (igual que incidencias)
+    // GUARDAR REGISTRO CON PDF GENERADO
     // =============================================
-    async _generarYSubirPDF(registro) {
-        try {
-            console.log('📄 Iniciando generación automática de PDF para:', registro.id);
-
-            if (!this.pdfGenerator) {
-                console.error('❌ PDFGenerator no disponible');
-                return false;
-            }
-
-            // Configurar el generador (igual que en incidencias)
-            this.pdfGenerator.configurar({
-                organizacionActual: {
-                    nombre: this.usuarioActual.organizacion,
-                    camelCase: this.usuarioActual.organizacionCamelCase,
-                    logoUrl: localStorage.getItem('organizacionLogo') || null
-                },
-                empresasCache: this.empresas,
-                authToken: localStorage.getItem('authToken')
-            });
-
-            // Esperar un momento para asegurar que todo esté listo
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Recargar el registro actualizado
-            const registroActualizado = await this.mercanciaManager.getRegistroById(
-                registro.id,
-                this.usuarioActual.organizacionCamelCase
-            );
-
-            if (!registroActualizado) {
-                throw new Error('No se pudo recargar el registro');
-            }
-
-            // Generar PDF como blob (sin mostrar alerta)
-            const pdfBlob = await this.pdfGenerator.generarReporte(registroActualizado, {
-                mostrarAlerta: false,
-                returnBlob: true
-            });
-
-            if (!pdfBlob || pdfBlob.size === 0) {
-                throw new Error('El PDF generado está vacío');
-            }
-
-            console.log(`📦 PDF generado: ${pdfBlob.size} bytes`);
-
-            // Subir PDF a Storage
-            const pdfFile = new File([pdfBlob], `reporte_${registro.id}.pdf`, { type: 'application/pdf' });
-            const rutaPDF = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registro.id}/reporte_${registro.id}.pdf`;
-
-            const resultado = await this.mercanciaManager.subirArchivo(pdfFile, rutaPDF);
-
-            // Actualizar registro con URL del PDF
-            const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-            const { db } = await import('/config/firebase-config.js');
-
-            const collectionName = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}`;
-            const registroRef = doc(db, collectionName, registro.id);
-
-            await updateDoc(registroRef, {
-                pdfUrl: resultado.url,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: this.usuarioActual.id,
-                actualizadoPorNombre: this.usuarioActual.nombreCompleto
-            });
-
-            console.log('✅ PDF subido exitosamente:', resultado.url);
-            return true;
-
-        } catch (error) {
-            console.error('❌ Error generando PDF automático:', error);
-            return false;
-        }
-    }
-
-    // =============================================
-    // GUARDAR REGISTRO COMPLETO (igual estructura que incidencias)
-    // =============================================
-    async _guardarRegistro(datos) {
+    async _guardarRegistroConPDF(datos, pdfBlob) {
         const btnCrear = document.getElementById('btnCrearRegistro');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Registrar Evento';
 
@@ -804,8 +1116,8 @@ class CrearMercanciaPerdidaController {
             }
 
             Swal.fire({
-                title: 'Registrando evento...',
-                text: 'Por favor espere, esto puede tomar unos segundos.',
+                title: 'Guardando registro...',
+                text: 'Subiendo evidencias y guardando información...',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
@@ -817,6 +1129,7 @@ class CrearMercanciaPerdidaController {
             const fechaObj = new Date(datos.fechaHora);
             const hora = fechaObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
+            // PASO 1: CREAR REGISTRO EN FIRESTORE
             const registroData = {
                 nombreEmpresaCC: datos.nombreEmpresaCC,
                 tipoEvento: datos.tipoEvento,
@@ -832,25 +1145,25 @@ class CrearMercanciaPerdidaController {
                 reportadoPorNombre: this.usuarioActual.nombreCompleto
             };
 
-            // Crear registro en Firestore (sin imágenes por ahora)
             const nuevoRegistro = await this.mercanciaManager.crearRegistro(
                 registroData,
                 this.usuarioActual,
-                [], // archivos vacíos
-                []  // comentarios vacíos
+                [],
+                []
             );
 
             registroId = nuevoRegistro.id;
+            console.log('✅ Registro creado:', registroId);
 
+            // PASO 2: SUBIR EVIDENCIAS
             Swal.update({
                 title: 'Subiendo evidencias...',
                 text: `Subiendo ${datos.imagenes.length} evidencias...`
             });
 
-            // Subir evidencias
             const evidenciasUrls = await this._subirEvidencias(registroId, datos.imagenes);
 
-            // Actualizar registro con las URLs de las evidencias
+            // PASO 3: ACTUALIZAR REGISTRO CON URLs DE EVIDENCIAS
             if (evidenciasUrls.length > 0) {
                 await this.mercanciaManager.actualizarRegistro(
                     registroId,
@@ -859,32 +1172,33 @@ class CrearMercanciaPerdidaController {
                     this.usuarioActual.organizacionCamelCase,
                     this.usuarioActual
                 );
+                console.log(`✅ ${evidenciasUrls.length} evidencias actualizadas`);
             }
 
+            // PASO 4: SUBIR EL PDF GENERADO (el de la vista previa)
             Swal.update({
-                title: 'Generando reporte PDF...',
-                text: 'Creando el documento PDF...',
-                html: `
-                    <div class="progress-container" style="width:100%; margin-top:10px;">
-                        <div class="progress-bar" style="width:0%; height:4px; background:linear-gradient(90deg, #1a3b5d, #c9a03d); border-radius:2px; transition:width 0.3s;"></div>
-                        <p class="progress-text" style="margin-top:10px; font-size:12px; color:#666;">Preparando PDF...</p>
-                    </div>
-                `,
-                showConfirmButton: false
+                title: 'Subiendo PDF...',
+                text: 'Guardando el reporte PDF...'
             });
 
-            // Recargar registro actualizado
-            const registroActualizado = await this.mercanciaManager.getRegistroById(
+            const pdfFile = new File([pdfBlob], `reporte_${registroId}.pdf`, { type: 'application/pdf' });
+            const rutaPDF = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registroId}/pdf/reporte_${registroId}.pdf`;
+
+            const resultado = await this.mercanciaManager.subirArchivo(pdfFile, rutaPDF);
+
+            await this.mercanciaManager.actualizarEstadoPDF(
                 registroId,
-                this.usuarioActual.organizacionCamelCase
+                'completado',
+                resultado.url,
+                this.usuarioActual.organizacionCamelCase,
+                this.usuarioActual
             );
 
-            // Generar y subir PDF automáticamente (igual que en incidencias)
-            const pdfGenerado = await this._generarYSubirPDF(registroActualizado);
+            console.log('✅ PDF subido exitosamente:', resultado.url);
 
             Swal.close();
 
-            // Registrar en historial
+            // PASO 5: REGISTRAR EN HISTORIAL
             const historial = await this._initHistorialManager();
             if (historial) {
                 await historial.registrarActividad({
@@ -897,17 +1211,24 @@ class CrearMercanciaPerdidaController {
                         nombreEmpresaCC: datos.nombreEmpresaCC,
                         montoPerdido: datos.montoPerdido,
                         tipoEvento: datos.tipoEvento,
-                        totalEvidencias: evidenciasUrls.length,
-                        pdfGenerado: pdfGenerado
+                        totalEvidencias: evidenciasUrls.length
                     }
                 });
             }
 
-            const mensajePDF = pdfGenerado ? ' y su reporte PDF' : '';
             await Swal.fire({
                 icon: 'success',
                 title: '¡Evento registrado!',
-                text: `El registro de ${datos.nombreEmpresaCC}${mensajePDF} se ha guardado correctamente.`,
+                html: `
+                    <div style="text-align: center;">
+                        <i class="fas fa-check-circle" style="font-size: 48px; color: #28a745; margin-bottom: 16px;"></i>
+                        <p>El registro de <strong>${this._escapeHTML(datos.nombreEmpresaCC)}</strong> se ha guardado correctamente.</p>
+                        <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                            <i class="fas fa-file-pdf"></i> El reporte PDF ya está disponible.<br>
+                            Puedes descargarlo desde la lista de registros.
+                        </p>
+                    </div>
+                `,
                 confirmButtonText: 'Ver registros',
                 confirmButtonColor: '#28a745'
             });
@@ -918,14 +1239,13 @@ class CrearMercanciaPerdidaController {
             console.error('Error guardando registro:', error);
             Swal.close();
             
-            // Limpiar si hay error
             if (registroId) {
                 try {
                     const rutaStorage = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registroId}`;
                     await this.mercanciaManager.eliminarCarpetaStorage(rutaStorage);
                     await this.mercanciaManager.eliminarRegistro(registroId, this.usuarioActual.organizacionCamelCase, false);
                 } catch (cleanupError) {
-                    console.error('Error limpiando después de fallo:', cleanupError);
+                    console.error('Error limpiando:', cleanupError);
                 }
             }
             
@@ -936,6 +1256,44 @@ class CrearMercanciaPerdidaController {
                 btnCrear.disabled = false;
             }
         }
+    }
+
+    async _subirEvidencias(registroId, imagenes) {
+        if (!imagenes || imagenes.length === 0) return [];
+        
+        const resultados = [];
+        console.log(`📸 Subiendo ${imagenes.length} evidencias...`);
+        
+        for (let i = 0; i < imagenes.length; i++) {
+            const img = imagenes[i];
+            const comentario = img.comentario || '';
+            
+            const nombreArchivo = img.generatedName || 
+                `${Date.now()}_${Math.random().toString(36).substring(2, 8)}_${img.file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            
+            const rutaStorage = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registroId}/evidencias/${nombreArchivo}`;
+            
+            try {
+                console.log(`📤 Evidencia ${i + 1}/${imagenes.length}: ${nombreArchivo}`);
+                const resultado = await this.mercanciaManager.subirArchivo(img.file, rutaStorage);
+                
+                resultados.push({
+                    id: `EVD${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+                    url: resultado.url,
+                    path: resultado.path,
+                    comentario: comentario,
+                    nombre: img.file.name,
+                    generatedName: nombreArchivo,
+                    fechaAgregada: new Date()
+                });
+                console.log(`✅ Evidencia ${i + 1} subida correctamente`);
+            } catch (error) {
+                console.error(`❌ Error subiendo evidencia ${i + 1}:`, error);
+                throw error;
+            }
+        }
+        
+        return resultados;
     }
 
     _volverALista() {
@@ -992,6 +1350,16 @@ class CrearMercanciaPerdidaController {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+    
+    _getTipoEventoTexto(tipo) {
+        const tipos = {
+            'robo': 'Robo',
+            'extravio': 'Extravío',
+            'accidente': 'Accidente',
+            'otro': 'Otro'
+        };
+        return tipos[tipo] || tipo;
     }
 }
 

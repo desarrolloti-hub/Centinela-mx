@@ -20,8 +20,8 @@ const IMAGEN_CONFIG = {
     MAX_RETRIES: 2,
     RETRY_DELAY: 1000,
     MAX_PARALLEL: 3,
-    CACHE_DURATION: 300000,
-    MAX_IMAGE_SIZE: 5 * 1024 * 1024,
+    CACHE_DURATION: 300000, // 5 minutos
+    MAX_IMAGE_SIZE: 10 * 1024 * 1024, // 10MB
     SUPPORTED_FORMATS: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
     TAMANIOS: {
         IMAGEN_PRINCIPAL: {
@@ -167,59 +167,78 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
     }
 
     // =============================================
-    // SISTEMA DE IMÁGENES - VERSIÓN COMPLETA (igual que iph-generator)
+    // CONVERSIÓN DE BLOB A BASE64
     // =============================================
     
-    extraerUrlImagen(item) {
-        if (!item) return null;
+    async blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    // =============================================
+    // SISTEMA DE IMÁGENES - VERSIÓN MEJORADA
+    // =============================================
+    
+  // En mercanciaPDF.js - MÉTODO extraerUrlImagen CORREGIDO
+
+extraerUrlImagen(item) {
+    if (!item) return null;
+    
+    // Si es un string directamente
+    if (typeof item === 'string') {
+        const trimmed = item.trim();
+        if (trimmed.startsWith('http') || trimmed.startsWith('data:image') || trimmed.startsWith('blob:')) {
+            return trimmed;
+        }
+        return null;
+    }
+    
+    // Si es un objeto
+    if (typeof item === 'object') {
+        // ========== PRIMERO: BUSCAR LA URL DIRECTAMENTE ==========
+        // Tu evidencia tiene la URL en item.url
+        if (item.url && typeof item.url === 'string') {
+            let url = item.url.trim();
+            console.log(`✅ URL encontrada en item.url: ${url.substring(0, 80)}...`);
+            return url;
+        }
         
-        if (typeof item === 'string') {
-            const trimmed = item.trim();
-            if (trimmed.includes('firebasestorage.googleapis.com') || 
-                trimmed.includes('firebaseio.com') ||
-                trimmed.includes('firebase')) {
-                if (this.authToken && !trimmed.includes('token=')) {
-                    const separator = trimmed.includes('?') ? '&' : '?';
-                    return `${trimmed}${separator}token=${this.authToken}`;
+        // ========== SEGUNDO: OTRAS PROPIEDADES DE FIREBASE ==========
+        const firebaseProps = ['downloadURL', 'storageUrl', 'firebaseUrl', 'urlDescarga'];
+        for (const prop of firebaseProps) {
+            if (item[prop] && typeof item[prop] === 'string') {
+                let url = item[prop].trim();
+                console.log(`✅ URL encontrada en ${prop}: ${url.substring(0, 80)}...`);
+                return url;
+            }
+        }
+        
+        // ========== TERCERO: PROPIEDADES COMUNES DE IMAGEN ==========
+        const props = ['src', 'imageUrl', 'foto', 'imagen', 'evidencia', 'fotoUrl', 'imagenUrl', 'preview'];
+        for (const prop of props) {
+            if (item[prop] && typeof item[prop] === 'string') {
+                const valor = item[prop].trim();
+                if (valor.startsWith('http') || valor.startsWith('data:image') || valor.startsWith('blob:')) {
+                    return valor;
                 }
-                return trimmed;
             }
-            if (trimmed.startsWith('http') || trimmed.startsWith('data:image') || trimmed.startsWith('blob:')) {
-                return trimmed;
-            }
+        }
+        
+        // ========== CUARTO: SI TIENE PATH PERO NO URL (no debería pasar) ==========
+        if (item.path && typeof item.path === 'string') {
+            console.warn('⚠️ Solo hay path, no URL:', item.path);
             return null;
         }
         
-        if (typeof item === 'object') {
-            const firebaseProps = ['url', 'downloadURL', 'storageUrl', 'firebaseUrl', 'urlDescarga'];
-            for (const prop of firebaseProps) {
-                if (item[prop] && typeof item[prop] === 'string') {
-                    let url = item[prop].trim();
-                    if ((url.includes('firebase') || url.includes('googleapis')) && this.authToken && !url.includes('token=')) {
-                        const separator = url.includes('?') ? '&' : '?';
-                        url = `${url}${separator}token=${this.authToken}`;
-                    }
-                    return url;
-                }
-            }
-            
-            const props = ['src', 'path', 'imageUrl', 'foto', 'imagen', 'evidencia', 'fotoUrl', 'imagenUrl'];
-            for (const prop of props) {
-                if (item[prop] && typeof item[prop] === 'string') {
-                    const valor = item[prop].trim();
-                    if (valor.startsWith('http') || valor.startsWith('data:image') || valor.startsWith('blob:')) {
-                        return valor;
-                    }
-                }
-            }
-            
-            if (item.url && typeof item.url === 'object' && item.url.url) {
-                return item.url.url;
-            }
-        }
-        
-        return null;
+        console.warn('❌ No se pudo extraer URL de:', Object.keys(item));
     }
+    
+    return null;
+}
     
     extraerComentario(item) {
         if (!item) return '';
@@ -251,16 +270,23 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
     normalizarUrl(url) {
         if (!url) return null;
         let normalized = url.trim();
+        // Remover parámetros de tracking
         normalized = normalized.replace(/[?&](utm_|fbclid|gclid|_ga|_gl)[^&]*/g, '');
         normalized = normalized.replace(/[?&]$/, '');
         return normalized;
     }
     
-    async cargarImagenConTimeout(url, timeoutMs = IMAGEN_CONFIG.TIMEOUT) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        
+    // =============================================
+    // CARGA DE IMÁGENES CON FETCH DIRECTO
+    // =============================================
+    
+    async cargarConFetch(url) {
         try {
+            console.log('📡 Fetch directo:', url.substring(0, 80));
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
             const headers = {};
             if (this.authToken) {
                 headers['Authorization'] = `Bearer ${this.authToken}`;
@@ -276,100 +302,127 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(`HTTP ${response.status}`);
             }
             
             const blob = await response.blob();
             
-            if (!IMAGEN_CONFIG.SUPPORTED_FORMATS.includes(blob.type)) {
-                throw new Error(`Formato no soportado: ${blob.type}`);
+            if (!blob.type.startsWith('image/')) {
+                throw new Error('No es una imagen');
             }
             
             if (blob.size > IMAGEN_CONFIG.MAX_IMAGE_SIZE) {
-                throw new Error(`Imagen demasiado grande: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+                throw new Error(`Imagen muy grande: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
             }
             
             return await this.blobToBase64(blob);
             
         } catch (error) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                throw new Error(`Timeout después de ${timeoutMs}ms`);
-            }
-            throw error;
+            console.warn('Fetch falló:', error.message);
+            return null;
         }
     }
     
-    // MÉTODO CRÍTICO: cargarImagenMultiEstrategia (igual que en iph-generator)
+    async cargarConImage(url) {
+        return new Promise((resolve) => {
+            console.log('📡 Image element:', url.substring(0, 80));
+            
+            const img = new Image();
+            const timeoutId = setTimeout(() => {
+                img.src = '';
+                resolve(null);
+            }, 10000);
+            
+            img.onload = () => {
+                clearTimeout(timeoutId);
+                const canvas = document.createElement('canvas');
+                const maxDimension = 1024;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = (height * maxDimension) / width;
+                        width = maxDimension;
+                    } else {
+                        width = (width * maxDimension) / height;
+                        height = maxDimension;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            
+            img.onerror = () => {
+                clearTimeout(timeoutId);
+                resolve(null);
+            };
+            
+            img.crossOrigin = 'Anonymous';
+            img.src = url;
+        });
+    }
+    
+    async cargarConProxy(url) {
+        const proxies = [
+            `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            `https://cors-anywhere.herokuapp.com/${url}`
+        ];
+        
+        for (const proxyUrl of proxies) {
+            try {
+                console.log('📡 Proxy:', proxyUrl.substring(0, 80));
+                const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    if (blob.type.startsWith('image/')) {
+                        return await this.blobToBase64(blob);
+                    }
+                }
+            } catch (error) {
+                console.warn('Proxy falló:', error.message);
+                continue;
+            }
+        }
+        return null;
+    }
+    
+    // =============================================
+    // MÉTODO PRINCIPAL DE CARGA DE IMÁGENES
+    // =============================================
+    
     async cargarImagenMultiEstrategia(url, intento = 0) {
         const urlNormalizada = this.normalizarUrl(url);
+        
         if (!this.esUrlValida(urlNormalizada)) {
+            console.error('❌ URL inválida:', urlNormalizada);
             throw new Error('URL inválida');
         }
         
         const cacheKey = `${urlNormalizada}_${intento}`;
+        
+        // Verificar caché
         if (this.imageCache.has(cacheKey)) {
+            console.log('✅ Imagen desde caché');
             return this.imageCache.get(cacheKey);
         }
         
+        // Verificar si ya está cargando
         if (this.pendingImages.has(cacheKey)) {
+            console.log('⏳ Esperando carga pendiente');
             return await this.pendingImages.get(cacheKey);
         }
         
+        // Estrategias de carga (prioridad: fetch directo, image element, proxy)
         const estrategias = [
-            async () => this.cargarImagenConTimeout(urlNormalizada),
-            async () => {
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(urlNormalizada)}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlNormalizada)}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                const proxyUrl = `https://cors-anywhere.herokuapp.com/${urlNormalizada}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    const timeoutId = setTimeout(() => {
-                        reject(new Error('Image element timeout'));
-                    }, IMAGEN_CONFIG.TIMEOUT);
-                    
-                    img.onload = () => {
-                        clearTimeout(timeoutId);
-                        const canvas = document.createElement('canvas');
-                        const maxDimension = 1024;
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        if (width > maxDimension || height > maxDimension) {
-                            if (width > height) {
-                                height = (height * maxDimension) / width;
-                                width = maxDimension;
-                            } else {
-                                width = (width * maxDimension) / height;
-                                height = maxDimension;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.85));
-                    };
-                    
-                    img.onerror = () => {
-                        clearTimeout(timeoutId);
-                        reject(new Error('Failed to load image'));
-                    };
-                    
-                    img.crossOrigin = 'Anonymous';
-                    img.src = urlNormalizada;
-                });
-            }
+            () => this.cargarConFetch(urlNormalizada),
+            () => this.cargarConImage(urlNormalizada),
+            () => this.cargarConProxy(urlNormalizada)
         ];
         
         const cargaPromise = (async () => {
@@ -379,6 +432,8 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                 try {
                     const resultado = await estrategias[i]();
                     if (resultado) {
+                        console.log(`✅ Imagen cargada con estrategia ${i + 1}`);
+                        // Guardar en caché
                         this.imageCache.set(cacheKey, resultado);
                         setTimeout(() => {
                             this.imageCache.delete(cacheKey);
@@ -387,8 +442,8 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                     }
                 } catch (error) {
                     lastError = error;
-                    console.warn(`Estrategia ${i + 1} falló para ${urlNormalizada}:`, error.message);
-                    await new Promise(r => setTimeout(r, 200));
+                    console.warn(`Estrategia ${i + 1} falló:`, error.message);
+                    await new Promise(r => setTimeout(r, 500));
                 }
             }
             
@@ -402,7 +457,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         } finally {
             setTimeout(() => {
                 this.pendingImages.delete(cacheKey);
-            }, 1000);
+            }, 2000);
         }
     }
     
@@ -413,10 +468,9 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             try {
                 if (intento > 0) {
                     const delay = IMAGEN_CONFIG.RETRY_DELAY * Math.pow(2, intento - 1);
-                    console.log(`⏳ Reintentando en ${delay}ms...`);
+                    console.log(`⏳ Reintento ${intento} en ${delay}ms...`);
                     await new Promise(r => setTimeout(r, delay));
                 }
-                // ✅ AHORA USA cargarImagenMultiEstrategia
                 return await this.cargarImagenMultiEstrategia(url, intento);
             } catch (error) {
                 lastError = error;
@@ -424,11 +478,23 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             }
         }
         
-        throw lastError || new Error('No se pudo cargar la imagen después de múltiples reintentos');
+        throw lastError || new Error('No se pudo cargar la imagen');
     }
     
-    async preCargarImagenes(urls, onProgress) {
-        const urlsValidas = urls.filter(url => this.esUrlValida(this.extraerUrlImagen(url)));
+    async preCargarImagenes(items, onProgress) {
+        const itemsValidos = items.filter(item => {
+            const url = this.extraerUrlImagen(item);
+            return url && this.esUrlValida(url);
+        });
+        
+        if (itemsValidos.length === 0) {
+            console.log('⚠️ No hay imágenes válidas para precargar');
+            if (onProgress) onProgress(1);
+            return new Map();
+        }
+        
+        console.log(`📸 Precargando ${itemsValidos.length} imágenes...`);
+        
         const resultados = new Map();
         let completadas = 0;
         
@@ -439,44 +505,65 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                     completadas++;
                     return null;
                 }
+                
+                console.log(`🖼️ Cargando imagen ${completadas + 1}/${itemsValidos.length}`);
                 const imgData = await this.cargarImagenConReintentos(imagenUrl);
-                resultados.set(imagenUrl, imgData);
+                
+                if (imgData) {
+                    resultados.set(imagenUrl, imgData);
+                    console.log(`✅ Imagen ${completadas + 1} cargada`);
+                } else {
+                    console.warn(`⚠️ Imagen ${completadas + 1} no se pudo cargar`);
+                }
+                
                 completadas++;
                 if (onProgress) {
-                    onProgress(completadas / urlsValidas.length);
+                    onProgress(completadas / itemsValidos.length);
                 }
+                
                 return imgData;
             } catch (error) {
                 console.error('Error precargando imagen:', error);
                 completadas++;
+                if (onProgress) {
+                    onProgress(completadas / itemsValidos.length);
+                }
                 return null;
             }
         };
         
+        // Procesar en paralelo con límite
         const lotes = [];
-        for (let i = 0; i < urlsValidas.length; i += IMAGEN_CONFIG.MAX_PARALLEL) {
-            lotes.push(urlsValidas.slice(i, i + IMAGEN_CONFIG.MAX_PARALLEL));
+        for (let i = 0; i < itemsValidos.length; i += IMAGEN_CONFIG.MAX_PARALLEL) {
+            lotes.push(itemsValidos.slice(i, i + IMAGEN_CONFIG.MAX_PARALLEL));
         }
         
         for (const lote of lotes) {
             await Promise.all(lote.map(item => procesarImagen(item)));
         }
         
+        console.log(`✅ Precarga completada: ${resultados.size}/${itemsValidos.length} imágenes cargadas`);
         return resultados;
     }
     
     async obtenerImagen(item) {
         const url = this.extraerUrlImagen(item);
-        if (!url) return null;
+        if (!url) {
+            console.warn('❌ No se pudo extraer URL');
+            return null;
+        }
         
+        // Buscar en caché
         const cacheKey = this.normalizarUrl(url);
         for (const [key, value] of this.imageCache.entries()) {
             if (key.includes(cacheKey) || cacheKey.includes(key)) {
+                console.log('✅ Imagen desde caché');
                 return value;
             }
         }
         
         try {
+            console.log('🖼️ Cargando imagen:', url.substring(0, 80));
             return await this.cargarImagenConReintentos(url);
         } catch (error) {
             console.error('Error obteniendo imagen:', error);
@@ -484,12 +571,24 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         }
     }
     
+    // =============================================
+    // DIBUJAR IMAGEN EN PDF
+    // =============================================
+    
     async dibujarImagenEnPDF(pdf, imagen, x, y, ancho, alto, numero, esEvidencia = false) {
         try {
             const imgData = await this.obtenerImagen(imagen);
             
             if (imgData) {
                 try {
+                    // Dibujar fondo blanco y borde
+                    pdf.setFillColor(255, 255, 255);
+                    pdf.rect(x + 2, y + 2, ancho - 4, alto - 4, 'F');
+                    pdf.setDrawColor(coloresBase.borde);
+                    pdf.setLineWidth(0.5);
+                    pdf.rect(x + 2, y + 2, ancho - 4, alto - 4, 'S');
+                    
+                    // Calcular dimensiones manteniendo aspecto
                     const tempImg = new Image();
                     await new Promise((resolve, reject) => {
                         tempImg.onload = resolve;
@@ -498,8 +597,8 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                     });
                     
                     const aspectRatio = tempImg.width / tempImg.height;
-                    let drawWidth = ancho - 4;
-                    let drawHeight = alto - 4;
+                    let drawWidth = ancho - 8;
+                    let drawHeight = alto - 8;
                     
                     if (aspectRatio > 1) {
                         drawHeight = drawWidth / aspectRatio;
@@ -511,10 +610,14 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                     const yOffset = (alto - drawHeight) / 2;
                     
                     pdf.addImage(imgData, 'JPEG', x + 2 + xOffset, y + 2 + yOffset, drawWidth, drawHeight, undefined, 'FAST');
-                } catch {
+                    console.log(`✅ Imagen ${numero} dibujada correctamente`);
+                    
+                } catch (imgError) {
+                    console.warn(`Error renderizando imagen ${numero}, método alternativo:`, imgError);
                     pdf.addImage(imgData, 'JPEG', x + 2, y + 2, ancho - 4, alto - 4, undefined, 'FAST');
                 }
             } else {
+                console.warn(`⚠️ Imagen ${numero} no disponible, dibujando placeholder`);
                 this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
             }
         } catch (error) {
@@ -528,7 +631,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             await this.dibujarImagenEnPDF(pdf, imagen, x, y, ancho, alto, numero, esEvidencia);
             
             const comentario = this.extraerComentario(imagen);
-            if (comentario) {
+            if (comentario && comentario.trim() !== '') {
                 pdf.setFillColor(248, 248, 248);
                 pdf.rect(xComentario, y, anchoComentario, alto, 'F');
                 
@@ -602,7 +705,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
     }
     
     // =============================================
-    // GENERACIÓN DE PÁGINAS (el resto del código permanece igual)
+    // GENERACIÓN DE PÁGINAS
     // =============================================
     
     async generarPaginaReporte(pdf, registro, onProgress) {
@@ -1014,6 +1117,13 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             if (diagnosticar) {
                 console.log('🔍 Ejecutando diagnóstico de imágenes...');
                 console.log('📸 Total evidencias:', registro.evidencias?.length || 0);
+                
+                if (registro.evidencias && registro.evidencias.length > 0) {
+                    registro.evidencias.forEach((ev, i) => {
+                        const url = this.extraerUrlImagen(ev);
+                        console.log(`📷 Evidencia ${i + 1}:`, url ? url.substring(0, 80) : '❌ SIN URL');
+                    });
+                }
             }
             
             if (mostrarAlerta) {
@@ -1120,25 +1230,28 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             const img = evidencias[i];
             console.log(`\n🔍 Evidencia #${i + 1}:`);
             console.log(`   Tipo: ${typeof img}`);
+            console.log(`   Objeto:`, JSON.stringify(img, null, 2).substring(0, 200));
             
             const urlExtraida = this.extraerUrlImagen(img);
             if (urlExtraida) {
                 const preview = urlExtraida.length > 100 ? urlExtraida.substring(0, 100) + '...' : urlExtraida;
-                console.log(`   URL extraída: ${preview}`);
+                console.log(`   ✅ URL extraída: ${preview}`);
                 
                 const comentario = this.extraerComentario(img);
                 if (comentario) {
-                    console.log(`   Comentario: ${comentario.substring(0, 50)}...`);
+                    console.log(`   💬 Comentario: ${comentario.substring(0, 50)}...`);
                 }
             } else {
                 console.log(`   ❌ No se pudo extraer URL de la evidencia`);
+                console.log(`   Propiedades disponibles:`, Object.keys(img));
             }
         }
         
         console.log('\n===== FIN DIAGNÓSTICO =====');
         
         return {
-            totalEvidencias: evidencias.length
+            totalEvidencias: evidencias.length,
+            urlsEncontradas: evidencias.filter(e => this.extraerUrlImagen(e)).length
         };
     }
 }

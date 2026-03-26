@@ -1,6 +1,8 @@
 // mercanciaPerdida.js - CONTROLADOR
+// VERSIÓN ACTUALIZADA CON BOTÓN DE PDF Y ESTADO DE GENERACIÓN
 
 import { MercanciaPerdidaManager } from '/clases/mercanciaPerdida.js';
+import '/components/visualizadorPDF.js';
 
 // =============================================
 // VARIABLES GLOBALES
@@ -86,8 +88,8 @@ async function cargarRegistrosPagina(pagina) {
                         <span class="visually-hidden">Cargando...</span>
                     </div>
                     <p style="margin-top: 12px; color: var(--color-text-secondary);">Cargando registros...</p>
-                </td>
-            </tr>
+                <\/td>
+            <\/tr>
         `;
 
         const resultado = await mercanciaManager.getRegistrosPaginados(
@@ -118,8 +120,8 @@ async function cargarRegistrosPagina(pagina) {
                                 <i class="fas fa-plus-circle"></i> Nuevo Registro
                             </a>
                         </div>
-                    </td>
-                </tr>
+                    <\/td>
+                <\/tr>
             `;
             return;
         }
@@ -145,8 +147,8 @@ window.irPagina = async function (pagina) {
                             <span class="visually-hidden">Cargando...</span>
                         </div>
                         <p style="margin-top: 12px;">Cargando página ${pagina}...</p>
-                    </td>
-                </tr>
+                    <\/td>
+                <\/tr>
             `;
         }
         
@@ -311,6 +313,60 @@ function limpiarFiltros() {
     cargarRegistrosPagina(1);
 }
 
+// =============================================
+// VER PDF (muestra si ya está generado o informa estado)
+// =============================================
+window.verPDF = async function (registroId, event) {
+    event?.stopPropagation();
+    
+    try {
+        const registro = registrosActuales.find(r => r.id === registroId);
+        
+        if (!registro) {
+            throw new Error('Registro no encontrado');
+        }
+        
+        if (registro.pdfUrl) {
+            window.visualizadorPDF.abrir(registro.pdfUrl, `Reporte ${registro.id}`);
+        } else if (registro.estadoGeneracion === 'generando') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Generando PDF',
+                text: 'El PDF se está generando en segundo plano. Recibirás una notificación cuando esté listo.',
+                confirmButtonText: 'Entendido'
+            });
+        } else if (registro.estadoGeneracion === 'pendiente') {
+            Swal.fire({
+                icon: 'info',
+                title: 'PDF pendiente',
+                text: 'La generación del PDF comenzará en breve. Recibirás una notificación cuando esté listo.',
+                confirmButtonText: 'Entendido'
+            });
+        } else if (registro.estadoGeneracion === 'error') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al generar PDF',
+                text: 'Hubo un problema al generar el PDF. Por favor, contacta al administrador.',
+                confirmButtonText: 'Entendido'
+            });
+        } else {
+            Swal.fire({
+                icon: 'info',
+                title: 'PDF no disponible',
+                text: 'Este registro aún no tiene un PDF generado. Se generará automáticamente en segundo plano.',
+                confirmButtonText: 'Entendido'
+            });
+        }
+    } catch (error) {
+        console.error('Error al abrir PDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo abrir el PDF: ' + error.message
+        });
+    }
+};
+
 window.verDetallesRegistro = function (registroId, event) {
     event?.stopPropagation();
     const registro = registrosActuales.find(r => r.id === registroId);
@@ -418,6 +474,10 @@ function mostrarModalDetalles(registro) {
         `;
     }
     
+    const estadoPDF = uiData.estadoGeneracion || 'pendiente';
+    const estadoPDFTexto = uiData.estadoGeneracionTexto || 'Pendiente';
+    const estadoPDFColor = uiData.estadoGeneracionColor || '#ffc107';
+    
     body.innerHTML = `
         <div class="detalles-grid">
             <div class="detalle-card">
@@ -435,6 +495,10 @@ function mostrarModalDetalles(registro) {
             <div class="detalle-card">
                 <p><strong>Estado</strong></p>
                 <p><span>${uiData.estadoTexto || uiData.estado}</span></p>
+            </div>
+            <div class="detalle-card">
+                <p><strong>Estado del PDF</strong></p>
+                <p><span style="color: ${estadoPDFColor};">${estadoPDFTexto}</span></p>
             </div>
             <div class="detalle-card">
                 <p><strong>Monto Perdido</strong></p>
@@ -493,6 +557,13 @@ function mostrarModalDetalles(registro) {
             ${recuperacionesHtml}
         </div>
         ${evidenciasHtml}
+        ${uiData.pdfUrl ? `
+        <div style="margin-top: 20px; text-align: center;">
+            <button class="btn btn-primary" onclick="window.visualizadorPDF.abrir('${uiData.pdfUrl}', 'Reporte ${uiData.id}')">
+                <i class="fas fa-file-pdf"></i> Ver PDF
+            </button>
+        </div>
+        ` : ''}
     `;
     
     modal.classList.add('show');
@@ -599,10 +670,14 @@ function crearFilaRegistro(registro, tbody) {
     const recuperadoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(uiData.montoRecuperado);
     const fechaFormateada = uiData.fecha || registro.getFechaFormateada?.() || 'N/A';
     
+    const tienePDF = uiData.tienePDF || (uiData.pdfGenerado === true && uiData.pdfUrl);
+    const pdfIcono = tienePDF ? '<i class="fas fa-file-pdf" style="color: #c0392b;"></i>' : '<i class="fas fa-file-pdf" style="color: #6c757d;"></i>';
+    const pdfTitle = tienePDF ? 'Ver PDF' : (uiData.estadoGeneracion === 'generando' ? 'Generando PDF...' : 'PDF pendiente');
+    
     tr.innerHTML = `
         <td data-label="ID / Folio">
             <span class="registro-id" title="${registro.id}">${registro.id.substring(0, 12)}...</span>
-        </td>
+        <\/td>
         <td data-label="Empresa/CC">
             <div style="display: flex; align-items: center;">
                 <div style="width:4px; height:24px; background:#00cfff; border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
@@ -610,32 +685,35 @@ function crearFilaRegistro(registro, tbody) {
                     <strong title="${escapeHTML(uiData.nombreEmpresaCC)}">${escapeHTML(uiData.nombreEmpresaCC.substring(0, 30))}${uiData.nombreEmpresaCC.length > 30 ? '...' : ''}</strong>
                 </div>
             </div>
-        </td>
+        <\/td>
         <td data-label="Tipo">
             <span class="tipo-badge ${uiData.tipoEvento}">
                 <i class="fas ${uiData.tipoEvento === 'robo' ? 'fa-mask' : uiData.tipoEvento === 'extravio' ? 'fa-question-circle' : uiData.tipoEvento === 'accidente' ? 'fa-car-crash' : 'fa-ellipsis-h'}"></i>
                 ${uiData.tipoEventoTexto || uiData.tipoEvento}
             </span>
-        </td>
+        <\/td>
         <td data-label="Monto Perdido">
             <span class="monto-text monto-perdido">${perdidoFormateado}</span>
-        </td>
+        <\/td>
         <td data-label="Monto Recuperado">
             <span class="monto-text monto-recuperado">${recuperadoFormateado}</span>
-        </td>
+        <\/td>
         <td data-label="Estado">
             <span class="estado-badge ${uiData.estado}">
                 <i class="fas ${uiData.estado === 'activo' ? 'fa-clock' : uiData.estado === 'recuperado' ? 'fa-check-circle' : 'fa-ban'}"></i>
                 ${uiData.estadoTexto || uiData.estado}
             </span>
-        </td>
+        <\/td>
         <td data-label="Fecha">
             ${fechaFormateada}
-        </td>
+        <\/td>
         <td data-label="Acciones">
             <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <button type="button" class="btn" data-action="ver" data-id="${registro.id}" title="Ver detalles">
                     <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="btn" data-action="pdf" data-id="${registro.id}" title="${pdfTitle}">
+                    ${pdfIcono}
                 </button>
                 ${uiData.estado !== 'recuperado' && uiData.estado !== 'cerrado' && uiData.montoRecuperado < uiData.montoPerdido ? `
                 <button type="button" class="btn" data-action="recuperar" data-id="${registro.id}" title="Registrar recuperación">
@@ -646,7 +724,7 @@ function crearFilaRegistro(registro, tbody) {
                     <i class="fas fa-trash" style="color: #dc3545;"></i>
                 </button>
             </div>
-        </td>
+        <\/td>
     `;
     
     tbody.appendChild(tr);
@@ -658,6 +736,7 @@ function crearFilaRegistro(registro, tbody) {
                 const action = btn.dataset.action;
                 const id = btn.dataset.id;
                 if (action === 'ver') window.verDetallesRegistro(id, e);
+                else if (action === 'pdf') window.verPDF(id, e);
                 else if (action === 'recuperar') window.registrarRecuperacion(id, e);
                 else if (action === 'eliminar') window.eliminarRegistro(id, e);
             });
@@ -729,8 +808,8 @@ function mostrarError(mensaje) {
                             <i class="fas fa-sync-alt"></i> Reintentar
                         </button>
                     </div>
-                </td>
-            </tr>
+                <\/td>
+            <\/tr>
         `;
     }
 }
