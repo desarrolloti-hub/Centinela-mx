@@ -1,6 +1,7 @@
 // ========== VARIABLES GLOBALES ==========
 let sucursalManager = null;
 let usuarioActual = null;
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 // Configuración de paginación
 const ITEMS_POR_PAGINA = 10;
@@ -12,6 +13,9 @@ let sucursalesFiltradas = []; // Sucursales filtradas para mostrar
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function() {    
     try {
+        // ✅ NUEVO: Inicializar historialManager
+        await inicializarHistorial();
+        
         const { SucursalManager } = await import('/clases/sucursal.js');
         
         sucursalManager = new SucursalManager();
@@ -46,11 +50,101 @@ document.addEventListener('DOMContentLoaded', async function() {
         configurarBusqueda();
         setupEvents();
         
+        // ✅ NUEVO: Registrar acceso a la vista de sucursales
+        await registrarAccesoVistaSucursales();
+        
     } catch (error) {
         console.error('❌ Error inicializando:', error);
         showError(error.message || 'Error al cargar la página');
     }
 });
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+        console.log('📋 HistorialManager inicializado para sucursales');
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar acceso a la vista de sucursales
+async function registrarAccesoVistaSucursales() {
+    if (!historialManager) return;
+    
+    try {
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'leer',
+            modulo: 'sucursales',
+            descripcion: 'Accedió a la vista de sucursales',
+            detalles: {
+                totalSucursales: todasLasSucursales.length || 0,
+                organizacion: usuarioActual?.organizacion
+            }
+        });
+        console.log('✅ Acceso a sucursales registrado en bitácora');
+    } catch (error) {
+        console.error('Error registrando acceso a sucursales:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar visualización de detalles de sucursal
+async function registrarVisualizacionSucursal(sucursal) {
+    if (!historialManager) return;
+    
+    try {
+        const regionInfo = await sucursal.getRegionInfo();
+        
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'leer',
+            modulo: 'sucursales',
+            descripcion: `Visualizó detalles de sucursal: ${sucursal.nombre}`,
+            detalles: {
+                sucursalId: sucursal.id,
+                sucursalNombre: sucursal.nombre,
+                sucursalTipo: sucursal.tipo,
+                sucursalRegion: regionInfo.nombre,
+                sucursalCiudad: sucursal.ciudad,
+                fechaVisualizacion: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Visualización de sucursal "${sucursal.nombre}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando visualización de sucursal:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar eliminación de sucursal
+async function registrarEliminacionSucursal(sucursal) {
+    if (!historialManager) return;
+    
+    try {
+        const regionInfo = await sucursal.getRegionInfo();
+        
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'eliminar',
+            modulo: 'sucursales',
+            descripcion: `Eliminó sucursal: ${sucursal.nombre}`,
+            detalles: {
+                sucursalId: sucursal.id,
+                sucursalNombre: sucursal.nombre,
+                sucursalTipo: sucursal.tipo,
+                sucursalRegion: regionInfo.nombre,
+                sucursalDireccion: sucursal.direccion,
+                sucursalCiudad: sucursal.ciudad,
+                fechaEliminacion: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Eliminación de sucursal "${sucursal.nombre}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando eliminación de sucursal:', error);
+    }
+}
 
 // ========== OBTENER USUARIO ACTUAL (TEMP) ==========
 function obtenerUsuarioActual() {
@@ -252,7 +346,7 @@ function renderizarConPaginacion() {
                             <h3>No se encontraron sucursales</h3>
                             <p>${terminoBusqueda ? `No hay resultados para "${terminoBusqueda}"` : ''}</p>
                         </div>
-                    </td>
+                    </div>
                 </tr>
             `;
         }
@@ -379,22 +473,22 @@ function renderBranchesTable(sucursales) {
                 <span class="tipo-badge">
                     ${escapeHTML(tipoDisplay)}
                 </span>
-            </td>
+             </td>
             <td data-label="UBICACIÓN">
                 <div class="ubicacion-info">
                     ${escapeHTML(ubicacionCompleta)}
                 </div>
-            </td>
+             </td>
             <td data-label="CONTACTO">
                 <div class="contacto-info">
                     ${escapeHTML(telefonoFormateado)}
                 </div>
-            </td>
+             </td>
             <td data-label="FECHA CREACIÓN">
                 <span style="color: var(--color-text-dim);">
                     ${escapeHTML(fechaCreacion)}
                 </span>
-            </td>
+             </td>
             <td data-label="ACCIONES">
                 <div class="btn-group">
                     <button type="button" class="btn btn-view" data-action="view" data-branch-id="${suc.id}" data-branch-name="${escapeHTML(suc.nombre)}" title="Ver detalles">
@@ -407,7 +501,7 @@ function renderBranchesTable(sucursales) {
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
-            </td>
+             </td>
         `;
         
         tbody.appendChild(row);
@@ -482,6 +576,9 @@ async function viewBranchDetails(branchId, branchName) {
         if (!sucursal) {
             throw new Error('Sucursal no encontrada');
         }
+        
+        // ✅ NUEVO: Registrar visualización de sucursal
+        await registrarVisualizacionSucursal(sucursal);
         
         await showBranchDetails(sucursal, branchName);
         
@@ -564,6 +661,16 @@ async function showBranchDetails(sucursal, branchName) {
 
 // ========== ELIMINAR SUCURSAL ==========
 async function deleteBranch(branchId, branchName) {
+    // Obtener la sucursal completa antes de eliminarla para registrar detalles
+    let sucursalCompleta = null;
+    try {
+        sucursalCompleta = await sucursalManager.getSucursalById(branchId, usuarioActual.organizacionCamelCase);
+    } catch (error) {
+        console.warn('No se pudo obtener sucursal completa para registro:', error);
+        // Si no se puede obtener, crear un objeto mínimo con la información disponible
+        sucursalCompleta = { id: branchId, nombre: branchName };
+    }
+    
     // Mostrar confirmación antes de eliminar
     const confirmResult = await Swal.fire({
         title: '¿Eliminar sucursal?',
@@ -603,6 +710,9 @@ async function deleteBranch(branchId, branchName) {
 
     try {
         await sucursalManager.eliminarSucursal(branchId, usuarioActual.organizacionCamelCase);
+        
+        // ✅ NUEVO: Registrar eliminación en bitácora
+        await registrarEliminacionSucursal(sucursalCompleta);
         
         Swal.close();
         

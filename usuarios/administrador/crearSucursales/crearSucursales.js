@@ -1,5 +1,6 @@
-// crearSucursales.js - VERSIÓN CORREGIDA (NO BORRA COORDENADAS)
 import { SucursalManager, ESTADOS_MEXICO } from '/clases/sucursal.js';
+
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 // Variable global para debugging
 window.crearSucursalDebug = {
@@ -52,23 +53,26 @@ class CrearSucursalController {
                 throw new Error('No se pudo cargar información del usuario');
             }
 
-            // 2. Inicializar SucursalManager
+            // 2. Inicializar historialManager
+            await this._initHistorial();
+
+            // 3. Inicializar SucursalManager
             this.sucursalManager = new SucursalManager();
 
-            // 3. Configurar eventos
+            // 4. Configurar eventos
             this._configurarEventos();
 
-            // 4. Cargar regiones y estados
+            // 5. Cargar regiones y estados
             await this._cargarRegiones();
             this._cargarEstados();
 
-            // 5. Aplicar límites de caracteres
+            // 6. Aplicar límites de caracteres
             this._aplicarLimitesCaracteres();
 
-            // 6. Configurar listener de coordenadas
+            // 7. Configurar listener de coordenadas
             this._configurarListenerCoordenadas();
 
-            // 7. Inicializar mapa
+            // 8. Inicializar mapa
             setTimeout(() => this._inicializarMapa(), 500);
 
             window.crearSucursalDebug.controller = this;
@@ -76,6 +80,51 @@ class CrearSucursalController {
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
+        }
+    }
+
+    // ✅ NUEVO: Inicializar historialManager
+    async _initHistorial() {
+        try {
+            const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+            historialManager = new HistorialUsuarioManager();
+            console.log('📋 HistorialManager inicializado para crear sucursales');
+        } catch (error) {
+            console.error('Error inicializando historialManager:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar creación de sucursal
+    async _registrarCreacionSucursal(sucursal, datos) {
+        if (!historialManager) return;
+        
+        try {
+            await historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'crear',
+                modulo: 'sucursales',
+                descripcion: `Creó sucursal: ${datos.nombre}`,
+                detalles: {
+                    sucursalId: sucursal.id,
+                    sucursalNombre: datos.nombre,
+                    sucursalTipo: datos.tipo,
+                    regionId: datos.regionId,
+                    regionNombre: datos.regionNombre,
+                    estado: datos.estado,
+                    ciudad: datos.ciudad,
+                    direccion: datos.direccion,
+                    zona: datos.zona || 'No especificada',
+                    contacto: datos.contacto,
+                    coordenadas: {
+                        latitud: datos.latitud,
+                        longitud: datos.longitud
+                    },
+                    fechaCreacion: new Date().toISOString()
+                }
+            });
+            console.log(`✅ Creación de sucursal "${datos.nombre}" registrada en bitácora`);
+        } catch (error) {
+            console.error('Error registrando creación de sucursal:', error);
         }
     }
 
@@ -494,6 +543,19 @@ class CrearSucursalController {
     _confirmarGuardado(datos) {
         Swal.fire({
             title: 'Crear sucursal',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>Nombre:</strong> ${this._escapeHTML(datos.nombre)}</p>
+                    <p><strong>Tipo:</strong> ${this._escapeHTML(datos.tipo)}</p>
+                    <p><strong>Región:</strong> ${this._escapeHTML(datos.regionNombre)}</p>
+                    <p><strong>Estado:</strong> ${this._escapeHTML(datos.estado)}</p>
+                    <p><strong>Ciudad:</strong> ${this._escapeHTML(datos.ciudad)}</p>
+                    <p><strong>Dirección:</strong> ${this._escapeHTML(datos.direccion)}</p>
+                    <p><strong>Zona:</strong> ${this._escapeHTML(datos.zona || 'No especificada')}</p>
+                    <p><strong>Contacto:</strong> ${this._escapeHTML(datos.contacto)}</p>
+                    <p><strong>Coordenadas:</strong> ${datos.latitud}, ${datos.longitud}</p>
+                </div>
+            `,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'CONFIRMAR',
@@ -516,6 +578,15 @@ class CrearSucursalController {
                 btnCrear.disabled = true;
             }
 
+            Swal.fire({
+                title: 'Creando sucursal...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+
             const sucursalData = {
                 nombre: datos.nombre,
                 tipo: datos.tipo,
@@ -534,10 +605,21 @@ class CrearSucursalController {
 
             this.sucursalCreadaReciente = nuevaSucursal;
 
+            Swal.close();
+
+            // ✅ NUEVO: Registrar creación en bitácora
+            await this._registrarCreacionSucursal(nuevaSucursal, datos);
+
             // Mostrar éxito
             await Swal.fire({
                 icon: 'success',
                 title: '¡Sucursal creada!',
+                html: `
+                    <div style="text-align: left;">
+                        <p><strong>Nombre:</strong> ${this._escapeHTML(datos.nombre)}</p>
+                        <p><strong>Ubicación:</strong> ${this._escapeHTML(datos.ciudad)}, ${this._escapeHTML(datos.estado)}</p>
+                    </div>
+                `,
                 showCancelButton: true,
                 confirmButtonText: 'CREAR OTRA',
                 cancelButtonText: 'IR A SUCURSALES'
@@ -551,6 +633,7 @@ class CrearSucursalController {
 
         } catch (error) {
             console.error('Error guardando sucursal:', error);
+            Swal.close();
             this._mostrarError(error.message || 'No se pudo crear la sucursal');
         } finally {
             if (btnCrear) {
