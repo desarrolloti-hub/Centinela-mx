@@ -52,8 +52,6 @@ const ordenModulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidenc
 // =============================================
 async function inicializarVerPermiso() {
     try {
-        console.log('Inicializando vista de permiso...');
-
         const urlParams = new URLSearchParams(window.location.search);
         const permisoId = urlParams.get('id');
 
@@ -78,10 +76,7 @@ async function inicializarVerPermiso() {
         mostrarInfoPermiso();
         configurarEventos();
 
-        console.log('Vista de permiso inicializada correctamente');
-
     } catch (error) {
-        console.error('Error inicializando:', error);
         mostrarError('Error al cargar el permiso: ' + error.message);
 
         const container = document.querySelector('.custom-container');
@@ -114,7 +109,6 @@ async function inicializarManagers() {
             permisoManager.organizacionCamelCase = usuarioActual.organizacionCamelCase;
         }
     } catch (error) {
-        console.error('Error cargando managers:', error);
         throw error;
     }
 }
@@ -139,26 +133,17 @@ async function cargarPermisosDelPlan() {
             usuarioActual.plan = planId;
         }
 
-        console.log(`🔍 Plan ID obtenido: "${planId}"`);
-
         if (!planId || planId === 'sin-plan' || planId === 'gratis' || planId === 'null' || planId === 'undefined') {
-            console.log('📋 Administrador sin plan asignado - Incidencias y Mapa de Alertas NO disponibles');
             permisosPlan = { incidencias: false, monitoreo: false };
             return;
         }
-
-        console.log(`🔍 Buscando plan con ID: "${planId}" en Firestore`);
 
         const plan = await planManager.obtenerPorId(planId);
 
         if (!plan) {
-            console.warn(`⚠️ Plan "${planId}" no encontrado en Firestore`);
             permisosPlan = { incidencias: false, monitoreo: false };
             return;
         }
-
-        console.log(`✅ Plan encontrado: ${plan.nombre}`);
-        console.log('📦 Mapas activos:', plan.mapasActivos);
 
         const mapasActivos = plan.mapasActivos || {};
 
@@ -167,10 +152,7 @@ async function cargarPermisosDelPlan() {
             monitoreo: mapasActivos.alertas === true
         };
 
-        console.log('🎯 Módulos dinámicos disponibles:', permisosPlan);
-
     } catch (error) {
-        console.error('❌ Error cargando permisos del plan:', error);
         permisosPlan = { incidencias: false, monitoreo: false };
     }
 }
@@ -209,7 +191,6 @@ function cargarUsuario() {
                 plan: adminData.plan || null,
                 correo: adminData.correoElectronico || ''
             };
-            console.log('✅ Usuario cargado desde adminInfo:', usuarioActual);
             return;
         }
 
@@ -224,7 +205,6 @@ function cargarUsuario() {
                 plan: userData.plan || null,
                 correo: userData.correoElectronico || ''
             };
-            console.log('✅ Usuario cargado desde userData:', usuarioActual);
             return;
         }
 
@@ -239,14 +219,12 @@ function cargarUsuario() {
                 plan: user.plan || null,
                 correo: user.correoElectronico || ''
             };
-            console.log('✅ Usuario cargado desde userManager:', usuarioActual);
             return;
         }
 
         throw new Error('No hay sesión activa');
 
     } catch (error) {
-        console.error('Error cargando usuario:', error);
         throw error;
     }
 }
@@ -254,7 +232,6 @@ function cargarUsuario() {
 async function cargarAreas() {
     try {
         if (!usuarioActual?.organizacionCamelCase) {
-            console.warn('No hay organización definida para cargar áreas');
             return;
         }
 
@@ -266,9 +243,8 @@ async function cargarAreas() {
                 cargos: area.cargos || {}
             });
         });
-        console.log(`✅ Cargadas ${areas.length} áreas`);
     } catch (error) {
-        console.error('Error cargando áreas:', error);
+        // Error handling without console
     }
 }
 
@@ -283,15 +259,7 @@ async function cargarPermiso(permisoId) {
             throw new Error('Permiso no encontrado');
         }
 
-        console.log('✅ Permiso cargado:', {
-            id: permisoActual.id,
-            areaId: permisoActual.areaId,
-            cargoId: permisoActual.cargoId,
-            permisos: permisoActual.permisos
-        });
-
     } catch (error) {
-        console.error('Error cargando permiso:', error);
         throw error;
     }
 }
@@ -330,7 +298,6 @@ function mostrarInfoPermiso() {
 function mostrarModulos() {
     const container = document.getElementById('modulosContainer');
     if (!container) {
-        console.warn('Contenedor de módulos no encontrado');
         return;
     }
     if (!permisoActual) return;
@@ -384,8 +351,6 @@ function mostrarModulos() {
     `;
 
     container.innerHTML = html + resumenHtml;
-
-    console.log(`📊 Módulos mostrados: ${modulosActivos} activos, ${modulosInactivos} inactivos`);
 }
 
 function formatearFecha(fecha) {
@@ -440,7 +405,7 @@ function configurarEventos() {
             btnVolverLista.addEventListener('click', () => volverALista());
         }
     } catch (error) {
-        console.error('Error configurando eventos:', error);
+
     }
 }
 

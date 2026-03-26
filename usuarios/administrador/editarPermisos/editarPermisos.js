@@ -60,7 +60,6 @@ class EditarPermisoController {
             this._mostrarModulosDinamicos();
 
         } catch (error) {
-            console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
         }
     }
@@ -81,8 +80,6 @@ class EditarPermisoController {
                     plan: adminData.plan || null,
                     correo: adminData.correoElectronico || adminData.correo || ''
                 };
-                console.log('✅ Usuario cargado desde adminInfo:', this.usuarioActual.nombreCompleto);
-                console.log('📋 Plan ID desde adminInfo.plan:', this.usuarioActual.plan);
                 return true;
             }
 
@@ -98,16 +95,12 @@ class EditarPermisoController {
                     plan: userData.plan || null,
                     correo: userData.correoElectronico || userData.correo || userData.email || ''
                 };
-                console.log('✅ Usuario cargado desde userData:', this.usuarioActual.nombreCompleto);
-                console.log('📋 Plan ID desde userData.plan:', this.usuarioActual.plan);
                 return true;
             }
 
-            console.warn('⚠️ No se encontró usuario autenticado');
             return false;
 
         } catch (error) {
-            console.error('Error cargando usuario:', error);
             return false;
         }
     }
@@ -137,10 +130,7 @@ class EditarPermisoController {
                 this.permisoManager.organizacionCamelCase = this.usuarioActual.organizacionCamelCase;
             }
 
-            console.log('✅ Managers inicializados correctamente');
-
         } catch (error) {
-            console.error('❌ Error cargando managers:', error);
             throw new Error('No se pudieron cargar los módulos necesarios. Verifica la consola.');
         }
     }
@@ -163,26 +153,17 @@ class EditarPermisoController {
                 planId = userData.plan;
             }
 
-            console.log(`🔍 Plan ID obtenido: "${planId}"`);
-
             if (!planId || planId === 'sin-plan' || planId === 'gratis' || planId === 'null' || planId === 'undefined') {
-                console.log('📋 Administrador sin plan asignado - Incidencias y Mapa de Alertas NO disponibles');
                 this.permisosPlan = { incidencias: false, monitoreo: false };
                 return;
             }
-
-            console.log(`🔍 Buscando plan con ID: "${planId}" en Firestore`);
 
             const plan = await this.planManager.obtenerPorId(planId);
 
             if (!plan) {
-                console.warn(`⚠️ Plan "${planId}" no encontrado en Firestore`);
                 this.permisosPlan = { incidencias: false, monitoreo: false };
                 return;
             }
-
-            console.log(`✅ Plan encontrado: ${plan.nombre}`);
-            console.log('📦 Mapas activos:', plan.mapasActivos);
 
             const mapasActivos = plan.mapasActivos || {};
 
@@ -191,10 +172,7 @@ class EditarPermisoController {
                 monitoreo: mapasActivos.alertas === true
             };
 
-            console.log('🎯 Módulos dinámicos disponibles:', this.permisosPlan);
-
         } catch (error) {
-            console.error('❌ Error cargando permisos del plan:', error);
             this.permisosPlan = { incidencias: false, monitoreo: false };
         }
     }
@@ -206,10 +184,8 @@ class EditarPermisoController {
         if (moduloIncidencias) {
             if (this.permisosPlan.incidencias === true) {
                 moduloIncidencias.style.display = 'flex';
-                console.log('✅ Módulo Incidencias visible (plan lo incluye)');
             } else {
                 moduloIncidencias.style.display = 'none';
-                console.log('❌ Módulo Incidencias oculto (plan no lo incluye)');
             }
         }
 
@@ -218,15 +194,10 @@ class EditarPermisoController {
         if (moduloMonitoreo) {
             if (this.permisosPlan.monitoreo === true) {
                 moduloMonitoreo.style.display = 'flex';
-                console.log('✅ Módulo Mapa de Alertas visible (plan lo incluye)');
             } else {
                 moduloMonitoreo.style.display = 'none';
-                console.log('❌ Módulo Mapa de Alertas oculto (plan no lo incluye)');
             }
         }
-
-        // Los módulos Usuarios, Estadísticas y Tareas siempre están visibles
-        console.log('✅ Módulos Usuarios, Estadísticas y Tareas siempre visibles');
     }
 
     // ========== CARGA DE ÁREAS ==========
@@ -240,10 +211,7 @@ class EditarPermisoController {
                 this.usuarioActual.organizacionCamelCase
             );
 
-            console.log(`📋 Áreas cargadas: ${this.areas.length}`);
-
         } catch (error) {
-            console.error('❌ Error cargando áreas:', error);
             throw error;
         }
     }
@@ -278,7 +246,6 @@ class EditarPermisoController {
             this._cargarDatosFormulario();
 
         } catch (error) {
-            console.error('Error cargando permiso:', error);
             throw error;
         }
     }
@@ -408,7 +375,7 @@ class EditarPermisoController {
             this._configurarAccionesRapidas();
 
         } catch (error) {
-            console.error('Error configurando eventos:', error);
+            // Error handling without console
         }
     }
 
@@ -521,12 +488,6 @@ class EditarPermisoController {
             // Obtener permisos seleccionados
             const nuevosPermisos = this._obtenerPermisosSeleccionados();
 
-            console.log('📝 Actualizando permiso con datos:', {
-                permisoId: this.permisoActual.id,
-                nuevosPermisos,
-                organizacion: this.usuarioActual.organizacionCamelCase
-            });
-
             // Crear objeto userManager para pasar a la clase
             const userManager = {
                 currentUser: {
@@ -561,8 +522,6 @@ class EditarPermisoController {
             this._volverALista();
 
         } catch (error) {
-            console.error('❌ Error guardando cambios:', error);
-
             let mensajeError = error.message || 'No se pudo actualizar el permiso';
 
             // Mensajes más amigables
