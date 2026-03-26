@@ -1,5 +1,6 @@
 // =============================================
 // estadisticas.js - VERSIÓN FINAL CON FILTROS FUNCIONALES Y PDF GENERATOR
+// CON REGISTRO DE BITÁCORA
 // =============================================
 
 // =============================================
@@ -14,6 +15,8 @@ let sucursalesCache = [];
 let categoriasCache = [];
 let charts = {};
 let authToken = null;
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
+let accesoVistaRegistrado = false; // ✅ NUEVO: Para evitar registros duplicados
 
 // Filtros activos
 let filtrosActivos = {
@@ -31,6 +34,9 @@ let filtrosActivos = {
 document.addEventListener('DOMContentLoaded', async function () {
     try {
         console.log('🎯 Iniciando estadísticas...');
+
+        // ✅ NUEVO: Inicializar historialManager
+        await inicializarHistorial();
 
         // Mostrar estado de carga
         mostrarLoadingInicial();
@@ -50,11 +56,195 @@ document.addEventListener('DOMContentLoaded', async function () {
         // NO cargar incidencias automáticamente - esperar a que el usuario aplique filtros
         mostrarMensajeEsperaFiltros();
 
+        // ✅ NUEVO: Registrar acceso a la vista de estadísticas
+        await registrarAccesoVistaEstadisticas();
+
     } catch (error) {
         console.error('❌ Error al inicializar estadísticas:', error);
         mostrarError('Error al cargar la página: ' + error.message);
     }
 });
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+        console.log('📋 HistorialManager inicializado para estadísticas');
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
+
+// ✅ NUEVO: Obtener usuario actual
+function obtenerUsuarioActual() {
+    try {
+        const adminInfo = localStorage.getItem('adminInfo');
+        if (adminInfo) {
+            const data = JSON.parse(adminInfo);
+            return {
+                id: data.id || data.uid,
+                uid: data.uid || data.id,
+                nombreCompleto: data.nombreCompleto || 'Administrador',
+                organizacion: data.organizacion,
+                organizacionCamelCase: data.organizacionCamelCase,
+                correoElectronico: data.correoElectronico || ''
+            };
+        }
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            return {
+                id: userData.uid || userData.id,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                organizacion: userData.organizacion,
+                organizacionCamelCase: userData.organizacionCamelCase,
+                correoElectronico: userData.correo || userData.email || ''
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error obteniendo usuario actual:', error);
+        return null;
+    }
+}
+
+// ✅ NUEVO: Registrar acceso a la vista de estadísticas
+async function registrarAccesoVistaEstadisticas() {
+    if (!historialManager) return;
+    if (accesoVistaRegistrado) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'estadisticas',
+            descripcion: 'Accedió al módulo de estadísticas',
+            detalles: {
+                organizacion: organizacionActual?.nombre,
+                filtrosPredeterminados: {
+                    fechaInicio: filtrosActivos.fechaInicio,
+                    fechaFin: filtrosActivos.fechaFin,
+                    rango: 'últimos 30 días'
+                }
+            }
+        });
+        accesoVistaRegistrado = true;
+        console.log('✅ Acceso a estadísticas registrado en bitácora');
+    } catch (error) {
+        console.error('Error registrando acceso a estadísticas:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar aplicación de filtros
+async function registrarAplicacionFiltros(filtrosAplicados, totalIncidencias) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        const filtrosDetalles = {};
+        
+        if (filtrosAplicados.fechaInicio && filtrosAplicados.fechaFin) {
+            filtrosDetalles.rangoFechas = `${filtrosAplicados.fechaInicio} al ${filtrosAplicados.fechaFin}`;
+        }
+        
+        if (filtrosAplicados.categoriaId !== 'todas') {
+            const categoria = categoriasCache.find(c => c.id === filtrosAplicados.categoriaId);
+            filtrosDetalles.categoria = categoria?.nombre || filtrosAplicados.categoriaId;
+        }
+        
+        if (filtrosAplicados.sucursalId !== 'todas') {
+            const sucursal = sucursalesCache.find(s => s.id === filtrosAplicados.sucursalId);
+            filtrosDetalles.sucursal = sucursal?.nombre || filtrosAplicados.sucursalId;
+        }
+        
+        if (filtrosAplicados.colaboradorId !== 'todos') {
+            filtrosDetalles.colaborador = filtrosAplicados.colaboradorId;
+        }
+        
+        if (filtrosAplicados.busqueda) {
+            filtrosDetalles.busqueda = filtrosAplicados.busqueda;
+        }
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'estadisticas',
+            descripcion: `Aplicó filtros en estadísticas - ${totalIncidencias} incidencias encontradas`,
+            detalles: {
+                filtros: filtrosDetalles,
+                totalIncidencias: totalIncidencias,
+                fechaAplicacion: new Date().toISOString()
+            }
+        });
+        console.log('✅ Aplicación de filtros registrada en bitácora');
+    } catch (error) {
+        console.error('Error registrando aplicación de filtros:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar generación de reporte PDF
+async function registrarGeneracionPDFReporte(totalIncidencias, filtrosAplicados) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'estadisticas',
+            descripcion: `Generó reporte PDF de estadísticas - ${totalIncidencias} incidencias`,
+            detalles: {
+                totalIncidencias: totalIncidencias,
+                filtrosAplicados: {
+                    fechaInicio: filtrosAplicados.fechaInicio,
+                    fechaFin: filtrosAplicados.fechaFin,
+                    categoria: filtrosAplicados.categoriaId !== 'todas' ? 
+                        categoriasCache.find(c => c.id === filtrosAplicados.categoriaId)?.nombre : 'todas',
+                    sucursal: filtrosAplicados.sucursalId !== 'todas' ? 
+                        sucursalesCache.find(s => s.id === filtrosAplicados.sucursalId)?.nombre : 'todas',
+                    colaborador: filtrosAplicados.colaboradorId !== 'todos' ? filtrosAplicados.colaboradorId : 'todos'
+                },
+                fechaGeneracion: new Date().toISOString()
+            }
+        });
+        console.log('✅ Generación de reporte PDF registrada en bitácora');
+    } catch (error) {
+        console.error('Error registrando generación de PDF:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar limpieza de filtros
+async function registrarLimpiezaFiltros() {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'estadisticas',
+            descripcion: 'Limpió los filtros de estadísticas',
+            detalles: {
+                fechaLimpieza: new Date().toISOString()
+            }
+        });
+        console.log('✅ Limpieza de filtros registrada en bitácora');
+    } catch (error) {
+        console.error('Error registrando limpieza de filtros:', error);
+    }
+}
 
 // =============================================
 // OBTENER TOKEN DE AUTENTICACIÓN
@@ -107,12 +297,12 @@ function mostrarMensajeEsperaFiltros() {
     // Limpiar tablas
     const tablaColab = document.getElementById('tablaColaboradoresBody');
     if (tablaColab) {
-        tablaColab.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px;"><i class="fas fa-filter" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>Selecciona filtros y presiona APLICAR</td></tr>';
+        tablaColab.innerHTML = '发展<td colspan="6" style="text-align:center; padding:40px;"><i class="fas fa-filter" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>Selecciona filtros y presiona APLICAR发展</div>';
     }
 
     const tablaCat = document.getElementById('tablaCategoriasBody');
     if (tablaCat) {
-        tablaCat.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:40px;"><i class="fas fa-filter" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>Selecciona filtros y presiona APLICAR</td></tr>';
+        tablaCat.innerHTML = '发展<td colspan="2" style="text-align:center; padding:40px;"><i class="fas fa-filter" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>Selecciona filtros y presiona APLICAR发展</div>';
     }
 
     // Resetear métricas
@@ -265,20 +455,29 @@ async function aplicarFiltros() {
     mostrarLoadingGraficas();
 
     // Actualizar filtros activos con los valores del formulario
-    filtrosActivos.fechaInicio = document.getElementById('filtroFechaInicio')?.value || null;
-    filtrosActivos.fechaFin = document.getElementById('filtroFechaFin')?.value || null;
-    filtrosActivos.categoriaId = document.getElementById('filtroCategoria')?.value || 'todas';
-    filtrosActivos.sucursalId = document.getElementById('filtroSucursal')?.value || 'todas';
-    filtrosActivos.colaboradorId = document.getElementById('filtroColaborador')?.value || 'todos';
-    filtrosActivos.busqueda = document.getElementById('buscarIncidencias')?.value || '';
+    const nuevosFiltros = {
+        fechaInicio: document.getElementById('filtroFechaInicio')?.value || null,
+        fechaFin: document.getElementById('filtroFechaFin')?.value || null,
+        categoriaId: document.getElementById('filtroCategoria')?.value || 'todas',
+        sucursalId: document.getElementById('filtroSucursal')?.value || 'todas',
+        colaboradorId: document.getElementById('filtroColaborador')?.value || 'todos',
+        busqueda: document.getElementById('buscarIncidencias')?.value || ''
+    };
+
+    filtrosActivos = nuevosFiltros;
 
     console.log('🔍 Aplicando filtros:', filtrosActivos);
 
     // Cargar incidencias con los filtros aplicados
     await cargarIncidencias();
+
+    // ✅ NUEVO: Registrar aplicación de filtros después de cargar incidencias
+    if (incidenciasFiltradas) {
+        await registrarAplicacionFiltros(filtrosActivos, incidenciasFiltradas.length);
+    }
 }
 
-function limpiarFiltros() {
+async function limpiarFiltros() {
     const hoy = new Date();
     const hace30Dias = new Date();
     hace30Dias.setDate(hoy.getDate() - 30);
@@ -310,8 +509,11 @@ function limpiarFiltros() {
 
     console.log('🧹 Filtros limpiados');
 
+    // ✅ NUEVO: Registrar limpieza de filtros
+    await registrarLimpiezaFiltros();
+
     // Cargar incidencias con los filtros por defecto
-    cargarIncidencias();
+    await cargarIncidencias();
 }
 
 function filtrarIncidencias(incidencias) {
@@ -455,12 +657,12 @@ function mostrarMensajeSinResultados() {
 
     const tablaColab = document.getElementById('tablaColaboradoresBody');
     if (tablaColab) {
-        tablaColab.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px;"><i class="fas fa-search" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>No hay incidencias que coincidan con los filtros</td></tr>';
+        tablaColab.innerHTML = '发展<td colspan="6" style="text-align:center; padding:40px;"><i class="fas fa-search" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>No hay incidencias que coincidan con los filtros发展</div>';
     }
 
     const tablaCat = document.getElementById('tablaCategoriasBody');
     if (tablaCat) {
-        tablaCat.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:40px;"><i class="fas fa-search" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>No hay incidencias que coincidan con los filtros</td></tr>';
+        tablaCat.innerHTML = '发展<td colspan="2" style="text-align:center; padding:40px;"><i class="fas fa-search" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>No hay incidencias que coincidan con los filtros发展</div>';
     }
 
     // Resetear métricas a 0
@@ -1113,7 +1315,7 @@ function renderizarTablaColaboradores(colaboradores) {
     if (!tbody) return;
 
     if (!colaboradores || colaboradores.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px;">No hay datos de colaboradores</td></tr>';
+        tbody.innerHTML = '发展<td colspan="6" style="text-align:center; padding:30px;">No hay datos de colaboradores发展</div>';
         return;
     }
 
@@ -1152,7 +1354,7 @@ function renderizarTablaCategorias(categorias) {
     if (!tbody) return;
 
     if (!categorias || categorias.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:30px;">No hay datos de categorías</td></tr>';
+        tbody.innerHTML = '发展<td colspan="2" style="text-align:center; padding:30px;">No hay datos de categorías发展</div>';
         return;
     }
 
@@ -1201,7 +1403,7 @@ function obtenerNombreCategoria(categoriaId) {
 }
 
 // =============================================
-// GENERAR REPORTE PDF - VERSIÓN CORREGIDA
+// GENERAR REPORTE PDF - VERSIÓN CORREGIDA CON BITÁCORA
 // =============================================
 async function generarReportePDF() {
     try {
@@ -1239,6 +1441,9 @@ async function generarReportePDF() {
         };
 
         Swal.close();
+
+        // ✅ NUEVO: Registrar generación de PDF
+        await registrarGeneracionPDFReporte(incidenciasFiltradas.length, filtrosActivos);
 
         // Importar el generador de estadísticas
         const { generadorPDFEstadisticas } = await import('/components/pdf-estadisticas-generator.js');
@@ -1288,7 +1493,7 @@ function mostrarLoadingInicial() {
             if (id.includes('grafico')) {
                 el.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--color-accent-primary);"></i></div>';
             } else if (id.includes('tabla')) {
-                el.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fas fa-spinner fa-spin"></i> Cargando datos...</td></tr>';
+                el.innerHTML = '发展<td colspan="6" style="text-align:center;"><i class="fas fa-spinner fa-spin"></i> Cargando datos...发展</div>';
             } else {
                 el.textContent = '...';
             }

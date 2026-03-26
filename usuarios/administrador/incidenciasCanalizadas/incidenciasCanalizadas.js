@@ -1,9 +1,12 @@
 // incidenciasCanalizadasColaborador.js - VERSIÓN COMPLETA CON NOTIFICACIONES
 // Muestra las incidencias canalizadas al área del usuario actual
 // PDF: Abre desde storage (NO genera nuevo)
+// CON REGISTRO DE BITÁCORA
 
 import { generadorIPH } from '/components/iph-generator.js';
 import '/components/visualizadorPDF.js'; // Importar visualizador de PDF
+
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 // =============================================
 // VARIABLES GLOBALES - Incidencias Canalizadas
@@ -67,12 +70,18 @@ let filtrosActivos = {
     sucursalId: 'todos'
 };
 
+// ✅ NUEVO: Registrar flag para evitar registros duplicados de acceso a vista
+let accesoVistaRegistrado = false;
+
 // =============================================
 // INICIALIZACIÓN
 //==============================================
 async function inicializarIncidenciaManager() {
     try {
         console.log('🚀 Inicializando módulo de incidencias canalizadas...');
+
+        // ✅ NUEVO: Inicializar historialManager
+        await inicializarHistorial();
 
         await obtenerDatosOrganizacion();
         await obtenerTokenAuth();
@@ -110,6 +119,9 @@ async function inicializarIncidenciaManager() {
         actualizarInterfazArea();
         actualizarEstadisticas();
 
+        // ✅ NUEVO: Registrar acceso a la vista de incidencias canalizadas
+        await registrarAccesoVistaIncidenciasCanalizadas();
+
         console.log('✅ Módulo de incidencias canalizadas inicializado correctamente');
 
         return true;
@@ -118,6 +130,165 @@ async function inicializarIncidenciaManager() {
         console.error('❌ Error al inicializar:', error);
         mostrarErrorInicializacion();
         return false;
+    }
+}
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+        console.log('📋 HistorialManager inicializado para incidencias canalizadas');
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
+
+// ✅ NUEVO: Obtener usuario actual
+function obtenerUsuarioActual() {
+    try {
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+        
+        const usuario = userData.id || adminInfo.id || userData.uid || adminInfo.uid;
+        const nombre = userData.nombreCompleto || adminInfo.nombreCompleto || 'Usuario';
+        const organizacion = userData.organizacion || adminInfo.organizacion || 'Sin organización';
+        const organizacionCamelCase = userData.organizacionCamelCase || adminInfo.organizacionCamelCase || '';
+        const correo = userData.correoElectronico || adminInfo.correoElectronico || userData.correo || adminInfo.correo || '';
+        
+        return {
+            id: usuario,
+            uid: usuario,
+            nombreCompleto: nombre,
+            organizacion: organizacion,
+            organizacionCamelCase: organizacionCamelCase,
+            correoElectronico: correo
+        };
+    } catch (error) {
+        console.error('Error obteniendo usuario actual:', error);
+        return null;
+    }
+}
+
+// ✅ NUEVO: Registrar acceso a la vista de incidencias canalizadas
+async function registrarAccesoVistaIncidenciasCanalizadas() {
+    if (!historialManager) return;
+    if (accesoVistaRegistrado) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'incidencias',
+            descripcion: `Accedió a la vista de incidencias canalizadas a ${areaActual.nombre}`,
+            detalles: {
+                areaId: areaActual.id,
+                areaNombre: areaActual.nombre,
+                totalIncidencias: incidenciasCache.length || 0,
+                pendientes: incidenciasCache.filter(i => i.estado === 'pendiente').length,
+                enProceso: incidenciasCache.filter(i => i.estado === 'en_proceso').length,
+                organizacion: organizacionActual?.nombre
+            }
+        });
+        accesoVistaRegistrado = true;
+        console.log('✅ Acceso a incidencias canalizadas registrado en bitácora');
+    } catch (error) {
+        console.error('Error registrando acceso a incidencias canalizadas:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar visualización de incidencia canalizada
+async function registrarVisualizacionIncidencia(incidencia) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        // Obtener la canalización específica para el área actual
+        const canalizacionArea = obtenerCanalizacionParaArea(incidencia);
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'incidencias',
+            descripcion: `Visualizó incidencia canalizada: ${incidencia.id}`,
+            detalles: {
+                incidenciaId: incidencia.id,
+                titulo: incidencia.titulo || incidencia.nombreActividad || 'Sin título',
+                sucursal: obtenerNombreSucursal(incidencia.sucursalId),
+                categoria: obtenerNombreCategoria(incidencia.categoriaId),
+                nivelRiesgo: incidencia.nivelRiesgo,
+                estado: incidencia.estado,
+                areaCanalizada: areaActual.nombre,
+                fechaCanalizacion: canalizacionArea?.fechaCanalizacion || null,
+                canalizadoPor: canalizacionArea?.canalizadoPorNombre || null
+            }
+        });
+        console.log(`✅ Visualización de incidencia "${incidencia.id}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando visualización de incidencia:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar visualización de detalles de canalización
+async function registrarVisualizacionDetallesCanalizacion(incidencia) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        const canalizaciones = incidencia.getCanalizacionesArray ?
+            incidencia.getCanalizacionesArray() :
+            Object.values(incidencia.canalizaciones || {});
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'incidencias',
+            descripcion: `Visualizó detalles de canalización de incidencia: ${incidencia.id}`,
+            detalles: {
+                incidenciaId: incidencia.id,
+                titulo: incidencia.titulo || incidencia.nombreActividad || 'Sin título',
+                totalCanalizaciones: canalizaciones.length,
+                areasCanalizadas: canalizaciones.map(c => c.areaNombre),
+                areaActual: areaActual.nombre,
+                fechaVisualizacion: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Visualización de detalles de canalización de incidencia "${incidencia.id}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando visualización de detalles de canalización:', error);
+    }
+}
+
+// ✅ NUEVO: Registrar apertura de PDF de incidencia canalizada
+async function registrarAperturaPDF(incidencia) {
+    if (!historialManager) return;
+    
+    try {
+        const usuario = obtenerUsuarioActual();
+        if (!usuario) return;
+        
+        await historialManager.registrarActividad({
+            usuario: usuario,
+            tipo: 'leer',
+            modulo: 'incidencias',
+            descripcion: `Abrió PDF de incidencia canalizada: ${incidencia.id}`,
+            detalles: {
+                incidenciaId: incidencia.id,
+                titulo: incidencia.titulo || incidencia.nombreActividad || 'Sin título',
+                areaCanalizada: areaActual.nombre,
+                fechaApertura: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Apertura de PDF de incidencia "${incidencia.id}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando apertura de PDF:', error);
     }
 }
 
@@ -377,7 +548,7 @@ async function cargarIncidenciasCanalizadas() {
         const tbody = document.getElementById('tablaIncidenciasBody');
         if (!tbody) return;
 
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i> Cargando incidencias canalizadas...</td></tr>';
+        tbody.innerHTML = '发展<td colspan="9" style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i> Cargando incidencias canalizadas...发展</tr>';
 
         // Obtener todas las incidencias de la organización con ordenamiento
         const todasIncidencias = await incidenciaManager.getIncidenciasByOrganizacion(
@@ -390,7 +561,7 @@ async function cargarIncidenciasCanalizadas() {
 
         if (!incidenciasCache || incidenciasCache.length === 0) {
             tbody.innerHTML = `
-                <tr>
+                发展
                     <td colspan="9" style="text-align:center; padding:60px 20px;">
                         <div style="text-align:center;">
                             <i class="fas fa-directions" style="font-size:48px; color:rgba(0,207,255,0.3); margin-bottom:16px;"></i>
@@ -399,7 +570,7 @@ async function cargarIncidenciasCanalizadas() {
                                 No se han encontrado incidencias canalizadas a ${areaActual.nombre}.
                             </p>
                         </div>
-                    </td>
+                    发展
                 </tr>
             `;
             return;
@@ -627,6 +798,9 @@ window.verPDF = async function (incidenciaId, event) {
             throw new Error('Incidencia no encontrada');
         }
 
+        // ✅ NUEVO: Registrar apertura de PDF
+        await registrarAperturaPDF(incidencia);
+
         if (incidencia.pdfUrl) {
             // Usar el visualizador de PDF
             window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
@@ -696,7 +870,7 @@ function crearFilaIncidencia(incidencia, tbody) {
         <td data-label="ID / Folio">
             <span class="incidencia-id" title="${incidencia.id}">${incidencia.id.substring(0, 8)}...</span>
             ${multiCanalizada}
-        </td>
+         </td>
         <td data-label="Sucursal">
             <div style="display: flex; align-items: center;">
                 <div style="width:4px; height:24px; background:var(--color-accent-primary); border-radius:2px; margin-right:12px; flex-shrink:0;"></div>
@@ -704,34 +878,34 @@ function crearFilaIncidencia(incidencia, tbody) {
                     <strong title="${obtenerNombreSucursal(incidencia.sucursalId)}">${obtenerNombreSucursal(incidencia.sucursalId)}</strong>
                 </div>
             </div>
-        </td>
+         </td>
         <td data-label="Categoría">
             ${obtenerNombreCategoria(incidencia.categoriaId)}
-        </td>
+         </td>
         <td data-label="Subcategoría">
             ${obtenerNombreSubcategoria(incidencia.subcategoriaId)}
-        </td>
+         </td>
         <td data-label="Riesgo">
             <span class="riesgo-badge ${incidencia.nivelRiesgo}" style="background: ${riesgoColor}20; color: ${riesgoColor}; border-color: ${riesgoColor}40;">
                 ${riesgoTexto}
             </span>
-        </td>
+         </td>
         <td data-label="Estado">
             <span class="estado-badge ${incidencia.estado}">
                 ${estadoTexto}
             </span>
-        </td>
+         </td>
         <td data-label="Fecha Canalización">
             <div class="fecha-canalizacion">
                 <span class="fecha">${fechaFormateada}</span>
                 <span class="hora">${horaFormateada}</span>
             </div>
-        </td>
+          </td>
         <td data-label="Origen">
             <span class="origen-badge" title="Canalizado por">
                 <i class="fas fa-user"></i> ${nombreOrigen}
             </span>
-        </td>
+          </td>
         <td data-label="Acciones">
             <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <button type="button" class="btn" data-action="ver" data-id="${incidencia.id}" title="Ver detalles">
@@ -747,7 +921,7 @@ function crearFilaIncidencia(incidencia, tbody) {
                     <i class="fas fa-file-pdf" style="color: #c0392b;"></i>
                 </button>
             </div>
-        </td>
+          </td>
     `;
 
     tbody.appendChild(tr);
@@ -790,8 +964,15 @@ function obtenerCanalizacionParaArea(incidencia) {
 // =============================================
 // FUNCIONES DE ACCIÓN
 // =============================================
-window.verDetallesIncidencia = function (incidenciaId, event) {
+window.verDetallesIncidencia = async function (incidenciaId, event) {
     event?.stopPropagation();
+    
+    // ✅ NUEVO: Registrar visualización de incidencia
+    const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
+    if (incidencia) {
+        await registrarVisualizacionIncidencia(incidencia);
+    }
+    
     window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
 };
 
@@ -801,11 +982,14 @@ window.seguimientoIncidencia = function (incidenciaId, event) {
 };
 
 // Función para mostrar detalles de canalización
-function mostrarDetallesCanalizacion(incidenciaId, event) {
+async function mostrarDetallesCanalizacion(incidenciaId, event) {
     event?.stopPropagation();
 
     const incidencia = incidenciasCache.find(i => i.id === incidenciaId);
     if (!incidencia) return;
+
+    // ✅ NUEVO: Registrar visualización de detalles de canalización
+    await registrarVisualizacionDetallesCanalizacion(incidencia);
 
     const modal = document.getElementById('modalDetallesCanalizacion');
     const modalBody = document.getElementById('modalCanalizacionBody');
@@ -920,7 +1104,7 @@ function mostrarError(mensaje) {
     const tbody = document.getElementById('tablaIncidenciasBody');
     if (tbody) {
         tbody.innerHTML = `
-            <tr>
+            发展
                 <td colspan="9" style="text-align:center; padding:40px;">
                     <div style="color: #ef4444;">
                         <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 16px;"></i>
@@ -930,8 +1114,8 @@ function mostrarError(mensaje) {
                             <i class="fas fa-sync-alt"></i> Reintentar
                         </button>
                     </div>
-                </td>
-            </tr>
+                发展
+            </td>
         `;
     }
 }
@@ -940,7 +1124,7 @@ function mostrarErrorInicializacion() {
     const tbody = document.getElementById('tablaIncidenciasBody');
     if (tbody) {
         tbody.innerHTML = `
-            <tr>
+            发展
                 <td colspan="9" style="text-align:center; padding:40px;">
                     <div style="color: #ef4444;">
                         <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
@@ -950,8 +1134,8 @@ function mostrarErrorInicializacion() {
                             <i class="fas fa-sync-alt"></i> Reintentar
                         </button>
                     </div>
-                </td>
-            </tr>
+                发展
+            </td>
         `;
     }
 }
