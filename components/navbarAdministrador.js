@@ -1836,6 +1836,18 @@ class NavbarComplete {
                             <i class="fa-solid fa-share-alt"></i>
                             <span>Incidencias Canalizadas</span>
                         </a>
+                         <a href="/usuarios/administrador/mercanciaPerdida/mercanciaPerdida.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
+                            <i class="fa-solid fa-list"></i>
+                            <span>Lista de Extravios</span>
+                        </a>
+                         <a href="/usuarios/administrador/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Crear Extravio</span>
+                        </a>
+                          <a href="/usuarios/administrador/estadisticasExtravios/estadisticasExtravios.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Estadisticas Extravios</span>
+                        </a>
                     </div>
                 </div>
 

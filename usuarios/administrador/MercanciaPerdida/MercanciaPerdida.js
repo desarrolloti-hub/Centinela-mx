@@ -116,7 +116,7 @@ async function cargarRegistrosPagina(pagina) {
                             <i class="fas fa-box-open" style="font-size:48px; color:rgba(0,207,255,0.3); margin-bottom:16px;"></i>
                             <h5 style="color:white;">No hay registros de mercancía perdida</h5>
                             <p style="color: var(--color-text-dim); margin-bottom: 20px;">Comienza registrando el primer incidente de mercancía perdida o robada.</p>
-                            <a href="../crearMercanciaPerdida/crearMercanciaPerdida.html" class="btn-nuevo-registro-header" style="display:inline-flex; margin-top:16px;">
+                            <a href="/usuarios/administrador/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html" class="btn-nuevo-registro-header" style="display:inline-flex; margin-top:16px;">
                                 <i class="fas fa-plus-circle"></i> Nuevo Registro
                             </a>
                         </div>
