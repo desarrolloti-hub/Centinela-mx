@@ -48,7 +48,6 @@ class CrearPermisoController {
             this._mostrarModulosDinamicos();
 
         } catch (error) {
-            console.error('Error en _init:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
         }
     }
@@ -69,8 +68,6 @@ class CrearPermisoController {
                     plan: adminData.plan || null,
                     correo: adminData.correoElectronico || adminData.correo || ''
                 };
-                console.log('✅ Usuario cargado desde adminInfo:', this.usuarioActual.nombreCompleto);
-                console.log('📋 Plan ID desde adminInfo.plan:', this.usuarioActual.plan);
                 return true;
             }
 
@@ -86,16 +83,12 @@ class CrearPermisoController {
                     plan: userData.plan || null,
                     correo: userData.correoElectronico || userData.correo || userData.email || ''
                 };
-                console.log('✅ Usuario cargado desde userData:', this.usuarioActual.nombreCompleto);
-                console.log('📋 Plan ID desde userData.plan:', this.usuarioActual.plan);
                 return true;
             }
 
-            console.warn('⚠️ No se encontró usuario autenticado');
             return false;
 
         } catch (error) {
-            console.error('Error cargando usuario:', error);
             return false;
         }
     }
@@ -125,10 +118,7 @@ class CrearPermisoController {
                 this.permisoManager.organizacionCamelCase = this.usuarioActual.organizacionCamelCase;
             }
 
-            console.log('✅ Managers inicializados correctamente');
-
         } catch (error) {
-            console.error('Error en _cargarManagers:', error);
             throw new Error('No se pudieron cargar los módulos necesarios. Verifica la consola.');
         }
     }
@@ -151,26 +141,17 @@ class CrearPermisoController {
                 planId = userData.plan;
             }
 
-            console.log(`🔍 Plan ID obtenido: "${planId}"`);
-
             if (!planId || planId === 'sin-plan' || planId === 'gratis' || planId === 'null' || planId === 'undefined') {
-                console.log('📋 Administrador sin plan asignado - Incidencias y Mapa de Alertas NO disponibles');
                 this.permisosPlan = { incidencias: false, monitoreo: false };
                 return;
             }
-
-            console.log(`🔍 Buscando plan con ID: "${planId}" en Firestore`);
 
             const plan = await this.planManager.obtenerPorId(planId);
 
             if (!plan) {
-                console.warn(`⚠️ Plan "${planId}" no encontrado en Firestore`);
                 this.permisosPlan = { incidencias: false, monitoreo: false };
                 return;
             }
-
-            console.log(`✅ Plan encontrado: ${plan.nombre}`);
-            console.log('📦 Mapas activos:', plan.mapasActivos);
 
             const mapasActivos = plan.mapasActivos || {};
 
@@ -179,10 +160,7 @@ class CrearPermisoController {
                 monitoreo: mapasActivos.alertas === true
             };
 
-            console.log('🎯 Módulos dinámicos disponibles:', this.permisosPlan);
-
         } catch (error) {
-            console.error('❌ Error cargando permisos del plan:', error);
             this.permisosPlan = { incidencias: false, monitoreo: false };
         }
     }
@@ -194,10 +172,8 @@ class CrearPermisoController {
         if (moduloIncidencias) {
             if (this.permisosPlan.incidencias === true) {
                 moduloIncidencias.style.display = 'flex';
-                console.log('✅ Módulo Incidencias visible (plan lo incluye)');
             } else {
                 moduloIncidencias.style.display = 'none';
-                console.log('❌ Módulo Incidencias oculto (plan no lo incluye)');
             }
         }
 
@@ -206,15 +182,10 @@ class CrearPermisoController {
         if (moduloMonitoreo) {
             if (this.permisosPlan.monitoreo === true) {
                 moduloMonitoreo.style.display = 'flex';
-                console.log('✅ Módulo Mapa de Alertas visible (plan lo incluye)');
             } else {
                 moduloMonitoreo.style.display = 'none';
-                console.log('❌ Módulo Mapa de Alertas oculto (plan no lo incluye)');
             }
         }
-
-        // Los módulos Usuarios, Estadísticas y Tareas siempre están visibles
-        console.log('✅ Módulos Usuarios, Estadísticas y Tareas siempre visibles');
     }
 
     // ========== CARGA DE ÁREAS ==========
@@ -226,22 +197,16 @@ class CrearPermisoController {
             }
 
             if (!this.usuarioActual?.organizacionCamelCase) {
-                console.warn('No hay organización definida, usando valor por defecto');
                 this.usuarioActual.organizacionCamelCase = 'miOrganizacion';
             }
-
-            console.log('🔍 Buscando áreas para organización:', this.usuarioActual.organizacionCamelCase);
 
             this.areas = await this.areaManager.getAreasByOrganizacion(
                 this.usuarioActual.organizacionCamelCase
             );
 
-            console.log(`📋 Áreas cargadas: ${this.areas.length}`);
-
             this._llenarSelectAreas();
 
         } catch (error) {
-            console.error('Error cargando áreas:', error);
             const areaSelect = document.getElementById('areaSelect');
             if (areaSelect) {
                 areaSelect.innerHTML = '<option value="" disabled selected>-- Error cargando áreas --</option>';
@@ -304,7 +269,6 @@ class CrearPermisoController {
         });
 
         cargoSelect.disabled = false;
-        console.log(`📋 Cargos cargados para área ${area.nombreArea}: ${cargos.length}`);
     }
 
     // ========== CONFIGURACIÓN DE ORGANIZACIÓN ==========
@@ -356,7 +320,7 @@ class CrearPermisoController {
             this._configurarAccionesRapidas();
 
         } catch (error) {
-            console.error('Error en _configurarEventos:', error);
+            // Error handling without console
         }
     }
 
@@ -518,7 +482,6 @@ class CrearPermisoController {
             this._guardarPermiso(areaId, cargoId, permisos);
 
         } catch (error) {
-            console.error('Error verificando permiso:', error);
             this._mostrarError('Error al verificar permiso existente');
         }
     }
@@ -557,16 +520,7 @@ class CrearPermisoController {
             const area = this.areas.find(a => a.id === areaId);
             const cargoNombre = this._getCargoNombre(areaId, cargoId);
 
-            console.log('📝 Creando permiso con datos:', {
-                areaId,
-                areaNombre: area?.nombreArea,
-                cargoId,
-                cargoNombre,
-                permisos,
-                organizacion: this.usuarioActual.organizacionCamelCase
-            });
-
-            const nuevoPermiso = await this.permisoManager.crearPermiso(
+            await this.permisoManager.crearPermiso(
                 permisoData,
                 userManager
             );
@@ -616,7 +570,6 @@ class CrearPermisoController {
             this._volverALista();
 
         } catch (error) {
-            console.error('Error guardando permiso:', error);
             Swal.close();
 
             let mensajeError = error.message || 'No se pudo crear el permiso';
