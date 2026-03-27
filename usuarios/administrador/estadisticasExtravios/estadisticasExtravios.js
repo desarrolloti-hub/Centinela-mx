@@ -760,14 +760,20 @@ function actualizarGraficoComparativa(estadisticas) {
 // =============================================
 // FUNCIÓN PARA MOSTRAR REGISTROS EN SWEETALERT
 // =============================================
-function mostrarRegistrosEnSweet(registros, titulo, icono = '<i class="fas fa-list"></i>') {
+// =============================================
+// FUNCIÓN PARA MOSTRAR REGISTROS EN SWEETALERT - VERSIÓN MEJORADA
+// =============================================
+function mostrarRegistrosEnSweet(registros, titulo, icono = '<i class="fas fa-chart-simple"></i>') {
     if (!registros || registros.length === 0) {
         Swal.fire({
             icon: 'info',
             title: 'Sin registros',
             text: 'No hay registros para mostrar',
             background: 'var(--color-bg-primary)',
-            color: 'white'
+            color: 'white',
+            customClass: {
+                popup: 'swal2-popup-custom'
+            }
         });
         return;
     }
@@ -775,22 +781,34 @@ function mostrarRegistrosEnSweet(registros, titulo, icono = '<i class="fas fa-li
     const formatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
     const totalPerdido = registros.reduce((acc, r) => acc + (r.montoPerdido || 0), 0);
     const totalRecuperado = registros.reduce((acc, r) => acc + (r.montoRecuperado || 0), 0);
+    const tasaRecuperacion = totalPerdido > 0 ? ((totalRecuperado / totalPerdido) * 100).toFixed(2) : 0;
     
-    // Limitar a los primeros 10 registros para no saturar el modal
-    const registrosMostrar = registros.slice(0, 10);
-    const hayMas = registros.length > 10;
+    // Limitar a los primeros 15 registros para no saturar el modal
+    const registrosMostrar = registros.slice(0, 15);
+    const hayMas = registros.length > 15;
     
     let registrosHtml = `
-        <div style="max-height: 400px; overflow-y: auto; margin-top: 12px;">
-            <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                    <span><strong><i class="fas fa-chart-simple"></i> Total registros:</strong> ${registros.length}</span>
-                    <span><strong><i class="fas fa-dollar-sign"></i> Total perdido:</strong> ${formatter.format(totalPerdido)}</span>
-                    <span><strong><i class="fas fa-undo-alt"></i> Total recuperado:</strong> ${formatter.format(totalRecuperado)}</span>
-                    <span><strong><i class="fas fa-percent"></i> Tasa recuperación:</strong> ${totalPerdido > 0 ? ((totalRecuperado / totalPerdido) * 100).toFixed(2) : 0}%</span>
+        <div class="swal-resumen-stats">
+            <div class="swal-stats-grid">
+                <div class="swal-stat-item" style="border-left-color: #8b5cf6;">
+                    <span class="swal-stat-label">Total registros</span>
+                    <span class="swal-stat-value">${registros.length}</span>
+                </div>
+                <div class="swal-stat-item" style="border-left-color: #ef4444;">
+                    <span class="swal-stat-label">Total perdido</span>
+                    <span class="swal-stat-value" style="color: #ef4444;">${formatter.format(totalPerdido)}</span>
+                </div>
+                <div class="swal-stat-item" style="border-left-color: #10b981;">
+                    <span class="swal-stat-label">Total recuperado</span>
+                    <span class="swal-stat-value" style="color: #10b981;">${formatter.format(totalRecuperado)}</span>
+                </div>
+                <div class="swal-stat-item" style="border-left-color: #3b82f6;">
+                    <span class="swal-stat-label">Tasa recuperación</span>
+                    <span class="swal-stat-value" style="color: #3b82f6;">${tasaRecuperacion}%</span>
                 </div>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+        </div>
+        <div class="swal-registros-list">
     `;
     
     registrosMostrar.forEach(registro => {
@@ -798,71 +816,109 @@ function mostrarRegistrosEnSweet(registros, titulo, icono = '<i class="fas fa-li
         const tipoTexto = registro.getTipoEventoTexto ? registro.getTipoEventoTexto() : (registro.tipoEvento || 'N/A');
         const estadoTexto = registro.getEstadoTexto ? registro.getEstadoTexto() : (registro.estado || 'activo');
         
-        let estadoClass = '';
-        if (estadoTexto === 'Recuperado') estadoClass = '#10b981';
-        else if (estadoTexto === 'Activo') estadoClass = '#ffc107';
-        else estadoClass = '#6c757d';
+        // Clase de color para el estado
+        let estadoColor = '#6c757d';
+        let estadoIcon = 'fa-circle';
+        if (estadoTexto === 'Recuperado') {
+            estadoColor = '#10b981';
+            estadoIcon = 'fa-check-circle';
+        } else if (estadoTexto === 'Activo') {
+            estadoColor = '#f59e0b';
+            estadoIcon = 'fa-exclamation-circle';
+        } else if (estadoTexto === 'Cerrado') {
+            estadoColor = '#6c757d';
+            estadoIcon = 'fa-ban';
+        }
+        
+        // Traducción de tipo de evento para mostrar bonito
+        let tipoIcon = 'fa-tag';
+        let tipoDisplay = tipoTexto;
+        if (tipoTexto === 'robo' || tipoTexto === 'Robo') {
+            tipoIcon = 'fa-mask';
+            tipoDisplay = 'Robo';
+        } else if (tipoTexto === 'extravio' || tipoTexto === 'Extravío') {
+            tipoIcon = 'fa-map-marker-alt';
+            tipoDisplay = 'Extravío';
+        } else if (tipoTexto === 'accidente' || tipoTexto === 'Accidente') {
+            tipoIcon = 'fa-car-crash';
+            tipoDisplay = 'Accidente';
+        }
         
         registrosHtml += `
-            <div style="background: rgba(0,0,0,0.3); border-left: 3px solid ${estadoClass}; border-radius: 8px; padding: 12px; transition: all 0.2s ease; cursor: pointer;" 
-                 onclick="window.verDetalleRegistroDesdeSweet('${registro.id}')">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px;">
-                    <span style="font-family: monospace; font-size: 12px; color: #aaa;">${escapeHTML(registro.id)}</span>
-                    <span style="background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 12px; font-size: 11px;">${fecha}</span>
+            <div class="swal-registro-card" onclick="window.verDetalleRegistroDesdeSweet('${registro.id}')">
+                <div class="swal-card-header">
+                    <span class="swal-id"><i class="fas fa-hashtag"></i> ${escapeHTML(registro.id.substring(0, 12))}...</span>
+                    <span class="swal-fecha"><i class="fas fa-calendar-alt"></i> ${fecha}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <div>
-                        <strong style="color: white;">${escapeHTML(registro.nombreEmpresaCC || 'Sin asignar')}</strong>
-                        <span style="color: #aaa; font-size: 12px; margin-left: 8px;">${tipoTexto}</span>
+                <div class="swal-card-body">
+                    <div class="swal-info-principal">
+                        <div class="swal-sucursal">
+                            <i class="fas fa-store"></i> ${escapeHTML(registro.nombreEmpresaCC || 'Sin asignar')}
+                        </div>
+                        <div class="swal-tipo-evento">
+                            <i class="fas ${tipoIcon}"></i> ${tipoDisplay}
+                            <span class="swal-estado-badge" style="margin-left: 8px; color: ${estadoColor};">
+                                <i class="fas ${estadoIcon}"></i> ${estadoTexto}
+                            </span>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 12px;">
-                        <span style="color: ${COLORS.rojo}; font-weight: 600;">${formatter.format(registro.montoPerdido || 0)}</span>
-                        <span style="color: ${COLORS.verde}; font-weight: 600;">${formatter.format(registro.montoRecuperado || 0)}</span>
+                    <div class="swal-montos">
+                        <span class="swal-monto-perdido"><i class="fas fa-arrow-down"></i> ${formatter.format(registro.montoPerdido || 0)}</span>
+                        <span class="swal-monto-recuperado"><i class="fas fa-arrow-up"></i> ${formatter.format(registro.montoRecuperado || 0)}</span>
                     </div>
                 </div>
-                ${registro.narracionEventos ? `<div style="color: #aaa; font-size: 11px; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><i class="fas fa-file-alt"></i> ${escapeHTML(registro.narracionEventos.substring(0, 80))}${registro.narracionEventos.length > 80 ? '...' : ''}</div>` : ''}
+                ${registro.narracionEventos ? `
+                <div class="swal-card-footer">
+                    <div class="swal-narracion">
+                        <i class="fas fa-file-alt"></i>
+                        <span>${escapeHTML(registro.narracionEventos.substring(0, 100))}${registro.narracionEventos.length > 100 ? '...' : ''}</span>
+                    </div>
+                </div>
+                ` : ''}
             </div>
         `;
     });
     
     if (hayMas) {
         registrosHtml += `
-            <div style="text-align: center; padding: 12px; color: #aaa; font-size: 12px;">
-                ... y ${registros.length - 10} registros más. Haz clic en un registro para ver detalles completos.
+            <div class="swal-mas-registros">
+                <i class="fas fa-ellipsis-h"></i> y ${registros.length - 15} registros más. Haz clic en un registro para ver detalles completos.
             </div>
         `;
     }
     
-    registrosHtml += `
-            </div>
-        </div>
-    `;
+    registrosHtml += `</div>`;
     
     Swal.fire({
         title: `${icono} ${titulo}`,
         html: registrosHtml,
-        width: '800px',
-        background: 'var(--color-bg-primary)',
-        color: 'white',
+        width: '880px',
+        background: 'transparent',
         showConfirmButton: true,
         confirmButtonText: '<i class="fas fa-check"></i> Cerrar',
         confirmButtonColor: '#28a745',
-        showCancelButton: false,
         customClass: {
             popup: 'swal2-popup-custom',
-            title: 'swal2-title-custom'
-        }
+            title: 'swal2-title-custom',
+            confirmButton: 'swal2-confirm'
+        },
+        backdrop: `
+            rgba(0,0,0,0.8)
+            left top
+            no-repeat
+        `
     });
 }
 
 // =============================================
 // FUNCIÓN GLOBAL PARA VER DETALLE DE REGISTRO DESDE SWEET
 // =============================================
+// =============================================
+// FUNCIÓN GLOBAL PARA VER DETALLE DE REGISTRO DESDE SWEET - VERSIÓN MEJORADA
+// =============================================
 window.verDetalleRegistroDesdeSweet = function(registroId) {
-    // Cerrar SweetAlert actual
     Swal.close();
     
-    // Buscar el registro en los datos actuales
     const registro = datosActuales.registros.find(r => r.id === registroId);
     
     if (!registro) {
@@ -871,38 +927,104 @@ window.verDetalleRegistroDesdeSweet = function(registroId) {
             title: 'Registro no encontrado',
             text: 'No se pudo encontrar el registro seleccionado',
             background: 'var(--color-bg-primary)',
-            color: 'white'
+            color: 'white',
+            customClass: {
+                popup: 'swal2-popup-custom'
+            }
         });
         return;
     }
     
-    // Mostrar modal de detalles (reutilizando la función existente si está disponible)
-    if (typeof mostrarModalDetalles === 'function') {
-        mostrarModalDetalles(registro);
-    } else {
-        // Fallback: mostrar Sweet con detalles básicos
-        const formatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-        Swal.fire({
-            title: `<i class="fas fa-info-circle"></i> Detalles del registro`,
-            html: `
-                <div style="text-align: left;">
-                    <p><strong><i class="fas fa-building"></i> Empresa:</strong> ${escapeHTML(registro.nombreEmpresaCC || 'N/A')}</p>
-                    <p><strong><i class="fas fa-calendar"></i> Fecha:</strong> ${registro.getFechaFormateada ? registro.getFechaFormateada() : 'N/A'}</p>
-                    <p><strong><i class="fas fa-clock"></i> Hora:</strong> ${registro.hora || 'N/A'}</p>
-                    <p><strong><i class="fas fa-tag"></i> Tipo:</strong> ${registro.getTipoEventoTexto ? registro.getTipoEventoTexto() : registro.tipoEvento}</p>
-                    <p><strong><i class="fas fa-chart-line"></i> Estado:</strong> ${registro.getEstadoTexto ? registro.getEstadoTexto() : registro.estado}</p>
-                    <p><strong><i class="fas fa-dollar-sign"></i> Monto perdido:</strong> ${formatter.format(registro.montoPerdido || 0)}</p>
-                    <p><strong><i class="fas fa-undo-alt"></i> Monto recuperado:</strong> ${formatter.format(registro.montoRecuperado || 0)}</p>
-                    <p><strong><i class="fas fa-file-alt"></i> Narración:</strong> ${escapeHTML(registro.narracionEventos?.substring(0, 200) || 'N/A')}${registro.narracionEventos?.length > 200 ? '...' : ''}</p>
-                </div>
-            `,
-            width: '500px',
-            background: 'var(--color-bg-primary)',
-            color: 'white',
-            confirmButtonText: 'Cerrar',
-            confirmButtonColor: '#28a745'
-        });
+    const formatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+    const fecha = registro.getFechaFormateada ? registro.getFechaFormateada() : (registro.fecha ? new Date(registro.fecha).toLocaleDateString('es-MX') : 'N/A');
+    const tipoTexto = registro.getTipoEventoTexto ? registro.getTipoEventoTexto() : (registro.tipoEvento || 'N/A');
+    const estadoTexto = registro.getEstadoTexto ? registro.getEstadoTexto() : (registro.estado || 'activo');
+    
+    let estadoColor = '#6c757d';
+    let estadoIcon = 'fa-circle';
+    if (estadoTexto === 'Recuperado') {
+        estadoColor = '#10b981';
+        estadoIcon = 'fa-check-circle';
+    } else if (estadoTexto === 'Activo') {
+        estadoColor = '#f59e0b';
+        estadoIcon = 'fa-exclamation-circle';
     }
+    
+    let tipoIcon = 'fa-tag';
+    if (tipoTexto === 'robo' || tipoTexto === 'Robo') tipoIcon = 'fa-mask';
+    else if (tipoTexto === 'extravio' || tipoTexto === 'Extravío') tipoIcon = 'fa-map-marker-alt';
+    else if (tipoTexto === 'accidente' || tipoTexto === 'Accidente') tipoIcon = 'fa-car-crash';
+    
+    const detallesHtml = `
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="swal-resumen-stats" style="margin-bottom: 0;">
+                <div class="swal-stats-grid">
+                    <div class="swal-stat-item" style="border-left-color: #8b5cf6;">
+                        <span class="swal-stat-label">ID Registro</span>
+                        <span class="swal-stat-value" style="font-size: 0.8rem; word-break: break-all;">${escapeHTML(registro.id)}</span>
+                    </div>
+                    <div class="swal-stat-item" style="border-left-color: #3b82f6;">
+                        <span class="swal-stat-label">Fecha</span>
+                        <span class="swal-stat-value" style="font-size: 0.9rem;">${fecha}</span>
+                    </div>
+                    <div class="swal-stat-item" style="border-left-color: ${estadoColor};">
+                        <span class="swal-stat-label">Estado</span>
+                        <span class="swal-stat-value" style="color: ${estadoColor};"><i class="fas ${estadoIcon}"></i> ${estadoTexto}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: rgba(0,0,0,0.4); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase; color: #9ca3af; letter-spacing: 1px;">Sucursal</div>
+                        <div style="font-size: 1rem; font-weight: 600; margin-top: 4px;"><i class="fas fa-store" style="color: var(--color-accent-primary);"></i> ${escapeHTML(registro.nombreEmpresaCC || 'N/A')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase; color: #9ca3af; letter-spacing: 1px;">Tipo de evento</div>
+                        <div style="font-size: 1rem; font-weight: 600; margin-top: 4px;"><i class="fas ${tipoIcon}"></i> ${tipoTexto}</div>
+                    </div>
+                    ${registro.hora ? `
+                    <div>
+                        <div style="font-size: 0.7rem; text-transform: uppercase; color: #9ca3af; letter-spacing: 1px;">Hora</div>
+                        <div style="font-size: 1rem; font-weight: 600; margin-top: 4px;"><i class="fas fa-clock"></i> ${escapeHTML(registro.hora)}</div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                <div style="flex: 1; background: rgba(239, 68, 68, 0.1); border-radius: 16px; padding: 16px; border-left: 3px solid #ef4444;">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #9ca3af;">Monto perdido</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #ef4444; font-family: var(--font-family-primary);">${formatter.format(registro.montoPerdido || 0)}</div>
+                </div>
+                <div style="flex: 1; background: rgba(16, 185, 129, 0.1); border-radius: 16px; padding: 16px; border-left: 3px solid #10b981;">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #9ca3af;">Monto recuperado</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #10b981; font-family: var(--font-family-primary);">${formatter.format(registro.montoRecuperado || 0)}</div>
+                </div>
+            </div>
+            
+            ${registro.narracionEventos ? `
+            <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px;">
+                <div style="font-size: 0.7rem; text-transform: uppercase; color: #9ca3af; margin-bottom: 8px;"><i class="fas fa-file-alt"></i> Narración del evento</div>
+                <div style="font-size: 0.85rem; line-height: 1.5; color: #d1d5db;">${escapeHTML(registro.narracionEventos)}</div>
+            </div>
+            ` : ''}
+        </div>
+    `;
+    
+    Swal.fire({
+        title: `<i class="fas fa-info-circle" style="color: var(--color-accent-primary);"></i> Detalles del registro`,
+        html: detallesHtml,
+        width: '700px',
+        background: 'transparent',
+        confirmButtonText: '<i class="fas fa-check"></i> Cerrar',
+        customClass: {
+            popup: 'swal2-popup-custom',
+            title: 'swal2-title-custom',
+            confirmButton: 'swal2-confirm'
+        }
+    });
 };
 
 // =============================================

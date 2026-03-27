@@ -1845,7 +1845,7 @@ class NavbarComplete {
                             <span>Crear Extravio</span>
                         </a>
                           <a href="/usuarios/administrador/estadisticasExtravios/estadisticasExtravios.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
-                            <i class="fa-solid fa-plus-circle"></i>
+                            <i class="fa-solid fa-chart-bar"></i>
                             <span>Estadisticas Extravios</span>
                         </a>
                     </div>

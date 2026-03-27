@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ===============================================================
-    // 🔥 FUNCIÓN MEJORADA - Guardar en sessionStorage con área, cargo y PLAN
+    // FUNCIÓN MEJORADA - Guardar en sessionStorage con área, cargo y PLAN
     // ===============================================================
     function saveUserToSessionStorage(user) {
         try {
@@ -278,11 +278,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
 
-                // ✅ GUARDAR ÁREA Y CARGO EN SESSION TAMBIÉN
+                //  GUARDAR ÁREA Y CARGO EN SESSION TAMBIÉN
                 areaAsignadaId: user.areaAsignadaId || '',
                 cargoId: user.cargoId || '',
                 
-                // ✅ ✅ ✅ NUEVO: GUARDAR PLAN EN SESSION TAMBIÉN
+                // NUEVO: GUARDAR PLAN EN SESSION TAMBIÉN
                 plan: planId,
                 planId: planId,
 
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function () {
             sessionStorage.setItem('sessionUser', user.nombreCompleto);
             sessionStorage.setItem('sessionRole', user.rol);
             
-            // ✅ ✅ ✅ Guardar plan en sessionStorage
+            // Guardar plan en sessionStorage
             if (planId) {
                 sessionStorage.setItem('sessionPlan', planId);
             }
@@ -355,19 +355,8 @@ document.addEventListener('DOMContentLoaded', function () {
             title: '¡Bienvenido!',
             html: `
                 <div style="text-align: center;">
-                    <h3>${user.nombreCompleto}</h3>
+                    <h3> Bienvenido: ${user.nombreCompleto}</h3>
                     <p>Sesión iniciada correctamente</p>
-                    
-                    <div>
-                        <p><strong>Organización:</strong> ${user.organizacion}</p>
-                        <p><strong>Rol:</strong> ${user.rol === 'administrador' ? 'ADMINISTRADOR' : 'COLABORADOR'}</p>
-                        <p><strong>Plan:</strong> ${planId}</p>
-                        <p><strong>Área ID:</strong> ${user.areaAsignadaId || 'No asignada'}</p>
-                        <p><strong>Cargo ID:</strong> ${user.cargoId || 'No asignado'}</p>
-                        <p><strong>Estado:</strong> ${user.verificado ? 'Verificado' : 'Pendiente'}</p>
-                    </div>
-                    
-                    <p>Redirigiendo al sistema...</p>
                 </div>
             `,
             showConfirmButton: false,

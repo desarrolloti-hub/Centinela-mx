@@ -1067,3 +1067,308 @@ p, h1, h2, h3, h4, h5, h6, span, div {
 * {
     -webkit-tap-highlight-color: transparent;
 }
+/* estadisticasExtravios.css - Añadir al final del archivo */
+/* =============================================
+   ESTILOS PERSONALIZADOS PARA SWEETALERT
+   ============================================= */
+
+/* Estilo general para SweetAlert */
+.swal2-popup-custom {
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, rgba(10, 10, 10, 0.98), rgba(20, 20, 20, 0.98)) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.swal2-title-custom {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    font-size: 1.3rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+    margin-bottom: 10px;
+}
+
+/* Contenedor de resumen estadístico */
+.swal-resumen-stats {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(4px);
+}
+
+.swal-stats-grid {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.swal-stat-item {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    border-left: 2px solid;
+    transition: all 0.2s ease;
+}
+
+.swal-stat-item:hover {
+    transform: translateY(-2px);
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.swal-stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #9ca3af;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.swal-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+}
+
+/* Lista de registros */
+.swal-registros-list {
+    max-height: 450px;
+    overflow-y: auto;
+    margin-top: 8px;
+    padding-right: 4px;
+}
+
+/* Scrollbar personalizada */
+.swal-registros-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.swal-registros-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.swal-registros-list::-webkit-scrollbar-thumb {
+    background: var(--color-accent-primary, #c0c0c0);
+    border-radius: 10px;
+}
+
+/* Tarjeta de registro individual */
+.swal-registro-card {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3));
+    border-radius: 14px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.swal-registro-card:hover {
+    transform: translateX(4px);
+    border-color: var(--color-accent-primary, #c0c0c0);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.4));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Header de la tarjeta */
+.swal-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px 8px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.swal-id {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: #6b7280;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+}
+
+.swal-fecha {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
+.swal-fecha i {
+    font-size: 0.65rem;
+    color: var(--color-accent-primary);
+}
+
+/* Body de la tarjeta */
+.swal-card-body {
+    padding: 10px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.swal-info-principal {
+    flex: 2;
+    min-width: 150px;
+}
+
+.swal-sucursal {
+    font-weight: 600;
+    color: white;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.swal-sucursal i {
+    color: var(--color-accent-primary);
+    font-size: 0.75rem;
+    width: 16px;
+}
+
+.swal-tipo-evento {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 4px;
+}
+
+.swal-montos {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.swal-monto-perdido {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.swal-monto-recuperado {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+/* Footer de la tarjeta */
+.swal-card-footer {
+    padding: 8px 14px 12px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.swal-narracion {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    line-height: 1.4;
+}
+
+.swal-narracion i {
+    color: var(--color-accent-primary);
+    font-size: 0.7rem;
+    margin-top: 2px;
+}
+
+.swal-narracion span {
+    flex: 1;
+    word-break: break-word;
+}
+
+/* Estado de la tarjeta (badge) */
+.swal-estado-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.swal-estado-badge i {
+    font-size: 0.6rem;
+}
+
+/* Mensaje de más registros */
+.swal-mas-registros {
+    text-align: center;
+    padding: 14px;
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+/* Botón de SweetAlert personalizado */
+.swal2-confirm {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border: 1px solid var(--color-accent-primary, #c0c0c0) !important;
+    border-radius: 10px !important;
+    padding: 10px 24px !important;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.2s ease !important;
+}
+
+.swal2-confirm:hover {
+    transform: translateY(-2px) !important;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a) !important;
+    box-shadow: 0 0 15px rgba(192, 192, 192, 0.2) !important;
+}
+
+/* Animación de entrada para las tarjetas */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.swal-registro-card {
+    animation: fadeInUp 0.2s ease forwards;
+}

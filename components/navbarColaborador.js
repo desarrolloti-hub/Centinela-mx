@@ -1749,10 +1749,25 @@ class NavbarComplete {
                             <i class="fa-solid fa-plus-circle"></i>
                             <span>Crear Incidencia</span>
                         </a>
-
                         <a href="../incidenciasCanalizadas/incidenciasCanalizadas.html" class="incidencias-dropdown-option" id="incidenciasCanalizadasBtn">
                             <i class="fa-solid fa-check-circle"></i>
                             <span>Incidencias Canalizadas</span>
+                        </a>
+                      <a href="/usuarios/administrador/estadisticas/estadisticas.html"  class="incidencias-dropdown-option" id="incidenciasCanalizadasBtn">
+                            <i class="fa-solid fa-chart-bar"></i>
+                            <span>Estadisticas Incidencias</span>
+                        </a>
+                         <a href="/usuarios/administrador/mercanciaPerdida/mercanciaPerdida.html"  class="incidencias-dropdown-option" id="incidenciasCanalizadasBtn">
+                            <i class="fa-solid fa-list"></i>
+                            <span>Lista de Extravios</span>
+                        </a>
+                         <a href="/usuarios/administrador/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html"  class="incidencias-dropdown-option" id="incidenciasCanalizadasBtn">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Crear Extravio</span>
+                        </a>
+                          <a href="/usuarios/administrador/estadisticasExtravios/estadisticasExtravios.html"  class="incidencias-dropdown-option" id="incidenciasCanalizadasBtn">
+                            <i class="fa-solid fa-chart-bar"></i>
+                            <span>Estadisticas Extravios</span>
                         </a>
                     </div>
                 </div>
