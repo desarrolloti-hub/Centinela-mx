@@ -1805,10 +1805,6 @@ class NavbarComplete {
                             <i class="fa-solid fa-users-gear"></i>
                             <span>Usuarios</span>
                         </a>
-                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-chart-bar"></i>
-                            <span>Estadísticas</span>
-                        </a>
                         <a href="/usuarios/administrador/tareas/tareas.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-tasks"></i>
                             <span>Tareas</span>
@@ -1835,6 +1831,10 @@ class NavbarComplete {
                         <a href="/usuarios/administrador/incidenciasCanalizadas/incidenciasCanalizadas.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
                             <i class="fa-solid fa-share-alt"></i>
                             <span>Incidencias Canalizadas</span>
+                        </a>
+                            <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
+                            <i class="fa-solid fa-chart-bar"></i>
+                            <span>Estadisticas Incidencias</span>
                         </a>
                          <a href="/usuarios/administrador/mercanciaPerdida/mercanciaPerdida.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
                             <i class="fa-solid fa-list"></i>

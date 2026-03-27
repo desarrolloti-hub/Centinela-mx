@@ -38,9 +38,14 @@
         <div class="filtros-container">
             <div class="filtros-header">
                 <h5><i class="fas fa-filter"></i> Filtros de análisis</h5>
-                <button class="btn-limpiar-filtros" id="btnLimpiarFiltros">
-                    <i class="fas fa-eraser"></i> Limpiar filtros
-                </button>
+                <div class="filtros-actions">
+                    <button class="btn-pdf" id="btnGenerarPDF">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn-limpiar-filtros" id="btnLimpiarFiltros">
+                        <i class="fas fa-eraser"></i> Limpiar filtros
+                    </button>
+                </div>
             </div>
             <div class="filtros-body">
                 <div class="filtro-grupo">
@@ -67,16 +72,6 @@
                         <option value="extravio">Extravío</option>
                         <option value="accidente">Accidente</option>
                         <option value="otro">Otro</option>
-                    </select>
-                </div>
-
-                <div class="filtro-grupo">
-                    <label><i class="fas fa-chart-simple"></i> Estado</label>
-                    <select id="filtroEstado" class="filtro-select">
-                        <option value="todos">Todos los estados</option>
-                        <option value="activo">Activo</option>
-                        <option value="recuperado">Recuperado</option>
-                        <option value="cerrado">Cerrado</option>
                     </select>
                 </div>
 
@@ -247,7 +242,7 @@
     <script type="module" src="/components/autenticador.j"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <script type="module" src="/components/navbarSysAdmin.js"></script>
+    <script type="module" src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="./estadisticasExtravios.js"></script>
 </body>

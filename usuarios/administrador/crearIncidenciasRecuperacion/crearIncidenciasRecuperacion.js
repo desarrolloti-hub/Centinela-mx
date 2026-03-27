@@ -80,10 +80,7 @@ class CrearMercanciaPerdidaController {
                 </div>
                 <div class="pdf-preview-footer">
                     <button class="btn btn-secondary" id="pdfCancelBtn">
-                        <i class="fas fa-times"></i> Cancelar
-                    </button>
-                    <button class="btn btn-warning" id="pdfViewOnlyBtn">
-                        <i class="fas fa-file-pdf"></i> PDF
+                        <i class="fas fa-times"></i> Cerrar
                     </button>
                     <button class="btn btn-success" id="pdfAcceptBtn">
                         <i class="fas fa-check-circle"></i> Aceptar
@@ -105,7 +102,6 @@ class CrearMercanciaPerdidaController {
         // Event listeners
         document.getElementById('pdfCloseBtn').addEventListener('click', () => this._closePDFPreview());
         document.getElementById('pdfCancelBtn').addEventListener('click', () => this._closePDFPreview());
-        document.getElementById('pdfViewOnlyBtn').addEventListener('click', () => this._downloadPreviewPDF());
         document.getElementById('pdfAcceptBtn').addEventListener('click', () => this._acceptAndUpload());
         
         // Cerrar al hacer click fuera
@@ -263,16 +259,6 @@ class CrearMercanciaPerdidaController {
                 
                 .pdf-preview-footer .btn-secondary:hover {
                     background: #5a6268;
-                    transform: translateY(-2px);
-                }
-                
-                .pdf-preview-footer .btn-warning {
-                    background: #ffc107;
-                    color: #000;
-                }
-                
-                .pdf-preview-footer .btn-warning:hover {
-                    background: #e0a800;
                     transform: translateY(-2px);
                 }
                 
@@ -1101,7 +1087,7 @@ class CrearMercanciaPerdidaController {
             denyButtonText: '<i class="fas fa-file-pdf"></i> Ver PDF',
             cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
             confirmButtonColor: '#28a745',
-            denyButtonColor: '#ffc107',
+            denyButtonColor: '#dc3545',  // CAMBIADO: ahora es rojo como en las demás vistas
             cancelButtonColor: '#6c757d',
             reverseButtons: false
         });

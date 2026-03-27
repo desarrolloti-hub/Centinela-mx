@@ -1648,3 +1648,155 @@ select:not(.field-disabled):focus {
     border-color: var(--color-accent-primary);
     box-shadow: 0 0 0 2px rgba(0, 207, 255, 0.2);
 }
+
+/* =============================================
+   ESTILOS PARA MODAL DE VISTA PREVIA PDF (AGREGADO)
+   ============================================= */
+.pdf-preview-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    flex-direction: column;
+    animation: pdfPreviewFadeIn 0.3s ease;
+}
+
+@keyframes pdfPreviewFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.pdf-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #1a3b5d 0%, #0f2a44 100%);
+    color: white;
+    border-bottom: 2px solid #c9a03d;
+}
+
+.pdf-preview-header h3 {
+    margin: 0;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pdf-preview-header h3 i {
+    color: #e74c3c;
+}
+
+.pdf-preview-close-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+.pdf-preview-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.pdf-preview-content {
+    flex: 1;
+    padding: 20px;
+    background: #1a1a1a;
+    position: relative;
+    min-height: 0;
+}
+
+.pdf-preview-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-preview-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: white;
+}
+
+.pdf-preview-loading .spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #c9a03d;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+.pdf-preview-loading p {
+    margin: 10px 0;
+    font-size: 14px;
+}
+
+.pdf-preview-loading .small {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.pdf-preview-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    padding: 16px 24px;
+    background: #2d2d2d;
+    border-top: 1px solid #444;
+}
+
+.pdf-preview-footer .btn {
+    padding: 10px 24px;
+    font-family: var(--font-family-secondary);
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+}
+
+.pdf-preview-footer .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.pdf-preview-footer .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+.pdf-preview-footer .btn-success {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
+    border: 1px solid #28a745;
+    color: white;
+}
+
+.pdf-preview-footer .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}

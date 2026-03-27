@@ -1,6 +1,7 @@
 // estadisticasExtravios.js - Dashboard de Pérdidas y Recuperaciones
 // VERSIÓN CON FILTROS MANUALES - Sin auto-refresco
 // OPTIMIZADO - Sin scroll horizontal, gráficas mejoradas y CLICKEABLES
+// CON EXPORTACIÓN A PDF
 
 import { MercanciaPerdidaManager } from '/clases/mercanciaPerdida.js';
 
@@ -167,7 +168,6 @@ async function cargarRegistrosConFiltros() {
         const fechaInicio = document.getElementById('fechaInicio')?.value;
         const fechaFin = document.getElementById('fechaFin')?.value;
         const tipoEvento = document.getElementById('filtroTipoEvento')?.value || 'todos';
-        const estado = document.getElementById('filtroEstado')?.value || 'todos';
         
         const todosRegistros = await mercanciaManager.getRegistrosByOrganizacion(
             organizacionActual.camelCase
@@ -205,13 +205,6 @@ async function cargarRegistrosConFiltros() {
         if (tipoEvento !== 'todos') {
             registrosFiltrados = registrosFiltrados.filter(r => 
                 r.tipoEvento === tipoEvento
-            );
-        }
-        
-        // Filtro por estado
-        if (estado !== 'todos') {
-            registrosFiltrados = registrosFiltrados.filter(r => 
-                r.estado === estado
             );
         }
         
@@ -926,7 +919,7 @@ function actualizarGraficaVacia() {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.font = '12px "Rajdhani", sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('<i class="fas fa-chart-line"></i> Sin datos para mostrar', canvas.width / 2, canvas.height / 2);
+            ctx.fillText('Sin datos para mostrar', canvas.width / 2, canvas.height / 2);
         }
     });
 }
@@ -1025,15 +1018,96 @@ function limpiarFiltros() {
     const fechaInicio = document.getElementById('fechaInicio');
     const fechaFin = document.getElementById('fechaFin');
     const filtroTipoEvento = document.getElementById('filtroTipoEvento');
-    const filtroEstado = document.getElementById('filtroEstado');
     
     if (filtroSucursal) filtroSucursal.value = 'todas';
     if (fechaInicio) fechaInicio.value = '';
     if (fechaFin) fechaFin.value = '';
     if (filtroTipoEvento) filtroTipoEvento.value = 'todos';
-    if (filtroEstado) filtroEstado.value = 'todos';
     
     mostrarEmptyState();
+}
+
+// =============================================
+// GENERAR REPORTE PDF
+// =============================================
+async function generarReportePDF() {
+    try {
+        if (!datosActuales.registros || datosActuales.registros.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sin datos',
+                text: 'No hay datos para exportar. Aplica filtros primero.',
+                background: 'var(--color-bg-primary)',
+                color: 'white'
+            });
+            return;
+        }
+
+        // Mostrar loading
+        Swal.fire({
+            title: 'Generando PDF...',
+            text: 'Capturando gráficas y procesando datos',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Obtener datos de la tabla de resumen actual
+        const sucursalesResumen = [];
+        const tbody = document.getElementById('tablaResumenBody');
+        if (tbody) {
+            const filas = tbody.querySelectorAll('tr');
+            filas.forEach(fila => {
+                const celdas = fila.querySelectorAll('td');
+                if (celdas.length >= 6 && !celdas[0].textContent.includes('No hay datos')) {
+                    sucursalesResumen.push({
+                        nombre: celdas[0].textContent.trim(),
+                        eventos: parseInt(celdas[1].textContent) || 0,
+                        perdido: parseFloat(celdas[2].textContent.replace(/[^0-9.-]/g, '')) || 0,
+                        recuperado: parseFloat(celdas[3].textContent.replace(/[^0-9.-]/g, '')) || 0,
+                        neto: parseFloat(celdas[4].textContent.replace(/[^0-9.-]/g, '')) || 0,
+                        porcentaje: parseFloat(celdas[5].textContent) || 0
+                    });
+                }
+            });
+        }
+
+        // Obtener filtros actuales
+        const filtros = {
+            sucursal: document.getElementById('filtroSucursal')?.value || 'todas',
+            fechaInicio: document.getElementById('fechaInicio')?.value,
+            fechaFin: document.getElementById('fechaFin')?.value,
+            tipoEvento: document.getElementById('filtroTipoEvento')?.value || 'todos'
+        };
+
+        // Preparar datos para PDF
+        const datosPDF = {
+            estadisticas: datosActuales.estadisticas,
+            registros: datosActuales.registros,
+            sucursalesResumen: sucursalesResumen,
+            filtros: filtros
+        };
+
+        // Importar generador PDF
+        const { generadorPDFEstadisticasExtravios } = await import('/components/estadisticasExtraviosPDF.js');
+
+        // Generar PDF
+        await generadorPDFEstadisticasExtravios.generarReporte(datosPDF, {
+            mostrarAlerta: true,
+            tituloPersonalizado: 'REPORTE DE PÉRDIDAS Y RECUPERACIONES'
+        });
+
+    } catch (error) {
+        console.error('Error generando PDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el PDF: ' + error.message,
+            background: 'var(--color-bg-primary)',
+            color: 'white'
+        });
+    }
 }
 
 // =============================================
@@ -1064,10 +1138,12 @@ function configurarEventos() {
     const btnAplicar = document.getElementById('btnAplicarFiltros');
     const btnLimpiar = document.getElementById('btnLimpiarFiltros');
     const btnEmptyAplicar = document.getElementById('btnEmptyAplicar');
+    const btnPDF = document.getElementById('btnGenerarPDF');
     
     if (btnAplicar) btnAplicar.addEventListener('click', cargarRegistrosConFiltros);
     if (btnLimpiar) btnLimpiar.addEventListener('click', limpiarFiltros);
     if (btnEmptyAplicar) btnEmptyAplicar.addEventListener('click', cargarRegistrosConFiltros);
+    if (btnPDF) btnPDF.addEventListener('click', generarReportePDF);
     
     const fechaInicio = document.getElementById('fechaInicio');
     const fechaFin = document.getElementById('fechaFin');
