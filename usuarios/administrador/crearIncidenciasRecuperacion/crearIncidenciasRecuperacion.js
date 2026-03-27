@@ -397,8 +397,6 @@ class CrearMercanciaPerdidaController {
             hora: fechaObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
             narracionEventos: datos.narracionEventos,
             detallesPerdida: datos.detallesPerdida,
-            ubicacion: datos.ubicacion,
-            responsableAsignado: datos.responsableAsignado,
             reportadoPorNombre: this.usuarioActual.nombreCompleto,
             evidencias: evidenciasProcesadas,
             estado: 'activo',
@@ -1068,10 +1066,8 @@ class CrearMercanciaPerdidaController {
         narracionInput.classList.remove('is-invalid');
 
         const detallesPerdida = document.getElementById('detallesPerdida').value.trim();
-        const ubicacion = document.getElementById('ubicacion').value.trim();
-        const responsableAsignado = document.getElementById('responsableAsignado').value.trim();
 
-        // Guardar datos validados
+        // Guardar datos validados (ubicación y responsableAsignado eliminados)
         const datos = {
             nombreEmpresaCC,
             tipoEvento,
@@ -1080,8 +1076,6 @@ class CrearMercanciaPerdidaController {
             fechaHora,
             narracionEventos,
             detallesPerdida,
-            ubicacion,
-            responsableAsignado,
             imagenes: this.imagenesSeleccionadas
         };
 
@@ -1166,7 +1160,7 @@ class CrearMercanciaPerdidaController {
                 throw new Error('No se pudo generar el PDF');
             }
 
-            // PASO 1: CREAR REGISTRO EN FIRESTORE
+            // PASO 1: CREAR REGISTRO EN FIRESTORE (campos ubicacion y responsableAsignado eliminados)
             const registroData = {
                 nombreEmpresaCC: datos.nombreEmpresaCC,
                 tipoEvento: datos.tipoEvento,
@@ -1176,8 +1170,6 @@ class CrearMercanciaPerdidaController {
                 hora: hora,
                 narracionEventos: datos.narracionEventos,
                 detallesPerdida: datos.detallesPerdida,
-                ubicacion: datos.ubicacion,
-                responsableAsignado: datos.responsableAsignado,
                 reportadoPorId: this.usuarioActual.id,
                 reportadoPorNombre: this.usuarioActual.nombreCompleto
             };

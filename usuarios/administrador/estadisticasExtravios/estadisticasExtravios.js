@@ -90,7 +90,7 @@ async function obtenerDatosOrganizacion() {
                 nombre: usuario.organizacion || 'Mi Empresa',
                 camelCase: usuario.organizacionCamelCase || ''
             };
-            console.log('📌 Organización:', organizacionActual);
+            console.log('Organización:', organizacionActual);
             return;
         }
         
@@ -137,7 +137,7 @@ async function cargarSucursales() {
             });
         }
         
-        console.log(`✅ ${sucursalesCache.length} sucursales cargadas`);
+        console.log(`${sucursalesCache.length} sucursales cargadas`);
         
     } catch (error) {
         console.error('Error cargando sucursales:', error);
@@ -392,7 +392,7 @@ function actualizarGraficoTipoEvento(registros) {
                             return;
                         }
                         
-                        mostrarRegistrosEnSweet(registrosTipo, `Registros de tipo: ${tipoNombre}`, `📋 ${tipoNombre}`);
+                        mostrarRegistrosEnSweet(registrosTipo, `Registros de tipo: ${tipoNombre}`, `<i class="fas fa-tag"></i> ${tipoNombre}`);
                     }
                 },
                 plugins: {
@@ -519,7 +519,7 @@ function actualizarGraficoEvolucionMensual(registros) {
                             return;
                         }
                         
-                        mostrarRegistrosEnSweet(registrosMes, `Registros de ${mesNombre}`, `📅 ${mesNombre}`);
+                        mostrarRegistrosEnSweet(registrosMes, `Registros de ${mesNombre}`, `<i class="fas fa-calendar-alt"></i> ${mesNombre}`);
                     }
                 },
                 plugins: {
@@ -632,7 +632,7 @@ function actualizarGraficoTopSucursales(registros) {
                             return;
                         }
                         
-                        mostrarRegistrosEnSweet(registrosSucursal, `Registros de ${sucursalNombre}`, `🏢 ${sucursalNombre}`);
+                        mostrarRegistrosEnSweet(registrosSucursal, `Registros de ${sucursalNombre}`, `<i class="fas fa-building"></i> ${sucursalNombre}`);
                     }
                 },
                 plugins: {
@@ -715,7 +715,7 @@ function actualizarGraficoComparativa(estadisticas) {
                         }
                         
                         if (tipo === 'Pérdidas') {
-                            mostrarRegistrosEnSweet(registros, 'Todos los registros de pérdidas', `📉 Todos los registros`);
+                            mostrarRegistrosEnSweet(registros, 'Todos los registros de pérdidas', `<i class="fas fa-chart-line"></i> Todos los registros`);
                         } else {
                             const registrosConRecuperacion = registros.filter(r => (r.montoRecuperado || 0) > 0);
                             if (registrosConRecuperacion.length === 0) {
@@ -728,7 +728,7 @@ function actualizarGraficoComparativa(estadisticas) {
                                 });
                                 return;
                             }
-                            mostrarRegistrosEnSweet(registrosConRecuperacion, 'Registros con recuperaciones', `💰 Recuperaciones registradas`);
+                            mostrarRegistrosEnSweet(registrosConRecuperacion, 'Registros con recuperaciones', `<i class="fas fa-undo-alt"></i> Recuperaciones registradas`);
                         }
                     }
                 },
@@ -767,7 +767,7 @@ function actualizarGraficoComparativa(estadisticas) {
 // =============================================
 // FUNCIÓN PARA MOSTRAR REGISTROS EN SWEETALERT
 // =============================================
-function mostrarRegistrosEnSweet(registros, titulo, icono = '📋') {
+function mostrarRegistrosEnSweet(registros, titulo, icono = '<i class="fas fa-list"></i>') {
     if (!registros || registros.length === 0) {
         Swal.fire({
             icon: 'info',
@@ -791,10 +791,10 @@ function mostrarRegistrosEnSweet(registros, titulo, icono = '📋') {
         <div style="max-height: 400px; overflow-y: auto; margin-top: 12px;">
             <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                    <span><strong>📊 Total registros:</strong> ${registros.length}</span>
-                    <span><strong>💰 Total perdido:</strong> ${formatter.format(totalPerdido)}</span>
-                    <span><strong>🔄 Total recuperado:</strong> ${formatter.format(totalRecuperado)}</span>
-                    <span><strong>📈 Tasa recuperación:</strong> ${totalPerdido > 0 ? ((totalRecuperado / totalPerdido) * 100).toFixed(2) : 0}%</span>
+                    <span><strong><i class="fas fa-chart-simple"></i> Total registros:</strong> ${registros.length}</span>
+                    <span><strong><i class="fas fa-dollar-sign"></i> Total perdido:</strong> ${formatter.format(totalPerdido)}</span>
+                    <span><strong><i class="fas fa-undo-alt"></i> Total recuperado:</strong> ${formatter.format(totalRecuperado)}</span>
+                    <span><strong><i class="fas fa-percent"></i> Tasa recuperación:</strong> ${totalPerdido > 0 ? ((totalRecuperado / totalPerdido) * 100).toFixed(2) : 0}%</span>
                 </div>
             </div>
             <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -827,7 +827,7 @@ function mostrarRegistrosEnSweet(registros, titulo, icono = '📋') {
                         <span style="color: ${COLORS.verde}; font-weight: 600;">${formatter.format(registro.montoRecuperado || 0)}</span>
                     </div>
                 </div>
-                ${registro.narracionEventos ? `<div style="color: #aaa; font-size: 11px; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📝 ${escapeHTML(registro.narracionEventos.substring(0, 80))}${registro.narracionEventos.length > 80 ? '...' : ''}</div>` : ''}
+                ${registro.narracionEventos ? `<div style="color: #aaa; font-size: 11px; margin-top: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><i class="fas fa-file-alt"></i> ${escapeHTML(registro.narracionEventos.substring(0, 80))}${registro.narracionEventos.length > 80 ? '...' : ''}</div>` : ''}
             </div>
         `;
     });
@@ -890,7 +890,7 @@ window.verDetalleRegistroDesdeSweet = function(registroId) {
         // Fallback: mostrar Sweet con detalles básicos
         const formatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
         Swal.fire({
-            title: `📋 Detalles del registro`,
+            title: `<i class="fas fa-info-circle"></i> Detalles del registro`,
             html: `
                 <div style="text-align: left;">
                     <p><strong><i class="fas fa-building"></i> Empresa:</strong> ${escapeHTML(registro.nombreEmpresaCC || 'N/A')}</p>
@@ -926,7 +926,7 @@ function actualizarGraficaVacia() {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.font = '12px "Rajdhani", sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('📊 Sin datos para mostrar', canvas.width / 2, canvas.height / 2);
+            ctx.fillText('<i class="fas fa-chart-line"></i> Sin datos para mostrar', canvas.width / 2, canvas.height / 2);
         }
     });
 }
@@ -968,7 +968,7 @@ function actualizarTablaResumen(registros) {
     if (sucursalesArray.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center">📭 No hay datos para mostrar con los filtros seleccionados</td>
+                <td colspan="6" class="text-center"><i class="fas fa-inbox"></i> No hay datos para mostrar con los filtros seleccionados</td>
             </tr>
         `;
         return;
@@ -1086,7 +1086,7 @@ function configurarEventos() {
 // =============================================
 async function inicializarDashboard() {
     try {
-        console.log('🚀 Inicializando Dashboard de Pérdidas...');
+        console.log('🚀 Dashboard inicializado correctamente');
         
         await obtenerDatosOrganizacion();
         
@@ -1100,8 +1100,6 @@ async function inicializarDashboard() {
         await cargarSucursales();
         configurarEventos();
         mostrarEmptyState();
-        
-        console.log('✅ Dashboard inicializado correctamente');
         
     } catch (error) {
         console.error('Error inicializando dashboard:', error);
