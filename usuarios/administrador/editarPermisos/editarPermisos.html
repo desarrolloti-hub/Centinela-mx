@@ -97,7 +97,6 @@
                     Editar Permiso
                 </h1>
                 <div class="header-description-text">
-
                     "Modifica los módulos a los que tiene acceso el cargo"
                 </div>
             </div>
@@ -245,6 +244,57 @@
                                             </div>
                                             <input type="checkbox" class="permiso-checkbox" id="permisoIncidencias">
                                         </div>
+
+                                        <!-- Módulo: Mapa de Alertas (Monitoreo) - DINÁMICO -->
+                                        <div class="permiso-card" id="permisoMonitoreoCard" style="display: none;">
+                                            <div class="permiso-icon cyan">
+                                                <i class="fas fa-map-marker-alt"></i>
+                                            </div>
+                                            <div class="permiso-contenido">
+                                                <span class="permiso-nombre">Mapa de Alertas</span>
+                                                <span class="permiso-descripcion">Visualización de alertas en
+                                                    mapa</span>
+                                            </div>
+                                            <input type="checkbox" class="permiso-checkbox" id="permisoMonitoreo"
+                                                data-modulo="monitoreo">
+                                        </div>
+
+                                        <!-- NUEVO Módulo: Usuarios -->
+                                        <div class="permiso-card" id="permisoUsuariosCard">
+                                            <div class="permiso-icon">
+                                                <i class="fas fa-users"></i>
+                                            </div>
+                                            <div class="permiso-contenido">
+                                                <span class="permiso-nombre">Usuarios</span>
+                                                <span class="permiso-descripcion">Gestionar usuarios del sistema</span>
+                                            </div>
+                                            <input type="checkbox" class="permiso-checkbox" id="permisoUsuarios">
+                                        </div>
+
+                                        <!-- NUEVO Módulo: Estadísticas -->
+                                        <div class="permiso-card" id="permisoEstadisticasCard">
+                                            <div class="permiso-icon">
+                                                <i class="fas fa-chart-line"></i>
+                                            </div>
+                                            <div class="permiso-contenido">
+                                                <span class="permiso-nombre">Estadísticas</span>
+                                                <span class="permiso-descripcion">Visualizar estadísticas y
+                                                    reportes</span>
+                                            </div>
+                                            <input type="checkbox" class="permiso-checkbox" id="permisoEstadisticas">
+                                        </div>
+
+                                        <!-- NUEVO Módulo: Tareas -->
+                                        <div class="permiso-card" id="permisoTareasCard">
+                                            <div class="permiso-icon">
+                                                <i class="fas fa-tasks"></i>
+                                            </div>
+                                            <div class="permiso-contenido">
+                                                <span class="permiso-nombre">Tareas</span>
+                                                <span class="permiso-descripcion">Gestionar tareas asignadas</span>
+                                            </div>
+                                            <input type="checkbox" class="permiso-checkbox" id="permisoTareas">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -254,7 +304,8 @@
                         <div class="alert alert-info" style="margin-top: 20px;">
                             <i class="fas fa-info-circle"></i>
                             Modifica los módulos a los que tendrá acceso este cargo. Los cambios se guardarán
-                            automáticamente.
+                            automáticamente. El módulo "Mapa de Alertas" solo está disponible si el plan de la
+                            organización lo incluye.
                         </div>
 
                         <!-- BOTONES DE ACCIÓN -->
@@ -282,11 +333,9 @@
     <script type="module" src="editarPermisos.js"></script>
 
     <!-- Protector de pagina -->
-    <script src="/components/protector-de-pagina.js" data-rol="administrador"
-        data-mensaje="Solo administradores pueden acceder a esta página."
-        data-titulo="Acceso de Administrador Requerido"
-        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
-        </script>
+    <!-- /usuarios/administrador/cualquier-pagina.html -->
+    <script type="module" src="/components/protector-admin.js"></script>
+</body>
 </body>
 
 </html>

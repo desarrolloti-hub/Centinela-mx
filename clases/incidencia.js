@@ -1,5 +1,5 @@
 // incidencia.js - CLASE COMPLETA CON PAGINACIÓN
-// SIN IMPORTACIONES DUPLICADAS, TODO CENTRALIZADO AQUÍ
+// CON MÉTODO agregarCanalizacion AGREGADO
 
 import {
     collection,
@@ -306,6 +306,50 @@ class Incidencia {
         return this._formatearFecha(this.fechaCreacion);
     }
 
+    async obtenerUrlsImagenes() {
+        try {
+            const urls = [];
+            for (const img of this.imagenes) {
+                if (img.url) {
+                    urls.push(img.url);
+                } else if (img.path) {
+                    const storageRef = ref(storage, img.path);
+                    const url = await getDownloadURL(storageRef);
+                    urls.push(url);
+                }
+            }
+            return urls;
+        } catch (error) {
+            console.error('Error obteniendo URLs de imágenes:', error);
+            return [];
+        }
+    }
+
+    async obtenerImagenesConComentarios() {
+        try {
+            const resultados = [];
+            for (const img of this.imagenes) {
+                let url = img.url;
+                if (!url && img.path) {
+                    const storageRef = ref(storage, img.path);
+                    url = await getDownloadURL(storageRef);
+                }
+
+                resultados.push({
+                    url: url,
+                    comentario: img.comentario || '',
+                    path: img.path,
+                    nombre: img.nombre || 'Imagen',
+                    elementos: img.elementos || []
+                });
+            }
+            return resultados;
+        } catch (error) {
+            console.error('Error obteniendo imágenes con comentarios:', error);
+            return [];
+        }
+    }
+
     toJSON() {
         return {
             id: this.id,
@@ -398,25 +442,25 @@ class IncidenciaManager {
 
     _construirConstraints(filtros = {}) {
         const constraints = [];
-        
+
         constraints.push(orderBy("fechaCreacion", "desc"));
-        
+
         if (filtros.estado && filtros.estado !== 'todos') {
             constraints.push(where("estado", "==", filtros.estado));
         }
-        
+
         if (filtros.sucursalId && filtros.sucursalId !== 'todos') {
             constraints.push(where("sucursalId", "==", filtros.sucursalId));
         }
-        
+
         if (filtros.nivelRiesgo && filtros.nivelRiesgo !== 'todos') {
             constraints.push(where("nivelRiesgo", "==", filtros.nivelRiesgo));
         }
-        
+
         if (filtros.categoriaId && filtros.categoriaId !== 'todos') {
             constraints.push(where("categoriaId", "==", filtros.categoriaId));
         }
-        
+
         return constraints;
     }
 
@@ -424,15 +468,15 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciasCollection = collection(db, collectionName);
-            
+
             const constraints = this._construirConstraints(filtros);
             const constraintsSinOrder = constraints.filter(c => c.type !== 'orderBy');
-            
+
             const q = query(incidenciasCollection, ...constraintsSinOrder);
-            
+
             await consumo.registrarFirestoreLectura(collectionName, 'conteo incidencias');
             const snapshot = await getCountFromServer(q);
-            
+
             return snapshot.data().count;
         } catch (error) {
             console.error('Error contando incidencias:', error);
@@ -448,28 +492,28 @@ class IncidenciaManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciasCollection = collection(db, collectionName);
-            
+
             let constraints = this._construirConstraints(filtros);
-            
+
             if (pagina > 1 && cursores?.ultimoDocumento) {
                 constraints.push(startAfter(cursores.ultimoDocumento));
             }
-            
+
             constraints.push(limit(itemsPorPagina));
-            
+
             const q = query(incidenciasCollection, ...constraints);
-            
+
             await consumo.registrarFirestoreLectura(collectionName, `página ${pagina}`);
             const snapshot = await getDocs(q);
-            
+
             const incidencias = [];
             let ultimoDoc = null;
             let primerDoc = null;
-            
+
             if (!snapshot.empty) {
                 ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
                 primerDoc = snapshot.docs[0];
-                
+
                 snapshot.forEach(doc => {
                     try {
                         const data = doc.data();
@@ -486,9 +530,9 @@ class IncidenciaManager {
                     }
                 });
             }
-            
+
             const total = await this.contarTotalIncidencias(organizacionCamelCase, filtros);
-            
+
             return {
                 incidencias,
                 total,
@@ -498,7 +542,7 @@ class IncidenciaManager {
                 primerDocumento: primerDoc,
                 tieneMas: snapshot.docs.length === itemsPorPagina
             };
-            
+
         } catch (error) {
             console.error('Error obteniendo incidencias paginadas:', error);
             return {
@@ -518,21 +562,21 @@ class IncidenciaManager {
             if (paginaDeseada === 1) {
                 return await this.getIncidenciasPaginadas(organizacionCamelCase, filtros, 1, itemsPorPagina);
             }
-            
+
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciasCollection = collection(db, collectionName);
-            
+
             let constraints = this._construirConstraints(filtros);
             constraints.push(limit((paginaDeseada - 1) * itemsPorPagina + itemsPorPagina));
-            
+
             const q = query(incidenciasCollection, ...constraints);
-            
+
             await consumo.registrarFirestoreLectura(collectionName, `página específica ${paginaDeseada}`);
             const snapshot = await getDocs(q);
-            
+
             const startIndex = (paginaDeseada - 1) * itemsPorPagina;
             const docsPagina = snapshot.docs.slice(startIndex, startIndex + itemsPorPagina);
-            
+
             const incidencias = [];
             docsPagina.forEach(doc => {
                 try {
@@ -549,10 +593,10 @@ class IncidenciaManager {
                     console.error('Error procesando incidencia:', error);
                 }
             });
-            
+
             const total = await this.contarTotalIncidencias(organizacionCamelCase, filtros);
             const ultimoDoc = docsPagina.length > 0 ? docsPagina[docsPagina.length - 1] : null;
-            
+
             return {
                 incidencias,
                 total,
@@ -562,7 +606,7 @@ class IncidenciaManager {
                 primerDocumento: docsPagina.length > 0 ? docsPagina[0] : null,
                 tieneMas: docsPagina.length === itemsPorPagina
             };
-            
+
         } catch (error) {
             console.error('Error obteniendo página específica:', error);
             return {
@@ -579,11 +623,38 @@ class IncidenciaManager {
 
     async subirArchivo(file, rutaCompleta, onProgress = null) {
         try {
+            if (!file) {
+                throw new Error('No se proporcionó archivo');
+            }
+
+            const maxSize = file.type === 'application/pdf' ? 20 * 1024 * 1024 : 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                throw new Error(`El archivo ${file.name} excede el tamaño máximo de ${maxSize / 1024 / 1024}MB`);
+            }
+
+            if (file.type.startsWith('image/')) {
+                const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!validImageTypes.includes(file.type)) {
+                    throw new Error(`Formato de imagen no válido: ${file.type}. Usa JPG, PNG, GIF o WEBP`);
+                }
+            } else if (file.type !== 'application/pdf') {
+                throw new Error(`Tipo de archivo no permitido: ${file.type}`);
+            }
+
             const storageRef = ref(storage, rutaCompleta);
+
+            const metadata = {
+                contentType: file.type,
+                customMetadata: {
+                    originalName: file.name,
+                    uploadedAt: new Date().toISOString(),
+                    size: file.size.toString()
+                }
+            };
 
             if (onProgress) {
                 return new Promise((resolve, reject) => {
-                    const uploadTask = uploadBytesResumable(storageRef, file);
+                    const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
                     uploadTask.on('state_changed',
                         (snapshot) => {
@@ -608,7 +679,7 @@ class IncidenciaManager {
                     );
                 });
             } else {
-                const snapshot = await uploadBytes(storageRef, file);
+                const snapshot = await uploadBytes(storageRef, file, metadata);
                 const downloadURL = await getDownloadURL(snapshot.ref);
                 await consumo.registrarStorageSubida(rutaCompleta, file.name);
                 return {
@@ -663,6 +734,12 @@ class IncidenciaManager {
         }
     }
 
+    /**
+     * CREAR INCIDENCIA - FLUJO OPTIMIZADO:
+     * 1. Subir todas las imágenes primero
+     * 2. Guardar incidencia en Firestore con las URLs de imágenes
+     * 3. Retornar la incidencia para que se pueda generar PDF después
+     */
     async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
             if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
@@ -670,30 +747,64 @@ class IncidenciaManager {
             }
 
             const organizacion = usuarioActual.organizacionCamelCase;
-            const collectionName = this._getCollectionName(organizacion);
-            const incidenciasCollection = collection(db, collectionName);
-
             const incidenciaId = this._generarIdIncidencia(organizacion);
-            const incidenciaRef = doc(incidenciasCollection, incidenciaId);
 
+            // =============================================
+            // PASO 1: SUBIR TODAS LAS IMÁGENES PRIMERO
+            // =============================================
             let imagenesUrls = [];
+
             if (archivos.length > 0) {
+                const maxImages = 20;
+                if (archivos.length > maxImages) {
+                    throw new Error(`Máximo ${maxImages} imágenes permitidas`);
+                }
+
+                console.log(`📸 Subiendo ${archivos.length} imágenes...`);
+
                 for (let i = 0; i < archivos.length; i++) {
                     const file = archivos[i];
-                    const comentario = imagenesConDatos[i]?.comentario || '';
+                    const datosImagen = imagenesConDatos[i] || {};
+                    const comentario = datosImagen.comentario || '';
+                    const elementos = datosImagen.elementos || [];
 
-                    const timestamp = Date.now();
-                    const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                    let nombreArchivo = datosImagen.generatedName;
+                    if (!nombreArchivo) {
+                        const timestamp = Date.now();
+                        const random = Math.random().toString(36).substring(2, 8);
+                        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                        nombreArchivo = `${timestamp}_${random}_${cleanFileName}`;
+                    }
+
                     const rutaStorage = `incidencias_${organizacion}/${incidenciaId}/imagenes/${nombreArchivo}`;
 
-                    const resultado = await this.subirArchivo(file, rutaStorage);
+                    const onProgress = archivos.length > 1 ? (progress) => {
+                        console.log(`📸 Imagen ${i + 1}/${archivos.length}: ${Math.round(progress)}%`);
+                    } : null;
+
+                    const resultado = await this.subirArchivo(file, rutaStorage, onProgress);
 
                     imagenesUrls.push({
                         url: resultado.url,
-                        comentario: comentario
+                        path: resultado.path,
+                        comentario: comentario,
+                        elementos: elementos,
+                        nombre: file.name,
+                        generatedName: nombreArchivo,
+                        tipo: file.type,
+                        tamaño: file.size
                     });
                 }
+
+                console.log(`✅ ${imagenesUrls.length} imágenes subidas correctamente`);
             }
+
+            // =============================================
+            // PASO 2: GUARDAR INCIDENCIA EN FIRESTORE
+            // =============================================
+            const collectionName = this._getCollectionName(organizacion);
+            const incidenciasCollection = collection(db, collectionName);
+            const incidenciaRef = doc(incidenciasCollection, incidenciaId);
 
             const fechaInicio = data.fechaInicio || new Date();
 
@@ -757,7 +868,8 @@ class IncidenciaManager {
             const nuevaIncidencia = new Incidencia(incidenciaId, {
                 ...incidenciaData,
                 fechaCreacion: new Date(),
-                fechaActualizacion: new Date()
+                fechaActualizacion: new Date(),
+                imagenes: imagenesUrls
             });
 
             this.incidencias.unshift(nuevaIncidencia);
@@ -786,10 +898,44 @@ class IncidenciaManager {
                 });
             }
 
+            console.log(`✅ Incidencia ${incidenciaId} creada con ${imagenesUrls.length} imágenes`);
+
+            // Retornar la incidencia con las URLs de imágenes ya guardadas
             return nuevaIncidencia;
 
         } catch (error) {
             console.error('Error creando incidencia:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * ACTUALIZAR PDF DE INCIDENCIA (para agregar PDF después de crear)
+     */
+    async actualizarPDFIncidencia(incidenciaId, pdfUrl, organizacionCamelCase, usuarioId, usuarioNombre) {
+        try {
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const incidenciaRef = doc(db, collectionName, incidenciaId);
+
+            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+            await updateDoc(incidenciaRef, {
+                pdfUrl: pdfUrl,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioId,
+                actualizadoPorNombre: usuarioNombre
+            });
+
+            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+            if (incidenciaIndex !== -1) {
+                this.incidencias[incidenciaIndex].pdfUrl = pdfUrl;
+                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+            }
+
+            console.log(`✅ PDF actualizado para incidencia ${incidenciaId}`);
+            return true;
+
+        } catch (error) {
+            console.error('Error actualizando PDF:', error);
             throw error;
         }
     }
@@ -803,7 +949,7 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-            
+
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
 
@@ -844,7 +990,7 @@ class IncidenciaManager {
             }
 
             const incidenciasQuery = query(incidenciasCollection, ...constraints);
-            
+
             await consumo.registrarFirestoreLectura(collectionName, 'lista incidencias');
             const snapshot = await getDocs(incidenciasQuery);
 
@@ -896,6 +1042,98 @@ class IncidenciaManager {
         }
     }
 
+    async agregarCanalizacion(incidenciaId, areaId, areaNombre, usuarioId, usuarioNombre, motivo = '', organizacionCamelCase = null) {
+        try {
+            if (!incidenciaId || !areaId) {
+                throw new Error('Faltan datos para agregar canalización');
+            }
+
+            let organizacion = organizacionCamelCase;
+            if (!organizacion) {
+                const incidenciaTemp = await this.getIncidenciaById(incidenciaId, this.organizacionCache);
+                if (incidenciaTemp) {
+                    organizacion = incidenciaTemp.organizacionCamelCase;
+                }
+            }
+
+            if (!organizacion) {
+                throw new Error('No se pudo determinar la organización');
+            }
+
+            const collectionName = this._getCollectionName(organizacion);
+
+            const canalizacionId = `CAN${Date.now()}_${areaId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+            const incidenciaRef = doc(db, collectionName, incidenciaId);
+            await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
+            const incidenciaSnap = await getDoc(incidenciaRef);
+
+            if (!incidenciaSnap.exists()) {
+                throw new Error('Incidencia no encontrada');
+            }
+
+            const incidenciaData = incidenciaSnap.data();
+            const canalizacionesActuales = incidenciaData.canalizaciones || {};
+
+            const yaExiste = Object.values(canalizacionesActuales).some(c => c.areaId === areaId);
+            if (yaExiste) {
+                return { success: false, message: 'Ya está canalizada a esta área' };
+            }
+
+            const nuevaCanalizacion = {
+                areaId,
+                areaNombre,
+                canalizadoPor: usuarioId,
+                canalizadoPorNombre: usuarioNombre,
+                motivo: motivo || 'Atención requerida',
+                fechaCanalizacion: new Date(),
+                estado: 'pendiente',
+                seguimientos: []
+            };
+
+            const nuevasCanalizaciones = {
+                ...canalizacionesActuales,
+                [canalizacionId]: nuevaCanalizacion
+            };
+
+            const esMultiCanalizada = Object.keys(nuevasCanalizaciones).length > 1;
+
+            let canalizacionActiva = incidenciaData.canalizacionActiva;
+            if (!canalizacionActiva && Object.keys(nuevasCanalizaciones).length > 0) {
+                canalizacionActiva = areaId;
+            }
+
+            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+            await updateDoc(incidenciaRef, {
+                canalizaciones: nuevasCanalizaciones,
+                canalizacionActiva: canalizacionActiva,
+                esMultiCanalizada: esMultiCanalizada,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioId,
+                actualizadoPorNombre: usuarioNombre
+            });
+
+            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+            if (incidenciaIndex !== -1) {
+                this.incidencias[incidenciaIndex].canalizaciones = nuevasCanalizaciones;
+                this.incidencias[incidenciaIndex].canalizacionActiva = canalizacionActiva;
+                this.incidencias[incidenciaIndex].esMultiCanalizada = esMultiCanalizada;
+                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+            }
+
+            return {
+                success: true,
+                canalizacionId,
+                areaId,
+                areaNombre
+            };
+
+        } catch (error) {
+            console.error('Error agregando canalización:', error);
+            throw error;
+        }
+    }
+
     async actualizarIncidencia(incidenciaId, nuevosDatos, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
             if (!organizacionCamelCase) {
@@ -904,7 +1142,7 @@ class IncidenciaManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-            
+
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
 
@@ -989,14 +1227,18 @@ class IncidenciaManager {
                     const comentario = evidenciasConComentarios[i]?.comentario || '';
 
                     const timestamp = Date.now();
-                    const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                    const random = Math.random().toString(36).substring(2, 8);
+                    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                    const nombreArchivo = `${timestamp}_${random}_${cleanFileName}`;
                     const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}/seguimiento/${seguimientoId}/${nombreArchivo}`;
 
                     const resultado = await this.subirArchivo(file, rutaStorage);
 
                     evidenciasUrls.push({
                         url: resultado.url,
-                        comentario: comentario
+                        path: resultado.path,
+                        comentario: comentario,
+                        nombre: file.name
                     });
                 }
             }
@@ -1135,7 +1377,7 @@ class IncidenciaManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-            
+
             await consumo.registrarFirestoreEliminacion(collectionName, incidenciaId);
             await deleteDoc(incidenciaRef);
 
@@ -1168,6 +1410,30 @@ class IncidenciaManager {
         }
     }
 
+    async limpiarImagenesTemporales(incidenciaId, organizacionCamelCase) {
+        try {
+            const rutaImagenes = `incidencias_${organizacionCamelCase}/${incidenciaId}/imagenes`;
+            const folderRef = ref(storage, rutaImagenes);
+
+            try {
+                const result = await listAll(folderRef);
+                const deletePromises = result.items.map(item => deleteObject(item));
+                await Promise.all(deletePromises);
+                await consumo.registrarStorageEliminacion(rutaImagenes);
+                console.log(`✅ Limpiadas ${result.items.length} imágenes temporales`);
+            } catch (error) {
+                if (error.code !== 'storage/object-not-found') {
+                    throw error;
+                }
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error limpiando imágenes temporales:', error);
+            return false;
+        }
+    }
+
     async getIncidenciasPorSucursal(sucursalId, organizacionCamelCase) {
         return await this.getIncidenciasByOrganizacion(organizacionCamelCase, { sucursalId });
     }
@@ -1184,7 +1450,7 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             await consumo.registrarFirestoreLectura(collectionName, 'estadísticas');
-            
+
             const incidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase);
 
             const incidenciasCanalizadas = incidencias.filter(i => i.canalizaciones && Object.keys(i.canalizaciones).length > 0);
@@ -1217,7 +1483,7 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-            
+
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
             return incidenciaSnap.exists();

@@ -1,6 +1,9 @@
 // Importar UserManager
 import { UserManager } from '/clases/user.js';
 
+// ✅ NUEVO: Variable para registrar actividades
+let historialManager = null;
+
 class ThemeManager {
     constructor(userManager = null) {
         // Estado del manager
@@ -457,6 +460,9 @@ class ThemeManager {
             return;
         }
         
+        // ✅ NUEVO: Inicializar historialManager
+        await this._initHistorial();
+        
         // Cargar tema desde el usuario
         await this.loadUserTheme();
         
@@ -476,6 +482,93 @@ class ThemeManager {
         
         // Hacerlo disponible globalmente
         window.themeManager = this;
+    }
+
+    // ✅ NUEVO: Inicializar historialManager
+    async _initHistorial() {
+        try {
+            const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+            historialManager = new HistorialUsuarioManager();
+            console.log('📋 HistorialManager inicializado para temas');
+        } catch (error) {
+            console.error('Error inicializando historialManager:', error);
+        }
+    }
+
+    // ✅ NUEVO: Obtener usuario actual
+    _obtenerUsuarioActual() {
+        try {
+            const adminInfo = localStorage.getItem('adminInfo');
+            if (adminInfo) {
+                const data = JSON.parse(adminInfo);
+                return {
+                    id: data.id || data.uid,
+                    uid: data.uid || data.id,
+                    nombreCompleto: data.nombreCompleto || 'Administrador',
+                    organizacion: data.organizacion,
+                    organizacionCamelCase: data.organizacionCamelCase,
+                    correoElectronico: data.correoElectronico || ''
+                };
+            }
+
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (userData && Object.keys(userData).length > 0) {
+                return {
+                    id: userData.uid || userData.id,
+                    uid: userData.uid || userData.id,
+                    nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                    organizacion: userData.organizacion,
+                    organizacionCamelCase: userData.organizacionCamelCase,
+                    correoElectronico: userData.correo || userData.email || ''
+                };
+            }
+
+            return null;
+        } catch (error) {
+            console.error('Error obteniendo usuario actual:', error);
+            return null;
+        }
+    }
+
+    // ✅ NUEVO: Registrar cambio de tema
+    async _registrarCambioTema(themeId, themeName, esSincronizacion = false, syncCount = 0) {
+        if (!historialManager) return;
+        
+        try {
+            const usuario = this._obtenerUsuarioActual();
+            if (!usuario) return;
+            
+            const detalles = {
+                temaId: themeId,
+                temaNombre: themeName,
+                fechaCambio: new Date().toISOString(),
+                esSincronizacion: esSincronizacion
+            };
+            
+            if (esSincronizacion) {
+                detalles.colaboradoresAfectados = syncCount;
+                detalles.descripcionAdicional = `Tema sincronizado a ${syncCount} colaboradores`;
+            }
+            
+            await historialManager.registrarActividad({
+                usuario: usuario,
+                tipo: 'editar',
+                modulo: 'temas',
+                descripcion: esSincronizacion 
+                    ? `Cambió tema a "${themeName}" y lo sincronizó con colaboradores`
+                    : `Cambió tema personal a "${themeName}"`,
+                detalles: detalles
+            });
+            console.log(`✅ Cambio de tema a "${themeName}" registrado en bitácora`);
+        } catch (error) {
+            console.error('Error registrando cambio de tema:', error);
+        }
+    }
+
+    // ✅ NUEVO: Extraer número de colaboradores sincronizados del mensaje
+    _extraerSyncCount(saveResult) {
+        const match = saveResult.match(/sincronizado a (\d+) colaboradores/);
+        return match ? parseInt(match[1]) : 0;
     }
 
     // =============================================
@@ -687,8 +780,13 @@ class ThemeManager {
         // Actualizar tema actual
         this.currentTheme = this.selectedThemeId;
         
-        // Guardar en el usuario actual
-        await this.saveThemeToUser(this.selectedThemeId);
+        // Guardar en el usuario actual y obtener información de sincronización
+        const saveResult = await this.saveThemeToUser(this.selectedThemeId);
+        
+        // ✅ NUEVO: Registrar cambio de tema
+        const esSincronizacion = saveResult.includes('sincronizado');
+        const syncCount = this._extraerSyncCount(saveResult);
+        await this._registrarCambioTema(this.selectedThemeId, theme.name, esSincronizacion, syncCount);
         
         // Actualizar UI
         this.updateUI();
@@ -697,7 +795,7 @@ class ThemeManager {
         if (typeof Swal !== 'undefined') {
             await Swal.fire({
                 title: '¡Tema aplicado!',
-                text: `El tema "${theme.name}" se ha aplicado correctamente`,
+                text: saveResult,
                 icon: 'success',
                 confirmButtonText: 'Aceptar',
                 confirmButtonColor: this.getCurrentColors()['--color-accent-primary'],
@@ -711,7 +809,7 @@ class ThemeManager {
                 }
             });
         } else {
-            alert(`Tema "${theme.name}" aplicado correctamente`);
+            alert(saveResult);
         }
         
         // Marca como activo
@@ -845,7 +943,7 @@ class ThemeManager {
                 // Si el administrador quiere sincronizar a colaboradores
                 if (this.userManager.esAdministrador()) {
                     const sync = await this.syncThemeToColaboradores(themeId);
-                    if (sync) {
+                    if (sync > 0) {
                         return `Tema aplicado y sincronizado a ${sync} colaboradores`;
                     }
                 }
@@ -899,6 +997,7 @@ class ThemeManager {
                         syncCount++;
                     } catch (error) {
                         // Error controlado, continuar con otros
+                        console.warn(`Error sincronizando tema para ${colaborador.id}:`, error);
                     }
                 }
             }
@@ -906,6 +1005,7 @@ class ThemeManager {
             return syncCount;
             
         } catch (error) {
+            console.error('Error sincronizando temas:', error);
             return 0;
         }
     }
@@ -935,6 +1035,7 @@ class ThemeManager {
             this.applyThemeById(themeId);
             
         } catch (error) {
+            console.error('Error cargando tema del usuario:', error);
             this.applyDefaultTheme();
         }
     }
@@ -953,6 +1054,7 @@ class ThemeManager {
             localStorage.setItem('centinela-theme', JSON.stringify(themeData));
         } catch (error) {
             // Error controlado, no afecta funcionalidad
+            console.warn('Error guardando tema en localStorage:', error);
         }
     }
     
@@ -968,6 +1070,7 @@ class ThemeManager {
             }
         } catch (error) {
             // Error controlado
+            console.warn('Error cargando tema desde localStorage:', error);
         }
         return null;
     }
@@ -983,6 +1086,7 @@ class ThemeManager {
             this.currentTheme = themeId;
             this.applyColors(theme.colors);
         } else {
+            console.warn(`Tema no encontrado: ${themeId}, aplicando predeterminado`);
             this.applyDefaultTheme();
         }
     }
@@ -1079,7 +1183,11 @@ if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', async () => {
         // Esperar a que UserManager esté disponible si existe
         if (!window.userManager && typeof UserManager !== 'undefined') {
-            window.userManager = new UserManager();
+            try {
+                window.userManager = new UserManager();
+            } catch (error) {
+                console.warn('UserManager no disponible:', error);
+            }
         }
         
         const themeManager = new ThemeManager(window.userManager);

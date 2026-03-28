@@ -166,8 +166,11 @@
     <script src="/components/footerColaborador.js"></script>
     <script type="module" src="/usuarios/administrador/sucursales/sucursales.js"></script>
 
-    <!-- Opción 1: Solo autenticación (cualquier colaborador) -->
-    <script src="/components/protector-de-pagina.js"></script>
+    <!-- Protector de pagina -->
+    <script src="/components/protector-colaborador.js" data-modulo="sucursales"
+        data-mensaje="No tienes permisos para acceder al módulo de Sucursales."
+        data-titulo="🔒 Acceso Restringido - Sucursales">
+        </script>
 </body>
 
 </html>

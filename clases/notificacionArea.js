@@ -20,6 +20,7 @@ import {
 
 import { db } from '/config/firebase-config.js';
 import consumo from '/clases/consumoFirebase.js';
+import { CLOUD_FUNCTION_BASE_URL } from '/config/urlCloudFunction.js';
 
 class NotificacionArea {
     constructor(id, data) {
@@ -144,7 +145,7 @@ class NotificacionArea {
 class NotificacionAreaManager {
     constructor() {
         this.usuarioActual = null;
-        this.functionUrl = 'https://us-central1-centinela-mx.cloudfunctions.net/sendPushNotification';
+        this.functionUrl = `${CLOUD_FUNCTION_BASE_URL}sendPushNotification`;
         this.functionUrlV2 = 'https://sendpushnotification-5orj5w7mha-uc.a.run.app';
         this._initUsuario();
     }

@@ -1,40 +1,57 @@
 // verPermiso.js - VISUALIZACIÓN DE PERMISOS (SOLO LECTURA)
-// MISMO ESTILO QUE CREAR PERMISOS - SIN CAMPO "CREADO POR"
+// ACTUALIZADO: Incluye lógica de plan (Incidencias y Mapa de Alertas solo si el plan los incluye)
 
 // =============================================
 // VARIABLES GLOBALES
 // =============================================
 let permisoManager = null;
 let areaManager = null;
+let planManager = null;
 let usuarioActual = null;
 let permisoActual = null;
 let areasMap = new Map();
+let permisosPlan = null; // Para saber qué módulos dinámicos mostrar
 
-// Nombres amigables para los módulos
+// NOMBRES DE LOS MÓDULOS
 const nombresModulos = {
     areas: 'Áreas',
     categorias: 'Categorías',
     sucursales: 'Sucursales',
     regiones: 'Regiones',
-    incidencias: 'Incidencias'
+    incidencias: 'Incidencias',
+    usuarios: 'Usuarios',
+    estadisticas: 'Estadísticas',
+    tareas: 'Tareas',
+    monitoreo: 'Mapa de Alertas'
 };
 
-// Iconos para los módulos
+// ICONOS DE LOS MÓDULOS
 const iconosModulos = {
     areas: 'fa-sitemap',
     categorias: 'fa-tags',
     sucursales: 'fa-store',
     regiones: 'fa-map-marked-alt',
-    incidencias: 'fa-exclamation-triangle'
+    incidencias: 'fa-exclamation-triangle',
+    usuarios: 'fa-users',
+    estadisticas: 'fa-chart-line',
+    tareas: 'fa-tasks',
+    monitoreo: 'fa-map-marker-alt'
 };
+
+// Módulos fijos (siempre visibles)
+const modulosFijos = ['areas', 'categorias', 'sucursales', 'regiones', 'usuarios', 'estadisticas', 'tareas'];
+
+// Módulos dinámicos (dependen del plan)
+const modulosDinamicos = ['incidencias', 'monitoreo'];
+
+// ORDEN DE LOS MÓDULOS PARA MOSTRAR
+const ordenModulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias', 'usuarios', 'estadisticas', 'tareas', 'monitoreo'];
 
 // =============================================
 // INICIALIZACIÓN
 // =============================================
 async function inicializarVerPermiso() {
     try {
-        console.log('Inicializando vista de permiso...');
-
         const urlParams = new URLSearchParams(window.location.search);
         const permisoId = urlParams.get('id');
 
@@ -49,16 +66,17 @@ async function inicializarVerPermiso() {
         }
 
         await inicializarManagers();
+
+        // Cargar permisos del plan (para saber qué módulos dinámicos mostrar)
+        await cargarPermisosDelPlan();
+
         await cargarAreas();
         await cargarPermiso(permisoId);
 
         mostrarInfoPermiso();
         configurarEventos();
 
-        console.log('Vista de permiso inicializada correctamente');
-
     } catch (error) {
-        console.error('Error inicializando:', error);
         mostrarError('Error al cargar el permiso: ' + error.message);
 
         const container = document.querySelector('.custom-container');
@@ -81,18 +99,86 @@ async function inicializarManagers() {
     try {
         const { PermisoManager } = await import('/clases/permiso.js');
         const { AreaManager } = await import('/clases/area.js');
+        const { PlanPersonalizadoManager } = await import('/clases/plan.js');
 
         permisoManager = new PermisoManager();
         areaManager = new AreaManager();
+        planManager = new PlanPersonalizadoManager();
+
+        if (usuarioActual?.organizacionCamelCase) {
+            permisoManager.organizacionCamelCase = usuarioActual.organizacionCamelCase;
+        }
     } catch (error) {
-        console.error('Error cargando managers:', error);
         throw error;
     }
 }
 
+// ========== CARGAR PERMISOS DEL PLAN (PARA INCIDENCIAS Y MAPA DE ALERTAS) ==========
+async function cargarPermisosDelPlan() {
+    try {
+        let planId = usuarioActual?.plan;
+
+        if (!planId) {
+            const adminInfo = localStorage.getItem('adminInfo');
+            if (adminInfo) {
+                const adminData = JSON.parse(adminInfo);
+                planId = adminData.plan;
+                usuarioActual.plan = planId;
+            }
+        }
+
+        if (!planId) {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            planId = userData.plan;
+            usuarioActual.plan = planId;
+        }
+
+        if (!planId || planId === 'sin-plan' || planId === 'gratis' || planId === 'null' || planId === 'undefined') {
+            permisosPlan = { incidencias: false, monitoreo: false };
+            return;
+        }
+
+        const plan = await planManager.obtenerPorId(planId);
+
+        if (!plan) {
+            permisosPlan = { incidencias: false, monitoreo: false };
+            return;
+        }
+
+        const mapasActivos = plan.mapasActivos || {};
+
+        permisosPlan = {
+            incidencias: mapasActivos.incidencias === true,
+            monitoreo: mapasActivos.alertas === true
+        };
+
+    } catch (error) {
+        permisosPlan = { incidencias: false, monitoreo: false };
+    }
+}
+
+// ========== VERIFICAR SI UN MÓDULO DEBE MOSTRARSE SEGÚN EL PLAN ==========
+function debeMostrarModulo(modulo) {
+    // Módulos fijos siempre se muestran
+    if (modulosFijos.includes(modulo)) {
+        return true;
+    }
+
+    // Módulos dinámicos dependen del plan
+    if (modulosDinamicos.includes(modulo)) {
+        if (modulo === 'incidencias') {
+            return permisosPlan?.incidencias === true;
+        }
+        if (modulo === 'monitoreo') {
+            return permisosPlan?.monitoreo === true;
+        }
+    }
+
+    return true;
+}
+
 function cargarUsuario() {
     try {
-        // Intentar obtener de adminInfo
         const adminInfo = localStorage.getItem('adminInfo');
         if (adminInfo) {
             const adminData = JSON.parse(adminInfo);
@@ -102,13 +188,26 @@ function cargarUsuario() {
                 nombreCompleto: adminData.nombreCompleto || 'Administrador',
                 organizacion: adminData.organizacion || 'Sin organización',
                 organizacionCamelCase: adminData.organizacionCamelCase,
+                plan: adminData.plan || null,
                 correo: adminData.correoElectronico || ''
             };
-            console.log('✅ Usuario cargado desde adminInfo:', usuarioActual);
             return;
         }
 
-        // Intentar obtener de window.userManager
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData && Object.keys(userData).length > 0) {
+            usuarioActual = {
+                id: userData.id || userData.uid,
+                uid: userData.uid || userData.id,
+                nombreCompleto: userData.nombreCompleto || 'Administrador',
+                organizacion: userData.organizacion || 'Mi Organización',
+                organizacionCamelCase: userData.organizacionCamelCase,
+                plan: userData.plan || null,
+                correo: userData.correoElectronico || ''
+            };
+            return;
+        }
+
         if (window.userManager && window.userManager.currentUser) {
             const user = window.userManager.currentUser;
             usuarioActual = {
@@ -117,16 +216,15 @@ function cargarUsuario() {
                 nombreCompleto: user.nombreCompleto || 'Administrador',
                 organizacion: user.organizacion || 'Mi Organización',
                 organizacionCamelCase: user.organizacionCamelCase,
+                plan: user.plan || null,
                 correo: user.correoElectronico || ''
             };
-            console.log('✅ Usuario cargado desde userManager:', usuarioActual);
             return;
         }
 
         throw new Error('No hay sesión activa');
 
     } catch (error) {
-        console.error('Error cargando usuario:', error);
         throw error;
     }
 }
@@ -134,7 +232,6 @@ function cargarUsuario() {
 async function cargarAreas() {
     try {
         if (!usuarioActual?.organizacionCamelCase) {
-            console.warn('No hay organización definida para cargar áreas');
             return;
         }
 
@@ -146,9 +243,8 @@ async function cargarAreas() {
                 cargos: area.cargos || {}
             });
         });
-        console.log(`✅ Cargadas ${areas.length} áreas`);
     } catch (error) {
-        console.error('Error cargando áreas:', error);
+        // Error handling without console
     }
 }
 
@@ -163,16 +259,7 @@ async function cargarPermiso(permisoId) {
             throw new Error('Permiso no encontrado');
         }
 
-        // Verificar que el elemento existe antes de asignar
-        // Opcional: mostrar ID si el elemento existe
-        const permisoIdElement = document.getElementById('permisoId');
-        if (permisoIdElement) {
-            permisoIdElement.textContent = permisoActual.id;
-        }
-        // Eliminado el warning
-
     } catch (error) {
-        console.error('Error cargando permiso:', error);
         throw error;
     }
 }
@@ -183,66 +270,66 @@ async function cargarPermiso(permisoId) {
 function mostrarInfoPermiso() {
     if (!permisoActual) return;
 
-    console.log('Mostrando información del permiso:', permisoActual);
-
-    // Función auxiliar para asignar valor a un input
     const setInputValue = (id, value) => {
         const element = document.getElementById(id);
         if (element) {
             element.value = value || '-';
-        } else {
-            console.warn(`Elemento ${id} no encontrado`);
         }
     };
 
-    // Organización
     setInputValue('infoOrganizacion', usuarioActual.organizacion);
 
-    // Área
     const area = areasMap.get(permisoActual.areaId);
     setInputValue('infoArea', area?.nombre || permisoActual.areaId || 'No especificada');
 
-    // Cargo
     let cargoNombre = permisoActual.cargoId;
     if (area && area.cargos && permisoActual.cargoId) {
         cargoNombre = area.cargos[permisoActual.cargoId]?.nombre || permisoActual.cargoId;
     }
     setInputValue('infoCargo', cargoNombre || 'No especificado');
 
-    // Fechas
     setInputValue('infoFechaCreacion', formatearFecha(permisoActual.fechaCreacion));
     setInputValue('infoFechaActualizacion', formatearFecha(permisoActual.fechaActualizacion));
 
-    // Módulos
     mostrarModulos();
 }
 
+// ========== MOSTRAR MÓDULOS (CON FILTRO DE PLAN) ==========
 function mostrarModulos() {
     const container = document.getElementById('modulosContainer');
     if (!container) {
-        console.warn('Contenedor de módulos no encontrado');
         return;
     }
     if (!permisoActual) return;
 
-    const modulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias'];
     let html = '';
+    let modulosActivos = 0;
+    let modulosInactivos = 0;
 
-    modulos.forEach(modulo => {
+    ordenModulos.forEach(modulo => {
+        // VERIFICAR SI EL MÓDULO DEBE MOSTRARSE SEGÚN EL PLAN
+        if (!debeMostrarModulo(modulo)) {
+            return; // Saltar este módulo
+        }
+
         const activo = permisoActual.permisos?.[modulo] || false;
         const nombreMostrar = nombresModulos[modulo] || modulo;
         const icono = iconosModulos[modulo] || 'fa-circle';
         const estadoClase = activo ? 'activo' : 'inactivo';
         const estadoTexto = activo ? 'Con acceso' : 'Sin acceso';
+        const colorIcono = activo ? '#10b981' : '#ef4444';
+
+        if (activo) modulosActivos++;
+        else modulosInactivos++;
 
         html += `
             <div class="modulo-item ${estadoClase}">
-                <div class="modulo-icon">
+                <div class="modulo-icon" style="color: ${colorIcono};">
                     <i class="fas ${icono}"></i>
                 </div>
                 <div class="modulo-info">
-                    <span class="modulo-nombre">${nombreMostrar}</span>
-                    <span class="modulo-estado">
+                    <span class="modulo-nombre">${escapeHTML(nombreMostrar)}</span>
+                    <span class="modulo-estado" style="color: ${colorIcono};">
                         <i class="fas ${activo ? 'fa-check-circle' : 'fa-times-circle'}"></i>
                         ${estadoTexto}
                     </span>
@@ -251,14 +338,25 @@ function mostrarModulos() {
         `;
     });
 
-    container.innerHTML = html;
+    // Resumen de módulos
+    const resumenHtml = `
+        <div style="grid-column: 1 / -1; margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; text-align: center;">
+            <span style="color: #10b981;">
+                <i class="fas fa-check-circle"></i> ${modulosActivos} módulo${modulosActivos !== 1 ? 's' : ''} con acceso
+            </span>
+            <span style="color: #ef4444; margin-left: 20px;">
+                <i class="fas fa-times-circle"></i> ${modulosInactivos} módulo${modulosInactivos !== 1 ? 's' : ''} sin acceso
+            </span>
+        </div>
+    `;
+
+    container.innerHTML = html + resumenHtml;
 }
 
 function formatearFecha(fecha) {
     if (!fecha) return 'No disponible';
 
     try {
-        // Si es un objeto Date
         if (fecha instanceof Date) {
             return fecha.toLocaleDateString('es-MX', {
                 year: 'numeric',
@@ -269,7 +367,6 @@ function formatearFecha(fecha) {
             });
         }
 
-        // Si es un string ISO
         if (typeof fecha === 'string') {
             const date = new Date(fecha);
             if (isNaN(date.getTime())) return 'Fecha inválida';
@@ -282,7 +379,6 @@ function formatearFecha(fecha) {
             });
         }
 
-        // Si es un timestamp de Firestore
         if (fecha && typeof fecha.toDate === 'function') {
             return fecha.toDate().toLocaleDateString('es-MX', {
                 year: 'numeric',
@@ -295,7 +391,6 @@ function formatearFecha(fecha) {
 
         return 'Fecha no disponible';
     } catch (error) {
-        console.error('Error formateando fecha:', error);
         return 'Fecha inválida';
     }
 }
@@ -308,22 +403,9 @@ function configurarEventos() {
         const btnVolverLista = document.getElementById('btnVolverLista');
         if (btnVolverLista) {
             btnVolverLista.addEventListener('click', () => volverALista());
-        } else {
-            console.warn('Botón btnVolverLista no encontrado');
         }
-
-        const btnVolverLista2 = document.getElementById('btnVolverLista2');
-        if (btnVolverLista2) {
-            btnVolverLista2.addEventListener('click', () => volverALista());
-        }
-
-        const btnEditar = document.getElementById('btnEditar');
-        if (btnEditar) {
-            btnEditar.addEventListener('click', () => editarPermiso());
-        }
-
     } catch (error) {
-        console.error('Error configurando eventos:', error);
+
     }
 }
 
@@ -349,7 +431,7 @@ function editarPermiso() {
     };
 
     localStorage.setItem('selectedPermiso', JSON.stringify(selectedPermiso));
-    window.location.href = `../editarPermiso/editarPermiso.html?id=${permisoActual.id}`;
+    window.location.href = `../editarPermisos/editarPermisos.html?id=${permisoActual.id}`;
 }
 
 // =============================================

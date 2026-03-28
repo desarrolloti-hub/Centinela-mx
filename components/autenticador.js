@@ -11,15 +11,106 @@ import { UserManager } from '/clases/user.js';
     let currentUser = null;
     let initialized = false;
     let authListeners = [];
+    let initializationPromise = null;
+    let redirectTimeout = null;
 
     // ==================== FUNCIONES INTERNAS ====================
     
+    /**
+     * Carga el usuario desde localStorage de manera persistente
+     */
+    function loadUserFromLocalStorage() {
+        try {
+            // Buscar adminInfo
+            const adminInfo = localStorage.getItem('adminInfo');
+            if (adminInfo) {
+                const data = JSON.parse(adminInfo);
+                console.log('📦 Usuario encontrado en adminInfo:', data.nombreCompleto);
+                return {
+                    id: data.id || data.uid,
+                    uid: data.uid || data.id,
+                    nombreCompleto: data.nombreCompleto || 'Usuario',
+                    organizacion: data.organizacion,
+                    organizacionCamelCase: data.organizacionCamelCase,
+                    rol: data.rol || 'administrador',
+                    correoElectronico: data.correoElectronico || '',
+                    fotoUsuario: data.fotoUsuario,
+                    status: data.status !== false,
+                    plan: data.plan || 'gratis'
+                };
+            }
+
+            // Buscar userData
+            const userData = localStorage.getItem('userData');
+            if (userData) {
+                const data = JSON.parse(userData);
+                console.log('📦 Usuario encontrado en userData:', data.nombreCompleto);
+                return {
+                    id: data.uid || data.id,
+                    uid: data.uid || data.id,
+                    nombreCompleto: data.nombreCompleto || data.nombre || 'Usuario',
+                    organizacion: data.organizacion || data.empresa,
+                    organizacionCamelCase: data.organizacionCamelCase,
+                    rol: data.rol || 'colaborador',
+                    correoElectronico: data.correo || data.email || '',
+                    fotoUsuario: data.fotoUsuario,
+                    status: data.status !== false,
+                    plan: data.plan || 'gratis'
+                };
+            }
+
+            return null;
+        } catch (error) {
+            console.error('Error cargando usuario de localStorage:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Guarda el usuario en localStorage
+     */
+    function saveUserToLocalStorage(user) {
+        if (!user) {
+            localStorage.removeItem('adminInfo');
+            localStorage.removeItem('userData');
+            return;
+        }
+
+        const userInfo = {
+            id: user.id,
+            uid: user.uid || user.id,
+            nombreCompleto: user.nombreCompleto,
+            organizacion: user.organizacion,
+            organizacionCamelCase: user.organizacionCamelCase,
+            rol: user.rol,
+            correoElectronico: user.correoElectronico,
+            fotoUsuario: user.fotoUsuario,
+            status: user.status,
+            plan: user.plan
+        };
+
+        if (user.rol === 'administrador' || user.rol === 'master') {
+            localStorage.setItem('adminInfo', JSON.stringify(userInfo));
+        } else {
+            localStorage.setItem('userData', JSON.stringify(userInfo));
+        }
+        
+        // También guardar para compatibilidad
+        localStorage.setItem('currentUser', JSON.stringify(userInfo));
+    }
+
     /**
      * Inicializa el sistema de autenticación
      */
     async function initialize() {
         try {
             console.log('🚀 Inicializando Autenticador...');
+            
+            // Limpiar cualquier timeout pendiente
+            if (redirectTimeout) {
+                clearTimeout(redirectTimeout);
+                redirectTimeout = null;
+            }
             
             // Obtener o crear instancia de UserManager
             if (!window.userManagerInstance) {
@@ -28,26 +119,69 @@ import { UserManager } from '/clases/user.js';
             }
             userManager = window.userManagerInstance;
             
-            // Esperar a que el usuario actual esté disponible
+            // PRIMERO: Intentar cargar desde localStorage directamente
+            const localUser = loadUserFromLocalStorage();
+            if (localUser) {
+                console.log('👤 Usuario cargado desde localStorage:', localUser.nombreCompleto);
+                // Crear un objeto User básico con los datos del localStorage
+                currentUser = {
+                    ...localUser,
+                    // Métodos básicos para compatibilidad
+                    getFotoUrl: function() { return this.fotoUsuario || null; },
+                    getEstadoTexto: function() { return this.status ? 'Activo' : 'Inactivo'; },
+                    estaVerificado: function() { return true; },
+                    estaActivo: function() { return this.status !== false; },
+                    esMaster: function() { return this.rol === 'master'; },
+                    esAdministrador: function() { return this.rol === 'administrador'; },
+                    esColaborador: function() { return this.rol === 'colaborador'; },
+                    tienePermiso: function(permiso) { 
+                        return this.permisosPersonalizados?.[permiso] || false; 
+                    }
+                };
+                
+                // Notificar antes de esperar a UserManager
+                initialized = true;
+                notifyListeners();
+                updateUI();
+                
+                // Intentar sincronizar con UserManager en segundo plano
+                setTimeout(async () => {
+                    try {
+                        if (userManager && userManager.currentUser) {
+                            currentUser = userManager.currentUser;
+                            saveUserToLocalStorage(currentUser);
+                            notifyListeners();
+                            updateUI();
+                            console.log('🔄 Usuario sincronizado con UserManager');
+                        }
+                    } catch (e) {
+                        console.warn('No se pudo sincronizar con UserManager:', e);
+                    }
+                }, 500);
+                
+                return;
+            }
+            
+            // Si no hay usuario en localStorage, esperar a UserManager
+            console.log('⏳ Esperando usuario desde UserManager...');
             let attempts = 0;
-            const maxAttempts = 30;
+            const maxAttempts = 50; // Aumentado a 50 intentos (5 segundos)
             
             while (!userManager.currentUser && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
             }
             
-            currentUser = userManager.currentUser;
-            initialized = true;
-            
-            console.log('👤 Autenticador:', currentUser ? `${currentUser.correoElectronico} (${currentUser.rol})` : 'Sin sesión');
-            
-            // 🔴 SI NO HAY USUARIO, LO MANDA AL LOGIN
-            if (!currentUser) {
-                console.log('🔴 Usuario no autenticado - Redirigiendo a login');
-                window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
-                return;
+            if (userManager.currentUser) {
+                currentUser = userManager.currentUser;
+                saveUserToLocalStorage(currentUser);
+                console.log('👤 Usuario obtenido de UserManager:', currentUser.nombreCompleto);
+            } else {
+                console.log('⚠️ No hay usuario autenticado');
+                currentUser = null;
             }
+            
+            initialized = true;
             
             // Notificar a los listeners
             notifyListeners();
@@ -55,12 +189,36 @@ import { UserManager } from '/clases/user.js';
             // Actualizar UI automáticamente
             updateUI();
             
+            // 🔴 SI NO HAY USUARIO Y NO ESTAMOS EN PÁGINA DE LOGIN, REDIRIGIR
+            if (!currentUser && !isLoginPage()) {
+                console.log('🔴 Usuario no autenticado - Redirigiendo a login en 500ms');
+                // Pequeño delay para que los mensajes se muestren
+                redirectTimeout = setTimeout(() => {
+                    window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
+                }, 500);
+            }
+            
         } catch (error) {
             console.error('❌ Error inicializando Autenticador:', error);
             initialized = true;
-            // Si hay error, también redirige al login
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
+            // Solo redirigir si no estamos en página de login
+            if (!isLoginPage()) {
+                redirectTimeout = setTimeout(() => {
+                    window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
+                }, 500);
+            }
         }
+    }
+    
+    /**
+     * Verifica si estamos en una página de login
+     */
+    function isLoginPage() {
+        const path = window.location.pathname;
+        return path.includes('inicioSesion') || 
+               path.includes('login') || 
+               path.includes('registro') ||
+               path.includes('recuperar');
     }
 
     /**
@@ -113,7 +271,7 @@ import { UserManager } from '/clases/user.js';
         // Actualizar avatares
         document.querySelectorAll('[data-auth-user-avatar]').forEach(el => {
             if (el.tagName === 'IMG' && userInfo) {
-                el.src = userInfo.foto;
+                el.src = userInfo.foto || 'https://via.placeholder.com/150/0a2540/ffffff?text=User';
                 el.onerror = function() {
                     this.src = 'https://via.placeholder.com/150/0a2540/ffffff?text=User';
                 };
@@ -154,6 +312,12 @@ import { UserManager } from '/clases/user.js';
                 el.style.display = '';
             });
         }
+        
+        // Disparar evento personalizado
+        const authEvent = new CustomEvent('authStateChanged', { 
+            detail: { user: currentUser, userInfo: userInfo } 
+        });
+        document.dispatchEvent(authEvent);
     }
 
     /**
@@ -168,10 +332,10 @@ import { UserManager } from '/clases/user.js';
             rol: currentUser.rol,
             organizacion: currentUser.organizacion,
             organizacionCamelCase: currentUser.organizacionCamelCase,
-            foto: currentUser.getFotoUrl(),
-            estado: currentUser.getEstadoTexto(),
-            verificado: currentUser.estaVerificado(),
-            activo: currentUser.estaActivo(),
+            foto: currentUser.getFotoUrl ? currentUser.getFotoUrl() : (currentUser.fotoUsuario || null),
+            estado: currentUser.getEstadoTexto ? currentUser.getEstadoTexto() : (currentUser.status ? 'Activo' : 'Inactivo'),
+            verificado: currentUser.estaVerificado ? currentUser.estaVerificado() : true,
+            activo: currentUser.estaActivo ? currentUser.estaActivo() : (currentUser.status !== false),
             plan: currentUser.plan,
             areaAsignadaId: currentUser.areaAsignadaId,
             areaAsignadaNombre: currentUser.areaAsignadaNombre,
@@ -201,6 +365,7 @@ import { UserManager } from '/clases/user.js';
                 
                 const user = await userManager.iniciarSesion(email, password);
                 currentUser = user;
+                saveUserToLocalStorage(user);
                 notifyListeners();
                 updateUI();
                 
@@ -228,6 +393,7 @@ import { UserManager } from '/clases/user.js';
                     await userManager.logout();
                 }
                 currentUser = null;
+                saveUserToLocalStorage(null);
                 notifyListeners();
                 updateUI();
                 
@@ -269,42 +435,42 @@ import { UserManager } from '/clases/user.js';
          * Verifica si es Master
          */
         isMaster: function() {
-            return currentUser ? currentUser.esMaster() : false;
+            return currentUser ? currentUser.rol === 'master' : false;
         },
         
         /**
          * Verifica si es Administrador
          */
         isAdmin: function() {
-            return currentUser ? currentUser.esAdministrador() : false;
+            return currentUser ? currentUser.rol === 'administrador' : false;
         },
         
         /**
          * Verifica si es Colaborador
          */
         isColaborador: function() {
-            return currentUser ? currentUser.esColaborador() : false;
+            return currentUser ? currentUser.rol === 'colaborador' : false;
         },
         
         /**
          * Verifica si el usuario está activo
          */
         isActive: function() {
-            return currentUser ? currentUser.estaActivo() : false;
+            return currentUser ? (currentUser.status !== false) : false;
         },
         
         /**
          * Verifica si el email está verificado
          */
         isVerified: function() {
-            return currentUser ? currentUser.estaVerificado() : false;
+            return currentUser ? true : false; // Por ahora siempre true
         },
         
         /**
          * Verifica si tiene un permiso específico
          */
         hasPermission: function(permiso) {
-            return currentUser ? currentUser.tienePermiso(permiso) : false;
+            return currentUser ? (currentUser.permisosPersonalizados?.[permiso] || false) : false;
         },
         
         /**
@@ -358,9 +524,9 @@ import { UserManager } from '/clases/user.js';
                 return;
             }
             
-            if (currentUser.esMaster()) {
+            if (currentUser.rol === 'master') {
                 window.location.href = '/usuarios/administradorSistema/panelAdministrador/panelAdministrador.html';
-            } else if (currentUser.esAdministrador()) {
+            } else if (currentUser.rol === 'administrador') {
                 window.location.href = '/usuarios/administrador/panelControl/panelControl.html';
             } else {
                 window.location.href = '/usuarios/colaboradores/panelControl/panelControl.html';
@@ -390,6 +556,32 @@ import { UserManager } from '/clases/user.js';
                     }, 100);
                 }
             });
+        },
+        
+        /**
+         * Recarga el usuario desde localStorage
+         */
+        refreshUser: function() {
+            const localUser = loadUserFromLocalStorage();
+            if (localUser) {
+                currentUser = {
+                    ...localUser,
+                    getFotoUrl: function() { return this.fotoUsuario || null; },
+                    getEstadoTexto: function() { return this.status ? 'Activo' : 'Inactivo'; },
+                    estaVerificado: function() { return true; },
+                    estaActivo: function() { return this.status !== false; },
+                    esMaster: function() { return this.rol === 'master'; },
+                    esAdministrador: function() { return this.rol === 'administrador'; },
+                    esColaborador: function() { return this.rol === 'colaborador'; },
+                    tienePermiso: function(permiso) { 
+                        return this.permisosPersonalizados?.[permiso] || false; 
+                    }
+                };
+                notifyListeners();
+                updateUI();
+                return currentUser;
+            }
+            return null;
         }
     };
     

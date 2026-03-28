@@ -308,6 +308,32 @@
 
     <br>
 
+    <!-- Modal de Vista Previa PDF (AGREGADO) -->
+    <div id="pdfPreviewModal" class="pdf-preview-modal" style="display: none;">
+        <div class="pdf-preview-header">
+            <h3><i class="fas fa-file-pdf"></i> Vista Previa del Informe de Incidencia</h3>
+            <button class="pdf-preview-btn pdf-close-btn" id="pdfCloseBtn" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="pdf-preview-content">
+            <div class="pdf-preview-loading" id="pdfPreviewLoading">
+                <div class="spinner"></div>
+                <p>Generando vista previa del informe...</p>
+                <p class="small">Esto puede tomar unos segundos dependiendo de las imágenes</p>
+            </div>
+            <iframe id="pdfPreviewIframe" class="pdf-preview-iframe" style="display: none;"></iframe>
+        </div>
+        <div class="pdf-preview-footer">
+            <button class="btn btn-secondary" id="pdfCancelBtn">
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+            <button class="btn btn-success" id="pdfAcceptBtn">
+                <i class="fas fa-check-circle"></i> Aceptar y Guardar
+            </button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
@@ -318,11 +344,8 @@
     <script type="module" src="crearIncidencias.js"></script>
 
     <!-- Protector de pagina -->
-    <script src="/components/protector-de-pagina.js" data-rol="administrador"
-        data-mensaje="Solo administradores pueden acceder a esta página."
-        data-titulo="Acceso de Administrador Requerido"
-        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
-        </script>
+    <!-- /usuarios/administrador/cualquier-pagina.html -->
+    <script type="module" src="/components/protector-admin.js"></script>
 </body>
 
 </html>

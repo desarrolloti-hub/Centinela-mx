@@ -142,35 +142,47 @@
         </div>
 
         <section class="center-row">
-            <!-- PANEL ÚNICO - REGISTRO (SOLO 2 TARJETAS) -->
+            <!-- PANEL ÚNICO - ACCESO RÁPIDO (TARJETAS DINÁMICAS) -->
             <div class="side full-width">
                 <div class="section-container">
                     <div class="section-header">
-                        <h2 class="section-title"><i class="fa-solid fa-pen-to-square"></i> REGISTRO</h2>
-                        <p class="section-subtitle">Crear nuevos elementos en el sistema</p>
+                        <h2 class="section-title"><i class="fa-solid fa-bolt"></i> ACCESO RÁPIDO</h2>
+                        <p class="section-subtitle">Módulos disponibles según tu plan</p>
                     </div>
 
                     <div class="cards-grid-2">
-                        <!-- Tarjeta: Nueva Incidencia -->
+                        <!-- Tarjeta: Incidencias (Lista) -->
+                        <div class="dashboard-card" id="card-incidencias-lista">
+                            <div class="card-icon orange">
+                                <i class="fa-solid fa-list"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Incidencias</h3>
+                                <p>Ver lista de incidencias</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
+                        <!-- Tarjeta: Nueva Incidencia (Especial con parpadeo) -->
                         <div class="dashboard-card" id="card-nueva-incidencia">
                             <div class="card-icon cyan">
                                 <i class="fa-solid fa-triangle-exclamation"></i>
                             </div>
                             <div class="card-text">
                                 <h3>Nueva Incidencia</h3>
-                                <p>Crear nuevo reporte de incidencia</p>
+                                <p>Crear nuevo reporte</p>
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
 
-                        <!-- Tarjeta: Nuevo Usuario -->
-                        <div class="dashboard-card" id="card-nuevo-usuario">
-                            <div class="card-icon purple">
-                                <i class="fa-solid fa-user-plus"></i>
+                        <!-- Tarjeta: Mapa de Alertas (Monitoreo) -->
+                        <div class="dashboard-card" id="card-mapa-alertas">
+                            <div class="card-icon cyan">
+                                <i class="fa-solid fa-map-marker-alt"></i>
                             </div>
                             <div class="card-text">
-                                <h3>Nuevo Colaborador</h3>
-                                <p>Crear nueva cuenta de usuario</p>
+                                <h3>Mapa de Alertas</h3>
+                                <p>Monitoreo en tiempo real</p>
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
@@ -189,11 +201,8 @@
     <script src="/components/footerAdministrador.js"></script>
 
     <!-- Protector de pagina -->
-    <script src="/components/protector-de-pagina.js" data-rol="administrador"
-        data-mensaje="Solo administradores pueden acceder a esta página."
-        data-titulo="Acceso de Administrador Requerido"
-        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
-        </script>
+    <!-- /usuarios/administrador/cualquier-pagina.html -->
+    <script type="module" src="/components/protector-admin.js"></script>
 </body>
 
 </html>

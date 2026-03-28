@@ -1,5 +1,5 @@
 // editarPermisos.js - EDICIÓN DE PERMISOS
-// MISMO ESTILO QUE CREAR PERMISOS
+// CON MÓDULOS COMPLETOS (Áreas, Categorías, Sucursales, Regiones, Incidencias, Mapa Alertas, Usuarios, Estadísticas, Tareas)
 
 // =============================================
 // CLASE PRINCIPAL - EditarPermisoController
@@ -8,9 +8,11 @@ class EditarPermisoController {
     constructor() {
         this.permisoManager = null;
         this.areaManager = null;
+        this.planManager = null;
         this.usuarioActual = null;
         this.permisoActual = null;
         this.areas = [];
+        this.permisosPlan = null;
         this.permisoId = null;
 
         // Inicializar
@@ -39,20 +41,25 @@ class EditarPermisoController {
             // 2. Cargar managers
             await this._cargarManagers();
 
-            // 3. Cargar áreas
+            // 3. Cargar permisos del plan (para saber qué módulos mostrar)
+            await this._cargarPermisosDelPlan();
+
+            // 4. Cargar áreas
             await this._cargarAreas();
 
-            // 4. Cargar permiso
+            // 5. Cargar permiso
             await this._cargarPermiso();
 
-            // 5. Configurar eventos
+            // 6. Configurar eventos
             this._configurarEventos();
 
-            // 6. Configurar organización automática
+            // 7. Configurar organización automática
             this._configurarOrganizacion();
 
+            // 8. Mostrar/ocultar módulos dinámicos según el plan
+            this._mostrarModulosDinamicos();
+
         } catch (error) {
-            console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
         }
     }
@@ -60,7 +67,6 @@ class EditarPermisoController {
     // ========== CARGA DE USUARIO ==========
     _cargarUsuario() {
         try {
-            // Intentar obtener de adminInfo (guardado por regiones.js o permisos.js)
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const adminData = JSON.parse(adminInfo);
@@ -71,74 +77,30 @@ class EditarPermisoController {
                     organizacion: adminData.organizacion || 'Sin organización',
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
+                    plan: adminData.plan || null,
                     correo: adminData.correoElectronico || adminData.correo || ''
                 };
                 return true;
             }
 
-            // Intentar obtener de userData
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             if (userData && Object.keys(userData).length > 0) {
                 this.usuarioActual = {
-                    id: userData.uid || userData.id || `user_${Date.now()}`,
+                    id: userData.id || userData.uid || `user_${Date.now()}`,
                     uid: userData.uid || userData.id,
-                    nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+                    nombreCompleto: userData.nombreCompleto || userData.nombre || 'Administrador',
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
                     organizacionCamelCase: userData.organizacionCamelCase ||
                         this._generarCamelCase(userData.organizacion || userData.empresa),
-                    correo: userData.correo || userData.email || ''
+                    plan: userData.plan || null,
+                    correo: userData.correoElectronico || userData.correo || userData.email || ''
                 };
                 return true;
             }
 
-            // Intentar obtener de window.userManager (si existe)
-            if (window.userManager && window.userManager.currentUser) {
-                const user = window.userManager.currentUser;
-                this.usuarioActual = {
-                    id: user.id || user.uid,
-                    uid: user.uid || user.id,
-                    nombreCompleto: user.nombreCompleto || 'Administrador',
-                    organizacion: user.organizacion || 'Mi Organización',
-                    organizacionCamelCase: user.organizacionCamelCase ||
-                        this._generarCamelCase(user.organizacion),
-                    correo: user.correoElectronico || user.correo || ''
-                };
-
-                // Guardar en localStorage para futuras cargas
-                localStorage.setItem('adminInfo', JSON.stringify({
-                    id: this.usuarioActual.id,
-                    uid: this.usuarioActual.uid,
-                    nombreCompleto: this.usuarioActual.nombreCompleto,
-                    organizacion: this.usuarioActual.organizacion,
-                    organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
-                    correoElectronico: this.usuarioActual.correo,
-                    timestamp: new Date().toISOString()
-                }));
-
-                return true;
-            }
-
-            // Intentar obtener de selectedPermiso (desde la vista de lista)
-            const selectedPermiso = localStorage.getItem('selectedPermiso');
-            if (selectedPermiso) {
-                const permisoData = JSON.parse(selectedPermiso);
-                this.usuarioActual = {
-                    id: permisoData.adminId || 'admin',
-                    uid: permisoData.adminId || 'admin',
-                    nombreCompleto: permisoData.admin || 'Administrador',
-                    organizacion: permisoData.organizacion || 'Mi Organización',
-                    organizacionCamelCase: permisoData.organizacionCamelCase ||
-                        this._generarCamelCase(permisoData.organizacion),
-                    correo: ''
-                };
-                return true;
-            }
-
-            // Si no hay nada, redirigir al login
             return false;
 
         } catch (error) {
-            console.error('Error cargando usuario:', error);
             return false;
         }
     }
@@ -158,13 +120,83 @@ class EditarPermisoController {
         try {
             const { PermisoManager } = await import('/clases/permiso.js');
             const { AreaManager } = await import('/clases/area.js');
+            const { PlanPersonalizadoManager } = await import('/clases/plan.js');
 
             this.permisoManager = new PermisoManager();
             this.areaManager = new AreaManager();
+            this.planManager = new PlanPersonalizadoManager();
+
+            if (this.usuarioActual?.organizacionCamelCase) {
+                this.permisoManager.organizacionCamelCase = this.usuarioActual.organizacionCamelCase;
+            }
 
         } catch (error) {
-            console.error('❌ Error cargando managers:', error);
             throw new Error('No se pudieron cargar los módulos necesarios. Verifica la consola.');
+        }
+    }
+
+    // ========== CARGAR PERMISOS DEL PLAN (PARA INCIDENCIAS Y MAPA DE ALERTAS) ==========
+    async _cargarPermisosDelPlan() {
+        try {
+            let planId = this.usuarioActual?.plan;
+
+            if (!planId) {
+                const adminInfo = localStorage.getItem('adminInfo');
+                if (adminInfo) {
+                    const adminData = JSON.parse(adminInfo);
+                    planId = adminData.plan;
+                }
+            }
+
+            if (!planId) {
+                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                planId = userData.plan;
+            }
+
+            if (!planId || planId === 'sin-plan' || planId === 'gratis' || planId === 'null' || planId === 'undefined') {
+                this.permisosPlan = { incidencias: false, monitoreo: false };
+                return;
+            }
+
+            const plan = await this.planManager.obtenerPorId(planId);
+
+            if (!plan) {
+                this.permisosPlan = { incidencias: false, monitoreo: false };
+                return;
+            }
+
+            const mapasActivos = plan.mapasActivos || {};
+
+            this.permisosPlan = {
+                incidencias: mapasActivos.incidencias === true,
+                monitoreo: mapasActivos.alertas === true
+            };
+
+        } catch (error) {
+            this.permisosPlan = { incidencias: false, monitoreo: false };
+        }
+    }
+
+    // ========== MOSTRAR/OCULTAR MÓDULOS DINÁMICOS ==========
+    _mostrarModulosDinamicos() {
+        // Módulo de Incidencias
+        const moduloIncidencias = document.getElementById('permisoIncidenciasCard');
+        if (moduloIncidencias) {
+            if (this.permisosPlan.incidencias === true) {
+                moduloIncidencias.style.display = 'flex';
+            } else {
+                moduloIncidencias.style.display = 'none';
+            }
+        }
+
+        // Módulo de Mapa de Alertas (Monitoreo)
+        const moduloMonitoreo = document.getElementById('permisoMonitoreoCard');
+        if (moduloMonitoreo) {
+            if (this.permisosPlan.monitoreo === true) {
+                moduloMonitoreo.style.display = 'flex';
+            } else {
+                moduloMonitoreo.style.display = 'none';
+            }
         }
     }
 
@@ -180,7 +212,6 @@ class EditarPermisoController {
             );
 
         } catch (error) {
-            console.error('❌ Error cargando áreas:', error);
             throw error;
         }
     }
@@ -211,14 +242,10 @@ class EditarPermisoController {
                 }
             }
 
-            // NO mostramos el ID del permiso - Eliminamos el código que mostraba el ID
-            // Simplemente cargamos los datos en el formulario
-
             // Cargar datos en el formulario
             this._cargarDatosFormulario();
 
         } catch (error) {
-            console.error('Error cargando permiso:', error);
             throw error;
         }
     }
@@ -238,7 +265,9 @@ class EditarPermisoController {
         // Cargo
         let cargoNombre = this.permisoActual.cargoId;
         if (area && area.cargos && this.permisoActual.cargoId) {
-            cargoNombre = area.cargos[this.permisoActual.cargoId]?.nombre || this.permisoActual.cargoId;
+            const cargosArray = area.getCargosAsArray();
+            const cargo = cargosArray.find(c => c.id === this.permisoActual.cargoId);
+            cargoNombre = cargo?.nombre || this.permisoActual.cargoId;
         }
         document.getElementById('cargoNombre').value = cargoNombre || 'No especificado';
         document.getElementById('cargoId').value = this.permisoActual.cargoId;
@@ -246,39 +275,67 @@ class EditarPermisoController {
         // Permisos
         const permisos = this.permisoActual.permisos || {};
 
-        // Áreas
+        // Áreas (fijo)
         const chkAreas = document.getElementById('permisoAreas');
         if (chkAreas) {
             chkAreas.checked = permisos.areas || false;
             this._actualizarEstiloCard(document.getElementById('permisoAreasCard'), chkAreas.checked);
         }
 
-        // Categorías
+        // Categorías (fijo)
         const chkCategorias = document.getElementById('permisoCategorias');
         if (chkCategorias) {
             chkCategorias.checked = permisos.categorias || false;
             this._actualizarEstiloCard(document.getElementById('permisoCategoriasCard'), chkCategorias.checked);
         }
 
-        // Sucursales
+        // Sucursales (fijo)
         const chkSucursales = document.getElementById('permisoSucursales');
         if (chkSucursales) {
             chkSucursales.checked = permisos.sucursales || false;
             this._actualizarEstiloCard(document.getElementById('permisoSucursalesCard'), chkSucursales.checked);
         }
 
-        // Regiones
+        // Regiones (fijo)
         const chkRegiones = document.getElementById('permisoRegiones');
         if (chkRegiones) {
             chkRegiones.checked = permisos.regiones || false;
             this._actualizarEstiloCard(document.getElementById('permisoRegionesCard'), chkRegiones.checked);
         }
 
-        // Incidencias
+        // Incidencias (dinámico)
         const chkIncidencias = document.getElementById('permisoIncidencias');
         if (chkIncidencias) {
             chkIncidencias.checked = permisos.incidencias || false;
             this._actualizarEstiloCard(document.getElementById('permisoIncidenciasCard'), chkIncidencias.checked);
+        }
+
+        // Mapa de Alertas (dinámico)
+        const chkMonitoreo = document.getElementById('permisoMonitoreo');
+        if (chkMonitoreo) {
+            chkMonitoreo.checked = permisos.monitoreo || false;
+            this._actualizarEstiloCard(document.getElementById('permisoMonitoreoCard'), chkMonitoreo.checked);
+        }
+
+        // NUEVO Módulo: Usuarios
+        const chkUsuarios = document.getElementById('permisoUsuarios');
+        if (chkUsuarios) {
+            chkUsuarios.checked = permisos.usuarios || false;
+            this._actualizarEstiloCard(document.getElementById('permisoUsuariosCard'), chkUsuarios.checked);
+        }
+
+        // NUEVO Módulo: Estadísticas
+        const chkEstadisticas = document.getElementById('permisoEstadisticas');
+        if (chkEstadisticas) {
+            chkEstadisticas.checked = permisos.estadisticas || false;
+            this._actualizarEstiloCard(document.getElementById('permisoEstadisticasCard'), chkEstadisticas.checked);
+        }
+
+        // NUEVO Módulo: Tareas
+        const chkTareas = document.getElementById('permisoTareas');
+        if (chkTareas) {
+            chkTareas.checked = permisos.tareas || false;
+            this._actualizarEstiloCard(document.getElementById('permisoTareasCard'), chkTareas.checked);
         }
     }
 
@@ -318,30 +375,38 @@ class EditarPermisoController {
             this._configurarAccionesRapidas();
 
         } catch (error) {
-            console.error('Error configurando eventos:', error);
+            // Error handling without console
         }
     }
 
     _configurarCheckboxesPermisos() {
-        const modulos = ['Areas', 'Categorias', 'Sucursales', 'Regiones', 'Incidencias'];
+        // TODOS los módulos disponibles
+        const todosModulos = ['Areas', 'Categorias', 'Sucursales', 'Regiones', 'Incidencias', 'Monitoreo', 'Usuarios', 'Estadisticas', 'Tareas'];
 
-        modulos.forEach(modulo => {
+        todosModulos.forEach(modulo => {
             const checkbox = document.getElementById(`permiso${modulo}`);
             const card = document.getElementById(`permiso${modulo}Card`);
 
             if (checkbox && card) {
-                // Evento click en la tarjeta
-                card.addEventListener('click', (e) => {
-                    if (e.target !== checkbox) {
-                        checkbox.checked = !checkbox.checked;
-                        this._actualizarEstiloCard(card, checkbox.checked);
+                // Eliminar eventos anteriores para evitar duplicados
+                const newCard = card.cloneNode(true);
+                card.parentNode.replaceChild(newCard, card);
+
+                const newCheckbox = newCard.querySelector(`#permiso${modulo}`);
+                const newCardElement = newCard;
+
+                newCardElement.addEventListener('click', (e) => {
+                    if (e.target !== newCheckbox) {
+                        newCheckbox.checked = !newCheckbox.checked;
+                        this._actualizarEstiloCard(newCardElement, newCheckbox.checked);
                     }
                 });
 
-                // Evento change en el checkbox
-                checkbox.addEventListener('change', (e) => {
-                    this._actualizarEstiloCard(card, e.target.checked);
+                newCheckbox.addEventListener('change', (e) => {
+                    this._actualizarEstiloCard(newCardElement, e.target.checked);
                 });
+
+                this._actualizarEstiloCard(newCardElement, newCheckbox.checked);
             }
         });
     }
@@ -389,7 +454,12 @@ class EditarPermisoController {
             categorias: document.getElementById('permisoCategorias')?.checked || false,
             sucursales: document.getElementById('permisoSucursales')?.checked || false,
             regiones: document.getElementById('permisoRegiones')?.checked || false,
-            incidencias: document.getElementById('permisoIncidencias')?.checked || false
+            incidencias: document.getElementById('permisoIncidencias')?.checked || false,
+            monitoreo: document.getElementById('permisoMonitoreo')?.checked || false,
+            // NUEVOS MÓDULOS
+            usuarios: document.getElementById('permisoUsuarios')?.checked || false,
+            estadisticas: document.getElementById('permisoEstadisticas')?.checked || false,
+            tareas: document.getElementById('permisoTareas')?.checked || false
         };
 
         return permisos;
@@ -418,12 +488,23 @@ class EditarPermisoController {
             // Obtener permisos seleccionados
             const nuevosPermisos = this._obtenerPermisosSeleccionados();
 
+            // Crear objeto userManager para pasar a la clase
+            const userManager = {
+                currentUser: {
+                    id: this.usuarioActual.id,
+                    uid: this.usuarioActual.uid,
+                    organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
+                    nombreCompleto: this.usuarioActual.nombreCompleto
+                }
+            };
+
             // Actualizar permiso usando el manager
             const permisoActualizado = await this.permisoManager.actualizarPermiso(
                 this.permisoActual.id,
                 nuevosPermisos,
                 this.usuarioActual.id || this.usuarioActual.uid,
-                this.usuarioActual.organizacionCamelCase
+                this.usuarioActual.organizacionCamelCase,
+                userManager.currentUser
             );
 
             // Limpiar localStorage
@@ -441,8 +522,6 @@ class EditarPermisoController {
             this._volverALista();
 
         } catch (error) {
-            console.error('❌ Error guardando cambios:', error);
-
             let mensajeError = error.message || 'No se pudo actualizar el permiso';
 
             // Mensajes más amigables
@@ -493,6 +572,10 @@ class EditarPermisoController {
             text: mensaje,
             confirmButtonText: 'Entendido'
         });
+    }
+
+    _redirigirAlLogin() {
+        window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
     }
 }
 

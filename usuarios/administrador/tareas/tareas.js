@@ -1,9 +1,12 @@
 // tareas.js - VERSIÓN CON FORMULARIO INLINE (COMO EN LA IMAGEN)
 // BASADO EN LAS IMÁGENES DE REFERENCIA
+// CON REGISTRO DE BITÁCORA
 
 import { TareaManager } from '/clases/tarea.js';
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
+
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 class TareasController {
     constructor() {
@@ -44,6 +47,9 @@ class TareasController {
 
     async init() {
         try {
+            // ✅ NUEVO: Inicializar historialManager
+            await this._initHistorial();
+
             this.userManager = new UserManager();
             this.areaManager = new AreaManager();
             const { TareaManager } = await import('/clases/tarea.js');
@@ -76,6 +82,138 @@ class TareasController {
 
         } catch (error) {
             this._mostrarError(error.message);
+        }
+    }
+
+    // ✅ NUEVO: Inicializar historialManager
+    async _initHistorial() {
+        try {
+            const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+            historialManager = new HistorialUsuarioManager();
+            console.log('📋 HistorialManager inicializado para tareas');
+        } catch (error) {
+            console.error('Error inicializando historialManager:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar creación de tarea
+    async _registrarCreacionTarea(tareaData, resultado) {
+        if (!historialManager) return;
+
+        try {
+            const cantidadItems = tareaData.items ? Object.keys(tareaData.items).length : 0;
+            let destinatariosInfo = '';
+
+            if (tareaData.tipo === 'compartida' && tareaData.usuariosCompartidosIds) {
+                destinatariosInfo = `${tareaData.usuariosCompartidosIds.length} usuarios`;
+            } else if (tareaData.tipo === 'area' && tareaData.areaId) {
+                const area = this.areasDisponibles.find(a => a.id === tareaData.areaId);
+                destinatariosInfo = `área ${area?.nombreArea || tareaData.areaId}`;
+                if (tareaData.cargosIds && tareaData.cargosIds.length > 0) {
+                    destinatariosInfo += ` (${tareaData.cargosIds.length} cargos específicos)`;
+                }
+            } else if (tareaData.tipo === 'global') {
+                destinatariosInfo = 'todos los usuarios de la organización';
+            } else {
+                destinatariosInfo = 'solo para mí';
+            }
+
+            await historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'crear',
+                modulo: 'tareas',
+                descripcion: `Creó nota: ${tareaData.nombreActividad}`,
+                detalles: {
+                    tareaId: resultado?.id || 'pendiente',
+                    tareaTitulo: tareaData.nombreActividad,
+                    tareaTipo: tareaData.tipo === 'global' ? 'general' : tareaData.tipo,
+                    destinatarios: destinatariosInfo,
+                    cantidadItems: cantidadItems,
+                    tieneRecordatorio: tareaData.tieneRecordatorio || false,
+                    fechaCreacion: new Date().toISOString()
+                }
+            });
+            console.log(`✅ Creación de nota "${tareaData.nombreActividad}" registrada en bitácora`);
+        } catch (error) {
+            console.error('Error registrando creación de tarea:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar edición de tarea
+    async _registrarEdicionTarea(tareaOriginal, tareaActualizada, cambios) {
+        if (!historialManager) return;
+
+        try {
+            await historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'editar',
+                modulo: 'tareas',
+                descripcion: `Editó nota: ${tareaActualizada.nombreActividad || tareaOriginal.nombreActividad}`,
+                detalles: {
+                    tareaId: tareaOriginal.id,
+                    tareaTituloOriginal: tareaOriginal.nombreActividad,
+                    tareaTituloActualizado: tareaActualizada.nombreActividad,
+                    cambios: cambios,
+                    fechaEdicion: new Date().toISOString()
+                }
+            });
+            console.log(`✅ Edición de nota "${tareaOriginal.nombreActividad}" registrada en bitácora`);
+        } catch (error) {
+            console.error('Error registrando edición de tarea:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar eliminación de tarea
+    async _registrarEliminacionTarea(tarea) {
+        if (!historialManager) return;
+
+        try {
+            const cantidadItems = tarea.items ? Object.keys(tarea.items).length : 0;
+
+            await historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'eliminar',
+                modulo: 'tareas',
+                descripcion: `Eliminó nota: ${tarea.nombreActividad}`,
+                detalles: {
+                    tareaId: tarea.id,
+                    tareaTitulo: tarea.nombreActividad,
+                    tareaTipo: tarea.tipo === 'global' ? 'general' : tarea.tipo,
+                    cantidadItems: cantidadItems,
+                    fechaEliminacion: new Date().toISOString()
+                }
+            });
+            console.log(`✅ Eliminación de nota "${tarea.nombreActividad}" registrada en bitácora`);
+        } catch (error) {
+            console.error('Error registrando eliminación de tarea:', error);
+        }
+    }
+
+    // ✅ NUEVO: Registrar marcado de item
+    async _registrarMarcadoItem(tarea, itemId, itemTexto, completado) {
+        if (!historialManager) return;
+
+        try {
+            await historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'editar',
+                modulo: 'tareas',
+                descripcion: completado ? 
+                    `Marcó como completado item en nota "${tarea.nombreActividad}"` : 
+                    `Desmarcó item en nota "${tarea.nombreActividad}"`,
+                detalles: {
+                    tareaId: tarea.id,
+                    tareaTitulo: tarea.nombreActividad,
+                    itemId: itemId,
+                    itemTexto: itemTexto,
+                    estadoAnterior: completado ? 'pendiente' : 'completado',
+                    estadoNuevo: completado ? 'completado' : 'pendiente',
+                    fechaCambio: new Date().toISOString()
+                }
+            });
+            console.log(`✅ Marcado de item en nota "${tarea.nombreActividad}" registrado en bitácora`);
+        } catch (error) {
+            console.error('Error registrando marcado de item:', error);
         }
     }
 
@@ -344,12 +482,21 @@ class TareasController {
 
     async _marcarItem(tareaId, itemId, completado) {
         try {
+            // Obtener la tarea y el item para registrar detalles
+            const tarea = this.todasLasTareas.find(t => t.id === tareaId);
+            const item = tarea?.items?.[itemId];
+            const itemTexto = item?.texto || 'Item sin texto';
+
             await this.tareaManager.marcarItemTarea(
                 tareaId, itemId, completado,
                 this.usuarioActual, this.usuarioActual.organizacionCamelCase
             );
 
-            const tarea = this.todasLasTareas.find(t => t.id === tareaId);
+            // ✅ NUEVO: Registrar marcado de item en bitácora
+            if (tarea) {
+                await this._registrarMarcadoItem(tarea, itemId, itemTexto, completado);
+            }
+
             if (tarea && tarea.items && tarea.items[itemId]) {
                 tarea.items[itemId].completado = completado;
             }
@@ -389,9 +536,11 @@ class TareasController {
         this._seleccionarTipoFormulario('personal');
 
         document.getElementById('formularioCreacion').style.display = 'block';
-        document.getElementById('formularioCreacion').scrollIntoView({ behavior: 'smooth' });
 
+        // Desplazar al formulario
         setTimeout(() => {
+            const formulario = document.getElementById('formularioCreacion');
+            formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
             document.getElementById('notaTitulo').focus();
         }, 100);
     }
@@ -528,7 +677,7 @@ class TareasController {
 
         switch (tipo) {
             case 'personal':
-                html = ''; // Prioridad eliminada
+                html = '';
                 break;
             case 'compartida':
                 html = this._getHTMLUsuariosCreacion();
@@ -1007,13 +1156,24 @@ class TareasController {
         });
 
         try {
+            let resultado;
             if (notaId) {
+                // Obtener tarea original antes de editar para registrar cambios
+                const tareaOriginal = await this.tareaManager.getTareaById(
+                    notaId, this.usuarioActual.organizacionCamelCase
+                );
+                
                 await this.tareaManager.actualizarTarea(
                     notaId, tareaData,
                     this.usuarioActual, this.usuarioActual.organizacionCamelCase
                 );
+                
+                // Detectar cambios
+                const cambios = this._detectarCambiosTarea(tareaOriginal, tareaData);
+                await this._registrarEdicionTarea(tareaOriginal, tareaData, cambios);
             } else {
-                await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
+                resultado = await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
+                await this._registrarCreacionTarea(tareaData, resultado);
             }
 
             Swal.close();
@@ -1036,7 +1196,85 @@ class TareasController {
         }
     }
 
-    // ========== ABRIR FORMULARIO DE EDICIÓN (CON SCROLL FIX Y FOCUS SIN MOVER SCROLL) ==========
+    // ✅ NUEVO: Detectar cambios en tarea para registro
+    _detectarCambiosTarea(original, actualizada) {
+        const cambios = [];
+
+        if (original.nombreActividad !== actualizada.nombreActividad) {
+            cambios.push({
+                campo: 'título',
+                anterior: original.nombreActividad,
+                nuevo: actualizada.nombreActividad
+            });
+        }
+
+        if (original.descripcion !== actualizada.descripcion) {
+            cambios.push({
+                campo: 'descripción',
+                anterior: original.descripcion?.substring(0, 50) || '',
+                nuevo: actualizada.descripcion?.substring(0, 50) || ''
+            });
+        }
+
+        if (original.tipo !== actualizada.tipo) {
+            cambios.push({
+                campo: 'tipo',
+                anterior: original.tipo === 'global' ? 'general' : original.tipo,
+                nuevo: actualizada.tipo === 'global' ? 'general' : actualizada.tipo
+            });
+        }
+
+        if (original.tieneRecordatorio !== actualizada.tieneRecordatorio) {
+            cambios.push({
+                campo: 'recordatorio',
+                anterior: original.tieneRecordatorio ? 'activado' : 'desactivado',
+                nuevo: actualizada.tieneRecordatorio ? 'activado' : 'desactivado'
+            });
+        }
+
+        // Detectar cambios en items (agregados, eliminados, modificados)
+        const itemsOriginales = original.items ? Object.values(original.items) : [];
+        const itemsActuales = actualizada.items ? Object.values(actualizada.items) : [];
+
+        const itemsAgregados = itemsActuales.filter(i => 
+            !itemsOriginales.some(o => o.id === i.id)
+        );
+        if (itemsAgregados.length > 0) {
+            cambios.push({
+                campo: 'items',
+                tipo: 'agregados',
+                cantidad: itemsAgregados.length,
+                items: itemsAgregados.map(i => ({ id: i.id, texto: i.texto?.substring(0, 30) }))
+            });
+        }
+
+        const itemsEliminados = itemsOriginales.filter(o => 
+            !itemsActuales.some(i => i.id === o.id)
+        );
+        if (itemsEliminados.length > 0) {
+            cambios.push({
+                campo: 'items',
+                tipo: 'eliminados',
+                cantidad: itemsEliminados.length
+            });
+        }
+
+        const itemsModificados = itemsActuales.filter(i => {
+            const originalItem = itemsOriginales.find(o => o.id === i.id);
+            return originalItem && originalItem.texto !== i.texto;
+        });
+        if (itemsModificados.length > 0) {
+            cambios.push({
+                campo: 'items',
+                tipo: 'modificados',
+                cantidad: itemsModificados.length
+            });
+        }
+
+        return cambios;
+    }
+
+    // ========== ABRIR FORMULARIO DE EDICIÓN (CON SCROLL AL FORMULARIO) ==========
 
     async _abrirFormularioEdicion(tareaId) {
         Swal.fire({
@@ -1099,28 +1337,26 @@ class TareasController {
 
             const formulario = document.getElementById('formularioCreacion');
             const tituloInput = document.getElementById('notaTitulo');
-            const scrollActual = window.scrollY;
 
+            // Mostrar el formulario
             formulario.style.display = 'block';
 
-            window.scrollTo({
-                top: scrollActual,
-                behavior: 'instant'
-            });
-
+            // Esperar a que el DOM se actualice y luego desplazar al formulario
             setTimeout(() => {
-                if (tituloInput) {
-                    const scrollPosAntes = window.scrollY;
-                    tituloInput.focus();
-                    tituloInput.select();
-                    if (window.scrollY !== scrollPosAntes) {
-                        window.scrollTo({
-                            top: scrollPosAntes,
-                            behavior: 'instant'
-                        });
+                formulario.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                    inline: 'nearest'
+                });
+
+                // Enfocar el título después del scroll
+                setTimeout(() => {
+                    if (tituloInput) {
+                        tituloInput.focus();
+                        tituloInput.select();
                     }
-                }
-            }, 50);
+                }, 500);
+            }, 100);
 
         } catch (error) {
             Swal.close();
@@ -1136,7 +1372,7 @@ class TareasController {
 
         switch (tipo) {
             case 'personal':
-                html = ''; // Prioridad eliminada
+                html = '';
                 break;
             case 'compartida':
                 html = this._getHTMLUsuariosEdicion(tareaData);
@@ -1313,6 +1549,9 @@ class TareasController {
     // ========== ELIMINAR TAREA ==========
 
     async _eliminarTarea(tareaId) {
+        // Obtener la tarea antes de eliminarla para registrar detalles
+        const tarea = this.todasLasTareas.find(t => t.id === tareaId);
+
         const result = await Swal.fire({
             title: '¿Eliminar nota?',
             text: 'Esta acción no se puede deshacer',
@@ -1338,6 +1577,11 @@ class TareasController {
             await this.tareaManager.eliminarTarea(
                 tareaId, this.usuarioActual, this.usuarioActual.organizacionCamelCase
             );
+
+            // ✅ NUEVO: Registrar eliminación en bitácora
+            if (tarea) {
+                await this._registrarEliminacionTarea(tarea);
+            }
 
             Swal.close();
 

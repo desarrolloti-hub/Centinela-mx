@@ -1,10 +1,14 @@
 // ========== permisos.js - GESTIÓN DE PERMISOS ==========
 // Basado en la estructura de categorias.js - VERSIÓN CON LOCALSTORAGE ÚNICAMENTE
+// ACTUALIZADO: Incluye módulos Usuarios, Estadísticas y Tareas
+// Y lógica de plan para Incidencias y Mapa de Alertas
 
 // ========== VARIABLES GLOBALES ==========
 let permisoManager = null;
 let areaManager = null;
+let planManager = null;
 let adminActual = null;
+let permisosPlan = null; // Para saber qué módulos dinámicos mostrar
 
 // Configuración de paginación
 const ITEMS_POR_PAGINA = 10;
@@ -16,14 +20,27 @@ let permisosFiltrados = []; // Permisos filtrados para mostrar
 // Cache de áreas para mostrar nombres
 let areasCache = new Map();
 
-// Nombres amigables para los módulos
+// Nombres amigables para los módulos (TODOS)
 const nombresModulos = {
     areas: 'Áreas',
     categorias: 'Categorías',
     sucursales: 'Sucursales',
     regiones: 'Regiones',
-    incidencias: 'Incidencias'
+    incidencias: 'Incidencias',
+    usuarios: 'Usuarios',
+    estadisticas: 'Estadísticas',
+    tareas: 'Tareas',
+    monitoreo: 'Mapa Alertas'
 };
+
+// Módulos fijos (siempre visibles)
+const modulosFijos = ['areas', 'categorias', 'sucursales', 'regiones', 'usuarios', 'estadisticas', 'tareas'];
+
+// Módulos dinámicos (dependen del plan)
+const modulosDinamicos = ['incidencias', 'monitoreo'];
+
+// Orden de los módulos para mostrar
+const ordenModulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias', 'usuarios', 'estadisticas', 'tareas', 'monitoreo'];
 
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
@@ -42,12 +59,17 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Importar las clases necesarias
         const { PermisoManager } = await import('/clases/permiso.js');
         const { AreaManager } = await import('/clases/area.js');
+        const { PlanPersonalizadoManager } = await import('/clases/plan.js');
 
         permisoManager = new PermisoManager();
         areaManager = new AreaManager();
+        planManager = new PlanPersonalizadoManager();
 
         // Pequeña pausa para simular carga
         await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Cargar permisos del plan (para saber qué módulos dinámicos mostrar)
+        await cargarPermisosDelPlan();
 
         // Cargar áreas primero para tener los nombres
         await loadAreas();
@@ -60,10 +82,53 @@ document.addEventListener('DOMContentLoaded', async function () {
         setupEvents();
 
     } catch (error) {
-
         showError(error.message || 'Error al cargar la página');
     }
 });
+
+// ========== CARGAR PERMISOS DEL PLAN (PARA INCIDENCIAS Y MAPA DE ALERTAS) ==========
+async function cargarPermisosDelPlan() {
+    try {
+        let planId = adminActual?.plan;
+
+        if (!planId) {
+            const adminInfo = localStorage.getItem('adminInfo');
+            if (adminInfo) {
+                const adminData = JSON.parse(adminInfo);
+                planId = adminData.plan;
+                adminActual.plan = planId;
+            }
+        }
+
+        if (!planId) {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            planId = userData.plan;
+            adminActual.plan = planId;
+        }
+
+        if (!planId || planId === 'sin-plan' || planId === 'gratis' || planId === 'null' || planId === 'undefined') {
+            permisosPlan = { incidencias: false, monitoreo: false };
+            return;
+        }
+
+        const plan = await planManager.obtenerPorId(planId);
+
+        if (!plan) {
+            permisosPlan = { incidencias: false, monitoreo: false };
+            return;
+        }
+
+        const mapasActivos = plan.mapasActivos || {};
+
+        permisosPlan = {
+            incidencias: mapasActivos.incidencias === true,
+            monitoreo: mapasActivos.alertas === true
+        };
+
+    } catch (error) {
+        permisosPlan = { incidencias: false, monitoreo: false };
+    }
+}
 
 // ========== CARGAR USUARIO DESDE LOCALSTORAGE SOLAMENTE ==========
 function cargarUsuarioDesdeStorage() {
@@ -79,7 +144,8 @@ function cargarUsuarioDesdeStorage() {
                 organizacion: userData.organizacion || 'Sin organización',
                 organizacionCamelCase: userData.organizacionCamelCase || '',
                 rol: userData.rol || 'administrador',
-                correoElectronico: userData.correoElectronico || ''
+                correoElectronico: userData.correoElectronico || '',
+                plan: userData.plan || null
             };
 
             // También guardar como adminInfo para compatibilidad con otros módulos
@@ -91,6 +157,7 @@ function cargarUsuarioDesdeStorage() {
                 organizacionCamelCase: adminActual.organizacionCamelCase,
                 rol: adminActual.rol,
                 correoElectronico: adminActual.correoElectronico,
+                plan: adminActual.plan,
                 timestamp: new Date().toISOString()
             }));
 
@@ -108,7 +175,8 @@ function cargarUsuarioDesdeStorage() {
                 organizacion: adminData.organizacion || 'Sin organización',
                 organizacionCamelCase: adminData.organizacionCamelCase,
                 rol: adminData.rol || 'administrador',
-                correoElectronico: adminData.correoElectronico || ''
+                correoElectronico: adminData.correoElectronico || '',
+                plan: adminData.plan || null
             };
 
             return true;
@@ -116,7 +184,6 @@ function cargarUsuarioDesdeStorage() {
 
         return false;
     } catch (error) {
-
         return false;
     }
 }
@@ -137,7 +204,7 @@ async function loadAreas() {
             });
         });
     } catch (error) {
-        console.error('Error cargando áreas:', error);
+        // Error handling without console
     }
 }
 
@@ -335,11 +402,8 @@ async function loadPermisos() {
 
         // ORDENAR POR FECHA DE CREACIÓN DESCENDENTE (MÁS RECIENTES PRIMERO)
         todosLosPermisos.sort((a, b) => {
-            // Convertir a timestamp para comparar
             const fechaA = a.fechaCreacion ? new Date(a.fechaCreacion).getTime() : 0;
             const fechaB = b.fechaCreacion ? new Date(b.fechaCreacion).getTime() : 0;
-
-            // Orden descendente (más reciente primero)
             return fechaB - fechaA;
         });
 
@@ -349,13 +413,60 @@ async function loadPermisos() {
         renderizarConPaginacion();
 
     } catch (error) {
-        // Si es error por falta de datos, mostrar empty state
         if (error.message.includes('organización')) {
             showEmptyState();
         } else {
             showFirebaseError(error);
         }
     }
+}
+
+// ========== VERIFICAR SI UN MÓDULO DEBE MOSTRARSE SEGÚN EL PLAN ==========
+function debeMostrarModulo(modulo) {
+    // Módulos fijos siempre se muestran
+    if (modulosFijos.includes(modulo)) {
+        return true;
+    }
+
+    // Módulos dinámicos dependen del plan
+    if (modulosDinamicos.includes(modulo)) {
+        if (modulo === 'incidencias') {
+            return permisosPlan?.incidencias === true;
+        }
+        if (modulo === 'monitoreo') {
+            return permisosPlan?.monitoreo === true;
+        }
+    }
+
+    return true;
+}
+
+// ========== GENERAR BADGES DE PERMISOS (con lógica de plan) ==========
+function generarBadgesPermisos(permisos) {
+    let badges = '';
+
+    ordenModulos.forEach(modulo => {
+        // Verificar si el módulo debe mostrarse según el plan
+        if (!debeMostrarModulo(modulo)) {
+            return; // Saltar este módulo
+        }
+
+        const activo = permisos?.[modulo] || false;
+        const nombreMostrar = nombresModulos[modulo] || modulo;
+
+        badges += `
+            <span class="permiso-badge ${activo ? 'activo' : 'inactivo'}" title="${activo ? 'Tiene acceso' : 'Sin acceso'}">
+                ${nombreMostrar}
+            </span>
+        `;
+    });
+
+    // Si no hay badges generados, mostrar un badge de "Sin permisos"
+    if (!badges) {
+        badges = `<span class="permiso-badge inactivo">Sin módulos</span>`;
+    }
+
+    return badges;
 }
 
 // ========== RENDERIZAR TABLA DE PERMISOS ==========
@@ -368,7 +479,7 @@ function renderPermisosTable(permisos) {
     permisos.forEach(permiso => {
         const row = document.createElement('tr');
 
-        // Construir badges de permisos
+        // Construir badges de permisos (ya con lógica de plan)
         const permisosHTML = generarBadgesPermisos(permiso.permisos);
 
         // Usar data-label para responsive
@@ -404,28 +515,8 @@ function renderPermisosTable(permisos) {
     });
 }
 
-// ========== GENERAR BADGES DE PERMISOS ==========
-function generarBadgesPermisos(permisos) {
-    const modulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias'];
-    let badges = '';
-
-    modulos.forEach(modulo => {
-        const activo = permisos?.[modulo] || false;
-        const nombreMostrar = nombresModulos[modulo] || modulo;
-
-        badges += `
-            <span class="permiso-badge ${activo ? 'activo' : 'inactivo'}" title="${activo ? 'Tiene acceso' : 'Sin acceso'}">
-                ${nombreMostrar}
-            </span>
-        `;
-    });
-
-    return badges;
-}
-
 // ========== CONFIGURAR EVENTOS ==========
 function setupEvents() {
-    // El botón "Agregar Permiso" es un enlace <a> en el header
     const addBtn = document.getElementById('addBtn');
     if (addBtn) {
         addBtn.addEventListener('click', (e) => {
@@ -437,7 +528,6 @@ function setupEvents() {
     if (tableBody) {
         tableBody.addEventListener('click', async (e) => {
             const button = e.target.closest('button');
-
             if (!button) return;
 
             const permisoId = button.getAttribute('data-permiso-id');
@@ -449,16 +539,14 @@ function setupEvents() {
                 await editPermiso(permisoId, permisoArea, permisoCargo);
             }
             else if (action === 'view' || (button.classList.contains('btn') && !button.classList.contains('btn-warning'))) {
-                // Redirigir a la vista de ver permiso
                 verPermiso(permisoId, permisoArea, permisoCargo);
             }
         });
     }
 }
 
-// ========== VER PERMISO (REDIRECCIÓN A LA VISTA DETALLADA) ==========
+// ========== VER PERMISO ==========
 function verPermiso(permisoId, areaNombre, cargoNombre) {
-    // Redirigir a la página de ver permiso con el ID en la URL
     window.location.href = `../verPermisos/verPermisos.html?id=${permisoId}`;
 }
 
@@ -481,8 +569,6 @@ async function editPermiso(permisoId, areaNombre, cargoNombre) {
     };
 
     localStorage.setItem('selectedPermiso', JSON.stringify(selectedPermiso));
-
-    // Usar la ruta correcta para editar permisos
     window.location.href = `../editarPermisos/editarPermisos.html?id=${permisoId}`;
 }
 
@@ -503,7 +589,6 @@ function showLoadingState() {
         </tr>
     `;
 
-    // Ocultar paginación mientras carga
     const paginacionContainer = document.querySelector('.pagination-container');
     if (paginacionContainer) {
         paginacionContainer.style.display = 'none';
@@ -531,7 +616,6 @@ function showEmptyState() {
         </tr>
     `;
 
-    // Ocultar paginación
     const paginacionContainer = document.querySelector('.pagination-container');
     if (paginacionContainer) {
         paginacionContainer.style.display = 'none';
@@ -562,7 +646,6 @@ function showNoAdminMessage() {
         </tr>
     `;
 
-    // Ocultar paginación
     const paginacionContainer = document.querySelector('.pagination-container');
     if (paginacionContainer) {
         paginacionContainer.style.display = 'none';
@@ -588,7 +671,6 @@ function showFirebaseError(error) {
         </tr>
     `;
 
-    // Ocultar paginación
     const paginacionContainer = document.querySelector('.pagination-container');
     if (paginacionContainer) {
         paginacionContainer.style.display = 'none';
@@ -613,7 +695,6 @@ function showError(message) {
         </tr>
     `;
 
-    // Ocultar paginación
     const paginacionContainer = document.querySelector('.pagination-container');
     if (paginacionContainer) {
         paginacionContainer.style.display = 'none';

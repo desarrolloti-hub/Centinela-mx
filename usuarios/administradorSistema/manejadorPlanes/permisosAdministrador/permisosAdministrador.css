@@ -1198,6 +1198,135 @@
 }
 
 /* =============================================
+   ESTILOS COMPACTOS PARA TARJETAS DE PLANES
+   ============================================= */
+
+/* Contenedor de planes en modo compacto */
+.planes-container.compacta .planes-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Tarjeta de plan compacta */
+.planes-container.compacta .plan-opcion {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-border-light);
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.planes-container.compacta .plan-opcion.selected {
+    border-color: var(--color-accent-primary);
+    background: rgba(0, 207, 255, 0.05);
+    box-shadow: 0 0 12px rgba(0, 207, 255, 0.15);
+}
+
+/* Ocultar el input radio original */
+.planes-container.compacta .plan-opcion input[type="radio"] {
+    display: none;
+}
+
+/* Label que actúa como contenedor clickeable */
+.planes-container.compacta .plan-opcion label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    margin: 0;
+    width: 100%;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Header del plan compacto (icono + nombre + precio) */
+.planes-container.compacta .plan-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 2;
+    min-width: 180px;
+}
+
+.planes-container.compacta .plan-header i {
+    font-size: 1.2rem;
+    width: 28px;
+    text-align: center;
+}
+
+.planes-container.compacta .plan-header h3 {
+    font-size: 0.95rem;
+    margin: 0;
+    font-family: var(--font-family-primary, 'Orbitron');
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.planes-container.compacta .plan-precio {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.15);
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+/* Stats compactos (íconos + números) */
+.planes-container.compacta .plan-stats {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.planes-container.compacta .plan-stats span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.planes-container.compacta .plan-stats i {
+    font-size: 0.7rem;
+}
+
+/* Ocultar secciones que ya no se necesitan */
+.planes-container.compacta .plan-descripcion,
+.planes-container.compacta .plan-modulos,
+.planes-container.compacta .mapas-activos,
+.planes-container.compacta .permisos-activos,
+.planes-container.compacta .badge-modulos,
+.planes-container.compacta .badge-permisos,
+.planes-container.compacta .badge-vigencia {
+    display: none;
+}
+
+/* Para móviles muy pequeños, ajustar layout */
+@media (max-width: 560px) {
+    .planes-container.compacta .plan-opcion label {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .planes-container.compacta .plan-stats {
+        justify-content: flex-start;
+        margin-top: 0.25rem;
+        width: 100%;
+    }
+    
+    .planes-container.compacta .plan-header {
+        width: 100%;
+    }
+}
+
+/* =============================================
    MEJORAS PARA FOOTER
    ============================================= */
 

@@ -1533,6 +1533,8 @@ async createMaster(masterData, password) {
                 if (!user.esMaster()) {
                     localStorage.setItem('organizacion', user.organizacion);
                 }
+                ///user
+                await this.guardarDatosAccesoEnLocalStorage();
             } catch (e) {
                 console.warn('No se pudo guardar datos en localStorage');
             }
@@ -1899,6 +1901,76 @@ async createMaster(masterData, password) {
             console.error('Error al cerrar sesión:', error);
             throw error;
         }
+    }
+    // Agregar este método en la clase UserManager, después del método logout (línea ~1500)
+
+    /**
+     * Guarda los datos de plan y permisos en localStorage después del login
+     * Debe llamarse después de cargar el usuario actual
+     */
+    async guardarDatosAccesoEnLocalStorage() {
+        if (!this.currentUser) return;
+        
+        const usuario = this.currentUser;
+        
+        // Guardar datos básicos
+        localStorage.setItem('user-rol', usuario.rol);
+        localStorage.setItem('user-id', usuario.id);
+        localStorage.setItem('user-plan-nombre', usuario.plan || 'gratis');
+        
+        if (usuario.esMaster()) {
+            localStorage.setItem('plan-usuario', JSON.stringify({
+                id: 'master',
+                nombre: 'Master',
+                mapasActivos: {}
+            }));
+        } 
+        else if (usuario.esAdministrador()) {
+            try {
+                // Intentar cargar el plan completo desde Firestore
+                const { GestorPlanesPersonalizados } = await import('/clases/plan.js');
+                const gestorPlanes = new GestorPlanesPersonalizados();
+                const plan = await gestorPlanes.obtenerPorId(usuario.plan || 'gratis');
+                if (plan) {
+                    const planInfo = plan.paraInterfaz();
+                    localStorage.setItem('plan-usuario', JSON.stringify(planInfo));
+                } else {
+                    localStorage.setItem('plan-usuario', JSON.stringify({
+                        id: usuario.plan || 'gratis',
+                        nombre: usuario.plan || 'gratis',
+                        mapasActivos: {}
+                    }));
+                }
+            } catch (error) {
+                console.warn('No se pudo cargar el plan completo:', error);
+                localStorage.setItem('plan-usuario', JSON.stringify({
+                    id: usuario.plan || 'gratis',
+                    nombre: usuario.plan || 'gratis',
+                    mapasActivos: {}
+                }));
+            }
+        } 
+        else if (usuario.esColaborador()) {
+            // Guardar permisos personalizados
+            if (usuario.permisosPersonalizados && Object.keys(usuario.permisosPersonalizados).length > 0) {
+                localStorage.setItem('permisos-usuario', JSON.stringify(usuario.permisosPersonalizados));
+            }
+            
+            // Guardar plan del colaborador
+            try {
+                const { GestorPlanesPersonalizados } = await import('/clases/plan.js');
+                const gestorPlanes = new GestorPlanesPersonalizados();
+                const plan = await gestorPlanes.obtenerPorId(usuario.plan || 'gratis');
+                if (plan) {
+                    const planInfo = plan.paraInterfaz();
+                    localStorage.setItem('plan-usuario', JSON.stringify(planInfo));
+                }
+            } catch (error) {
+                console.warn('No se pudo cargar el plan del colaborador:', error);
+            }
+        }
+        
+        console.log('✅ Datos de acceso guardados en localStorage');
     }
 }
 

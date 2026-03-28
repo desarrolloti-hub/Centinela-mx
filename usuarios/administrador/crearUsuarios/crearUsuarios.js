@@ -1,7 +1,10 @@
 // ARCHIVO JS PARA CREAR COLABORADOR - VERSIÓN CORREGIDA (SIN DOBLE SELECCIÓN)
+// CON REGISTRO DE BITÁCORA
 // ==================== IMPORTS CORREGIDOS ====================
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
+
+let historialManager = null; // ✅ NUEVO: Para registrar actividades
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', function() {
@@ -10,8 +13,22 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    initCollaboratorForm();
+    // ✅ NUEVO: Inicializar historialManager
+    inicializarHistorial().then(() => {
+        initCollaboratorForm();
+    });
 });
+
+// ✅ NUEVO: Inicializar historialManager
+async function inicializarHistorial() {
+    try {
+        const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
+        historialManager = new HistorialUsuarioManager();
+        console.log('📋 HistorialManager inicializado para crear usuarios');
+    } catch (error) {
+        console.error('Error inicializando historialManager:', error);
+    }
+}
 
 async function initCollaboratorForm() {
     
@@ -40,6 +57,8 @@ async function initCollaboratorForm() {
             };
         }
         
+        window.usuarioActual = usuarioActual;
+        
         // Configurar interfaz con datos del usuario
         actualizarInterfazConUsuario(elements, usuarioActual);
         
@@ -52,6 +71,31 @@ async function initCollaboratorForm() {
     } catch (error) {
         console.error('❌ Error inicializando formulario:', error);
         mostrarErrorSistema(error.message);
+    }
+}
+
+// ✅ NUEVO: Registrar creación de colaborador
+async function registrarCreacionColaborador(colaboradorData, usuarioActual) {
+    if (!historialManager) return;
+    
+    try {
+        await historialManager.registrarActividad({
+            usuario: usuarioActual,
+            tipo: 'crear',
+            modulo: 'usuarios',
+            descripcion: `Creó colaborador: ${colaboradorData.nombreCompleto}`,
+            detalles: {
+                colaboradorId: colaboradorData.id || 'pendiente',
+                colaboradorNombre: colaboradorData.nombreCompleto,
+                colaboradorEmail: colaboradorData.correoElectronico,
+                colaboradorRol: colaboradorData.rol || 'colaborador',
+                areaAsignadaId: colaboradorData.areaAsignadaId || null,
+                fechaCreacion: new Date().toISOString()
+            }
+        });
+        console.log(`✅ Creación de colaborador "${colaboradorData.nombreCompleto}" registrada en bitácora`);
+    } catch (error) {
+        console.error('Error registrando creación de colaborador:', error);
     }
 }
 
@@ -694,6 +738,12 @@ async function registrarColaborador(event, elements, userManager, usuario) {
             elements.contrasena.value,
             usuario.id
         );
+        
+        // ✅ NUEVO: Registrar creación en bitácora
+        if (resultado && resultado.id) {
+            colaboradorData.id = resultado.id;
+            await registrarCreacionColaborador(colaboradorData, usuario);
+        }
                 
         // Mostrar éxito
         Swal.close();

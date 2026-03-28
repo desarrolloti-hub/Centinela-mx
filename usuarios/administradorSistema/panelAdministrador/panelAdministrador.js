@@ -1,4 +1,4 @@
-// panelAdministrador.js - Versión con datos reales desde OperacionesEstadisticas
+// panelAdministrador.js - Versión limpia
 
 import OperacionesEstadisticas from '/clases/operacion.js';
 
@@ -12,7 +12,6 @@ class PanelAdministrador {
     async init() {
         console.log('🚀 Inicializando Panel Administrador...');
         
-        // Escuchar progreso de actualización
         OperacionesEstadisticas.onProgreso((progreso) => {
             this.actualizarProgreso(progreso);
         });
@@ -20,14 +19,12 @@ class PanelAdministrador {
         await this.cargarDatosGlobales();
         this.inicializarBotonesAcciones();
         this.inicializarActualizacionAutomatica();
+        this.inicializarAccionesRapidas();
     }
 
     async cargarDatosGlobales() {
         try {
-            // Mostrar loading en las tarjetas KPI
             this.mostrarLoadingKPI();
-            
-            // Obtener datos de todas las empresas
             this.datosGlobales = await OperacionesEstadisticas.obtenerDatosTodasEmpresas();
             
             if (this.datosGlobales && this.datosGlobales.totales) {
@@ -47,10 +44,7 @@ class PanelAdministrador {
     }
 
     mostrarLoadingKPI() {
-        const kpis = [
-            'total-empresas', 'total-usuarios', 'total-ingresos',
-            'total-almacenamiento', 'total-bandwidth', 'total-api'
-        ];
+        const kpis = ['total-empresas', 'total-usuarios', 'total-ingresos', 'total-almacenamiento'];
         kpis.forEach(id => {
             const elemento = document.getElementById(id);
             if (elemento) {
@@ -60,76 +54,22 @@ class PanelAdministrador {
     }
 
     actualizarKPIs(totales) {
-        // 1. EMPRESAS ACTIVAS
         const totalEmpresas = this.datosGlobales.porEmpresa?.length || 0;
         this.actualizarElemento('total-empresas', totalEmpresas);
         
-        // 2. USUARIOS TOTALES
         const totalUsuarios = totales.auth?.totalUsuarios || 0;
         this.actualizarElemento('total-usuarios', totalUsuarios);
         
-        // 3. INGRESOS MENSUALES (simulado basado en empresas y usuarios)
-        // Puedes ajustar esta fórmula según tu modelo de negocio
-        const ingresosEstimados = this.calcularIngresosEstimados(totalEmpresas, totalUsuarios);
+        const ingresosEstimados = (totalEmpresas * 100) + (totalUsuarios * 5);
         this.actualizarElemento('total-ingresos', `$${ingresosEstimados.toLocaleString()}`);
         
-        // 4. ALMACENAMIENTO
         const almacenamientoGB = (totales.storage?.totalSizeMB || 0) / 1024;
         this.actualizarElemento('total-almacenamiento', `${almacenamientoGB.toFixed(2)} GB`);
-        
-        // 5. ANCHO DE BANDA (simulado basado en almacenamiento)
-        const bandwidthGB = (almacenamientoGB * 0.3).toFixed(2); // Estimación
-        this.actualizarElemento('total-bandwidth', `${bandwidthGB} GB`);
-        
-        // 6. PETICIONES API (simulado basado en documentos y usuarios)
-        const apiRequests = (totales.firestore?.documentos || 0) * 2 + totalUsuarios * 10;
-        this.actualizarElemento('total-api', apiRequests.toLocaleString());
-        
-        // Actualizar tooltips con más información
-        this.actualizarTooltips(totales);
-    }
-
-    calcularIngresosEstimados(empresas, usuarios) {
-        // Ejemplo: $100 por empresa base + $5 por usuario
-        const basePorEmpresa = 100;
-        const porUsuario = 5;
-        return (empresas * basePorEmpresa) + (usuarios * porUsuario);
-    }
-
-    actualizarTooltips(totales) {
-        // Agregar información detallada a las tarjetas KPI
-        const kpiCards = document.querySelectorAll('.kpi-card');
-        kpiCards.forEach(card => {
-            const title = card.querySelector('h3')?.innerText || '';
-            let tooltipText = '';
-            
-            switch(title) {
-                case 'EMPRESAS':
-                    const activas = this.datosGlobales.porEmpresa?.length || 0;
-                    const conDatos = this.datosGlobales.porEmpresa?.filter(e => e.conteos?.firestore?.documentos > 0).length || 0;
-                    tooltipText = `${activas} empresas totales, ${conDatos} con actividad`;
-                    break;
-                case 'USUARIOS':
-                    tooltipText = `${totales.auth?.administradores || 0} administradores, ${totales.auth?.colaboradores || 0} colaboradores`;
-                    break;
-                case 'ALMACENAMIENTO':
-                    tooltipText = `${totales.storage?.totalArchivos || 0} archivos almacenados`;
-                    break;
-                case 'API REQUESTS':
-                    tooltipText = `Basado en ${totales.firestore?.documentos || 0} documentos Firestore`;
-                    break;
-            }
-            
-            if (tooltipText) {
-                card.setAttribute('title', tooltipText);
-            }
-        });
     }
 
     actualizarGraficas(datosGlobales) {
         const porEmpresa = datosGlobales.porEmpresa || [];
         
-        // Gráfica de Distribución de Planes (basada en tamaño de almacenamiento)
         if (porEmpresa.length > 0) {
             const top5 = [...porEmpresa]
                 .sort((a, b) => (b.conteos?.storage?.totalSizeMB || 0) - (a.conteos?.storage?.totalSizeMB || 0))
@@ -141,7 +81,6 @@ class PanelAdministrador {
             this.crearGraficaPastel('chartPlanes', labels, data, 'MB');
         }
         
-        // Gráfica de Crecimiento Mensual (datos simulados pero basados en documentos reales)
         this.crearGraficaCrecimiento(porEmpresa);
     }
 
@@ -154,7 +93,7 @@ class PanelAdministrador {
         }
         
         const total = data.reduce((a, b) => a + b, 0);
-        const colores = ['#ff4d00', '#2f8cff', '#00cfff', '#b16bff', '#ffcc00', '#9caba4', '#28a745', '#dc3545'];
+        const colores = ['#ff4d00', '#2f8cff', '#00cfff', '#b16bff', '#ffcc00'];
         
         this.charts[canvasId] = new Chart(canvas.getContext('2d'), {
             type: 'doughnut',
@@ -194,17 +133,6 @@ class PanelAdministrador {
                 cutout: '50%'
             }
         });
-        
-        // Actualizar leyenda
-        const legendContainer = document.getElementById('planesLegend');
-        if (legendContainer && labels.length > 0) {
-            legendContainer.innerHTML = labels.map((label, i) => `
-                <span style="display: inline-flex; align-items: center; gap: 6px;">
-                    <span style="width: 10px; height: 10px; background: ${colores[i]}; border-radius: 50%;"></span>
-                    ${label}: ${data[i].toFixed(2)} MB
-                </span>
-            `).join('');
-        }
     }
 
     crearGraficaCrecimiento(porEmpresa) {
@@ -215,9 +143,17 @@ class PanelAdministrador {
             this.charts['chartCrecimiento'].destroy();
         }
         
-        // Simular crecimiento basado en datos reales de los últimos 6 meses
         const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
-        const documentosPorMes = this.simularCrecimientoMensual(porEmpresa);
+        const documentosTotales = porEmpresa.reduce((sum, e) => sum + (e.conteos?.firestore?.documentos || 0), 0);
+        const base = documentosTotales / 6;
+        const documentosPorMes = [
+            Math.round(base * 0.3),
+            Math.round(base * 0.5),
+            Math.round(base * 0.7),
+            Math.round(base * 0.9),
+            Math.round(base * 1.1),
+            Math.round(base * 1.3)
+        ];
         
         this.charts['chartCrecimiento'] = new Chart(canvas.getContext('2d'), {
             type: 'line',
@@ -264,21 +200,6 @@ class PanelAdministrador {
         });
     }
 
-    simularCrecimientoMensual(porEmpresa) {
-        const documentosTotales = porEmpresa.reduce((sum, e) => sum + (e.conteos?.firestore?.documentos || 0), 0);
-        
-        // Distribuir el total en 6 meses con crecimiento exponencial
-        const base = documentosTotales / 6;
-        return [
-            Math.round(base * 0.3),
-            Math.round(base * 0.5),
-            Math.round(base * 0.7),
-            Math.round(base * 0.9),
-            Math.round(base * 1.1),
-            Math.round(base * 1.3)
-        ];
-    }
-
     actualizarTopEmpresas(porEmpresa) {
         const container = document.getElementById('topEmpresas');
         if (!container) return;
@@ -288,7 +209,6 @@ class PanelAdministrador {
             return;
         }
         
-        // Top empresas por número de usuarios
         const topEmpresas = [...porEmpresa]
             .sort((a, b) => (b.conteos?.auth?.totalUsuarios || 0) - (a.conteos?.auth?.totalUsuarios || 0))
             .slice(0, 5);
@@ -297,7 +217,8 @@ class PanelAdministrador {
             const nombre = emp.nombreEmpresa || emp.id;
             const usuarios = emp.conteos?.auth?.totalUsuarios || 0;
             const documentos = emp.conteos?.firestore?.documentos || 0;
-            const plan = this.obtenerPlanPorTamanio(emp.conteos?.storage?.totalSizeMB || 0);
+            const tamanioMB = emp.conteos?.storage?.totalSizeMB || 0;
+            const plan = tamanioMB < 100 ? 'Básico' : tamanioMB < 500 ? 'Pro' : tamanioMB < 2000 ? 'Empresarial' : 'Enterprise';
             
             return `
                 <div class="top-empresa-item">
@@ -315,13 +236,6 @@ class PanelAdministrador {
         }).join('');
     }
 
-    obtenerPlanPorTamanio(tamanioMB) {
-        if (tamanioMB < 100) return 'Básico';
-        if (tamanioMB < 500) return 'Pro';
-        if (tamanioMB < 2000) return 'Empresarial';
-        return 'Enterprise';
-    }
-
     actualizarAlertas(datosGlobales) {
         const container = document.getElementById('alertasList');
         if (!container) return;
@@ -330,7 +244,6 @@ class PanelAdministrador {
         const totales = datosGlobales.totales;
         const porEmpresa = datosGlobales.porEmpresa || [];
         
-        // Alerta: Almacenamiento cerca del límite (simulado)
         const almacenamientoGB = (totales.storage?.totalSizeMB || 0) / 1024;
         if (almacenamientoGB > 90) {
             alertas.push({
@@ -346,7 +259,6 @@ class PanelAdministrador {
             });
         }
         
-        // Alerta: Empresas sin actividad
         const empresasInactivas = porEmpresa.filter(e => (e.conteos?.firestore?.documentos || 0) === 0).length;
         if (empresasInactivas > 0) {
             alertas.push({
@@ -356,7 +268,6 @@ class PanelAdministrador {
             });
         }
         
-        // Alerta: Usuarios sin colaboradores
         const empresasSinColaboradores = porEmpresa.filter(e => (e.conteos?.auth?.colaboradores || 0) === 0).length;
         if (empresasSinColaboradores > 0) {
             alertas.push({
@@ -366,19 +277,6 @@ class PanelAdministrador {
             });
         }
         
-        // Alerta: Muchos archivos multimedia
-        const archivosMultimedia = totales.storage?.porTipo?.multimedia?.cantidad || 0;
-        const totalArchivos = totales.storage?.totalArchivos || 0;
-        const porcentajeMultimedia = totalArchivos > 0 ? (archivosMultimedia / totalArchivos) * 100 : 0;
-        if (porcentajeMultimedia > 30) {
-            alertas.push({
-                tipo: 'info',
-                titulo: '🎬 Alto contenido multimedia',
-                mensaje: `${porcentajeMultimedia.toFixed(1)}% del almacenamiento son archivos multimedia`
-            });
-        }
-        
-        // Alerta de éxito (si todo está bien)
         if (alertas.length === 0) {
             alertas.push({
                 tipo: 'success',
@@ -417,7 +315,6 @@ class PanelAdministrador {
             return;
         }
         
-        // Últimas empresas por fecha de actualización
         const ultimas = [...porEmpresa]
             .sort((a, b) => new Date(b.fechaActualizacion) - new Date(a.fechaActualizacion))
             .slice(0, 5);
@@ -442,7 +339,6 @@ class PanelAdministrador {
     }
 
     actualizarProgreso(progreso) {
-        // Mostrar progreso si hay una actualización en curso
         if (!progreso.completado && progreso.total > 0) {
             const toastContainer = document.getElementById('progressToast') || this.crearToastProgreso();
             const porcentaje = progreso.porcentaje || Math.round((progreso.procesadas / progreso.total) * 100);
@@ -461,7 +357,7 @@ class PanelAdministrador {
             
             if (progreso.exitosas !== undefined) {
                 this.mostrarNotificacion(`Actualización completada: ${progreso.exitosas} empresas actualizadas`, 'success');
-                this.cargarDatosGlobales(); // Recargar datos
+                this.cargarDatosGlobales();
             }
         }
     }
@@ -496,7 +392,6 @@ class PanelAdministrador {
     }
 
     inicializarBotonesAcciones() {
-        // Botón de actualización manual
         const btnActualizar = document.getElementById('btnActualizarDatos');
         if (btnActualizar) {
             btnActualizar.addEventListener('click', () => this.actualizarTodosLosDatos());
@@ -504,11 +399,45 @@ class PanelAdministrador {
     }
 
     inicializarActualizacionAutomatica() {
-        // Actualizar datos cada 5 minutos (300000 ms)
         setInterval(() => {
             console.log('🔄 Actualización automática de datos...');
             this.cargarDatosGlobales();
         }, 300000);
+    }
+
+    inicializarAccionesRapidas() {
+        const rutas = {
+            'card-ver-empresas': '/usuarios/administradorSistema/administradores/administradores.html',
+            'card-ver-planes': '/usuarios/administradorSistema/consumoGlobal/consumoGlobal.html',
+            'card-reportes': '/usuarios/administradorSistema/cuentasPM/cuentasPM.html',
+            'card-config': '#',
+            'card-respaldos': '/usuarios/administradorSistema/operaciones/operaciones.html'
+        };
+
+        for (const [id, url] of Object.entries(rutas)) {
+            const boton = document.getElementById(id);
+            if (boton && url !== '#') {
+                boton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'Cargando...',
+                        text: 'Por favor espera',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+                    setTimeout(() => {
+                        Swal.close();
+                        window.location.href = url;
+                    }, 300);
+                });
+            } else if (boton && url === '#') {
+                boton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.mostrarNotificacion('Módulo en construcción', 'info');
+                });
+            }
+        }
     }
 
     async actualizarTodosLosDatos() {
@@ -573,10 +502,7 @@ class PanelAdministrador {
     }
 
     mostrarSinDatos() {
-        const kpis = [
-            'total-empresas', 'total-usuarios', 'total-ingresos',
-            'total-almacenamiento', 'total-bandwidth', 'total-api'
-        ];
+        const kpis = ['total-empresas', 'total-usuarios', 'total-ingresos', 'total-almacenamiento'];
         kpis.forEach(id => {
             this.actualizarElemento(id, '0');
         });
@@ -591,7 +517,7 @@ class PanelAdministrador {
     }
 }
 
-// Inicializar cuando el DOM esté listo
+// Inicializar
 document.addEventListener('DOMContentLoaded', () => {
     new PanelAdministrador();
 });
