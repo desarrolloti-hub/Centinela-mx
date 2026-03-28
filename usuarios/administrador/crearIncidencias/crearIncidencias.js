@@ -1,4 +1,6 @@
-// crearIncidencias.js - VERSIÓN CON VISTA PREVIA DE PDF
+// crearIncidencias.js - VERSIÓN OPTIMIZADA (SIN CORS)
+// FLUJO: 1. Generar PDF con imágenes en memoria → 2. Crear incidencia → 3. Subir imágenes → 4. Subir PDF
+
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
 };
@@ -20,11 +22,8 @@ class CrearIncidenciaController {
         this.AreaManager = null;
         this.notificacionManager = null;
         
-        // Para vista previa de PDF (AGREGADO)
+        // Para PDF (sin modal)
         this.pdfGenerator = null;
-        this.pdfPreviewModal = null;
-        this.pdfBlobGenerado = null;
-        this.datosActuales = null;
 
         this._init();
     }
@@ -54,7 +53,7 @@ class CrearIncidenciaController {
     }
 
     // =============================================
-    // INICIALIZAR PDF GENERATOR (AGREGADO)
+    // INICIALIZAR PDF GENERATOR (sin modal)
     // =============================================
     async _initPDFGenerator() {
         if (!this.pdfGenerator) {
@@ -71,472 +70,35 @@ class CrearIncidenciaController {
         return true;
     }
 
-    // =============================================
-    // INICIALIZAR MODAL DE VISTA PREVIA PDF (AGREGADO)
-    // =============================================
-   _initPDFPreviewModal() {
-    // Verificar si el modal ya existe
-    let modal = document.getElementById('pdfPreviewModal');
-    
-    if (!modal) {
-        const modalHTML = `
-            <div id="pdfPreviewModal" class="pdf-preview-modal">
-                <div class="pdf-preview-header">
-                    <h3><i class="fas fa-file-pdf"></i> Vista Previa del Informe de Incidencia</h3>
-                    <button class="pdf-preview-btn pdf-close-btn" id="pdfCloseBtn" title="Cerrar">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="pdf-preview-content">
-                    <div class="pdf-preview-loading" id="pdfPreviewLoading">
-                        <div class="spinner"></div>
-                        <p>Generando vista previa del informe...</p>
-                        <p class="small">Esto puede tomar unos segundos dependiendo de las imágenes</p>
-                    </div>
-                    <iframe id="pdfPreviewIframe" class="pdf-preview-iframe" style="display: none;"></iframe>
-                </div>
-                <div class="pdf-preview-footer">
-                    <button class="btn btn-secondary" id="pdfCancelBtn">
-                        <i class="fas fa-times"></i> Cerrar
-                    </button>
-                    <button class="btn btn-success" id="pdfAcceptBtn">
-                        <i class="fas fa-check-circle"></i> Aceptar y Guardar
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        modal = document.getElementById('pdfPreviewModal');
-        
-        this._addPDFPreviewStyles();
-    }
-    
-    // Asignar referencias
-    this.pdfPreviewModal = modal;
-    this.pdfPreviewIframe = document.getElementById('pdfPreviewIframe');
-    this.pdfPreviewLoading = document.getElementById('pdfPreviewLoading');
-    
-    // Remover event listeners anteriores para evitar duplicados
-    const closeBtn = document.getElementById('pdfCloseBtn');
-    const cancelBtn = document.getElementById('pdfCancelBtn');
-    const acceptBtn = document.getElementById('pdfAcceptBtn');
-    
-    if (closeBtn) {
-        const newCloseBtn = closeBtn.cloneNode(true);
-        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-        newCloseBtn.addEventListener('click', () => this._closePDFPreview());
-    }
-    
-    if (cancelBtn) {
-        const newCancelBtn = cancelBtn.cloneNode(true);
-        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-        newCancelBtn.addEventListener('click', () => this._closePDFPreview());
-    }
-    
-    if (acceptBtn) {
-        const newAcceptBtn = acceptBtn.cloneNode(true);
-        acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
-        newAcceptBtn.addEventListener('click', () => this._acceptAndUpload());
-    }
-    
-    // Cerrar al hacer click fuera
-    if (this.pdfPreviewModal) {
-        // Remover event listener anterior si existe
-        if (this._modalClickListener) {
-            this.pdfPreviewModal.removeEventListener('click', this._modalClickListener);
-        }
-        this._modalClickListener = (e) => {
-            if (e.target === this.pdfPreviewModal) {
-                this._closePDFPreview();
+    async _init() {
+        try {
+            this._cargarUsuario();
+
+            if (!this.usuarioActual) {
+                throw new Error('No se pudo cargar información del usuario');
             }
-        };
-        this.pdfPreviewModal.addEventListener('click', this._modalClickListener);
-    }
-    
-    // Escapar con ESC - remover anterior si existe
-    if (this._escListener) {
-        document.removeEventListener('keydown', this._escListener);
-    }
-    this._escListener = (e) => {
-        if (this.pdfPreviewModal && this.pdfPreviewModal.style.display === 'flex' && e.key === 'Escape') {
-            this._closePDFPreview();
-        }
-    };
-    document.addEventListener('keydown', this._escListener);
-}
-    
-   _addPDFPreviewStyles() {
-    if (document.getElementById('pdfPreviewStyles')) return;
-    
-    const styles = `
-        <style id="pdfPreviewStyles">
-            .pdf-preview-modal {
-                display: none;
-                position: fixed;
-                z-index: 10000;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.95);
-                flex-direction: column;
-                animation: pdfPreviewFadeIn 0.3s ease;
-            }
+
+            await this._inicializarManager();
+            await this._cargarDatosRelacionados();
+            await this._cargarAreas();
+            await this._initNotificacionManager();
             
-            @keyframes pdfPreviewFadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            
-            .pdf-preview-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 16px 24px;
-                background: linear-gradient(135deg, #1a3b5d 0%, #0f2a44 100%);
-                color: white;
-                border-bottom: 2px solid #c9a03d;
-            }
-            
-            .pdf-preview-header h3 {
-                margin: 0;
-                font-size: 18px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            
-            .pdf-preview-header h3 i {
-                color: #e74c3c;
-            }
-            
-            .pdf-preview-close-btn {
-                background: rgba(255, 255, 255, 0.1);
-                border: none;
-                color: white;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 18px;
-                transition: all 0.3s ease;
-            }
-            
-            .pdf-preview-close-btn:hover {
-                background: rgba(255, 255, 255, 0.2);
-                transform: scale(1.1);
-            }
-            
-            .pdf-preview-content {
-                flex: 1;
-                padding: 20px;
-                background: #1a1a1a;
-                position: relative;
-                min-height: 0;
-            }
-            
-            .pdf-preview-iframe {
-                width: 100%;
-                height: 100%;
-                border: none;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            }
-            
-            .pdf-preview-loading {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                text-align: center;
-                color: white;
-            }
-            
-            .pdf-preview-loading .spinner {
-                width: 50px;
-                height: 50px;
-                border: 3px solid rgba(255, 255, 255, 0.3);
-                border-top-color: #c9a03d;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin: 0 auto 15px;
-            }
-            
-            .pdf-preview-loading p {
-                margin: 10px 0;
-                font-size: 14px;
-            }
-            
-            .pdf-preview-loading .small {
-                font-size: 12px;
-                color: #aaa;
-            }
-            
-            .pdf-preview-footer {
-                display: flex;
-                justify-content: flex-end;
-                gap: 15px;
-                padding: 16px 24px;
-                background: #2d2d2d;
-                border-top: 1px solid #444;
-            }
-            
-            .pdf-preview-footer .btn {
-                padding: 10px 24px;
-                font-family: var(--font-family-secondary);
-                font-weight: 600;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                border: none;
-            }
-            
-            .pdf-preview-footer .btn-secondary {
-                background: #6c757d;
-                color: white;
-            }
-            
-            .pdf-preview-footer .btn-secondary:hover {
-                background: #5a6268;
-                transform: translateY(-2px);
-            }
-            
-            .pdf-preview-footer .btn-success {
-                background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
-                border: 1px solid #28a745;
-                color: white;
-            }
-            
-            .pdf-preview-footer .btn-success:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
-            }
-            
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-            
-            @media (max-width: 768px) {
-                .pdf-preview-header {
-                    padding: 12px 16px;
-                }
-                .pdf-preview-header h3 {
-                    font-size: 16px;
-                }
-                .pdf-preview-footer {
-                    padding: 12px 16px;
-                }
-                .pdf-preview-footer .btn {
-                    padding: 8px 16px;
-                    font-size: 14px;
-                }
-            }
-        </style>
-    `;
-    
-    document.head.insertAdjacentHTML('beforeend', styles);
-}
-    
-    // =============================================
-    // MOSTRAR VISTA PREVIA DEL PDF (AGREGADO)
-    // =============================================
-    async _mostrarVistaPreviaPDF(datos) {
-    try {
-        // Verificar que el modal esté inicializado
-        if (!this.pdfPreviewModal) {
-            console.warn('Modal no inicializado, inicializando ahora...');
-            this._initPDFPreviewModal();
-        }
-        
-        // Verificar nuevamente después de la inicialización
-        if (!this.pdfPreviewModal) {
-            throw new Error('No se pudo inicializar el visor de PDF');
-        }
-        
-        this.pdfPreviewModal.style.display = 'flex';
-        
-        if (this.pdfPreviewIframe) {
-            this.pdfPreviewIframe.style.display = 'none';
-        }
-        if (this.pdfPreviewLoading) {
-            this.pdfPreviewLoading.style.display = 'block';
-        }
-        
-        this.datosActuales = datos;
-        
-        const registroTemporal = this._crearRegistroTemporal(datos);
-        
-        console.log('📄 Generando vista previa del PDF para incidencia...');
-        console.log('📸 Evidencias para vista previa:', registroTemporal.imagenes?.length || 0);
-        
-        // Verificar que el generador PDF esté disponible
-        if (!this.pdfGenerator) {
             await this._initPDFGenerator();
+
+            this._configurarOrganizacion();
+            this._inicializarDateTimePicker();
+            this._configurarEventos();
+            this._inicializarValidaciones();
+            this._inicializarValidacionSecuencial();
+
+            this.imageEditorModal = new window.ImageEditorModal();
+
+        } catch (error) {
+            console.error('Error inicializando:', error);
+            this._mostrarError('Error al inicializar: ' + error.message);
         }
-        
-        const pdfBlob = await this.pdfGenerator.generarIPH(registroTemporal, {
-            mostrarAlerta: false,
-            returnBlob: true,
-            diagnosticar: false
-        });
-        
-        if (!pdfBlob || pdfBlob.size === 0) {
-            throw new Error('El PDF generado está vacío');
-        }
-        
-        console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
-        
-        this.pdfBlobGenerado = pdfBlob;
-        
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        
-        if (this.pdfPreviewIframe) {
-            this.pdfPreviewIframe.src = pdfUrl;
-            this.pdfPreviewIframe.style.display = 'block';
-        }
-        if (this.pdfPreviewLoading) {
-            this.pdfPreviewLoading.style.display = 'none';
-        }
-        
-        console.log('✅ Vista previa PDF cargada correctamente');
-        
-    } catch (error) {
-        console.error('❌ Error generando vista previa:', error);
-        this._closePDFPreview();
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'Error al generar vista previa',
-            text: error.message || 'No se pudo generar la vista previa del informe',
-            footer: 'Por favor, verifica tu conexión y las imágenes seleccionadas.'
-        });
-    }
-}
-    
-    _crearRegistroTemporal(datos) {
-        const fechaObj = new Date(datos.fechaHora);
-        
-        const evidenciasProcesadas = datos.imagenes.map((img, index) => {
-            return {
-                id: `temp_${Date.now()}_${index}`,
-                file: img.file,
-                preview: img.preview,
-                url: img.preview,
-                comentario: img.comentario || '',
-                elementos: img.elementos || [],
-                generatedName: img.generatedName
-            };
-        });
-        
-        return {
-            id: `PREVIEW_${Date.now()}`,
-            sucursalId: datos.sucursalId,
-            sucursalNombre: datos.sucursalNombre,
-            categoriaId: datos.categoriaId,
-            categoriaNombre: datos.categoriaNombre,
-            subcategoriaId: datos.subcategoriaId,
-            subcategoriaNombre: datos.subcategoriaNombre,
-            nivelRiesgo: datos.nivelRiesgo,
-            estado: datos.estado,
-            fechaInicio: fechaObj,
-            detalles: datos.detalles,
-            reportadoPorNombre: this.usuarioActual.nombreCompleto,
-            imagenes: evidenciasProcesadas,
-            fechaCreacion: new Date(),
-            getEstadoTexto: () => datos.estado === 'pendiente' ? 'Pendiente' : 'Finalizada',
-            getNivelRiesgoTexto: () => this._getRiesgoTexto(datos.nivelRiesgo)
-        };
     }
     
-    _getRiesgoTexto(riesgo) {
-        const riesgos = {
-            'bajo': 'Bajo',
-            'medio': 'Medio',
-            'alto': 'Alto',
-            'critico': 'Crítico'
-        };
-        return riesgos[riesgo] || riesgo;
-    }
-    
-_closePDFPreview() {
-    if (this.pdfPreviewModal) {
-        this.pdfPreviewModal.style.display = 'none';
-        
-        // Limpiar iframe
-        if (this.pdfPreviewIframe) {
-            this.pdfPreviewIframe.src = '';
-            this.pdfPreviewIframe.style.display = 'none';
-        }
-        
-        // Limpiar loading
-        if (this.pdfPreviewLoading) {
-            this.pdfPreviewLoading.style.display = 'block';
-        }
-    }
-}
-    
-    async _acceptAndUpload() {
-        this._closePDFPreview();
-        
-        if (!this.pdfBlobGenerado) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudo generar el PDF. Por favor, intenta de nuevo.'
-            });
-            return;
-        }
-        
-        await this._guardarIncidencia(this.datosActuales, this.pdfBlobGenerado);
-    }
-
-async _init() {
-    try {
-        this._cargarUsuario();
-
-        if (!this.usuarioActual) {
-            throw new Error('No se pudo cargar información del usuario');
-        }
-
-        await this._inicializarManager();
-        await this._cargarDatosRelacionados();
-        await this._cargarAreas();
-        await this._initNotificacionManager();
-        
-        // Inicializar PDF Generator
-        await this._initPDFGenerator();
-
-        this._configurarOrganizacion();
-        this._inicializarDateTimePicker();
-        this._configurarEventos();
-        this._inicializarValidaciones();
-        this._inicializarValidacionSecuencial();
-
-        this.imageEditorModal = new window.ImageEditorModal();
-        
-        // Inicializar modal de vista previa (sincrónico)
-        this._initPDFPreviewModal();
-        
-        // Verificar que se inicializó correctamente
-        if (!this.pdfPreviewModal) {
-            console.error('No se pudo inicializar el modal de vista previa');
-        } else {
-            console.log('✅ Modal de vista previa inicializado correctamente');
-        }
-
-    } catch (error) {
-        console.error('Error inicializando:', error);
-        this._mostrarError('Error al inicializar: ' + error.message);
-    }
-}
     _inicializarValidacionSecuencial() {
         const camposDependientes = [
             { id: 'categoriaIncidencia', nombre: 'Categoría' },
@@ -664,15 +226,6 @@ async _init() {
         if (fechaInput && typeof flatpickr !== 'undefined') {
             try {
                 const ahora = new Date();
-
-                const fechaFormateada = ahora.toLocaleString('es-MX', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                });
 
                 this.flatpickrInstance = flatpickr(fechaInput, {
                     enableTime: true,
@@ -894,7 +447,7 @@ async _init() {
 
             document.getElementById('btnCrearIncidencia')?.addEventListener('click', (e) => {
                 e.preventDefault();
-                this._validarYMostrarOpciones(); // MODIFICADO: ahora muestra opciones primero
+                this._validarYGuardar();
             });
 
             document.getElementById('btnAgregarImagen')?.addEventListener('click', () => {
@@ -905,7 +458,7 @@ async _init() {
 
             document.getElementById('formIncidenciaPrincipal')?.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this._validarYMostrarOpciones(); // MODIFICADO: ahora muestra opciones primero
+                this._validarYGuardar();
             });
 
             document.getElementById('categoriaIncidencia')?.addEventListener('change', (e) => {
@@ -1350,9 +903,57 @@ async _init() {
     }
 
     // =============================================
-    // NUEVO MÉTODO: VALIDAR Y MOSTRAR OPCIONES (MODIFICADO)
+    // CREAR REGISTRO TEMPORAL PARA EL PDF (CON BLOBS)
     // =============================================
-    async _validarYMostrarOpciones() {
+    _crearRegistroTemporal(datos) {
+        const fechaObj = new Date(datos.fechaHora);
+        
+        const evidenciasProcesadas = datos.imagenes.map((img, index) => {
+            return {
+                id: `temp_${Date.now()}_${index}`,
+                file: img.file,
+                preview: img.preview,
+                url: img.preview,  // 👈 Usamos el blob para evitar CORS
+                comentario: img.comentario || '',
+                elementos: img.elementos || [],
+                generatedName: img.generatedName
+            };
+        });
+        
+        return {
+            id: `PREVIEW_${Date.now()}`,
+            sucursalId: datos.sucursalId,
+            sucursalNombre: datos.sucursalNombre,
+            categoriaId: datos.categoriaId,
+            categoriaNombre: datos.categoriaNombre,
+            subcategoriaId: datos.subcategoriaId,
+            subcategoriaNombre: datos.subcategoriaNombre,
+            nivelRiesgo: datos.nivelRiesgo,
+            estado: datos.estado,
+            fechaInicio: fechaObj,
+            detalles: datos.detalles,
+            reportadoPorNombre: this.usuarioActual.nombreCompleto,
+            imagenes: evidenciasProcesadas,
+            fechaCreacion: new Date(),
+            getEstadoTexto: () => datos.estado === 'pendiente' ? 'Pendiente' : 'Finalizada',
+            getNivelRiesgoTexto: () => this._getRiesgoTexto(datos.nivelRiesgo)
+        };
+    }
+
+    _getRiesgoTexto(riesgo) {
+        const riesgos = {
+            'bajo': 'Bajo',
+            'medio': 'Medio',
+            'alto': 'Alto',
+            'critico': 'Crítico'
+        };
+        return riesgos[riesgo] || riesgo;
+    }
+
+    // =============================================
+    // VALIDAR Y GUARDAR (SIN VISTA PREVIA MODAL)
+    // =============================================
+    async _validarYGuardar() {
         const sucursalInput = document.getElementById('sucursalIncidencia');
         const categoriaInput = document.getElementById('categoriaIncidencia');
 
@@ -1436,7 +1037,6 @@ async _init() {
         const subcategoriaNombre = subcategoriaId ? 
             subcategoriaSelect.options[subcategoriaSelect.selectedIndex]?.text : '';
 
-        // Guardar datos validados
         const datos = {
             sucursalId,
             sucursalNombre,
@@ -1451,7 +1051,7 @@ async _init() {
             imagenes: this.imagenesSeleccionadas
         };
 
-        // Mostrar SweetAlert con opciones (como en recuperación)
+        // Mostrar confirmación con SweetAlert
         const result = await Swal.fire({
             title: 'Confirmar creación de incidencia',
             html: `
@@ -1464,53 +1064,25 @@ async _init() {
                     <p><strong><i class="fas fa-calendar"></i> Fecha:</strong> ${new Date(fechaHora).toLocaleString('es-MX')}</p>
                     <p><strong><i class="fas fa-images"></i> Evidencias:</strong> ${this.imagenesSeleccionadas.length} imagen(es)</p>
                 </div>
-                <hr>
-                <p style="font-size: 12px; color: #aaa;">Selecciona una opción:</p>
             `,
             icon: 'question',
             showCancelButton: true,
-            showDenyButton: true,
             confirmButtonText: '<i class="fas fa-check-circle"></i> Aceptar',
-            denyButtonText: '<i class="fas fa-file-pdf"></i> Ver PDF',
-            cancelButtonText: '<i class="fas fa-times"></i> Cerrar',
+            cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
             confirmButtonColor: '#28a745',
-            denyButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            reverseButtons: false
+            cancelButtonColor: '#6c757d'
         });
 
         if (result.isConfirmed) {
-            await this._guardarIncidencia(datos, null);
-        } else if (result.isDenied) {
-            await this._generarYMostrarPDFPreview(datos);
-        } else {
-            console.log('Usuario canceló');
+            await this._guardarIncidencia(datos);
         }
     }
 
     // =============================================
-    // GENERAR Y MOSTRAR VISTA PREVIA PDF (AGREGADO)
+    // GUARDAR INCIDENCIA - OPTIMIZADO (SIN CORS)
+    // FLUJO: 1. Generar PDF con blobs → 2. Crear incidencia → 3. Subir imágenes → 4. Subir PDF
     // =============================================
-    async _generarYMostrarPDFPreview(datos) {
-        Swal.fire({
-            title: 'Generando vista previa...',
-            text: 'Preparando el informe PDF con tus evidencias',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-        
-        await this._mostrarVistaPreviaPDF(datos);
-        
-        Swal.close();
-    }
-
-    // =============================================
-    // GUARDAR INCIDENCIA (MODIFICADO para aceptar PDF blob)
-    // =============================================
-    async _guardarIncidencia(datos, pdfBlobPreGenerado = null) {
+    async _guardarIncidencia(datos) {
         const btnCrear = document.getElementById('btnCrearIncidencia');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
 
@@ -1521,8 +1093,8 @@ async _init() {
             }
 
             Swal.fire({
-                title: 'Creando incidencia...',
-                text: 'Subiendo imágenes y guardando información...',
+                title: 'Preparando incidencia...',
+                text: 'Generando informe y preparando imágenes...',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
@@ -1531,8 +1103,43 @@ async _init() {
                 }
             });
 
+            // =============================================
+            // PASO 1: GENERAR PDF CON IMÁGENES EN MEMORIA (BLOBS)
+            // =============================================
             const fechaObj = new Date(datos.fechaHora);
+            
+            const incidenciaTemporal = this._crearRegistroTemporal(datos);
+            
+            Swal.update({
+                title: 'Generando PDF...',
+                text: 'Creando el documento de la incidencia...'
+            });
+            
+            let pdfBlob = null;
+            try {
+                pdfBlob = await this.pdfGenerator.generarIPH(incidenciaTemporal, {
+                    mostrarAlerta: false,
+                    returnBlob: true,
+                    diagnosticar: false
+                });
+                console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
+            } catch (pdfError) {
+                console.error('Error generando PDF:', pdfError);
+                throw new Error('No se pudo generar el PDF');
+            }
+            
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('El PDF generado está vacío');
+            }
 
+            // =============================================
+            // PASO 2: CREAR INCIDENCIA EN FIRESTORE (SIN IMÁGENES)
+            // =============================================
+            Swal.update({
+                title: 'Creando incidencia...',
+                text: 'Guardando la información en la base de datos...'
+            });
+            
             const incidenciaData = {
                 sucursalId: datos.sucursalId,
                 categoriaId: datos.categoriaId,
@@ -1543,61 +1150,110 @@ async _init() {
                 detalles: datos.detalles,
                 reportadoPorId: this.usuarioActual.id
             };
-
-            const archivos = datos.imagenes.map(img => img.file);
-            const imagenesConDatos = datos.imagenes.map(img => ({
-                comentario: img.comentario,
-                elementos: img.elementos,
-                generatedName: img.generatedName
-            }));
-
+            
+            // Usar el método optimizado que CREA LA INCIDENCIA PRIMERO (sin imágenes)
+            // y luego sube las imágenes en paralelo
             const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
                 incidenciaData,
                 this.usuarioActual,
-                archivos,
-                imagenesConDatos
+                [], // No pasar imágenes todavía
+                []  // No pasar datos de imágenes
             );
-
-            console.log('✅ Incidencia creada con', nuevaIncidencia.imagenes.length, 'imágenes');
-
-            Swal.update({
-                title: 'Generando PDF...',
-                text: 'Creando documento de la incidencia...'
-            });
-
-            // Usar PDF pre-generado o generar uno nuevo
-            let pdfBlob = pdfBlobPreGenerado;
-            if (!pdfBlob) {
-                const { generadorIPH } = await import('/components/iph-generator.js');
-                pdfBlob = await generadorIPH.generarIPH(nuevaIncidencia, {
-                    mostrarAlerta: false,
-                    returnBlob: true
+            
+            console.log('✅ Incidencia creada:', nuevaIncidencia.id);
+            
+            // =============================================
+            // PASO 3: SUBIR IMÁGENES EN PARALELO
+            // =============================================
+            if (datos.imagenes.length > 0) {
+                Swal.update({
+                    title: 'Subiendo imágenes...',
+                    text: `Subiendo ${datos.imagenes.length} imagen(es)...`
                 });
+                
+                const archivos = datos.imagenes.map(img => img.file);
+                const imagenesConDatos = datos.imagenes.map(img => ({
+                    comentario: img.comentario,
+                    elementos: img.elementos,
+                    generatedName: img.generatedName
+                }));
+                
+                // Subir imágenes en paralelo
+                const imagenesUrls = [];
+                const uploadPromises = archivos.map(async (file, index) => {
+                    const datosImagen = imagenesConDatos[index] || {};
+                    const comentario = datosImagen.comentario || '';
+                    const elementos = datosImagen.elementos || [];
+                    
+                    let nombreArchivo = datosImagen.generatedName;
+                    if (!nombreArchivo) {
+                        const timestamp = Date.now();
+                        const random = Math.random().toString(36).substring(2, 8);
+                        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                        nombreArchivo = `${timestamp}_${random}_${cleanFileName}`;
+                    }
+                    
+                    const rutaStorage = `incidencias_${this.usuarioActual.organizacionCamelCase}/${nuevaIncidencia.id}/imagenes/${nombreArchivo}`;
+                    
+                    const resultado = await this.incidenciaManager.subirArchivo(file, rutaStorage, null);
+                    
+                    return {
+                        url: resultado.url,
+                        path: resultado.path,
+                        comentario: comentario,
+                        elementos: elementos,
+                        nombre: file.name,
+                        generatedName: nombreArchivo,
+                        tipo: file.type,
+                        tamaño: file.size
+                    };
+                });
+                
+                const imagenesSubidas = await Promise.all(uploadPromises);
+                
+                // Actualizar incidencia con las URLs de imágenes
+                const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
+                const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+                const { db } = await import('/config/firebase-config.js');
+                
+                const incidenciaRef = doc(db, collectionName, nuevaIncidencia.id);
+                await updateDoc(incidenciaRef, {
+                    imagenes: imagenesSubidas,
+                    fechaActualizacion: new Date()
+                });
+                
+                nuevaIncidencia.imagenes = imagenesSubidas;
+                console.log(`✅ ${imagenesSubidas.length} imágenes subidas`);
             }
-
-            if (pdfBlob && pdfBlob.size > 0) {
-                console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
-                
-                const pdfFile = new File([pdfBlob], `incidencia_${nuevaIncidencia.id}.pdf`, { type: 'application/pdf' });
-                const rutaPDF = nuevaIncidencia.getRutaPDF();
-                
-                const resultado = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-                
-                await this.incidenciaManager.actualizarPDFIncidencia(
-                    nuevaIncidencia.id,
-                    resultado.url,
-                    this.usuarioActual.organizacionCamelCase,
-                    this.usuarioActual.id,
-                    this.usuarioActual.nombreCompleto
-                );
-                
-                console.log('✅ PDF subido exitosamente:', resultado.url);
-            } else {
-                console.warn('⚠️ PDF no se pudo generar, pero la incidencia ya está guardada');
-            }
-
+            
+            // =============================================
+            // PASO 4: SUBIR EL PDF
+            // =============================================
+            Swal.update({
+                title: 'Subiendo PDF...',
+                text: 'Guardando el documento PDF...'
+            });
+            
+            const pdfFile = new File([pdfBlob], `incidencia_${nuevaIncidencia.id}.pdf`, { type: 'application/pdf' });
+            const rutaPDF = nuevaIncidencia.getRutaPDF();
+            
+            const resultadoPDF = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
+            
+            await this.incidenciaManager.actualizarPDFIncidencia(
+                nuevaIncidencia.id,
+                resultadoPDF.url,
+                this.usuarioActual.organizacionCamelCase,
+                this.usuarioActual.id,
+                this.usuarioActual.nombreCompleto
+            );
+            
+            console.log('✅ PDF subido exitosamente:', resultadoPDF.url);
+            
             Swal.close();
-
+            
+            // =============================================
+            // PASO 5: CANALIZACIÓN (opcional)
+            // =============================================
             const quiereCanalizar = await Swal.fire({
                 icon: 'question',
                 title: '¿Canalizar esta incidencia?',
@@ -1607,38 +1263,34 @@ async _init() {
                 cancelButtonText: 'NO, FINALIZAR',
                 confirmButtonColor: '#28a745'
             });
-
+            
             let areasCanalizadas = [];
-
+            
             if (quiereCanalizar.isConfirmed) {
                 areasCanalizadas = await this._canalizarAreas(nuevaIncidencia.id, datos.detalles.substring(0, 50));
             }
-
+            
             const totalCanalizaciones = areasCanalizadas.length;
             const mensajeCanalizacion = totalCanalizaciones > 0
                 ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
                 : 'No se canalizó a ninguna área.';
-
-            const mensajePDF = pdfBlob && pdfBlob.size > 0
-                ? '✅ El PDF se ha generado correctamente.'
-                : '⚠️ El PDF no se pudo generar, pero la incidencia se guardó.';
-
+            
             await Swal.fire({
                 icon: 'success',
                 title: '¡Incidencia creada!',
                 html: `
                     <div style="text-align: left;">
                         <p>✅ Incidencia guardada con ${nuevaIncidencia.imagenes.length} imagen(es).</p>
-                        <p>${mensajePDF}</p>
+                        <p>✅ El PDF se ha generado correctamente.</p>
                         <p>${mensajeCanalizacion}</p>
                     </div>
                 `,
                 confirmButtonText: 'Ver incidencias',
                 confirmButtonColor: '#28a745'
             });
-
+            
             this._volverALista();
-
+            
         } catch (error) {
             console.error('Error guardando incidencia:', error);
             Swal.close();
@@ -1694,37 +1346,34 @@ async _init() {
                     });
 
                     try {
-                        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-                        const { db } = await import('/config/firebase-config.js');
+                        const resultado = await this.incidenciaManager.agregarCanalizacion(
+                            incidenciaId,
+                            area.id,
+                            area.nombreArea,
+                            this.usuarioActual.id,
+                            this.usuarioActual.nombreCompleto,
+                            'Canalización desde creación',
+                            this.usuarioActual.organizacionCamelCase
+                        );
 
-                        const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
-                        const incidenciaRef = doc(db, collectionName, incidenciaId);
-
-                        await updateDoc(incidenciaRef, {
-                            canalizaciones: arrayUnion({
-                                areaId: area.id,
-                                areaNombre: area.nombreArea,
-                                fechaCanalizacion: new Date(),
-                                canalizadoPor: this.usuarioActual.id,
-                                canalizadoPorNombre: this.usuarioActual.nombreCompleto,
-                                estado: 'pendiente'
-                            })
-                        });
-
-                        await Swal.fire({
-                            icon: 'success',
-                            title: 'Área agregada',
-                            text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
+                        if (resultado && resultado.success) {
+                            await Swal.fire({
+                                icon: 'success',
+                                title: 'Área agregada',
+                                text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            throw new Error(resultado?.message || 'Error al guardar canalización');
+                        }
 
                     } catch (error) {
                         console.error('Error guardando canalización:', error);
                         await Swal.fire({
                             icon: 'error',
                             title: 'Error',
-                            text: 'No se pudo canalizar a esta área'
+                            text: error.message || 'No se pudo canalizar a esta área'
                         });
                     }
                 }
@@ -1757,7 +1406,6 @@ async _init() {
             }));
 
             console.log('📨 Enviando notificaciones a áreas:', areasFormateadas);
-            console.log('👑 Administradores recibirán automáticamente la notificación');
 
             Swal.fire({
                 title: 'Enviando notificaciones...',
@@ -1794,8 +1442,6 @@ async _init() {
                     mensaje += `<br>📱 Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
                 }
 
-                console.log(mensaje);
-
                 Swal.fire({
                     icon: 'success',
                     title: 'Notificaciones enviadas',
@@ -1815,11 +1461,6 @@ async _init() {
         } catch (error) {
             console.error('Error en _enviarNotificacionesCanalizacion:', error);
             Swal.close();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message
-            });
         }
     }
 
