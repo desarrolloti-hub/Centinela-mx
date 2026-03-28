@@ -321,23 +321,43 @@ window.seguimientoIncidencia = function (incidenciaId, event) {
     window.location.href = `../seguimientoIncidencias/seguimientoIncidencias.html?id=${incidenciaId}`;
 };
 
+/**
+ * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR
+ * Utiliza la URL guardada en Firestore y la abre en una nueva pestaña
+ */
 window.verPDF = async function (incidenciaId, event) {
     event?.stopPropagation();
 
     try {
+        // Buscar la incidencia en el caché actual
         const incidencia = incidenciasActuales.find(i => i.id === incidenciaId);
 
         if (!incidencia) {
             throw new Error('Incidencia no encontrada');
         }
 
-        if (incidencia.pdfUrl) {
-            window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
+        // Verificar si tiene URL de PDF guardada
+        if (incidencia.pdfUrl && incidencia.pdfUrl.trim() !== '') {
+            // Abrir PDF en nueva pestaña con el visor nativo del navegador
+            window.open(incidencia.pdfUrl, '_blank');
+            
+            // Mostrar notificación opcional (puedes eliminarla si prefieres)
+            Swal.fire({
+                icon: 'success',
+                title: 'Abriendo PDF',
+                text: 'El PDF se está abriendo en una nueva pestaña',
+                timer: 1500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
         } else {
+            // Si no tiene PDF, mostrar mensaje informativo
             Swal.fire({
                 icon: 'info',
                 title: 'PDF no disponible',
-                text: 'Esta incidencia aún no tiene un PDF generado.'
+                text: 'Esta incidencia aún no tiene un PDF asociado. Se generará automáticamente cuando sea necesario.',
+                confirmButtonText: 'Entendido'
             });
         }
     } catch (error) {
