@@ -277,7 +277,38 @@ exports.proxyPowerManage = functions.https.onRequest((req, res) => {
                     } catch (error) {
                         return res.status(401).json({ valid: false });
                     }
-
+                case 'renamePanel':
+                    // Cambiar el alias de un panel
+                    console.log('📥 Renombrando panel:', {
+                        panel_serial: req.body.panel_serial,
+                        alias: req.body.alias
+                    });
+                    
+                    if (!req.body.panel_serial) {
+                        return res.status(400).json({ error_message: 'Serial del panel es requerido' });
+                    }
+                    
+                    if (!req.body.alias) {
+                        return res.status(400).json({ error_message: 'Alias es requerido' });
+                    }
+                    
+                    try {
+                        const renameRes = await axios.post(`${PM_API}/panel/rename`, {
+                            panel_serial: req.body.panel_serial,
+                            alias: req.body.alias
+                        }, {
+                            headers: { 'User-Token': user_token }
+                        });
+                        
+                        console.log('✅ Panel renombrado:', renameRes.data);
+                        return res.status(200).json({ success: true, data: renameRes.data });
+                        
+                    } catch (error) {
+                        console.error('❌ Error renombrando panel:', error.response?.data || error.message);
+                        return res.status(error.response?.status || 500).json({
+                            error_message: error.response?.data?.error_message || 'Error al renombrar el panel'
+                        });
+                    }    
                 default:
                     return res.status(400).json({ error: `Acción no reconocida: ${action}` });
             }
