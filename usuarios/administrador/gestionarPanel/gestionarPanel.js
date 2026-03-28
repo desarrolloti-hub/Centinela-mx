@@ -4,7 +4,7 @@ import { CLOUD_FUNCTION_BASE_URL, ACTIONS } from '/config/urlCloudFunction.js';
 
 // ==================== CONSTANTES ====================
 const POWER_MANAGE_FUNCTION = 'proxyPowerManage';
-const AUTO_REFRESH_INTERVAL = 30000; // 30 segundos
+const AUTO_REFRESH_INTERVAL = 10000; // 10 segundos
 
 // ==================== VARIABLES GLOBALES ====================
 let cuentaAppId = null;
@@ -14,14 +14,22 @@ let panelTipo = null;
 let powerManageUserToken = null;
 let sessionToken = null;
 let autoRefreshTimer = null;
-let eventosPage = 0;
-let cargandoMasEventos = false;
+let ultimoEventoId = null;
+let eventosCache = [];
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', async () => {
     if (typeof Swal === 'undefined') {
         console.error('❌ SweetAlert2 no está cargado.');
         return;
+    }
+    
+    // Solicitar permiso para notificaciones al cargar
+    if ('Notification' in window) {
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+        console.log('📢 Permiso de notificaciones:', Notification.permission);
     }
     
     await initGestionPanel();
@@ -45,7 +53,6 @@ async function initGestionPanel() {
     }
     
     try {
-        // Obtener token de Power Manage
         const powerManageStr = localStorage.getItem('powerManageToken');
         if (!powerManageStr) {
             throw new Error('No hay sesión activa de Power Manage');
@@ -54,7 +61,6 @@ async function initGestionPanel() {
         const powerManageData = JSON.parse(powerManageStr);
         powerManageUserToken = powerManageData.user_token;
         
-        // Cargar información del panel desde localStorage
         const panelStr = localStorage.getItem('panelSeleccionado');
         if (panelStr) {
             const panel = JSON.parse(panelStr);
@@ -68,16 +74,10 @@ async function initGestionPanel() {
             document.getElementById('panelSerial').textContent = `Serial: ${panelSerial}`;
         }
         
-        // Obtener session_token
         await obtenerSessionToken();
-        
-        // Cargar datos del panel
         await cargarDatosPanel();
         
-        // Iniciar auto-refresh
         iniciarAutoRefresh();
-        
-        // Configurar eventos
         configurarEventos();
         configurarTabs();
         
@@ -102,10 +102,8 @@ async function initGestionPanel() {
 async function obtenerSessionToken() {
     mostrarProgreso('Conectando al panel...', 20);
     
-    // Verificar session guardado
     const savedSession = localStorage.getItem(`session_${panelSerial}`);
     if (savedSession) {
-        console.log('🔄 Verificando session token guardado...');
         sessionToken = savedSession;
         
         try {
@@ -121,13 +119,11 @@ async function obtenerSessionToken() {
             });
             
             if (testResponse.ok) {
-                console.log('✅ Session token válido');
                 mostrarProgreso('Conexión establecida', 100);
                 setTimeout(() => ocultarProgreso(), 500);
                 return;
             }
         } catch (e) {
-            console.log('⚠️ Session token expirado');
             localStorage.removeItem(`session_${panelSerial}`);
         }
     }
@@ -189,8 +185,6 @@ async function obtenerSessionToken() {
         if (!response.ok) {
             if (result.error_reason_code === 'WrongUserCode') {
                 throw new Error('Código de usuario incorrecto');
-            } else if (result.error_reason_code === 'UserIsDeactivatedOnPanel') {
-                throw new Error('El usuario está desactivado en el panel');
             } else {
                 throw new Error(result.error_message || 'Error al conectar con el panel');
             }
@@ -199,7 +193,6 @@ async function obtenerSessionToken() {
         sessionToken = result.session_token;
         
         localStorage.setItem(`session_${panelSerial}`, sessionToken);
-        localStorage.setItem(`panel_tipo_${panelSerial}`, panelTipo);
         
         mostrarProgreso('Conexión establecida', 100);
         setTimeout(() => ocultarProgreso(), 500);
@@ -294,9 +287,6 @@ async function cargarEstadoPanel() {
         
     } catch (error) {
         console.error('❌ Error cargando estado:', error);
-        if (error.message === 'Wrong user token') {
-            redirectToLogin();
-        }
     }
 }
 
@@ -340,10 +330,6 @@ async function cargarZonas() {
                 <div class="zona-info">
                     ${zona.name || 'Sin nombre'} - Tipo: ${zona.zone_type || zona.device_type || 'Desconocido'}
                 </div>
-                <div class="zona-bateria">
-                    <i class="fas fa-battery-${zona.battery?.status === 'low' ? 'quarter' : 'full'}"></i>
-                    Batería: ${zona.battery?.level || zona.battery?.status || 'Normal'}
-                </div>
             </div>
         `).join('');
         
@@ -354,14 +340,6 @@ async function cargarZonas() {
 }
 
 async function cargarEventos(reset = false) {
-    if (reset) {
-        eventosPage = 0;
-        document.getElementById('eventosList').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando eventos...</div>';
-    }
-    
-    if (cargandoMasEventos) return;
-    cargandoMasEventos = true;
-    
     try {
         const response = await fetch(`${CLOUD_FUNCTION_BASE_URL}${POWER_MANAGE_FUNCTION}`, {
             method: 'POST',
@@ -371,71 +349,213 @@ async function cargarEventos(reset = false) {
                 user_token: powerManageUserToken,
                 session_token: sessionToken,
                 panel_serial: panelSerial,
-                limit: 20,
-                offset: eventosPage * 20
+                limit: 100
             })
         });
         
         if (response.status === 401) throw new Error('Wrong user token');
         
-        const eventos = await response.json();
+        let eventos = await response.json();
         
         if (!response.ok) throw new Error(eventos.error_message);
         
-        const eventosList = document.getElementById('eventosList');
-        const eventosCount = document.getElementById('eventosCount');
-        const btnCargarMas = document.getElementById('btnCargarMas');
+        // Ordenar de más reciente a más antiguo
+        eventos = eventos.sort((a, b) => {
+            return new Date(b.datetime) - new Date(a.datetime);
+        });
         
-        if (reset) {
-            eventosCount.textContent = eventos.total || eventos.length;
+        console.log(`📊 Eventos obtenidos: ${eventos.length}`);
+        
+        // Detectar nuevos eventos
+        if (!reset && eventosCache.length > 0) {
+            const nuevosEventos = eventos.filter(evento => {
+                const eventoId = `${evento.datetime}_${evento.event}_${evento.description}`;
+                const existe = eventosCache.some(e => `${e.datetime}_${e.event}_${e.description}` === eventoId);
+                return !existe;
+            });
+            
+            if (nuevosEventos.length > 0) {
+                console.log(`🆕 Nuevos eventos detectados: ${nuevosEventos.length}`);
+                for (const evento of nuevosEventos) {
+                    mostrarNotificacionEvento(evento);
+                }
+            }
         }
         
+        // Guardar en caché
+        eventosCache = [...eventos];
+        
+        const eventosList = document.getElementById('eventosList');
+        const eventosCount = document.getElementById('eventosCount');
+        
+        if (eventosCount) eventosCount.textContent = eventos.length;
+        
         if (!eventos || eventos.length === 0) {
-            if (reset) {
-                eventosList.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No hay eventos recientes</p></div>';
-            }
-            btnCargarMas.style.display = 'none';
-            cargandoMasEventos = false;
+            eventosList.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No hay eventos recientes</p></div>';
             return;
         }
         
-        if (reset) {
-            eventosList.innerHTML = '';
-        }
-        
-        eventos.forEach(evento => {
-            const eventoCard = document.createElement('div');
-            eventoCard.className = 'evento-card';
-            eventoCard.innerHTML = `
-                <div class="evento-fecha">${new Date(evento.datetime).toLocaleString()}</div>
-                <div class="evento-tipo">
-                    <i class="fas ${getEventoIcon(evento.label)}"></i>
-                    ${evento.description}
-                </div>
-                <div class="evento-detalle">
-                    ${evento.appointment ? `Usuario: ${evento.appointment}` : ''}
-                    ${evento.zone ? `Zona: ${evento.zone}` : ''}
-                    ${evento.name ? `Dispositivo: ${evento.name}` : ''}
+        // Renderizar eventos
+        eventosList.innerHTML = eventos.map(evento => {
+            const fecha = new Date(evento.datetime);
+            const fechaFormateada = fecha.toLocaleString();
+            const esNuevo = (new Date() - fecha) < 5 * 60 * 1000; // menos de 5 minutos
+            
+            // Determinar clase y estilo según tipo
+            let claseEvento = 'evento-normal';
+            let iconoEvento = 'fa-info-circle';
+            let colorEvento = '';
+            
+            switch(evento.label) {
+                case 'ARM':
+                    claseEvento = 'evento-arma';
+                    iconoEvento = 'fa-shield-alt';
+                    break;
+                case 'DISARM':
+                    claseEvento = 'evento-desarma';
+                    iconoEvento = 'fa-shield-alt';
+                    break;
+                case 'BURGLER':
+                    claseEvento = 'evento-alarma';
+                    iconoEvento = 'fa-bell';
+                    break;
+                case 'FIRE':
+                    claseEvento = 'evento-fuego';
+                    iconoEvento = 'fa-fire';
+                    break;
+                case 'PANIC':
+                    claseEvento = 'evento-panico';
+                    iconoEvento = 'fa-exclamation-triangle';
+                    break;
+                case 'ONLINE':
+                    claseEvento = 'evento-online';
+                    iconoEvento = 'fa-wifi';
+                    break;
+                case 'OFFLINE':
+                    claseEvento = 'evento-offline';
+                    iconoEvento = 'fa-plug';
+                    break;
+                default:
+                    claseEvento = 'evento-normal';
+                    iconoEvento = 'fa-info-circle';
+            }
+            
+            return `
+                <div class="evento-card ${claseEvento} ${esNuevo ? 'evento-nuevo' : ''}">
+                    <div class="evento-header">
+                        <i class="fas ${iconoEvento}"></i>
+                        <span class="evento-tipo">${evento.description}</span>
+                        ${esNuevo ? '<span class="nuevo-badge">NUEVO</span>' : ''}
+                    </div>
+                    <div class="evento-fecha">${fechaFormateada}</div>
+                    <div class="evento-detalle">
+                        ${evento.appointment ? `<span><i class="fas fa-user"></i> ${evento.appointment}</span>` : ''}
+                        ${evento.zone ? `<span><i class="fas fa-map-marker-alt"></i> Zona ${evento.zone}</span>` : ''}
+                        ${evento.name ? `<span><i class="fas fa-microchip"></i> ${evento.name}</span>` : ''}
+                    </div>
                 </div>
             `;
-            eventosList.appendChild(eventoCard);
-        });
+        }).join('');
         
-        eventosPage++;
-        
-        if (eventos.length === 20) {
-            btnCargarMas.style.display = 'block';
-        } else {
-            btnCargarMas.style.display = 'none';
-        }
+        // Scroll al inicio para ver los más recientes
+        eventosList.scrollTop = 0;
         
     } catch (error) {
         console.error('❌ Error cargando eventos:', error);
         if (reset) {
             document.getElementById('eventosList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error cargando eventos</p></div>';
         }
-    } finally {
-        cargandoMasEventos = false;
+    }
+}
+
+function mostrarNotificacionEvento(evento) {
+    console.log(`🔔 Mostrando notificación: ${evento.description}`);
+    
+    // Traducir tipo de evento
+    let titulo = '';
+    let cuerpo = '';
+    let esImportante = false;
+    
+    switch(evento.label) {
+        case 'ARM':
+            titulo = '🔒 Panel Armado';
+            cuerpo = `El panel ha sido armado${evento.appointment ? ` por ${evento.appointment}` : ''}`;
+            break;
+        case 'DISARM':
+            titulo = '🔓 Panel Desarmado';
+            cuerpo = `El panel ha sido desarmado${evento.appointment ? ` por ${evento.appointment}` : ''}`;
+            break;
+        case 'BURGLER':
+            titulo = '🚨 ALARMA DE INTRUSIÓN';
+            cuerpo = `¡Alarma activada!${evento.zone ? ` Zona ${evento.zone}` : ''}`;
+            esImportante = true;
+            break;
+        case 'FIRE':
+            titulo = '🔥 ALARMA DE INCENDIO';
+            cuerpo = `¡Detectado fuego!${evento.zone ? ` Zona ${evento.zone}` : ''}`;
+            esImportante = true;
+            break;
+        case 'PANIC':
+            titulo = '⚠️ ALARMA DE PÁNICO';
+            cuerpo = `Alarma de pánico activada${evento.appointment ? ` por ${evento.appointment}` : ''}`;
+            esImportante = true;
+            break;
+        case 'ONLINE':
+            titulo = '📡 Panel en línea';
+            cuerpo = 'El panel se ha conectado correctamente';
+            break;
+        case 'OFFLINE':
+            titulo = '⚠️ Panel desconectado';
+            cuerpo = 'El panel ha perdido conexión';
+            esImportante = true;
+            break;
+        default:
+            titulo = '📢 Nuevo evento';
+            cuerpo = evento.description;
+    }
+    
+    // Mostrar SweetAlert para eventos importantes
+    if (esImportante) {
+        Swal.fire({
+            icon: 'error',
+            title: titulo,
+            text: cuerpo,
+            toast: false,
+            confirmButtonText: 'ENTENDIDO',
+            background: '#ff4444',
+            color: '#fff',
+            iconColor: '#fff',
+            timer: 10000,
+            timerProgressBar: true
+        });
+    } else {
+        // Toast para eventos normales
+        Swal.fire({
+            icon: 'info',
+            title: titulo,
+            text: cuerpo,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+        });
+    }
+    
+    // Notificación del navegador
+    if ('Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(titulo, {
+            body: cuerpo,
+            icon: '/assets/images/logo.png',
+            silent: false
+        });
+        
+        notification.onclick = () => {
+            window.focus();
+            notification.close();
+        };
+        
+        setTimeout(() => notification.close(), 8000);
     }
 }
 
@@ -472,17 +592,12 @@ async function cargarDispositivos() {
         dispositivosList.innerHTML = dispositivos.map(disp => `
             <div class="dispositivo-card">
                 <div class="dispositivo-header">
-                    <i class="fas ${getDeviceIcon(disp.device_type)}"></i>
+                    <i class="fas fa-microchip"></i>
                     <strong>${disp.name || disp.device_type}</strong>
                     <span class="dispositivo-id">ID: ${disp.device_number}</span>
                 </div>
                 <div class="dispositivo-info">
                     <span>Tipo: ${disp.device_type}</span>
-                    ${disp.subtype ? `<span>Subtipo: ${disp.subtype}</span>` : ''}
-                </div>
-                <div class="dispositivo-bateria">
-                    <i class="fas fa-battery-${disp.battery?.status === 'low' ? 'quarter' : 'full'}"></i>
-                    Batería: ${disp.battery?.level || 'Normal'}
                 </div>
             </div>
         `).join('');
@@ -498,7 +613,7 @@ async function cambiarEstadoPanel(estado) {
         Swal.fire({
             icon: 'warning',
             title: 'Sesión expirada',
-            text: 'La conexión con el panel ha expirado. Reconectando...',
+            text: 'Reconectando...',
             confirmButtonText: 'RECONECTAR'
         }).then(() => {
             obtenerSessionToken().then(() => {
@@ -508,7 +623,7 @@ async function cambiarEstadoPanel(estado) {
         return;
     }
     
-    mostrarProgreso(`Cambiando a ${estado === 'DISARM' ? 'Desarmado' : estado === 'HOME' ? 'Modo Casa' : 'Modo Ausente'}...`, 30);
+    mostrarProgreso(`Cambiando estado...`, 30);
     
     try {
         const response = await fetch(`${CLOUD_FUNCTION_BASE_URL}${POWER_MANAGE_FUNCTION}`, {
@@ -527,25 +642,26 @@ async function cambiarEstadoPanel(estado) {
         
         if (response.status === 401) throw new Error('Wrong user token');
         
-        mostrarProgreso('Comando enviado, actualizando estado...', 70);
+        mostrarProgreso('Comando enviado', 70);
         
-        const result = await response.json();
-        
-        if (!response.ok) throw new Error(result.error_message);
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error_message);
+        }
         
         ocultarProgreso();
         
         Swal.fire({
             icon: 'success',
             title: 'Comando enviado',
-            text: `El panel está cambiando a ${estado === 'DISARM' ? 'Desarmado' : estado === 'HOME' ? 'Modo Casa' : 'Modo Ausente'}`,
+            text: `Cambiando a ${estado === 'DISARM' ? 'Desarmado' : estado === 'HOME' ? 'Modo Casa' : 'Modo Ausente'}`,
             timer: 2000,
             showConfirmButton: false
         });
         
         setTimeout(() => {
             cargarEstadoPanel();
-            cargarEventos(true);
+            cargarEventos(false);
         }, 2000);
         
     } catch (error) {
@@ -558,37 +674,10 @@ async function cambiarEstadoPanel(estado) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: error.message || 'No se pudo cambiar el estado del panel'
+                text: error.message
             });
         }
     }
-}
-
-function getEventoIcon(label) {
-    const icons = {
-        'ARM': 'fa-shield-alt',
-        'DISARM': 'fa-shield-alt',
-        'BURGLER': 'fa-bell',
-        'FIRE': 'fa-fire',
-        'PANIC': 'fa-exclamation-triangle',
-        'ONLINE': 'fa-wifi',
-        'OFFLINE': 'fa-plug',
-        'BATTERY': 'fa-battery-quarter',
-        'TAMPER': 'fa-tools'
-    };
-    return icons[label] || 'fa-info-circle';
-}
-
-function getDeviceIcon(type) {
-    const icons = {
-        'KEYFOB': 'fa-key',
-        'ZONE': 'fa-map-marker-alt',
-        'CONTROL_PANEL': 'fa-microchip',
-        'CAMERA': 'fa-camera',
-        'SIREN': 'fa-bell',
-        'SMOKE': 'fa-smog'
-    };
-    return icons[type] || 'fa-microchip';
 }
 
 function redirectToLogin() {
@@ -596,7 +685,7 @@ function redirectToLogin() {
     Swal.fire({
         icon: 'warning',
         title: 'Sesión expirada',
-        text: 'Debes autenticarte nuevamente en Power Manage',
+        text: 'Debes autenticarte nuevamente',
         confirmButtonText: 'IR A AUTENTICACIÓN'
     }).then(() => {
         window.location.href = `/usuarios/administrador/loginMonitoreo/loginMonitoreo.html?redirect=gestionarPanel&appId=${cuentaAppId}&panelSerial=${panelSerial}`;
@@ -607,70 +696,36 @@ function iniciarAutoRefresh() {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     autoRefreshTimer = setInterval(() => {
         if (sessionToken) {
-            cargarEstadoPanel();
-            cargarZonas();
+            console.log('🔄 Auto-refresh eventos');
+            cargarEventos(false);
         }
     }, AUTO_REFRESH_INTERVAL);
+    
+    console.log(`🔄 Auto-refresh cada ${AUTO_REFRESH_INTERVAL / 1000} segundos`);
 }
 
 function configurarEventos() {
     const btnDisarm = document.getElementById('btnDisarm');
     const btnHome = document.getElementById('btnHome');
     const btnAway = document.getElementById('btnAway');
-    const btnCargarMas = document.getElementById('btnCargarMas');
     
     if (btnDisarm) btnDisarm.addEventListener('click', () => cambiarEstadoPanel('DISARM'));
     if (btnHome) btnHome.addEventListener('click', () => cambiarEstadoPanel('HOME'));
     if (btnAway) btnAway.addEventListener('click', () => cambiarEstadoPanel('AWAY'));
-    if (btnCargarMas) btnCargarMas.addEventListener('click', () => cargarEventos(false));
 }
 
 function configurarTabs() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
     
-    console.log('🔧 Configurando tabs...');
-    console.log('Botones encontrados:', tabBtns.length);
-    console.log('Contenidos encontrados:', tabContents.length);
-    
-    // Ocultar todos los tabs inicialmente
-    tabContents.forEach(content => {
-        content.classList.remove('active');
-        content.style.display = 'none';
-    });
-    
-    // Mostrar el primer tab (zonas)
-    const firstTab = document.getElementById('tab-zonas');
-    if (firstTab) {
-        firstTab.classList.add('active');
-        firstTab.style.display = 'block';
-        console.log('✅ Mostrando tab inicial: zonas');
-    }
-    
     tabBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
-            console.log('📌 Click en tab:', tabId);
-            
-            // Cambiar clase activa en botones
             tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
-            
-            // Ocultar todos los tabs
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-                content.style.display = 'none';
-            });
-            
-            // Mostrar el tab seleccionado
             const targetTab = document.getElementById(`tab-${tabId}`);
-            if (targetTab) {
-                targetTab.classList.add('active');
-                targetTab.style.display = 'block';
-                console.log('✅ Mostrando tab:', tabId);
-            } else {
-                console.error('❌ No se encontró el tab:', `tab-${tabId}`);
-            }
+            if (targetTab) targetTab.classList.add('active');
         });
     });
 }
