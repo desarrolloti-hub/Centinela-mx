@@ -25,7 +25,6 @@ import { UserManager } from '/clases/user.js';
             const adminInfo = localStorage.getItem('adminInfo');
             if (adminInfo) {
                 const data = JSON.parse(adminInfo);
-                console.log('📦 Usuario encontrado en adminInfo:', data.nombreCompleto);
                 return {
                     id: data.id || data.uid,
                     uid: data.uid || data.id,
@@ -44,7 +43,6 @@ import { UserManager } from '/clases/user.js';
             const userData = localStorage.getItem('userData');
             if (userData) {
                 const data = JSON.parse(userData);
-                console.log('📦 Usuario encontrado en userData:', data.nombreCompleto);
                 return {
                     id: data.uid || data.id,
                     uid: data.uid || data.id,
@@ -104,7 +102,6 @@ import { UserManager } from '/clases/user.js';
      */
     async function initialize() {
         try {
-            console.log('🚀 Inicializando Autenticador...');
             
             // Limpiar cualquier timeout pendiente
             if (redirectTimeout) {
@@ -115,15 +112,12 @@ import { UserManager } from '/clases/user.js';
             // Obtener o crear instancia de UserManager
             if (!window.userManagerInstance) {
                 window.userManagerInstance = new UserManager();
-                console.log('✅ Nueva instancia de UserManager creada');
             }
             userManager = window.userManagerInstance;
             
             // PRIMERO: Intentar cargar desde localStorage directamente
             const localUser = loadUserFromLocalStorage();
             if (localUser) {
-                console.log('👤 Usuario cargado desde localStorage:', localUser.nombreCompleto);
-                // Crear un objeto User básico con los datos del localStorage
                 currentUser = {
                     ...localUser,
                     // Métodos básicos para compatibilidad
@@ -152,7 +146,6 @@ import { UserManager } from '/clases/user.js';
                             saveUserToLocalStorage(currentUser);
                             notifyListeners();
                             updateUI();
-                            console.log('🔄 Usuario sincronizado con UserManager');
                         }
                     } catch (e) {
                         console.warn('No se pudo sincronizar con UserManager:', e);
@@ -163,7 +156,6 @@ import { UserManager } from '/clases/user.js';
             }
             
             // Si no hay usuario en localStorage, esperar a UserManager
-            console.log('⏳ Esperando usuario desde UserManager...');
             let attempts = 0;
             const maxAttempts = 50; // Aumentado a 50 intentos (5 segundos)
             
@@ -175,9 +167,7 @@ import { UserManager } from '/clases/user.js';
             if (userManager.currentUser) {
                 currentUser = userManager.currentUser;
                 saveUserToLocalStorage(currentUser);
-                console.log('👤 Usuario obtenido de UserManager:', currentUser.nombreCompleto);
             } else {
-                console.log('⚠️ No hay usuario autenticado');
                 currentUser = null;
             }
             
@@ -191,7 +181,6 @@ import { UserManager } from '/clases/user.js';
             
             // 🔴 SI NO HAY USUARIO Y NO ESTAMOS EN PÁGINA DE LOGIN, REDIRIGIR
             if (!currentUser && !isLoginPage()) {
-                console.log('🔴 Usuario no autenticado - Redirigiendo a login en 500ms');
                 // Pequeño delay para que los mensajes se muestren
                 redirectTimeout = setTimeout(() => {
                     window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
@@ -592,5 +581,4 @@ import { UserManager } from '/clases/user.js';
         initialize();
     }
     
-    console.log('✅ Autenticador cargado correctamente');
 })();
