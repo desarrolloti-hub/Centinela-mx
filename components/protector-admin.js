@@ -72,13 +72,11 @@
                 
                 // Master tiene acceso total
                 if (this.userRole === 'master') {
-                    console.log('👑 Master - acceso total');
                     return;
                 }
                 
                 // Módulos generales siempre permitidos
                 if (!this.campoPlan) {
-                    console.log(`✅ Módulo general: ${this.nombreModulo}`);
                     return;
                 }
                 
@@ -92,8 +90,6 @@
                     await this._mostrarAlerta();
                     return;
                 }
-                
-                console.log(`✅ Acceso permitido: ${this.nombreModulo}`);
                 
             } catch (error) {
                 console.error('Error en protector administrador:', error);
@@ -221,7 +217,6 @@
                     const userData = JSON.parse(userDataStr);
                     this.userRole = userData.rol?.toLowerCase() || 'colaborador';
                     this.planId = userData.plan || 'gratis';
-                    console.log(`📌 Rol: ${this.userRole}, Plan ID: ${this.planId}`);
                     return;
                 }
                 
@@ -230,7 +225,6 @@
                     const adminData = JSON.parse(adminInfoStr);
                     this.userRole = adminData.rol?.toLowerCase() || 'colaborador';
                     this.planId = adminData.plan || 'gratis';
-                    console.log(`📌 Rol: ${this.userRole}, Plan ID: ${this.planId}`);
                     return;
                 }
                 
@@ -252,7 +246,6 @@
                 
                 if (plan) {
                     this.plan = plan;
-                    console.log(`📦 Plan cargado: ${this.plan.nombre}`, this.plan.mapasActivos);
                 } else {
                     this.plan = null;
                 }

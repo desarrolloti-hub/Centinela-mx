@@ -26,8 +26,6 @@
                     return;
                 }
                 
-                console.log('👑 Master - acceso permitido');
-                
             } catch (error) {
                 console.error('Error en protector master:', error);
                 await this._mostrarAlerta('Error al validar permisos.');
@@ -119,7 +117,6 @@
                 if (userDataStr) {
                     const userData = JSON.parse(userDataStr);
                     this.userRole = userData.rol?.toLowerCase() || 'colaborador';
-                    console.log(`📌 Rol: ${this.userRole}`);
                     return;
                 }
                 
@@ -127,12 +124,10 @@
                 if (adminInfoStr) {
                     const adminData = JSON.parse(adminInfoStr);
                     this.userRole = adminData.rol?.toLowerCase() || 'colaborador';
-                    console.log(`📌 Rol: ${this.userRole}`);
                     return;
                 }
                 
                 this.userRole = 'colaborador';
-                console.log(`📌 Rol por defecto: ${this.userRole}`);
                 
             } catch (error) {
                 console.error('Error cargando rol:', error);
