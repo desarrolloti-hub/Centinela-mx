@@ -20,9 +20,9 @@ class FooterComponent {
     // Configuración principal del footer
     setup() {
         try {
-            this.removeOriginalFooter();  
-            this.createFooter();          
-            this.updateDateTime();       
+            this.removeOriginalFooter();
+            this.createFooter();
+            this.updateDateTime();
         } catch (error) {
             console.error('❌ Error:', error);
         }
@@ -36,7 +36,7 @@ class FooterComponent {
 
     // Crea el footer completo
     createFooter() {
-        this.addStyles();  
+        this.addStyles();
         this.insertHTML();
     }
 
@@ -226,7 +226,7 @@ class FooterComponent {
                 <div class="footer-bottom-content">
                     <!-- Logo y nombre de la empresa -->
                     <div class="footer-left">
-                        <a href="/index.html" class="footer-logo-link">
+                        <a href="https://rsienterprise.web.app/" target="_blank" rel="noopener noreferrer" class="footer-logo-link">
                             <img src="/assets/images/logoApp.png" alt="Centinela Logo" class="footer-logo">
                             <span class="footer-logo-text">RSI Enterprise</span>
                         </a>
