@@ -72,14 +72,14 @@
                 
                 // 6. Verificar que tenga área y cargo asignados
                 if (!this.usuarioActual?.areaAsignadaId || !this.usuarioActual?.cargoId) {
-                    this._redirigirDashboard();
-                    return;
+                    await this._mostrarAlertaSinPermiso();
+                    return; // No redirigir aquí, la alerta ya maneja la redirección
                 }
                 
                 // 7. Verificar que esté activo
                 if (this.usuarioActual?.status === false) {
-                    this._redirigirDashboard();
-                    return;
+                    await this._mostrarAlertaSinPermiso();
+                    return; // No redirigir aquí, la alerta ya maneja la redirección
                 }
                 
                 // 8. Obtener permisos reales desde Firestore
@@ -90,15 +90,102 @@
                 const tienePermiso = this._tienePermisoModulo(this.moduloRequerido);
                 
                 if (!tienePermiso) {
-                    // Redirigir al dashboard silenciosamente
-                    this._redirigirDashboard();
+                    // Mostrar alerta y redirigir al dashboard
+                    await this._mostrarAlertaSinPermiso();
+                    return; // No redirigir aquí, la alerta ya maneja la redirección
                 }
                 
             } catch (error) {
                 console.error('Error en protector colaborador:', error);
-                // En caso de error, redirigir al dashboard por seguridad
-                this._redirigirDashboard();
+                // En caso de error, mostrar alerta y redirigir al dashboard por seguridad
+                await this._mostrarAlertaSinPermiso();
+                return;
             }
+        }
+
+        async _mostrarAlertaSinPermiso() {
+            // Evitar múltiples alertas
+            if (this.redirigiendo) return;
+            this.redirigiendo = true;
+            
+            // Verificar si SweetAlert2 está disponible
+            if (typeof Swal === 'undefined') {
+                await this._cargarSweetAlert();
+            }
+            
+            // Mostrar alerta con barra de progreso
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Acceso Denegado',
+                html: `
+                    <p>No tienes permisos para acceder al módulo <strong>${this.nombreModulo || this.moduloRequerido}</strong>.</p>
+                    <p>Para más información, comunícate con tu administrador.</p>
+                    <div class="mt-3">
+                        <div class="progress" style="height: 5px;">
+                            <div id="swal-progress-bar" class="progress-bar bg-warning" role="progressbar" style="width: 0%; transition: width 0.1s linear;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="mt-2 text-muted small">Redirigiendo al dashboard...</p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    // Animar la barra de progreso
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += 2;
+                        const progressBar = document.getElementById('swal-progress-bar');
+                        if (progressBar) {
+                            progressBar.style.width = `${progress}%`;
+                            progressBar.setAttribute('aria-valuenow', progress);
+                        }
+                        if (progress >= 100) {
+                            clearInterval(interval);
+                            // Redirigir inmediatamente después de que la barra llegue al 100%
+                            this._ejecutarRedireccion();
+                        }
+                    }, 60);
+                    
+                    // Guardar el intervalo para limpiarlo si es necesario
+                    this._progressInterval = interval;
+                },
+                willClose: () => {
+                    if (this._progressInterval) {
+                        clearInterval(this._progressInterval);
+                    }
+                }
+            });
+        }
+        
+        _ejecutarRedireccion() {
+            // Determinar dashboard según el rol
+            let dashboardUrl = '/usuarios/colaboradores/panelControl/panelControl.html';
+
+            
+            // Usar replace para no guardar la URL denegada en el historial
+            window.location.replace(dashboardUrl);
+        }
+        
+        async _cargarSweetAlert() {
+            return new Promise((resolve, reject) => {
+                if (typeof Swal !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+                document.head.appendChild(link);
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error('Error cargando SweetAlert2'));
+                document.head.appendChild(script);
+            });
         }
 
         _obtenerModuloRequerido() {
@@ -260,21 +347,6 @@
                 case 'permisos': return this.permisos.permisos === true;
                 default: return false;
             }
-        }
-
-        _redirigirDashboard() {
-            if (this.redirigiendo) return;
-            this.redirigiendo = true;
-            
-            // Determinar dashboard según el rol
-            let dashboardUrl = '/usuarios/colaboradores/panelControl/panelControl.html';
-            
-            if (this.userRole === 'administrador' || this.userRole === 'master') {
-                dashboardUrl = '/admin/dashboard.html';
-            }
-            
-            // Usar replace para no guardar la URL denegada en el historial
-            window.location.replace(dashboardUrl);
         }
     }
 
