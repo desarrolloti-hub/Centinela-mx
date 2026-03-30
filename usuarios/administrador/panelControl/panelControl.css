@@ -312,17 +312,15 @@ body {
     width: 100%;
 }
 
+/* Contenedor base - CON BRILLO PERMANENTE USANDO COLOR DEL SISTEMA */
 .section-container {
-    border: 1px solid var(--color-border-light);
+    border: 1px solid var(--color-accent-primary);
     border-radius: var(--border-radius-medium);
     padding: var(--spacing-md, 0.75rem);
     transition: var(--transition-default);
     width: 100%;
     backdrop-filter: blur(8px);
-}
-
-.section-container:hover {
-    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 8px var(--color-accent-primary);
 }
 
 .section-header {
@@ -364,6 +362,7 @@ body {
 }
 
 /* Tarjetas base - VERSIÓN COMPACTA */
+/* Tarjetas base - VERSIÓN COMPACTA */
 .dashboard-card {
     display: flex !important;
     flex-direction: row !important;
@@ -373,7 +372,8 @@ body {
     min-height: 70px !important;
     width: auto !important;
     min-width: 200px !important;
-    max-width: 280px !important;
+    max-width: 350px !important;
+    /* ← CAMBIA ESTE VALOR */
     padding: 0.5rem 0.75rem !important;
     position: relative;
     border: 1px solid var(--color-border-light);
@@ -587,5 +587,70 @@ body {
 
     #particle-canvas {
         display: none;
+    }
+}
+
+/* =============================================
+   MÓDULOS DE ACCESO - GRID DE 3 COLUMNAS
+   ============================================= */
+.modulos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.modulo-columna {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--border-radius-medium);
+    padding: 1rem;
+    border: 1px solid var(--color-border-light);
+    transition: var(--transition-default);
+    box-shadow: 0 0 5px var(--color-accent-primary);
+}
+
+.modulo-columna:hover {
+    border-color: var(--color-accent-primary);
+    transform: translateY(-2px);
+}
+
+.modulo-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.modulo-header i {
+    font-size: 1.2rem;
+}
+
+.modulo-header h3 {
+    font-family: var(--font-family-primary);
+    font-size: 0.85rem;
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.modulo-tarjetas {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.modulo-tarjetas .dashboard-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: auto !important;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .modulos-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 }

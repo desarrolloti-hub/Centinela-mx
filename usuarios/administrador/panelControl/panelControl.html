@@ -87,7 +87,9 @@
     <canvas id="particle-canvas"></canvas>
 
     <main class="right-layout">
-        <!-- SECCIÓN KPI SUPERIOR - 6 TARJETAS CON DATOS REALES -->
+        <!-- ============================================= -->
+        <!-- SECCIÓN 1: PANEL DE CONTROL (KPI - ARRIBA) -->
+        <!-- ============================================= -->
         <div class="kpi-section">
             <h2><i class="fa-solid fa-chart-line"></i> PANEL DE CONTROL</h2>
             <div class="kpi-row kpi-row-6">
@@ -99,7 +101,15 @@
                     <p>Total registradas</p>
                 </div>
 
-                <!-- Tarjeta 2: REGIONES -->
+                <!-- Tarjeta 2: INCIDENCIAS DIARIAS -->
+                <div class="kpi-card" id="kpi-incidencias-diarias">
+                    <i class="fa-solid fa-calendar-day" style="color: #ff8c5a;"></i>
+                    <span class="kpi-number" id="total-incidencias-diarias">0</span>
+                    <h3>INCIDENCIAS DIARIAS</h3>
+                    <p>Registradas hoy</p>
+                </div>
+
+                <!-- Tarjeta 3: REGIONES -->
                 <div class="kpi-card" id="kpi-regiones">
                     <i class="fa-solid fa-map" style="color: #2f8cff;"></i>
                     <span class="kpi-number" id="total-regiones">0</span>
@@ -107,7 +117,7 @@
                     <p>Registradas</p>
                 </div>
 
-                <!-- Tarjeta 3: SUCURSALES -->
+                <!-- Tarjeta 4: SUCURSALES -->
                 <div class="kpi-card" id="kpi-sucursales">
                     <i class="fa-solid fa-building" style="color: #00cfff;"></i>
                     <span class="kpi-number" id="total-sucursales">0</span>
@@ -115,20 +125,12 @@
                     <p>Activas</p>
                 </div>
 
-                <!-- Tarjeta 4: ÁREAS -->
+                <!-- Tarjeta 5: ÁREAS -->
                 <div class="kpi-card" id="kpi-areas">
                     <i class="fa-solid fa-layer-group" style="color: #b16bff;"></i>
                     <span class="kpi-number" id="total-areas">0</span>
                     <h3>ÁREAS</h3>
                     <p>Registradas</p>
-                </div>
-
-                <!-- Tarjeta 5: CARGOS -->
-                <div class="kpi-card" id="kpi-cargos">
-                    <i class="fa-solid fa-briefcase" style="color: #ffcc00;"></i>
-                    <span class="kpi-number" id="total-cargos">0</span>
-                    <h3>CARGOS</h3>
-                    <p>Totales</p>
                 </div>
 
                 <!-- Tarjeta 6: USUARIOS -->
@@ -141,16 +143,30 @@
             </div>
         </div>
 
+        <!-- ============================================= -->
+        <!-- SECCIÓN 2: ACCESO RÁPIDO -->
+        <!-- ============================================= -->
         <section class="center-row">
-            <!-- PANEL ÚNICO - ACCESO RÁPIDO (TARJETAS DINÁMICAS) -->
             <div class="side full-width">
                 <div class="section-container">
                     <div class="section-header">
                         <h2 class="section-title"><i class="fa-solid fa-bolt"></i> ACCESO RÁPIDO</h2>
-                        <p class="section-subtitle">Módulos disponibles según tu plan</p>
+                        <p class="section-subtitle">Módulos principales según tu plan</p>
                     </div>
 
-                    <div class="cards-grid-2">
+                    <div class="cards-grid-2" id="acceso-rapido-grid">
+                        <!-- Tarjeta: Nueva Incidencia (con parpadeo) -->
+                        <div class="dashboard-card" id="card-nueva-incidencia">
+                            <div class="card-icon cyan">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Nueva Incidencia</h3>
+                                <p>Crear nuevo reporte</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+
                         <!-- Tarjeta: Incidencias (Lista) -->
                         <div class="dashboard-card" id="card-incidencias-lista">
                             <div class="card-icon orange">
@@ -159,18 +175,6 @@
                             <div class="card-text">
                                 <h3>Incidencias</h3>
                                 <p>Ver lista de incidencias</p>
-                            </div>
-                            <div class="card-arrow">→</div>
-                        </div>
-
-                        <!-- Tarjeta: Nueva Incidencia (Especial con parpadeo) -->
-                        <div class="dashboard-card" id="card-nueva-incidencia">
-                            <div class="card-icon cyan">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div class="card-text">
-                                <h3>Nueva Incidencia</h3>
-                                <p>Crear nuevo reporte</p>
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
@@ -186,6 +190,128 @@
                             </div>
                             <div class="card-arrow">→</div>
                         </div>
+
+                        <!-- Tarjeta: Lista de Extravíos -->
+                        <div class="dashboard-card" id="card-lista-extravios">
+                            <div class="card-icon orange">
+                                <i class="fa-solid fa-box-open"></i>
+                            </div>
+                            <div class="card-text">
+                                <h3>Lista de Extravíos</h3>
+                                <p>Ver mercancía perdida</p>
+                            </div>
+                            <div class="card-arrow">→</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <br>
+
+        <!-- ============================================= -->
+        <!-- SECCIÓN 3: MÓDULOS DE ACCESO - 3 COLUMNAS -->
+        <!-- ============================================= -->
+        <section class="center-row">
+            <div class="side full-width">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h2 class="section-title"><i class="fa-solid fa-cubes"></i> MÓDULOS DE ACCESO</h2>
+                        <p class="section-subtitle">Gestión administrativa</p>
+                    </div>
+
+                    <!-- CONTENEDORES HORIZONTALES (3 COLUMNAS) -->
+                    <div class="modulos-grid">
+
+                        <!-- COLUMNA 1: ÁREAS -->
+                        <div class="modulo-columna">
+                            <div class="modulo-header">
+                                <i class="fa-solid fa-layer-group" style="color: #b16bff;"></i>
+                                <h3> PANEL DE ÁREAS</h3>
+                            </div>
+                            <div class="modulo-tarjetas">
+                                <div class="dashboard-card" id="card-areas-lista">
+                                    <div class="card-icon purple">
+                                        <i class="fa-solid fa-list"></i>
+                                    </div>
+                                    <div class="card-text">
+                                        <h3>Lista Áreas</h3>
+                                        <p>Ver todas las áreas</p>
+                                    </div>
+                                    <div class="card-arrow">→</div>
+                                </div>
+                                <div class="dashboard-card" id="card-areas-nueva">
+                                    <div class="card-icon purple">
+                                        <i class="fa-solid fa-plus-circle"></i>
+                                    </div>
+                                    <div class="card-text">
+                                        <h3>Nueva Área</h3>
+                                        <p>Crear nueva área</p>
+                                    </div>
+                                    <div class="card-arrow">→</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COLUMNA 2: SUCURSALES -->
+                        <div class="modulo-columna">
+                            <div class="modulo-header">
+                                <i class="fa-solid fa-building" style="color: #00cfff;"></i>
+                                <h3> PANEL DE SUCURSALES</h3>
+                            </div>
+                            <div class="modulo-tarjetas">
+                                <div class="dashboard-card" id="card-sucursales-lista">
+                                    <div class="card-icon cyan">
+                                        <i class="fa-solid fa-list"></i>
+                                    </div>
+                                    <div class="card-text">
+                                        <h3>Lista Sucursales</h3>
+                                        <p>Ver todas las sucursales</p>
+                                    </div>
+                                    <div class="card-arrow">→</div>
+                                </div>
+                                <div class="dashboard-card" id="card-sucursales-nueva">
+                                    <div class="card-icon cyan">
+                                        <i class="fa-solid fa-plus-circle"></i>
+                                    </div>
+                                    <div class="card-text">
+                                        <h3>Nueva Sucursal</h3>
+                                        <p>Crear nueva sucursal</p>
+                                    </div>
+                                    <div class="card-arrow">→</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COLUMNA 3: REGIONES -->
+                        <div class="modulo-columna">
+                            <div class="modulo-header">
+                                <i class="fa-solid fa-map" style="color: #2f8cff;"></i>
+                                <h3>PANEL DE REGIONES</h3>
+                            </div>
+                            <div class="modulo-tarjetas">
+                                <div class="dashboard-card" id="card-regiones-lista">
+                                    <div class="card-icon blue">
+                                        <i class="fa-solid fa-list"></i>
+                                    </div>
+                                    <div class="card-text">
+                                        <h3>Lista Regiones</h3>
+                                        <p>Ver todas las regiones</p>
+                                    </div>
+                                    <div class="card-arrow">→</div>
+                                </div>
+                                <div class="dashboard-card" id="card-regiones-nueva">
+                                    <div class="card-icon blue">
+                                        <i class="fa-solid fa-plus-circle"></i>
+                                    </div>
+                                    <div class="card-text">
+                                        <h3>Nueva Región</h3>
+                                        <p>Crear nueva región</p>
+                                    </div>
+                                    <div class="card-arrow">→</div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -201,7 +327,6 @@
     <script src="/components/footerAdministrador.js"></script>
 
     <!-- Protector de pagina -->
-    <!-- /usuarios/administrador/cualquier-pagina.html -->
     <script type="module" src="/components/protector-admin.js"></script>
 </body>
 
