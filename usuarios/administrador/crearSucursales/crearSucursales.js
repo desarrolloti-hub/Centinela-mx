@@ -97,7 +97,7 @@ class CrearSucursalController {
     // ✅ NUEVO: Registrar creación de sucursal
     async _registrarCreacionSucursal(sucursal, datos) {
         if (!historialManager) return;
-        
+
         try {
             await historialManager.registrarActividad({
                 usuario: this.usuarioActual,
@@ -144,8 +144,12 @@ class CrearSucursalController {
                 const lat = parseFloat(latInput.value);
                 const lng = parseFloat(lngInput.value);
 
-                // Validar que sean números válidos
+                // Validar que sean números válidos y estén dentro de México
                 if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                    if (!this._validarCoordenadasMexico(lat, lng)) {
+                        this._mostrarNotificacion('Las coordenadas deben estar dentro del territorio mexicano', 'warning', 3000);
+                        return;
+                    }
                     // Esperar 500ms después de que el usuario deje de escribir
                     this.coordenadasTimeout = setTimeout(() => {
                         this._obtenerDireccionDesdeCoordenadas(lat, lng);
@@ -478,6 +482,9 @@ class CrearSucursalController {
         } else if (isNaN(latitud)) {
             latitudInput?.classList.add('is-invalid');
             errores.push('La latitud debe ser un número válido');
+        } else if (!this._validarCoordenadasMexico(parseFloat(latitud), parseFloat(longitudInput?.value))) {
+            latitudInput?.classList.add('is-invalid');
+            errores.push('La latitud debe estar dentro del territorio mexicano');
         } else {
             latitudInput?.classList.remove('is-invalid');
         }
@@ -490,6 +497,9 @@ class CrearSucursalController {
         } else if (isNaN(longitud)) {
             longitudInput?.classList.add('is-invalid');
             errores.push('La longitud debe ser un número válido');
+        } else if (!this._validarCoordenadasMexico(parseFloat(latitudInput?.value), parseFloat(longitud))) {
+            longitudInput?.classList.add('is-invalid');
+            errores.push('La longitud debe estar dentro del territorio mexicano');
         } else {
             longitudInput?.classList.remove('is-invalid');
         }
@@ -656,9 +666,9 @@ class CrearSucursalController {
         // Recargar regiones por si acaso
         this._cargarRegiones();
 
-        // Resetear mapa a coordenadas por defecto
+        // Resetear mapa a coordenadas por defecto (centro de México)
         if (this.map && this.marker) {
-            this._colocarMarcador([25.686614, -100.316112]);
+            this._colocarMarcador([23.6345, -102.5528]);
         }
     }
 
@@ -736,27 +746,42 @@ class CrearSucursalController {
     // ========== FUNCIONES DEL MAPA ==========
     _inicializarMapa() {
         try {
-            // Coordenadas por defecto (Monterrey, México)
-            const defaultLat = 25.686614;
-            const defaultLng = -100.316112;
+            // Coordenadas por defecto (Centro de México)
+            const defaultLat = 23.6345;
+            const defaultLng = -102.5528;
+            const defaultZoom = 5;
 
-            // Crear mapa
-            this.map = L.map('sucursalMap').setView([defaultLat, defaultLng], 13);
+            // Crear mapa con límites geográficos restringidos a México
+            this.map = L.map('sucursalMap', {
+                // Límites estrictos para México
+                maxBounds: this._obtenerLimitesMexico(),
+                maxBoundsViscosity: 1.0, // El mapa "rebota" al intentar salirse
+                minZoom: 5, // Zoom mínimo para no alejarse demasiado
+                maxZoom: 18, // Zoom máximo
+                zoomControl: true
+            }).setView([defaultLat, defaultLng], defaultZoom);
 
             // Capa de OpenStreetMap
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors | Centinela-MX'
+                attribution: '© OpenStreetMap contributors | Centinela-MX',
+                maxZoom: 19,
+                minZoom: 5
+            }).addTo(this.map);
+
+            // Agregar control de zoom en la posición deseada
+            L.control.zoom({
+                position: 'bottomright'
             }).addTo(this.map);
 
             // Icono personalizado para el marcador
             const customIcon = L.divIcon({
                 className: 'custom-marker',
-                html: '<i class="fas fa-map-marker-alt"></i>',
+                html: '<i class="fas fa-map-marker-alt" style="font-size: 30px; color: var(--color-accent-primary); filter: drop-shadow(0 0 5px var(--color-accent-primary));"></i>',
                 iconSize: [30, 30],
                 popupAnchor: [0, -15]
             });
 
-            // Crear marcador
+            // Crear marcador (inicialmente en el centro de México)
             this.marker = L.marker([defaultLat, defaultLng], {
                 draggable: true,
                 icon: customIcon
@@ -764,21 +789,35 @@ class CrearSucursalController {
 
             // Popup del marcador
             this.marker.bindPopup(`
-                <b>Sucursal</b><br>
+                <b style="color: var(--color-accent-primary);">📍 Sucursal</b><br>
                 Arrástrame para ajustar la posición
             `).openPopup();
 
             // Evento cuando se arrastra el marcador
             this.marker.on('dragend', (event) => {
                 const position = event.target.getLatLng();
-                this._actualizarCoordenadasMapa(position.lat, position.lng);
-                this._obtenerDireccionDesdeCoordenadas(position.lat, position.lng);
+                // Validar que la posición esté dentro de México
+                if (this._validarCoordenadasMexico(position.lat, position.lng)) {
+                    this._actualizarCoordenadasMapa(position.lat, position.lng);
+                    this._obtenerDireccionDesdeCoordenadas(position.lat, position.lng);
+                } else {
+                    // Si está fuera, regresar a la última posición válida
+                    const ultimaLat = parseFloat(document.getElementById('latitudSucursal')?.value || defaultLat);
+                    const ultimaLng = parseFloat(document.getElementById('longitudSucursal')?.value || defaultLng);
+                    this._colocarMarcador([ultimaLat, ultimaLng]);
+                    this._mostrarNotificacion('La ubicación debe estar dentro del territorio mexicano', 'warning', 3000);
+                }
             });
 
             // Evento cuando se hace clic en el mapa
             this.map.on('click', (e) => {
-                this._colocarMarcador(e.latlng);
-                this._obtenerDireccionDesdeCoordenadas(e.latlng.lat, e.latlng.lng);
+                const { lat, lng } = e.latlng;
+                if (this._validarCoordenadasMexico(lat, lng)) {
+                    this._colocarMarcador(e.latlng);
+                    this._obtenerDireccionDesdeCoordenadas(lat, lng);
+                } else {
+                    this._mostrarNotificacion('Selecciona una ubicación dentro del territorio mexicano', 'warning', 3000);
+                }
             });
 
             // Sincronizar con campos de texto iniciales
@@ -795,6 +834,31 @@ class CrearSucursalController {
         }
     }
 
+    // ========== OBTENER LÍMITES GEOGRÁFICOS DE MÉXICO ==========
+    _obtenerLimitesMexico() {
+        // Límites aproximados del territorio mexicano
+        return L.latLngBounds(
+            L.latLng(14.5, -118.5),  // Suroeste (esquina inferior izquierda)
+            L.latLng(33.0, -86.5)    // Noreste (esquina superior derecha)
+        );
+    }
+
+    // ========== VALIDAR QUE LAS COORDENADAS ESTÉN DENTRO DE MÉXICO ==========
+    _validarCoordenadasMexico(lat, lng) {
+        // Límites expandidos de México (incluyendo zonas marítimas y fronterizas)
+        const limites = {
+            minLat: 14.5,   // Sur: Chiapas, frontera con Guatemala
+            maxLat: 33.0,   // Norte: Baja California, frontera con EE.UU.
+            minLng: -118.5, // Oeste: Baja California, Océano Pacífico
+            maxLng: -86.5   // Este: Quintana Roo, Mar Caribe
+        };
+
+        return lat >= limites.minLat &&
+            lat <= limites.maxLat &&
+            lng >= limites.minLng &&
+            lng <= limites.maxLng;
+    }
+
     _configurarEventosMapa() {
         // Botón centrar mapa
         const btnCentrar = document.getElementById('btnCentrarMapa');
@@ -803,13 +867,15 @@ class CrearSucursalController {
                 const lat = parseFloat(document.getElementById('latitudSucursal').value);
                 const lng = parseFloat(document.getElementById('longitudSucursal').value);
 
-                if (!isNaN(lat) && !isNaN(lng)) {
+                if (!isNaN(lat) && !isNaN(lng) && this._validarCoordenadasMexico(lat, lng)) {
                     this.map.setView([lat, lng], 15);
+                } else {
+                    this._mostrarNotificacion('Coordenadas no válidas o fuera de México', 'warning', 3000);
                 }
             });
         }
 
-        // Botón buscar dirección - CORREGIDO: YA NO BORRA COORDENADAS
+        // Botón buscar dirección
         const btnBuscar = document.getElementById('btnBuscarDireccion');
         if (btnBuscar) {
             btnBuscar.addEventListener('click', () => this._buscarDireccionEnMapa());
@@ -829,20 +895,24 @@ class CrearSucursalController {
             latInput.addEventListener('change', () => {
                 const lat = parseFloat(latInput.value);
                 const lng = parseFloat(lngInput.value);
-                if (!isNaN(lat) && !isNaN(lng)) {
+                if (!isNaN(lat) && !isNaN(lng) && this._validarCoordenadasMexico(lat, lng)) {
                     this.actualizandoDesdeMapa = true;
                     this._colocarMarcador([lat, lng]);
                     this.actualizandoDesdeMapa = false;
+                } else if (!isNaN(lat) && !isNaN(lng)) {
+                    this._mostrarNotificacion('Las coordenadas deben estar dentro de México', 'warning', 3000);
                 }
             });
 
             lngInput.addEventListener('change', () => {
                 const lat = parseFloat(latInput.value);
                 const lng = parseFloat(lngInput.value);
-                if (!isNaN(lat) && !isNaN(lng)) {
+                if (!isNaN(lat) && !isNaN(lng) && this._validarCoordenadasMexico(lat, lng)) {
                     this.actualizandoDesdeMapa = true;
                     this._colocarMarcador([lat, lng]);
                     this.actualizandoDesdeMapa = false;
+                } else if (!isNaN(lat) && !isNaN(lng)) {
+                    this._mostrarNotificacion('Las coordenadas deben estar dentro de México', 'warning', 3000);
                 }
             });
         }
@@ -889,7 +959,7 @@ class CrearSucursalController {
         if (mapLng) mapLng.textContent = lngFormatted;
     }
 
-    // ========== BUSCAR DIRECCIÓN - CORREGIDO ==========
+    // ========== BUSCAR DIRECCIÓN ==========
     async _buscarDireccionEnMapa() {
         const direccion = document.getElementById('direccionSucursal').value;
 
@@ -901,24 +971,21 @@ class CrearSucursalController {
         try {
             this._mostrarCargando('Buscando dirección exacta...');
 
-            // Guardar las coordenadas actuales por si acaso
-            const latActual = document.getElementById('latitudSucursal').value;
-            const lngActual = document.getElementById('longitudSucursal').value;
-
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}&limit=1&countrycodes=mx`);
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion + ', México')}&limit=1&countrycodes=mx`);
             const data = await response.json();
 
             if (data && data.length > 0) {
                 const lat = parseFloat(data[0].lat);
                 const lon = parseFloat(data[0].lon);
 
-                // Colocar marcador en las nuevas coordenadas
-                this._colocarMarcador([lat, lon]);
-
-                // Obtener la dirección EXACTA de estas coordenadas
-                await this._obtenerDireccionDesdeCoordenadas(lat, lon);
-
-                this._mostrarNotificacion('Dirección encontrada milimétricamente 🔍', 'success', 2000);
+                // Validar que esté dentro de México
+                if (this._validarCoordenadasMexico(lat, lon)) {
+                    this._colocarMarcador([lat, lon]);
+                    await this._obtenerDireccionDesdeCoordenadas(lat, lon);
+                    this._mostrarNotificacion('Dirección encontrada milimétricamente 🔍', 'success', 2000);
+                } else {
+                    this._mostrarNotificacion('La dirección encontrada está fuera del territorio mexicano', 'warning');
+                }
             } else {
                 this._mostrarNotificacion('No se encontró la dirección en México', 'warning');
             }
@@ -941,8 +1008,12 @@ class CrearSucursalController {
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
-                this._colocarMarcador([latitude, longitude]);
-                this._obtenerDireccionDesdeCoordenadas(latitude, longitude);
+                if (this._validarCoordenadasMexico(latitude, longitude)) {
+                    this._colocarMarcador([latitude, longitude]);
+                    this._obtenerDireccionDesdeCoordenadas(latitude, longitude);
+                } else {
+                    this._mostrarNotificacion('Tu ubicación actual está fuera del territorio mexicano', 'warning');
+                }
                 this._ocultarCargando();
             },
             (error) => {
@@ -976,47 +1047,59 @@ class CrearSucursalController {
         // Coordenadas aproximadas de los estados de México
         const coordenadasEstados = {
             "Aguascalientes": [21.8853, -102.2916],
-            "Baja California": [32.5000, -115.5000],
-            "Baja California Sur": [25.0000, -111.5000],
-            "Campeche": [19.0000, -90.5000],
-            "Chiapas": [16.5000, -92.5000],
-            "Chihuahua": [28.5000, -106.0000],
-            "Coahuila": [27.5000, -101.5000],
-            "Colima": [19.5000, -103.5000],
-            "Durango": [24.5000, -104.5000],
-            "Guanajuato": [21.0000, -101.5000],
-            "Guerrero": [17.5000, -100.0000],
-            "Hidalgo": [20.5000, -98.5000],
-            "Jalisco": [20.5000, -103.5000],
-            "México": [19.5000, -99.5000],
-            "Estado de México": [19.5000, -99.5000],
+            "Baja California": [30.8406, -115.2838],
+            "Baja California Sur": [25.8378, -111.9748],
+            "Campeche": [19.8301, -90.5349],
+            "Chiapas": [16.7569, -93.1292],
+            "Chihuahua": [28.6329, -106.0691],
+            "Coahuila": [27.0587, -101.7068],
+            "Colima": [19.2452, -103.7241],
+            "Durango": [24.0277, -104.6532],
+            "Guanajuato": [21.0190, -101.2574],
+            "Guerrero": [17.4392, -99.5451],
+            "Hidalgo": [20.0911, -98.7624],
+            "Jalisco": [20.6595, -103.3496],
+            "México": [19.2870, -99.6544],
+            "Estado de México": [19.2870, -99.6544],
             "Ciudad de México": [19.4326, -99.1332],
-            "Michoacán": [19.5000, -101.5000],
-            "Morelos": [18.5000, -99.0000],
-            "Nayarit": [22.0000, -105.0000],
-            "Nuevo León": [25.5000, -100.0000],
-            "Oaxaca": [17.5000, -96.5000],
-            "Puebla": [19.0000, -98.0000],
-            "Querétaro": [20.5000, -100.0000],
-            "Quintana Roo": [20.5000, -87.5000],
-            "San Luis Potosí": [22.5000, -100.5000],
-            "Sinaloa": [25.0000, -107.5000],
-            "Sonora": [29.5000, -110.0000],
-            "Tabasco": [18.0000, -92.5000],
-            "Tamaulipas": [24.5000, -98.5000],
-            "Tlaxcala": [19.5000, -98.5000],
-            "Veracruz": [19.5000, -96.5000],
-            "Yucatán": [20.5000, -89.0000],
-            "Zacatecas": [23.5000, -102.5000]
+            "Michoacán": [19.5665, -101.7068],
+            "Morelos": [18.6813, -99.1013],
+            "Nayarit": [21.7514, -104.8455],
+            "Nuevo León": [25.5921, -99.9962],
+            "Oaxaca": [17.0732, -96.7266],
+            "Puebla": [19.0414, -98.2062],
+            "Querétaro": [20.5888, -100.3899],
+            "Quintana Roo": [19.1814, -88.4794],
+            "San Luis Potosí": [22.1565, -100.9855],
+            "Sinaloa": [24.8091, -107.3940],
+            "Sonora": [29.2970, -110.3309],
+            "Tabasco": [17.9892, -92.9475],
+            "Tamaulipas": [24.2669, -98.8362],
+            "Tlaxcala": [19.3181, -98.2375],
+            "Veracruz": [19.1738, -96.1342],
+            "Yucatán": [20.7099, -89.0943],
+            "Zacatecas": [23.1273, -102.8722]
         };
 
         const coords = coordenadasEstados[estado];
 
         if (coords) {
-            this.map.setView(coords, 8);
+            let zoom = 8;
+            const estadosPequeños = ["Aguascalientes", "Colima", "Morelos", "Tlaxcala", "Querétaro"];
+            if (estadosPequeños.includes(estado)) {
+                zoom = 9;
+            }
+
+            this.map.setView(coords, zoom);
+
             L.popup()
                 .setLatLng(coords)
-                .setContent(`<b>${estado}</b><br>Haz clic en el mapa para colocar la sucursal`)
+                .setContent(`
+                    <div style="text-align: center;">
+                        <b style="color: var(--color-accent-primary);">📍 ${estado}</b><br>
+                        <small>Haz clic en el mapa para colocar la sucursal</small>
+                    </div>
+                `)
                 .openOn(this.map);
 
             this._mostrarNotificacion(`Mapa centrado en ${estado}`, 'info', 2000);

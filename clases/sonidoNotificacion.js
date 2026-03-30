@@ -65,20 +65,15 @@ export class SonidoNotificacion {
     async init() {
         if (this.initialized) return;
         
-        console.log('🎵 Buscando sonidos disponibles en Firebase Storage...');
         await this.scanAvailableSounds();
         
         this.initialized = true;
-        console.log(`✅ Sistema de sonidos listo. Sonidos encontrados: ${this.availableSounds.length}`);
     }
 
     async scanAvailableSounds() {
         try {
             const folderRef = ref(storage, 'audios/notificaciones/');
             const result = await listAll(folderRef);
-            
-            console.log(`📁 Escaneando carpeta: audios/notificaciones/`);
-            console.log(`📁 Encontrados ${result.items.length} archivos`);
             
             for (const itemRef of result.items) {
                 const fullPath = itemRef.fullPath;
@@ -107,7 +102,6 @@ export class SonidoNotificacion {
                 });
                 
                 this.availableSounds.push(soundName);
-                console.log(`✅ Sonido encontrado: ${soundName} (${this.namesConfig[soundName] || soundName})`);
             }
             
             if (this.availableSounds.length === 0) {
@@ -191,7 +185,6 @@ export class SonidoNotificacion {
                     .then(() => {
                         this.activeSources.set(soundId, audio);
                         const soundConfig = this.soundConfigs.get(soundName);
-                        console.log(`🔊 Reproduciendo: ${soundConfig?.name || soundName}`);
                     })
                     .catch(error => {
                         console.debug('Error reproduciendo sonido:', error.message);
