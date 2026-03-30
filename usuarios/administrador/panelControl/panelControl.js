@@ -1,5 +1,6 @@
 // ========== panelControl.js - VERSIÓN MODIFICADA ==========
 // Se eliminó CARGOS, se agregó INCIDENCIAS DIARIAS
+// SIN OVERLAY DE CARGA - EL PANEL SE MUESTRA DIRECTAMENTE
 
 import { UserManager } from '/clases/user.js';
 import { IncidenciaManager } from '/clases/incidencia.js';
@@ -159,9 +160,8 @@ const KPI_NAVEGACION = {
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
     try {
-        mostrarEstadoCarga();
-
-        await esperarAutenticacion();
+        // Esperar autenticación (máximo 10 segundos)
+        await esperarAutenticacion(10000);
         usuarioActual = userManager.currentUser;
 
         if (!usuarioActual) {
@@ -169,18 +169,26 @@ document.addEventListener('DOMContentLoaded', async function () {
             return;
         }
 
+        // Cargar permisos del plan
         await cargarPermisosDelPlan();
-        await cargarTodasLasEstadisticas();
+
+        // Aplicar filtros según permisos
         filtrarTarjetasPorPermisos();
         configurarEventosTarjetas();
         configurarEventosKPI();
-        actualizarUI();
 
-        ocultarEstadoCarga();
-        setInterval(refrescarEstadisticas, 5 * 60 * 1000);
+        // Cargar datos (actualizarán la UI cuando lleguen)
+        cargarTodasLasEstadisticas().then(() => {
+            actualizarUI();
+        });
+
+        // Refrescar cada 5 minutos
+        setInterval(async () => {
+            await cargarTodasLasEstadisticas();
+            actualizarUI();
+        }, 5 * 60 * 1000);
 
     } catch (error) {
-        ocultarEstadoCarga();
         mostrarError(error.message);
     }
 });
@@ -229,6 +237,10 @@ async function cargarPermisosDelPlan() {
             monitoreo: tieneMonitoreo,
             permisosIncidencias: permisosIncidencias
         };
+
+        // Re-aplicar filtros después de cargar permisos
+        filtrarTarjetasPorPermisos();
+        configurarEventosKPI();
 
     } catch (error) {
         permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
@@ -369,11 +381,6 @@ function actualizarUI() {
     if (totalUsuarios) totalUsuarios.textContent = estadisticas.usuarios;
 }
 
-async function refrescarEstadisticas() {
-    await cargarTodasLasEstadisticas();
-    actualizarUI();
-}
-
 // ========== VERIFICAR PERMISO DE MÓDULO ==========
 function tienePermisoModulo(config) {
     const permisoRequerido = config.permisoRequerido;
@@ -500,46 +507,8 @@ function manejarClickKPI(e, config) {
     window.location.href = config.url;
 }
 
-// ========== ESTADOS DE CARGA Y ERROR ==========
-function mostrarEstadoCarga() {
-    if (!document.getElementById('loading-overlay')) {
-        const overlay = document.createElement('div');
-        overlay.id = 'loading-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            backdrop-filter: blur(5px);
-            transition: opacity 0.3s ease;
-        `;
-        overlay.innerHTML = `
-            <div style="text-align: center;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #c0c0c0; margin-bottom: 16px;"></i>
-                <h3 style="color: white; font-family: 'Orbitron', sans-serif;">CARGANDO PANEL</h3>
-                <p style="color: #a5a5a5;">Cargando estadísticas...</p>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-    }
-}
-
-function ocultarEstadoCarga() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.style.opacity = '0';
-        setTimeout(() => overlay.remove(), 300);
-    }
-}
-
+// ========== MOSTRAR ERROR ==========
 function mostrarErrorSesion() {
-    ocultarEstadoCarga();
     const container = document.querySelector('.right-layout');
     if (container) {
         container.innerHTML = `
@@ -563,7 +532,6 @@ function mostrarErrorSesion() {
 }
 
 function mostrarError(mensaje) {
-    ocultarEstadoCarga();
     const container = document.querySelector('.right-layout');
     if (container) {
         container.innerHTML = `
