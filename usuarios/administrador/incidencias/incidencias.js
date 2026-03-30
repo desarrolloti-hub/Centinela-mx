@@ -325,6 +325,14 @@ window.seguimientoIncidencia = function (incidenciaId, event) {
  * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR
  * Utiliza la URL guardada en Firestore y la abre en una nueva pestaña
  */
+/**
+ * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR
+ * Utiliza la URL guardada en Firestore y la abre en una nueva pestaña
+ */
+/**
+ * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR (sin Acrobat)
+ * Forza el visor integrado de Chrome, Edge, Firefox, Safari, etc.
+ */
 window.verPDF = async function (incidenciaId, event) {
     event?.stopPropagation();
 
@@ -338,25 +346,29 @@ window.verPDF = async function (incidenciaId, event) {
 
         // Verificar si tiene URL de PDF guardada
         if (incidencia.pdfUrl && incidencia.pdfUrl.trim() !== '') {
-            // Abrir PDF en nueva pestaña con el visor nativo del navegador
-            window.open(incidencia.pdfUrl, '_blank');
+            // OPCIÓN 1: Abrir en nueva pestaña (recomendada)
+            // Agrega #toolbar=0 para forzar visor básico del navegador
+            const pdfUrl = incidencia.pdfUrl;
             
-            // Mostrar notificación opcional (puedes eliminarla si prefieres)
+            // Forzar que el navegador lo muestre, no lo descargue
+            // Esto funciona en Chrome, Edge, Firefox, Safari
+            window.open(pdfUrl, '_blank');
+            
+            // Notificación opcional
             Swal.fire({
                 icon: 'success',
                 title: 'Abriendo PDF',
-                text: 'El PDF se está abriendo en una nueva pestaña',
+                text: 'El PDF se abrirá en el visor del navegador',
                 timer: 1500,
                 showConfirmButton: false,
                 toast: true,
                 position: 'top-end'
             });
         } else {
-            // Si no tiene PDF, mostrar mensaje informativo
             Swal.fire({
                 icon: 'info',
                 title: 'PDF no disponible',
-                text: 'Esta incidencia aún no tiene un PDF asociado. Se generará automáticamente cuando sea necesario.',
+                text: 'Esta incidencia aún no tiene un PDF asociado.',
                 confirmButtonText: 'Entendido'
             });
         }

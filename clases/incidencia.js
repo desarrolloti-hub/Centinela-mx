@@ -556,6 +556,50 @@ class IncidenciaManager {
             };
         }
     }
+    // En la clase Incidencia, agrega este método:
+async obtenerUrlsImagenesActualizadas() {
+    try {
+        const { getDownloadURL, ref } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-storage.js");
+        const { storage } = await import('/config/firebase-config.js');
+        
+        const urlsActualizadas = [];
+        
+        for (const img of this.imagenes) {
+            try {
+                let url = null;
+                
+                // Si tiene path, obtener URL fresca de Storage
+                if (img.path) {
+                    const storageRef = ref(storage, img.path);
+                    url = await getDownloadURL(storageRef);
+                    console.log(`✅ URL fresca obtenida para: ${img.path}`);
+                } 
+                // Si tiene url pero da error, intentar igual con el path si existe
+                else if (img.url && !img.path) {
+                    url = img.url;
+                }
+                
+                if (url) {
+                    urlsActualizadas.push({
+                        ...img,
+                        url: url,
+                        urlActualizada: true
+                    });
+                } else {
+                    urlsActualizadas.push(img);
+                }
+            } catch (error) {
+                console.error(`Error obteniendo URL para imagen:`, error);
+                urlsActualizadas.push(img);
+            }
+        }
+        
+        return urlsActualizadas;
+    } catch (error) {
+        console.error('Error obteniendo URLs actualizadas:', error);
+        return this.imagenes;
+    }
+}
 
     async getIncidenciasPaginaEspecifica(organizacionCamelCase, filtros = {}, paginaDeseada = 1, itemsPorPagina = 10) {
         try {
