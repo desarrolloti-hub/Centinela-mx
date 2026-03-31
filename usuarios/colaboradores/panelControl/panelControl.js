@@ -1,16 +1,76 @@
 // ========== panelControl.js - PANEL DE CONTROL CON PERMISOS ==========
-// VERSIÓN ACTUALIZADA - Incluye módulos: Usuarios, Estadísticas, Tareas, Mapa de Alertas
+// VERSIÓN ACTUALIZADA - Solo KPIs: Incidencias Canalizadas, Áreas, Categorías, Sucursales, Regiones, Colaboradores
+
+import { db } from '/config/firebase-config.js';
+import {
+    collection,
+    getDocs,
+    query,
+    where,
+    orderBy,
+    onSnapshot
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 // ========== VARIABLES GLOBALES ==========
 let permisoManager = null;
 let usuarioActual = null;
 let permisosUsuario = null;
-let areaUsuario = null;
-let cargoUsuario = null;
+let unsubscribeFunctions = [];
 
-// Mapeo de módulos a sus respectivas tarjetas y rutas (ACTUALIZADO)
+// Configuración de KPIs según módulos (SOLO LOS SOLICITADOS)
+const KPI_CONFIG = {
+    // Incidencias canalizadas (para el usuario actual)
+    incidenciasCanalizadas: {
+        modulo: 'incidencias',
+        titulo: 'MIS INCIDENCIAS',
+        subtitulo: '',
+        icono: 'fa-share-alt',
+        color: 'danger'
+    },
+    // Áreas
+    areas: {
+        modulo: 'areas',
+        titulo: 'ÁREAS',
+        subtitulo: '',
+        icono: 'fa-sitemap',
+        color: 'blue'
+    },
+    // Categorías
+    categorias: {
+        modulo: 'categorias',
+        titulo: 'CATEGORÍAS',
+        subtitulo: '',
+        icono: 'fa-tags',
+        color: 'purple'
+    },
+    // Sucursales
+    sucursales: {
+        modulo: 'sucursales',
+        titulo: 'SUCURSALES',
+        subtitulo: 'Activas',
+        icono: 'fa-store',
+        color: 'yellow'
+    },
+    // Regiones
+    regiones: {
+        modulo: 'regiones',
+        titulo: 'REGIONES',
+        subtitulo: 'Registradas',
+        icono: 'fa-map-marked-alt',
+        color: 'purple'
+    },
+    // Colaboradores (Usuarios activos)
+    colaboradores: {
+        modulo: 'usuarios',
+        titulo: 'COLABORADORES',
+        subtitulo: '',
+        icono: 'fa-users',
+        color: 'cyan'
+    }
+};
+
+// Mapeo de módulos a sus respectivas tarjetas y rutas
 const MODULOS_CONFIG = {
-    // ========== MÓDULOS PRINCIPALES (grid superior) ==========
     'areas': {
         modulo: 'areas',
         selector: '[data-modulo="areas"]',
@@ -51,7 +111,6 @@ const MODULOS_CONFIG = {
         descripcion: 'Gestionar reportes de incidencias',
         icono: 'fa-exclamation-triangle'
     },
-    // NUEVOS MÓDULOS PRINCIPALES
     'usuarios': {
         modulo: 'usuarios',
         selector: '[data-modulo="usuarios"]',
@@ -83,167 +142,46 @@ const MODULOS_CONFIG = {
         titulo: 'Mapa de Alertas',
         descripcion: 'Visualización de alertas en mapa',
         icono: 'fa-map-marker-alt'
-    },
-
-    // ========== ACCIONES RÁPIDAS (sección izquierda) ==========
-    'registroAccesos': {
-        modulo: 'incidencias',
-        icono: 'fa-door-open',
-        seccion: '.side.left',
-        url: '/registro-accesos/',
-        titulo: 'Registro de Accesos',
-        descripcion: 'Registrar entradas y salidas'
-    },
-    'nuevaIncidencia': {
-        modulo: 'incidencias',
-        icono: 'fa-triangle-exclamation',
-        seccion: '.side.left',
-        url: '/incidencias/crear/',
-        titulo: 'Nueva Incidencia',
-        descripcion: 'Reportar una incidencia'
-    },
-    'nuevoUsuario': {
-        modulo: 'usuarios',
-        icono: 'fa-user-plus',
-        seccion: '.side.left',
-        url: '/usuarios/crear/',
-        titulo: 'Nuevo Usuario',
-        descripcion: 'Registrar nuevo usuario',
-        requiereAdmin: true
-    },
-    'nuevaTarea': {
-        modulo: 'tareas',
-        icono: 'fa-plus-circle',
-        seccion: '.side.left',
-        url: '/tareas/crear/',
-        titulo: 'Nueva Tarea',
-        descripcion: 'Crear nueva tarea'
-    },
-
-    // ========== ANÁLISIS Y REPORTES (sección derecha superior) ==========
-    'graficasIncidencias': {
-        modulo: 'incidencias',
-        icono: 'fa-chart-line',
-        seccion: '.side.right .section-container:first-child',
-        url: '/graficas/incidencias/',
-        titulo: 'Gráficas de Incidencias',
-        descripcion: 'Tendencias y análisis'
-    },
-    'mapaAlertas': {
-        modulo: 'monitoreo',
-        icono: 'fa-map-location-dot',
-        seccion: '.side.right .section-container:first-child',
-        url: '/mapa/',
-        titulo: 'Mapa de Alertas',
-        descripcion: 'Visualización geográfica'
-    },
-    'estadisticasGenerales': {
-        modulo: 'estadisticas',
-        icono: 'fa-chart-pie',
-        seccion: '.side.right .section-container:first-child',
-        url: '/estadisticas/',
-        titulo: 'Estadísticas',
-        descripcion: 'Métricas y KPIs del sistema'
-    },
-    'reporteTareas': {
-        modulo: 'tareas',
-        icono: 'fa-file-alt',
-        seccion: '.side.right .section-container:first-child',
-        url: '/tareas/reportes/',
-        titulo: 'Reporte de Tareas',
-        descripcion: 'Seguimiento y cumplimiento'
-    },
-
-    // ========== ADMINISTRACIÓN (sección derecha inferior) ==========
-    'tiposIncidencia': {
-        modulo: 'categorias',
-        icono: 'fa-list-check',
-        seccion: '.side.right .section-container:last-child',
-        url: '/categorias/',
-        titulo: 'Tipos de Incidencia',
-        descripcion: 'Gestionar categorías'
-    },
-    'rolesPermisos': {
-        modulo: 'permisos',
-        icono: 'fa-user-gear',
-        seccion: '.side.right .section-container:last-child',
-        url: '/permisos/',
-        titulo: 'Roles y Permisos',
-        descripcion: 'Control de accesos',
-        requiereAdmin: true
-    },
-    'backup': {
-        modulo: 'admin',
-        icono: 'fa-database',
-        seccion: '.side.right .section-container:last-child',
-        url: '/backup/',
-        titulo: 'Backup del Sistema',
-        descripcion: 'Respaldo de datos',
-        requiereAdmin: true
-    },
-    'configuracion': {
-        modulo: 'admin',
-        icono: 'fa-sliders',
-        seccion: '.side.right .section-container:last-child',
-        url: '/configuracion/',
-        titulo: 'Configuración General',
-        descripcion: 'Ajustes del sistema',
-        requiereAdmin: true
     }
 };
 
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
     try {
-        console.log('🚀 Iniciando panel de control...');
-
-        // Mostrar estado de carga
         mostrarEstadoCarga();
 
-        // Cargar usuario desde localStorage
         const usuarioCargado = cargarUsuarioDesdeStorage();
 
         if (!usuarioCargado) {
-            console.error('❌ No hay usuario autenticado');
             mostrarErrorSesion();
             return;
         }
 
-        console.log('✅ Usuario cargado:', usuarioActual);
-
-        // Importar clases necesarias
         try {
             const { PermisoManager } = await import('/clases/permiso.js');
             permisoManager = new PermisoManager();
 
-            // Establecer la organización del usuario en el permisoManager
             if (usuarioActual.organizacionCamelCase) {
                 permisoManager.organizacionCamelCase = usuarioActual.organizacionCamelCase;
             }
         } catch (error) {
-            console.warn('⚠️ Error importando PermisoManager:', error);
+            // Error silencioso
         }
 
-        // Obtener permisos del usuario según su área y cargo
         await obtenerPermisosUsuario();
 
-        // Filtrar tarjetas según permisos
+        // Filtrar tarjetas de módulos según permisos
         filtrarTarjetasPorPermisos();
 
         // Configurar eventos de las tarjetas
         configurarEventosTarjetas();
 
-        // Cargar datos de KPI
-        await cargarDatosKPI();
+        // Cargar KPIs según permisos
+        await cargarKPISegunPermisos();
 
-        // Ocultar estado de carga
         ocultarEstadoCarga();
 
-        // Mostrar resumen de permisos en consola
-        mostrarResumenPermisos();
-
     } catch (error) {
-        console.error('❌ Error inicializando panel:', error);
         ocultarEstadoCarga();
         mostrarError(error.message);
     }
@@ -252,9 +190,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 // ========== CARGAR USUARIO DESDE LOCALSTORAGE ==========
 function cargarUsuarioDesdeStorage() {
     try {
-        console.log('🔍 Verificando localStorage...');
-
-        // Intentar obtener de userData (para colaboradores)
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
 
         if (userData && Object.keys(userData).length > 0) {
@@ -265,29 +200,16 @@ function cargarUsuarioDesdeStorage() {
                 correo: userData.correoElectronico || userData.correo || '',
                 organizacion: userData.organizacion || 'Mi Organización',
                 organizacionCamelCase: userData.organizacionCamelCase || '',
-                areaId: userData.areaAsignadaId || '',
+                areaId: userData.areaAsignadaId || userData.areaId || '',
+                areaNombre: userData.areaAsignadaNombre || userData.areaNombre || '',
                 cargoId: userData.cargoId || '',
+                cargoNombre: userData.cargoNombre || '',
                 rol: userData.rol || 'colaborador'
             };
-
-            console.log('✅ Usuario cargado desde userData:', {
-                nombre: usuarioActual.nombreCompleto,
-                areaAsignadaId: usuarioActual.areaId,
-                cargoId: usuarioActual.cargoId,
-                rol: usuarioActual.rol
-            });
-
-            if (!usuarioActual.areaId) {
-                console.warn('⚠️ El usuario NO tiene área asignada');
-            }
-            if (!usuarioActual.cargoId) {
-                console.warn('⚠️ El usuario NO tiene cargo asignado');
-            }
 
             return true;
         }
 
-        // Fallback a adminInfo
         const adminInfo = localStorage.getItem('adminInfo');
         if (adminInfo) {
             const adminData = JSON.parse(adminInfo);
@@ -299,18 +221,17 @@ function cargarUsuarioDesdeStorage() {
                 organizacion: adminData.organizacion || 'Mi Organización',
                 organizacionCamelCase: adminData.organizacionCamelCase || '',
                 areaId: adminData.areaAsignadaId || '',
+                areaNombre: adminData.areaAsignadaNombre || '',
                 cargoId: adminData.cargoId || '',
+                cargoNombre: adminData.cargoNombre || '',
                 rol: adminData.rol || 'administrador'
             };
-            console.log('✅ Usuario cargado desde adminInfo');
             return true;
         }
 
-        console.warn('⚠️ No hay datos de usuario en localStorage');
         return false;
 
     } catch (error) {
-        console.error('❌ Error cargando usuario:', error);
         return false;
     }
 }
@@ -320,14 +241,12 @@ async function obtenerPermisosUsuario() {
     try {
         // Administrador o master tienen todos los permisos
         if (usuarioActual.rol === 'administrador' || usuarioActual.rol === 'master') {
-            console.log('👑 Usuario administrador - todos los permisos');
             permisosUsuario = {
                 areas: true,
                 categorias: true,
                 sucursales: true,
                 regiones: true,
                 incidencias: true,
-                // NUEVOS PERMISOS
                 usuarios: true,
                 estadisticas: true,
                 tareas: true,
@@ -340,7 +259,6 @@ async function obtenerPermisosUsuario() {
 
         // Verificar si el usuario tiene área y cargo
         if (!usuarioActual.areaId || !usuarioActual.cargoId) {
-            console.log('ℹ️ Usuario sin área/cargo - permisos por defecto');
             permisosUsuario = {
                 areas: false,
                 categorias: false,
@@ -372,7 +290,6 @@ async function obtenerPermisosUsuario() {
                     sucursales: permiso.puedeAcceder('sucursales'),
                     regiones: permiso.puedeAcceder('regiones'),
                     incidencias: permiso.puedeAcceder('incidencias'),
-                    // NUEVOS PERMISOS
                     usuarios: permiso.puedeAcceder('usuarios'),
                     estadisticas: permiso.puedeAcceder('estadisticas'),
                     tareas: permiso.puedeAcceder('tareas'),
@@ -380,13 +297,11 @@ async function obtenerPermisosUsuario() {
                     permisos: false,
                     admin: false
                 };
-                console.log('✅ Permisos encontrados:', permisosUsuario);
                 return;
             }
         }
 
         // Permisos por defecto
-        console.log('ℹ️ Usando permisos por defecto');
         permisosUsuario = {
             areas: false,
             categorias: false,
@@ -402,7 +317,6 @@ async function obtenerPermisosUsuario() {
         };
 
     } catch (error) {
-        console.error('Error en obtenerPermisosUsuario:', error);
         permisosUsuario = {
             areas: false,
             categorias: false,
@@ -419,163 +333,244 @@ async function obtenerPermisosUsuario() {
     }
 }
 
-// ========== FILTRAR TARJETAS POR PERMISOS ==========
-function filtrarTarjetasPorPermisos() {
-    if (!permisosUsuario) {
-        console.warn('No hay permisos - ocultando todo');
+// ========== CARGAR KPIs SEGÚN PERMISOS ==========
+async function cargarKPISegunPermisos() {
+    const container = document.getElementById('kpi-container');
+    if (!container) return;
+
+    // Limpiar contenedor
+    container.innerHTML = '';
+
+    // Determinar qué KPIs mostrar según permisos (SOLO LOS SOLICITADOS)
+    const kpisAMostrar = [];
+
+    // Siempre mostrar incidencias canalizadas si tiene permiso de incidencias
+    if (permisosUsuario.incidencias) {
+        kpisAMostrar.push('incidenciasCanalizadas');
+    }
+
+    // Áreas
+    if (permisosUsuario.areas) {
+        kpisAMostrar.push('areas');
+    }
+
+    // Categorías
+    if (permisosUsuario.categorias) {
+        kpisAMostrar.push('categorias');
+    }
+
+    // Sucursales
+    if (permisosUsuario.sucursales) {
+        kpisAMostrar.push('sucursales');
+    }
+
+    // Regiones
+    if (permisosUsuario.regiones) {
+        kpisAMostrar.push('regiones');
+    }
+
+    // Colaboradores (Usuarios activos)
+    if (permisosUsuario.usuarios) {
+        kpisAMostrar.push('colaboradores');
+    }
+
+    // Crear tarjetas KPI
+    for (const kpiKey of kpisAMostrar) {
+        const config = KPI_CONFIG[kpiKey];
+        if (!config) continue;
+
+        const card = crearTarjetaKPI(config);
+        container.appendChild(card);
+    }
+
+    // Si no hay KPIs para mostrar, mostrar mensaje
+    if (kpisAMostrar.length === 0) {
+        container.innerHTML = `
+            <div class="kpi-card" style="grid-column: 1/-1; text-align: center;">
+                <i class="fa-solid fa-info-circle" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                <p style="color: var(--color-dash-text);">No hay módulos disponibles con tus permisos actuales</p>
+            </div>
+        `;
         return;
     }
 
-    console.log('🎯 Aplicando filtros de permisos...');
+    // Cargar datos en tiempo real para cada KPI
+    for (const kpiKey of kpisAMostrar) {
+        await suscribirAKPI(kpiKey);
+    }
+}
 
-    let tarjetasVisibles = 0;
-    let modulosVisibles = [];
+// ========== CREAR TARJETA KPI ==========
+function crearTarjetaKPI(config) {
+    const card = document.createElement('div');
+    card.className = 'kpi-card';
+    if (config.color === 'danger') card.classList.add('danger');
+    card.id = `kpi-${config.modulo}`;
+    card.setAttribute('data-modulo', config.modulo);
+
+    const iconColorClass = config.color ? `kpi-icon ${config.color}` : 'kpi-icon';
+
+    card.innerHTML = `
+        <i class="fa-solid ${config.icono} ${iconColorClass}"></i>
+        <span class="kpi-number" id="kpi-number-${config.modulo}">0</span>
+        <h3 class="kpi-title">${config.titulo}</h3>
+        <p class="kpi-subtitle">${config.subtitulo}</p>
+    `;
+
+    return card;
+}
+
+// ========== SUSCRIBIRSE A KPI EN TIEMPO REAL ==========
+async function suscribirAKPI(kpiKey) {
+    const config = KPI_CONFIG[kpiKey];
+    if (!config) return;
+
+    const organizacion = usuarioActual.organizacionCamelCase;
+    if (!organizacion) return;
+
+    const numberElement = document.getElementById(`kpi-number-${config.modulo}`);
+    if (!numberElement) return;
+
+    try {
+        let unsubscribe = null;
+
+        switch (kpiKey) {
+            case 'incidenciasCanalizadas':
+                unsubscribe = await suscribirIncidenciasCanalizadas(organizacion, numberElement);
+                break;
+            case 'areas':
+                unsubscribe = await suscribirAColeccion(`areas_${organizacion}`, numberElement);
+                break;
+            case 'categorias':
+                unsubscribe = await suscribirAColeccion(`categorias_${organizacion}`, numberElement);
+                break;
+            case 'sucursales':
+                unsubscribe = await suscribirSucursalesActivas(organizacion, numberElement);
+                break;
+            case 'regiones':
+                unsubscribe = await suscribirAColeccion(`regiones_${organizacion}`, numberElement);
+                break;
+            case 'colaboradores':
+                unsubscribe = await suscribirColaboradoresActivos(organizacion, numberElement);
+                break;
+        }
+
+        if (unsubscribe) {
+            unsubscribeFunctions.push(unsubscribe);
+        }
+
+    } catch (error) {
+        numberElement.textContent = '0';
+    }
+}
+
+// ========== SUSCRIBIR A INCIDENCIAS CANALIZADAS ==========
+async function suscribirIncidenciasCanalizadas(organizacion, numberElement) {
+    const collectionName = `incidencias_${organizacion}`;
+    const incidenciasCollection = collection(db, collectionName);
+
+    // Si el usuario tiene área asignada, filtrar por canalizaciones a esa área
+    let q;
+    if (usuarioActual.areaId && usuarioActual.rol !== 'administrador' && usuarioActual.rol !== 'master') {
+        q = query(incidenciasCollection, orderBy("fechaCreacion", "desc"));
+    } else {
+        q = query(incidenciasCollection, where("estado", "==", "pendiente"), orderBy("fechaCreacion", "desc"));
+    }
+
+    return onSnapshot(q, (snapshot) => {
+        let count = 0;
+
+        if (usuarioActual.areaId && usuarioActual.rol !== 'administrador' && usuarioActual.rol !== 'master') {
+            // Filtrar incidencias canalizadas al área del usuario
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const canalizaciones = data.canalizaciones || {};
+
+                // Verificar si alguna canalización es para el área del usuario
+                const esParaMiArea = Object.values(canalizaciones).some(c => c.areaId === usuarioActual.areaId);
+                if (esParaMiArea && data.estado !== 'finalizada') {
+                    count++;
+                }
+            });
+        } else {
+            // Admin o master: todas las pendientes
+            count = snapshot.size;
+        }
+
+        numberElement.textContent = count;
+    }, (error) => {
+        numberElement.textContent = '0';
+    });
+}
+
+// ========== SUSCRIBIR A COLECCIÓN GENÉRICA ==========
+async function suscribirAColeccion(collectionName, numberElement) {
+    const coleccion = collection(db, collectionName);
+    return onSnapshot(coleccion, (snapshot) => {
+        numberElement.textContent = snapshot.size;
+    }, (error) => {
+        numberElement.textContent = '0';
+    });
+}
+
+// ========== SUSCRIBIR A SUCURSALES ACTIVAS ==========
+async function suscribirSucursalesActivas(organizacion, numberElement) {
+    const collectionName = `sucursales_${organizacion}`;
+    const sucursalesCollection = collection(db, collectionName);
+
+    return onSnapshot(sucursalesCollection, (snapshot) => {
+        numberElement.textContent = snapshot.size;
+    }, (error) => {
+        numberElement.textContent = '0';
+    });
+}
+
+// ========== SUSCRIBIR A COLABORADORES ACTIVOS ==========
+async function suscribirColaboradoresActivos(organizacion, numberElement) {
+    const colaboradoresCollection = collection(db, `colaboradores_${organizacion}`);
+    const colaboradoresQuery = query(colaboradoresCollection, where("status", "==", true));
+
+    return onSnapshot(colaboradoresQuery, (snapshot) => {
+        numberElement.textContent = snapshot.size;
+    }, (error) => {
+        numberElement.textContent = '0';
+    });
+}
+
+// ========== FILTRAR TARJETAS POR PERMISOS ==========
+function filtrarTarjetasPorPermisos() {
+    if (!permisosUsuario) {
+        return;
+    }
 
     Object.entries(MODULOS_CONFIG).forEach(([key, config]) => {
-        let tarjeta = null;
-
-        // Buscar la tarjeta por selector o icono
-        if (config.selector) {
-            tarjeta = document.querySelector(config.selector);
-        } else if (config.icono) {
-            const icono = document.querySelector(`.${config.icono}`);
-            if (icono) {
-                tarjeta = icono.closest('.dashboard-card');
-            }
-        }
-
-        // Búsqueda alternativa
-        if (!tarjeta && config.icono) {
-            const icono = document.querySelector(`.${config.icono}`);
-            if (icono) {
-                tarjeta = icono.closest('.dashboard-card');
-            }
-        }
-
-        if (!tarjeta) {
-            return;
-        }
+        const tarjeta = document.querySelector(config.selector);
+        if (!tarjeta) return;
 
         const debeMostrarse = verificarPermisoModulo(config);
 
         if (debeMostrarse) {
             tarjeta.style.display = 'flex';
-            tarjetasVisibles++;
-            modulosVisibles.push(config.titulo);
             tarjeta.dataset.url = config.url;
             tarjeta.dataset.titulo = config.titulo;
             tarjeta.dataset.modulo = config.modulo;
-            if (config.requiereAdmin) {
-                tarjeta.dataset.requiereAdmin = 'true';
-            }
         } else {
             tarjeta.style.display = 'none';
         }
     });
-
-    console.log(`📊 Total tarjetas visibles: ${tarjetasVisibles}`);
-    if (modulosVisibles.length > 0) {
-        console.log('📋 Módulos visibles:', modulosVisibles.join(', '));
-    }
-
-    verificarSeccionesVacias();
 }
 
 // ========== VERIFICAR PERMISO DE MÓDULO ==========
 function verificarPermisoModulo(config) {
-    // Admin ve todo
     if (usuarioActual.rol === 'administrador' || usuarioActual.rol === 'master') {
         return true;
     }
 
-    // Si requiere admin y no es admin
-    if (config.requiereAdmin) {
-        return false;
-    }
-
-    // Verificar permiso específico
     if (config.modulo && permisosUsuario) {
         return permisosUsuario[config.modulo] === true;
     }
 
     return false;
-}
-
-// ========== VERIFICAR SECCIONES VACÍAS ==========
-function verificarSeccionesVacias() {
-    // Módulos Principales
-    const modulosPrincipales = document.querySelector('.modulos-principales');
-    if (modulosPrincipales) {
-        const tarjetasVisibles = modulosPrincipales.querySelectorAll('.dashboard-card[style*="display: flex"]');
-        if (tarjetasVisibles.length === 0) {
-            modulosPrincipales.style.display = 'none';
-        } else {
-            modulosPrincipales.style.display = 'block';
-        }
-    }
-
-    // Sección izquierda
-    const sideLeft = document.querySelector('.side.left');
-    if (sideLeft) {
-        const secciones = sideLeft.querySelectorAll('.section-container');
-        secciones.forEach(seccion => {
-            const tarjetasVisibles = seccion.querySelectorAll('.dashboard-card[style*="display: flex"]');
-            if (tarjetasVisibles.length === 0) {
-                seccion.style.display = 'none';
-            } else {
-                seccion.style.display = 'block';
-            }
-        });
-    }
-
-    // Sección derecha
-    const sideRight = document.querySelector('.side.right');
-    if (sideRight) {
-        const secciones = sideRight.querySelectorAll('.section-container');
-        secciones.forEach(seccion => {
-            const tarjetasVisibles = seccion.querySelectorAll('.dashboard-card[style*="display: flex"]');
-            if (tarjetasVisibles.length === 0) {
-                seccion.style.display = 'none';
-            } else {
-                seccion.style.display = 'block';
-            }
-        });
-    }
-}
-
-// ========== CARGAR DATOS DE KPI ==========
-async function cargarDatosKPI() {
-    // Aquí iría la lógica para cargar datos reales
-    // Por ahora, valores de ejemplo
-    const kpiIncidencias = document.getElementById('kpi-incidencias-pendientes');
-    const kpiUsuarios = document.getElementById('kpi-usuarios-activos');
-    const kpiSucursales = document.getElementById('kpi-sucursales-activas');
-    const kpiEficiencia = document.getElementById('kpi-eficiencia');
-
-    if (kpiIncidencias) kpiIncidencias.textContent = '12';
-    if (kpiUsuarios) kpiUsuarios.textContent = '8';
-    if (kpiSucursales) kpiSucursales.textContent = '5';
-    if (kpiEficiencia) kpiEficiencia.textContent = '94%';
-}
-
-// ========== MOSTRAR RESUMEN DE PERMISOS ==========
-function mostrarResumenPermisos() {
-    console.log('='.repeat(50));
-    console.log('📋 RESUMEN DE PERMISOS');
-    console.log('='.repeat(50));
-    console.log(`👤 Usuario: ${usuarioActual.nombreCompleto}`);
-    console.log(`🏢 Organización: ${usuarioActual.organizacion}`);
-    console.log(`📌 Área: ${usuarioActual.areaId || 'No asignada'}`);
-    console.log(`👔 Cargo: ${usuarioActual.cargoId || 'No asignado'}`);
-    console.log(`👑 Rol: ${usuarioActual.rol}`);
-    console.log('-'.repeat(50));
-    console.log('🔑 Permisos:');
-    if (permisosUsuario) {
-        Object.entries(permisosUsuario).forEach(([modulo, tiene]) => {
-            if (tiene) console.log(`   ✅ ${modulo}`);
-        });
-    }
-    console.log('='.repeat(50));
 }
 
 // ========== CONFIGURAR EVENTOS DE TARJETAS ==========
@@ -597,7 +592,6 @@ function configurarEventosTarjetas() {
                 };
 
                 if (verificarPermisoModulo(config)) {
-                    console.log(`➡️ Navegando a: ${titulo}`);
                     window.location.href = url;
                 } else {
                     Swal.fire({
@@ -611,6 +605,11 @@ function configurarEventosTarjetas() {
             }
         });
     });
+}
+
+// ========== MOSTRAR RESUMEN DE PERMISOS ==========
+function mostrarResumenPermisos() {
+    // Función vacía - se eliminaron los console.log
 }
 
 // ========== ESTADOS DE CARGA Y ERROR ==========
@@ -702,3 +701,10 @@ function escapeHTML(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// Limpiar suscripciones al salir
+window.addEventListener('beforeunload', () => {
+    unsubscribeFunctions.forEach(unsubscribe => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+    });
+});
