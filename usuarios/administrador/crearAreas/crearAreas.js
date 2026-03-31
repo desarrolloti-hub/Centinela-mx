@@ -1,7 +1,7 @@
 // crearAreas.js - VERSIÓN CORREGIDA CON COLECCIÓN DINÁMICA COMO CATEGORIAS
 // SweetAlerts sin estilos personalizados
+// SIN PANTALLA DE CARGA "CREANDO..."
 
-// Limpiar consola y mostrar solo "inicializado"
 console.clear();
 console.log('inicializado');
 
@@ -29,7 +29,6 @@ async function cargarDependencias() {
         iniciarAplicacion();
 
     } catch (error) {
-        console.error('[Error]', error.message);
         mostrarErrorInterfaz(error.message);
     }
 }
@@ -59,7 +58,6 @@ function inicializarController() {
         window.crearAreaDebug.controller = app;
         app.init();
     } catch (error) {
-        console.error('[Error]', error.message);
         mostrarErrorInterfaz(error.message);
     }
 }
@@ -68,9 +66,9 @@ class CrearAreaController {
     constructor() {
         // Primero cargar datos de organización desde localStorage como en categoria.js
         const orgData = this._cargarDatosOrganizacion();
-        
+
         this.areaManager = new AreaManager();
-        
+
         // Configurar userManager con los datos de organización
         this.userManager = {
             currentUser: {
@@ -83,7 +81,6 @@ class CrearAreaController {
 
         this.areaEnProceso = null;
         this.areaCreadaReciente = null;
-        this.loadingOverlay = null;
         this.cargos = [];
     }
 
@@ -107,7 +104,7 @@ class CrearAreaController {
             // Intentar cargar desde userData (usuario normal)
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             const orgNombre = userData.organizacion || userData.empresa || 'Mi Organización';
-            
+
             return {
                 organizacionNombre: orgNombre,
                 organizacionCamelCase: userData.organizacionCamelCase || this._generarCamelCase(orgNombre),
@@ -116,7 +113,6 @@ class CrearAreaController {
             };
 
         } catch (error) {
-            console.error('Error cargando datos de organización:', error);
             return {
                 organizacionNombre: 'Mi Organización',
                 organizacionCamelCase: 'miOrganizacion',
@@ -177,9 +173,6 @@ class CrearAreaController {
 
         // Aplicar límites de caracteres a los campos
         this.aplicarLimitesCaracteres();
-        
-        // Mostrar en consola dónde se guardarán los datos (para debugging)
-        console.log(`Los datos se guardarán en: areas_${this.userManager.currentUser.organizacionCamelCase}`);
     }
 
     aplicarLimitesCaracteres() {
@@ -556,13 +549,8 @@ class CrearAreaController {
                 throw new Error('No hay datos de área para crear');
             }
 
-            this.mostrarCargando('Creando área...');
-
-            // Asegurarse de que el AreaManager tenga los datos de organización
-            // Pasamos el userManager completo que contiene organizacionCamelCase
+            // Crear área sin mostrar pantalla de carga
             const nuevaArea = await this.areaManager.crearArea(this.areaEnProceso, this.userManager);
-
-            this.ocultarCargando();
 
             this.areaCreadaReciente = nuevaArea;
 
@@ -593,8 +581,6 @@ class CrearAreaController {
             }
 
         } catch (error) {
-            this.ocultarCargando();
-            console.error('Error creando área:', error);
             this.mostrarError('Error creando área: ' + error.message);
         }
     }
@@ -631,43 +617,6 @@ class CrearAreaController {
 
         this.actualizarContadorCaracteres();
         this.areaEnProceso = null;
-    }
-
-    mostrarCargando(mensaje = 'Guardando...') {
-        if (this.loadingOverlay) this.ocultarCargando();
-
-        const overlay = document.createElement('div');
-        overlay.className = 'loading-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            flex-direction: column;
-        `;
-
-        overlay.innerHTML = `
-            <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status">
-                <span class="visually-hidden">${mensaje}</span>
-            </div>
-            <div class="text-light fs-5">${mensaje}</div>
-        `;
-
-        document.body.appendChild(overlay);
-        this.loadingOverlay = overlay;
-    }
-
-    ocultarCargando() {
-        if (this.loadingOverlay?.parentNode) {
-            this.loadingOverlay.remove();
-            this.loadingOverlay = null;
-        }
     }
 
     mostrarError(mensaje) {

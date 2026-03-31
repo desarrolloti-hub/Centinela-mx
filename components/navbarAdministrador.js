@@ -58,13 +58,10 @@ class NavbarComplete {
             this._iniciarListenerNotificaciones();
 
         } catch (error) {
-            console.error('❌ Error en inicialización:', error);
+            // Error silencioso
         }
     }
 
-    /**
-     * 🔥 Inicializar sistema de sonido
-     */
     async _initSonidoNotificacion() {
         try {
             const { sonidoNotificacion } = await import('/clases/sonidoNotificacion.js');
@@ -73,22 +70,6 @@ class NavbarComplete {
             await this.sonidoNotificacion.initialize();
 
             this.availableSounds = this.sonidoNotificacion.getAvailableSounds();
-
-            if (this.availableSounds.length > 0) {
-                console.log(`🔊 Sistema de sonido inicializado. Sonidos encontrados: ${this.availableSounds.length}`);
-                this.availableSounds.forEach(s => console.log(`   - ${s.name} (${s.id})`));
-
-                const sonidosEsperados = ['incidencia', 'actualizacion', 'canalizacion', 'comentario', 'alarma-robo'];
-                sonidosEsperados.forEach(sonido => {
-                    if (this.availableSounds.some(s => s.id === sonido)) {
-                        console.log(`   ✅ Sonido "${sonido}" disponible`);
-                    } else {
-                        console.warn(`   ⚠️ Sonido "${sonido}" NO disponible. Sube: audios/notificaciones/${sonido}.mp3`);
-                    }
-                });
-            } else {
-                console.warn('⚠️ No se encontraron archivos de sonido en Firebase Storage');
-            }
 
             if (this.currentAdmin) {
                 const deviceId = this._getDeviceId();
@@ -124,23 +105,17 @@ class NavbarComplete {
             }
 
         } catch (error) {
-            console.warn('⚠️ No se pudo inicializar sistema de sonido:', error);
             this.sonidoNotificacion = null;
         }
     }
 
-    /**
-     * 🔥 Determinar qué sonido usar según la notificación
-     */
     _determinarSonidoPorNotificacion(notificacion) {
-        // Prioridad máxima: nivel de riesgo crítico
         if (notificacion.nivelRiesgo === 'critico') {
             if (this.availableSounds.some(s => s.id === 'alarma-robo')) {
                 return 'alarma-robo';
             }
         }
 
-        // Según el tipo de notificación
         if (notificacion.tipo === 'incidencia') {
             if (this.availableSounds.some(s => s.id === 'incidencia')) {
                 return 'incidencia';
@@ -165,38 +140,28 @@ class NavbarComplete {
             }
         }
 
-        // Fallback: usar el primer sonido disponible
         if (this.availableSounds.length > 0) {
-            console.log(`🔄 Usando sonido fallback: ${this.availableSounds[0].id}`);
             return this.availableSounds[0].id;
         }
 
         return null;
     }
 
-    /**
-     * 🔥 Reproducir sonido de notificación
-     */
     async _reproducirSonido(notificacion) {
         if (!this.soundEnabled || !this.sonidoNotificacion) return;
 
         const sonidoId = this._determinarSonidoPorNotificacion(notificacion);
         if (!sonidoId) {
-            console.debug('🔇 No hay sonidos disponibles');
             return;
         }
 
         try {
             await this.sonidoNotificacion.play(sonidoId, this.soundVolume);
-            console.log(`🔊 Sonido reproducido: ${sonidoId} (tipo: ${notificacion.tipo || 'desconocido'}, riesgo: ${notificacion.nivelRiesgo || 'ninguno'})`);
         } catch (error) {
-            console.debug('Error reproduciendo sonido:', error);
+            // Error silencioso
         }
     }
 
-    /**
-     * 🔥 Detectar nuevas notificaciones y reproducir sonido
-     */
     async _detectarYReproducirSonido(nuevasNotificaciones) {
         if (!this.soundEnabled || !this.sonidoNotificacion) return;
 
@@ -245,9 +210,6 @@ class NavbarComplete {
         }
     }
 
-    /**
-     * 🔥 Obtener ID del dispositivo
-     */
     _getDeviceId() {
         let deviceId = localStorage.getItem('fcm_device_id');
         if (!deviceId) {
@@ -260,7 +222,6 @@ class NavbarComplete {
     async cargarPermisosDelPlan() {
         try {
             if (!this.currentAdmin || !this.currentAdmin.id) {
-                console.log(' No hay administrador cargado para obtener permisos');
                 this.permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
                 this.actualizarNavbarSegunPermisos();
                 return;
@@ -269,13 +230,10 @@ class NavbarComplete {
             const planId = this.currentAdmin.plan;
 
             if (!planId || planId === 'sin-plan' || planId === 'gratis') {
-                console.log('Administrador sin plan asignado o con plan gratis');
                 this.permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
                 this.actualizarNavbarSegunPermisos();
                 return;
             }
-
-            console.log(` Buscando plan con ID: "${planId}" en Firestore`);
 
             const { PlanPersonalizadoManager } = await import('/clases/plan.js');
             this.planManager = new PlanPersonalizadoManager();
@@ -283,14 +241,10 @@ class NavbarComplete {
             const plan = await this.planManager.obtenerPorId(planId);
 
             if (!plan) {
-                console.warn(` Plan "${planId}" no encontrado en Firestore`);
                 this.permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
                 this.actualizarNavbarSegunPermisos();
                 return;
             }
-
-            console.log(` Plan encontrado: ${plan.nombre}`);
-            console.log(' Mapas activos:', plan.mapasActivos);
 
             const mapasActivos = plan.mapasActivos;
 
@@ -315,12 +269,9 @@ class NavbarComplete {
                 permisosIncidencias: permisosIncidencias
             };
 
-            console.log('🎯 Permisos cargados:', this.permisosPlan);
-
             this.actualizarNavbarSegunPermisos();
 
         } catch (error) {
-            console.error('❌ Error cargando permisos del plan:', error);
             this.permisosPlan = { incidencias: false, monitoreo: false, permisosIncidencias: [] };
             this.actualizarNavbarSegunPermisos();
         }
@@ -353,8 +304,6 @@ class NavbarComplete {
                 incidenciasSection.style.display = 'none';
             }
         }
-
-        console.log('✅ Navbar actualizado según permisos del plan');
     }
 
     async _initNotificacionManager() {
@@ -371,13 +320,12 @@ class NavbarComplete {
                 };
             }
         } catch (error) {
-            console.error('Error inicializando notificacionManager:', error);
+            // Error silencioso
         }
     }
 
     async _cargarNotificaciones() {
         if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
-            console.log(' No se pueden cargar notificaciones: falta información');
             return;
         }
 
@@ -389,8 +337,6 @@ class NavbarComplete {
                 50
             );
 
-            console.log(` Admin cargó ${todasNotificaciones.length} notificaciones`);
-
             const nuevasNoLeidas = todasNotificaciones.filter(n => !n.leida);
             const nuevas = nuevasNoLeidas.filter(n => {
                 const existe = this.notificaciones.some(old => old.id === n.id);
@@ -398,7 +344,6 @@ class NavbarComplete {
             });
 
             if (nuevas.length > 0) {
-                console.log(` ${nuevas.length} nuevas notificaciones detectadas`);
                 await this._detectarYReproducirSonido(nuevas);
             }
 
@@ -409,7 +354,7 @@ class NavbarComplete {
             this._renderizarNotificaciones();
 
         } catch (error) {
-            console.error('Error cargando notificaciones para admin:', error);
+            // Error silencioso
         }
     }
 
@@ -673,7 +618,7 @@ class NavbarComplete {
             }
 
         } catch (error) {
-            console.error('Error marcando todas como leídas:', error);
+            // Error silencioso
         }
     }
 
@@ -1773,7 +1718,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
-                <!-- ========== SECCIÓN GESTIONAR (Administración) ========== -->
+                <!-- SECCIÓN GESTIONAR (Administración) -->
                 <div class="nav-section">
                     <button class="administracion-dropdown-btn" id="administracionDropdownBtn">
                         <span><i class="fa-solid fa-gear"></i> General</span>
@@ -1812,7 +1757,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
-                <!-- ========== SECCIÓN INCIDENCIAS ========== -->
+                <!-- SECCIÓN INCIDENCIAS -->
                 <div class="nav-section" id="incidenciasSection">
                     <button class="administracion-dropdown-btn" id="incidenciasDropdownBtn">
                         <span><i class="fa-solid fa-exclamation-triangle"></i> Incidencias</span>
@@ -1832,26 +1777,26 @@ class NavbarComplete {
                             <i class="fa-solid fa-share-alt"></i>
                             <span>Incidencias Canalizadas</span>
                         </a>
-                            <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
+                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
                             <i class="fa-solid fa-chart-bar"></i>
                             <span>Estadisticas Incidencias</span>
                         </a>
-                         <a href="/usuarios/administrador/mercanciaPerdida/mercanciaPerdida.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
+                        <a href="/usuarios/administrador/mercanciaPerdida/mercanciaPerdida.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
                             <i class="fa-solid fa-list"></i>
                             <span>Lista de Extravios</span>
                         </a>
-                         <a href="/usuarios/administrador/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
+                        <a href="/usuarios/administrador/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
                             <i class="fa-solid fa-plus-circle"></i>
                             <span>Crear Extravio</span>
                         </a>
-                          <a href="/usuarios/administrador/estadisticasExtravios/estadisticasExtravios.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
+                        <a href="/usuarios/administrador/estadisticasExtravios/estadisticasExtravios.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
                             <i class="fa-solid fa-chart-bar"></i>
                             <span>Estadisticas Extravios</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- ========== SECCIÓN MONITOREO ========== -->
+                <!-- SECCIÓN MONITOREO -->
                 <div class="nav-section" id="monitoreoSection">
                     <button class="administracion-dropdown-btn" id="monitoreoDropdownBtn">
                         <span><i class="fa-solid fa-map-marker-alt"></i> Monitoreo</span>
@@ -1866,7 +1811,7 @@ class NavbarComplete {
                     </div>
                 </div>
 
-                <!-- ========== SECCIÓN BITÁCORA ========== -->
+                <!-- SECCIÓN BITÁCORA -->
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <i class="fa-solid fa-book"></i>
@@ -1878,7 +1823,7 @@ class NavbarComplete {
                     </a>
                 </div>
 
-                <!-- ========== SECCIÓN CONFIGURACIÓN ========== -->
+                <!-- SECCIÓN CONFIGURACIÓN -->
                 <div class="admin-options-section">
                     <button class="admin-dropdown-btn" id="adminDropdownBtn">
                         <span><i class="fa-solid fa-user-gear"></i> Configuración</span>
@@ -2043,6 +1988,7 @@ class NavbarComplete {
             }
 
         } catch (error) {
+            // Error silencioso
         }
     }
 
@@ -2081,6 +2027,7 @@ class NavbarComplete {
             if (userData.fechaVencimiento) localStorage.setItem('userFechaVencimiento', userData.fechaVencimiento);
 
         } catch (error) {
+            // Error silencioso
         }
     }
 
@@ -2559,6 +2506,7 @@ class NavbarComplete {
             }
 
         } catch (error) {
+            // Error silencioso
         }
     }
 
@@ -2570,6 +2518,7 @@ class NavbarComplete {
             this.clearIndexedDB();
 
         } catch (error) {
+            // Error silencioso
         }
     }
 
@@ -2586,6 +2535,7 @@ class NavbarComplete {
                 }
             }
         } catch (error) {
+            // Error silencioso
         }
     }
 
@@ -2600,6 +2550,7 @@ class NavbarComplete {
                 }
             }
         } catch (error) {
+            // Error silencioso
         }
     }
 

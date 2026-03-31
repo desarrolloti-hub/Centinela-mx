@@ -60,7 +60,7 @@ class NavbarComplete {
             this._iniciarListenerNotificaciones();
 
         } catch (error) {
-            console.error('Error en navbar:', error);
+            // Error silencioso
         }
     }
 
@@ -73,12 +73,6 @@ class NavbarComplete {
             await this.sonidoNotificacion.initialize();
 
             this.availableSounds = this.sonidoNotificacion.getAvailableSounds();
-
-            if (this.availableSounds.length > 0) {
-                console.log(`🔊 Sistema de sonido inicializado. Sonidos encontrados: ${this.availableSounds.length}`);
-            } else {
-                console.warn('⚠️ No se encontraron archivos de sonido');
-            }
 
             if (this.currentUser) {
                 const deviceId = this._getDeviceId();
@@ -114,7 +108,6 @@ class NavbarComplete {
             }
 
         } catch (error) {
-            console.warn('⚠️ No se pudo inicializar sistema de sonido:', error);
             this.sonidoNotificacion = null;
         }
     }
@@ -176,9 +169,8 @@ class NavbarComplete {
 
         try {
             await this.sonidoNotificacion.play(sonidoId, this.soundVolume);
-            console.log(`🔊 Sonido reproducido: ${sonidoId}`);
         } catch (error) {
-            console.debug('Error reproduciendo sonido:', error);
+            // Error silencioso
         }
     }
 
@@ -236,7 +228,7 @@ class NavbarComplete {
             const { NotificacionAreaManager } = await import('/clases/notificacionArea.js');
             this.notificacionManager = new NotificacionAreaManager();
         } catch (error) {
-            console.error('Error inicializando notificacionManager:', error);
+            // Error silencioso
         }
     }
 
@@ -276,7 +268,6 @@ class NavbarComplete {
                 });
 
                 if (nuevas.length > 0) {
-                    console.log(`🔔 ${nuevas.length} nuevas notificaciones detectadas`);
                     await this._detectarYReproducirSonido(nuevas);
                 }
 
@@ -1920,7 +1911,6 @@ class NavbarComplete {
             return false;
 
         } catch (error) {
-            console.error('Error al cargar usuario desde localStorage:', error);
             return false;
         }
     }
@@ -1934,7 +1924,7 @@ class NavbarComplete {
                 this.permisoManager.organizacionCamelCase = this.currentUser.organizacionCamelCase;
             }
         } catch (error) {
-            console.warn('Error importando PermisoManager en navbar:', error);
+            // Error silencioso
         }
     }
 
@@ -1963,13 +1953,11 @@ class NavbarComplete {
                     configuracion: true,
                     ayuda: true
                 };
-                console.log('👑 Admin - todos los módulos visibles');
                 return;
             }
 
             // Para colaboradores, verificar si tienen área y cargo
             if (!this.currentUser?.areaId || !this.currentUser?.cargoId) {
-                console.log('ℹ️ Usuario sin área/cargo - sin permisos');
                 this.permisos = {
                     areas: false,
                     categorias: false,
@@ -2023,17 +2011,14 @@ class NavbarComplete {
                             configuracion: true,
                             ayuda: true
                         };
-
-                        console.log('✅ Permisos cargados desde Firestore:', this.permisos);
                         return;
                     }
                 } catch (error) {
-                    console.warn('Error consultando permisos en Firebase:', error);
+                    // Error silencioso
                 }
             }
 
             // Permisos por defecto
-            console.log('ℹ️ Usando permisos por defecto - sin módulos');
             this.permisos = {
                 areas: false,
                 categorias: false,
@@ -2055,7 +2040,6 @@ class NavbarComplete {
             };
 
         } catch (error) {
-            console.error('Error en obtenerPermisosReales:', error);
             this.permisos = {
                 areas: false,
                 categorias: false,
@@ -2120,10 +2104,8 @@ class NavbarComplete {
             if (debeMostrarse) {
                 item.elemento.style.display = 'flex';
                 itemsVisibles++;
-                console.log(`✅ Mostrando: ${item.texto}`);
             } else {
                 item.elemento.style.display = 'none';
-                console.log(`❌ Ocultando: ${item.texto}`);
             }
         });
 
@@ -2141,10 +2123,8 @@ class NavbarComplete {
         if (incidenciasSection) {
             if (!tienePermisoIncidencias) {
                 incidenciasSection.style.display = 'none';
-                console.log('❌ Sección de Incidencias oculta (sin permisos)');
             } else {
                 incidenciasSection.style.display = 'block';
-                console.log('✅ Sección de Incidencias visible (con permisos)');
             }
         }
     }
@@ -2562,7 +2542,6 @@ class NavbarComplete {
             this.redirectToLogin();
 
         } catch (error) {
-            console.error('Error al cerrar sesión:', error);
             this.clearAllStorage();
             this.redirectToLogin();
         }
@@ -2575,7 +2554,7 @@ class NavbarComplete {
             this.clearSessionCookies();
             this.clearIndexedDB();
         } catch (error) {
-            console.warn('Error al limpiar almacenamiento:', error);
+            // Error silencioso
         }
     }
 
@@ -2592,7 +2571,7 @@ class NavbarComplete {
                 }
             }
         } catch (error) {
-            console.warn('Error al limpiar cookies:', error);
+            // Error silencioso
         }
     }
 
@@ -2606,7 +2585,7 @@ class NavbarComplete {
                 } catch (e) { }
             }
         } catch (error) {
-            console.warn('Error al limpiar indexedDB:', error);
+            // Error silencioso
         }
     }
 
