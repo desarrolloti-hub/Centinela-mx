@@ -1262,38 +1262,52 @@ async function guardarSeguimiento(datos) {
 async function _generarYSubirPDF() {
     try {
         console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
-
+        
+        // Recargar la incidencia más reciente
+        const incidenciaActualizada = await incidenciaManager.getIncidenciaById(
+            incidenciaActual.id,
+            usuarioActual.organizacionCamelCase
+        );
+        
+        if (!incidenciaActualizada) {
+            throw new Error('No se pudo recargar la incidencia');
+        }
+        
+        incidenciaActual = incidenciaActualizada;
+        
         const sucursalesArray = Array.from(sucursalesMap.values());
         const categoriasArray = Array.from(categoriasMap.values());
-
-        const { generadorIPH } = await import('/components/iph-generator.js');
-
-        generadorIPH.configurar({
+        
+        // IMPORTANTE: Usar el generador de SEGUIMIENTO
+        const { generadorIPHSeguimiento } = await import('/components/iph-generator-seguimiento.js');
+        
+        generadorIPHSeguimiento.configurar({
             organizacionActual: {
                 nombre: usuarioActual.organizacion,
                 camelCase: usuarioActual.organizacionCamelCase
             },
             sucursalesCache: sucursalesArray,
             categoriasCache: categoriasArray,
-            authToken: localStorage.getItem('authToken')
+            usuariosCache: [usuarioActual]
         });
-
-        const pdfBlob = await generadorIPH.generarIPH(incidenciaActual, {
+        
+        // Generar PDF con el método específico
+        const pdfBlob = await generadorIPHSeguimiento.generarIPHSeguimiento(incidenciaActual, {
             mostrarAlerta: false,
             returnBlob: true
         });
-
+        
         if (!pdfBlob || pdfBlob.size === 0) {
             throw new Error('El PDF generado está vacío');
         }
-
+        
+        console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
+        
         const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
         const rutaPDF = incidenciaActual.getRutaPDF();
-
-        // Usar el método de la clase para subir archivo
+        
         const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-
-        // Actualizar la incidencia con la URL del PDF usando el manager
+        
         await incidenciaManager.actualizarIncidencia(
             incidenciaActual.id,
             { pdfUrl: resultado.url },
@@ -1301,12 +1315,12 @@ async function _generarYSubirPDF() {
             usuarioActual.organizacionCamelCase,
             usuarioActual
         );
-
+        
         incidenciaActual.pdfUrl = resultado.url;
-
+        
         console.log('✅ PDF actualizado exitosamente:', resultado.url);
         return true;
-
+        
     } catch (error) {
         console.error('❌ Error actualizando PDF:', error);
         return false;

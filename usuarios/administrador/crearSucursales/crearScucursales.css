@@ -19,7 +19,8 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 20px;
-    padding-top: 80px; /* Espacio para el navbar fijo */
+    padding-top: 80px;
+    /* Espacio para el navbar fijo */
     line-height: 1.5;
 }
 
@@ -72,13 +73,14 @@ body {
 @keyframes titleGlow {
     0% {
         text-shadow: 0 0 5px var(--color-accent-primary),
-                     0 0 15px var(--color-accent-primary);
+            0 0 15px var(--color-accent-primary);
         opacity: 0.9;
     }
+
     100% {
         text-shadow: 0 0 15px var(--color-accent-primary),
-                     0 0 30px var(--color-accent-primary),
-                     0 0 45px var(--color-accent-primary);
+            0 0 30px var(--color-accent-primary),
+            0 0 45px var(--color-accent-primary);
         opacity: 1;
     }
 }
@@ -542,6 +544,7 @@ body {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -555,6 +558,7 @@ body {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -580,9 +584,10 @@ body {
    ============================================= */
 @media (max-width: 1023px) {
     body {
-        padding-top: 70px; /* Reducido ligeramente para tablets */
+        padding-top: 70px;
+        /* Reducido ligeramente para tablets */
     }
-    
+
     .custom-container {
         padding: 20px !important;
     }
@@ -633,7 +638,8 @@ body {
 @media (max-width: 768px) {
     body {
         padding: 10px !important;
-        padding-top: 70px !important; /* Mantener espacio para navbar */
+        padding-top: 70px !important;
+        /* Mantener espacio para navbar */
     }
 
     .custom-container {
@@ -679,7 +685,8 @@ body {
 @media (max-width: 480px) {
     body {
         padding: 8px !important;
-        padding-top: 65px !important; /* Espacio suficiente para navbar en móviles */
+        padding-top: 65px !important;
+        /* Espacio suficiente para navbar en móviles */
     }
 
     .custom-container {
@@ -716,19 +723,20 @@ body {
     body {
         padding-top: 60px !important;
     }
-    
+
     .main-title {
         font-size: 18px !important;
     }
-    
+
     .main-title i {
         font-size: 20px !important;
     }
-    
+
     .header-description-text {
         font-size: 0.9rem !important;
     }
 }
+
 /* =============================================
    SCROLLBAR PERSONALIZADO
    ============================================= */
@@ -874,9 +882,11 @@ body {
     0% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.5;
     }
+
     100% {
         opacity: 1;
     }
@@ -953,10 +963,12 @@ body {
         filter: drop-shadow(0 0 5px var(--color-accent-primary));
         transform: scale(1);
     }
+
     50% {
         filter: drop-shadow(0 0 15px var(--color-accent-primary));
         transform: scale(1.1);
     }
+
     100% {
         filter: drop-shadow(0 0 5px var(--color-accent-primary));
         transform: scale(1);
@@ -968,27 +980,27 @@ body {
     .map-wrapper {
         height: 350px;
     }
-    
+
     .map-overlay {
         top: 10px;
         right: 10px;
     }
-    
+
     .map-button {
         padding: 8px 12px !important;
         font-size: 12px !important;
     }
-    
+
     .coordinates-display {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
     }
-    
+
     .coord-item {
         width: 100%;
     }
-    
+
     .map-coordinates-panel {
         flex-direction: column;
         align-items: flex-start;
@@ -999,16 +1011,94 @@ body {
     .map-wrapper {
         height: 300px;
     }
-    
+
     .map-overlay {
         position: static;
         flex-direction: row;
         justify-content: center;
         margin-bottom: 10px;
     }
-    
+
     .map-button {
         flex: 1;
         justify-content: center;
+    }
+}
+
+/* =============================================
+   MEJORAS VISUALES PARA LÍMITES DEL MAPA
+   ============================================= */
+
+/* Estilo para el rectángulo de límites de México */
+.leaflet-overlay-pane .leaflet-zoom-animated {
+    transition: all 0.3s ease;
+}
+
+/* Mejorar visualización del marcador dentro de límites */
+.custom-marker i {
+    transition: all 0.3s ease;
+}
+
+/* Indicador visual cuando el marcador está dentro de los límites */
+.custom-marker i {
+    animation: markerPulse 2s infinite;
+}
+
+/* Estilo para el popup de advertencia de límites */
+.limits-warning-popup .leaflet-popup-content-wrapper {
+    background: rgba(255, 68, 68, 0.9);
+    color: white;
+    border: 1px solid #ff4444;
+}
+
+/* Mejorar visibilidad del área permitida */
+.leaflet-interactive[stroke="#ff4444"] {
+    animation: borderPulse 2s infinite;
+}
+
+@keyframes borderPulse {
+    0% {
+        stroke-opacity: 0.3;
+    }
+
+    50% {
+        stroke-opacity: 0.6;
+    }
+
+    100% {
+        stroke-opacity: 0.3;
+    }
+}
+
+/* Tooltip de información de límites */
+.map-limits-info {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px 10px;
+    border-radius: var(--border-radius-small);
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    backdrop-filter: blur(5px);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.map-limits-info i {
+    color: var(--color-accent-primary);
+    font-size: 10px;
+}
+
+/* Responsive para el mapa */
+@media (max-width: 768px) {
+    .map-limits-info {
+        font-size: 9px;
+        bottom: 5px;
+        left: 5px;
+        padding: 3px 6px;
     }
 }

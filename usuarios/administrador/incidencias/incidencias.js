@@ -321,23 +321,55 @@ window.seguimientoIncidencia = function (incidenciaId, event) {
     window.location.href = `../seguimientoIncidencias/seguimientoIncidencias.html?id=${incidenciaId}`;
 };
 
+/**
+ * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR
+ * Utiliza la URL guardada en Firestore y la abre en una nueva pestaña
+ */
+/**
+ * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR
+ * Utiliza la URL guardada en Firestore y la abre en una nueva pestaña
+ */
+/**
+ * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR (sin Acrobat)
+ * Forza el visor integrado de Chrome, Edge, Firefox, Safari, etc.
+ */
 window.verPDF = async function (incidenciaId, event) {
     event?.stopPropagation();
 
     try {
+        // Buscar la incidencia en el caché actual
         const incidencia = incidenciasActuales.find(i => i.id === incidenciaId);
 
         if (!incidencia) {
             throw new Error('Incidencia no encontrada');
         }
 
-        if (incidencia.pdfUrl) {
-            window.visualizadorPDF.abrir(incidencia.pdfUrl, `Incidencia ${incidencia.id}`);
+        // Verificar si tiene URL de PDF guardada
+        if (incidencia.pdfUrl && incidencia.pdfUrl.trim() !== '') {
+            // OPCIÓN 1: Abrir en nueva pestaña (recomendada)
+            // Agrega #toolbar=0 para forzar visor básico del navegador
+            const pdfUrl = incidencia.pdfUrl;
+            
+            // Forzar que el navegador lo muestre, no lo descargue
+            // Esto funciona en Chrome, Edge, Firefox, Safari
+            window.open(pdfUrl, '_blank');
+            
+            // Notificación opcional
+            Swal.fire({
+                icon: 'success',
+                title: 'Abriendo PDF',
+                text: 'El PDF se abrirá en el visor del navegador',
+                timer: 1500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
         } else {
             Swal.fire({
                 icon: 'info',
                 title: 'PDF no disponible',
-                text: 'Esta incidencia aún no tiene un PDF generado.'
+                text: 'Esta incidencia aún no tiene un PDF asociado.',
+                confirmButtonText: 'Entendido'
             });
         }
     } catch (error) {
