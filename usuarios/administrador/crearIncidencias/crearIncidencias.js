@@ -1,5 +1,5 @@
-// crearIncidencias.js - VERSIÓN OPTIMIZADA (SIN CORS)
-// FLUJO: 1. Generar PDF con imágenes en memoria → 2. Crear incidencia → 3. Subir imágenes → 4. Subir PDF
+// crearIncidencias.js - VERSIÓN CORREGIDA
+// FLUJO: 1. Crear incidencia → 2. Subir imágenes → 3. Subir PDF
 
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
@@ -1079,229 +1079,304 @@ class CrearIncidenciaController {
     }
 
     // =============================================
-    // GUARDAR INCIDENCIA - OPTIMIZADO (SIN CORS)
-    // FLUJO: 1. Generar PDF con blobs → 2. Crear incidencia → 3. Subir imágenes → 4. Subir PDF
+    // GUARDAR INCIDENCIA - OPTIMIZADO
+    // FLUJO: 1. Crear incidencia → 2. Subir imágenes → 3. Subir PDF
     // =============================================
-    async _guardarIncidencia(datos) {
-        const btnCrear = document.getElementById('btnCrearIncidencia');
-        const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
+// =============================================
+// GUARDAR INCIDENCIA - OPTIMIZADO
+// FLUJO: 1. Crear incidencia → 2. Subir imágenes → 3. Generar PDF con imágenes en base64 → 4. Subir PDF
+// =============================================
+// =============================================
+// GUARDAR INCIDENCIA - OPTIMIZADO
+// FLUJO: 1. Crear incidencia → 2. Subir imágenes → 3. Generar PDF con imágenes en base64 (desde blobs locales) → 4. Subir PDF
+// =============================================
+async _guardarIncidencia(datos) {
+    const btnCrear = document.getElementById('btnCrearIncidencia');
+    const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
 
-        try {
-            if (btnCrear) {
-                btnCrear.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
-                btnCrear.disabled = true;
+    try {
+        if (btnCrear) {
+            btnCrear.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
+            btnCrear.disabled = true;
+        }
+
+        Swal.fire({
+            title: 'Creando incidencia...',
+            text: 'Guardando información en la base de datos...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
             }
+        });
 
-            Swal.fire({
-                title: 'Preparando incidencia...',
-                text: 'Generando informe y preparando imágenes...',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
+        // =============================================
+        // PASO 1: CREAR INCIDENCIA EN FIRESTORE (sin imágenes)
+        // =============================================
+        const fechaObj = new Date(datos.fechaHora);
+        
+        const incidenciaData = {
+            sucursalId: datos.sucursalId,
+            categoriaId: datos.categoriaId,
+            subcategoriaId: datos.subcategoriaId || '',
+            nivelRiesgo: datos.nivelRiesgo,
+            estado: datos.estado,
+            fechaInicio: fechaObj,
+            detalles: datos.detalles,
+            reportadoPorId: this.usuarioActual.id
+        };
+        
+        // Crear incidencia primero (sin imágenes)
+        const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
+            incidenciaData,
+            this.usuarioActual,
+            [], // No pasar imágenes todavía
+            []  // No pasar datos de imágenes
+        );
+        
+        console.log('✅ Incidencia creada:', nuevaIncidencia.id);
+        
+        // =============================================
+        // PASO 2: SUBIR IMÁGENES EN PARALELO
+        // =============================================
+        let imagenesSubidas = [];
+        
+        // Guardar los blobs originales para el PDF (antes de perderlos)
+        const blobsOriginales = datos.imagenes.map(img => ({
+            file: img.file,
+            comentario: img.comentario,
+            elementos: img.elementos,
+            generatedName: img.generatedName
+        }));
+        
+        if (datos.imagenes.length > 0) {
+            Swal.update({
+                title: 'Subiendo imágenes...',
+                text: `Subiendo ${datos.imagenes.length} imagen(es)...`
+            });
+            
+            const archivos = datos.imagenes.map(img => img.file);
+            const imagenesConDatos = datos.imagenes.map(img => ({
+                comentario: img.comentario,
+                elementos: img.elementos,
+                generatedName: img.generatedName
+            }));
+            
+            const uploadPromises = archivos.map(async (file, index) => {
+                const datosImagen = imagenesConDatos[index] || {};
+                const comentario = datosImagen.comentario || '';
+                const elementos = datosImagen.elementos || [];
+                
+                let nombreArchivo = datosImagen.generatedName;
+                if (!nombreArchivo) {
+                    const timestamp = Date.now();
+                    const random = Math.random().toString(36).substring(2, 8);
+                    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                    nombreArchivo = `${timestamp}_${random}_${cleanFileName}`;
                 }
+                
+                const rutaStorage = `incidencias_${this.usuarioActual.organizacionCamelCase}/${nuevaIncidencia.id}/imagenes/${nombreArchivo}`;
+                
+                const resultado = await this.incidenciaManager.subirArchivo(file, rutaStorage);
+                
+                return {
+                    url: resultado.url,
+                    comentario: comentario,
+                    elementos: elementos,
+                    nombre: file.name,
+                    generatedName: nombreArchivo,
+                    tipo: file.type,
+                    tamaño: file.size
+                };
             });
-
-            // =============================================
-            // PASO 1: GENERAR PDF CON IMÁGENES EN MEMORIA (BLOBS)
-            // =============================================
-            const fechaObj = new Date(datos.fechaHora);
             
-            const incidenciaTemporal = this._crearRegistroTemporal(datos);
+            imagenesSubidas = await Promise.all(uploadPromises);
             
-            Swal.update({
-                title: 'Generando PDF...',
-                text: 'Creando el documento de la incidencia...'
+            // Actualizar incidencia con las URLs de imágenes
+            const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
+            const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+            const { db } = await import('/config/firebase-config.js');
+            
+            const incidenciaRef = doc(db, collectionName, nuevaIncidencia.id);
+            await updateDoc(incidenciaRef, {
+                imagenes: imagenesSubidas,
+                fechaActualizacion: new Date()
             });
             
-            let pdfBlob = null;
+            nuevaIncidencia.imagenes = imagenesSubidas;
+            console.log(`✅ ${imagenesSubidas.length} imágenes subidas`);
+        }
+        
+        // =============================================
+        // PASO 3: CONVERTIR IMÁGENES LOCALES A BASE64 (desde los blobs originales)
+        // =============================================
+        Swal.update({
+            title: 'Preparando imágenes para el PDF...',
+            text: 'Procesando imágenes...'
+        });
+        
+        // Función para convertir File/Blob a base64
+        const blobToBase64 = (blob) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        };
+        
+        // Convertir las imágenes locales (blobs) a base64
+        const imagenesConBase64 = [];
+        for (const img of blobsOriginales) {
             try {
-                pdfBlob = await this.pdfGenerator.generarIPH(incidenciaTemporal, {
-                    mostrarAlerta: false,
-                    returnBlob: true,
-                    diagnosticar: false
-                });
-                console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
-            } catch (pdfError) {
-                console.error('Error generando PDF:', pdfError);
-                throw new Error('No se pudo generar el PDF');
-            }
-            
-            if (!pdfBlob || pdfBlob.size === 0) {
-                throw new Error('El PDF generado está vacío');
-            }
-
-            // =============================================
-            // PASO 2: CREAR INCIDENCIA EN FIRESTORE (SIN IMÁGENES)
-            // =============================================
-            Swal.update({
-                title: 'Creando incidencia...',
-                text: 'Guardando la información en la base de datos...'
-            });
-            
-            const incidenciaData = {
-                sucursalId: datos.sucursalId,
-                categoriaId: datos.categoriaId,
-                subcategoriaId: datos.subcategoriaId || '',
-                nivelRiesgo: datos.nivelRiesgo,
-                estado: datos.estado,
-                fechaInicio: fechaObj,
-                detalles: datos.detalles,
-                reportadoPorId: this.usuarioActual.id
-            };
-            
-            // Usar el método optimizado que CREA LA INCIDENCIA PRIMERO (sin imágenes)
-            // y luego sube las imágenes en paralelo
-            const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
-                incidenciaData,
-                this.usuarioActual,
-                [], // No pasar imágenes todavía
-                []  // No pasar datos de imágenes
-            );
-            
-            console.log('✅ Incidencia creada:', nuevaIncidencia.id);
-            
-            // =============================================
-            // PASO 3: SUBIR IMÁGENES EN PARALELO
-            // =============================================
-            if (datos.imagenes.length > 0) {
-                Swal.update({
-                    title: 'Subiendo imágenes...',
-                    text: `Subiendo ${datos.imagenes.length} imagen(es)...`
-                });
-                
-                const archivos = datos.imagenes.map(img => img.file);
-                const imagenesConDatos = datos.imagenes.map(img => ({
+                const base64Data = await blobToBase64(img.file);
+                imagenesConBase64.push({
+                    url: base64Data,  // Usar base64 desde el blob local
                     comentario: img.comentario,
-                    elementos: img.elementos,
-                    generatedName: img.generatedName
-                }));
-                
-                // Subir imágenes en paralelo
-                const imagenesUrls = [];
-                const uploadPromises = archivos.map(async (file, index) => {
-                    const datosImagen = imagenesConDatos[index] || {};
-                    const comentario = datosImagen.comentario || '';
-                    const elementos = datosImagen.elementos || [];
-                    
-                    let nombreArchivo = datosImagen.generatedName;
-                    if (!nombreArchivo) {
-                        const timestamp = Date.now();
-                        const random = Math.random().toString(36).substring(2, 8);
-                        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-                        nombreArchivo = `${timestamp}_${random}_${cleanFileName}`;
-                    }
-                    
-                    const rutaStorage = `incidencias_${this.usuarioActual.organizacionCamelCase}/${nuevaIncidencia.id}/imagenes/${nombreArchivo}`;
-                    
-                    const resultado = await this.incidenciaManager.subirArchivo(file, rutaStorage, null);
-                    
-                    return {
-                        url: resultado.url,
-                        path: resultado.path,
-                        comentario: comentario,
-                        elementos: elementos,
-                        nombre: file.name,
-                        generatedName: nombreArchivo,
-                        tipo: file.type,
-                        tamaño: file.size
-                    };
+                    elementos: img.elementos
                 });
-                
-                const imagenesSubidas = await Promise.all(uploadPromises);
-                
-                // Actualizar incidencia con las URLs de imágenes
-                const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
-                const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-                const { db } = await import('/config/firebase-config.js');
-                
-                const incidenciaRef = doc(db, collectionName, nuevaIncidencia.id);
-                await updateDoc(incidenciaRef, {
-                    imagenes: imagenesSubidas,
-                    fechaActualizacion: new Date()
+            } catch (error) {
+                console.error('Error convirtiendo imagen a base64:', error);
+                // Si falla, agregar un placeholder
+                imagenesConBase64.push({
+                    url: null,
+                    comentario: img.comentario,
+                    elementos: img.elementos
                 });
-                
-                nuevaIncidencia.imagenes = imagenesSubidas;
-                console.log(`✅ ${imagenesSubidas.length} imágenes subidas`);
-            }
-            
-            // =============================================
-            // PASO 4: SUBIR EL PDF
-            // =============================================
-            Swal.update({
-                title: 'Subiendo PDF...',
-                text: 'Guardando el documento PDF...'
-            });
-            
-            const pdfFile = new File([pdfBlob], `incidencia_${nuevaIncidencia.id}.pdf`, { type: 'application/pdf' });
-            const rutaPDF = nuevaIncidencia.getRutaPDF();
-            
-            const resultadoPDF = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-            
-            await this.incidenciaManager.actualizarPDFIncidencia(
-                nuevaIncidencia.id,
-                resultadoPDF.url,
-                this.usuarioActual.organizacionCamelCase,
-                this.usuarioActual.id,
-                this.usuarioActual.nombreCompleto
-            );
-            
-            console.log('✅ PDF subido exitosamente:', resultadoPDF.url);
-            
-            Swal.close();
-            
-            // =============================================
-            // PASO 5: CANALIZACIÓN (opcional)
-            // =============================================
-            const quiereCanalizar = await Swal.fire({
-                icon: 'question',
-                title: '¿Canalizar esta incidencia?',
-                text: '¿Deseas canalizar esta incidencia a alguna área?',
-                showCancelButton: true,
-                confirmButtonText: 'SÍ, CANALIZAR',
-                cancelButtonText: 'NO, FINALIZAR',
-                confirmButtonColor: '#28a745'
-            });
-            
-            let areasCanalizadas = [];
-            
-            if (quiereCanalizar.isConfirmed) {
-                areasCanalizadas = await this._canalizarAreas(nuevaIncidencia.id, datos.detalles.substring(0, 50));
-            }
-            
-            const totalCanalizaciones = areasCanalizadas.length;
-            const mensajeCanalizacion = totalCanalizaciones > 0
-                ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
-                : 'No se canalizó a ninguna área.';
-            
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Incidencia creada!',
-                html: `
-                    <div style="text-align: left;">
-                        <p>✅ Incidencia guardada con ${nuevaIncidencia.imagenes.length} imagen(es).</p>
-                        <p>✅ El PDF se ha generado correctamente.</p>
-                        <p>${mensajeCanalizacion}</p>
-                    </div>
-                `,
-                confirmButtonText: 'Ver incidencias',
-                confirmButtonColor: '#28a745'
-            });
-            
-            this._volverALista();
-            
-        } catch (error) {
-            console.error('Error guardando incidencia:', error);
-            Swal.close();
-            this._mostrarError(error.message || 'No se pudo crear la incidencia');
-        } finally {
-            if (btnCrear) {
-                btnCrear.innerHTML = originalHTML;
-                btnCrear.disabled = false;
             }
         }
+        
+        // =============================================
+        // PASO 4: GENERAR PDF CON IMÁGENES EN BASE64 (desde blobs locales)
+        // =============================================
+        Swal.update({
+            title: 'Generando PDF...',
+            text: 'Creando el documento de la incidencia...'
+        });
+        
+        // Crear objeto temporal con las imágenes en base64 (desde blobs locales)
+        const incidenciaParaPDF = {
+            id: nuevaIncidencia.id,
+            sucursalId: datos.sucursalId,
+            sucursalNombre: datos.sucursalNombre,
+            categoriaId: datos.categoriaId,
+            categoriaNombre: datos.categoriaNombre,
+            subcategoriaId: datos.subcategoriaId || '',
+            subcategoriaNombre: datos.subcategoriaNombre || '',
+            nivelRiesgo: datos.nivelRiesgo,
+            estado: datos.estado,
+            fechaInicio: fechaObj,
+            detalles: datos.detalles,
+            reportadoPorNombre: this.usuarioActual.nombreCompleto,
+            imagenes: imagenesConBase64.map(img => ({
+                url: img.url,  // base64 del blob local
+                comentario: img.comentario,
+                elementos: img.elementos
+            })),
+            fechaCreacion: new Date(),
+            getEstadoTexto: () => datos.estado === 'pendiente' ? 'Pendiente' : 'Finalizada',
+            getNivelRiesgoTexto: () => this._getRiesgoTexto(datos.nivelRiesgo)
+        };
+        
+        let pdfBlob = null;
+        try {
+            pdfBlob = await this.pdfGenerator.generarIPH(incidenciaParaPDF, {
+                mostrarAlerta: false,
+                returnBlob: true,
+                diagnosticar: false
+            });
+            console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
+        } catch (pdfError) {
+            console.error('Error generando PDF:', pdfError);
+            throw new Error('No se pudo generar el PDF');
+        }
+        
+        if (!pdfBlob || pdfBlob.size === 0) {
+            throw new Error('El PDF generado está vacío');
+        }
+        
+        // =============================================
+        // PASO 5: SUBIR PDF
+        // =============================================
+        Swal.update({
+            title: 'Subiendo PDF...',
+            text: 'Guardando el documento PDF...'
+        });
+        
+        const pdfFile = new File([pdfBlob], `incidencia_${nuevaIncidencia.id}.pdf`, { type: 'application/pdf' });
+        const rutaPDF = nuevaIncidencia.getRutaPDF();
+        
+        const resultadoPDF = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
+        
+        // Actualizar incidencia con la URL del PDF
+        const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+        const { db } = await import('/config/firebase-config.js');
+        
+        const incidenciaRef = doc(db, collectionName, nuevaIncidencia.id);
+        await updateDoc(incidenciaRef, {
+            pdfUrl: resultadoPDF.url,
+            fechaActualizacion: new Date(),
+            actualizadoPor: this.usuarioActual.id,
+            actualizadoPorNombre: this.usuarioActual.nombreCompleto
+        });
+        
+        console.log('✅ PDF subido exitosamente:', resultadoPDF.url);
+        
+        Swal.close();
+        
+        // =============================================
+        // PASO 6: CANALIZACIÓN (opcional)
+        // =============================================
+        const quiereCanalizar = await Swal.fire({
+            icon: 'question',
+            title: '¿Canalizar esta incidencia?',
+            text: '¿Deseas canalizar esta incidencia a alguna área?',
+            showCancelButton: true,
+            confirmButtonText: 'SÍ, CANALIZAR',
+            cancelButtonText: 'NO, FINALIZAR',
+            confirmButtonColor: '#28a745'
+        });
+        
+        let areasCanalizadas = [];
+        
+        if (quiereCanalizar.isConfirmed) {
+            areasCanalizadas = await this._canalizarAreas(nuevaIncidencia.id, datos.detalles.substring(0, 50));
+        }
+        
+        const totalCanalizaciones = areasCanalizadas.length;
+        const mensajeCanalizacion = totalCanalizaciones > 0
+            ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
+            : 'No se canalizó a ninguna área.';
+        
+        await Swal.fire({
+            icon: 'success',
+            title: '¡Incidencia creada!',
+            html: `
+                <div style="text-align: left;">
+                    <p>✅ Incidencia guardada con ${imagenesSubidas.length} imagen(es).</p>
+                    <p>✅ El PDF se ha generado correctamente.</p>
+                    <p>${mensajeCanalizacion}</p>
+                </div>
+            `,
+            confirmButtonText: 'Ver incidencias',
+            confirmButtonColor: '#28a745'
+        });
+        
+        this._volverALista();
+        
+    } catch (error) {
+        console.error('Error guardando incidencia:', error);
+        Swal.close();
+        this._mostrarError(error.message || 'No se pudo crear la incidencia');
+    } finally {
+        if (btnCrear) {
+            btnCrear.innerHTML = originalHTML;
+            btnCrear.disabled = false;
+        }
     }
+}
 
     async _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
         let continuar = true;
