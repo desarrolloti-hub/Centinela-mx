@@ -47,6 +47,9 @@ class Sucursal {
         this.latitud = data.latitud || '';
         this.longitud = data.longitud || '';
         
+        // [MODIFICACIÓN NUEVA]: Números de emergencia
+        this.numerosEmergencia = data.numerosEmergencia || {};
+        
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
         this.creadoPorEmail = data.creadoPorEmail || '';
@@ -152,6 +155,48 @@ class Sucursal {
         return this.contacto;
     }
 
+    // [MODIFICACIÓN NUEVA]: Métodos para números de emergencia
+    getNumerosEmergencia() {
+        return this.numerosEmergencia || {};
+    }
+
+    tieneNumerosEmergencia() {
+        return this.numerosEmergencia && Object.keys(this.numerosEmergencia).length > 0;
+    }
+
+    getNumeroEmergenciaPorServicio(servicio) {
+        if (!this.numerosEmergencia || !this.numerosEmergencia[servicio]) {
+            return null;
+        }
+        return this.numerosEmergencia[servicio];
+    }
+
+    agregarNumeroEmergencia(servicio, numero) {
+        if (!servicio || !numero) return false;
+        
+        if (!this.numerosEmergencia) {
+            this.numerosEmergencia = {};
+        }
+        
+        this.numerosEmergencia[servicio] = numero;
+        return true;
+    }
+
+    eliminarNumeroEmergencia(servicio) {
+        if (!this.numerosEmergencia || !this.numerosEmergencia[servicio]) {
+            return false;
+        }
+        
+        delete this.numerosEmergencia[servicio];
+        
+        // Si el objeto quedó vacío, lo establecemos como objeto vacío
+        if (Object.keys(this.numerosEmergencia).length === 0) {
+            this.numerosEmergencia = {};
+        }
+        
+        return true;
+    }
+
     getFechaCreacionFormateada() {
         return this._formatearFecha(this.fechaCreacion);
     }
@@ -180,6 +225,7 @@ class Sucursal {
             regionId: this.regionId,
             latitud: this.latitud,
             longitud: this.longitud,
+            numerosEmergencia: this.numerosEmergencia, // [MODIFICACIÓN NUEVA]
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorEmail: this.creadoPorEmail,
@@ -210,6 +256,8 @@ class Sucursal {
             longitud: this.longitud,
             coordenadas: this.getCoordenadas(),
             tieneCoordenadas: this.tieneCoordenadas(),
+            numerosEmergencia: this.getNumerosEmergencia(), // [MODIFICACIÓN NUEVA]
+            tieneNumerosEmergencia: this.tieneNumerosEmergencia(), // [MODIFICACIÓN NUEVA]
             fechaCreacion: this.getFechaCreacionFormateada(),
             fechaActualizacion: this.getFechaActualizacionFormateada(),
             creadoPor: this.creadoPorNombre || this.creadoPorEmail,
@@ -284,6 +332,12 @@ class SucursalManager {
             }
         }
 
+        // [MODIFICACIÓN NUEVA]: Los números de emergencia NO son obligatorios, no se validan
+        // Solo se valida si existen, que sea un objeto
+        if (sucursalData.numerosEmergencia && typeof sucursalData.numerosEmergencia !== 'object') {
+            errores.push('Los números de emergencia deben ser un objeto válido');
+        }
+
         return errores;
     }
 
@@ -334,6 +388,7 @@ class SucursalManager {
                 regionId: sucursalData.regionId,
                 latitud: sucursalData.latitud || '',
                 longitud: sucursalData.longitud || '',
+                numerosEmergencia: sucursalData.numerosEmergencia || {}, // [MODIFICACIÓN NUEVA]
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorEmail: usuarioActual.correo || usuarioActual.email || '',
@@ -377,7 +432,8 @@ class SucursalManager {
                         ciudad: sucursalData.ciudad,
                         estado: sucursalData.estado,
                         regionId: sucursalData.regionId,
-                        regionNombre
+                        regionNombre,
+                        numerosEmergencia: sucursalData.numerosEmergencia || {} // [MODIFICACIÓN NUEVA]
                     }
                 });
             }
@@ -544,6 +600,8 @@ class SucursalManager {
                 ...(nuevosDatos.regionId && { regionId: nuevosDatos.regionId }),
                 ...(nuevosDatos.latitud !== undefined && { latitud: nuevosDatos.latitud }),
                 ...(nuevosDatos.longitud !== undefined && { longitud: nuevosDatos.longitud }),
+                // [MODIFICACIÓN NUEVA]: Actualizar números de emergencia si se proporcionan
+                ...(nuevosDatos.numerosEmergencia !== undefined && { numerosEmergencia: nuevosDatos.numerosEmergencia }),
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId
             };
@@ -577,6 +635,14 @@ class SucursalManager {
                     if (datosActuales.regionId !== nuevosDatos.regionId) {
                         cambios.push(`región: "${regionNombreActual}" → "${regionNombreNuevo}"`);
                     }
+                    // [MODIFICACIÓN NUEVA]: Registrar cambios en números de emergencia
+                    if (nuevosDatos.numerosEmergencia !== undefined) {
+                        const tieneCambios = JSON.stringify(datosActuales.numerosEmergencia || {}) !== 
+                                           JSON.stringify(nuevosDatos.numerosEmergencia || {});
+                        if (tieneCambios) {
+                            cambios.push('números de emergencia actualizados');
+                        }
+                    }
 
                     await historial.registrarActividad({
                         usuario: usuarioActual,
@@ -595,6 +661,7 @@ class SucursalManager {
                             estado: nuevosDatos.estado || datosActuales.estado,
                             regionId: nuevosDatos.regionId || datosActuales.regionId,
                             regionNombre: regionNombreNuevo,
+                            numerosEmergencia: nuevosDatos.numerosEmergencia || datosActuales.numerosEmergencia, // [MODIFICACIÓN NUEVA]
                             cambios
                         }
                     });
@@ -768,6 +835,48 @@ class SucursalManager {
             console.error('Error obteniendo total de sucursales:', error);
             return 0;
         }
+    }
+    // Agregar este método a la clase SucursalManager (después del método getTotalSucursales)
+
+    /**
+     * Obtiene el número de colaboradores asignados a una sucursal
+     * @param {string} sucursalId - ID de la sucursal
+     * @param {string} organizacionCamelCase - Organización en camelCase
+     * @returns {Promise<number>} - Número de colaboradores asignados
+     */
+    async getColaboradoresPorSucursal(sucursalId, organizacionCamelCase) {
+        try {
+            if (!sucursalId || !organizacionCamelCase) return 0;
+
+            const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
+            
+            const q = query(
+                collection(db, coleccionColaboradores),
+                where("sucursalAsignadaId", "==", sucursalId),
+                where("status", "==", true)
+            );
+
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(coleccionColaboradores, `colaboradores por sucursal ${sucursalId}`);
+
+            const snapshot = await getDocs(q);
+            return snapshot.size;
+
+        } catch (error) {
+            console.error('Error obteniendo colaboradores por sucursal:', error);
+            return 0;
+        }
+    }
+
+    /**
+     * Verifica si una sucursal puede recibir más colaboradores
+     * @param {string} sucursalId - ID de la sucursal
+     * @param {string} organizacionCamelCase - Organización en camelCase
+     * @returns {Promise<boolean>} - true si se puede asignar, false si ya tiene 2 colaboradores
+     */
+    async puedeAsignarColaborador(sucursalId, organizacionCamelCase) {
+        const colaboradores = await this.getColaboradoresPorSucursal(sucursalId, organizacionCamelCase);
+        return colaboradores < 2;
     }
 }
 

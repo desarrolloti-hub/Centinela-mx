@@ -40,6 +40,7 @@ class User {
 
         this.nombreCompleto = data.nombreCompleto || '';
         this.correoElectronico = data.correoElectronico || '';
+        this.telefono = data.telefono || ''; // Nuevo campo teléfono
         this.status = data.status !== undefined ? data.status : true;
         this.idAuth = data.idAuth || '';
         this.fotoUsuario = data.fotoUsuario || data.fotoURL || data.foto || '';
@@ -271,10 +272,10 @@ class UserManager {
         try {
             // 1. Buscar primero si es MASTER (Administrador del Sistema)
             const masterRef = doc(db, "administradoresSistema", userId);
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradoresSistema", userId);
-            
+
             const masterSnap = await getDoc(masterRef);
 
             if (masterSnap.exists()) {
@@ -290,6 +291,7 @@ class UserManager {
                     organizacionCamelCase: 'sistema',
                     verificado: true,
                     emailVerified: auth.currentUser?.emailVerified || false,
+                    telefono: data.telefono || '' // Nuevo campo
                 });
 
                 this.currentUser = user;
@@ -300,10 +302,10 @@ class UserManager {
 
             // 2. Si no es Master, buscar como ADMINISTRADOR (dueño de organización)
             const adminRef = doc(db, "administradores", userId);
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", userId);
-            
+
             const adminSnap = await getDoc(adminRef);
 
             if (adminSnap.exists()) {
@@ -320,7 +322,8 @@ class UserManager {
                     areaAsignadaId: data.areaAsignadaId,
                     creadoPorEmail: data.creadoPorEmail,
                     creadoPorNombre: data.creadoPorNombre,
-                    actualizadoPor: data.actualizadoPor
+                    actualizadoPor: data.actualizadoPor,
+                    telefono: data.telefono || '' // Nuevo campo
                 });
 
                 this.users.push(user);
@@ -333,15 +336,15 @@ class UserManager {
 
             for (const organizacion of todasLasOrganizaciones) {
                 const coleccionColaboradores = `colaboradores_${organizacion.camelCase}`;
-                
+
                 const colabQuery = query(
                     collection(db, coleccionColaboradores),
                     where("idAuth", "==", userId)
                 );
-                
+
                 // [MODIFICACIÓN]: Registrar LECTURA
                 await consumo.registrarFirestoreLectura(coleccionColaboradores, `consulta por idAuth: ${userId}`);
-                
+
                 const colabSnapshot = await getDocs(colabQuery);
 
                 if (!colabSnapshot.empty) {
@@ -366,7 +369,8 @@ class UserManager {
                         areaAsignadaId: data.areaAsignadaId,
                         creadoPorEmail: data.creadoPorEmail,
                         creadoPorNombre: data.creadoPorNombre,
-                        actualizadoPor: data.actualizadoPor
+                        actualizadoPor: data.actualizadoPor,
+                        telefono: data.telefono || '' // Nuevo campo
                     });
 
                     this.currentUser = user;
@@ -387,7 +391,7 @@ class UserManager {
         try {
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", "lista organizaciones");
-            
+
             const adminsSnapshot = await getDocs(collection(db, "administradores"));
             const organizaciones = [];
 
@@ -451,12 +455,13 @@ class UserManager {
                 creadoPor: uid,
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp(),
-                ultimoLogin: null
+                ultimoLogin: null,
+                telefono: adminData.telefono || '' // Nuevo campo
             };
 
             // [MODIFICACIÓN]: Registrar ESCRITURA
             await consumo.registrarFirestoreEscritura("administradores", uid);
-            
+
             await setDoc(adminRef, adminFirestoreData);
 
             const newAdmin = new User(uid, {
@@ -488,98 +493,99 @@ class UserManager {
             throw error;
         }
     }
-   /**
- * Crea un nuevo Administrador del Sistema (MASTER)
- * @param {Object} masterData - Datos del master { nombreCompleto, correoElectronico, fotoUsuario (opcional) }
- * @param {string} password - Contraseña
- * @returns {Promise<Object>} - Resultado de la creación
- */
-async createMaster(masterData, password) {
-    try {
-        const emailExists = await this.verificarCorreoExistente(masterData.correoElectronico, 'todos');
-        if (emailExists) {
-            throw new Error('El correo electrónico ya está registrado en el sistema.');
-        }
-
-        const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            masterData.correoElectronico,
-            password
-        );
-        const uid = userCredential.user.uid;
-
+    /**
+  * Crea un nuevo Administrador del Sistema (MASTER)
+  * @param {Object} masterData - Datos del master { nombreCompleto, correoElectronico, fotoUsuario (opcional), telefono (opcional) }
+  * @param {string} password - Contraseña
+  * @returns {Promise<Object>} - Resultado de la creación
+  */
+    async createMaster(masterData, password) {
         try {
-            await sendEmailVerification(userCredential.user, {
-                url: window.location.origin + '/verifyEmail.html',
-                handleCodeInApp: true
-            });
-        } catch (emailError) {
-            console.warn('⚠️ Error enviando verificación de email al master:', emailError);
-        }
-
-        const profileUpdates = {
-            displayName: masterData.nombreCompleto
-        };
-        
-        if (masterData.fotoUsuario && masterData.fotoUsuario.startsWith('data:image')) {
-            console.log('📸 Se guardará foto en Firestore');
-        }
-        
-        await updateProfile(userCredential.user, profileUpdates);
-
-        const masterRef = doc(db, "administradoresSistema", uid);
-        const masterFirestoreData = {
-            nombreCompleto: masterData.nombreCompleto,
-            correoElectronico: masterData.correoElectronico,
-            idAuth: uid,
-            fotoUsuario: masterData.fotoUsuario || null,
-            fechaCreacion: serverTimestamp(),
-            fechaActualizacion: serverTimestamp(),
-            ultimoLogin: null,
-            creadoPor: this.currentUser?.id || 'sistema'
-        };
-
-        // [MODIFICACIÓN]: Registrar ESCRITURA
-        await consumo.registrarFirestoreEscritura("administradoresSistema", uid);
-        
-        await setDoc(masterRef, masterFirestoreData);
-
-        const newMaster = new User(uid, {
-            ...masterFirestoreData,
-            rol: 'master',
-            organizacion: 'Sistema',
-            organizacionCamelCase: 'sistema',
-            fechaCreacion: new Date(),
-            fechaActualizacion: new Date(),
-            verificado: false,
-            emailVerified: false
-        });
-        
-        this.users.unshift(newMaster);
-
-        await signOut(auth);
-
-        console.log("✅ Administrador del Sistema (Master) creado exitosamente:", uid);
-        return {
-            id: uid,
-            user: newMaster,
-            credential: userCredential,
-            emailVerificationSent: true
-        };
-
-    } catch (error) {
-        console.error("❌ Error creando Administrador del Sistema (Master):", error);
-
-        if (auth.currentUser) {
-            try {
-                await auth.currentUser.delete();
-            } catch (deleteError) {
-                console.warn("No se pudo eliminar el usuario de Auth tras error:", deleteError);
+            const emailExists = await this.verificarCorreoExistente(masterData.correoElectronico, 'todos');
+            if (emailExists) {
+                throw new Error('El correo electrónico ya está registrado en el sistema.');
             }
+
+            const userCredential = await createUserWithEmailAndPassword(
+                auth,
+                masterData.correoElectronico,
+                password
+            );
+            const uid = userCredential.user.uid;
+
+            try {
+                await sendEmailVerification(userCredential.user, {
+                    url: window.location.origin + '/verifyEmail.html',
+                    handleCodeInApp: true
+                });
+            } catch (emailError) {
+                console.warn('⚠️ Error enviando verificación de email al master:', emailError);
+            }
+
+            const profileUpdates = {
+                displayName: masterData.nombreCompleto
+            };
+
+            if (masterData.fotoUsuario && masterData.fotoUsuario.startsWith('data:image')) {
+                console.log('📸 Se guardará foto en Firestore');
+            }
+
+            await updateProfile(userCredential.user, profileUpdates);
+
+            const masterRef = doc(db, "administradoresSistema", uid);
+            const masterFirestoreData = {
+                nombreCompleto: masterData.nombreCompleto,
+                correoElectronico: masterData.correoElectronico,
+                idAuth: uid,
+                fotoUsuario: masterData.fotoUsuario || null,
+                fechaCreacion: serverTimestamp(),
+                fechaActualizacion: serverTimestamp(),
+                ultimoLogin: null,
+                creadoPor: this.currentUser?.id || 'sistema',
+                telefono: masterData.telefono || '' // Nuevo campo
+            };
+
+            // [MODIFICACIÓN]: Registrar ESCRITURA
+            await consumo.registrarFirestoreEscritura("administradoresSistema", uid);
+
+            await setDoc(masterRef, masterFirestoreData);
+
+            const newMaster = new User(uid, {
+                ...masterFirestoreData,
+                rol: 'master',
+                organizacion: 'Sistema',
+                organizacionCamelCase: 'sistema',
+                fechaCreacion: new Date(),
+                fechaActualizacion: new Date(),
+                verificado: false,
+                emailVerified: false
+            });
+
+            this.users.unshift(newMaster);
+
+            await signOut(auth);
+
+            console.log("✅ Administrador del Sistema (Master) creado exitosamente:", uid);
+            return {
+                id: uid,
+                user: newMaster,
+                credential: userCredential,
+                emailVerificationSent: true
+            };
+
+        } catch (error) {
+            console.error("❌ Error creando Administrador del Sistema (Master):", error);
+
+            if (auth.currentUser) {
+                try {
+                    await auth.currentUser.delete();
+                } catch (deleteError) {
+                    console.warn("No se pudo eliminar el usuario de Auth tras error:", deleteError);
+                }
+            }
+            throw error;
         }
-        throw error;
     }
-}
 
     async createColaborador(colaboradorData, password, idAdministrador) {
         const adminEmail = auth.currentUser?.email;
@@ -587,10 +593,10 @@ async createMaster(masterData, password) {
 
         try {
             const adminRef = doc(db, "administradores", idAdministrador);
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", idAdministrador);
-            
+
             const adminSnap = await getDoc(adminRef);
 
             if (!adminSnap.exists()) {
@@ -668,12 +674,13 @@ async createMaster(masterData, password) {
                 creadoPor: idAdministrador,
                 fechaCreacion: serverTimestamp(),
                 fechaActualizacion: serverTimestamp(),
-                ultimoLogin: null
+                ultimoLogin: null,
+                telefono: colaboradorData.telefono || '' // Nuevo campo
             };
 
             // [MODIFICACIÓN]: Registrar ESCRITURA
             await consumo.registrarFirestoreEscritura(coleccionColaboradores, uid);
-            
+
             await setDoc(colabRef, colabFirestoreData);
 
             const newColab = new User(uid, {
@@ -748,7 +755,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccion, userId);
-            
+
             const userSnap = await getDoc(userDocRef);
             if (!userSnap.exists()) {
                 throw new Error('Usuario no encontrado en Firestore');
@@ -765,7 +772,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
             await consumo.registrarFirestoreActualizacion(coleccion, userId);
-            
+
             await updateDoc(userDocRef, {
                 dispositivos: dispositivosActualizados,
                 fechaActualizacion: serverTimestamp()
@@ -805,7 +812,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccion, userId);
-            
+
             const userSnap = await getDoc(userDocRef);
             if (!userSnap.exists()) {
                 throw new Error('Usuario no encontrado');
@@ -820,7 +827,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
             await consumo.registrarFirestoreActualizacion(coleccion, userId);
-            
+
             await updateDoc(userDocRef, {
                 dispositivos: dispositivosActualizados,
                 fechaActualizacion: serverTimestamp()
@@ -860,7 +867,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccion, userId);
-            
+
             const userSnap = await getDoc(userDocRef);
             if (!userSnap.exists()) {
                 throw new Error('Usuario no encontrado');
@@ -875,7 +882,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
             await consumo.registrarFirestoreActualizacion(coleccion, userId);
-            
+
             await updateDoc(userDocRef, {
                 dispositivos: dispositivosActualizados,
                 fechaActualizacion: serverTimestamp()
@@ -915,7 +922,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccion, userId);
-            
+
             const userSnap = await getDoc(userDocRef);
             if (!userSnap.exists()) {
                 throw new Error('Usuario no encontrado');
@@ -928,7 +935,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
             await consumo.registrarFirestoreActualizacion(coleccion, userId);
-            
+
             await updateDoc(userDocRef, {
                 dispositivos: dispositivosActualizados,
                 fechaActualizacion: serverTimestamp()
@@ -1071,7 +1078,7 @@ async createMaster(masterData, password) {
 
                 if (organizacionCamelCase) {
                     const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
-                    
+
                     const colabQuery = query(
                         collection(db, coleccionColaboradores),
                         where("status", "==", true)
@@ -1079,7 +1086,7 @@ async createMaster(masterData, password) {
 
                     // [MODIFICACIÓN]: Registrar LECTURA para la consulta de colaboradores
                     await consumo.registrarFirestoreLectura(coleccionColaboradores, "consulta por status true");
-                    
+
                     const colabSnapshot = await getDocs(colabQuery);
                     const updatePromises = [];
 
@@ -1116,7 +1123,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
             await consumo.registrarFirestoreActualizacion(coleccion, id);
-            
+
             await updateDoc(docRef, {
                 status: false,
                 fechaActualizacion: serverTimestamp(),
@@ -1180,7 +1187,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
             await consumo.registrarFirestoreActualizacion(coleccion, id);
-            
+
             await updateDoc(docRef, {
                 status: true,
                 fechaActualizacion: serverTimestamp(),
@@ -1226,10 +1233,10 @@ async createMaster(masterData, password) {
                 where("correoElectronico", "==", correo),
                 where("organizacionCamelCase", "==", organizacionCamelCase)
             );
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", `verificar correo ${correo}`);
-            
+
             const adminSnapshot = await getDocs(adminQuery);
 
             if (!adminSnapshot.empty) {
@@ -1237,15 +1244,15 @@ async createMaster(masterData, password) {
             }
 
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
-            
+
             const colabQuery = query(
                 collection(db, coleccionColaboradores),
                 where("correoElectronico", "==", correo)
             );
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccionColaboradores, `verificar correo ${correo}`);
-            
+
             const colabSnapshot = await getDocs(colabQuery);
 
             return !colabSnapshot.empty;
@@ -1263,10 +1270,10 @@ async createMaster(masterData, password) {
                     collection(db, "administradores"),
                     where("correoElectronico", "==", correo)
                 );
-                
+
                 // [MODIFICACIÓN]: Registrar LECTURA
                 await consumo.registrarFirestoreLectura("administradores", `verificar correo existente ${correo}`);
-                
+
                 const adminsSnapshot = await getDocs(qAdmins);
 
                 if (!adminsSnapshot.empty) {
@@ -1283,10 +1290,10 @@ async createMaster(masterData, password) {
                         collection(db, coleccionColaboradores),
                         where("correoElectronico", "==", correo)
                     );
-                    
+
                     // [MODIFICACIÓN]: Registrar LECTURA
                     await consumo.registrarFirestoreLectura(coleccionColaboradores, `verificar correo existente ${correo}`);
-                    
+
                     const colaboradoresSnapshot = await getDocs(qColaboradores);
 
                     if (!colaboradoresSnapshot.empty) {
@@ -1312,23 +1319,23 @@ async createMaster(masterData, password) {
                 where("organizacionCamelCase", "==", organizacionCamelCase),
                 where("status", "==", true)
             );
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", "contar usuarios activos por organización");
-            
+
             const adminSnapshot = await getDocs(adminQuery);
             total += adminSnapshot.size;
 
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
-            
+
             const colabQuery = query(
                 collection(db, coleccionColaboradores),
                 where("status", "==", true)
             );
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccionColaboradores, "contar usuarios activos por organización");
-            
+
             const colabSnapshot = await getDocs(colabQuery);
             total += colabSnapshot.size;
 
@@ -1348,18 +1355,18 @@ async createMaster(masterData, password) {
                 collection(db, "administradores"),
                 where("organizacionCamelCase", "==", organizacionCamelCase)
             );
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", "contar todos usuarios por organización");
-            
+
             const adminSnapshot = await getDocs(adminQuery);
             total += adminSnapshot.size;
 
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccionColaboradores, "contar todos usuarios por organización");
-            
+
             const colabSnapshot = await getDocs(collection(db, coleccionColaboradores));
             total += colabSnapshot.size;
 
@@ -1399,7 +1406,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
             await consumo.registrarFirestoreActualizacion(coleccion, id);
-            
+
             await updateDoc(docRef, updateData);
 
             const index = this.users.findIndex(user => user.id === id);
@@ -1420,6 +1427,9 @@ async createMaster(masterData, password) {
                     }
                     if (data.rol && data.rol !== usuarioAntes?.rol) {
                         cambios.push(`rol: ${usuarioAntes?.rol} → ${data.rol}`);
+                    }
+                    if (data.telefono && data.telefono !== usuarioAntes?.telefono) {
+                        cambios.push(`teléfono: "${usuarioAntes?.telefono || 'No registrado'}" → "${data.telefono}"`);
                     }
 
                     await historial.registrarActividad({
@@ -1486,7 +1496,7 @@ async createMaster(masterData, password) {
                     ultimoLogin: serverTimestamp(),
                     fechaActualizacion: serverTimestamp()
                 });
-            }else if (user.esAdministrador()) {
+            } else if (user.esAdministrador()) {
                 // [MODIFICACIÓN]: Registrar ACTUALIZACIÓN
                 await consumo.registrarFirestoreActualizacion("administradores", uid);
                 await updateDoc(doc(db, "administradores", uid), {
@@ -1567,7 +1577,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccionColaboradores, "lista colaboradores");
-            
+
             const colabSnapshot = await getDocs(colabQuery);
             const colaboradores = [];
 
@@ -1595,7 +1605,7 @@ async createMaster(masterData, password) {
             if (!areaId || !organizacionCamelCase) return [];
 
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
-            
+
             let q;
             if (soloActivos) {
                 q = query(
@@ -1614,7 +1624,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccionColaboradores, `colaboradores por área ${areaId}`);
-            
+
             const snapshot = await getDocs(q);
             const colaboradores = [];
 
@@ -1649,7 +1659,7 @@ async createMaster(masterData, password) {
 
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", "lista administradores");
-            
+
             const adminsSnapshot = await getDocs(adminsQuery);
             const administradores = [];
 
@@ -1668,15 +1678,15 @@ async createMaster(masterData, password) {
             return [];
         }
     }
-        /**
-     * Obtiene la lista de Administradores del Sistema (MASTERS)
-     * @returns {Promise<Array<User>>} - Lista de usuarios masters
-     */
+    /**
+ * Obtiene la lista de Administradores del Sistema (MASTERS)
+ * @returns {Promise<Array<User>>} - Lista de usuarios masters
+ */
     async getMasters() {
         try {
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradoresSistema", "lista masters");
-            
+
             const mastersSnapshot = await getDocs(collection(db, "administradoresSistema"));
             const masters = [];
 
@@ -1709,10 +1719,10 @@ async createMaster(masterData, password) {
                 where("organizacionCamelCase", "==", organizacionCamelCase),
                 where("status", "==", false)
             );
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", "usuarios inactivos por organización");
-            
+
             const adminSnapshot = await getDocs(adminQuery);
 
             adminSnapshot.forEach(doc => {
@@ -1724,15 +1734,15 @@ async createMaster(masterData, password) {
             });
 
             const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
-            
+
             const colabQuery = query(
                 collection(db, coleccionColaboradores),
                 where("status", "==", false)
             );
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura(coleccionColaboradores, "usuarios inactivos por organización");
-            
+
             const colabSnapshot = await getDocs(colabQuery);
 
             colabSnapshot.forEach(doc => {
@@ -1761,10 +1771,10 @@ async createMaster(masterData, password) {
         try {
             // 1. Buscar primero en MASTERS (Administradores del Sistema)
             const masterRef = doc(db, "administradoresSistema", id);
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradoresSistema", id);
-            
+
             const masterSnap = await getDoc(masterRef);
 
             if (masterSnap.exists()) {
@@ -1780,7 +1790,8 @@ async createMaster(masterData, password) {
                     email: data.correoElectronico || data.email,
                     verificado: true,
                     emailVerified: auth.currentUser?.emailVerified || false,
-                    status: true
+                    status: true,
+                    telefono: data.telefono || '' // Nuevo campo
                 });
 
                 this.users.push(user);
@@ -1790,10 +1801,10 @@ async createMaster(masterData, password) {
 
             // 2. Si no es Master, buscar en ADMINISTRADORES
             const adminRef = doc(db, "administradores", id);
-            
+
             // [MODIFICACIÓN]: Registrar LECTURA
             await consumo.registrarFirestoreLectura("administradores", id);
-            
+
             const adminSnap = await getDoc(adminRef);
 
             if (adminSnap.exists()) {
@@ -1811,7 +1822,8 @@ async createMaster(masterData, password) {
                     areaAsignadaId: data.areaAsignadaId,
                     creadoPorEmail: data.creadoPorEmail,
                     creadoPorNombre: data.creadoPorNombre,
-                    actualizadoPor: data.actualizadoPor
+                    actualizadoPor: data.actualizadoPor,
+                    telefono: data.telefono || '' // Nuevo campo
                 });
 
                 this.users.push(user);
@@ -1829,10 +1841,10 @@ async createMaster(masterData, password) {
                         collection(db, coleccion),
                         where("idAuth", "==", id)
                     );
-                    
+
                     // [MODIFICACIÓN]: Registrar LECTURA
                     await consumo.registrarFirestoreLectura(coleccion, `consulta por idAuth: ${id}`);
-                    
+
                     const snapshot = await getDocs(q);
 
                     if (!snapshot.empty) {
@@ -1851,7 +1863,8 @@ async createMaster(masterData, password) {
                             areaAsignadaId: data.areaAsignadaId,
                             creadoPorEmail: data.creadoPorEmail,
                             creadoPorNombre: data.creadoPorNombre,
-                            actualizadoPor: data.actualizadoPor
+                            actualizadoPor: data.actualizadoPor,
+                            telefono: data.telefono || '' // Nuevo campo
                         });
 
                         this.users.push(user);
@@ -1910,21 +1923,21 @@ async createMaster(masterData, password) {
      */
     async guardarDatosAccesoEnLocalStorage() {
         if (!this.currentUser) return;
-        
+
         const usuario = this.currentUser;
-        
+
         // Guardar datos básicos
         localStorage.setItem('user-rol', usuario.rol);
         localStorage.setItem('user-id', usuario.id);
         localStorage.setItem('user-plan-nombre', usuario.plan || 'gratis');
-        
+
         if (usuario.esMaster()) {
             localStorage.setItem('plan-usuario', JSON.stringify({
                 id: 'master',
                 nombre: 'Master',
                 mapasActivos: {}
             }));
-        } 
+        }
         else if (usuario.esAdministrador()) {
             try {
                 // Intentar cargar el plan completo desde Firestore
@@ -1949,13 +1962,13 @@ async createMaster(masterData, password) {
                     mapasActivos: {}
                 }));
             }
-        } 
+        }
         else if (usuario.esColaborador()) {
             // Guardar permisos personalizados
             if (usuario.permisosPersonalizados && Object.keys(usuario.permisosPersonalizados).length > 0) {
                 localStorage.setItem('permisos-usuario', JSON.stringify(usuario.permisosPersonalizados));
             }
-            
+
             // Guardar plan del colaborador
             try {
                 const { GestorPlanesPersonalizados } = await import('/clases/plan.js');
@@ -1969,7 +1982,7 @@ async createMaster(masterData, password) {
                 console.warn('No se pudo cargar el plan del colaborador:', error);
             }
         }
-        
+
         console.log('✅ Datos de acceso guardados en localStorage');
     }
 }
