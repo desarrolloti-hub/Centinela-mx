@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Colaborador | Centinela-MX</title>
+    <title>Crear Colaborador | Centinela</title>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
@@ -29,7 +29,7 @@
     <meta name="keywords"
         content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
     <meta name="author" content="Centinela-MX">
-    <link rel="canonical" href="https://centinela-mx.web.app/" />
+    <link rel="canonical" href="https://centinela-mx.web.app" />
 
     <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
     <meta property="og:type" content="website">
@@ -205,6 +205,21 @@
                         </div>
                     </div>
 
+                    <!-- Teléfono - NUEVO CAMPO -->
+                    <div class="form-field-group">
+                        <label class="field-label" for="telefono">
+                            <i class="fas fa-phone-alt"></i> TELÉFONO
+                        </label>
+                        <div class="input-wrapper">
+                            <input class="form-input-field" type="tel" id="telefono"
+                                placeholder="Ej: 5512345678 o 525512345678" inputmode="numeric" pattern="[0-9]+"
+                                maxlength="15">
+                        </div>
+                        <div class="field-hint">
+                            <i class="fas fa-info-circle"></i> Solo números, sin espacios ni guiones (máximo 15 dígitos)
+                        </div>
+                    </div>
+
                     <!-- CARGO / ROL EN EL SISTEMA -->
                     <div class="form-field-group">
                         <label class="field-label" for="rol">
@@ -246,6 +261,21 @@
                             <select class="form-input-field" id="cargoEnAreaSelect" required>
                                 <option value="">Primero selecciona un área</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <!-- SUCURSAL (SOLO SI EL ÁREA ES "SUCURSALES") -->
+                    <div class="form-field-group" id="sucursalContainer" style="display: none;">
+                        <label class="field-label" for="sucursalSelect">
+                            <i class="fas fa-store"></i> SUCURSAL
+                        </label>
+                        <div class="input-wrapper">
+                            <select class="form-input-field" id="sucursalSelect">
+                                <option value="">Selecciona una sucursal</option>
+                            </select>
+                        </div>
+                        <div class="field-hint" id="sucursalHint">
+                            <i class="fas fa-info-circle"></i> Opcional. Selecciona la sucursal a la que pertenecerá
                         </div>
                     </div>
 
@@ -317,9 +347,7 @@
 
     <!-- Protector de pagina -->
     <!-- /usuarios/administrador/cualquier-pagina.html -->
-    <script type="module" src="/components/protector-admin.js"></script>
-</body>
-</body>
+    <script src="/components/protector-admin.js" data-modulo="generales"> </script>
 </body>
 
 </html>

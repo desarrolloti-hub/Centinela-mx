@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    // Solicitar permiso para notificaciones al cargar
     if ('Notification' in window) {
         if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
             Notification.requestPermission();
@@ -214,7 +213,7 @@ async function cargarDatosPanel() {
     await Promise.all([
         cargarEstadoPanel(),
         cargarZonas(),
-        cargarEventos(true),
+        cargarEventos(),
         cargarDispositivos()
     ]);
     
@@ -314,11 +313,11 @@ async function cargarZonas() {
         
         if (!zonas || zonas.length === 0) {
             zonasGrid.innerHTML = '<div class="empty-state"><i class="fas fa-map-marker-alt"></i><p>No hay zonas configuradas</p></div>';
-            zonasCount.textContent = '0';
+            if (zonasCount) zonasCount.textContent = '0';
             return;
         }
         
-        zonasCount.textContent = zonas.length;
+        if (zonasCount) zonasCount.textContent = zonas.length;
         
         zonasGrid.innerHTML = zonas.map(zona => `
             <div class="zona-card">
@@ -339,7 +338,7 @@ async function cargarZonas() {
     }
 }
 
-async function cargarEventos(reset = false) {
+async function cargarEventos() {
     try {
         const response = await fetch(`${CLOUD_FUNCTION_BASE_URL}${POWER_MANAGE_FUNCTION}`, {
             method: 'POST',
@@ -359,15 +358,15 @@ async function cargarEventos(reset = false) {
         
         if (!response.ok) throw new Error(eventos.error_message);
         
+        console.log(`📊 Eventos obtenidos: ${eventos.length}`);
+        
         // Ordenar de más reciente a más antiguo
         eventos = eventos.sort((a, b) => {
             return new Date(b.datetime) - new Date(a.datetime);
         });
         
-        console.log(`📊 Eventos obtenidos: ${eventos.length}`);
-        
         // Detectar nuevos eventos
-        if (!reset && eventosCache.length > 0) {
+        if (eventosCache.length > 0) {
             const nuevosEventos = eventos.filter(evento => {
                 const eventoId = `${evento.datetime}_${evento.event}_${evento.description}`;
                 const existe = eventosCache.some(e => `${e.datetime}_${e.event}_${e.description}` === eventoId);
@@ -399,79 +398,62 @@ async function cargarEventos(reset = false) {
         eventosList.innerHTML = eventos.map(evento => {
             const fecha = new Date(evento.datetime);
             const fechaFormateada = fecha.toLocaleString();
-            const esNuevo = (new Date() - fecha) < 5 * 60 * 1000; // menos de 5 minutos
+            const esNuevo = (new Date() - fecha) < 5 * 60 * 1000;
             
-            // Determinar clase y estilo según tipo
-            let claseEvento = 'evento-normal';
+            // Determinar icono según tipo
             let iconoEvento = 'fa-info-circle';
-            let colorEvento = '';
             
             switch(evento.label) {
                 case 'ARM':
-                    claseEvento = 'evento-arma';
-                    iconoEvento = 'fa-shield-alt';
-                    break;
                 case 'DISARM':
-                    claseEvento = 'evento-desarma';
                     iconoEvento = 'fa-shield-alt';
                     break;
                 case 'BURGLER':
-                    claseEvento = 'evento-alarma';
                     iconoEvento = 'fa-bell';
                     break;
                 case 'FIRE':
-                    claseEvento = 'evento-fuego';
                     iconoEvento = 'fa-fire';
                     break;
                 case 'PANIC':
-                    claseEvento = 'evento-panico';
                     iconoEvento = 'fa-exclamation-triangle';
                     break;
                 case 'ONLINE':
-                    claseEvento = 'evento-online';
                     iconoEvento = 'fa-wifi';
                     break;
                 case 'OFFLINE':
-                    claseEvento = 'evento-offline';
                     iconoEvento = 'fa-plug';
                     break;
                 default:
-                    claseEvento = 'evento-normal';
                     iconoEvento = 'fa-info-circle';
             }
             
             return `
-                <div class="evento-card ${claseEvento} ${esNuevo ? 'evento-nuevo' : ''}">
+                <div class="evento-card ${esNuevo ? 'evento-nuevo' : ''}">
                     <div class="evento-header">
                         <i class="fas ${iconoEvento}"></i>
-                        <span class="evento-tipo">${evento.description}</span>
+                        <span class="evento-tipo">${escapeHTML(evento.description)}</span>
                         ${esNuevo ? '<span class="nuevo-badge">NUEVO</span>' : ''}
                     </div>
                     <div class="evento-fecha">${fechaFormateada}</div>
                     <div class="evento-detalle">
-                        ${evento.appointment ? `<span><i class="fas fa-user"></i> ${evento.appointment}</span>` : ''}
+                        ${evento.appointment ? `<span><i class="fas fa-user"></i> ${escapeHTML(evento.appointment)}</span>` : ''}
                         ${evento.zone ? `<span><i class="fas fa-map-marker-alt"></i> Zona ${evento.zone}</span>` : ''}
-                        ${evento.name ? `<span><i class="fas fa-microchip"></i> ${evento.name}</span>` : ''}
+                        ${evento.name ? `<span><i class="fas fa-microchip"></i> ${escapeHTML(evento.name)}</span>` : ''}
                     </div>
                 </div>
             `;
         }).join('');
         
-        // Scroll al inicio para ver los más recientes
-        eventosList.scrollTop = 0;
-        
     } catch (error) {
         console.error('❌ Error cargando eventos:', error);
-        if (reset) {
-            document.getElementById('eventosList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error cargando eventos</p></div>';
-        }
+        const eventosList = document.getElementById('eventosList');
+        eventosList.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error cargando eventos</p></div>';
     }
 }
 
 function mostrarNotificacionEvento(evento) {
     console.log(`🔔 Mostrando notificación: ${evento.description}`);
     
-    // Traducir tipo de evento
     let titulo = '';
     let cuerpo = '';
     let esImportante = false;
@@ -514,7 +496,6 @@ function mostrarNotificacionEvento(evento) {
             cuerpo = evento.description;
     }
     
-    // Mostrar SweetAlert para eventos importantes
     if (esImportante) {
         Swal.fire({
             icon: 'error',
@@ -529,7 +510,6 @@ function mostrarNotificacionEvento(evento) {
             timerProgressBar: true
         });
     } else {
-        // Toast para eventos normales
         Swal.fire({
             icon: 'info',
             title: titulo,
@@ -542,7 +522,6 @@ function mostrarNotificacionEvento(evento) {
         });
     }
     
-    // Notificación del navegador
     if ('Notification' in window && Notification.permission === 'granted') {
         const notification = new Notification(titulo, {
             body: cuerpo,
@@ -578,26 +557,34 @@ async function cargarDispositivos() {
         
         if (!response.ok) throw new Error(dispositivos.error_message);
         
+        console.log(`📊 Dispositivos obtenidos: ${dispositivos.length}`);
+        
         const dispositivosList = document.getElementById('dispositivosList');
         const dispositivosCount = document.getElementById('dispositivosCount');
         
         if (!dispositivos || dispositivos.length === 0) {
             dispositivosList.innerHTML = '<div class="empty-state"><i class="fas fa-microchip"></i><p>No hay dispositivos adicionales</p></div>';
-            dispositivosCount.textContent = '0';
+            if (dispositivosCount) dispositivosCount.textContent = '0';
             return;
         }
         
-        dispositivosCount.textContent = dispositivos.length;
+        if (dispositivosCount) dispositivosCount.textContent = dispositivos.length;
         
         dispositivosList.innerHTML = dispositivos.map(disp => `
             <div class="dispositivo-card">
                 <div class="dispositivo-header">
-                    <i class="fas fa-microchip"></i>
-                    <strong>${disp.name || disp.device_type}</strong>
+                    <i class="fas ${disp.device_type === 'KEYFOB' ? 'fa-key' : 'fa-microchip'}"></i>
+                    <strong>${escapeHTML(disp.name || disp.device_type)}</strong>
                     <span class="dispositivo-id">ID: ${disp.device_number}</span>
                 </div>
                 <div class="dispositivo-info">
                     <span>Tipo: ${disp.device_type}</span>
+                    ${disp.subtype ? `<span>Subtipo: ${disp.subtype}</span>` : ''}
+                    ${disp.zone ? `<span>Zona: ${disp.zone}</span>` : ''}
+                </div>
+                <div class="dispositivo-bateria">
+                    <i class="fas fa-battery-${disp.battery?.status === 'low' ? 'quarter' : 'full'}"></i>
+                    Batería: ${disp.battery?.level || disp.battery?.status || 'Normal'}
                 </div>
             </div>
         `).join('');
@@ -661,7 +648,7 @@ async function cambiarEstadoPanel(estado) {
         
         setTimeout(() => {
             cargarEstadoPanel();
-            cargarEventos(false);
+            cargarEventos();
         }, 2000);
         
     } catch (error) {
@@ -697,7 +684,7 @@ function iniciarAutoRefresh() {
     autoRefreshTimer = setInterval(() => {
         if (sessionToken) {
             console.log('🔄 Auto-refresh eventos');
-            cargarEventos(false);
+            cargarEventos();
         }
     }, AUTO_REFRESH_INTERVAL);
     
@@ -718,14 +705,53 @@ function configurarTabs() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
     
+    console.log('🔧 Configurando tabs...');
+    console.log('Botones encontrados:', tabBtns.length);
+    console.log('Contenidos encontrados:', tabContents.length);
+    
+    // Asegurar que todos los tabs estén ocultos inicialmente
+    tabContents.forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Mostrar el primer tab (zonas)
+    const zonasTab = document.getElementById('tab-zonas');
+    if (zonasTab) {
+        zonasTab.style.display = 'block';
+        console.log('✅ Mostrando tab: zonas');
+    }
+    
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
+            console.log('📌 Click en tab:', tabId);
+            
+            // Cambiar clase activa en botones
             tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
+            
+            // Ocultar todos los tabs
+            tabContents.forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Mostrar el tab seleccionado
             const targetTab = document.getElementById(`tab-${tabId}`);
-            if (targetTab) targetTab.classList.add('active');
+            if (targetTab) {
+                targetTab.style.display = 'block';
+                console.log('✅ Mostrando tab:', tabId);
+                
+                // Si es el tab de eventos, recargar para asegurar que se vean
+                if (tabId === 'eventos') {
+                    cargarEventos();
+                }
+                // Si es el tab de dispositivos, recargar
+                if (tabId === 'dispositivos') {
+                    cargarDispositivos();
+                }
+            } else {
+                console.error('❌ No se encontró el tab:', `tab-${tabId}`);
+            }
         });
     });
 }

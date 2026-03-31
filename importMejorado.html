@@ -15,14 +15,13 @@
         
         // Tu configuración de Firebase (REEMPLAZA CON TUS DATOS)
         const firebaseConfig = {
-            apiKey: "AIzaSyAkRF8CUBs8dKlpk6N2U4EhESYhsOAW9sQ",
-            authDomain: "centinela-c5.firebaseapp.com",
-            databaseURL: "https://centinela-c5-default-rtdb.firebaseio.com",
-            projectId: "centinela-c5",
-            storageBucket: "centinela-c5.firebasestorage.app",
-            messagingSenderId: "572612004113",
-            appId: "1:572612004113:web:9ff187d18068d1fdf5a4b0",
-            measurementId: "G-GP0ZLWBT7Y",
+            apiKey: "AIzaSyB5D45RI21rRAJB9mlt1NeI6N4d3PDyEqg",
+            authDomain: "centinela-mx.firebaseapp.com",
+            projectId: "centinela-mx",
+            storageBucket: "centinela-mx.firebasestorage.app",
+            messagingSenderId: "215358382201",
+            appId: "1:215358382201:web:cf7e0fffb00ca36b05b4a8",
+            measurementId: "G-0S5PVJX04Y"
         };
         
         const app = initializeApp(firebaseConfig);
@@ -588,6 +587,38 @@
         const importBtn = document.getElementById('importBtn');
         const regionSelector = document.getElementById('regionSelector');
         
+        // ==================== FUNCIÓN DE SANITIZACIÓN ====================
+        // Esta función asegura que los campos de sucursales sean strings
+        function sanitizeSucursalData(data) {
+            console.log('=== SANITIZANDO DATOS DE SUCURSALES ===');
+            
+            // Campos que deben ser strings
+            const stringFields = ['nombre', 'tipo', 'contacto', 'direccion', 'ciudad', 'estado', 'zona', 
+                                   'regionId', 'latitud', 'longitud', 'organizacionCamelCase', 
+                                   'creadoPor', 'creadoPorEmail', 'creadoPorNombre', 'actualizadoPor'];
+            
+            return data.map(item => {
+                const sanitized = { ...item };
+                
+                stringFields.forEach(field => {
+                    if (sanitized[field] !== undefined && sanitized[field] !== null) {
+                        // Convertir a string y limpiar
+                        let stringValue = String(sanitized[field]);
+                        
+                        // Para teléfono, eliminar espacios extras
+                        if (field === 'contacto') {
+                            stringValue = stringValue.trim();
+                            console.log(`Teléfono convertido: ${sanitized[field]} -> "${stringValue}"`);
+                        }
+                        
+                        sanitized[field] = stringValue;
+                    }
+                });
+                
+                return sanitized;
+            });
+        }
+        
         // ==================== FUNCIONES PARA SUBCATEGORÍAS ====================
         
         function parseSubcategoriasFromValue(value, type) {
@@ -1111,6 +1142,8 @@
                 mapped = addRegionIdToSucursales(mapped);
                 mapped = addOrganizationFieldsSucursales(mapped);
                 mapped = addDefaultValues(mapped, 'sucursales');
+                // Aplicar sanitización para sucursales
+                mapped = sanitizeSucursalData(mapped);
             } else if (currentTab === 'categorias') {
                 mapped = addOrganizationFieldsCategorias(mapped);
                 mapped = processSubcategoriasCategorias(mapped);
@@ -1147,7 +1180,6 @@
                             <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: black;">
                                 <th style="padding: 12px 15px; text-align: left; font-weight: 600; border-bottom: 2px solid rgba(255,255,255,0.2); position: sticky; left: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">#</th>
                                 ${keysList.map(key => {
-                                    // Usar el nombre exacto del campo (sin transformar)
                                     return `<th style="padding: 12px 15px; text-align: left; font-weight: 600; border-bottom: 2px solid rgba(255,255,255,0.2);">${escapeHtml(key)}</th>`;
                                 }).join('')}
                             </tr>
@@ -1158,7 +1190,7 @@
             previewData.forEach((doc, idx) => {
                 const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
                 html += `<tr style="background: ${bgColor}; border-bottom: 1px solid #e2e8f0;">`;
-                html += `<td style="padding: 12px 15px; font-weight: 600; color: #667eea; position: sticky; left: 0; background: ${bgColor}; border-right: 1px solid #e2e8f0;">${idx + 1}${'</td>'}`;
+                html += `<td style="padding: 12px 15px; font-weight: 600; color: #667eea; position: sticky; left: 0; background: ${bgColor}; border-right: 1px solid #e2e8f0;">${idx + 1}</td>`;
                 
                 keysList.forEach(key => {
                     let val = doc[key];
@@ -1175,7 +1207,6 @@
                             if (subcatCount === 0) {
                                 displayValue = '<span style="color: #94a3b8;">{}</span>';
                             } else {
-                                // Mostrar el objeto completo como JSON formateado
                                 const subcatList = Object.values(val).map(s => s.nombre);
                                 const preview = subcatList.slice(0, 3).join(', ');
                                 if (subcatCount > 3) {
@@ -1206,7 +1237,7 @@
                         displayValue = `<span style="color: #2d3748;">${escapeHtml(stringVal)}</span>`;
                     }
                     
-                    html += `<td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; max-width: 300px; word-break: break-word;">${displayValue}${'</td>'}`;
+                    html += `<td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; max-width: 300px; word-break: break-word;">${displayValue}</td>`;
                 });
                 
                 html += '</tr>';
@@ -1340,6 +1371,8 @@
                 dataToImport = addRegionIdToSucursales(dataToImport);
                 dataToImport = addOrganizationFieldsSucursales(dataToImport);
                 dataToImport = addDefaultValues(dataToImport, 'sucursales');
+                // APLICAR SANITIZACIÓN PARA SUCURSALES (convierte contacto, latitud, longitud a string)
+                dataToImport = sanitizeSucursalData(dataToImport);
             } else if (currentTab === 'categorias') {
                 dataToImport = addOrganizationFieldsCategorias(dataToImport);
                 dataToImport = processSubcategoriasCategorias(dataToImport);
@@ -1380,6 +1413,11 @@
                         console.log(`Registro ${i + 1}: "${docData.nombre}" - ${subcatCount} subcategorías`);
                     }
                     
+                    // Log para verificar que contacto es string
+                    if (docData.contacto) {
+                        console.log(`Registro ${i + 1}: Contacto es tipo ${typeof docData.contacto}, valor: "${docData.contacto}"`);
+                    }
+                    
                     try {
                         if (docId) {
                             const docRef = doc(db, collectionName, docId);
@@ -1396,7 +1434,7 @@
                 }
                 
                 updateProgress(100);
-                showAlert(`✅ Importación completada: ${successCount} registros importados`, 'success');
+                showAlert(`✅ Importación completada: ${successCount} registros importados, ${errorCount} errores`, errorCount > 0 ? 'warning' : 'success');
                 updatePreview();
                 
             } catch (error) {
@@ -1453,6 +1491,7 @@
         }
         
         console.log('✅ Importador listo con soporte mejorado para arrays JSON de subcategorías');
+        console.log('✅ AHORA: Los campos de sucursales (contacto, latitud, longitud) se importan como STRINGS');
         console.log('⚠️ RECUERDA: Debes mapear el campo "Subcategorías (array o CSV)" con la columna que contiene los arrays JSON');
     </script>
 </body>

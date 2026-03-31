@@ -1,3 +1,5 @@
+// bitacoraActividades.js - CON NAVEGACIÓN A INCIDENCIAS (SIN ICONOS DE ACTIVIDAD)
+
 class BitacoraController {
     constructor() {
         this.historialManager = null;
@@ -169,10 +171,7 @@ class BitacoraController {
     }
 
     async _cargarActividades(fecha) {
-        this._mostrarCargando('Cargando actividades...');
-
         try {
-            // ✅ CORREGIDO: Usar obtenerActividadesPorUsuarioYFecha en lugar de obtenerActividadesPorFecha
             this.actividades = await this.historialManager.obtenerActividadesPorUsuarioYFecha(
                 this.usuarioActual.id,
                 fecha,
@@ -185,8 +184,59 @@ class BitacoraController {
         } catch (error) {
             console.error('Error cargando actividades:', error);
             this._mostrarError('No se pudieron cargar las actividades');
-        } finally {
-            this._ocultarCargando();
+        }
+    }
+
+    _extraerIdIncidencia(actividad) {
+        const detalles = actividad.detalles || {};
+        
+        if (actividad.modulo === 'incidencias') {
+            return detalles.incidenciaId || detalles.id;
+        }
+        
+        if (actividad.modulo === 'seguimiento') {
+            return detalles.incidenciaId;
+        }
+        
+        return null;
+    }
+
+    async _manejarClicActividad(actividadId) {
+        const actividad = this.actividades.find(a => a.id === actividadId);
+        if (!actividad) return;
+        
+        const incidenciaId = this._extraerIdIncidencia(actividad);
+        
+        if ((actividad.modulo === 'incidencias' || actividad.modulo === 'seguimiento') && incidenciaId) {
+            const tipoTexto = actividad.modulo === 'incidencias' ? 'la incidencia' : 'el seguimiento de la incidencia';
+            
+            const result = await Swal.fire({
+                title: '¿Ir a la incidencia?',
+                html: `Deseas ver ${tipoTexto} <strong>${incidenciaId}</strong>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#00cfff',
+                cancelButtonColor: '#dc3545',
+                confirmButtonText: 'Sí, ver incidencia',
+                cancelButtonText: 'Cancelar',
+                background: '#1a1a1a',
+                color: '#fff'
+            });
+            
+            if (result.isConfirmed) {
+                window.location.href = `../verIncidencias/verIncidencias.html?id=${incidenciaId}`;
+            }
+        } else {
+            if (actividad.modulo === 'incidencias' || actividad.modulo === 'seguimiento') {
+                Swal.fire({
+                    title: 'Información',
+                    html: `Esta actividad registra una acción sobre <strong>${actividad.modulo}</strong>, pero no se encontró un ID de incidencia asociado.`,
+                    icon: 'info',
+                    confirmButtonColor: '#00cfff',
+                    background: '#1a1a1a',
+                    color: '#fff'
+                });
+            }
         }
     }
 
@@ -209,41 +259,64 @@ class BitacoraController {
         this.actividades.forEach(act => {
             const uiData = act.toUI();
             const color = uiData.color;
-
+            const incidenciaId = this._extraerIdIncidencia(act);
+            const esNavegable = (act.modulo === 'incidencias' || act.modulo === 'seguimiento') && incidenciaId;
+            
+            const claseNavegable = esNavegable ? 'actividad-navegable' : '';
+            
             html += `
-                <div class="actividad-item" data-id="${uiData.id}">
-                    <div class="actividad-icono" style="border-color: ${color}; color: ${color};">
-                        <i class="fas ${uiData.icono}"></i>
-                    </div>
+                <div class="actividad-item ${claseNavegable}" data-actividad-id="${act.id}">
+                    <!-- ELIMINADO EL ÍCONO DE ACTIVIDAD -->
                     <div class="actividad-contenido">
                         <div class="actividad-header">
                             <span class="actividad-hora" style="color: ${color};">
-                                <i class="fas fa-clock"></i> ${uiData.hora}
+                                ${uiData.hora}
                             </span>
                             <span class="actividad-modulo">
-                                <i class="fas ${this._getIconoModulo(uiData.modulo)}"></i>
                                 ${uiData.modulo}
                             </span>
                             <span class="actividad-tipo" style="background: ${color}20; color: ${color};">
                                 ${uiData.tipo}
                             </span>
+                            ${esNavegable ? `
+                                <span class="badge-navegable" style="background: ${color}20; color: ${color};">
+                                    Ver incidencia
+                                </span>
+                            ` : ''}
                         </div>
                         <div class="actividad-descripcion">
                             ${uiData.descripcion}
                         </div>
                         <div class="actividad-usuario">
                             <div class="usuario-info">
-                                <i class="fas fa-user"></i>
                                 <span class="usuario-nombre">${this._escapeHTML(uiData.usuario.nombre)}</span>
                                 <span class="usuario-correo">(${this._escapeHTML(uiData.usuario.correo)})</span>
                             </div>
                         </div>
+                        ${incidenciaId ? `
+                            <div class="actividad-incidencia-id" style="margin-top: 8px; font-size: 12px; color: var(--color-accent-primary);">
+                                ID: ${this._escapeHTML(incidenciaId)}
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
         });
 
         contenedor.innerHTML = html;
+        
+        const itemsNavegables = contenedor.querySelectorAll('.actividad-item[data-actividad-id]');
+        itemsNavegables.forEach(item => {
+            const actividadId = item.getAttribute('data-actividad-id');
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.btn') || e.target.closest('button')) return;
+                this._manejarClicActividad(actividadId);
+            });
+            
+            if (item.classList.contains('actividad-navegable')) {
+                item.style.cursor = 'pointer';
+            }
+        });
     }
 
     _getIconoModulo(modulo) {
@@ -253,6 +326,8 @@ class BitacoraController {
             sucursales: 'fa-store',
             regiones: 'fa-map-marked-alt',
             incidencias: 'fa-exclamation-triangle',
+            seguimiento: 'fa-clipboard-list',
+            mercanciasPerdidas: 'fa-box-open',
             permisos: 'fa-lock',
             usuarios: 'fa-users',
             tema: 'fa-paint-roller',
@@ -362,29 +437,6 @@ class BitacoraController {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
-    }
-
-    _mostrarCargando(mensaje = 'Cargando...') {
-        if (this.loadingOverlay) {
-            this.loadingOverlay.remove();
-        }
-
-        const overlay = document.createElement('div');
-        overlay.className = 'loading-overlay';
-        overlay.innerHTML = `
-            <div class="spinner"></div>
-            <div class="loading-text">${mensaje}</div>
-        `;
-
-        document.body.appendChild(overlay);
-        this.loadingOverlay = overlay;
-    }
-
-    _ocultarCargando() {
-        if (this.loadingOverlay) {
-            this.loadingOverlay.remove();
-            this.loadingOverlay = null;
-        }
     }
 }
 

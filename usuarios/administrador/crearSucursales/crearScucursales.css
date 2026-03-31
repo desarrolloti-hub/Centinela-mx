@@ -19,7 +19,8 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 20px;
-    padding-top: 80px; /* Espacio para el navbar fijo */
+    padding-top: 80px;
+    /* Espacio para el navbar fijo */
     line-height: 1.5;
 }
 
@@ -72,13 +73,14 @@ body {
 @keyframes titleGlow {
     0% {
         text-shadow: 0 0 5px var(--color-accent-primary),
-                     0 0 15px var(--color-accent-primary);
+            0 0 15px var(--color-accent-primary);
         opacity: 0.9;
     }
+
     100% {
         text-shadow: 0 0 15px var(--color-accent-primary),
-                     0 0 30px var(--color-accent-primary),
-                     0 0 45px var(--color-accent-primary);
+            0 0 30px var(--color-accent-primary),
+            0 0 45px var(--color-accent-primary);
         opacity: 1;
     }
 }
@@ -542,6 +544,7 @@ body {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -555,6 +558,7 @@ body {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -580,9 +584,10 @@ body {
    ============================================= */
 @media (max-width: 1023px) {
     body {
-        padding-top: 70px; /* Reducido ligeramente para tablets */
+        padding-top: 70px;
+        /* Reducido ligeramente para tablets */
     }
-    
+
     .custom-container {
         padding: 20px !important;
     }
@@ -633,7 +638,8 @@ body {
 @media (max-width: 768px) {
     body {
         padding: 10px !important;
-        padding-top: 70px !important; /* Mantener espacio para navbar */
+        padding-top: 70px !important;
+        /* Mantener espacio para navbar */
     }
 
     .custom-container {
@@ -679,7 +685,8 @@ body {
 @media (max-width: 480px) {
     body {
         padding: 8px !important;
-        padding-top: 65px !important; /* Espacio suficiente para navbar en móviles */
+        padding-top: 65px !important;
+        /* Espacio suficiente para navbar en móviles */
     }
 
     .custom-container {
@@ -716,19 +723,20 @@ body {
     body {
         padding-top: 60px !important;
     }
-    
+
     .main-title {
         font-size: 18px !important;
     }
-    
+
     .main-title i {
         font-size: 20px !important;
     }
-    
+
     .header-description-text {
         font-size: 0.9rem !important;
     }
 }
+
 /* =============================================
    SCROLLBAR PERSONALIZADO
    ============================================= */
@@ -874,9 +882,11 @@ body {
     0% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.5;
     }
+
     100% {
         opacity: 1;
     }
@@ -953,10 +963,12 @@ body {
         filter: drop-shadow(0 0 5px var(--color-accent-primary));
         transform: scale(1);
     }
+
     50% {
         filter: drop-shadow(0 0 15px var(--color-accent-primary));
         transform: scale(1.1);
     }
+
     100% {
         filter: drop-shadow(0 0 5px var(--color-accent-primary));
         transform: scale(1);
@@ -968,27 +980,27 @@ body {
     .map-wrapper {
         height: 350px;
     }
-    
+
     .map-overlay {
         top: 10px;
         right: 10px;
     }
-    
+
     .map-button {
         padding: 8px 12px !important;
         font-size: 12px !important;
     }
-    
+
     .coordinates-display {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
     }
-    
+
     .coord-item {
         width: 100%;
     }
-    
+
     .map-coordinates-panel {
         flex-direction: column;
         align-items: flex-start;
@@ -999,16 +1011,585 @@ body {
     .map-wrapper {
         height: 300px;
     }
-    
+
     .map-overlay {
         position: static;
         flex-direction: row;
         justify-content: center;
         margin-bottom: 10px;
     }
-    
+
     .map-button {
         flex: 1;
         justify-content: center;
     }
+}
+
+/* =============================================
+   MEJORAS VISUALES PARA LÍMITES DEL MAPA
+   ============================================= */
+
+/* Estilo para el rectángulo de límites de México */
+.leaflet-overlay-pane .leaflet-zoom-animated {
+    transition: all 0.3s ease;
+}
+
+/* Mejorar visualización del marcador dentro de límites */
+.custom-marker i {
+    transition: all 0.3s ease;
+}
+
+/* Indicador visual cuando el marcador está dentro de los límites */
+.custom-marker i {
+    animation: markerPulse 2s infinite;
+}
+
+/* Estilo para el popup de advertencia de límites */
+.limits-warning-popup .leaflet-popup-content-wrapper {
+    background: rgba(255, 68, 68, 0.9);
+    color: white;
+    border: 1px solid #ff4444;
+}
+
+/* Mejorar visibilidad del área permitida */
+.leaflet-interactive[stroke="#ff4444"] {
+    animation: borderPulse 2s infinite;
+}
+
+@keyframes borderPulse {
+    0% {
+        stroke-opacity: 0.3;
+    }
+
+    50% {
+        stroke-opacity: 0.6;
+    }
+
+    100% {
+        stroke-opacity: 0.3;
+    }
+}
+
+/* Tooltip de información de límites */
+.map-limits-info {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px 10px;
+    border-radius: var(--border-radius-small);
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    backdrop-filter: blur(5px);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.map-limits-info i {
+    color: var(--color-accent-primary);
+    font-size: 10px;
+}
+
+/* Responsive para el mapa */
+@media (max-width: 768px) {
+    .map-limits-info {
+        font-size: 9px;
+        bottom: 5px;
+        left: 5px;
+        padding: 3px 6px;
+    }
+}
+/* ============================================= */
+/* ESTILOS PARA NÚMEROS DE EMERGENCIA */
+/* ============================================= */
+
+.emergency-container {
+    margin-top: 15px;
+}
+
+.emergency-list {
+    margin-bottom: 10px;
+    min-height: 60px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Cada ítem de emergencia - MISMO ESTILO QUE LAS TARJETAS */
+.emergency-item {
+    background: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    border-radius: var(--border-radius-small) !important;
+    padding: 10px 15px !important;
+    margin-bottom: 8px !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.emergency-item:hover {
+    background: var(--color-bg-hover) !important;
+    border-color: var(--color-accent-primary) !important;
+    transform: translateX(5px);
+}
+
+.emergency-item-info {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+/* Institución - MISMO ESTILO QUE LOS TÍTULOS DE SECCIÓN */
+.emergency-institucion {
+    font-family: var(--font-family-primary) !important;
+    font-weight: 600 !important;
+    color: var(--color-accent-primary) !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    text-shadow: 0 0 4px var(--color-accent-primary);
+}
+
+/* Teléfono - MISMO ESTILO QUE LOS FORMULARIOS */
+.emergency-telefono {
+    font-family: var(--font-family-secondary) !important;
+    background: var(--color-bg-tertiary) !important;
+    padding: 4px 10px !important;
+    border-radius: var(--border-radius-small) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Botón eliminar - MISMO ESTILO QUE LOS BOTONES DE ACCIÓN */
+.btn-remove-emergency {
+    background: none !important;
+    border: none !important;
+    color: var(--color-danger) !important;
+    cursor: pointer !important;
+    padding: 8px 12px !important;
+    font-size: 1rem !important;
+    border-radius: var(--border-radius-small) !important;
+    transition: all 0.3s ease !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-remove-emergency:hover {
+    background: rgba(220, 53, 69, 0.1) !important;
+    transform: scale(1.05) !important;
+    color: var(--color-danger) !important;
+}
+
+/* Mensaje vacío - MISMO ESTILO QUE LAS ALERTAS */
+.empty-emergency {
+    text-align: center;
+    padding: 20px !important;
+    color: var(--color-text-secondary) !important;
+    font-size: 0.85rem !important;
+    background: var(--color-bg-secondary) !important;
+    border-radius: var(--border-radius-small) !important;
+    border: 1px dashed var(--color-border-light) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.empty-emergency i {
+    font-size: 1.2rem;
+    color: var(--color-text-secondary);
+    opacity: 0.7;
+}
+
+/* Contenedor de agregar - MISMO ESTILO QUE FORM-GRID */
+.emergency-add {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border-light);
+}
+
+.emergency-add-field {
+    flex: 1;
+    min-width: 180px;
+}
+
+/* Labels - MISMO ESTILO QUE .form-label */
+.emergency-add-label {
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-secondary) !important;
+    font-weight: 500 !important;
+    margin-bottom: 8px !important;
+    font-size: 13px !important;
+    display: block;
+    text-shadow: 0 0 2px rgba(192, 192, 192, 0.3);
+}
+
+/* Inputs - MISMO ESTILO QUE .form-control */
+.emergency-add-input {
+    background: var(--color-bg-tertiary) !important;
+    border: 1px solid var(--color-border-light) !important;
+    color: var(--color-text-primary) !important;
+    border-radius: var(--border-radius-small) !important;
+    padding: 10px 12px !important;
+    transition: all 0.3s ease !important;
+    font-family: var(--font-family-secondary) !important;
+    width: 100%;
+    font-size: 14px;
+}
+
+.emergency-add-input:focus {
+    border-color: var(--color-accent-secondary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(47, 140, 255, 0.25) !important;
+    background: var(--color-bg-tertiary) !important;
+    outline: none !important;
+}
+
+.emergency-add-input::placeholder {
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Botón agregar - MISMO ESTILO QUE .btn-success */
+.btn-add-emergency {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    color: var(--color-text-primary) !important;
+    padding: 10px 20px !important;
+    border-radius: var(--border-radius-medium) !important;
+    font-weight: 600 !important;
+    font-family: var(--font-family-secondary) !important;
+    font-size: 13px !important;
+    cursor: pointer;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    transition: all 0.3s ease !important;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-add-emergency::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 100%;
+    height: 200%;
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    transform: rotate(30deg);
+    transition: all 0.5s ease;
+    opacity: 0;
+}
+
+.btn-add-emergency:hover::after {
+    opacity: 1;
+    transform: rotate(30deg) translate(10%, 10%);
+}
+
+.btn-add-emergency:hover {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border-color: var(--color-accent-secondary) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(47, 140, 255, 0.2) !important;
+}
+
+.btn-add-emergency:active {
+    transform: translateY(0) !important;
+}
+
+/* Badge opcional - MISMO ESTILO QUE LOS BADGES DE LA PÁGINA */
+.optional-badge {
+    font-size: 0.7rem !important;
+    background: var(--color-bg-tertiary) !important;
+    color: var(--color-text-secondary) !important;
+    padding: 2px 8px !important;
+    border-radius: 12px !important;
+    margin-left: 10px !important;
+    font-weight: normal !important;
+    display: inline-block;
+    border: 1px solid var(--color-border-light);
+}
+
+/* Responsive para números de emergencia - COINCIDIENDO CON TUS MEDIA QUERIES */
+@media (max-width: 768px) {
+    .emergency-add {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .emergency-add-field {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .btn-add-emergency {
+        width: 100%;
+        justify-content: center;
+        margin-top: 5px;
+    }
+    
+    .emergency-item-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .emergency-institucion, 
+    .emergency-telefono {
+        width: 100%;
+    }
+    
+    .emergency-telefono {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .emergency-item {
+        padding: 8px 12px !important;
+    }
+    
+    .emergency-institucion {
+        font-size: 12px;
+    }
+    
+    .emergency-telefono {
+        font-size: 12px;
+        padding: 3px 8px !important;
+    }
+    
+    .btn-add-emergency {
+        padding: 8px 15px !important;
+        font-size: 12px !important;
+    }
+    
+    .emergency-add-label {
+        font-size: 12px !important;
+    }
+    
+    .emergency-add-input {
+        padding: 8px 10px !important;
+        font-size: 13px !important;
+    }
+}
+/* ============================================= */
+/* TOAST NOTIFICACIONES PERSONALIZADAS */
+/* ============================================= */
+
+/* Contenedor de toasts (opcional, si quieres múltiples toasts) */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Estilo base del toast */
+.custom-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    padding: 10px 16px;
+    border-radius: var(--border-radius-medium);
+    font-family: var(--font-family-secondary);
+    font-size: 13px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+    animation: slideInRight 0.3s ease;
+    border-left: 4px solid;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Colores por tipo */
+.custom-toast.toast-success {
+    border-left-color: #28a745;
+}
+
+.custom-toast.toast-success i {
+    color: #28a745;
+}
+
+.custom-toast.toast-error {
+    border-left-color: #dc3545;
+}
+
+.custom-toast.toast-error i {
+    color: #dc3545;
+}
+
+.custom-toast.toast-warning {
+    border-left-color: #ffc107;
+}
+
+.custom-toast.toast-warning i {
+    color: #ffc107;
+}
+
+.custom-toast.toast-info {
+    border-left-color: #17a2b8;
+}
+
+.custom-toast.toast-info i {
+    color: #17a2b8;
+}
+
+/* Iconos dentro del toast */
+.custom-toast i {
+    font-size: 14px;
+}
+
+/* Texto del toast */
+.custom-toast span {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Animaciones */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Animación de fade (alternativa) */
+@keyframes fadeInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOutDown {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+}
+
+/* Versión alternativa con fade (puedes usarla cambiando la animación) */
+.custom-toast.fade-toast {
+    animation: fadeInUp 0.3s ease;
+}
+
+.custom-toast.fade-toast.toast-hide {
+    animation: fadeOutDown 0.3s ease;
+}
+
+/* Para móviles, ajustar posición */
+@media (max-width: 768px) {
+    .custom-toast {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    
+    .custom-toast i {
+        font-size: 12px;
+    }
+    
+    .custom-toast span {
+        font-size: 12px;
+    }
+}
+
+/* Para pantallas muy pequeñas */
+@media (max-width: 480px) {
+    .custom-toast {
+        bottom: 8px;
+        right: 8px;
+        left: 8px;
+        padding: 6px 10px;
+    }
+}
+
+/* Estilo para toasts con múltiples líneas */
+.custom-toast.multiline {
+    padding: 12px 16px;
+    max-width: 300px;
+}
+
+.custom-toast.multiline span {
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+/* Opcional: sombra más pronunciada para mejor visibilidad */
+.custom-toast {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Borde sutil alrededor del toast */
+.custom-toast {
+    border: 1px solid var(--color-border-light);
+}
+
+/* Efecto de brillo en el borde izquierdo (opcional) */
+.custom-toast.toast-success {
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+}
+
+.custom-toast.toast-error {
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+}
+
+.custom-toast.toast-warning {
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+}
+
+.custom-toast.toast-info {
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.2);
 }

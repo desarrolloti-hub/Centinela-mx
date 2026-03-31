@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Sucursal | Centinela-MX</title>
+    <title>Crear Sucursal | Centinela</title>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
@@ -236,6 +236,42 @@
                                     10 dígitos, solo números
                                 </div>
                             </div>
+                             <!-- NÚMEROS DE EMERGENCIA -->
+                            <div class="form-field">
+                                <!-- NÚMEROS DE EMERGENCIA -->
+                                <h6 class="section-title" style="margin-top: 20px;">
+                                    <i class="fas fa-phone-alt"></i>Números de Emergencia
+                                    <span class="optional-badge">Opcional</span>
+                                </h6>
+
+                                <div class="emergency-container">
+                                    <div id="emergencyList" class="emergency-list">
+                                        <!-- Aquí se mostrarán los números agregados -->
+                                    </div>
+                                    
+                                    <div class="emergency-add">
+                                        <div class="emergency-add-field">
+                                            <label class="emergency-add-label">
+                                                <i class="fas fa-building"></i> Institución / Dependencia
+                                            </label>
+                                            <input type="text" id="emergencyInstitucion" class="emergency-add-input" 
+                                                placeholder="Ej: Policía Local, Bomberos, Cruz Roja">
+                                        </div>
+                                        <div class="emergency-add-field">
+                                            <label class="emergency-add-label">
+                                                <i class="fas fa-phone"></i> Número telefónico
+                                            </label>
+                                            <input type="tel" id="emergencyTelefono" class="emergency-add-input" 
+                                                placeholder="Ej: 911, 8112345678">
+                                        </div>
+                                        <div>
+                                            <button type="button" id="btnAddEmergency" class="btn-add-emergency">
+                                                <i class="fas fa-plus"></i> Agregar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- COORDENADAS -->
                             <h6 class="section-title" style="margin-top: 20px;"><i
@@ -265,6 +301,7 @@
                                     <span>Formato decimal (grados). Ejemplo: 25.686614, -100.316112</span>
                                 </div>
                             </div>
+                            
                         </form>
                     </div>
                 </div>
@@ -354,7 +391,7 @@
 
     <!-- Protector de pagina -->
     <!-- /usuarios/administrador/cualquier-pagina.html -->
-    <script type="module" src="/components/protector-admin.js"></script>
+    <script src="/components/protector-admin.js" data-modulo="generales"> </script>
 </body>
 </body>
 
