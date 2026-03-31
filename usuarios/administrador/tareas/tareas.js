@@ -1,18 +1,18 @@
-// tareas.js - VERSIÓN CON FORMULARIO INLINE (COMO EN LA IMAGEN)
-// BASADO EN LAS IMÁGENES DE REFERENCIA
-// CON REGISTRO DE BITÁCORA
+// tareas.js - VERSIÓN CORREGIDA CON FILTRO DE VISIBILIDAD
 
 import { TareaManager } from '/clases/tarea.js';
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
+import { CategoriaManager } from '/clases/categoria.js';
 
-let historialManager = null; // ✅ NUEVO: Para registrar actividades
+let historialManager = null;
 
 class TareasController {
     constructor() {
         this.tareaManager = null;
         this.userManager = null;
         this.areaManager = null;
+        this.categoriaManager = null;
         this.usuarioActual = null;
 
         // Datos
@@ -20,12 +20,14 @@ class TareasController {
         this.tareasFiltradas = [];
         this.tipoActual = 'todas';
         this.terminoBusqueda = '';
+        this.cargando = false;
 
         // Cachés
         this.cacheUsuarios = {};
         this.cacheAreas = {};
         this.usuariosDisponibles = [];
         this.areasDisponibles = [];
+        this.categoriasDisponibles = [];
 
         // Estado del formulario
         this.modoEdicion = false;
@@ -41,17 +43,18 @@ class TareasController {
         this.cargos = [];
         this.cargosFiltrados = [];
         this.areaSeleccionada = null;
+        this.categoriaSeleccionada = null;
 
         this.init();
     }
 
     async init() {
         try {
-            // ✅ NUEVO: Inicializar historialManager
             await this._initHistorial();
 
             this.userManager = new UserManager();
             this.areaManager = new AreaManager();
+            this.categoriaManager = new CategoriaManager();
             const { TareaManager } = await import('/clases/tarea.js');
             this.tareaManager = new TareaManager();
 
@@ -74,8 +77,13 @@ class TareasController {
                 cargoId: this.usuarioActual.cargoId
             }));
 
-            await this._cargarUsuarios();
-            await this._cargarAreas();
+            // Cargar datos en paralelo para mayor velocidad
+            await Promise.all([
+                this._cargarUsuarios(),
+                this._cargarAreas(),
+                this._cargarCategorias()
+            ]);
+
             await this._cargarTareas();
 
             this._configurarEventos();
@@ -85,114 +93,17 @@ class TareasController {
         }
     }
 
-    // ✅ NUEVO: Inicializar historialManager
     async _initHistorial() {
         try {
             const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
             historialManager = new HistorialUsuarioManager();
-            console.log('📋 HistorialManager inicializado para tareas');
         } catch (error) {
             console.error('Error inicializando historialManager:', error);
         }
     }
 
-    // ✅ NUEVO: Registrar creación de tarea
-    async _registrarCreacionTarea(tareaData, resultado) {
-        if (!historialManager) return;
-
-        try {
-            const cantidadItems = tareaData.items ? Object.keys(tareaData.items).length : 0;
-            let destinatariosInfo = '';
-
-            if (tareaData.tipo === 'compartida' && tareaData.usuariosCompartidosIds) {
-                destinatariosInfo = `${tareaData.usuariosCompartidosIds.length} usuarios`;
-            } else if (tareaData.tipo === 'area' && tareaData.areaId) {
-                const area = this.areasDisponibles.find(a => a.id === tareaData.areaId);
-                destinatariosInfo = `área ${area?.nombreArea || tareaData.areaId}`;
-                if (tareaData.cargosIds && tareaData.cargosIds.length > 0) {
-                    destinatariosInfo += ` (${tareaData.cargosIds.length} cargos específicos)`;
-                }
-            } else if (tareaData.tipo === 'global') {
-                destinatariosInfo = 'todos los usuarios de la organización';
-            } else {
-                destinatariosInfo = 'solo para mí';
-            }
-
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'crear',
-                modulo: 'tareas',
-                descripcion: `Creó nota: ${tareaData.nombreActividad}`,
-                detalles: {
-                    tareaId: resultado?.id || 'pendiente',
-                    tareaTitulo: tareaData.nombreActividad,
-                    tareaTipo: tareaData.tipo === 'global' ? 'general' : tareaData.tipo,
-                    destinatarios: destinatariosInfo,
-                    cantidadItems: cantidadItems,
-                    tieneRecordatorio: tareaData.tieneRecordatorio || false,
-                    fechaCreacion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Creación de nota "${tareaData.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando creación de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar edición de tarea
-    async _registrarEdicionTarea(tareaOriginal, tareaActualizada, cambios) {
-        if (!historialManager) return;
-
-        try {
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'editar',
-                modulo: 'tareas',
-                descripcion: `Editó nota: ${tareaActualizada.nombreActividad || tareaOriginal.nombreActividad}`,
-                detalles: {
-                    tareaId: tareaOriginal.id,
-                    tareaTituloOriginal: tareaOriginal.nombreActividad,
-                    tareaTituloActualizado: tareaActualizada.nombreActividad,
-                    cambios: cambios,
-                    fechaEdicion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Edición de nota "${tareaOriginal.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando edición de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar eliminación de tarea
-    async _registrarEliminacionTarea(tarea) {
-        if (!historialManager) return;
-
-        try {
-            const cantidadItems = tarea.items ? Object.keys(tarea.items).length : 0;
-
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'eliminar',
-                modulo: 'tareas',
-                descripcion: `Eliminó nota: ${tarea.nombreActividad}`,
-                detalles: {
-                    tareaId: tarea.id,
-                    tareaTitulo: tarea.nombreActividad,
-                    tareaTipo: tarea.tipo === 'global' ? 'general' : tarea.tipo,
-                    cantidadItems: cantidadItems,
-                    fechaEliminacion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Eliminación de nota "${tarea.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando eliminación de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar marcado de item
     async _registrarMarcadoItem(tarea, itemId, itemTexto, completado) {
         if (!historialManager) return;
-
         try {
             await historialManager.registrarActividad({
                 usuario: this.usuarioActual,
@@ -207,11 +118,9 @@ class TareasController {
                     itemId: itemId,
                     itemTexto: itemTexto,
                     estadoAnterior: completado ? 'pendiente' : 'completado',
-                    estadoNuevo: completado ? 'completado' : 'pendiente',
-                    fechaCambio: new Date().toISOString()
+                    estadoNuevo: completado ? 'completado' : 'pendiente'
                 }
             });
-            console.log(`✅ Marcado de item en nota "${tarea.nombreActividad}" registrado en bitácora`);
         } catch (error) {
             console.error('Error registrando marcado de item:', error);
         }
@@ -242,7 +151,8 @@ class TareasController {
                     rol: data.rol || 'administrador',
                     correoElectronico: data.correoElectronico || '',
                     areaAsignadaId: data.areaAsignadaId,
-                    cargoId: data.cargoId
+                    cargoId: data.cargoId,
+                    esAdmin: data.rol === 'administrador' || data.rol === 'admin'
                 };
                 return true;
             }
@@ -287,7 +197,6 @@ class TareasController {
             this.areasDisponibles = await this.areaManager.getAreasByOrganizacion(
                 this.usuarioActual.organizacionCamelCase
             );
-
             this.areasDisponibles = this.areasDisponibles.filter(a => a.estado === 'activa');
 
         } catch (error) {
@@ -295,37 +204,72 @@ class TareasController {
         }
     }
 
-    async _cargarTareas() {
+    async _cargarCategorias() {
         try {
-            this._mostrarCarga();
+            if (!this.usuarioActual?.organizacionCamelCase) return;
+            
+            this.categoriasDisponibles = await this.categoriaManager.obtenerCategoriasPorOrganizacion(
+                this.usuarioActual.organizacionCamelCase
+            );
+        } catch (error) {
+            this.categoriasDisponibles = [];
+        }
+    }
 
+    /**
+     * ✅ CORREGIDO: Cargar SOLO las tareas visibles para el usuario actual
+     */
+    async _cargarTareas() {
+        if (this.cargando) return;
+        this.cargando = true;
+
+        try {
             if (!this.usuarioActual?.organizacionCamelCase) {
                 throw new Error('No hay organización definida');
             }
 
-            this.todasLasTareas = await this.tareaManager.getTodasLasTareas(
+            // Mostrar estado de carga
+            this._mostrarCarga();
+
+            // Obtener TODAS las tareas de la organización
+            const todasLasTareas = await this.tareaManager.getTodasLasTareas(
                 this.usuarioActual.organizacionCamelCase
             );
+
+            // ✅ FILTRAR solo las tareas visibles para el usuario actual
+            this.todasLasTareas = todasLasTareas.filter(tarea => {
+                return tarea.esVisibleParaUsuario(
+                    this.usuarioActual.id,
+                    this.usuarioActual.areaAsignadaId,
+                    this.usuarioActual.cargoId
+                );
+            });
+
+            console.log(`📋 Total tareas: ${todasLasTareas.length}, Visibles: ${this.todasLasTareas.length}`);
 
             this._aplicarFiltros();
 
         } catch (error) {
             this._mostrarErrorEnGrid(error.message);
+        } finally {
+            this.cargando = false;
         }
     }
 
     _aplicarFiltros() {
+        let tareasFiltradas = [...this.todasLasTareas];
+
+        // Búsqueda por título
         if (this.terminoBusqueda && this.terminoBusqueda.length >= 2) {
-            this.tareasFiltradas = this.todasLasTareas.filter(t =>
+            tareasFiltradas = tareasFiltradas.filter(t =>
                 (t.nombreActividad && t.nombreActividad.toLowerCase().includes(this.terminoBusqueda)) ||
                 (t.descripcion && t.descripcion.toLowerCase().includes(this.terminoBusqueda))
             );
-        } else {
-            this.tareasFiltradas = [...this.todasLasTareas];
         }
 
+        // Filtro por tipo (respetando visibilidad ya aplicada)
         if (this.tipoActual !== 'todas') {
-            this.tareasFiltradas = this.tareasFiltradas.filter(t => {
+            tareasFiltradas = tareasFiltradas.filter(t => {
                 if (this.tipoActual === 'generales') {
                     return t.tipo === 'global' || t.tipo === 'general';
                 }
@@ -350,6 +294,10 @@ class TareasController {
             });
         }
 
+        // Ordenar por fecha de creación (más reciente primero)
+        tareasFiltradas.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
+
+        this.tareasFiltradas = tareasFiltradas;
         this._renderizarTareas();
     }
 
@@ -369,6 +317,7 @@ class TareasController {
 
         container.innerHTML = html;
 
+        // Eventos de edición y eliminación
         container.querySelectorAll('.btn-card-action.edit').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -387,14 +336,53 @@ class TareasController {
             });
         });
 
+        // Eventos de checklist - TODOS pueden marcar/desmarcar
         container.querySelectorAll('.tarea-item-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
+            checkbox.addEventListener('change', async (e) => {
                 e.stopPropagation();
                 const tareaId = checkbox.dataset.tareaId;
                 const itemId = checkbox.dataset.itemId;
-                this._marcarItem(tareaId, itemId, checkbox.checked);
+                const completado = checkbox.checked;
+                await this._marcarItem(tareaId, itemId, completado);
             });
         });
+    }
+
+    async _marcarItem(tareaId, itemId, completado) {
+        try {
+            const tarea = this.todasLasTareas.find(t => t.id === tareaId);
+            const item = tarea?.items?.[itemId];
+            const itemTexto = item?.texto || 'Item sin texto';
+
+            // ACTUALIZAR EN FIRESTORE
+            await this.tareaManager.marcarItemTarea(
+                tareaId, itemId, completado,
+                this.usuarioActual, this.usuarioActual.organizacionCamelCase
+            );
+
+            // Actualizar caché local
+            if (tarea && tarea.items && tarea.items[itemId]) {
+                tarea.items[itemId].completado = completado;
+                tarea._calcularProgreso();
+            }
+
+            // Registrar en bitácora
+            await this._registrarMarcadoItem(tarea, itemId, itemTexto, completado);
+
+        } catch (error) {
+            // Revertir el checkbox en caso de error
+            const checkbox = document.querySelector(`.tarea-item-checkbox[data-tarea-id="${tareaId}"][data-item-id="${itemId}"]`);
+            if (checkbox) checkbox.checked = !completado;
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo actualizar el item',
+                timer: 2000,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)'
+            });
+        }
     }
 
     _crearTarjetaNota(tarea) {
@@ -420,13 +408,36 @@ class TareasController {
             hour: '2-digit', minute: '2-digit'
         });
 
+        const fechaLimite = tarea.fechaLimite ? new Date(tarea.fechaLimite) : null;
+        const fechaLimiteStr = fechaLimite ? fechaLimite.toLocaleDateString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        }) : null;
+
         const esCreador = tarea.creadoPor === this.usuarioActual?.id;
+        const puedeEditar = esCreador || (tarea.tipo === 'global' && this.usuarioActual?.esAdmin);
+
+        // Categoría y subcategoría
+        let categoriaNombre = 'Sin categoría';
+        let subcategoriaNombre = '';
+        
+        if (tarea.categoriaId && this.categoriasDisponibles) {
+            const categoria = this.categoriasDisponibles.find(c => c.id === tarea.categoriaId);
+            if (categoria) {
+                categoriaNombre = categoria.nombre;
+                if (tarea.subcategoriaId && categoria.subcategorias && categoria.subcategorias[tarea.subcategoriaId]) {
+                    subcategoriaNombre = categoria.subcategorias[tarea.subcategoriaId].nombre || '';
+                }
+            }
+        }
+
         const items = tarea.items ? Object.values(tarea.items) : [];
+        const totalItems = items.length;
+        const completados = items.filter(i => i.completado).length;
 
         let itemsPreview = '';
         if (items.length > 0) {
             itemsPreview = '<div class="tarea-items-preview">';
-            items.slice(0, 3).forEach(item => {
+            items.forEach(item => {
                 itemsPreview += `
                     <div class="tarea-item-preview ${item.completado ? 'completado' : ''}">
                         <input type="checkbox" class="tarea-item-checkbox" 
@@ -437,10 +448,14 @@ class TareasController {
                     </div>
                 `;
             });
-            if (items.length > 3) {
-                itemsPreview += `<div class="tarea-mas-items">+${items.length - 3} items más</div>`;
-            }
-            itemsPreview += '</div>';
+            itemsPreview += `
+                <div class="tarea-progreso">
+                    <span class="progreso-texto">${completados}/${totalItems} completados</span>
+                    <div class="progreso-bar">
+                        <div class="progreso-fill" style="width: ${totalItems > 0 ? (completados / totalItems) * 100 : 0}%"></div>
+                    </div>
+                </div>
+            </div>`;
         }
 
         return `
@@ -450,8 +465,28 @@ class TareasController {
                     <span class="tarea-tipo-badge ${tipoClass}">${tipoTexto}</span>
                 </div>
                 
+                <div class="tarea-metadatos">
+                    <div class="tarea-categoria">
+                        <i class="fas fa-tag"></i>
+                        <span>${this._escapeHTML(categoriaNombre)}</span>
+                        ${subcategoriaNombre ? `<span class="tarea-subcategoria"> / ${this._escapeHTML(subcategoriaNombre)}</span>` : ''}
+                    </div>
+                    <div class="tarea-fechas">
+                        <span class="tarea-fecha-inicio">
+                            <i class="fas fa-calendar-plus"></i> ${fechaStr}
+                        </span>
+                        ${fechaLimiteStr ? `
+                            <span class="tarea-fecha-limite ${tarea.estaVencida && tarea.estaVencida() ? 'vencida' : ''}">
+                                <i class="fas fa-calendar-check"></i> Límite: ${fechaLimiteStr}
+                            </span>
+                        ` : ''}
+                    </div>
+                </div>
+                
                 ${tarea.descripcion ? `
-                    <p class="tarea-contenido">${this._escapeHTML(tarea.descripcion)}</p>
+                    <div class="tarea-contenido">
+                        ${this._escapeHTML(tarea.descripcion)}
+                    </div>
                 ` : ''}
                 
                 ${itemsPreview}
@@ -460,69 +495,32 @@ class TareasController {
                     <span class="tarea-creador">
                         <i class="fas fa-user"></i>
                         ${this._escapeHTML(tarea.creadoPorNombre || 'Usuario')}
-                        ${esCreador ? '<span style="color: #ffc107; margin-left: 4px;">(tú)</span>' : ''}
-                    </span>
-                    <span class="tarea-fecha">
-                        <i class="fas fa-calendar"></i>
-                        ${fechaStr}
+                        ${esCreador ? '<span class="creador-badge">(tú)</span>' : ''}
                     </span>
                 </div>
                 
-                <div class="tarea-acciones">
-                    <button class="btn-card-action edit" data-id="${tarea.id}">
-                        <i class="fas fa-edit"></i> Editar
-                    </button>
-                    <button class="btn-card-action delete" data-id="${tarea.id}">
-                        <i class="fas fa-trash-alt"></i> Eliminar
-                    </button>
-                </div>
+                ${puedeEditar ? `
+                    <div class="tarea-acciones">
+                        <button class="btn-card-action edit" data-id="${tarea.id}">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn-card-action delete" data-id="${tarea.id}">
+                            <i class="fas fa-trash-alt"></i> Eliminar
+                        </button>
+                    </div>
+                ` : ''}
             </div>
         `;
     }
 
-    async _marcarItem(tareaId, itemId, completado) {
-        try {
-            // Obtener la tarea y el item para registrar detalles
-            const tarea = this.todasLasTareas.find(t => t.id === tareaId);
-            const item = tarea?.items?.[itemId];
-            const itemTexto = item?.texto || 'Item sin texto';
-
-            await this.tareaManager.marcarItemTarea(
-                tareaId, itemId, completado,
-                this.usuarioActual, this.usuarioActual.organizacionCamelCase
-            );
-
-            // ✅ NUEVO: Registrar marcado de item en bitácora
-            if (tarea) {
-                await this._registrarMarcadoItem(tarea, itemId, itemTexto, completado);
-            }
-
-            if (tarea && tarea.items && tarea.items[itemId]) {
-                tarea.items[itemId].completado = completado;
-            }
-
-        } catch (error) {
-            const checkbox = document.querySelector(`.tarea-item-checkbox[data-tarea-id="${tareaId}"][data-item-id="${itemId}"]`);
-            if (checkbox) checkbox.checked = !completado;
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudo actualizar el item',
-                timer: 2000,
-                showConfirmButton: false,
-                background: 'var(--color-bg-secondary)'
-            });
-        }
-    }
-
-    // ========== FUNCIONES PARA EL FORMULARIO INLINE ==========
+    // ========== FUNCIONES DEL FORMULARIO (MANTENIDAS) ==========
 
     _mostrarFormularioCreacion() {
         this.modoEdicion = false;
         this.tareaActual = null;
         this.tipoSeleccionado = 'personal';
         this.areaSeleccionada = null;
+        this.categoriaSeleccionada = null;
         this.itemsActuales = [];
 
         document.getElementById('notaId').value = '';
@@ -531,13 +529,15 @@ class TareasController {
         document.getElementById('tieneRecordatorio').checked = false;
         document.getElementById('fechaLimite').value = this._getFechaPorDefecto('personal');
         document.getElementById('fechaContainer').style.display = 'none';
+        document.getElementById('categoriaNota').value = '';
+        document.getElementById('subcategoriaNota').innerHTML = '<option value="">-- Selecciona subcategoría --</option>';
+        document.getElementById('subcategoriaNota').disabled = true;
 
         this._renderizarItemsInline([]);
         this._seleccionarTipoFormulario('personal');
 
         document.getElementById('formularioCreacion').style.display = 'block';
 
-        // Desplazar al formulario
         setTimeout(() => {
             const formulario = document.getElementById('formularioCreacion');
             formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -675,31 +675,105 @@ class TareasController {
 
         let html = '';
 
+        // Categoría siempre visible
+        html += this._getHTMLCategorias();
+
         switch (tipo) {
             case 'personal':
-                html = '';
                 break;
             case 'compartida':
-                html = this._getHTMLUsuariosCreacion();
+                html += this._getHTMLUsuariosCreacion();
                 break;
             case 'area':
-                html = this._getHTMLAreasCreacion();
+                html += this._getHTMLAreasCreacion();
                 break;
             case 'general':
-                html = this._getHTMLGeneral();
+                html += this._getHTMLGeneral();
                 break;
         }
 
         container.innerHTML = html;
 
-        if (tipo === 'compartida' && html) {
+        if (tipo === 'compartida' && html.includes('usuariosContainer')) {
             this._configurarSelectorUsuariosCreacion();
-        } else if (tipo === 'area' && html) {
+        } else if (tipo === 'area' && html.includes('areasContainer')) {
             this._configurarSelectorAreasCreacion();
         }
+
+        this._configurarSelectorCategorias();
     }
 
-    // ========== HTML PARA CAMPOS ESPECÍFICOS ==========
+    _getHTMLCategorias() {
+        if (this.categoriasDisponibles.length === 0) {
+            return `
+                <div class="form-field">
+                    <label class="form-label">Categoría</label>
+                    <select class="form-control" id="categoriaNota">
+                        <option value="">Sin categoría</option>
+                    </select>
+                    <small class="form-text text-muted">No hay categorías disponibles</small>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Subcategoría</label>
+                    <select class="form-control" id="subcategoriaNota" disabled>
+                        <option value="">-- Selecciona subcategoría --</option>
+                    </select>
+                </div>
+            `;
+        }
+
+        let options = '<option value="">Sin categoría</option>';
+        this.categoriasDisponibles.forEach(cat => {
+            options += `<option value="${cat.id}">${this._escapeHTML(cat.nombre)}</option>`;
+        });
+
+        return `
+            <div class="form-field">
+                <label class="form-label">Categoría</label>
+                <select class="form-control" id="categoriaNota">
+                    ${options}
+                </select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Subcategoría</label>
+                <select class="form-control" id="subcategoriaNota" disabled>
+                    <option value="">-- Selecciona subcategoría --</option>
+                </select>
+            </div>
+        `;
+    }
+
+    _configurarSelectorCategorias() {
+        const categoriaSelect = document.getElementById('categoriaNota');
+        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+
+        if (!categoriaSelect) return;
+
+        categoriaSelect.addEventListener('change', async (e) => {
+            const categoriaId = e.target.value;
+            
+            if (!categoriaId) {
+                subcategoriaSelect.innerHTML = '<option value="">-- Selecciona subcategoría --</option>';
+                subcategoriaSelect.disabled = true;
+                return;
+            }
+
+            const categoria = this.categoriasDisponibles.find(c => c.id === categoriaId);
+            if (!categoria || !categoria.subcategorias || Object.keys(categoria.subcategorias).length === 0) {
+                subcategoriaSelect.innerHTML = '<option value="">-- No hay subcategorías --</option>';
+                subcategoriaSelect.disabled = true;
+                return;
+            }
+
+            let options = '<option value="">-- Selecciona subcategoría --</option>';
+            Object.values(categoria.subcategorias).forEach(sub => {
+                options += `<option value="${sub.id}">${this._escapeHTML(sub.nombre)}</option>`;
+            });
+
+            subcategoriaSelect.innerHTML = options;
+            subcategoriaSelect.disabled = false;
+        });
+    }
 
     _getHTMLUsuariosCreacion() {
         if (this.usuariosDisponibles.length === 0) {
@@ -748,55 +822,44 @@ class TareasController {
         return html;
     }
 
-    _getHTMLUsuariosEdicion(tareaData) {
-        if (this.usuariosDisponibles.length === 0) {
-            return '<p class="no-items">No hay usuarios disponibles</p>';
-        }
+    _configurarSelectorUsuariosCreacion() {
+        const container = document.getElementById('usuariosContainer');
+        if (!container) return;
 
-        const seleccionados = tareaData?.usuariosCompartidosIds || [];
+        container.querySelectorAll('.usuario-item').forEach(item => {
+            const checkbox = item.querySelector('.usuario-checkbox');
 
-        let html = `
-            <div class="campos-especificos">
-                <h6 class="section-title"><i class="fas fa-users"></i> Compartir con usuarios</h6>
-                
-                <div class="acciones-rapidas">
-                    <button type="button" class="btn-accion-rapida" id="seleccionarTodosUsuarios">
-                        <i class="fas fa-check-double"></i> Seleccionar Todos
-                    </button>
-                    <button type="button" class="btn-accion-rapida" id="deseleccionarTodosUsuarios">
-                        <i class="fas fa-times"></i> Deseleccionar Todos
-                    </button>
-                </div>
-                
-                <div class="usuarios-container" id="usuariosContainer">
-        `;
+            item.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    this._actualizarEstiloItem(item, checkbox.checked);
+                }
+                this._actualizarContadorUsuarios();
+            });
 
-        this.usuariosDisponibles.forEach(usuario => {
-            const iniciales = this._obtenerIniciales(usuario.nombreCompleto);
-            const seleccionado = seleccionados.includes(usuario.id) ? 'checked' : '';
-
-            html += `
-                <div class="usuario-item" data-usuario-id="${usuario.id}">
-                    <input type="checkbox" class="usuario-checkbox" value="${usuario.id}" ${seleccionado}>
-                    <div class="usuario-avatar">${iniciales}</div>
-                    <div class="usuario-info">
-                        <span class="usuario-nombre">${this._escapeHTML(usuario.nombreCompleto)}</span>
-                        <span class="usuario-correo">${this._escapeHTML(usuario.correoElectronico || '')}</span>
-                    </div>
-                </div>
-            `;
+            checkbox.addEventListener('change', (e) => {
+                this._actualizarEstiloItem(item, e.target.checked);
+                this._actualizarContadorUsuarios();
+            });
         });
 
-        html += `
-                </div>
-                <div class="selected-summary" id="selectedUsersSummary">
-                    <i class="fas fa-users"></i>
-                    <span id="selectedUsersCount">${seleccionados.length}</span> usuarios seleccionados
-                </div>
-            </div>
-        `;
+        document.getElementById('seleccionarTodosUsuarios')?.addEventListener('click', () => {
+            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                cb.checked = true;
+                this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
+            });
+            this._actualizarContadorUsuarios();
+        });
 
-        return html;
+        document.getElementById('deseleccionarTodosUsuarios')?.addEventListener('click', () => {
+            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                cb.checked = false;
+                this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
+            });
+            this._actualizarContadorUsuarios();
+        });
+
+        this._actualizarContadorUsuarios();
     }
 
     _getHTMLAreasCreacion() {
@@ -846,112 +909,6 @@ class TareasController {
         html += `</div>`;
 
         return html;
-    }
-
-    _getHTMLAreasEdicion(tareaData) {
-        if (this.areasDisponibles.length === 0) {
-            return '<p class="no-items">No hay áreas disponibles</p>';
-        }
-
-        const areaSeleccionada = tareaData?.areaId || null;
-        const cargosSeleccionados = tareaData?.cargosIds || [];
-
-        let html = `
-            <div class="campos-especificos">
-                <h6 class="section-title"><i class="fas fa-building"></i> Asignar a Área</h6>
-                
-                <div class="areas-container" id="areasContainer">
-        `;
-
-        this.areasDisponibles.forEach(area => {
-            const iniciales = this._obtenerIniciales(area.nombreArea);
-            const totalCargos = area.cargos ? Object.keys(area.cargos).length : 0;
-            const seleccionado = areaSeleccionada === area.id ? 'checked' : '';
-
-            html += `
-                <div class="area-item" data-area-id="${area.id}">
-                    <input type="radio" class="area-radio" name="areaSeleccionada" value="${area.id}" ${seleccionado}>
-                    <div class="area-icon">${iniciales}</div>
-                    <div class="area-info">
-                        <span class="area-nombre">${this._escapeHTML(area.nombreArea)}</span>
-                        <span class="area-descripcion">${this._escapeHTML(area.descripcion || 'Sin descripción')}</span>
-                        <span class="area-badge">${totalCargos} cargos</span>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += `</div>`;
-
-        html += `
-            <div id="cargosSection" style="margin-top: 20px; ${!areaSeleccionada ? 'display: none;' : ''}">
-                <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
-                <div class="cargos-container" id="cargosContainer">
-                    <div class="loading-cargos"><i class="fas fa-spinner fa-spin"></i> Cargando cargos...</div>
-                </div>
-                <div class="selected-summary" id="selectedCargosSummary" style="${cargosSeleccionados.length === 0 ? 'display: none;' : ''}">
-                    <i class="fas fa-users"></i>
-                    <span id="selectedCargosCount">${cargosSeleccionados.length}</span> cargos seleccionados
-                </div>
-            </div>
-        `;
-
-        html += `</div>`;
-
-        return html;
-    }
-
-    _getHTMLGeneral() {
-        return `
-            <div class="campos-especificos">
-                <div class="visibility-info" style="padding: 15px; text-align: center;">
-                    <i class="fas fa-eye" style="font-size: 24px; margin-right: 10px;"></i>
-                    <span>Esta nota será visible para <strong>todos los usuarios</strong> de la organización</span>
-                </div>
-            </div>
-        `;
-    }
-
-    // ========== CONFIGURACIÓN DE SELECTORES ==========
-
-    _configurarSelectorUsuariosCreacion() {
-        const container = document.getElementById('usuariosContainer');
-        if (!container) return;
-
-        container.querySelectorAll('.usuario-item').forEach(item => {
-            const checkbox = item.querySelector('.usuario-checkbox');
-
-            item.addEventListener('click', (e) => {
-                if (e.target !== checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                    this._actualizarEstiloItem(item, checkbox.checked);
-                }
-                this._actualizarContadorUsuarios();
-            });
-
-            checkbox.addEventListener('change', (e) => {
-                this._actualizarEstiloItem(item, e.target.checked);
-                this._actualizarContadorUsuarios();
-            });
-        });
-
-        document.getElementById('seleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = true;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
-            });
-            this._actualizarContadorUsuarios();
-        });
-
-        document.getElementById('deseleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = false;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
-            });
-            this._actualizarContadorUsuarios();
-        });
-
-        this._actualizarContadorUsuarios();
     }
 
     _configurarSelectorAreasCreacion() {
@@ -1045,7 +1002,16 @@ class TareasController {
         this._actualizarContadorCargos();
     }
 
-    // ========== UTILIDADES PARA SELECTORES ==========
+    _getHTMLGeneral() {
+        return `
+            <div class="campos-especificos">
+                <div class="visibility-info" style="padding: 15px; text-align: center;">
+                    <i class="fas fa-eye" style="font-size: 24px; margin-right: 10px;"></i>
+                    <span>Esta nota será visible para <strong>todos los usuarios</strong> de la organización</span>
+                </div>
+            </div>
+        `;
+    }
 
     _actualizarEstiloItem(item, seleccionado) {
         if (seleccionado) {
@@ -1076,8 +1042,6 @@ class TareasController {
         }
     }
 
-    // ========== GUARDAR NOTA ==========
-
     async _guardarNota() {
         const titulo = document.getElementById('notaTitulo').value.trim();
         if (!titulo) {
@@ -1090,6 +1054,8 @@ class TareasController {
         const descripcion = document.getElementById('notaDescripcion').value.trim();
         const tieneRecordatorio = document.getElementById('tieneRecordatorio').checked;
         const fechaLimiteInput = document.getElementById('fechaLimite').value;
+        const categoriaId = document.getElementById('categoriaNota')?.value || '';
+        const subcategoriaId = document.getElementById('subcategoriaNota')?.value || '';
 
         const items = {};
         document.querySelectorAll('#itemsList .item-row').forEach((row, index) => {
@@ -1137,7 +1103,9 @@ class TareasController {
             items: items,
             tipo: tipo === 'general' ? 'global' : tipo,
             fechaLimite: fechaLimite,
-            tieneRecordatorio: tieneRecordatorio
+            tieneRecordatorio: tieneRecordatorio,
+            categoriaId: categoriaId || null,
+            subcategoriaId: subcategoriaId || null
         };
 
         if (tipo === 'compartida') {
@@ -1158,7 +1126,6 @@ class TareasController {
         try {
             let resultado;
             if (notaId) {
-                // Obtener tarea original antes de editar para registrar cambios
                 const tareaOriginal = await this.tareaManager.getTareaById(
                     notaId, this.usuarioActual.organizacionCamelCase
                 );
@@ -1168,7 +1135,6 @@ class TareasController {
                     this.usuarioActual, this.usuarioActual.organizacionCamelCase
                 );
                 
-                // Detectar cambios
                 const cambios = this._detectarCambiosTarea(tareaOriginal, tareaData);
                 await this._registrarEdicionTarea(tareaOriginal, tareaData, cambios);
             } else {
@@ -1196,7 +1162,6 @@ class TareasController {
         }
     }
 
-    // ✅ NUEVO: Detectar cambios en tarea para registro
     _detectarCambiosTarea(original, actualizada) {
         const cambios = [];
 
@@ -1216,65 +1181,105 @@ class TareasController {
             });
         }
 
-        if (original.tipo !== actualizada.tipo) {
-            cambios.push({
-                campo: 'tipo',
-                anterior: original.tipo === 'global' ? 'general' : original.tipo,
-                nuevo: actualizada.tipo === 'global' ? 'general' : actualizada.tipo
-            });
-        }
-
-        if (original.tieneRecordatorio !== actualizada.tieneRecordatorio) {
-            cambios.push({
-                campo: 'recordatorio',
-                anterior: original.tieneRecordatorio ? 'activado' : 'desactivado',
-                nuevo: actualizada.tieneRecordatorio ? 'activado' : 'desactivado'
-            });
-        }
-
-        // Detectar cambios en items (agregados, eliminados, modificados)
-        const itemsOriginales = original.items ? Object.values(original.items) : [];
-        const itemsActuales = actualizada.items ? Object.values(actualizada.items) : [];
-
-        const itemsAgregados = itemsActuales.filter(i => 
-            !itemsOriginales.some(o => o.id === i.id)
-        );
-        if (itemsAgregados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'agregados',
-                cantidad: itemsAgregados.length,
-                items: itemsAgregados.map(i => ({ id: i.id, texto: i.texto?.substring(0, 30) }))
-            });
-        }
-
-        const itemsEliminados = itemsOriginales.filter(o => 
-            !itemsActuales.some(i => i.id === o.id)
-        );
-        if (itemsEliminados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'eliminados',
-                cantidad: itemsEliminados.length
-            });
-        }
-
-        const itemsModificados = itemsActuales.filter(i => {
-            const originalItem = itemsOriginales.find(o => o.id === i.id);
-            return originalItem && originalItem.texto !== i.texto;
-        });
-        if (itemsModificados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'modificados',
-                cantidad: itemsModificados.length
-            });
-        }
-
         return cambios;
     }
 
-    // ========== ABRIR FORMULARIO DE EDICIÓN (CON SCROLL AL FORMULARIO) ==========
+    async _registrarCreacionTarea(tareaData, resultado) {
+        if (!historialManager) return;
+        try {
+            await historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'crear',
+                modulo: 'tareas',
+                descripcion: `Creó nota: ${tareaData.nombreActividad}`,
+                detalles: {
+                    tareaId: resultado?.id || 'pendiente',
+                    tareaTitulo: tareaData.nombreActividad,
+                    tareaTipo: tareaData.tipo === 'global' ? 'general' : tareaData.tipo
+                }
+            });
+        } catch (error) {
+            console.error('Error registrando creación de tarea:', error);
+        }
+    }
+
+    async _registrarEdicionTarea(tareaOriginal, tareaActualizada, cambios) {
+        if (!historialManager) return;
+        try {
+            await historialManager.registrarActividad({
+                usuario: this.usuarioActual,
+                tipo: 'editar',
+                modulo: 'tareas',
+                descripcion: `Editó nota: ${tareaActualizada.nombreActividad || tareaOriginal.nombreActividad}`,
+                detalles: {
+                    tareaId: tareaOriginal.id,
+                    tareaTituloOriginal: tareaOriginal.nombreActividad,
+                    tareaTituloActualizado: tareaActualizada.nombreActividad,
+                    cambios: cambios
+                }
+            });
+        } catch (error) {
+            console.error('Error registrando edición de tarea:', error);
+        }
+    }
+
+    async _eliminarTarea(tareaId) {
+        const tarea = this.todasLasTareas.find(t => t.id === tareaId);
+
+        const result = await Swal.fire({
+            title: '¿Eliminar nota?',
+            text: 'Esta acción no se puede deshacer',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            background: 'var(--color-bg-secondary)',
+            confirmButtonColor: '#dc3545'
+        });
+
+        if (!result.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Eliminando...',
+            html: '<i class="fas fa-spinner fa-spin"></i>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'var(--color-bg-secondary)'
+        });
+
+        try {
+            await this.tareaManager.eliminarTarea(
+                tareaId, this.usuarioActual, this.usuarioActual.organizacionCamelCase
+            );
+
+            if (tarea && historialManager) {
+                await historialManager.registrarActividad({
+                    usuario: this.usuarioActual,
+                    tipo: 'eliminar',
+                    modulo: 'tareas',
+                    descripcion: `Eliminó nota: ${tarea.nombreActividad}`,
+                    detalles: { tareaId: tarea.id, tareaTitulo: tarea.nombreActividad }
+                });
+            }
+
+            Swal.close();
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Eliminada',
+                text: 'La nota se eliminó correctamente',
+                timer: 1500,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)'
+            });
+
+            await this._cargarTareas();
+
+        } catch (error) {
+            Swal.close();
+            this._mostrarError(error.message);
+        }
+    }
 
     async _abrirFormularioEdicion(tareaId) {
         Swal.fire({
@@ -1317,6 +1322,27 @@ class TareasController {
 
             document.getElementById('fechaContainer').style.display = tieneRecordatorio ? 'block' : 'none';
 
+            // Cargar categoría y subcategoría
+            if (this.tareaActual.categoriaId && this.categoriasDisponibles.length > 0) {
+                const categoriaSelect = document.getElementById('categoriaNota');
+                if (categoriaSelect) {
+                    categoriaSelect.value = this.tareaActual.categoriaId;
+                    // Cargar subcategorías
+                    const categoria = this.categoriasDisponibles.find(c => c.id === this.tareaActual.categoriaId);
+                    if (categoria && categoria.subcategorias) {
+                        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+                        if (subcategoriaSelect) {
+                            let options = '<option value="">-- Selecciona subcategoría --</option>';
+                            Object.values(categoria.subcategorias).forEach(sub => {
+                                options += `<option value="${sub.id}" ${this.tareaActual.subcategoriaId === sub.id ? 'selected' : ''}>${this._escapeHTML(sub.nombre)}</option>`;
+                            });
+                            subcategoriaSelect.innerHTML = options;
+                            subcategoriaSelect.disabled = false;
+                        }
+                    }
+                }
+            }
+
             const titulos = {
                 'general': 'Editar Nota General',
                 'personal': 'Editar Nota Personal',
@@ -1338,10 +1364,8 @@ class TareasController {
             const formulario = document.getElementById('formularioCreacion');
             const tituloInput = document.getElementById('notaTitulo');
 
-            // Mostrar el formulario
             formulario.style.display = 'block';
 
-            // Esperar a que el DOM se actualice y luego desplazar al formulario
             setTimeout(() => {
                 formulario.scrollIntoView({
                     behavior: 'smooth',
@@ -1349,7 +1373,6 @@ class TareasController {
                     inline: 'nearest'
                 });
 
-                // Enfocar el título después del scroll
                 setTimeout(() => {
                     if (tituloInput) {
                         tituloInput.focus();
@@ -1368,32 +1391,102 @@ class TareasController {
         const container = document.getElementById('camposEspecificos');
         if (!container) return;
 
-        let html = '';
+        // Mantener la categoría
+        let html = this._getHTMLCategorias();
 
         switch (tipo) {
             case 'personal':
-                html = '';
                 break;
             case 'compartida':
-                html = this._getHTMLUsuariosEdicion(tareaData);
+                html += this._getHTMLUsuariosEdicion(tareaData);
                 break;
             case 'area':
-                html = this._getHTMLAreasEdicion(tareaData);
+                html += this._getHTMLAreasEdicion(tareaData);
                 break;
             case 'general':
-                html = this._getHTMLGeneral();
+                html += this._getHTMLGeneral();
                 break;
-            default:
-                html = '';
         }
 
         container.innerHTML = html;
 
-        if (tipo === 'compartida' && html) {
+        if (tipo === 'compartida' && html.includes('usuariosContainer')) {
             this._configurarSelectorUsuariosEdicion(tareaData);
-        } else if (tipo === 'area' && html) {
+        } else if (tipo === 'area' && html.includes('areasContainer')) {
             await this._configurarSelectorAreasEdicion(tareaData);
         }
+
+        this._configurarSelectorCategorias();
+        
+        // Restaurar valores de categoría
+        if (tareaData.categoriaId) {
+            const categoriaSelect = document.getElementById('categoriaNota');
+            if (categoriaSelect) {
+                categoriaSelect.value = tareaData.categoriaId;
+                const event = new Event('change');
+                categoriaSelect.dispatchEvent(event);
+                
+                setTimeout(() => {
+                    if (tareaData.subcategoriaId) {
+                        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+                        if (subcategoriaSelect) {
+                            subcategoriaSelect.value = tareaData.subcategoriaId;
+                        }
+                    }
+                }, 100);
+            }
+        }
+    }
+
+    _getHTMLUsuariosEdicion(tareaData) {
+        if (this.usuariosDisponibles.length === 0) {
+            return '<p class="no-items">No hay usuarios disponibles</p>';
+        }
+
+        const seleccionados = tareaData?.usuariosCompartidosIds || [];
+
+        let html = `
+            <div class="campos-especificos">
+                <h6 class="section-title"><i class="fas fa-users"></i> Compartir con usuarios</h6>
+                
+                <div class="acciones-rapidas">
+                    <button type="button" class="btn-accion-rapida" id="seleccionarTodosUsuarios">
+                        <i class="fas fa-check-double"></i> Seleccionar Todos
+                    </button>
+                    <button type="button" class="btn-accion-rapida" id="deseleccionarTodosUsuarios">
+                        <i class="fas fa-times"></i> Deseleccionar Todos
+                    </button>
+                </div>
+                
+                <div class="usuarios-container" id="usuariosContainer">
+        `;
+
+        this.usuariosDisponibles.forEach(usuario => {
+            const iniciales = this._obtenerIniciales(usuario.nombreCompleto);
+            const seleccionado = seleccionados.includes(usuario.id) ? 'checked' : '';
+
+            html += `
+                <div class="usuario-item" data-usuario-id="${usuario.id}">
+                    <input type="checkbox" class="usuario-checkbox" value="${usuario.id}" ${seleccionado}>
+                    <div class="usuario-avatar">${iniciales}</div>
+                    <div class="usuario-info">
+                        <span class="usuario-nombre">${this._escapeHTML(usuario.nombreCompleto)}</span>
+                        <span class="usuario-correo">${this._escapeHTML(usuario.correoElectronico || '')}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+                <div class="selected-summary" id="selectedUsersSummary">
+                    <i class="fas fa-users"></i>
+                    <span id="selectedUsersCount">${seleccionados.length}</span> usuarios seleccionados
+                </div>
+            </div>
+        `;
+
+        return html;
     }
 
     _configurarSelectorUsuariosEdicion(tareaData) {
@@ -1438,6 +1531,59 @@ class TareasController {
         });
 
         this._actualizarContadorUsuarios();
+    }
+
+    _getHTMLAreasEdicion(tareaData) {
+        if (this.areasDisponibles.length === 0) {
+            return '<p class="no-items">No hay áreas disponibles</p>';
+        }
+
+        const areaSeleccionada = tareaData?.areaId || null;
+        const cargosSeleccionados = tareaData?.cargosIds || [];
+
+        let html = `
+            <div class="campos-especificos">
+                <h6 class="section-title"><i class="fas fa-building"></i> Asignar a Área</h6>
+                
+                <div class="areas-container" id="areasContainer">
+        `;
+
+        this.areasDisponibles.forEach(area => {
+            const iniciales = this._obtenerIniciales(area.nombreArea);
+            const totalCargos = area.cargos ? Object.keys(area.cargos).length : 0;
+            const seleccionado = areaSeleccionada === area.id ? 'checked' : '';
+
+            html += `
+                <div class="area-item" data-area-id="${area.id}">
+                    <input type="radio" class="area-radio" name="areaSeleccionada" value="${area.id}" ${seleccionado}>
+                    <div class="area-icon">${iniciales}</div>
+                    <div class="area-info">
+                        <span class="area-nombre">${this._escapeHTML(area.nombreArea)}</span>
+                        <span class="area-descripcion">${this._escapeHTML(area.descripcion || 'Sin descripción')}</span>
+                        <span class="area-badge">${totalCargos} cargos</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+
+        html += `
+            <div id="cargosSection" style="margin-top: 20px; ${!areaSeleccionada ? 'display: none;' : ''}">
+                <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
+                <div class="cargos-container" id="cargosContainer">
+                    <div class="loading-cargos"><i class="fas fa-spinner fa-spin"></i> Cargando cargos...</div>
+                </div>
+                <div class="selected-summary" id="selectedCargosSummary" style="${cargosSeleccionados.length === 0 ? 'display: none;' : ''}">
+                    <i class="fas fa-users"></i>
+                    <span id="selectedCargosCount">${cargosSeleccionados.length}</span> cargos seleccionados
+                </div>
+            </div>
+        `;
+
+        html += `</div>`;
+
+        return html;
     }
 
     async _configurarSelectorAreasEdicion(tareaData) {
@@ -1544,62 +1690,6 @@ class TareasController {
         });
 
         this._actualizarContadorCargos();
-    }
-
-    // ========== ELIMINAR TAREA ==========
-
-    async _eliminarTarea(tareaId) {
-        // Obtener la tarea antes de eliminarla para registrar detalles
-        const tarea = this.todasLasTareas.find(t => t.id === tareaId);
-
-        const result = await Swal.fire({
-            title: '¿Eliminar nota?',
-            text: 'Esta acción no se puede deshacer',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            background: 'var(--color-bg-secondary)',
-            confirmButtonColor: '#dc3545'
-        });
-
-        if (!result.isConfirmed) return;
-
-        Swal.fire({
-            title: 'Eliminando...',
-            html: '<i class="fas fa-spinner fa-spin"></i>',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            background: 'var(--color-bg-secondary)'
-        });
-
-        try {
-            await this.tareaManager.eliminarTarea(
-                tareaId, this.usuarioActual, this.usuarioActual.organizacionCamelCase
-            );
-
-            // ✅ NUEVO: Registrar eliminación en bitácora
-            if (tarea) {
-                await this._registrarEliminacionTarea(tarea);
-            }
-
-            Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: 'Eliminada',
-                text: 'La nota se eliminó correctamente',
-                timer: 1500,
-                showConfirmButton: false,
-                background: 'var(--color-bg-secondary)'
-            });
-
-            await this._cargarTareas();
-
-        } catch (error) {
-            Swal.close();
-            this._mostrarError(error.message);
-        }
     }
 
     // ========== CONFIGURACIÓN DE EVENTOS ==========

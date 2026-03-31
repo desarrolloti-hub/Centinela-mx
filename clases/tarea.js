@@ -40,6 +40,10 @@ class Tarea {
         this.areaId = data.areaId || '';
         this.cargosIds = data.cargosIds || [];
 
+        // ✅ NUEVO: Categoría y subcategoría
+        this.categoriaId = data.categoriaId || null;
+        this.subcategoriaId = data.subcategoriaId || null;
+
         // Metadatos de usuario
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
@@ -224,6 +228,8 @@ class Tarea {
             usuariosCompartidosIds: this.usuariosCompartidosIds,
             areaId: this.areaId,
             cargosIds: this.cargosIds,
+            categoriaId: this.categoriaId,
+            subcategoriaId: this.subcategoriaId,
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -254,6 +260,8 @@ class Tarea {
             usuariosCompartidosIds: this.usuariosCompartidosIds,
             areaId: this.areaId,
             cargosIds: this.cargosIds,
+            categoriaId: this.categoriaId,
+            subcategoriaId: this.subcategoriaId,
             fechaCreacion: this._formatearFecha(this.fechaCreacion),
             fechaCreacionRaw: this.fechaCreacion,
             fechaActualizacion: this._formatearFecha(this.fechaActualizacion),
@@ -362,6 +370,8 @@ class TareaManager {
                 usuariosCompartidosIds: tareaData.usuariosCompartidosIds || [],
                 areaId: tareaData.areaId || '',
                 cargosIds: tareaData.cargosIds || [],
+                categoriaId: tareaData.categoriaId || null,
+                subcategoriaId: tareaData.subcategoriaId || null,
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorNombre: usuarioActual.nombreCompleto || usuarioActual.email || 'Usuario',

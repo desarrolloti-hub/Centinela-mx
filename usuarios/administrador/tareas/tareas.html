@@ -47,11 +47,11 @@
             <div class="header-content">
                 <h1 class="main-title">
                     <i class="fas fa-sticky-note"></i>
-                    Mis Notas
+                    Tareas
                 </h1>
                 <div class="header-description-text">
                     <i class="fas fa-quote-left"></i>
-                    Gestiona tus checklists y notas pendientes
+                    Gestiona tus tareas pendientes
                     <i class="fas fa-quote-right"></i>
                 </div>
             </div>
@@ -62,7 +62,7 @@
             <div class="action-buttons-group">
                 <button class="btn-action" id="btnCrearNota">
                     <i class="fas fa-plus"></i>
-                    Crear Nota
+                    Crear Tarea
                 </button>
             </div>
             <div class="search-box">
@@ -85,7 +85,7 @@
         <!-- FORMULARIO INLINE DE CREACIÓN (se muestra al hacer clic en Crear Nota) -->
         <div class="formulario-creacion" id="formularioCreacion" style="display: none;">
             <div class="formulario-header">
-                <h3 id="formularioTitulo">Nueva Nota Personal</h3>
+                <h3 id="formularioTitulo">Nueva Tarea Personal</h3>
                 <button class="btn-cerrar-form" id="cerrarFormulario">
                     <i class="fas fa-times"></i>
                 </button>
@@ -94,7 +94,7 @@
             <div class="formulario-body">
                 <!-- SELECTOR DE TIPO DE NOTA (arriba del título) -->
                 <div class="tipo-selector-container">
-                    <label class="form-label">Tipo de nota</label>
+                    <label class="form-label">Tipo de tarea</label>
                     <div class="tipo-options">
                         <div class="tipo-option" data-tipo="general">
                             <i class="fas fa-globe"></i>
@@ -181,8 +181,7 @@
             <div class="loading-state">
                 <div class="loading-content">
                     <div class="loading-spinner"></div>
-                    <h3>Cargando notas...</h3>
-                    <p>Obteniendo datos de Firebase</p>
+                    <h3>Cargando Tareas...</h3>
                 </div>
             </div>
         </div>
