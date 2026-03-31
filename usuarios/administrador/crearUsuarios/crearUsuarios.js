@@ -1,26 +1,28 @@
 // ARCHIVO JS PARA CREAR COLABORADOR - VERSIÓN CORREGIDA (SIN DOBLE SELECCIÓN)
-// CON REGISTRO DE BITÁCORA
+// CON REGISTRO DE BITÁCORA Y CAMPO TELÉFONO NUMÉRICO
+// CON SUCURSALES - SOLO SI EL ÁREA ES "SUCURSALES"
 // ==================== IMPORTS CORREGIDOS ====================
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
 
 let historialManager = null; // ✅ NUEVO: Para registrar actividades
+let sucursalManager = null; // ✅ NUEVO: Para manejo de sucursales
 
 // ==================== INICIALIZACIÓN ====================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (typeof Swal === 'undefined') {
         console.error('❌ SweetAlert2 no está cargado.');
         return;
     }
-    
-    // ✅ NUEVO: Inicializar historialManager
-    inicializarHistorial().then(() => {
+
+    // ✅ NUEVO: Inicializar historialManager y sucursalManager
+    inicializarManagers().then(() => {
         initCollaboratorForm();
     });
 });
 
-// ✅ NUEVO: Inicializar historialManager
-async function inicializarHistorial() {
+// ✅ NUEVO: Inicializar historialManager y sucursalManager
+async function inicializarManagers() {
     try {
         const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
         historialManager = new HistorialUsuarioManager();
@@ -28,14 +30,66 @@ async function inicializarHistorial() {
     } catch (error) {
         console.error('Error inicializando historialManager:', error);
     }
+
+    try {
+        const { SucursalManager } = await import('/clases/sucursal.js');
+        sucursalManager = new SucursalManager();
+        console.log('🏢 SucursalManager inicializado para crear usuarios');
+    } catch (error) {
+        console.error('Error inicializando sucursalManager:', error);
+    }
+}
+
+// ========== FUNCIÓN PARA FILTRAR SOLO NÚMEROS ==========
+function configurarFiltroNumerico(elements) {
+    if (elements.telefono) {
+        elements.telefono.addEventListener('input', function (e) {
+            // Eliminar cualquier carácter que no sea número
+            this.value = this.value.replace(/[^0-9]/g, '');
+
+            // Validar longitud máxima (15 dígitos)
+            if (this.value.length > 15) {
+                this.value = this.value.slice(0, 15);
+            }
+        });
+
+        // Prevenir pegado de texto con caracteres no numéricos
+        elements.telefono.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const numericOnly = pastedText.replace(/[^0-9]/g, '');
+            if (numericOnly) {
+                this.value = numericOnly.slice(0, 15);
+                // Disparar evento input para actualizar validación
+                const inputEvent = new Event('input', { bubbles: true });
+                this.dispatchEvent(inputEvent);
+            }
+        });
+
+        // Prevenir entrada de caracteres no numéricos en tiempo real
+        elements.telefono.addEventListener('keypress', function (e) {
+            const key = e.key;
+            // Permitir teclas de control (backspace, delete, tab, etc.)
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            if (key === 'Backspace' || key === 'Delete' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight') return;
+
+            // Solo permitir números
+            if (!/^[0-9]$/.test(key)) {
+                e.preventDefault();
+            }
+        });
+    }
 }
 
 async function initCollaboratorForm() {
-    
+
     // Obtener elementos del DOM
     const elements = obtenerElementosDOM();
     if (!elements) return;
-    
+
+    // Configurar filtro de solo números para teléfono
+    configurarFiltroNumerico(elements);
+
     // Instanciar UserManager
     const userManager = new UserManager();
 
@@ -56,18 +110,18 @@ async function initCollaboratorForm() {
                 plan: 'gratis'
             };
         }
-        
+
         window.usuarioActual = usuarioActual;
-        
+
         // Configurar interfaz con datos del usuario
         actualizarInterfazConUsuario(elements, usuarioActual);
-        
+
         // Cargar áreas desde Firebase usando AreaManager
         await cargarAreas(elements, usuarioActual);
-        
+
         // Configurar handlers
         configurarHandlers(elements, userManager, usuarioActual);
-                
+
     } catch (error) {
         console.error('❌ Error inicializando formulario:', error);
         mostrarErrorSistema(error.message);
@@ -77,7 +131,7 @@ async function initCollaboratorForm() {
 // ✅ NUEVO: Registrar creación de colaborador
 async function registrarCreacionColaborador(colaboradorData, usuarioActual) {
     if (!historialManager) return;
-    
+
     try {
         await historialManager.registrarActividad({
             usuario: usuarioActual,
@@ -88,8 +142,10 @@ async function registrarCreacionColaborador(colaboradorData, usuarioActual) {
                 colaboradorId: colaboradorData.id || 'pendiente',
                 colaboradorNombre: colaboradorData.nombreCompleto,
                 colaboradorEmail: colaboradorData.correoElectronico,
+                colaboradorTelefono: colaboradorData.telefono || 'No especificado',
                 colaboradorRol: colaboradorData.rol || 'colaborador',
                 areaAsignadaId: colaboradorData.areaAsignadaId || null,
+                sucursalAsignadaId: colaboradorData.sucursalAsignadaId || null,
                 fechaCreacion: new Date().toISOString()
             }
         });
@@ -162,36 +218,40 @@ function obtenerElementosDOM() {
             profileImage: document.getElementById('profileImage'),
             editProfileOverlay: document.getElementById('editProfileOverlay'),
             profileInput: document.getElementById('profile-input'),
-            
+
             // Logo de organización (heredado)
             orgCircle: document.getElementById('orgCircle'),
             orgPlaceholder: document.getElementById('orgPlaceholder'),
             orgImage: document.getElementById('orgImage'),
             editOrgOverlay: document.getElementById('editOrgOverlay'),
             orgInfoText: document.getElementById('orgInfoText'),
-            
+
             // Campos del formulario
             organization: document.getElementById('organization'),
             nombreCompleto: document.getElementById('nombreCompleto'),
             correoElectronico: document.getElementById('correoElectronico'),
+            telefono: document.getElementById('telefono'), // Nuevo campo
             rol: document.getElementById('rol'),
             areaSelect: document.getElementById('areaSelect'),
             cargoEnAreaSelect: document.getElementById('cargoEnAreaSelect'),
-            
+            sucursalContainer: document.getElementById('sucursalContainer'),
+            sucursalSelect: document.getElementById('sucursalSelect'),
+            sucursalHint: document.getElementById('sucursalHint'),
+
             contrasena: document.getElementById('contrasena'),
             confirmarContrasena: document.getElementById('confirmarContrasena'),
-            
+
             // Botones y mensajes
             registerBtn: document.getElementById('registerBtn'),
             cancelBtn: document.getElementById('cancelBtn'),
             mainMessage: document.getElementById('mainMessage'),
             registerForm: document.getElementById('registerForm'),
-            
+
             // Títulos
             adminNameSubtitle: document.getElementById('adminNameSubtitle'),
             formMainTitle: document.getElementById('formMainTitle'),
             formSubTitle: document.getElementById('formSubTitle'),
-            
+
             // Toggle de contraseñas
             toggleContrasenaBtns: document.querySelectorAll('.toggle-contrasena')
         };
@@ -212,51 +272,51 @@ function actualizarInterfazConUsuario(elements, usuario) {
         elements.organization.value = usuario.organizacion;
         elements.organization.classList.add('readonly-field');
     }
-    
+
     // Actualizar nombre del usuario en el subtítulo
     if (elements.adminNameSubtitle) {
         elements.adminNameSubtitle.textContent = `Usuario: ${usuario.nombreCompleto} | ${usuario.organizacion}`;
     }
-    
+
     // Cargar logo de organización heredado
     if (usuario.fotoOrganizacion && elements.orgCircle && elements.orgPlaceholder && elements.orgImage) {
         try {
             elements.orgPlaceholder.style.display = 'none';
             elements.orgImage.src = usuario.fotoOrganizacion;
             elements.orgImage.style.display = 'block';
-            
+
             // Deshabilitar interacción con el logo
             elements.orgCircle.classList.add('org-disabled');
             if (elements.editOrgOverlay) {
                 elements.editOrgOverlay.style.display = 'none';
             }
-            
+
             // Actualizar texto informativo
             if (elements.orgInfoText) {
                 elements.orgInfoText.textContent = 'Logo heredado. Los colaboradores verán este logo.';
             }
-            
+
         } catch (error) {
             console.warn('⚠️ No se pudo cargar el logo de organización:', error);
         }
     }
-    
+
     // Actualizar títulos con información del usuario
     if (elements.formMainTitle) {
         elements.formMainTitle.textContent = `CREAR COLABORADOR PARA ${usuario.organizacion.toUpperCase()}`;
     }
-    
+
     if (elements.formSubTitle) {
         elements.formSubTitle.textContent = `Completa los datos para crear un colaborador en ${usuario.organizacion}`;
     }
-    
+
     // Mostrar mensaje informativo
     mostrarMensajeInfoUsuario(elements.mainMessage, usuario);
 }
 
 function mostrarMensajeInfoUsuario(element, usuario) {
     if (!element) return;
-    
+
     element.innerHTML = `
         <div class="message-container info" style="display: block;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
@@ -281,40 +341,40 @@ function mostrarMensajeInfoUsuario(element, usuario) {
 
 async function cargarAreas(elements, usuario) {
     if (!elements.areaSelect) return;
-    
+
     try {
         const areaManager = new AreaManager();
-        
+
         console.log('🔍 Cargando áreas para organización:', usuario.organizacionCamelCase);
-        
+
         elements.areaSelect.innerHTML = '<option value="">Cargando áreas...</option>';
         elements.areaSelect.disabled = true;
         elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
         elements.cargoEnAreaSelect.disabled = true;
-        
+
         const areas = await areaManager.getAreasByOrganizacion(usuario.organizacionCamelCase);
-        
+
         // Guardar las áreas en el elemento select para usarlas después
         elements.areaSelect._areasData = areas;
-        
+
         if (areas.length === 0) {
             elements.areaSelect.innerHTML = '<option value="">No hay áreas disponibles</option>';
             elements.areaSelect.disabled = false;
             return;
         }
-        
+
         let options = '<option value="">Selecciona un área</option>';
         areas.forEach(area => {
-            options += `<option value="${area.id}">${area.nombreArea}</option>`;
+            options += `<option value="${area.id}" data-nombre="${area.nombreArea}">${area.nombreArea}</option>`;
         });
         elements.areaSelect.innerHTML = options;
         elements.areaSelect.disabled = false;
-        
+
     } catch (error) {
         console.error('❌ Error cargando áreas:', error);
         elements.areaSelect.innerHTML = '<option value="">Error al cargar áreas</option>';
         elements.areaSelect.disabled = false;
-        
+
         Swal.fire({
             icon: 'warning',
             title: 'Error al cargar áreas',
@@ -326,27 +386,33 @@ async function cargarAreas(elements, usuario) {
 
 function cargarCargosPorArea(elements) {
     if (!elements.areaSelect || !elements.cargoEnAreaSelect) return;
-    
+
     const areaId = elements.areaSelect.value;
+    const areaNombre = elements.areaSelect.options[elements.areaSelect.selectedIndex]?.getAttribute('data-nombre') || '';
     const areas = elements.areaSelect._areasData || [];
-    
+
     elements.cargoEnAreaSelect.innerHTML = '';
     elements.cargoEnAreaSelect.disabled = true;
-    
+
+    // Ocultar campo de sucursal por defecto
+    if (elements.sucursalContainer) {
+        elements.sucursalContainer.style.display = 'none';
+    }
+
     if (!areaId) {
         elements.cargoEnAreaSelect.innerHTML = '<option value="">Primero selecciona un área</option>';
         return;
     }
-    
+
     const areaSeleccionada = areas.find(a => a.id === areaId);
-    
+
     if (!areaSeleccionada) {
         elements.cargoEnAreaSelect.innerHTML = '<option value="">Área no encontrada</option>';
         return;
     }
-    
+
     const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
-    
+
     if (cargos.length === 0) {
         elements.cargoEnAreaSelect.innerHTML = '<option value="">Esta área no tiene cargos</option>';
     } else {
@@ -354,7 +420,7 @@ function cargarCargosPorArea(elements) {
         cargos.forEach((cargo, index) => {
             const cargoId = cargo.id || `cargo_${index}_${Date.now()}`;
             options += `<option value="${cargoId}">${cargo.nombre || 'Cargo sin nombre'}</option>`;
-            
+
             if (!elements.cargoEnAreaSelect._cargosData) {
                 elements.cargoEnAreaSelect._cargosData = {};
             }
@@ -362,8 +428,93 @@ function cargarCargosPorArea(elements) {
         });
         elements.cargoEnAreaSelect.innerHTML = options;
     }
-    
+
     elements.cargoEnAreaSelect.disabled = false;
+
+    // ✅ NUEVO: Verificar si el área seleccionada es "sucursales" para mostrar el campo de sucursal
+    if (areaNombre.toLowerCase() === 'sucursales' || areaNombre.toLowerCase() === 'sucursal') {
+        console.log('🏢 Área "sucursales" seleccionada, cargando sucursales...');
+        cargarSucursales(elements);
+    }
+}
+
+// ✅ NUEVO: Cargar sucursales para asociar al colaborador
+async function cargarSucursales(elements) {
+    if (!elements.sucursalSelect || !sucursalManager) return;
+
+    try {
+        const usuarioActual = window.usuarioActual;
+        if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
+            console.warn('No se pudo cargar sucursales: organización no disponible');
+            return;
+        }
+
+        elements.sucursalSelect.innerHTML = '<option value="">Cargando sucursales...</option>';
+        elements.sucursalSelect.disabled = true;
+
+        const sucursales = await sucursalManager.getSucursalesByOrganizacion(usuarioActual.organizacionCamelCase);
+
+        if (sucursales.length === 0) {
+            elements.sucursalSelect.innerHTML = '<option value="">No hay sucursales disponibles</option>';
+            if (elements.sucursalHint) {
+                elements.sucursalHint.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No hay sucursales registradas. Crea una sucursal primero.';
+            }
+        } else {
+            let options = '<option value="">Selecciona una sucursal (opcional)</option>';
+            sucursales.forEach(sucursal => {
+                options += `<option value="${sucursal.id}" data-nombre="${sucursal.nombre}" data-ciudad="${sucursal.ciudad}">${sucursal.nombre} - ${sucursal.ciudad || 'Sin ciudad'}</option>`;
+            });
+            elements.sucursalSelect.innerHTML = options;
+            elements.sucursalSelect.disabled = false;
+
+            if (elements.sucursalHint) {
+                elements.sucursalHint.innerHTML = '<i class="fas fa-info-circle"></i> Opcional. Selecciona la sucursal a la que pertenecerá';
+            }
+        }
+
+        // Mostrar el contenedor de sucursal
+        if (elements.sucursalContainer) {
+            elements.sucursalContainer.style.display = 'block';
+        }
+
+        // Guardar lista de sucursales para validaciones posteriores
+        elements.sucursalSelect._sucursalesData = sucursales;
+
+    } catch (error) {
+        console.error('❌ Error cargando sucursales:', error);
+        elements.sucursalSelect.innerHTML = '<option value="">Error al cargar sucursales</option>';
+        if (elements.sucursalHint) {
+            elements.sucursalHint.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error al cargar sucursales';
+        }
+    }
+}
+
+// ✅ NUEVO: Verificar que la sucursal no tenga más de 2 colaboradores asignados
+async function verificarLimiteSucursal(sucursalId, organizacionCamelCase) {
+    if (!sucursalId || !sucursalManager) return true;
+
+    try {
+        // Obtener todos los colaboradores de la organización
+        const { UserManager } = await import('/clases/user.js');
+        const userManager = new UserManager();
+
+        const colaboradores = await userManager.getColaboradoresByOrganizacion(organizacionCamelCase, true);
+
+        // Contar cuántos colaboradores tienen esta sucursal asignada
+        const colaboradoresEnSucursal = colaboradores.filter(colab =>
+            colab.sucursalAsignadaId === sucursalId
+        );
+
+        if (colaboradoresEnSucursal.length >= 2) {
+            return false;
+        }
+
+        return true;
+
+    } catch (error) {
+        console.error('Error verificando límite de sucursal:', error);
+        return true; // Si hay error, permitir continuar
+    }
 }
 
 // ========== MANEJO DE IMÁGENES CON SWEETALERT2 ==========
@@ -373,30 +524,30 @@ function configurarHandlers(elements, userManager, usuario) {
     if (elements.editProfileOverlay && elements.profileInput) {
         elements.editProfileOverlay.addEventListener('click', () => elements.profileInput.click());
         elements.profileCircle.addEventListener('click', () => elements.profileInput.click());
-        
+
         // IMPORTANTE: No limpiar el input aquí, solo cuando se abre
-        elements.profileInput.addEventListener('click', function(e) {
+        elements.profileInput.addEventListener('click', function (e) {
             // Detener propagación para evitar eventos múltiples
             e.stopPropagation();
             // Limpiar solo cuando se abre el selector
             this.value = '';
         });
-        
+
         // Usar { once: false } pero asegurar que no se acumulen eventos
         elements.profileInput.removeEventListener('change', manejarCambioFoto);
-        elements.profileInput.addEventListener('change', function(e) {
+        elements.profileInput.addEventListener('change', function (e) {
             manejarCambioFoto(e, elements);
         });
     }
-    
+
     // Mostrar/ocultar contraseña
     if (elements.toggleContrasenaBtns) {
         elements.toggleContrasenaBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const targetId = this.getAttribute('data-target');
                 const input = document.getElementById(targetId);
                 const icon = this.querySelector('i');
-                
+
                 if (input && icon) {
                     input.type = input.type === 'password' ? 'text' : 'password';
                     icon.classList.toggle('fa-eye');
@@ -405,20 +556,20 @@ function configurarHandlers(elements, userManager, usuario) {
             });
         });
     }
-    
+
     // Evento para cuando cambia el área seleccionada
     if (elements.areaSelect) {
         elements.areaSelect.addEventListener('change', () => cargarCargosPorArea(elements));
     }
-    
+
     // Validación en tiempo real
     configurarValidacionTiempoReal(elements);
-    
+
     // Botón de registro
     if (elements.registerBtn) {
         elements.registerBtn.addEventListener('click', (e) => registrarColaborador(e, elements, userManager, usuario));
     }
-    
+
     // Botón cancelar
     if (elements.cancelBtn) {
         elements.cancelBtn.addEventListener('click', () => cancelarRegistro());
@@ -431,24 +582,24 @@ let procesandoFoto = false;
 function manejarCambioFoto(event, elements) {
     // Prevenir procesamiento múltiple
     if (procesandoFoto) return;
-    
+
     const file = event.target.files[0];
     if (!file) return;
-    
+
     procesandoFoto = true;
-    
+
     // Validar archivo
     if (!validarArchivo(file, 5)) {
         elements.profileInput.value = '';
         procesandoFoto = false;
         return;
     }
-    
+
     const reader = new FileReader();
-    
-    reader.onload = function(e) {
+
+    reader.onload = function (e) {
         const imageBase64 = e.target.result;
-        
+
         Swal.fire({
             title: 'Confirmar foto de perfil',
             html: `
@@ -473,8 +624,8 @@ function manejarCambioFoto(event, elements) {
             procesandoFoto = false;
         });
     };
-    
-    reader.onerror = function() {
+
+    reader.onerror = function () {
         elements.profileInput.value = '';
         procesandoFoto = false;
         Swal.fire({
@@ -483,14 +634,14 @@ function manejarCambioFoto(event, elements) {
             text: 'No se pudo leer el archivo'
         });
     };
-    
+
     reader.readAsDataURL(file);
 }
 
 function validarArchivo(file, maxSizeMB) {
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     const maxSize = maxSizeMB * 1024 * 1024;
-    
+
     if (!validTypes.includes(file.type)) {
         Swal.fire({
             icon: 'error',
@@ -500,7 +651,7 @@ function validarArchivo(file, maxSizeMB) {
         });
         return false;
     }
-    
+
     if (file.size > maxSize) {
         Swal.fire({
             icon: 'error',
@@ -510,7 +661,7 @@ function validarArchivo(file, maxSizeMB) {
         });
         return false;
     }
-    
+
     return true;
 }
 
@@ -519,7 +670,7 @@ function actualizarFotoPerfil(imageSrc, elements) {
         elements.profilePlaceholder.style.display = 'none';
         elements.profileImage.src = imageSrc;
         elements.profileImage.style.display = 'block';
-        
+
         Swal.fire({
             icon: 'success',
             title: '¡Foto cargada!',
@@ -533,9 +684,22 @@ function actualizarFotoPerfil(imageSrc, elements) {
 // ========== VALIDACIÓN ==========
 
 function configurarValidacionTiempoReal(elements) {
+    // Validar teléfono en tiempo real (solo números)
+    if (elements.telefono) {
+        elements.telefono.addEventListener('input', function () {
+            if (this.value) {
+                // Validar que solo tenga números y longitud adecuada
+                const isValid = /^[0-9]{8,15}$/.test(this.value);
+                this.style.borderColor = isValid ? 'var(--color-success, #28a745)' : 'var(--color-danger, #dc3545)';
+            } else {
+                this.style.borderColor = '';
+            }
+        });
+    }
+
     // Validar coincidencia de contraseñas
     if (elements.confirmarContrasena) {
-        elements.confirmarContrasena.addEventListener('input', function() {
+        elements.confirmarContrasena.addEventListener('input', function () {
             if (elements.contrasena.value && this.value) {
                 this.style.borderColor = elements.contrasena.value === this.value ? 'var(--color-success, #28a745)' : 'var(--color-danger, #dc3545)';
             } else {
@@ -543,10 +707,10 @@ function configurarValidacionTiempoReal(elements) {
             }
         });
     }
-    
+
     // Validar email
     if (elements.correoElectronico) {
-        elements.correoElectronico.addEventListener('blur', function() {
+        elements.correoElectronico.addEventListener('blur', function () {
             if (this.value) {
                 const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value);
                 this.style.borderColor = isValid ? 'var(--color-success, #28a745)' : 'var(--color-danger, #dc3545)';
@@ -559,40 +723,47 @@ function configurarValidacionTiempoReal(elements) {
 
 function validarFormulario(elements) {
     const errores = [];
-    
+
     // Nombre completo
     if (!elements.nombreCompleto.value.trim()) {
         errores.push('El nombre completo es obligatorio');
     } else if (elements.nombreCompleto.value.trim().length < 5) {
         errores.push('El nombre completo debe tener al menos 5 caracteres');
     }
-    
+
     // Email
     if (!elements.correoElectronico.value.trim()) {
         errores.push('El correo electrónico es obligatorio');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(elements.correoElectronico.value)) {
         errores.push('El correo electrónico no es válido');
     }
-    
+
+    // Teléfono (validación: solo números, entre 8 y 15 dígitos)
+    if (elements.telefono && elements.telefono.value.trim()) {
+        if (!/^[0-9]{8,15}$/.test(elements.telefono.value.trim())) {
+            errores.push('El teléfono debe contener solo números y tener entre 8 y 15 dígitos');
+        }
+    }
+
     // Contraseña
     if (!elements.contrasena.value) {
         errores.push('La contraseña es obligatoria');
     } else if (!validarContrasena(elements.contrasena.value)) {
         errores.push('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial');
     }
-    
+
     // Confirmar contraseña
     if (!elements.confirmarContrasena.value) {
         errores.push('Debes confirmar la contraseña');
     } else if (elements.contrasena.value !== elements.confirmarContrasena.value) {
         errores.push('Las contraseñas no coinciden');
     }
-    
+
     // Validar rol en el sistema
     if (elements.rol && !elements.rol.value) {
         errores.push('Debes seleccionar un rol en el sistema');
     }
-    
+
     return errores;
 }
 
@@ -602,19 +773,19 @@ function validarContrasena(password) {
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    
-    return password.length >= minLength && 
-           hasUpperCase && 
-           hasLowerCase && 
-           hasNumber && 
-           hasSpecialChar;
+
+    return password.length >= minLength &&
+        hasUpperCase &&
+        hasLowerCase &&
+        hasNumber &&
+        hasSpecialChar;
 }
 
 // ========== REGISTRO DE COLABORADOR ==========
 
 async function registrarColaborador(event, elements, userManager, usuario) {
     event.preventDefault();
-    
+
     // Validar formulario
     const errores = validarFormulario(elements);
     if (errores.length > 0) {
@@ -626,14 +797,14 @@ async function registrarColaborador(event, elements, userManager, usuario) {
         });
         return;
     }
-    
+
     // Obtener datos del área y cargo seleccionados (si existen)
     let areaNombre = 'No asignada';
     let cargoNombre = 'No asignado';
     let cargoDescripcion = '';
     let cargoObjeto = null;
     let areaId = null;
-    
+
     if (elements.areaSelect && elements.areaSelect.value) {
         areaId = elements.areaSelect.value;
         const areas = elements.areaSelect._areasData || [];
@@ -642,7 +813,7 @@ async function registrarColaborador(event, elements, userManager, usuario) {
             areaNombre = areaSeleccionada.nombreArea;
         }
     }
-    
+
     if (elements.cargoEnAreaSelect && elements.cargoEnAreaSelect.value) {
         const cargosData = elements.cargoEnAreaSelect._cargosData || {};
         const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect.value];
@@ -656,31 +827,79 @@ async function registrarColaborador(event, elements, userManager, usuario) {
             };
         }
     }
-    
+
+    // ✅ NUEVO: Obtener datos de sucursal si está seleccionada y visible
+    let sucursalId = null;
+    let sucursalNombre = null;
+    let sucursalCiudad = null;
+    let esAreaSucursales = false;
+
+    // Verificar si el área seleccionada es "sucursales"
+    const areaSeleccionadaElement = elements.areaSelect.options[elements.areaSelect.selectedIndex];
+    const areaSeleccionadaNombre = areaSeleccionadaElement?.getAttribute('data-nombre') || '';
+    esAreaSucursales = areaSeleccionadaNombre.toLowerCase() === 'sucursales' || areaSeleccionadaNombre.toLowerCase() === 'sucursal';
+
+    if (esAreaSucursales && elements.sucursalSelect && elements.sucursalSelect.value) {
+        sucursalId = elements.sucursalSelect.value;
+
+        // Obtener nombre y ciudad de la sucursal seleccionada
+        const sucursalesData = elements.sucursalSelect._sucursalesData || [];
+        const sucursalSeleccionada = sucursalesData.find(s => s.id === sucursalId);
+        if (sucursalSeleccionada) {
+            sucursalNombre = sucursalSeleccionada.nombre;
+            sucursalCiudad = sucursalSeleccionada.ciudad;
+        }
+
+        // Verificar límite de colaboradores por sucursal (máximo 2)
+        if (sucursalId && usuario.organizacionCamelCase) {
+            const limiteOk = await verificarLimiteSucursal(sucursalId, usuario.organizacionCamelCase);
+            if (!limiteOk) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Límite de colaboradores alcanzado',
+                    html: `La sucursal seleccionada ya tiene 2 colaboradores asignados.<br>
+                           No se pueden asignar más colaboradores a esta sucursal.`,
+                    confirmButtonText: 'ENTENDIDO'
+                });
+                return;
+            }
+        }
+    }
+
     // Mostrar confirmación
+    let confirmHtml = `
+        <div style="text-align: left; padding: 10px 0;">
+            <p><strong>Nombre:</strong> ${elements.nombreCompleto.value.trim()}</p>
+            <p><strong>Email:</strong> ${elements.correoElectronico.value.trim()}</p>
+            <p><strong>Teléfono:</strong> ${elements.telefono?.value.trim() || 'No especificado'}</p>
+            <p><strong>Rol en sistema:</strong> ${elements.rol ? elements.rol.options[elements.rol.selectedIndex].text : 'No especificado'}</p>
+            <p><strong>Área asignada:</strong> ${areaNombre}</p>
+            <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
+    `;
+
+    if (esAreaSucursales) {
+        confirmHtml += `<p><strong>Sucursal asignada:</strong> ${sucursalNombre ? `${sucursalNombre}${sucursalCiudad ? ` (${sucursalCiudad})` : ''}` : 'No asignada'}</p>`;
+    }
+
+    confirmHtml += `
+            <p style="color: var(--color-warning, #ff9800); margin-top: 15px;">
+                <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación al colaborador.
+            </p>
+        </div>
+    `;
+
     const confirmResult = await Swal.fire({
         title: 'Crear colaborador',
-        html: `
-            <div style="text-align: left; padding: 10px 0;">
-                <p><strong>Nombre:</strong> ${elements.nombreCompleto.value.trim()}</p>
-                <p><strong>Email:</strong> ${elements.correoElectronico.value.trim()}</p>
-                <p><strong>Rol en sistema:</strong> ${elements.rol ? elements.rol.options[elements.rol.selectedIndex].text : 'No especificado'}</p>
-                <p><strong>Área asignada:</strong> ${areaNombre}</p>
-                <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
-                <p style="color: var(--color-warning, #ff9800); margin-top: 15px;">
-                    <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación al colaborador.
-                </p>
-            </div>
-        `,
+        html: confirmHtml,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'CONFIRMAR',
         cancelButtonText: 'CANCELAR',
         allowOutsideClick: false
     });
-    
+
     if (!confirmResult.isConfirmed) return;
-    
+
     // Mostrar loader
     Swal.fire({
         title: 'Creando colaborador...',
@@ -690,38 +909,44 @@ async function registrarColaborador(event, elements, userManager, usuario) {
         showConfirmButton: false,
         didOpen: () => Swal.showLoading()
     });
-    
+
     try {
         const colaboradorData = {
             nombreCompleto: elements.nombreCompleto.value.trim(),
             correoElectronico: elements.correoElectronico.value.trim(),
+            telefono: elements.telefono?.value.trim() || '', // Nuevo campo - solo números
             fotoUsuario: elements.profileImage.src || null,
-            
+
             // Campos heredados del usuario
             organizacion: usuario.organizacion,
             organizacionCamelCase: usuario.organizacionCamelCase,
             fotoOrganizacion: usuario.fotoOrganizacion,
             theme: usuario.theme || 'light',
             plan: usuario.plan || 'gratis',
-            
+
             // Usar el objeto cargo para la información del puesto
             cargo: cargoObjeto,
-            
+
             // Solo el ID del área, no el nombre
             areaAsignadaId: areaId,
-            
+
+            // ✅ NUEVO: Sucursal asignada (solo si el área es sucursales)
+            sucursalAsignadaId: sucursalId,
+            sucursalAsignadaNombre: sucursalNombre,
+            sucursalAsignadaCiudad: sucursalCiudad,
+
             // El campo rol es para el nivel de acceso
             rol: elements.rol ? elements.rol.value : 'colaborador',
-            
+
             // Campos de sistema
             status: true,
-            
+
             // Campos de trazabilidad
             creadoPor: usuario.id,
             creadoPorEmail: usuario.correoElectronico,
             creadoPorNombre: usuario.nombreCompleto,
             fechaCreacion: new Date(),
-            
+
             // Permisos básicos
             permisosPersonalizados: {
                 dashboard: true,
@@ -731,24 +956,24 @@ async function registrarColaborador(event, elements, userManager, usuario) {
                 crearContenido: false
             }
         };
-        
+
         // Crear colaborador usando UserManager
         const resultado = await userManager.createColaborador(
             colaboradorData,
             elements.contrasena.value,
             usuario.id
         );
-        
+
         // ✅ NUEVO: Registrar creación en bitácora
         if (resultado && resultado.id) {
             colaboradorData.id = resultado.id;
             await registrarCreacionColaborador(colaboradorData, usuario);
         }
-                
+
         // Mostrar éxito
         Swal.close();
-        await mostrarExitoRegistro(colaboradorData);
-        
+        await mostrarExitoRegistro(colaboradorData, esAreaSucursales, sucursalNombre);
+
     } catch (error) {
         console.error('❌ Error creando colaborador:', error);
         Swal.close();
@@ -756,7 +981,12 @@ async function registrarColaborador(event, elements, userManager, usuario) {
     }
 }
 
-async function mostrarExitoRegistro(colaboradorData) {
+async function mostrarExitoRegistro(colaboradorData, esAreaSucursales = false, sucursalNombre = null) {
+    let mensajeSucursal = '';
+    if (esAreaSucursales && sucursalNombre) {
+        mensajeSucursal = `<p><strong>Sucursal:</strong> ${sucursalNombre}</p>`;
+    }
+
     const result = await Swal.fire({
         icon: 'success',
         title: '¡Colaborador creado!',
@@ -764,7 +994,9 @@ async function mostrarExitoRegistro(colaboradorData) {
             <div style="text-align: center;">
                 <p><strong>Nombre:</strong> ${colaboradorData.nombreCompleto}</p>
                 <p><strong>Email:</strong> ${colaboradorData.correoElectronico}</p>
+                <p><strong>Teléfono:</strong> ${colaboradorData.telefono || 'No especificado'}</p>
                 <p><strong>Organización:</strong> ${colaboradorData.organizacion}</p>
+                ${mensajeSucursal}
                 <p style="margin-top: 15px;"><i class="fas fa-envelope"></i> Se ha enviado un correo de verificación</p>
             </div>
         `,
@@ -773,7 +1005,7 @@ async function mostrarExitoRegistro(colaboradorData) {
         cancelButtonText: 'IR AL PANEL',
         allowOutsideClick: false
     });
-    
+
     if (result.isConfirmed) {
         // Recargar página para nuevo registro
         location.reload();
@@ -785,10 +1017,10 @@ async function mostrarExitoRegistro(colaboradorData) {
 function manejarErrorRegistro(error) {
     let errorMessage = 'Ocurrió un error al crear el colaborador';
     let errorTitle = 'Error al crear colaborador';
-    
+
     // Manejar errores específicos
     if (error.code) {
-        switch(error.code) {
+        switch (error.code) {
             case 'auth/email-already-in-use':
                 errorMessage = 'Este correo electrónico ya está registrado en el sistema.';
                 errorTitle = 'Email en uso';
@@ -818,7 +1050,7 @@ function manejarErrorRegistro(error) {
     } else if (error.message) {
         errorMessage = error.message;
     }
-    
+
     Swal.fire({
         icon: 'error',
         title: errorTitle,
@@ -849,6 +1081,17 @@ function cancelarRegistro() {
         if (result.isConfirmed) {
             window.location.href = '../usuarios/usuarios.html';
         }
+    });
+}
+
+function mostrarErrorSistema(mensaje) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Error del sistema',
+        text: mensaje || 'Ocurrió un error al cargar el formulario. Por favor, recarga la página.',
+        confirmButtonText: 'RECARGAR'
+    }).then(() => {
+        window.location.reload();
     });
 }
 
