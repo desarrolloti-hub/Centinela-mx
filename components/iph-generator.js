@@ -1,9 +1,10 @@
 /**
  * IPH GENERATOR - Sistema Centinela
- * VERSIÓN: 9.1 - ESPACIOS REDUCIDOS PARA UNA SOLA PÁGINA
+ * VERSIÓN: 9.2 - SIN MARCOS (SIN TABLAS)
  * 
  * Optimizado para generación rápida sin problemas CORS
- * ESPACIOS ENTRE BLOQUES REDUCIDOS (1-2 mm en lugar de 8 mm)
+ * Eliminados todos los bordes de rectángulos en secciones de información
+ * Se mantienen solo líneas divisorias debajo de títulos
  */
 
 import { PDFBaseGenerator, coloresBase } from './pdf-base-generator.js';
@@ -370,6 +371,7 @@ class IPHGenerator extends PDFBaseGenerator {
             const anchoConMargen = ancho - (margenImagen * 2);
             const altoConMargen = alto - (margenImagen * 2);
             
+            // Solo borde para la imagen individual (no para la sección)
             pdf.setDrawColor(80, 80, 80);
             pdf.setLineWidth(0.3);
             pdf.rect(x, y, ancho, alto, 'S');
@@ -418,11 +420,9 @@ class IPHGenerator extends PDFBaseGenerator {
                 const lineasComentario = this.dividirTextoPorCaracteres(comentario, CONFIG.MAX_CARACTERES_COMENTARIO);
                 const alturaComentario = Math.min(lineasComentario.length * CONFIG.ALTURA_LINEA, CONFIG.ALTURA_COMENTARIO + 15);
                 
+                // Fondo gris claro para el área de comentario sin borde
                 pdf.setFillColor(248, 248, 248);
-                pdf.setDrawColor(220, 220, 220);
-                pdf.setLineWidth(0.2);
-                pdf.rect(xComentario, yComentario - 1, anchoTexto, alturaComentario + 2, 'FD');
-                pdf.rect(xComentario, yComentario - 1, anchoTexto, alturaComentario + 2, 'S');
+                pdf.rect(xComentario, yComentario - 1, anchoTexto, alturaComentario + 2, 'F');
                 
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(this.fonts.mini);
@@ -448,6 +448,7 @@ class IPHGenerator extends PDFBaseGenerator {
                     alturaUtilizada: alto + CONFIG.ESPACIADO_COMENTARIO + alturaComentario + 6
                 };
             } else {
+                // Fondo gris claro para área sin comentario, sin borde
                 pdf.setFillColor(250, 250, 250);
                 pdf.rect(xComentario, yComentario - 1, anchoTexto, 7, 'F');
                 
@@ -523,7 +524,7 @@ class IPHGenerator extends PDFBaseGenerator {
     }
 
     // =============================================
-    // DIBUJAR SEGUIMIENTO
+    // DIBUJAR SEGUIMIENTO (SIN BORDES)
     // =============================================
     
     async dibujarSeguimiento(pdf, seguimiento, x, y, ancho, numero) {
@@ -545,11 +546,9 @@ class IPHGenerator extends PDFBaseGenerator {
         }
         
         pdf.saveGraphicsState();
+        // Fondo gris muy claro sin borde
         pdf.setFillColor(248, 248, 248);
-        pdf.setDrawColor(200, 200, 200);
-        pdf.setLineWidth(0.2);
-        pdf.rect(x, y, ancho, alturaTotal, 'FD');
-        pdf.rect(x, y, ancho, alturaTotal, 'S');
+        pdf.rect(x, y, ancho, alturaTotal, 'F');
         
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.small);
@@ -561,6 +560,7 @@ class IPHGenerator extends PDFBaseGenerator {
         pdf.setTextColor(100, 100, 100);
         pdf.text(fecha, x + ancho - 6, y + 6, { align: 'right' });
         
+        // Línea divisoria debajo del usuario/fecha
         pdf.setDrawColor(220, 220, 220);
         pdf.line(x + 4, y + 12, x + ancho - 4, y + 12);
         
@@ -749,22 +749,17 @@ class IPHGenerator extends PDFBaseGenerator {
         
         this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', incidencia.id || 'Nueva Incidencia');
         
-       // =============================================
-        // 1. IDENTIFICACIÓN DE LA UNIDAD
+        // =============================================
+        // 1. IDENTIFICACIÓN DE LA UNIDAD (SIN MARCO)
         // =============================================
         const alturaIdentificacion = 48;
         pdf.saveGraphicsState();
-        pdf.setFillColor(255, 255, 255);
-        pdf.setDrawColor(200, 200, 200);
-        pdf.setLineWidth(0.3);
-        pdf.rect(margen, yPos, anchoContenido, alturaIdentificacion, 'FD');
-
+        
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.normal);
         pdf.setTextColor(0, 0, 0);
         pdf.text("1. IDENTIFICACIÓN DE LA UNIDAD", margen + 6, yPos + 6);
         pdf.setDrawColor(180, 180, 180);
-        // 👇 LÍNEA MÁS CERCA: antes yPos + 12, ahora yPos + 9
         pdf.line(margen + 4, yPos + 9, margen + anchoContenido - 4, yPos + 9);
 
         pdf.setFont('helvetica', 'normal');
@@ -772,28 +767,22 @@ class IPHGenerator extends PDFBaseGenerator {
         pdf.setTextColor(60, 60, 60);
 
         const organizacion = this.organizacionActual?.nombre || incidencia.organizacion || 'No especificada';
-        pdf.text(`Organización: ${organizacion}`, margen + 6, yPos + 16); // Ajustado también
-        // 👆 antes estaba en yPos + 22, ahora más arriba
+        pdf.text(`Organización: ${organizacion}`, margen + 6, yPos + 16);
 
         const sucursalNombre = incidencia.sucursalNombre || this.obtenerNombreSucursal(incidencia.sucursalId);
         pdf.text(`Sucursal: ${sucursalNombre}`, margen + 6, yPos + 24);
-        // 👆 antes estaba en yPos + 30
 
         const nombreReportante = incidencia.reportadoPorNombre || this.obtenerNombreUsuario(incidencia.reportadoPorId);
         pdf.text(`Reportado por: ${nombreReportante}`, margen + 6, yPos + 32);
-        // 👆 antes estaba en yPos + 38
 
         pdf.restoreGraphicsState();
         yPos += alturaIdentificacion + CONFIG.ESPACIO_ENTRE_BLOQUES;
         
         // =============================================
-        // 2. DATOS GENERALES
+        // 2. DATOS GENERALES (SIN MARCO)
         // =============================================
         const alturaGenerales = 32;
         pdf.saveGraphicsState();
-        pdf.setFillColor(255, 255, 255);
-        pdf.setDrawColor(200, 200, 200);
-        pdf.rect(margen, yPos, anchoContenido, alturaGenerales, 'FD');
         
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.normal);
@@ -811,17 +800,13 @@ class IPHGenerator extends PDFBaseGenerator {
         pdf.text(`Hora de reporte: ${this.formatearHoraVisualizacion(fechaReporte)}`, margen + 105, yPos + 22);
         
         pdf.restoreGraphicsState();
-        // ESPACIO REDUCIDO: antes +8, ahora +CONFIG.ESPACIO_ENTRE_BLOQUES
         yPos += alturaGenerales + CONFIG.ESPACIO_ENTRE_BLOQUES;
         
         // =============================================
-        // 3. CLASIFICACIÓN DE LA INCIDENCIA
+        // 3. CLASIFICACIÓN DE LA INCIDENCIA (SIN MARCO)
         // =============================================
         const alturaClasificacion = 72;
         pdf.saveGraphicsState();
-        pdf.setFillColor(255, 255, 255);
-        pdf.setDrawColor(200, 200, 200);
-        pdf.rect(margen, yPos, anchoContenido, alturaClasificacion, 'FD');
         
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.normal);
@@ -860,11 +845,10 @@ class IPHGenerator extends PDFBaseGenerator {
         pdf.text(`Hora del incidente: ${this.formatearHoraVisualizacion(fechaInicio)}`, margen + 105, yPos + 54);
         
         pdf.restoreGraphicsState();
-        // ESPACIO REDUCIDO: antes +8, ahora +CONFIG.ESPACIO_ENTRE_BLOQUES
         yPos += alturaClasificacion + CONFIG.ESPACIO_ENTRE_BLOQUES;
         
         // =============================================
-        // 4. DESCRIPCIÓN DE LOS HECHOS
+        // 4. DESCRIPCIÓN DE LOS HECHOS (SIN MARCO)
         // =============================================
         const detalles = incidencia.detalles || 'No se proporcionó descripción.';
         const lineasDescripcion = this.dividirTextoPorCaracteres(detalles, CONFIG.MAX_CARACTERES_POR_LINEA);
@@ -881,10 +865,6 @@ class IPHGenerator extends PDFBaseGenerator {
         
         if (alturaTotalNecesaria <= espacioDisponibleEnPagina) {
             pdf.saveGraphicsState();
-            pdf.setFillColor(255, 255, 255);
-            pdf.setDrawColor(200, 200, 200);
-            pdf.setLineWidth(0.3);
-            pdf.rect(margen, yPos, anchoContenido, alturaTotalNecesaria, 'FD');
             
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(this.fonts.normal);
@@ -906,7 +886,7 @@ class IPHGenerator extends PDFBaseGenerator {
             pdf.restoreGraphicsState();
             yPos += alturaTotalNecesaria + CONFIG.ESPACIO_ENTRE_BLOQUES;
         } else {
-            // Lógica de paginación para descripción larga (mantener igual)
+            // Lógica de paginación para descripción larga
             const espacioParaTextoPrimera = espacioDisponibleEnPagina - ALTURA_TITULO - ALTURA_PADDING_SUPERIOR - ALTURA_PADDING_INFERIOR;
             const lineasQueCabenPrimera = Math.floor(espacioParaTextoPrimera / ALTURA_POR_LINEA);
             const lineasEnPrimeraPagina = Math.max(1, Math.min(lineasQueCabenPrimera, lineasDescripcion.length));
@@ -915,9 +895,6 @@ class IPHGenerator extends PDFBaseGenerator {
             const alturaRealPrimera = ALTURA_TITULO + ALTURA_PADDING_SUPERIOR + alturaTextoPrimera + ALTURA_PADDING_INFERIOR;
             
             pdf.saveGraphicsState();
-            pdf.setFillColor(255, 255, 255);
-            pdf.setDrawColor(200, 200, 200);
-            pdf.rect(margen, yPos, anchoContenido, alturaRealPrimera, 'FD');
             
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(this.fonts.normal);
@@ -962,9 +939,6 @@ class IPHGenerator extends PDFBaseGenerator {
                 const alturaRealActual = ALTURA_TITULO + ALTURA_PADDING_SUPERIOR + alturaTextoActual + ALTURA_PADDING_INFERIOR;
                 
                 pdf.saveGraphicsState();
-                pdf.setFillColor(255, 255, 255);
-                pdf.setDrawColor(200, 200, 200);
-                pdf.rect(margen, yPos, anchoContenido, alturaRealActual, 'FD');
                 
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(this.fonts.normal);
@@ -1034,10 +1008,7 @@ class IPHGenerator extends PDFBaseGenerator {
                 yPos = this.alturaEncabezado + 5;
             }
             
-            pdf.saveGraphicsState();
-            pdf.setFillColor(250, 250, 250);
-            pdf.setDrawColor(200, 200, 200);
-            pdf.rect(margen, yPos - 2, anchoContenido, 14, 'FD');
+            // Título de la sección sin fondo gris ni borde
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(this.fonts.normal);
             pdf.setTextColor(0, 0, 0);
@@ -1046,7 +1017,6 @@ class IPHGenerator extends PDFBaseGenerator {
             pdf.setFontSize(this.fonts.mini);
             pdf.setTextColor(100, 100, 100);
             pdf.text(`${imagenesPrincipales.length} imagen(es) adjunta(s)`, anchoPagina - margen - 45, yPos + 6);
-            pdf.restoreGraphicsState();
             yPos += 18;
             
             while (imagenIndex < imagenesPrincipales.length) {
@@ -1074,15 +1044,10 @@ class IPHGenerator extends PDFBaseGenerator {
                     this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
                     yPos = this.alturaEncabezado + 5;
                     
-                    pdf.saveGraphicsState();
-                    pdf.setFillColor(250, 250, 250);
-                    pdf.setDrawColor(200, 200, 200);
-                    pdf.rect(margen, yPos - 2, anchoContenido, 14, 'FD');
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(this.fonts.normal);
                     pdf.setTextColor(0, 0, 0);
                     pdf.text("5. EVIDENCIAS FOTOGRÁFICAS (Continuación)", margen + 6, yPos + 6);
-                    pdf.restoreGraphicsState();
                     yPos += 18;
                 }
                 
@@ -1121,9 +1086,6 @@ class IPHGenerator extends PDFBaseGenerator {
             }
             
             pdf.saveGraphicsState();
-            pdf.setFillColor(255, 255, 255);
-            pdf.setDrawColor(200, 200, 200);
-            pdf.rect(margen, yPos, anchoContenido, alturaSinImagenes, 'FD');
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(this.fonts.normal);
             pdf.setTextColor(0, 0, 0);
@@ -1152,10 +1114,6 @@ class IPHGenerator extends PDFBaseGenerator {
                 yPos = this.alturaEncabezado + 5;
             }
             
-            pdf.saveGraphicsState();
-            pdf.setFillColor(250, 250, 250);
-            pdf.setDrawColor(200, 200, 200);
-            pdf.rect(margen, yPos - 2, anchoContenido, 14, 'FD');
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(this.fonts.normal);
             pdf.setTextColor(0, 0, 0);
@@ -1164,7 +1122,6 @@ class IPHGenerator extends PDFBaseGenerator {
             pdf.setFontSize(this.fonts.mini);
             pdf.setTextColor(100, 100, 100);
             pdf.text(`${seguimientos.length} seguimiento(s) registrado(s)`, anchoPagina - margen - 50, yPos + 6);
-            pdf.restoreGraphicsState();
             yPos += 18;
             
             for (let i = 0; i < seguimientos.length; i++) {
@@ -1178,15 +1135,10 @@ class IPHGenerator extends PDFBaseGenerator {
                     this.dibujarEncabezadoBase(pdf, 'INFORME DE INCIDENCIA', `${incidencia.id} (Continuación)`);
                     yPos = this.alturaEncabezado + 5;
                     
-                    pdf.saveGraphicsState();
-                    pdf.setFillColor(250, 250, 250);
-                    pdf.setDrawColor(200, 200, 200);
-                    pdf.rect(margen, yPos - 2, anchoContenido, 14, 'FD');
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(this.fonts.normal);
                     pdf.setTextColor(0, 0, 0);
                     pdf.text("6. HISTORIAL DE SEGUIMIENTOS (Continuación)", margen + 6, yPos + 6);
-                    pdf.restoreGraphicsState();
                     yPos += 18;
                 }
                 
@@ -1209,8 +1161,7 @@ class IPHGenerator extends PDFBaseGenerator {
         
         pdf.saveGraphicsState();
         pdf.setFillColor(248, 248, 248);
-        pdf.setDrawColor(220, 220, 220);
-        pdf.rect(margen, altoPagina - alturaAviso - 8, anchoContenido, alturaAviso, 'FD');
+        pdf.rect(margen, altoPagina - alturaAviso - 8, anchoContenido, alturaAviso, 'F');
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.mini);
         pdf.setTextColor(80, 80, 80);

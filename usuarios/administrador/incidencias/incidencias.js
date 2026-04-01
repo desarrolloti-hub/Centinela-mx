@@ -322,16 +322,8 @@ window.seguimientoIncidencia = function (incidenciaId, event) {
 };
 
 /**
- * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR
- * Utiliza la URL guardada en Firestore y la abre en una nueva pestaña
- */
-/**
- * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR
- * Utiliza la URL guardada en Firestore y la abre en una nueva pestaña
- */
-/**
- * ABRIR PDF EN VISOR NATIVO DEL NAVEGADOR (sin Acrobat)
- * Forza el visor integrado de Chrome, Edge, Firefox, Safari, etc.
+ * ABRIR PDF EN EL VISOR MODAL
+ * Utiliza el componente VisualizadorPDF para mostrar el PDF en un modal
  */
 window.verPDF = async function (incidenciaId, event) {
     event?.stopPropagation();
@@ -346,24 +338,13 @@ window.verPDF = async function (incidenciaId, event) {
 
         // Verificar si tiene URL de PDF guardada
         if (incidencia.pdfUrl && incidencia.pdfUrl.trim() !== '') {
-            // OPCIÓN 1: Abrir en nueva pestaña (recomendada)
-            // Agrega #toolbar=0 para forzar visor básico del navegador
-            const pdfUrl = incidencia.pdfUrl;
+            // Usar el visor modal que ya tienes
+            // Obtener el nombre de la sucursal para el título
+            const nombreSucursal = obtenerNombreSucursal(incidencia.sucursalId);
+            const titulo = `PDF - ${nombreSucursal} - ${incidencia.id}`;
             
-            // Forzar que el navegador lo muestre, no lo descargue
-            // Esto funciona en Chrome, Edge, Firefox, Safari
-            window.open(pdfUrl, '_blank');
-            
-            // Notificación opcional
-            Swal.fire({
-                icon: 'success',
-                title: 'Abriendo PDF',
-                text: 'El PDF se abrirá en el visor del navegador',
-                timer: 1500,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
+            // Abrir en el visor modal
+            window.visualizadorPDF.abrir(incidencia.pdfUrl, titulo);
         } else {
             Swal.fire({
                 icon: 'info',
