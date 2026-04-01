@@ -40,6 +40,10 @@ class Tarea {
         this.areaId = data.areaId || '';
         this.cargosIds = data.cargosIds || [];
 
+        // ✅ NUEVO: Categoría y subcategoría
+        this.categoriaId = data.categoriaId || null;
+        this.subcategoriaId = data.subcategoriaId || null;
+
         // Metadatos de usuario
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
@@ -224,6 +228,8 @@ class Tarea {
             usuariosCompartidosIds: this.usuariosCompartidosIds,
             areaId: this.areaId,
             cargosIds: this.cargosIds,
+            categoriaId: this.categoriaId,
+            subcategoriaId: this.subcategoriaId,
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -254,6 +260,8 @@ class Tarea {
             usuariosCompartidosIds: this.usuariosCompartidosIds,
             areaId: this.areaId,
             cargosIds: this.cargosIds,
+            categoriaId: this.categoriaId,
+            subcategoriaId: this.subcategoriaId,
             fechaCreacion: this._formatearFecha(this.fechaCreacion),
             fechaCreacionRaw: this.fechaCreacion,
             fechaActualizacion: this._formatearFecha(this.fechaActualizacion),
@@ -362,6 +370,8 @@ class TareaManager {
                 usuariosCompartidosIds: tareaData.usuariosCompartidosIds || [],
                 areaId: tareaData.areaId || '',
                 cargosIds: tareaData.cargosIds || [],
+                categoriaId: tareaData.categoriaId || null,
+                subcategoriaId: tareaData.subcategoriaId || null,
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorNombre: usuarioActual.nombreCompleto || usuarioActual.email || 'Usuario',
@@ -712,6 +722,77 @@ class TareaManager {
 
         } catch (error) {
             console.error('Error eliminando tarea:', error);
+            throw error;
+        }
+    }
+
+    async marcarItemTareaConAutor(tareaId, itemId, completado, marcadoPor, marcadoPorNombre, usuarioActual, organizacionCamelCase) {
+        try {
+            const tarea = await this.getTareaById(tareaId, organizacionCamelCase);
+            if (!tarea) throw new Error('Tarea no encontrada');
+
+            // Verificar que el item existe
+            if (!tarea.items[itemId]) throw new Error('Item no encontrado');
+
+            // Actualizar el item
+            tarea.items[itemId].completado = completado;
+            tarea.items[itemId].marcadoPor = marcadoPor;
+            tarea.items[itemId].marcadoPorNombre = marcadoPorNombre;
+            tarea.items[itemId].fechaModificacion = new Date().toISOString();
+
+            tarea._calcularProgreso();
+
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const tareaRef = doc(db, collectionName, tareaId);
+
+            await consumo.registrarFirestoreActualizacion(collectionName, tareaId);
+            
+            await updateDoc(tareaRef, {
+                items: tarea.items,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioActual.id,
+                actualizadoPorNombre: usuarioActual.nombreCompleto || usuarioActual.email || 'Usuario'
+            });
+
+            return true;
+
+        } catch (error) {
+            console.error('Error marcando item con autor:', error);
+            throw error;
+        }
+    }
+
+
+    async marcarItemTareaConAutor(tareaId, itemId, completado, marcadoPor, marcadoPorNombre, usuarioActual, organizacionCamelCase) {
+        try {
+            const tarea = await this.getTareaById(tareaId, organizacionCamelCase);
+            if (!tarea) throw new Error('Tarea no encontrada');
+
+            if (!tarea.items[itemId]) throw new Error('Item no encontrado');
+
+            tarea.items[itemId].completado = completado;
+            tarea.items[itemId].marcadoPor = marcadoPor;
+            tarea.items[itemId].marcadoPorNombre = marcadoPorNombre;
+            tarea.items[itemId].fechaModificacion = new Date().toISOString();
+
+            tarea._calcularProgreso();
+
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const tareaRef = doc(db, collectionName, tareaId);
+
+            await consumo.registrarFirestoreActualizacion(collectionName, tareaId);
+
+            await updateDoc(tareaRef, {
+                items: tarea.items,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioActual.id,
+                actualizadoPorNombre: usuarioActual.nombreCompleto || usuarioActual.email || 'Usuario'
+            });
+
+            return true;
+
+        } catch (error) {
+            console.error('Error marcando item con autor:', error);
             throw error;
         }
     }

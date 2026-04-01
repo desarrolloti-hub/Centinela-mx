@@ -91,10 +91,10 @@
     <br>
     <div class="page-header">
         <h1>
-            <i class="fas fa-users"></i> Crear Nuevo Colaborador
+            <i class="fas fa-users"></i> Editar Colaborador
         </h1>
         <div class="header-description">
-            Crea colaboradores de tu organización.
+            Actualiza la información del colaborador de tu organización.
         </div>
     </div>
 
@@ -241,6 +241,20 @@
                             <p class="field-info">No se puede modificar el correo</p>
                         </div>
 
+                        <!-- Teléfono (EDITABLE) - NUEVO CAMPO -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="telefono">
+                                <i class="fas fa-phone-alt"></i> TELÉFONO
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="tel" id="telefono" placeholder="Ej: 5512345678"
+                                    inputmode="numeric" pattern="[0-9]+" maxlength="15">
+                            </div>
+                            <div class="field-hint">
+                                <i class="fas fa-info-circle"></i> Solo números, sin espacios ni guiones
+                            </div>
+                        </div>
+
                         <!-- Organización (SOLO LECTURA) -->
                         <div class="form-field-group">
                             <label class="field-label" for="organizationName">
@@ -256,7 +270,7 @@
                             <p class="field-info">Contacta al administrador principal</p>
                         </div>
 
-                        <!-- NUEVO: ÁREA (EDITABLE) -->
+                        <!-- ÁREA (EDITABLE) -->
                         <div class="form-field-group">
                             <label class="field-label" for="areaSelect">
                                 <i class="fas fa-building"></i> ÁREA / DEPARTAMENTO
@@ -268,7 +282,7 @@
                             </div>
                         </div>
 
-                        <!-- NUEVO: CARGO EN EL ÁREA (EDITABLE) -->
+                        <!-- CARGO EN EL ÁREA (EDITABLE) -->
                         <div class="form-field-group">
                             <label class="field-label" for="cargoEnAreaSelect">
                                 <i class="fas fa-user-tie"></i> CARGO EN EL ÁREA
@@ -277,6 +291,21 @@
                                 <select class="form-input-field" id="cargoEnAreaSelect" required>
                                     <option value="">Primero selecciona un área</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- SUCURSAL (SOLO SI EL ÁREA ES "SUCURSALES") -->
+                        <div class="form-field-group" id="sucursalContainer" style="display: none;">
+                            <label class="field-label" for="sucursalSelect">
+                                <i class="fas fa-store"></i> SUCURSAL
+                            </label>
+                            <div class="input-wrapper">
+                                <select class="form-input-field" id="sucursalSelect">
+                                    <option value="">Selecciona una sucursal (opcional)</option>
+                                </select>
+                            </div>
+                            <div class="field-hint" id="sucursalHint">
+                                <i class="fas fa-info-circle"></i> Opcional. Selecciona la sucursal a la que pertenecerá
                             </div>
                         </div>
 
@@ -299,50 +328,6 @@
                         </div>
                     </div>
 
-                    <!-- Permisos del sistema -->
-                    <section class="permissions-section">
-                        <h2 class="section-title">
-                            <i class="fas fa-shield-alt"></i> PERMISOS DEL SISTEMA
-                        </h2>
-
-                        <div class="permissions-grid">
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="dashboard">
-                                <span class="permission-label">Ver Dashboard</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="reports">
-                                <span class="permission-label">Generar Reportes</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="users">
-                                <span class="permission-label">Gestionar Usuarios</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="settings">
-                                <span class="permission-label">Configuración</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="analytics">
-                                <span class="permission-label">Analíticas</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="notifications">
-                                <span class="permission-label">Enviar Notificaciones</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="export">
-                                <span class="permission-label">Exportar Datos</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="admin">
-                                <span class="permission-label">Acceso Admin</span>
-                            </label>
-                        </div>
-                    </section>
-
-
-
                     <!-- Sección para cambiar contraseña -->
                     <div class="password-change-section">
                         <button type="button" class="btn-change-password" id="changePasswordBtn">
@@ -352,7 +337,6 @@
                             Se enviará un enlace seguro al correo del colaborador para restablecer su contraseña.
                         </p>
                     </div>
-
 
                     <!-- Acciones del formulario -->
                     <div class="form-actions">
@@ -381,7 +365,6 @@
     <!-- Protector de pagina -->
     <!-- /usuarios/administrador/cualquier-pagina.html -->
     <script src="/components/protector-admin.js" data-modulo="generales"> </script>
-</body>
 </body>
 
 </html>

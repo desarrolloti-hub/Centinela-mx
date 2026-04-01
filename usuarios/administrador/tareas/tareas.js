@@ -1,39 +1,37 @@
-// tareas.js - VERSIÓN CON FORMULARIO INLINE (COMO EN LA IMAGEN)
-// BASADO EN LAS IMÁGENES DE REFERENCIA
-// CON REGISTRO DE BITÁCORA
+// tareas.js - VERSIÓN FINAL CON CHECKLIST POR USUARIO Y CLICK EN TARJETA
 
 import { TareaManager } from '/clases/tarea.js';
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
+import { CategoriaManager } from '/clases/categoria.js';
 
-let historialManager = null; // ✅ NUEVO: Para registrar actividades
+let historialManager = null;
 
 class TareasController {
     constructor() {
         this.tareaManager = null;
         this.userManager = null;
         this.areaManager = null;
+        this.categoriaManager = null;
         this.usuarioActual = null;
 
-        // Datos
         this.todasLasTareas = [];
         this.tareasFiltradas = [];
         this.tipoActual = 'todas';
         this.terminoBusqueda = '';
+        this.cargando = false;
 
-        // Cachés
         this.cacheUsuarios = {};
         this.cacheAreas = {};
         this.usuariosDisponibles = [];
         this.areasDisponibles = [];
+        this.categoriasDisponibles = [];
 
-        // Estado del formulario
         this.modoEdicion = false;
         this.tareaActual = null;
         this.tipoSeleccionado = 'personal';
         this.itemsActuales = [];
 
-        // Cache para creación
         this.usuarios = [];
         this.usuariosFiltrados = [];
         this.areas = [];
@@ -41,17 +39,21 @@ class TareasController {
         this.cargos = [];
         this.cargosFiltrados = [];
         this.areaSeleccionada = null;
+        this.categoriaSeleccionada = null;
+
+        this.modalVisible = false;
+        this.tareaModalActual = null;
 
         this.init();
     }
 
     async init() {
         try {
-            // ✅ NUEVO: Inicializar historialManager
             await this._initHistorial();
 
             this.userManager = new UserManager();
             this.areaManager = new AreaManager();
+            this.categoriaManager = new CategoriaManager();
             const { TareaManager } = await import('/clases/tarea.js');
             this.tareaManager = new TareaManager();
 
@@ -74,125 +76,312 @@ class TareasController {
                 cargoId: this.usuarioActual.cargoId
             }));
 
-            await this._cargarUsuarios();
-            await this._cargarAreas();
+            await Promise.all([
+                this._cargarUsuarios(),
+                this._cargarAreas(),
+                this._cargarCategorias()
+            ]);
+
             await this._cargarTareas();
 
             this._configurarEventos();
+            this._crearModalTarea();
 
         } catch (error) {
             this._mostrarError(error.message);
         }
     }
 
-    // ✅ NUEVO: Inicializar historialManager
+    _crearModalTarea() {
+        // Verificar si ya existe el modal
+        if (document.getElementById('modalTareaDetalle')) return;
+
+        const modalHTML = `
+            <div id="modalTareaDetalle" class="tarea-modal">
+                <div class="tarea-modal-content">
+                    <div class="tarea-modal-header">
+                        <h3 id="modalTareaTitulo">Detalle de Nota</h3>
+                        <button class="tarea-modal-close" id="cerrarModalTarea">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="tarea-modal-body" id="modalTareaBody">
+                        <!-- Contenido dinámico -->
+                    </div>
+                    <div class="tarea-modal-footer" id="modalTareaFooter">
+                        <!-- Botones dinámicos -->
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const modal = document.getElementById('modalTareaDetalle');
+        const closeBtn = document.getElementById('cerrarModalTarea');
+
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('show');
+            this.modalVisible = false;
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+                this.modalVisible = false;
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.modalVisible) {
+                modal.classList.remove('show');
+                this.modalVisible = false;
+            }
+        });
+    }
+
+    _abrirModalTarea(tarea) {
+        this.tareaModalActual = tarea;
+        const modal = document.getElementById('modalTareaDetalle');
+        const modalTitulo = document.getElementById('modalTareaTitulo');
+        const modalBody = document.getElementById('modalTareaBody');
+        const modalFooter = document.getElementById('modalTareaFooter');
+
+        const esCreador = tarea.creadoPor === this.usuarioActual?.id;
+        const esAdmin = this.usuarioActual.rol === 'administrador' || this.usuarioActual.rol === 'admin';
+        const puedeEditar = esCreador;
+
+        // Tipo de nota
+        const tipoClass = {
+            'global': 'tipo-general',
+            'general': 'tipo-general',
+            'personal': 'tipo-personal',
+            'compartida': 'tipo-compartida',
+            'area': 'tipo-area'
+        }[tarea.tipo] || 'tipo-general';
+
+        const tipoTexto = {
+            'global': 'General',
+            'general': 'General',
+            'personal': 'Personal',
+            'compartida': 'Compartida',
+            'area': 'Área'
+        }[tarea.tipo] || 'General';
+
+        const fecha = tarea.fechaCreacion ? new Date(tarea.fechaCreacion) : new Date();
+        const fechaStr = fecha.toLocaleDateString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        const fechaLimite = tarea.fechaLimite ? new Date(tarea.fechaLimite) : null;
+        const fechaLimiteStr = fechaLimite ? fechaLimite.toLocaleDateString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        }) : null;
+
+        // Categoría y subcategoría
+        let categoriaNombre = 'Sin categoría';
+        let subcategoriaNombre = '';
+        
+        if (tarea.categoriaId && this.categoriasDisponibles) {
+            const categoria = this.categoriasDisponibles.find(c => c.id === tarea.categoriaId);
+            if (categoria) {
+                categoriaNombre = categoria.nombre;
+                if (tarea.subcategoriaId && categoria.subcategorias && categoria.subcategorias[tarea.subcategoriaId]) {
+                    subcategoriaNombre = categoria.subcategorias[tarea.subcategoriaId].nombre || '';
+                }
+            }
+        }
+
+        const items = tarea.items ? Object.values(tarea.items) : [];
+        const totalItems = items.length;
+        const completados = items.filter(i => i.completado).length;
+
+        // Construir lista de items con lógica de quien marcó
+        let itemsHtml = '';
+        if (items.length > 0) {
+            itemsHtml = '<div class="modal-items-list">';
+            items.forEach(item => {
+                const marcadoPor = item.marcadoPor || null;
+                const marcadoPorNombre = marcadoPor === this.usuarioActual.id ? 'tú' : (this.cacheUsuarios[marcadoPor] || 'otro usuario');
+                const puedeDesmarcar = marcadoPor === this.usuarioActual.id;
+                
+                itemsHtml += `
+                    <div class="modal-item-row ${item.completado ? 'completado' : ''}" data-item-id="${item.id}">
+                        <div class="modal-item-checkbox-wrapper">
+                            <input type="checkbox" class="modal-item-checkbox" 
+                                   data-item-id="${item.id}"
+                                   ${item.completado ? 'checked' : ''}
+                                   ${item.completado && !puedeDesmarcar ? 'disabled' : ''}>
+                        </div>
+                        <div class="modal-item-texto">${this._escapeHTML(item.texto)}</div>
+                        ${item.completado && marcadoPor ? `
+                            <div class="modal-item-marcado-por">
+                                <i class="fas fa-user-check"></i>
+                                <span>Marcado por: ${this._escapeHTML(marcadoPorNombre)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            itemsHtml += `
+                <div class="modal-progreso">
+                    <span class="progreso-texto">${completados}/${totalItems} completados</span>
+                    <div class="progreso-bar">
+                        <div class="progreso-fill" style="width: ${totalItems > 0 ? (completados / totalItems) * 100 : 0}%"></div>
+                    </div>
+                </div>
+            </div>`;
+        } else {
+            itemsHtml = '<p class="no-items">No hay items en el checklist</p>';
+        }
+
+        modalTitulo.innerHTML = `
+            <span class="tarea-tipo-badge ${tipoClass}" style="font-size: 12px; margin-right: 12px;">${tipoTexto}</span>
+            ${this._escapeHTML(tarea.nombreActividad || 'Sin título')}
+        `;
+
+        modalBody.innerHTML = `
+            <div class="modal-metadatos">
+                <div class="modal-categoria">
+                    <i class="fas fa-tag"></i>
+                    <span>Categoría: ${this._escapeHTML(categoriaNombre)}</span>
+                    ${subcategoriaNombre ? `<span class="tarea-subcategoria"> / ${this._escapeHTML(subcategoriaNombre)}</span>` : ''}
+                </div>
+                <div class="modal-fechas">
+                    <div class="modal-fecha-inicio">
+                        <i class="fas fa-calendar-plus"></i>
+                        <span>Creada: ${fechaStr}</span>
+                    </div>
+                    ${fechaLimiteStr ? `
+                        <div class="modal-fecha-limite">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Límite: ${fechaLimiteStr}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="modal-creador">
+                    <i class="fas fa-user"></i>
+                    <span>Creador: ${this._escapeHTML(tarea.creadoPorNombre || 'Usuario')}</span>
+                    ${esCreador ? '<span class="creador-badge">(tú)</span>' : ''}
+                </div>
+            </div>
+            
+            ${tarea.descripcion ? `
+                <div class="modal-descripcion">
+                    <h4><i class="fas fa-align-left"></i> Descripción</h4>
+                    <p>${this._escapeHTML(tarea.descripcion)}</p>
+                </div>
+            ` : ''}
+            
+            <div class="modal-checklist">
+                <h4><i class="fas fa-check-square"></i> Checklist</h4>
+                ${itemsHtml}
+            </div>
+        `;
+
+        modalFooter.innerHTML = '';
+        if (puedeEditar) {
+            modalFooter.innerHTML = `
+                <button class="btn-modal-editar" id="btnModalEditar">
+                    <i class="fas fa-edit"></i> Editar Nota
+                </button>
+                <button class="btn-modal-eliminar" id="btnModalEliminar">
+                    <i class="fas fa-trash-alt"></i> Eliminar Nota
+                </button>
+            `;
+
+            document.getElementById('btnModalEditar')?.addEventListener('click', () => {
+                modal.classList.remove('show');
+                this.modalVisible = false;
+                this._abrirFormularioEdicion(tarea.id);
+            });
+
+            document.getElementById('btnModalEliminar')?.addEventListener('click', () => {
+                modal.classList.remove('show');
+                this.modalVisible = false;
+                this._eliminarTarea(tarea.id);
+            });
+        }
+
+        // Eventos de checkbox en modal
+        modalBody.querySelectorAll('.modal-item-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', async (e) => {
+                e.stopPropagation();
+                const itemId = checkbox.dataset.itemId;
+                const completado = checkbox.checked;
+                
+                // Deshabilitar temporalmente para evitar clics múltiples
+                checkbox.disabled = true;
+                
+                await this._marcarItemModal(tarea.id, itemId, completado);
+                
+                // Recargar modal con datos actualizados
+                const tareaActualizada = await this.tareaManager.getTareaById(
+                    tarea.id, this.usuarioActual.organizacionCamelCase
+                );
+                if (tareaActualizada) {
+                    this.tareaModalActual = tareaActualizada;
+                    this._abrirModalTarea(tareaActualizada);
+                } else {
+                    checkbox.disabled = false;
+                }
+            });
+        });
+
+        modal.classList.add('show');
+        this.modalVisible = true;
+    }
+
+    async _marcarItemModal(tareaId, itemId, completado) {
+        try {
+            const tarea = this.todasLasTareas.find(t => t.id === tareaId);
+            const item = tarea?.items?.[itemId];
+            const itemTexto = item?.texto || 'Item sin texto';
+
+            // Registrar quién marcó/desmarcó
+            const marcadoPor = completado ? this.usuarioActual.id : null;
+            const marcadoPorNombre = completado ? this.usuarioActual.nombreCompleto : null;
+
+            await this.tareaManager.marcarItemTareaConAutor(
+                tareaId, itemId, completado, marcadoPor, marcadoPorNombre,
+                this.usuarioActual, this.usuarioActual.organizacionCamelCase
+            );
+
+            // Actualizar caché local
+            if (tarea && tarea.items && tarea.items[itemId]) {
+                tarea.items[itemId].completado = completado;
+                tarea.items[itemId].marcadoPor = marcadoPor;
+                tarea.items[itemId].marcadoPorNombre = marcadoPorNombre;
+                tarea._calcularProgreso();
+            }
+
+            await this._registrarMarcadoItem(tarea, itemId, itemTexto, completado);
+
+        } catch (error) {
+            console.error('Error marcando item:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'No se pudo actualizar el item',
+                timer: 2000,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)'
+            });
+        }
+    }
+
     async _initHistorial() {
         try {
             const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
             historialManager = new HistorialUsuarioManager();
-            console.log('📋 HistorialManager inicializado para tareas');
         } catch (error) {
             console.error('Error inicializando historialManager:', error);
         }
     }
 
-    // ✅ NUEVO: Registrar creación de tarea
-    async _registrarCreacionTarea(tareaData, resultado) {
-        if (!historialManager) return;
-
-        try {
-            const cantidadItems = tareaData.items ? Object.keys(tareaData.items).length : 0;
-            let destinatariosInfo = '';
-
-            if (tareaData.tipo === 'compartida' && tareaData.usuariosCompartidosIds) {
-                destinatariosInfo = `${tareaData.usuariosCompartidosIds.length} usuarios`;
-            } else if (tareaData.tipo === 'area' && tareaData.areaId) {
-                const area = this.areasDisponibles.find(a => a.id === tareaData.areaId);
-                destinatariosInfo = `área ${area?.nombreArea || tareaData.areaId}`;
-                if (tareaData.cargosIds && tareaData.cargosIds.length > 0) {
-                    destinatariosInfo += ` (${tareaData.cargosIds.length} cargos específicos)`;
-                }
-            } else if (tareaData.tipo === 'global') {
-                destinatariosInfo = 'todos los usuarios de la organización';
-            } else {
-                destinatariosInfo = 'solo para mí';
-            }
-
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'crear',
-                modulo: 'tareas',
-                descripcion: `Creó nota: ${tareaData.nombreActividad}`,
-                detalles: {
-                    tareaId: resultado?.id || 'pendiente',
-                    tareaTitulo: tareaData.nombreActividad,
-                    tareaTipo: tareaData.tipo === 'global' ? 'general' : tareaData.tipo,
-                    destinatarios: destinatariosInfo,
-                    cantidadItems: cantidadItems,
-                    tieneRecordatorio: tareaData.tieneRecordatorio || false,
-                    fechaCreacion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Creación de nota "${tareaData.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando creación de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar edición de tarea
-    async _registrarEdicionTarea(tareaOriginal, tareaActualizada, cambios) {
-        if (!historialManager) return;
-
-        try {
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'editar',
-                modulo: 'tareas',
-                descripcion: `Editó nota: ${tareaActualizada.nombreActividad || tareaOriginal.nombreActividad}`,
-                detalles: {
-                    tareaId: tareaOriginal.id,
-                    tareaTituloOriginal: tareaOriginal.nombreActividad,
-                    tareaTituloActualizado: tareaActualizada.nombreActividad,
-                    cambios: cambios,
-                    fechaEdicion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Edición de nota "${tareaOriginal.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando edición de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar eliminación de tarea
-    async _registrarEliminacionTarea(tarea) {
-        if (!historialManager) return;
-
-        try {
-            const cantidadItems = tarea.items ? Object.keys(tarea.items).length : 0;
-
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'eliminar',
-                modulo: 'tareas',
-                descripcion: `Eliminó nota: ${tarea.nombreActividad}`,
-                detalles: {
-                    tareaId: tarea.id,
-                    tareaTitulo: tarea.nombreActividad,
-                    tareaTipo: tarea.tipo === 'global' ? 'general' : tarea.tipo,
-                    cantidadItems: cantidadItems,
-                    fechaEliminacion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Eliminación de nota "${tarea.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando eliminación de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar marcado de item
     async _registrarMarcadoItem(tarea, itemId, itemTexto, completado) {
         if (!historialManager) return;
-
         try {
             await historialManager.registrarActividad({
                 usuario: this.usuarioActual,
@@ -205,13 +394,9 @@ class TareasController {
                     tareaId: tarea.id,
                     tareaTitulo: tarea.nombreActividad,
                     itemId: itemId,
-                    itemTexto: itemTexto,
-                    estadoAnterior: completado ? 'pendiente' : 'completado',
-                    estadoNuevo: completado ? 'completado' : 'pendiente',
-                    fechaCambio: new Date().toISOString()
+                    itemTexto: itemTexto
                 }
             });
-            console.log(`✅ Marcado de item en nota "${tarea.nombreActividad}" registrado en bitácora`);
         } catch (error) {
             console.error('Error registrando marcado de item:', error);
         }
@@ -287,7 +472,6 @@ class TareasController {
             this.areasDisponibles = await this.areaManager.getAreasByOrganizacion(
                 this.usuarioActual.organizacionCamelCase
             );
-
             this.areasDisponibles = this.areasDisponibles.filter(a => a.estado === 'activa');
 
         } catch (error) {
@@ -295,61 +479,111 @@ class TareasController {
         }
     }
 
-    async _cargarTareas() {
+    async _cargarCategorias() {
         try {
-            this._mostrarCarga();
+            if (!this.usuarioActual?.organizacionCamelCase) return;
+            
+            this.categoriasDisponibles = await this.categoriaManager.obtenerCategoriasPorOrganizacion(
+                this.usuarioActual.organizacionCamelCase
+            );
+        } catch (error) {
+            this.categoriasDisponibles = [];
+        }
+    }
 
+    _esTareaVisible(tarea) {
+        const esCreador = tarea.creadoPor === this.usuarioActual.id;
+        const esAdmin = this.usuarioActual.rol === 'administrador' || this.usuarioActual.rol === 'admin';
+        
+        if (tarea.tipo === 'personal') {
+            return esCreador;
+        }
+        
+        if (tarea.tipo === 'global' || tarea.tipo === 'general') {
+            return true;
+        }
+        
+        if (tarea.tipo === 'compartida') {
+            if (esCreador) return true;
+            return tarea.usuariosCompartidosIds && tarea.usuariosCompartidosIds.includes(this.usuarioActual.id);
+        }
+        
+        if (tarea.tipo === 'area') {
+            if (esAdmin) return true;
+            if (!tarea.areaId) return false;
+            if (!this.usuarioActual.areaAsignadaId) return false;
+            
+            const perteneceAlArea = tarea.areaId === this.usuarioActual.areaAsignadaId;
+            
+            if (tarea.cargosIds && tarea.cargosIds.length > 0) {
+                return perteneceAlArea && tarea.cargosIds.includes(this.usuarioActual.cargoId);
+            }
+            
+            return perteneceAlArea;
+        }
+        
+        return false;
+    }
+
+    async _cargarTareas() {
+        if (this.cargando) return;
+        this.cargando = true;
+
+        try {
             if (!this.usuarioActual?.organizacionCamelCase) {
                 throw new Error('No hay organización definida');
             }
 
-            this.todasLasTareas = await this.tareaManager.getTodasLasTareas(
+            this._mostrarCarga();
+
+            const todasLasTareas = await this.tareaManager.getTodasLasTareas(
                 this.usuarioActual.organizacionCamelCase
             );
+
+            this.todasLasTareas = todasLasTareas.filter(tarea => this._esTareaVisible(tarea));
+
+            console.log(`📋 Total tareas en org: ${todasLasTareas.length}, Visibles para ${this.usuarioActual.nombreCompleto} (${this.usuarioActual.rol}): ${this.todasLasTareas.length}`);
 
             this._aplicarFiltros();
 
         } catch (error) {
             this._mostrarErrorEnGrid(error.message);
+        } finally {
+            this.cargando = false;
         }
     }
 
     _aplicarFiltros() {
+        let tareasFiltradas = [...this.todasLasTareas];
+
         if (this.terminoBusqueda && this.terminoBusqueda.length >= 2) {
-            this.tareasFiltradas = this.todasLasTareas.filter(t =>
+            tareasFiltradas = tareasFiltradas.filter(t =>
                 (t.nombreActividad && t.nombreActividad.toLowerCase().includes(this.terminoBusqueda)) ||
                 (t.descripcion && t.descripcion.toLowerCase().includes(this.terminoBusqueda))
             );
-        } else {
-            this.tareasFiltradas = [...this.todasLasTareas];
         }
 
         if (this.tipoActual !== 'todas') {
-            this.tareasFiltradas = this.tareasFiltradas.filter(t => {
+            tareasFiltradas = tareasFiltradas.filter(t => {
                 if (this.tipoActual === 'generales') {
                     return t.tipo === 'global' || t.tipo === 'general';
                 }
                 if (this.tipoActual === 'personales') {
-                    return t.tipo === 'personal' && t.creadoPor === this.usuarioActual.id;
+                    return t.tipo === 'personal';
                 }
                 if (this.tipoActual === 'compartidas') {
-                    if (t.tipo !== 'compartida') return false;
-                    return t.creadoPor === this.usuarioActual.id ||
-                        (t.usuariosCompartidosIds && t.usuariosCompartidosIds.includes(this.usuarioActual.id));
+                    return t.tipo === 'compartida';
                 }
                 if (this.tipoActual === 'area') {
-                    if (t.tipo !== 'area') return false;
-                    if (t.creadoPor === this.usuarioActual.id) return true;
-                    if (t.areaId && t.areaId !== this.usuarioActual.areaAsignadaId) return false;
-                    if (t.cargosIds && t.cargosIds.length > 0) {
-                        return t.cargosIds.includes(this.usuarioActual.cargoId);
-                    }
-                    return true;
+                    return t.tipo === 'area';
                 }
                 return true;
             });
         }
 
+        tareasFiltradas.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
+
+        this.tareasFiltradas = tareasFiltradas;
         this._renderizarTareas();
     }
 
@@ -369,6 +603,22 @@ class TareasController {
 
         container.innerHTML = html;
 
+        // Evento de clic en tarjeta para abrir modal
+        container.querySelectorAll('.tarea-card').forEach(card => {
+            const tareaId = card.dataset.tareaId;
+            card.addEventListener('click', (e) => {
+                // No abrir modal si se hizo clic en botones internos
+                if (e.target.closest('.btn-card-action')) return;
+                if (e.target.closest('.tarea-item-checkbox')) return;
+                
+                const tarea = this.todasLasTareas.find(t => t.id === tareaId);
+                if (tarea) {
+                    this._abrirModalTarea(tarea);
+                }
+            });
+        });
+
+        // Eventos de edición y eliminación (solo para creador)
         container.querySelectorAll('.btn-card-action.edit').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -384,15 +634,6 @@ class TareasController {
                 e.stopPropagation();
                 const tareaId = btn.dataset.id;
                 this._eliminarTarea(tareaId);
-            });
-        });
-
-        container.querySelectorAll('.tarea-item-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                e.stopPropagation();
-                const tareaId = checkbox.dataset.tareaId;
-                const itemId = checkbox.dataset.itemId;
-                this._marcarItem(tareaId, itemId, checkbox.checked);
             });
         });
     }
@@ -420,19 +661,45 @@ class TareasController {
             hour: '2-digit', minute: '2-digit'
         });
 
+        const fechaLimite = tarea.fechaLimite ? new Date(tarea.fechaLimite) : null;
+        const fechaLimiteStr = fechaLimite ? fechaLimite.toLocaleDateString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        }) : null;
+
         const esCreador = tarea.creadoPor === this.usuarioActual?.id;
+        const puedeEditar = esCreador;
+
+        let categoriaNombre = 'Sin categoría';
+        let subcategoriaNombre = '';
+        
+        if (tarea.categoriaId && this.categoriasDisponibles) {
+            const categoria = this.categoriasDisponibles.find(c => c.id === tarea.categoriaId);
+            if (categoria) {
+                categoriaNombre = categoria.nombre;
+                if (tarea.subcategoriaId && categoria.subcategorias && categoria.subcategorias[tarea.subcategoriaId]) {
+                    subcategoriaNombre = categoria.subcategorias[tarea.subcategoriaId].nombre || '';
+                }
+            }
+        }
+
         const items = tarea.items ? Object.values(tarea.items) : [];
+        const totalItems = items.length;
+        const completados = items.filter(i => i.completado).length;
 
         let itemsPreview = '';
         if (items.length > 0) {
             itemsPreview = '<div class="tarea-items-preview">';
             items.slice(0, 3).forEach(item => {
+                // Verificar si el usuario actual puede desmarcar este item
+                const puedeDesmarcar = item.completado ? (item.marcadoPor === this.usuarioActual.id) : true;
+                
                 itemsPreview += `
                     <div class="tarea-item-preview ${item.completado ? 'completado' : ''}">
                         <input type="checkbox" class="tarea-item-checkbox" 
                                data-tarea-id="${tarea.id}" 
                                data-item-id="${item.id}"
-                               ${item.completado ? 'checked' : ''}>
+                               ${item.completado ? 'checked' : ''}
+                               ${item.completado && !puedeDesmarcar ? 'disabled' : ''}>
                         <span>${this._escapeHTML(item.texto)}</span>
                     </div>
                 `;
@@ -440,7 +707,14 @@ class TareasController {
             if (items.length > 3) {
                 itemsPreview += `<div class="tarea-mas-items">+${items.length - 3} items más</div>`;
             }
-            itemsPreview += '</div>';
+            itemsPreview += `
+                <div class="tarea-progreso">
+                    <span class="progreso-texto">${completados}/${totalItems} completados</span>
+                    <div class="progreso-bar">
+                        <div class="progreso-fill" style="width: ${totalItems > 0 ? (completados / totalItems) * 100 : 0}%"></div>
+                    </div>
+                </div>
+            </div>`;
         }
 
         return `
@@ -450,8 +724,28 @@ class TareasController {
                     <span class="tarea-tipo-badge ${tipoClass}">${tipoTexto}</span>
                 </div>
                 
+                <div class="tarea-metadatos">
+                    <div class="tarea-categoria">
+                        <i class="fas fa-tag"></i>
+                        <span>${this._escapeHTML(categoriaNombre)}</span>
+                        ${subcategoriaNombre ? `<span class="tarea-subcategoria"> / ${this._escapeHTML(subcategoriaNombre)}</span>` : ''}
+                    </div>
+                    <div class="tarea-fechas">
+                        <span class="tarea-fecha-inicio">
+                            <i class="fas fa-calendar-plus"></i> ${fechaStr}
+                        </span>
+                        ${fechaLimiteStr ? `
+                            <span class="tarea-fecha-limite">
+                                <i class="fas fa-calendar-check"></i> Límite: ${fechaLimiteStr}
+                            </span>
+                        ` : ''}
+                    </div>
+                </div>
+                
                 ${tarea.descripcion ? `
-                    <p class="tarea-contenido">${this._escapeHTML(tarea.descripcion)}</p>
+                    <div class="tarea-contenido">
+                        ${this._escapeHTML(tarea.descripcion)}
+                    </div>
                 ` : ''}
                 
                 ${itemsPreview}
@@ -460,93 +754,70 @@ class TareasController {
                     <span class="tarea-creador">
                         <i class="fas fa-user"></i>
                         ${this._escapeHTML(tarea.creadoPorNombre || 'Usuario')}
-                        ${esCreador ? '<span style="color: #ffc107; margin-left: 4px;">(tú)</span>' : ''}
-                    </span>
-                    <span class="tarea-fecha">
-                        <i class="fas fa-calendar"></i>
-                        ${fechaStr}
+                        ${esCreador ? '<span class="creador-badge">(tú)</span>' : ''}
                     </span>
                 </div>
                 
-                <div class="tarea-acciones">
-                    <button class="btn-card-action edit" data-id="${tarea.id}">
-                        <i class="fas fa-edit"></i> Editar
-                    </button>
-                    <button class="btn-card-action delete" data-id="${tarea.id}">
-                        <i class="fas fa-trash-alt"></i> Eliminar
-                    </button>
-                </div>
+                ${puedeEditar ? `
+                    <div class="tarea-acciones">
+                        <button class="btn-card-action edit" data-id="${tarea.id}">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn-card-action delete" data-id="${tarea.id}">
+                            <i class="fas fa-trash-alt"></i> Eliminar
+                        </button>
+                    </div>
+                ` : ''}
             </div>
         `;
     }
 
-    async _marcarItem(tareaId, itemId, completado) {
-        try {
-            // Obtener la tarea y el item para registrar detalles
-            const tarea = this.todasLasTareas.find(t => t.id === tareaId);
-            const item = tarea?.items?.[itemId];
-            const itemTexto = item?.texto || 'Item sin texto';
-
-            await this.tareaManager.marcarItemTarea(
-                tareaId, itemId, completado,
-                this.usuarioActual, this.usuarioActual.organizacionCamelCase
-            );
-
-            // ✅ NUEVO: Registrar marcado de item en bitácora
-            if (tarea) {
-                await this._registrarMarcadoItem(tarea, itemId, itemTexto, completado);
-            }
-
-            if (tarea && tarea.items && tarea.items[itemId]) {
-                tarea.items[itemId].completado = completado;
-            }
-
-        } catch (error) {
-            const checkbox = document.querySelector(`.tarea-item-checkbox[data-tarea-id="${tareaId}"][data-item-id="${itemId}"]`);
-            if (checkbox) checkbox.checked = !completado;
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudo actualizar el item',
-                timer: 2000,
-                showConfirmButton: false,
-                background: 'var(--color-bg-secondary)'
-            });
-        }
-    }
-
-    // ========== FUNCIONES PARA EL FORMULARIO INLINE ==========
+    // ========== FUNCIONES DEL FORMULARIO ==========
 
     _mostrarFormularioCreacion() {
         this.modoEdicion = false;
         this.tareaActual = null;
         this.tipoSeleccionado = 'personal';
         this.areaSeleccionada = null;
+        this.categoriaSeleccionada = null;
         this.itemsActuales = [];
 
-        document.getElementById('notaId').value = '';
-        document.getElementById('notaTitulo').value = '';
-        document.getElementById('notaDescripcion').value = '';
-        document.getElementById('tieneRecordatorio').checked = false;
-        document.getElementById('fechaLimite').value = this._getFechaPorDefecto('personal');
-        document.getElementById('fechaContainer').style.display = 'none';
+        const notaId = document.getElementById('notaId');
+        const notaTitulo = document.getElementById('notaTitulo');
+        const notaDescripcion = document.getElementById('notaDescripcion');
+        const tieneRecordatorio = document.getElementById('tieneRecordatorio');
+        const fechaLimite = document.getElementById('fechaLimite');
+        const fechaContainer = document.getElementById('fechaContainer');
+        const categoriaNota = document.getElementById('categoriaNota');
+        const subcategoriaNota = document.getElementById('subcategoriaNota');
+
+        if (notaId) notaId.value = '';
+        if (notaTitulo) notaTitulo.value = '';
+        if (notaDescripcion) notaDescripcion.value = '';
+        if (tieneRecordatorio) tieneRecordatorio.checked = false;
+        if (fechaLimite) fechaLimite.value = this._getFechaPorDefecto('personal');
+        if (fechaContainer) fechaContainer.style.display = 'none';
+        if (categoriaNota) categoriaNota.value = '';
+        if (subcategoriaNota) {
+            subcategoriaNota.innerHTML = '<option value="">-- Selecciona subcategoría --</option>';
+            subcategoriaNota.disabled = true;
+        }
 
         this._renderizarItemsInline([]);
         this._seleccionarTipoFormulario('personal');
 
-        document.getElementById('formularioCreacion').style.display = 'block';
+        const formulario = document.getElementById('formularioCreacion');
+        if (formulario) formulario.style.display = 'block';
 
-        // Desplazar al formulario
         setTimeout(() => {
-            const formulario = document.getElementById('formularioCreacion');
-            formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            document.getElementById('notaTitulo').focus();
+            if (formulario) formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (notaTitulo) notaTitulo.focus();
         }, 100);
     }
 
     _ocultarFormulario() {
-        document.getElementById('formularioCreacion').style.display = 'none';
+        const formulario = document.getElementById('formularioCreacion');
+        if (formulario) formulario.style.display = 'none';
     }
 
     _seleccionarTipoFormulario(tipo) {
@@ -566,7 +837,8 @@ class TareasController {
             'compartida': 'Nueva Nota Compartida',
             'area': 'Nueva Nota por Área'
         };
-        document.getElementById('formularioTitulo').textContent = titulos[tipo] || 'Nueva Nota';
+        const formularioTitulo = document.getElementById('formularioTitulo');
+        if (formularioTitulo) formularioTitulo.textContent = titulos[tipo] || 'Nueva Nota';
 
         this._renderizarCamposEspecificosInline(tipo);
         this._actualizarFechaPorDefecto();
@@ -574,8 +846,9 @@ class TareasController {
 
     _actualizarFechaPorDefecto() {
         const fechaInput = document.getElementById('fechaLimite');
-        if (!fechaInput) return;
-        fechaInput.value = this._getFechaPorDefecto(this.tipoSeleccionado);
+        if (fechaInput) {
+            fechaInput.value = this._getFechaPorDefecto(this.tipoSeleccionado);
+        }
     }
 
     _getFechaPorDefecto(tipo) {
@@ -612,12 +885,14 @@ class TareasController {
         const input = newRow.querySelector('.item-texto');
         const deleteBtn = newRow.querySelector('.btn-eliminar-item');
 
-        input.focus();
+        if (input) input.focus();
 
-        deleteBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            newRow.remove();
-        });
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                newRow.remove();
+            });
+        }
     }
 
     _renderizarItemsInline(items) {
@@ -650,11 +925,11 @@ class TareasController {
                 if (row) {
                     const texto = row.querySelector('.item-texto');
                     if (e.target.checked) {
-                        texto.style.textDecoration = 'line-through';
-                        texto.style.color = 'var(--color-text-dim)';
+                        if (texto) texto.style.textDecoration = 'line-through';
+                        if (texto) texto.style.color = 'var(--color-text-dim)';
                     } else {
-                        texto.style.textDecoration = 'none';
-                        texto.style.color = 'var(--color-text-primary)';
+                        if (texto) texto.style.textDecoration = 'none';
+                        if (texto) texto.style.color = 'var(--color-text-primary)';
                     }
                 }
             });
@@ -674,32 +949,110 @@ class TareasController {
         if (!container) return;
 
         let html = '';
+        html += this._getHTMLCategorias();
 
         switch (tipo) {
             case 'personal':
-                html = '';
                 break;
             case 'compartida':
-                html = this._getHTMLUsuariosCreacion();
+                html += this._getHTMLUsuariosCreacion();
                 break;
             case 'area':
-                html = this._getHTMLAreasCreacion();
+                html += this._getHTMLAreasCreacion();
                 break;
             case 'general':
-                html = this._getHTMLGeneral();
+                html += this._getHTMLGeneral();
                 break;
         }
 
         container.innerHTML = html;
 
-        if (tipo === 'compartida' && html) {
+        if (tipo === 'compartida' && html.includes('usuariosContainer')) {
             this._configurarSelectorUsuariosCreacion();
-        } else if (tipo === 'area' && html) {
+        } else if (tipo === 'area' && html.includes('areasContainer')) {
             this._configurarSelectorAreasCreacion();
         }
+
+        this._configurarSelectorCategorias();
     }
 
-    // ========== HTML PARA CAMPOS ESPECÍFICOS ==========
+    _getHTMLCategorias() {
+        if (this.categoriasDisponibles.length === 0) {
+            return `
+                <div class="form-field">
+                    <label class="form-label">Categoría</label>
+                    <select class="form-control" id="categoriaNota">
+                        <option value="">Sin categoría</option>
+                    </select>
+                    <small class="form-text text-muted">No hay categorías disponibles</small>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Subcategoría</label>
+                    <select class="form-control" id="subcategoriaNota" disabled>
+                        <option value="">-- Selecciona subcategoría --</option>
+                    </select>
+                </div>
+            `;
+        }
+
+        let options = '<option value="">Sin categoría</option>';
+        this.categoriasDisponibles.forEach(cat => {
+            options += `<option value="${cat.id}">${this._escapeHTML(cat.nombre)}</option>`;
+        });
+
+        return `
+            <div class="form-field">
+                <label class="form-label">Categoría</label>
+                <select class="form-control" id="categoriaNota">
+                    ${options}
+                </select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Subcategoría</label>
+                <select class="form-control" id="subcategoriaNota" disabled>
+                    <option value="">-- Selecciona subcategoría --</option>
+                </select>
+            </div>
+        `;
+    }
+
+    _configurarSelectorCategorias() {
+        const categoriaSelect = document.getElementById('categoriaNota');
+        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+
+        if (!categoriaSelect) return;
+
+        categoriaSelect.addEventListener('change', async (e) => {
+            const categoriaId = e.target.value;
+            
+            if (!categoriaId) {
+                if (subcategoriaSelect) {
+                    subcategoriaSelect.innerHTML = '<option value="">-- Selecciona subcategoría --</option>';
+                    subcategoriaSelect.disabled = true;
+                }
+                return;
+            }
+
+            const categoria = this.categoriasDisponibles.find(c => c.id === categoriaId);
+            if (!categoria || !categoria.subcategorias || Object.keys(categoria.subcategorias).length === 0) {
+                if (subcategoriaSelect) {
+                    subcategoriaSelect.innerHTML = '<option value="">-- No hay subcategorías --</option>';
+                    subcategoriaSelect.disabled = true;
+                }
+                return;
+            }
+
+            let options = '<option value="">-- Selecciona subcategoría --</option>';
+            Object.values(categoria.subcategorias).forEach(sub => {
+                options += `<option value="${sub.id}">${this._escapeHTML(sub.nombre)}</option>`;
+            });
+
+            if (subcategoriaSelect) {
+                subcategoriaSelect.innerHTML = options;
+                subcategoriaSelect.disabled = false;
+            }
+        });
+    }
 
     _getHTMLUsuariosCreacion() {
         if (this.usuariosDisponibles.length === 0) {
@@ -748,55 +1101,51 @@ class TareasController {
         return html;
     }
 
-    _getHTMLUsuariosEdicion(tareaData) {
-        if (this.usuariosDisponibles.length === 0) {
-            return '<p class="no-items">No hay usuarios disponibles</p>';
-        }
+    _configurarSelectorUsuariosCreacion() {
+        const container = document.getElementById('usuariosContainer');
+        if (!container) return;
 
-        const seleccionados = tareaData?.usuariosCompartidosIds || [];
+        container.querySelectorAll('.usuario-item').forEach(item => {
+            const checkbox = item.querySelector('.usuario-checkbox');
 
-        let html = `
-            <div class="campos-especificos">
-                <h6 class="section-title"><i class="fas fa-users"></i> Compartir con usuarios</h6>
-                
-                <div class="acciones-rapidas">
-                    <button type="button" class="btn-accion-rapida" id="seleccionarTodosUsuarios">
-                        <i class="fas fa-check-double"></i> Seleccionar Todos
-                    </button>
-                    <button type="button" class="btn-accion-rapida" id="deseleccionarTodosUsuarios">
-                        <i class="fas fa-times"></i> Deseleccionar Todos
-                    </button>
-                </div>
-                
-                <div class="usuarios-container" id="usuariosContainer">
-        `;
+            item.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    this._actualizarEstiloItem(item, checkbox.checked);
+                }
+                this._actualizarContadorUsuarios();
+            });
 
-        this.usuariosDisponibles.forEach(usuario => {
-            const iniciales = this._obtenerIniciales(usuario.nombreCompleto);
-            const seleccionado = seleccionados.includes(usuario.id) ? 'checked' : '';
-
-            html += `
-                <div class="usuario-item" data-usuario-id="${usuario.id}">
-                    <input type="checkbox" class="usuario-checkbox" value="${usuario.id}" ${seleccionado}>
-                    <div class="usuario-avatar">${iniciales}</div>
-                    <div class="usuario-info">
-                        <span class="usuario-nombre">${this._escapeHTML(usuario.nombreCompleto)}</span>
-                        <span class="usuario-correo">${this._escapeHTML(usuario.correoElectronico || '')}</span>
-                    </div>
-                </div>
-            `;
+            checkbox.addEventListener('change', (e) => {
+                this._actualizarEstiloItem(item, e.target.checked);
+                this._actualizarContadorUsuarios();
+            });
         });
 
-        html += `
-                </div>
-                <div class="selected-summary" id="selectedUsersSummary">
-                    <i class="fas fa-users"></i>
-                    <span id="selectedUsersCount">${seleccionados.length}</span> usuarios seleccionados
-                </div>
-            </div>
-        `;
+        const seleccionarTodos = document.getElementById('seleccionarTodosUsuarios');
+        const deseleccionarTodos = document.getElementById('deseleccionarTodosUsuarios');
 
-        return html;
+        if (seleccionarTodos) {
+            seleccionarTodos.addEventListener('click', () => {
+                container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                    cb.checked = true;
+                    this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
+                });
+                this._actualizarContadorUsuarios();
+            });
+        }
+
+        if (deseleccionarTodos) {
+            deseleccionarTodos.addEventListener('click', () => {
+                container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                    cb.checked = false;
+                    this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
+                });
+                this._actualizarContadorUsuarios();
+            });
+        }
+
+        this._actualizarContadorUsuarios();
     }
 
     _getHTMLAreasCreacion() {
@@ -848,112 +1197,6 @@ class TareasController {
         return html;
     }
 
-    _getHTMLAreasEdicion(tareaData) {
-        if (this.areasDisponibles.length === 0) {
-            return '<p class="no-items">No hay áreas disponibles</p>';
-        }
-
-        const areaSeleccionada = tareaData?.areaId || null;
-        const cargosSeleccionados = tareaData?.cargosIds || [];
-
-        let html = `
-            <div class="campos-especificos">
-                <h6 class="section-title"><i class="fas fa-building"></i> Asignar a Área</h6>
-                
-                <div class="areas-container" id="areasContainer">
-        `;
-
-        this.areasDisponibles.forEach(area => {
-            const iniciales = this._obtenerIniciales(area.nombreArea);
-            const totalCargos = area.cargos ? Object.keys(area.cargos).length : 0;
-            const seleccionado = areaSeleccionada === area.id ? 'checked' : '';
-
-            html += `
-                <div class="area-item" data-area-id="${area.id}">
-                    <input type="radio" class="area-radio" name="areaSeleccionada" value="${area.id}" ${seleccionado}>
-                    <div class="area-icon">${iniciales}</div>
-                    <div class="area-info">
-                        <span class="area-nombre">${this._escapeHTML(area.nombreArea)}</span>
-                        <span class="area-descripcion">${this._escapeHTML(area.descripcion || 'Sin descripción')}</span>
-                        <span class="area-badge">${totalCargos} cargos</span>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += `</div>`;
-
-        html += `
-            <div id="cargosSection" style="margin-top: 20px; ${!areaSeleccionada ? 'display: none;' : ''}">
-                <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
-                <div class="cargos-container" id="cargosContainer">
-                    <div class="loading-cargos"><i class="fas fa-spinner fa-spin"></i> Cargando cargos...</div>
-                </div>
-                <div class="selected-summary" id="selectedCargosSummary" style="${cargosSeleccionados.length === 0 ? 'display: none;' : ''}">
-                    <i class="fas fa-users"></i>
-                    <span id="selectedCargosCount">${cargosSeleccionados.length}</span> cargos seleccionados
-                </div>
-            </div>
-        `;
-
-        html += `</div>`;
-
-        return html;
-    }
-
-    _getHTMLGeneral() {
-        return `
-            <div class="campos-especificos">
-                <div class="visibility-info" style="padding: 15px; text-align: center;">
-                    <i class="fas fa-eye" style="font-size: 24px; margin-right: 10px;"></i>
-                    <span>Esta nota será visible para <strong>todos los usuarios</strong> de la organización</span>
-                </div>
-            </div>
-        `;
-    }
-
-    // ========== CONFIGURACIÓN DE SELECTORES ==========
-
-    _configurarSelectorUsuariosCreacion() {
-        const container = document.getElementById('usuariosContainer');
-        if (!container) return;
-
-        container.querySelectorAll('.usuario-item').forEach(item => {
-            const checkbox = item.querySelector('.usuario-checkbox');
-
-            item.addEventListener('click', (e) => {
-                if (e.target !== checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                    this._actualizarEstiloItem(item, checkbox.checked);
-                }
-                this._actualizarContadorUsuarios();
-            });
-
-            checkbox.addEventListener('change', (e) => {
-                this._actualizarEstiloItem(item, e.target.checked);
-                this._actualizarContadorUsuarios();
-            });
-        });
-
-        document.getElementById('seleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = true;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
-            });
-            this._actualizarContadorUsuarios();
-        });
-
-        document.getElementById('deseleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = false;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
-            });
-            this._actualizarContadorUsuarios();
-        });
-
-        this._actualizarContadorUsuarios();
-    }
-
     _configurarSelectorAreasCreacion() {
         const areasContainer = document.getElementById('areasContainer');
         if (!areasContainer) return;
@@ -986,7 +1229,8 @@ class TareasController {
         });
 
         this.areaSeleccionada = this.areasDisponibles.find(a => a.id === areaId);
-        document.getElementById('cargosSection').style.display = 'block';
+        const cargosSection = document.getElementById('cargosSection');
+        if (cargosSection) cargosSection.style.display = 'block';
         await this._cargarCargosAreaCreacion(areaId);
     }
 
@@ -1045,7 +1289,16 @@ class TareasController {
         this._actualizarContadorCargos();
     }
 
-    // ========== UTILIDADES PARA SELECTORES ==========
+    _getHTMLGeneral() {
+        return `
+            <div class="campos-especificos">
+                <div class="visibility-info" style="padding: 15px; text-align: center;">
+                    <i class="fas fa-eye" style="font-size: 24px; margin-right: 10px;"></i>
+                    <span>Esta nota será visible para <strong>todos los usuarios</strong> de la organización</span>
+                </div>
+            </div>
+        `;
+    }
 
     _actualizarEstiloItem(item, seleccionado) {
         if (seleccionado) {
@@ -1076,26 +1329,28 @@ class TareasController {
         }
     }
 
-    // ========== GUARDAR NOTA ==========
-
     async _guardarNota() {
-        const titulo = document.getElementById('notaTitulo').value.trim();
-        if (!titulo) {
+        const titulo = document.getElementById('notaTitulo');
+        if (!titulo || !titulo.value.trim()) {
             this._mostrarError('El título es requerido');
             return;
         }
 
         const tipo = this.tipoSeleccionado;
-        const notaId = document.getElementById('notaId').value;
-        const descripcion = document.getElementById('notaDescripcion').value.trim();
-        const tieneRecordatorio = document.getElementById('tieneRecordatorio').checked;
-        const fechaLimiteInput = document.getElementById('fechaLimite').value;
+        const notaId = document.getElementById('notaId')?.value || '';
+        const descripcion = document.getElementById('notaDescripcion')?.value.trim() || '';
+        const tieneRecordatorio = document.getElementById('tieneRecordatorio')?.checked || false;
+        const fechaLimiteInput = document.getElementById('fechaLimite')?.value || '';
+        const categoriaSelect = document.getElementById('categoriaNota');
+        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+        const categoriaId = categoriaSelect ? categoriaSelect.value : '';
+        const subcategoriaId = subcategoriaSelect ? subcategoriaSelect.value : '';
 
         const items = {};
         document.querySelectorAll('#itemsList .item-row').forEach((row, index) => {
             const checkbox = row.querySelector('.item-checkbox');
             const input = row.querySelector('.item-texto');
-            const texto = input.value.trim();
+            const texto = input ? input.value.trim() : '';
 
             if (texto) {
                 const itemId = row.dataset.itemId || `item_${Date.now()}_${index}`;
@@ -1103,7 +1358,9 @@ class TareasController {
                     id: itemId,
                     texto: texto,
                     completado: checkbox ? checkbox.checked : false,
-                    fechaCreacion: new Date().toISOString()
+                    fechaCreacion: new Date().toISOString(),
+                    marcadoPor: null,
+                    marcadoPorNombre: null
                 };
             }
         });
@@ -1114,6 +1371,9 @@ class TareasController {
 
         if (tipo === 'compartida') {
             usuariosCompartidosIds = Array.from(document.querySelectorAll('.usuario-checkbox:checked')).map(cb => cb.value);
+            if (!usuariosCompartidosIds.includes(this.usuarioActual.id)) {
+                usuariosCompartidosIds.push(this.usuarioActual.id);
+            }
         } else if (tipo === 'area') {
             const areaRadio = document.querySelector('.area-radio:checked');
             if (areaRadio) {
@@ -1131,13 +1391,17 @@ class TareasController {
             fechaLimite.setHours(23, 59, 59, 999);
         }
 
+        const tipoFirestore = tipo === 'general' ? 'global' : tipo;
+
         const tareaData = {
-            nombreActividad: titulo,
+            nombreActividad: titulo.value.trim(),
             descripcion: descripcion,
             items: items,
-            tipo: tipo === 'general' ? 'global' : tipo,
+            tipo: tipoFirestore,
             fechaLimite: fechaLimite,
-            tieneRecordatorio: tieneRecordatorio
+            tieneRecordatorio: tieneRecordatorio,
+            categoriaId: categoriaId || null,
+            subcategoriaId: subcategoriaId || null
         };
 
         if (tipo === 'compartida') {
@@ -1156,24 +1420,13 @@ class TareasController {
         });
 
         try {
-            let resultado;
             if (notaId) {
-                // Obtener tarea original antes de editar para registrar cambios
-                const tareaOriginal = await this.tareaManager.getTareaById(
-                    notaId, this.usuarioActual.organizacionCamelCase
-                );
-                
                 await this.tareaManager.actualizarTarea(
                     notaId, tareaData,
                     this.usuarioActual, this.usuarioActual.organizacionCamelCase
                 );
-                
-                // Detectar cambios
-                const cambios = this._detectarCambiosTarea(tareaOriginal, tareaData);
-                await this._registrarEdicionTarea(tareaOriginal, tareaData, cambios);
             } else {
-                resultado = await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
-                await this._registrarCreacionTarea(tareaData, resultado);
+                await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
             }
 
             Swal.close();
@@ -1196,85 +1449,51 @@ class TareasController {
         }
     }
 
-    // ✅ NUEVO: Detectar cambios en tarea para registro
-    _detectarCambiosTarea(original, actualizada) {
-        const cambios = [];
-
-        if (original.nombreActividad !== actualizada.nombreActividad) {
-            cambios.push({
-                campo: 'título',
-                anterior: original.nombreActividad,
-                nuevo: actualizada.nombreActividad
-            });
-        }
-
-        if (original.descripcion !== actualizada.descripcion) {
-            cambios.push({
-                campo: 'descripción',
-                anterior: original.descripcion?.substring(0, 50) || '',
-                nuevo: actualizada.descripcion?.substring(0, 50) || ''
-            });
-        }
-
-        if (original.tipo !== actualizada.tipo) {
-            cambios.push({
-                campo: 'tipo',
-                anterior: original.tipo === 'global' ? 'general' : original.tipo,
-                nuevo: actualizada.tipo === 'global' ? 'general' : actualizada.tipo
-            });
-        }
-
-        if (original.tieneRecordatorio !== actualizada.tieneRecordatorio) {
-            cambios.push({
-                campo: 'recordatorio',
-                anterior: original.tieneRecordatorio ? 'activado' : 'desactivado',
-                nuevo: actualizada.tieneRecordatorio ? 'activado' : 'desactivado'
-            });
-        }
-
-        // Detectar cambios en items (agregados, eliminados, modificados)
-        const itemsOriginales = original.items ? Object.values(original.items) : [];
-        const itemsActuales = actualizada.items ? Object.values(actualizada.items) : [];
-
-        const itemsAgregados = itemsActuales.filter(i => 
-            !itemsOriginales.some(o => o.id === i.id)
-        );
-        if (itemsAgregados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'agregados',
-                cantidad: itemsAgregados.length,
-                items: itemsAgregados.map(i => ({ id: i.id, texto: i.texto?.substring(0, 30) }))
-            });
-        }
-
-        const itemsEliminados = itemsOriginales.filter(o => 
-            !itemsActuales.some(i => i.id === o.id)
-        );
-        if (itemsEliminados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'eliminados',
-                cantidad: itemsEliminados.length
-            });
-        }
-
-        const itemsModificados = itemsActuales.filter(i => {
-            const originalItem = itemsOriginales.find(o => o.id === i.id);
-            return originalItem && originalItem.texto !== i.texto;
+    async _eliminarTarea(tareaId) {
+        const result = await Swal.fire({
+            title: '¿Eliminar nota?',
+            text: 'Esta acción no se puede deshacer',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            background: 'var(--color-bg-secondary)',
+            confirmButtonColor: '#dc3545'
         });
-        if (itemsModificados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'modificados',
-                cantidad: itemsModificados.length
+
+        if (!result.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Eliminando...',
+            html: '<i class="fas fa-spinner fa-spin"></i>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'var(--color-bg-secondary)'
+        });
+
+        try {
+            await this.tareaManager.eliminarTarea(
+                tareaId, this.usuarioActual, this.usuarioActual.organizacionCamelCase
+            );
+
+            Swal.close();
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Eliminada',
+                text: 'La nota se eliminó correctamente',
+                timer: 1500,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)'
             });
+
+            await this._cargarTareas();
+
+        } catch (error) {
+            Swal.close();
+            this._mostrarError(error.message);
         }
-
-        return cambios;
     }
-
-    // ========== ABRIR FORMULARIO DE EDICIÓN (CON SCROLL AL FORMULARIO) ==========
 
     async _abrirFormularioEdicion(tareaId) {
         Swal.fire({
@@ -1292,30 +1511,57 @@ class TareasController {
 
             if (!this.tareaActual) throw new Error('Nota no encontrada');
 
+            if (this.tareaActual.creadoPor !== this.usuarioActual.id) {
+                Swal.close();
+                this._mostrarError('No tienes permiso para editar esta nota');
+                return;
+            }
+
             Swal.close();
 
             this.modoEdicion = true;
             this.tipoSeleccionado = this.tareaActual.tipo === 'global' ? 'general' : this.tareaActual.tipo;
             this.areaSeleccionada = null;
 
-            document.getElementById('notaId').value = this.tareaActual.id;
-            document.getElementById('notaTitulo').value = this.tareaActual.nombreActividad || '';
-            document.getElementById('notaDescripcion').value = this.tareaActual.descripcion || '';
+            const notaIdInput = document.getElementById('notaId');
+            const notaTitulo = document.getElementById('notaTitulo');
+            const notaDescripcion = document.getElementById('notaDescripcion');
+            const tieneRecordatorio = document.getElementById('tieneRecordatorio');
+            const fechaLimite = document.getElementById('fechaLimite');
+            const fechaContainer = document.getElementById('fechaContainer');
+            const categoriaSelect = document.getElementById('categoriaNota');
+            const subcategoriaSelect = document.getElementById('subcategoriaNota');
+
+            if (notaIdInput) notaIdInput.value = this.tareaActual.id;
+            if (notaTitulo) notaTitulo.value = this.tareaActual.nombreActividad || '';
+            if (notaDescripcion) notaDescripcion.value = this.tareaActual.descripcion || '';
 
             const items = this.tareaActual.items ? Object.values(this.tareaActual.items) : [];
             this._renderizarItemsInline(items);
 
-            const tieneRecordatorio = this.tareaActual.tieneRecordatorio || false;
-            document.getElementById('tieneRecordatorio').checked = tieneRecordatorio;
+            const tieneRecordatorioVal = this.tareaActual.tieneRecordatorio || false;
+            if (tieneRecordatorio) tieneRecordatorio.checked = tieneRecordatorioVal;
+            if (fechaContainer) fechaContainer.style.display = tieneRecordatorioVal ? 'block' : 'none';
 
             if (this.tareaActual.fechaLimite) {
                 const fecha = new Date(this.tareaActual.fechaLimite);
-                document.getElementById('fechaLimite').value = fecha.toISOString().split('T')[0];
+                if (fechaLimite) fechaLimite.value = fecha.toISOString().split('T')[0];
             } else {
-                document.getElementById('fechaLimite').value = '';
+                if (fechaLimite) fechaLimite.value = '';
             }
 
-            document.getElementById('fechaContainer').style.display = tieneRecordatorio ? 'block' : 'none';
+            if (this.tareaActual.categoriaId && this.categoriasDisponibles.length > 0 && categoriaSelect) {
+                categoriaSelect.value = this.tareaActual.categoriaId;
+                const categoria = this.categoriasDisponibles.find(c => c.id === this.tareaActual.categoriaId);
+                if (categoria && categoria.subcategorias && subcategoriaSelect) {
+                    let options = '<option value="">-- Selecciona subcategoría --</option>';
+                    Object.values(categoria.subcategorias).forEach(sub => {
+                        options += `<option value="${sub.id}" ${this.tareaActual.subcategoriaId === sub.id ? 'selected' : ''}>${this._escapeHTML(sub.nombre)}</option>`;
+                    });
+                    subcategoriaSelect.innerHTML = options;
+                    subcategoriaSelect.disabled = false;
+                }
+            }
 
             const titulos = {
                 'general': 'Editar Nota General',
@@ -1323,7 +1569,8 @@ class TareasController {
                 'compartida': 'Editar Nota Compartida',
                 'area': 'Editar Nota por Área'
             };
-            document.getElementById('formularioTitulo').textContent = titulos[this.tipoSeleccionado] || 'Editar Nota';
+            const formularioTitulo = document.getElementById('formularioTitulo');
+            if (formularioTitulo) formularioTitulo.textContent = titulos[this.tipoSeleccionado] || 'Editar Nota';
 
             document.querySelectorAll('.tipo-option').forEach(opt => {
                 if (opt.dataset.tipo === this.tipoSeleccionado) {
@@ -1336,26 +1583,14 @@ class TareasController {
             await this._renderizarCamposEspecificosEdicion(this.tipoSeleccionado, this.tareaActual);
 
             const formulario = document.getElementById('formularioCreacion');
-            const tituloInput = document.getElementById('notaTitulo');
+            if (formulario) formulario.style.display = 'block';
 
-            // Mostrar el formulario
-            formulario.style.display = 'block';
-
-            // Esperar a que el DOM se actualice y luego desplazar al formulario
             setTimeout(() => {
-                formulario.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                    inline: 'nearest'
-                });
-
-                // Enfocar el título después del scroll
-                setTimeout(() => {
-                    if (tituloInput) {
-                        tituloInput.focus();
-                        tituloInput.select();
-                    }
-                }, 500);
+                if (formulario) formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (notaTitulo) {
+                    notaTitulo.focus();
+                    notaTitulo.select();
+                }
             }, 100);
 
         } catch (error) {
@@ -1368,32 +1603,100 @@ class TareasController {
         const container = document.getElementById('camposEspecificos');
         if (!container) return;
 
-        let html = '';
+        let html = this._getHTMLCategorias();
 
         switch (tipo) {
             case 'personal':
-                html = '';
                 break;
             case 'compartida':
-                html = this._getHTMLUsuariosEdicion(tareaData);
+                html += this._getHTMLUsuariosEdicion(tareaData);
                 break;
             case 'area':
-                html = this._getHTMLAreasEdicion(tareaData);
+                html += this._getHTMLAreasEdicion(tareaData);
                 break;
             case 'general':
-                html = this._getHTMLGeneral();
+                html += this._getHTMLGeneral();
                 break;
-            default:
-                html = '';
         }
 
         container.innerHTML = html;
 
-        if (tipo === 'compartida' && html) {
+        if (tipo === 'compartida' && html.includes('usuariosContainer')) {
             this._configurarSelectorUsuariosEdicion(tareaData);
-        } else if (tipo === 'area' && html) {
+        } else if (tipo === 'area' && html.includes('areasContainer')) {
             await this._configurarSelectorAreasEdicion(tareaData);
         }
+
+        this._configurarSelectorCategorias();
+        
+        if (tareaData.categoriaId) {
+            const categoriaSelect = document.getElementById('categoriaNota');
+            if (categoriaSelect) {
+                categoriaSelect.value = tareaData.categoriaId;
+                const event = new Event('change');
+                categoriaSelect.dispatchEvent(event);
+                
+                setTimeout(() => {
+                    if (tareaData.subcategoriaId) {
+                        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+                        if (subcategoriaSelect) {
+                            subcategoriaSelect.value = tareaData.subcategoriaId;
+                        }
+                    }
+                }, 100);
+            }
+        }
+    }
+
+    _getHTMLUsuariosEdicion(tareaData) {
+        if (this.usuariosDisponibles.length === 0) {
+            return '<p class="no-items">No hay usuarios disponibles</p>';
+        }
+
+        const seleccionados = tareaData?.usuariosCompartidosIds || [];
+
+        let html = `
+            <div class="campos-especificos">
+                <h6 class="section-title"><i class="fas fa-users"></i> Compartir con usuarios</h6>
+                
+                <div class="acciones-rapidas">
+                    <button type="button" class="btn-accion-rapida" id="seleccionarTodosUsuarios">
+                        <i class="fas fa-check-double"></i> Seleccionar Todos
+                    </button>
+                    <button type="button" class="btn-accion-rapida" id="deseleccionarTodosUsuarios">
+                        <i class="fas fa-times"></i> Deseleccionar Todos
+                    </button>
+                </div>
+                
+                <div class="usuarios-container" id="usuariosContainer">
+        `;
+
+        this.usuariosDisponibles.forEach(usuario => {
+            const iniciales = this._obtenerIniciales(usuario.nombreCompleto);
+            const seleccionado = seleccionados.includes(usuario.id) ? 'checked' : '';
+
+            html += `
+                <div class="usuario-item" data-usuario-id="${usuario.id}">
+                    <input type="checkbox" class="usuario-checkbox" value="${usuario.id}" ${seleccionado}>
+                    <div class="usuario-avatar">${iniciales}</div>
+                    <div class="usuario-info">
+                        <span class="usuario-nombre">${this._escapeHTML(usuario.nombreCompleto)}</span>
+                        <span class="usuario-correo">${this._escapeHTML(usuario.correoElectronico || '')}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+                <div class="selected-summary" id="selectedUsersSummary">
+                    <i class="fas fa-users"></i>
+                    <span id="selectedUsersCount">${seleccionados.length}</span> usuarios seleccionados
+                </div>
+            </div>
+        `;
+
+        return html;
     }
 
     _configurarSelectorUsuariosEdicion(tareaData) {
@@ -1421,23 +1724,83 @@ class TareasController {
             });
         });
 
-        document.getElementById('seleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = true;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
-            });
-            this._actualizarContadorUsuarios();
-        });
+        const seleccionarTodos = document.getElementById('seleccionarTodosUsuarios');
+        const deseleccionarTodos = document.getElementById('deseleccionarTodosUsuarios');
 
-        document.getElementById('deseleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = false;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
+        if (seleccionarTodos) {
+            seleccionarTodos.addEventListener('click', () => {
+                container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                    cb.checked = true;
+                    this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
+                });
+                this._actualizarContadorUsuarios();
             });
-            this._actualizarContadorUsuarios();
-        });
+        }
+
+        if (deseleccionarTodos) {
+            deseleccionarTodos.addEventListener('click', () => {
+                container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                    cb.checked = false;
+                    this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
+                });
+                this._actualizarContadorUsuarios();
+            });
+        }
 
         this._actualizarContadorUsuarios();
+    }
+
+    _getHTMLAreasEdicion(tareaData) {
+        if (this.areasDisponibles.length === 0) {
+            return '<p class="no-items">No hay áreas disponibles</p>';
+        }
+
+        const areaSeleccionada = tareaData?.areaId || null;
+        const cargosSeleccionados = tareaData?.cargosIds || [];
+
+        let html = `
+            <div class="campos-especificos">
+                <h6 class="section-title"><i class="fas fa-building"></i> Asignar a Área</h6>
+                
+                <div class="areas-container" id="areasContainer">
+        `;
+
+        this.areasDisponibles.forEach(area => {
+            const iniciales = this._obtenerIniciales(area.nombreArea);
+            const totalCargos = area.cargos ? Object.keys(area.cargos).length : 0;
+            const seleccionado = areaSeleccionada === area.id ? 'checked' : '';
+
+            html += `
+                <div class="area-item" data-area-id="${area.id}">
+                    <input type="radio" class="area-radio" name="areaSeleccionada" value="${area.id}" ${seleccionado}>
+                    <div class="area-icon">${iniciales}</div>
+                    <div class="area-info">
+                        <span class="area-nombre">${this._escapeHTML(area.nombreArea)}</span>
+                        <span class="area-descripcion">${this._escapeHTML(area.descripcion || 'Sin descripción')}</span>
+                        <span class="area-badge">${totalCargos} cargos</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+
+        html += `
+            <div id="cargosSection" style="margin-top: 20px; ${!areaSeleccionada ? 'display: none;' : ''}">
+                <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
+                <div class="cargos-container" id="cargosContainer">
+                    <div class="loading-cargos"><i class="fas fa-spinner fa-spin"></i> Cargando cargos...</div>
+                </div>
+                <div class="selected-summary" id="selectedCargosSummary" style="${cargosSeleccionados.length === 0 ? 'display: none;' : ''}">
+                    <i class="fas fa-users"></i>
+                    <span id="selectedCargosCount">${cargosSeleccionados.length}</span> cargos seleccionados
+                </div>
+            </div>
+        `;
+
+        html += `</div>`;
+
+        return html;
     }
 
     async _configurarSelectorAreasEdicion(tareaData) {
@@ -1480,7 +1843,8 @@ class TareasController {
         });
 
         this.areaSeleccionada = this.areasDisponibles.find(a => a.id === areaId);
-        document.getElementById('cargosSection').style.display = 'block';
+        const cargosSection = document.getElementById('cargosSection');
+        if (cargosSection) cargosSection.style.display = 'block';
         await this._cargarCargosAreaEdicion(areaId, tareaData);
     }
 
@@ -1546,76 +1910,29 @@ class TareasController {
         this._actualizarContadorCargos();
     }
 
-    // ========== ELIMINAR TAREA ==========
-
-    async _eliminarTarea(tareaId) {
-        // Obtener la tarea antes de eliminarla para registrar detalles
-        const tarea = this.todasLasTareas.find(t => t.id === tareaId);
-
-        const result = await Swal.fire({
-            title: '¿Eliminar nota?',
-            text: 'Esta acción no se puede deshacer',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            background: 'var(--color-bg-secondary)',
-            confirmButtonColor: '#dc3545'
-        });
-
-        if (!result.isConfirmed) return;
-
-        Swal.fire({
-            title: 'Eliminando...',
-            html: '<i class="fas fa-spinner fa-spin"></i>',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            background: 'var(--color-bg-secondary)'
-        });
-
-        try {
-            await this.tareaManager.eliminarTarea(
-                tareaId, this.usuarioActual, this.usuarioActual.organizacionCamelCase
-            );
-
-            // ✅ NUEVO: Registrar eliminación en bitácora
-            if (tarea) {
-                await this._registrarEliminacionTarea(tarea);
-            }
-
-            Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: 'Eliminada',
-                text: 'La nota se eliminó correctamente',
-                timer: 1500,
-                showConfirmButton: false,
-                background: 'var(--color-bg-secondary)'
-            });
-
-            await this._cargarTareas();
-
-        } catch (error) {
-            Swal.close();
-            this._mostrarError(error.message);
-        }
-    }
-
     // ========== CONFIGURACIÓN DE EVENTOS ==========
 
     _configurarEventos() {
-        document.getElementById('btnCrearNota')?.addEventListener('click', () => {
-            this._mostrarFormularioCreacion();
-        });
+        const btnCrearNota = document.getElementById('btnCrearNota');
+        if (btnCrearNota) {
+            btnCrearNota.addEventListener('click', () => {
+                this._mostrarFormularioCreacion();
+            });
+        }
 
-        document.getElementById('cerrarFormulario')?.addEventListener('click', () => {
-            this._ocultarFormulario();
-        });
+        const cerrarFormulario = document.getElementById('cerrarFormulario');
+        if (cerrarFormulario) {
+            cerrarFormulario.addEventListener('click', () => {
+                this._ocultarFormulario();
+            });
+        }
 
-        document.getElementById('cancelarNota')?.addEventListener('click', () => {
-            this._ocultarFormulario();
-        });
+        const cancelarNota = document.getElementById('cancelarNota');
+        if (cancelarNota) {
+            cancelarNota.addEventListener('click', () => {
+                this._ocultarFormulario();
+            });
+        }
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1626,13 +1943,16 @@ class TareasController {
             });
         });
 
-        document.getElementById('searchInput')?.addEventListener('input', (e) => {
-            clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => {
-                this.terminoBusqueda = e.target.value.trim().toLowerCase();
-                this._aplicarFiltros();
-            }, 300);
-        });
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    this.terminoBusqueda = e.target.value.trim().toLowerCase();
+                    this._aplicarFiltros();
+                }, 300);
+            });
+        }
 
         document.querySelectorAll('.tipo-option').forEach(opt => {
             opt.addEventListener('click', () => {
@@ -1641,15 +1961,27 @@ class TareasController {
             });
         });
 
-        document.getElementById('guardarNota')?.addEventListener('click', () => this._guardarNota());
+        const guardarNota = document.getElementById('guardarNota');
+        if (guardarNota) {
+            guardarNota.addEventListener('click', () => this._guardarNota());
+        }
 
-        document.getElementById('tieneRecordatorio')?.addEventListener('change', (e) => {
-            document.getElementById('fechaContainer').style.display = e.target.checked ? 'block' : 'none';
-        });
+        const tieneRecordatorio = document.getElementById('tieneRecordatorio');
+        if (tieneRecordatorio) {
+            tieneRecordatorio.addEventListener('change', (e) => {
+                const fechaContainer = document.getElementById('fechaContainer');
+                if (fechaContainer) {
+                    fechaContainer.style.display = e.target.checked ? 'block' : 'none';
+                }
+            });
+        }
 
-        document.getElementById('btnAgregarItem')?.addEventListener('click', () => {
-            this._agregarItemFormulario();
-        });
+        const btnAgregarItem = document.getElementById('btnAgregarItem');
+        if (btnAgregarItem) {
+            btnAgregarItem.addEventListener('click', () => {
+                this._agregarItemFormulario();
+            });
+        }
     }
 
     // ========== ESTADOS DE UI ==========
