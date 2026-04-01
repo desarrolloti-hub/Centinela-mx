@@ -89,9 +89,9 @@ class VisualizadorPDF {
                     justify-content: space-between;
                     align-items: center;
                     padding: 16px 24px;
-                    background: linear-gradient(135deg, #1a3b5d 0%, #0f2a44 100%);
+                    background: linear-gradient(135deg, #0033A0 0%, #0033A0 100%);
                     color: white;
-                    border-bottom: 2px solid #c9a03d;
+                    border-bottom: 2px solid #FF6600;
                 }
 
                 .pdf-visualizador-title {

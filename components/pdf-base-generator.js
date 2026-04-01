@@ -7,8 +7,8 @@
 // CONFIGURACIÓN DE COLORES BASE
 // =============================================
 export const coloresBase = {
-    primario: '#1a3b5d',
-    secundario: '#c9a03d',
+    primario: '#0033A0',
+    secundario: '#FF6600',
     texto: '#333333',
     textoClaro: '#666666',
     fondo: '#ffffff',

@@ -1,7 +1,8 @@
-// seguimientoIncidencia.js - CONTROLADOR
-// NO IMPORTA FIRESTORE DIRECTAMENTE, USA SOLO LA CLASE
+
 
 import '/components/visualizadorImagen.js';
+import '/components/visualizadorPDF.js';
+
 
 // =============================================
 // VARIABLES GLOBALES
@@ -103,7 +104,319 @@ function limpiarTodaCache() {
 }
 
 // =============================================
-// INICIALIZACIÓN OPTIMIZADA
+// CONVERTIR NUEVA IMAGEN A BASE64 (SOLO PARA LAS NUEVAS)
+// =============================================
+async function nuevaImagenABase64(file, comentario = '', elementos = []) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            resolve({
+                url: reader.result,
+                comentario: comentario,
+                elementos: elementos,
+                _esBase64: true,
+                _nombreOriginal: file.name
+            });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// =============================================
+// PREPARAR INCIDENCIA PARA PDF (SIN CONVERSIÓN MASIVA)
+// =============================================
+async function prepararIncidenciaParaPDF(incidenciaOriginal, nuevasEvidenciasBase64 = []) {
+    console.log('📄 Preparando incidencia para PDF...');
+    
+    const incidenciaParaPDF = JSON.parse(JSON.stringify(incidenciaOriginal));
+    
+    const seguimientosArray = incidenciaOriginal.getSeguimientosArray ? incidenciaOriginal.getSeguimientosArray() : [];
+    const seguimientosProcesados = [];
+    
+    for (const seg of seguimientosArray) {
+        const segProcesado = {
+            id: seg.id,
+            usuarioId: seg.usuarioId,
+            usuarioNombre: seg.usuarioNombre,
+            descripcion: seg.descripcion,
+            fecha: seg.fecha,
+            evidencias: []
+        };
+        
+        if (seg.evidencias && seg.evidencias.length > 0) {
+            for (const ev of seg.evidencias) {
+                if (ev.url && (ev.url.startsWith('http') || ev.url.startsWith('https'))) {
+                    segProcesado.evidencias.push({
+                        url: ev.url,
+                        comentario: ev.comentario || '',
+                        elementos: ev.elementos || []
+                    });
+                } else if (ev.urlOriginal && ev.urlOriginal.startsWith('http')) {
+                    segProcesado.evidencias.push({
+                        url: ev.urlOriginal,
+                        comentario: ev.comentario || '',
+                        elementos: ev.elementos || []
+                    });
+                }
+            }
+        }
+        
+        seguimientosProcesados.push(segProcesado);
+    }
+    
+    if (nuevasEvidenciasBase64.length > 0) {
+        const nuevoSeguimiento = {
+            id: `temp_${Date.now()}`,
+            usuarioId: usuarioActual.id,
+            usuarioNombre: usuarioActual.nombreCompleto,
+            descripcion: 'Nuevo seguimiento (procesando...)',
+            fecha: new Date(),
+            evidencias: nuevasEvidenciasBase64
+        };
+        seguimientosProcesados.push(nuevoSeguimiento);
+    }
+    
+    incidenciaParaPDF.getSeguimientosArray = () => seguimientosProcesados;
+    
+    console.log(`✅ Incidencia preparada: ${incidenciaParaPDF.imagenes?.length || 0} imágenes, ${seguimientosProcesados.length} seguimientos`);
+    
+    return incidenciaParaPDF;
+}
+
+// =============================================
+// EXTRAER IMÁGENES DEL DOM (YA CARGADAS)
+// =============================================
+async function extraerImagenesDelDOM() {
+    const imagenesBase64 = [];
+    
+    const galleryItems = document.querySelectorAll('.gallery-item');
+    for (const item of galleryItems) {
+        const imgElement = item.querySelector('img');
+        let comentario = '';
+        const comentarioElement = item.querySelector('.image-comment');
+        if (comentarioElement) {
+            comentario = comentarioElement.textContent?.trim() || '';
+            comentario = comentario.replace(/[📷\s]+/g, '').trim();
+        }
+        
+        if (imgElement && imgElement.src && imgElement.complete && imgElement.naturalWidth > 0) {
+            try {
+                console.log('📸 Extrayendo imagen de galería...');
+                const canvas = document.createElement('canvas');
+                canvas.width = imgElement.naturalWidth;
+                canvas.height = imgElement.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(imgElement, 0, 0);
+                const base64 = canvas.toDataURL('image/jpeg', 0.85);
+                imagenesBase64.push({
+                    url: base64,
+                    comentario: comentario,
+                    elementos: [],
+                    _esBase64: true
+                });
+            } catch (error) {
+                console.error('Error extrayendo imagen de galería:', error);
+            }
+        }
+    }
+    
+    return imagenesBase64;
+}
+
+// =============================================
+// EXTRAER EVIDENCIAS DEL HISTORIAL (YA CARGADAS)
+// =============================================
+async function extraerEvidenciasDelHistorial() {
+    const evidenciasPorSeguimiento = [];
+    
+    const timelineItems = document.querySelectorAll('.timeline-simple-item');
+    
+    for (const item of timelineItems) {
+        const nombreUsuario = item.querySelector('.timeline-simple-name')?.textContent?.trim() || 'Usuario';
+        const descripcion = item.querySelector('.timeline-simple-description')?.textContent?.trim() || '';
+        const fechaTexto = item.querySelector('.timeline-simple-date span')?.textContent?.trim() || '';
+        
+        const evidencias = [];
+        const evidenciaElements = item.querySelectorAll('.timeline-simple-evidencia');
+        
+        for (const evElement of evidenciaElements) {
+            const imgElement = evElement.querySelector('img');
+            let comentario = '';
+            const comentarioElement = evElement.querySelector('.timeline-simple-evidencia-comentario');
+            if (comentarioElement) {
+                comentario = comentarioElement.textContent?.trim() || '';
+            }
+            
+            if (imgElement && imgElement.src && imgElement.complete && imgElement.naturalWidth > 0) {
+                try {
+                    console.log('📸 Extrayendo evidencia del historial...');
+                    const canvas = document.createElement('canvas');
+                    canvas.width = imgElement.naturalWidth;
+                    canvas.height = imgElement.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(imgElement, 0, 0);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.85);
+                    evidencias.push({
+                        url: base64,
+                        comentario: comentario,
+                        elementos: [],
+                        _esBase64: true
+                    });
+                } catch (error) {
+                    console.error('Error extrayendo evidencia:', error);
+                }
+            }
+        }
+        
+        if (evidencias.length > 0 || descripcion) {
+            let fecha = new Date();
+            if (fechaTexto) {
+                try {
+                    fecha = new Date(fechaTexto);
+                } catch (e) {}
+            }
+            
+            evidenciasPorSeguimiento.push({
+                id: `seg_${Date.now()}_${evidenciasPorSeguimiento.length}`,
+                usuarioId: usuarioActual.id,
+                usuarioNombre: nombreUsuario,
+                descripcion: descripcion,
+                fecha: fecha,
+                evidencias: evidencias
+            });
+        }
+    }
+    
+    return evidenciasPorSeguimiento;
+}
+
+
+// =============================================
+// CREAR INCIDENCIA TEMPORAL PARA VISTA PREVIA DEL PDF
+// USANDO URLs ORIGINALES DE STORAGE (EL GENERADOR LAS CARGA)
+// =============================================
+async function crearIncidenciaParaVistaPrevia(datos) {
+    console.log('🔄 Creando incidencia para vista previa usando URLs de Storage...');
+    
+    // Obtener la incidencia actual completa
+    const incidenciaActualCompleta = await incidenciaManager.getIncidenciaById(
+        incidenciaActual.id,
+        usuarioActual.organizacionCamelCase
+    );
+    
+    // =============================================
+    // USAR URLs ORIGINALES DE STORAGE (NO CONVERTIR A BASE64)
+    // =============================================
+    const imagenesOriginales = incidenciaActualCompleta.imagenes || [];
+    
+    // Procesar seguimientos existentes (mantener URLs originales)
+    const seguimientosExistentes = incidenciaActualCompleta.getSeguimientosArray ? incidenciaActualCompleta.getSeguimientosArray() : [];
+    const seguimientosProcesados = [];
+    
+    for (const seg of seguimientosExistentes) {
+        const evidenciasProcesadas = [];
+        
+        for (const ev of seg.evidencias || []) {
+            // Mantener la URL original de Storage
+            let urlOriginal = ev.url;
+            if (!urlOriginal && ev.urlOriginal) {
+                urlOriginal = ev.urlOriginal;
+            }
+            
+            if (urlOriginal && (urlOriginal.startsWith('http') || urlOriginal.startsWith('https'))) {
+                evidenciasProcesadas.push({
+                    url: urlOriginal,
+                    comentario: ev.comentario || '',
+                    elementos: ev.elementos || []
+                });
+            } else {
+                console.warn('⚠️ Evidencia sin URL válida:', ev);
+            }
+        }
+        
+        seguimientosProcesados.push({
+            id: seg.id,
+            usuarioId: seg.usuarioId,
+            usuarioNombre: seg.usuarioNombre,
+            descripcion: seg.descripcion,
+            fecha: seg.fecha,
+            evidencias: evidenciasProcesadas
+        });
+    }
+    
+    // =============================================
+    // CONVERTIR NUEVAS EVIDENCIAS A BASE64
+    // =============================================
+    const nuevasEvidenciasBase64 = [];
+    for (const ev of datos.evidencias) {
+        try {
+            const base64Data = await nuevaImagenABase64(ev.file, ev.comentario, ev.elementos);
+            nuevasEvidenciasBase64.push({
+                url: base64Data.url,
+                comentario: ev.comentario,
+                elementos: ev.elementos,
+                _esBase64: true
+            });
+        } catch (error) {
+            console.error('Error convirtiendo nueva evidencia a base64:', error);
+        }
+    }
+    
+    // Crear el nuevo seguimiento con las nuevas evidencias (base64)
+    const nuevoSeguimiento = {
+        id: `temp_${Date.now()}`,
+        usuarioId: usuarioActual.id,
+        usuarioNombre: usuarioActual.nombreCompleto,
+        descripcion: datos.descripcion,
+        fecha: datos.fecha,
+        evidencias: nuevasEvidenciasBase64
+    };
+    
+    // Combinar todos los seguimientos
+    const todosSeguimientos = [...seguimientosProcesados, nuevoSeguimiento];
+    
+    // Convertir fecha de inicio
+    let fechaInicioObj = incidenciaActualCompleta.fechaInicio;
+    if (incidenciaActualCompleta.fechaInicio && typeof incidenciaActualCompleta.fechaInicio === 'object' && 'seconds' in incidenciaActualCompleta.fechaInicio) {
+        fechaInicioObj = new Date(incidenciaActualCompleta.fechaInicio.seconds * 1000);
+    }
+    
+    // Construir objeto para PDF
+    const incidenciaParaPDF = {
+        id: incidenciaActualCompleta.id,
+        sucursalId: incidenciaActualCompleta.sucursalId,
+        sucursalNombre: sucursalesMap.get(incidenciaActualCompleta.sucursalId)?.nombre || '',
+        categoriaId: incidenciaActualCompleta.categoriaId,
+        categoriaNombre: categoriasMap.get(incidenciaActualCompleta.categoriaId)?.nombre || '',
+        subcategoriaId: incidenciaActualCompleta.subcategoriaId,
+        subcategoriaNombre: incidenciaActualCompleta.subcategoriaId || '',
+        nivelRiesgo: incidenciaActualCompleta.nivelRiesgo,
+        estado: datos.nuevoEstado,
+        fechaInicio: fechaInicioObj,
+        detalles: incidenciaActualCompleta.detalles,
+        reportadoPorNombre: incidenciaActualCompleta.creadoPorNombre || '',
+        imagenes: imagenesOriginales,  // URLs originales de Storage
+        fechaCreacion: incidenciaActualCompleta.fechaCreacion,
+        getEstadoTexto: () => datos.nuevoEstado === 'pendiente' ? 'Pendiente' : 'Finalizada',
+        getNivelRiesgoTexto: () => {
+            const riesgos = { bajo: 'Bajo', medio: 'Medio', alto: 'Alto', critico: 'Crítico' };
+            return riesgos[incidenciaActualCompleta.nivelRiesgo] || incidenciaActualCompleta.nivelRiesgo;
+        },
+        getSeguimientosArray: () => todosSeguimientos  // URLs originales + nuevas en base64
+    };
+    
+    console.log(`✅ Vista previa preparada con URLs de Storage:`);
+    console.log(`   - ${imagenesOriginales.length} imágenes originales (URLs Storage)`);
+    console.log(`   - ${seguimientosProcesados.length} seguimientos existentes (URLs Storage)`);
+    console.log(`   - ${nuevasEvidenciasBase64.length} nuevas evidencias (base64 directo)`);
+    
+    return incidenciaParaPDF;
+}
+
+
+// =============================================
+// INICIALIZACIÓN
 // =============================================
 async function inicializarSeguimiento() {
     try {
@@ -122,7 +435,6 @@ async function inicializarSeguimiento() {
 
         await inicializarIncidenciaManager();
         
-        // Cargar incidencia y datos en paralelo
         await Promise.all([
             cargarIncidencia(incidenciaId),
             cargarAreas(),
@@ -186,7 +498,6 @@ async function cargarAreas(forceReload = false) {
     try {
         const now = Date.now();
         
-        // Verificar caché
         if (!forceReload && areasCache && areasCacheOrg === usuarioActual.organizacionCamelCase && 
             areasCacheTimestamp && (now - areasCacheTimestamp) < CACHE_TTL) {
             areas = areasCache;
@@ -200,12 +511,11 @@ async function cargarAreas(forceReload = false) {
         if (usuarioActual && usuarioActual.organizacionCamelCase) {
             const areasObtenidas = await areaManager.getAreasByOrganizacion(
                 usuarioActual.organizacionCamelCase,
-                true // solo activas
+                true
             );
 
             areas = areasObtenidas.filter(area => area.estado === 'activa');
             
-            // Guardar en caché
             areasCache = areas;
             areasCacheOrg = usuarioActual.organizacionCamelCase;
             areasCacheTimestamp = now;
@@ -281,6 +591,9 @@ function generarCamelCase(texto) {
         .replace(/[^a-zA-Z0-9]/g, '');
 }
 
+// =============================================
+// CARGAR INCIDENCIA - SIN CONVERSIÓN A BASE64
+// =============================================
 async function cargarIncidencia(incidenciaId) {
     try {
         incidenciaActual = await incidenciaManager.getIncidenciaById(
@@ -294,9 +607,8 @@ async function cargarIncidencia(incidenciaId) {
 
         fechaIncidencia = convertirFechaFirestore(incidenciaActual.fechaInicio) || new Date();
 
-        const seguimientos = incidenciaActual.getSeguimientosArray ?
-            incidenciaActual.getSeguimientosArray() : [];
-
+        const seguimientos = incidenciaActual.getSeguimientosArray();
+        
         if (seguimientos.length > 0) {
             fechaUltimoSeguimiento = convertirFechaFirestore(seguimientos[seguimientos.length - 1].fecha) || fechaIncidencia;
         } else {
@@ -307,6 +619,10 @@ async function cargarIncidencia(incidenciaId) {
         fechaMaxima = new Date();
 
         document.getElementById('incidenciaId').textContent = incidenciaActual.id;
+        
+        console.log('✅ Incidencia cargada correctamente');
+        console.log(`   - ${incidenciaActual.imagenes?.length || 0} imágenes originales (URLs Storage)`);
+        console.log(`   - ${seguimientos.length} seguimientos (URLs Storage)`);
 
     } catch (error) {
         console.error('Error cargando incidencia:', error);
@@ -318,7 +634,6 @@ async function cargarDatosRelacionados(forceReload = false) {
     try {
         const now = Date.now();
         
-        // Verificar caché
         if (!forceReload && sucursalesCacheData && categoriasCacheData && 
             datosCacheTimestamp && (now - datosCacheTimestamp) < CACHE_TTL) {
             sucursalesMap = sucursalesCacheData;
@@ -350,7 +665,6 @@ async function cargarDatosRelacionados(forceReload = false) {
         sucursalesMap = nuevaSucursalesMap;
         categoriasMap = nuevaCategoriasMap;
         
-        // Guardar en caché
         sucursalesCacheData = nuevaSucursalesMap;
         categoriasCacheData = nuevaCategoriasMap;
         datosCacheTimestamp = now;
@@ -469,18 +783,14 @@ function mostrarInfoIncidencia() {
     document.getElementById('infoSubcategoria').textContent = subcategoriaNombre;
 
     const riesgoSpan = document.getElementById('infoRiesgo');
-    const riesgoTexto = incidenciaActual.getNivelRiesgoTexto ?
-        incidenciaActual.getNivelRiesgoTexto() : incidenciaActual.nivelRiesgo;
-    const riesgoColor = incidenciaActual.getNivelRiesgoColor ?
-        incidenciaActual.getNivelRiesgoColor() : obtenerRiesgoColor(incidenciaActual.nivelRiesgo);
+    const riesgoTexto = incidenciaActual.getNivelRiesgoTexto ? incidenciaActual.getNivelRiesgoTexto() : incidenciaActual.nivelRiesgo;
+    const riesgoColor = incidenciaActual.getNivelRiesgoColor ? incidenciaActual.getNivelRiesgoColor() : obtenerRiesgoColor(incidenciaActual.nivelRiesgo);
 
     riesgoSpan.innerHTML = `<span class="riesgo-badge" style="background: ${riesgoColor}20; color: ${riesgoColor};">${riesgoTexto}</span>`;
 
     const estadoSpan = document.getElementById('infoEstado');
-    const estadoTexto = incidenciaActual.getEstadoTexto ?
-        incidenciaActual.getEstadoTexto() : incidenciaActual.estado;
-    const estadoColor = incidenciaActual.getEstadoColor ?
-        incidenciaActual.getEstadoColor() : (incidenciaActual.estado === 'finalizada' ? '#28a745' : '#ffc107');
+    const estadoTexto = incidenciaActual.getEstadoTexto ? incidenciaActual.getEstadoTexto() : incidenciaActual.estado;
+    const estadoColor = incidenciaActual.getEstadoColor ? incidenciaActual.getEstadoColor() : (incidenciaActual.estado === 'finalizada' ? '#28a745' : '#ffc107');
 
     estadoSpan.innerHTML = `<span class="estado-badge" style="background: ${estadoColor}20; color: ${estadoColor};">${estadoTexto}</span>`;
 
@@ -489,8 +799,7 @@ function mostrarInfoIncidencia() {
         estadoSelect.value = incidenciaActual.estado;
     }
 
-    document.getElementById('infoFechaInicio').textContent = incidenciaActual.getFechaInicioFormateada ?
-        incidenciaActual.getFechaInicioFormateada() : formatearFecha(incidenciaActual.fechaInicio);
+    document.getElementById('infoFechaInicio').textContent = incidenciaActual.getFechaInicioFormateada ? incidenciaActual.getFechaInicioFormateada() : formatearFecha(incidenciaActual.fechaInicio);
 
     document.getElementById('infoReportadoPor').textContent = incidenciaActual.creadoPorNombre || 'No especificado';
     document.getElementById('infoDescripcion').textContent = incidenciaActual.detalles || 'Sin descripción';
@@ -543,7 +852,7 @@ function formatearFechaCompacta(fecha) {
 }
 
 // =============================================
-// MOSTRAR EVIDENCIAS ORIGINALES
+// MOSTRAR EVIDENCIAS ORIGINALES (URLs Storage)
 // =============================================
 function mostrarEvidenciasOriginales() {
     const container = document.getElementById('galeriaOriginal');
@@ -569,7 +878,7 @@ function mostrarEvidenciasOriginales() {
 
     let html = '';
     imagenes.forEach((img, index) => {
-        const url = typeof img === 'string' ? img : img.url;
+        const url = img.url || (typeof img === 'string' ? img : '');
         const comentario = typeof img === 'object' && img.comentario ? img.comentario : '';
 
         html += `
@@ -589,7 +898,7 @@ function mostrarEvidenciasOriginales() {
 }
 
 // =============================================
-// MOSTRAR HISTORIAL DE SEGUIMIENTO
+// MOSTRAR HISTORIAL DE SEGUIMIENTO (URLs Storage)
 // =============================================
 function mostrarHistorialSeguimiento() {
     const container = document.getElementById('timelineSeguimientos');
@@ -597,8 +906,7 @@ function mostrarHistorialSeguimiento() {
 
     if (!container || !incidenciaActual) return;
 
-    const seguimientos = incidenciaActual.getSeguimientosArray ?
-        incidenciaActual.getSeguimientosArray() : [];
+    const seguimientos = incidenciaActual.getSeguimientosArray ? incidenciaActual.getSeguimientosArray() : [];
 
     if (totalSpan) {
         totalSpan.textContent = `${seguimientos.length} ${seguimientos.length === 1 ? 'seguimiento' : 'seguimientos'}`;
@@ -657,7 +965,7 @@ function mostrarHistorialSeguimiento() {
             `;
 
             evidencias.forEach((ev, evIndex) => {
-                const url = typeof ev === 'string' ? ev : ev.url;
+                const url = ev.url || (typeof ev === 'string' ? ev : '');
                 const comentario = typeof ev === 'object' && ev.comentario ? ev.comentario : '';
 
                 html += `
@@ -942,32 +1250,133 @@ async function confirmarYGuardar(datos) {
         'finalizada': 'Finalizada'
     }[datos.nuevoEstado] || datos.nuevoEstado;
 
+    let pdfPreviewUrl = null;
+    
+    try {
+        Swal.fire({
+            title: 'Generando vista previa...',
+            text: 'Preparando el PDF para previsualización...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const incidenciaConNuevasEvidencias = await crearIncidenciaParaVistaPrevia(datos);
+        
+        const { generadorIPH } = await import('/components/iph-generator.js');
+        
+        const sucursalesArray = Array.from(sucursalesMap.values());
+        const categoriasArray = Array.from(categoriasMap.values());
+        
+        generadorIPH.configurar({
+            organizacionActual: {
+                nombre: usuarioActual.organizacion,
+                camelCase: usuarioActual.organizacionCamelCase
+            },
+            sucursalesCache: sucursalesArray,
+            categoriasCache: categoriasArray,
+            usuariosCache: [],
+            authToken: localStorage.getItem('authToken')
+        });
+
+        const pdfBlob = await generadorIPH.generarIPH(incidenciaConNuevasEvidencias, {
+            mostrarAlerta: false,
+            returnBlob: true,
+            diagnosticar: false
+        });
+
+        if (pdfBlob && pdfBlob.size > 0) {
+            pdfPreviewUrl = URL.createObjectURL(pdfBlob);
+            console.log('📄 Vista previa PDF generada:', (pdfBlob.size / 1024).toFixed(2), 'KB');
+        }
+        
+        Swal.close();
+        
+    } catch (error) {
+        console.error('Error generando vista previa:', error);
+        Swal.close();
+    }
+
     const confirmResult = await Swal.fire({
         title: '¿Guardar seguimiento?',
         html: `
             <div style="text-align: left;">
-                <p><strong>Fecha:</strong> ${formatearFecha(datos.fecha)}</p>
-                <p><strong>Estado:</strong> <span style="color: ${estadoAnterior === datos.nuevoEstado ? 'var(--color-warning)' : 'var(--color-success)'};">${estadoTexto}</span></p>
-                <p><strong>Evidencias:</strong> ${datos.evidencias.length} imagen(es)</p>
-                <p><strong>Descripción:</strong><br>
-                    <span style="color: var(--color-text-secondary);">${escapeHTML(datos.descripcion.substring(0, 200))}${datos.descripcion.length > 200 ? '...' : ''}</span>
+                <p><strong><i class="fas fa-calendar-alt"></i> Fecha:</strong> ${formatearFecha(datos.fecha)}</p>
+                <p><strong><i class="fas fa-check-circle"></i> Estado:</strong> 
+                    <span style="color: ${estadoAnterior === datos.nuevoEstado ? 'var(--color-warning)' : 'var(--color-success)'};">
+                        ${estadoTexto}
+                    </span>
                 </p>
+                <p><strong><i class="fas fa-images"></i> Evidencias:</strong> ${datos.evidencias.length} imagen(es)</p>
+                <p><strong><i class="fas fa-align-left"></i> Descripción:</strong><br>
+                    <span style="color: var(--color-text-secondary); font-size: 13px;">${escapeHTML(datos.descripcion.substring(0, 200))}${datos.descripcion.length > 200 ? '...' : ''}</span>
+                </p>
+                ${pdfPreviewUrl ? `
+                    <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <p style="margin-bottom: 8px;">
+                            <strong><i class="fas fa-file-pdf" style="color: #e74c3c;"></i> Vista previa del PDF:</strong>
+                        </p>
+                        <div style="background: #2d2d2d; border-radius: 8px; overflow: hidden; margin-top: 8px;">
+                            <iframe 
+                                src="${pdfPreviewUrl}" 
+                                style="width: 100%; height: 280px; border: none; background: white;"
+                                frameborder="0">
+                            </iframe>
+                            <div style="padding: 8px 12px; background: #1e1e1e; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 12px; color: #aaa;">
+                                    <i class="fas fa-info-circle"></i> Vista previa del documento que se generará
+                                </span>
+                                <button type="button" id="btnAbrirPDFCompleto" style="background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 12px;">
+                                    <i class="fas fa-external-link-alt"></i> Abrir en pantalla completa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="margin-top: 16px; padding: 12px; background: rgba(231, 76, 60, 0.1); border-radius: 8px;">
+                        <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+                        <span style="font-size: 13px;">No se pudo generar la vista previa del PDF</span>
+                    </div>
+                `}
             </div>
         `,
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'GUARDAR SEGUIMIENTO',
-        cancelButtonText: 'CANCELAR',
-        confirmButtonColor: '#28a745'
+        confirmButtonText: '<i class="fas fa-save"></i> GUARDAR SEGUIMIENTO',
+        cancelButtonText: '<i class="fas fa-times"></i> CANCELAR',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        width: '650px',
+        didOpen: () => {
+            const btnAbrirCompleto = document.getElementById('btnAbrirPDFCompleto');
+            if (btnAbrirCompleto && pdfPreviewUrl) {
+                btnAbrirCompleto.addEventListener('click', () => {
+                    if (window.visualizadorPDF) {
+                        window.visualizadorPDF.abrir(pdfPreviewUrl, 'Vista previa - Seguimiento');
+                    } else {
+                        window.open(pdfPreviewUrl, '_blank');
+                    }
+                });
+            }
+        },
+        willClose: () => {
+            if (pdfPreviewUrl && pdfPreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(pdfPreviewUrl);
+            }
+        }
     });
 
     if (confirmResult.isConfirmed) {
         await guardarSeguimiento(datos);
+    } else {
+        if (pdfPreviewUrl && pdfPreviewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(pdfPreviewUrl);
+        }
     }
 }
 
 // =============================================
-// FUNCIONES DE CANALIZACIÓN (USANDO LA CLASE)
+// FUNCIONES DE CANALIZACIÓN (simplificadas)
 // =============================================
 async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
     let continuar = true;
@@ -1028,7 +1437,6 @@ async function _canalizarAreas(incidenciaId, incidenciaTitulo = '') {
                 });
 
                 try {
-                    // USAR EL MÉTODO CORRECTO DEL MANAGER
                     const resultado = await incidenciaManager.agregarCanalizacion(
                         incidenciaId,
                         area.id,
@@ -1138,7 +1546,7 @@ async function _enviarNotificacionesCanalizacion(areas, incidenciaId, incidencia
 }
 
 // =============================================
-// GUARDAR SEGUIMIENTO (USANDO LA CLASE)
+// GUARDAR SEGUIMIENTO - VERSIÓN OPTIMIZADA
 // =============================================
 async function guardarSeguimiento(datos) {
     const btnGuardar = document.getElementById('btnGuardarSeguimiento');
@@ -1156,14 +1564,11 @@ async function guardarSeguimiento(datos) {
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
+            didOpen: () => Swal.showLoading()
         });
 
         const archivos = datos.evidencias.map(ev => ev.file);
 
-        // 1. Guardar el seguimiento usando el manager
         await incidenciaManager.agregarSeguimiento(
             incidenciaActual.id,
             usuarioActual.id,
@@ -1176,7 +1581,6 @@ async function guardarSeguimiento(datos) {
             usuarioActual
         );
 
-        // 2. Actualizar estado si cambió
         if (datos.nuevoEstado !== incidenciaActual.estado) {
             await incidenciaManager.actualizarIncidencia(
                 incidenciaActual.id,
@@ -1187,22 +1591,113 @@ async function guardarSeguimiento(datos) {
             );
         }
 
-        // 3. Limpiar evidencias
+        Swal.update({
+            title: 'Actualizando datos...',
+            text: 'Recargando información de la incidencia...'
+        });
+
+        const incidenciaRecargada = await incidenciaManager.getIncidenciaById(
+            incidenciaActual.id,
+            usuarioActual.organizacionCamelCase
+        );
+
+        if (!incidenciaRecargada) {
+            throw new Error('No se pudo recargar la incidencia después del seguimiento');
+        }
+
+        incidenciaActual = incidenciaRecargada;
+        
+        console.log('✅ Incidencia recargada con URLs de Storage:', 
+            incidenciaActual.getSeguimientosArray().length, 
+            'seguimientos totales');
+
+        Swal.update({
+            title: 'Generando PDF actualizado...',
+            text: 'Creando el documento...'
+        });
+
+        const incidenciaCompleta = await incidenciaManager.getIncidenciaById(
+            incidenciaActual.id,
+            usuarioActual.organizacionCamelCase
+        );
+        
+        const incidenciaParaPDF = await prepararIncidenciaParaPDF(incidenciaCompleta, []);
+        
+        const { generadorIPH } = await import('/components/iph-generator.js');
+        
+        const sucursalesArray = Array.from(sucursalesMap.values());
+        const categoriasArray = Array.from(categoriasMap.values());
+        
+        generadorIPH.configurar({
+            organizacionActual: {
+                nombre: usuarioActual.organizacion,
+                camelCase: usuarioActual.organizacionCamelCase
+            },
+            sucursalesCache: sucursalesArray,
+            categoriasCache: categoriasArray,
+            usuariosCache: [],
+            authToken: localStorage.getItem('authToken')
+        });
+
+        console.log('📄 Generando PDF con URLs de Storage...');
+        
+        const pdfBlob = await generadorIPH.generarIPH(incidenciaParaPDF, {
+            mostrarAlerta: false,
+            returnBlob: true,
+            diagnosticar: false
+        });
+
+        if (!pdfBlob || pdfBlob.size === 0) {
+            throw new Error('El PDF generado está vacío');
+        }
+
+        console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
+
+        Swal.update({
+            title: 'Subiendo PDF...',
+            text: 'Guardando el documento actualizado...'
+        });
+
+        const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
+        const rutaPDF = incidenciaActual.getRutaPDF();
+
+        const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
+
+        const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
+        const { db } = await import('/config/firebase-config.js');
+        
+        const incidenciaRef = doc(db, collectionName, incidenciaActual.id);
+        await updateDoc(incidenciaRef, {
+            pdfUrl: resultado.url,
+            fechaActualizacion: new Date(),
+            actualizadoPor: usuarioActual.id,
+            actualizadoPorNombre: usuarioActual.nombreCompleto
+        });
+
+        incidenciaActual.pdfUrl = resultado.url;
+        incidenciaActual.fechaActualizacion = new Date();
+
         evidenciasSeleccionadas.forEach(ev => {
             if (ev.preview) URL.revokeObjectURL(ev.preview);
         });
         evidenciasSeleccionadas = [];
 
-        // 4. Recargar la incidencia para tener los datos actualizados
-        await cargarIncidencia(incidenciaActual.id);
+        mostrarInfoIncidencia();
+        mostrarEvidenciasOriginales();
+        mostrarHistorialSeguimiento();
 
-        // 5. Generar y subir el PDF (usando el manager)
-        const pdfGenerado = await _generarYSubirPDF();
+        document.getElementById('descripcionSeguimiento').value = '';
+        actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
+        configurarFechaSeguimiento();
 
-        // 6. Cerrar el loading inicial
+        const previewContainer = document.getElementById('evidenciasPreviewContainer');
+        if (previewContainer) previewContainer.style.display = 'none';
+        const evidenciasPreview = document.getElementById('evidenciasPreview');
+        if (evidenciasPreview) evidenciasPreview.innerHTML = '';
+
         Swal.close();
 
-        // 7. Preguntar si quiere canalizar
         const quiereCanalizar = await Swal.fire({
             icon: 'question',
             title: '¿Canalizar esta incidencia?',
@@ -1224,23 +1719,16 @@ async function guardarSeguimiento(datos) {
             ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
             : 'No se canalizó a ninguna área.';
 
-        // 8. Actualizar la vista
-        mostrarInfoIncidencia();
-        mostrarEvidenciasOriginales();
-        mostrarHistorialSeguimiento();
-
-        document.getElementById('descripcionSeguimiento').value = '';
-        actualizarContador('descripcionSeguimiento', 'contadorCaracteres', LIMITES.DESCRIPCION_SEGUIMIENTO);
-        configurarFechaSeguimiento();
-
-        // 9. Mostrar mensaje final
         await Swal.fire({
             icon: 'success',
             title: '¡Seguimiento guardado!',
             html: `
-                <p>El seguimiento se ha guardado correctamente.</p>
-                <p>${pdfGenerado ? '✅ PDF actualizado' : '⚠️ Hubo un problema con el PDF'}</p>
-                <p>${mensajeCanalizacion}</p>
+                <div style="text-align: left;">
+                    <p>✅ El seguimiento se ha guardado correctamente.</p>
+                    <p>✅ Se han subido ${datos.evidencias.length} evidencia(s).</p>
+                    <p>✅ PDF actualizado con todos los seguimientos</p>
+                    <p>${mensajeCanalizacion}</p>
+                </div>
             `,
             confirmButtonText: 'Aceptar',
             confirmButtonColor: '#28a745'
@@ -1259,78 +1747,17 @@ async function guardarSeguimiento(datos) {
     }
 }
 
-async function _generarYSubirPDF() {
-    try {
-        console.log('📄 Actualizando PDF después de seguimiento para:', incidenciaActual.id);
-        
-        // Recargar la incidencia más reciente
-        const incidenciaActualizada = await incidenciaManager.getIncidenciaById(
-            incidenciaActual.id,
-            usuarioActual.organizacionCamelCase
-        );
-        
-        if (!incidenciaActualizada) {
-            throw new Error('No se pudo recargar la incidencia');
-        }
-        
-        incidenciaActual = incidenciaActualizada;
-        
-        const sucursalesArray = Array.from(sucursalesMap.values());
-        const categoriasArray = Array.from(categoriasMap.values());
-        
-        // IMPORTANTE: Usar el generador de SEGUIMIENTO
-        const { generadorIPHSeguimiento } = await import('/components/iph-generator-seguimiento.js');
-        
-        generadorIPHSeguimiento.configurar({
-            organizacionActual: {
-                nombre: usuarioActual.organizacion,
-                camelCase: usuarioActual.organizacionCamelCase
-            },
-            sucursalesCache: sucursalesArray,
-            categoriasCache: categoriasArray,
-            usuariosCache: [usuarioActual]
-        });
-        
-        // Generar PDF con el método específico
-        const pdfBlob = await generadorIPHSeguimiento.generarIPHSeguimiento(incidenciaActual, {
-            mostrarAlerta: false,
-            returnBlob: true
-        });
-        
-        if (!pdfBlob || pdfBlob.size === 0) {
-            throw new Error('El PDF generado está vacío');
-        }
-        
-        console.log(`📦 PDF generado: ${(pdfBlob.size / 1024).toFixed(2)} KB`);
-        
-        const pdfFile = new File([pdfBlob], `incidencia_${incidenciaActual.id}.pdf`, { type: 'application/pdf' });
-        const rutaPDF = incidenciaActual.getRutaPDF();
-        
-        const resultado = await incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-        
-        await incidenciaManager.actualizarIncidencia(
-            incidenciaActual.id,
-            { pdfUrl: resultado.url },
-            usuarioActual.id,
-            usuarioActual.organizacionCamelCase,
-            usuarioActual
-        );
-        
-        incidenciaActual.pdfUrl = resultado.url;
-        
-        console.log('✅ PDF actualizado exitosamente:', resultado.url);
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Error actualizando PDF:', error);
-        return false;
-    }
-}
-
 // =============================================
 // NAVEGACIÓN
 // =============================================
 function volverALista() {
+    if (incidenciaActual && incidenciaActual.imagenes) {
+        for (const img of incidenciaActual.imagenes) {
+            if (img._esBlob && img.url && img.url.startsWith('blob:')) {
+                URL.revokeObjectURL(img.url);
+            }
+        }
+    }
     window.location.href = '../incidencias/incidencias.html';
 }
 
@@ -1387,7 +1814,6 @@ function mostrarCargando(mensaje = 'Guardando...') {
         <div class="spinner"></div>
         <div class="loading-text">${mensaje}</div>
     `;
-
     document.body.appendChild(overlay);
 }
 
