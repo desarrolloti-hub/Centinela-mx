@@ -1,10 +1,11 @@
 /**
  * IPH GENERATOR - Sistema Centinela
- * VERSIÓN: 9.2 - SIN MARCOS (SIN TABLAS)
+ * VERSIÓN: 9.3 - SIN MARCOS (SIN TABLAS) - ESPACIOS OPTIMIZADOS
  * 
  * Optimizado para generación rápida sin problemas CORS
  * Eliminados todos los bordes de rectángulos en secciones de información
  * Se mantienen solo líneas divisorias debajo de títulos
+ * OPTIMIZACIÓN: Reducción de espacios muertos cuando las imágenes no tienen descripción
  */
 
 import { PDFBaseGenerator, coloresBase } from './pdf-base-generator.js';
@@ -41,7 +42,10 @@ const CONFIG = {
     MAX_IMAGE_SIZE: 10 * 1024 * 1024,
     // ESPACIOS ENTRE BLOQUES (REDUCIDOS)
     ESPACIO_ENTRE_BLOQUES: 2,      // Antes 8 mm, ahora 2 mm
-    ESPACIO_ENTRE_BLOQUES_TITULO: 1  // Antes 5 mm, ahora 1 mm
+    ESPACIO_ENTRE_BLOQUES_TITULO: 1,  // Antes 5 mm, ahora 1 mm
+    // OPTIMIZACIÓN: Altura mínima cuando no hay comentario
+    ALTURA_SIN_COMENTARIO: 8,      // Altura reducida cuando no hay descripción
+    ESPACIADO_IMAGEN_SIN_COMENTARIO: 2  // Espaciado reducido entre imagen y siguiente elemento
 };
 
 class IPHGenerator extends PDFBaseGenerator {
@@ -357,13 +361,14 @@ class IPHGenerator extends PDFBaseGenerator {
     }
 
     // =============================================
-    // DIBUJAR IMAGEN EN PDF
+    // DIBUJAR IMAGEN EN PDF (OPTIMIZADO - ESPACIOS REDUCIDOS)
     // =============================================
     
     async dibujarImagen(pdf, imagenObj, x, y, ancho, alto, numero, anchoDisponible = null) {
         try {
             const imgData = await this.obtenerImagen(imagenObj);
             const comentario = this.extraerComentario(imagenObj);
+            const tieneComentario = comentario && comentario.trim() !== '';
             
             pdf.saveGraphicsState();
             
@@ -416,7 +421,8 @@ class IPHGenerator extends PDFBaseGenerator {
             const xComentario = x;
             const yComentario = y + alto + CONFIG.ESPACIADO_COMENTARIO;
             
-            if (comentario && comentario.trim() !== '') {
+            // OPTIMIZACIÓN: Si no hay comentario, usamos altura mínima
+            if (tieneComentario) {
                 const lineasComentario = this.dividirTextoPorCaracteres(comentario, CONFIG.MAX_CARACTERES_COMENTARIO);
                 const alturaComentario = Math.min(lineasComentario.length * CONFIG.ALTURA_LINEA, CONFIG.ALTURA_COMENTARIO + 15);
                 
@@ -448,24 +454,27 @@ class IPHGenerator extends PDFBaseGenerator {
                     alturaUtilizada: alto + CONFIG.ESPACIADO_COMENTARIO + alturaComentario + 6
                 };
             } else {
-                // Fondo gris claro para área sin comentario, sin borde
-                pdf.setFillColor(250, 250, 250);
-                pdf.rect(xComentario, yComentario - 1, anchoTexto, 7, 'F');
+                // OPTIMIZACIÓN: SIN COMENTARIO - Altura mínima (sin fondo gris grande)
+                // Solo una línea sutil para indicar sin descripción, muy compacto
+                pdf.setFillColor(252, 252, 252);
+                pdf.rect(xComentario, yComentario - 1, anchoTexto, CONFIG.ALTURA_SIN_COMENTARIO, 'F');
                 
                 pdf.setFont('helvetica', 'italic');
                 pdf.setFontSize(this.fonts.mini - 1);
-                pdf.setTextColor(150, 150, 150);
-                pdf.text("Sin descripción", xComentario + 3, yComentario + 4);
+                pdf.setTextColor(180, 180, 180);
+                pdf.text("Sin descripción", xComentario + 3, yComentario + 3);
                 
+                // OPTIMIZACIÓN: Retornamos altura reducida
                 return {
-                    alturaUtilizada: alto + CONFIG.ESPACIADO_COMENTARIO + 9
+                    alturaUtilizada: alto + CONFIG.ESPACIADO_IMAGEN_SIN_COMENTARIO + CONFIG.ALTURA_SIN_COMENTARIO
                 };
             }
             
         } catch (error) {
             console.error(`Error dibujando imagen ${numero}:`, error);
             this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero);
-            return { alturaUtilizada: alto + CONFIG.ESPACIADO_COMENTARIO + 12 };
+            // OPTIMIZACIÓN: También reducimos en caso de error
+            return { alturaUtilizada: alto + CONFIG.ESPACIADO_IMAGEN_SIN_COMENTARIO + CONFIG.ALTURA_SIN_COMENTARIO };
         }
     }
 
@@ -585,7 +594,7 @@ class IPHGenerator extends PDFBaseGenerator {
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(this.fonts.mini - 0.5);
             pdf.setTextColor(100, 100, 100);
-            pdf.text(`📷 ${evidencias.length} evidencia(s)`, x + 6, yTexto + 4);
+            //pdf.text(`📷 ${evidencias.length} evidencia(s)`, x + 6, yTexto + 4);
             
             const anchoMiniatura = 30;
             const altoMiniatura = 25;
@@ -981,7 +990,7 @@ class IPHGenerator extends PDFBaseGenerator {
         }
         
         // =============================================
-        // 5. ANEXOS - EVIDENCIAS FOTOGRÁFICAS
+        // 5. ANEXOS - EVIDENCIAS FOTOGRÁFICAS (OPTIMIZADO - ESPACIOS REDUCIDOS)
         // =============================================
         const imagenesPrincipales = incidencia.imagenes || [];
         
@@ -1021,18 +1030,22 @@ class IPHGenerator extends PDFBaseGenerator {
             
             while (imagenIndex < imagenesPrincipales.length) {
                 const imagenesEnFila = Math.min(numColumnas, imagenesPrincipales.length - imagenIndex);
-                let alturaFila = 0;
                 
+                // OPTIMIZACIÓN: Calculamos alturas dinámicamente según si tienen comentario
+                let alturaFila = 0;
                 for (let i = 0; i < imagenesEnFila; i++) {
                     const img = imagenesPrincipales[imagenIndex + i];
                     const comentario = this.extraerComentario(img);
-                    let alturaExtra = CONFIG.ESPACIADO_COMENTARIO + 12;
-                    if (comentario && comentario.trim() !== '') {
+                    const tieneComentario = comentario && comentario.trim() !== '';
+                    
+                    let alturaExtra;
+                    if (tieneComentario) {
                         const lineasCom = this.dividirTextoPorCaracteres(comentario, CONFIG.MAX_CARACTERES_COMENTARIO);
                         const lineas = Math.min(lineasCom.length, 4);
-                        alturaExtra += Math.min(lineas * CONFIG.ALTURA_LINEA, 24);
+                        alturaExtra = CONFIG.ESPACIADO_COMENTARIO + 12 + Math.min(lineas * CONFIG.ALTURA_LINEA, 24);
                     } else {
-                        alturaExtra += 7;
+                        // OPTIMIZACIÓN: Altura mínima para imágenes sin descripción
+                        alturaExtra = CONFIG.ESPACIADO_IMAGEN_SIN_COMENTARIO + CONFIG.ALTURA_SIN_COMENTARIO;
                     }
                     alturaFila = Math.max(alturaFila, imgHeight + alturaExtra);
                 }
@@ -1071,7 +1084,8 @@ class IPHGenerator extends PDFBaseGenerator {
                     }
                 }
                 
-                yPos += alturaFila + CONFIG.ESPACIADO_FILAS;
+                // OPTIMIZACIÓN: Espaciado reducido entre filas de imágenes
+                yPos += alturaFila + CONFIG.ESPACIADO_FILAS - 4; // Reducido de 18 a 14 aprox
                 imagenIndex += imagenesEnFila;
             }
             yPos += 5;
