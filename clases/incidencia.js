@@ -89,16 +89,52 @@ class Incidencia {
         }
     }
 
-    agregarCanalizacion(areaId, areaNombre, usuarioId, usuarioNombre, motivo = '') {
-        const canalizacionId = `CAN${Date.now()}_${areaId.replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-        if (!this.canalizaciones) {
-            this.canalizaciones = {};
+    async agregarCanalizacionSucursal(incidenciaId, sucursalId, sucursalNombre, usuarioId, usuarioNombre, motivo = '', organizacionCamelCase = null) {
+    try {
+        if (!incidenciaId || !sucursalId) {
+            throw new Error('Faltan datos para agregar canalización a sucursal');
         }
 
-        this.canalizaciones[canalizacionId] = {
-            areaId,
-            areaNombre,
+        // USAR EL PARÁMETRO recibido primero
+        let organizacion = organizacionCamelCase;
+        
+        // Si no se recibió organización, intentar obtenerla de la caché
+        if (!organizacion) {
+            // Buscar en el caché de incidencias
+            const incidenciaEnCache = this.incidencias.find(i => i.id === incidenciaId);
+            if (incidenciaEnCache) {
+                organizacion = incidenciaEnCache.organizacionCamelCase;
+            }
+        }
+        
+        // Si aún no hay organización, lanzar error
+        if (!organizacion) {
+            throw new Error('No se pudo determinar la organización. Asegúrate de pasar organizacionCamelCase como parámetro.');
+        }
+
+        const collectionName = this._getCollectionName(organizacion);
+
+        const canalizacionId = `CANSUC${Date.now()}_${sucursalId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+        const incidenciaRef = doc(db, collectionName, incidenciaId);
+        await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
+        const incidenciaSnap = await getDoc(incidenciaRef);
+
+        if (!incidenciaSnap.exists()) {
+            throw new Error('Incidencia no encontrada');
+        }
+
+        const incidenciaData = incidenciaSnap.data();
+        const canalizacionesActuales = incidenciaData.canalizacionesSucursales || {};
+
+        const yaExiste = Object.values(canalizacionesActuales).some(c => c.sucursalId === sucursalId);
+        if (yaExiste) {
+            return { success: false, message: 'Ya está canalizada a esta sucursal' };
+        }
+
+        const nuevaCanalizacion = {
+            sucursalId,
+            sucursalNombre,
             canalizadoPor: usuarioId,
             canalizadoPorNombre: usuarioNombre,
             motivo: motivo || 'Atención requerida',
@@ -107,17 +143,39 @@ class Incidencia {
             seguimientos: []
         };
 
-        if (!this.canalizacionActiva) {
-            this.canalizacionActiva = areaId;
+        const nuevasCanalizaciones = {
+            ...canalizacionesActuales,
+            [canalizacionId]: nuevaCanalizacion
+        };
+
+        const esMultiCanalizada = Object.keys(nuevasCanalizaciones).length > 1;
+
+        await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+        await updateDoc(incidenciaRef, {
+            canalizacionesSucursales: nuevasCanalizaciones,
+            fechaActualizacion: serverTimestamp(),
+            actualizadoPor: usuarioId,
+            actualizadoPorNombre: usuarioNombre
+        });
+
+        const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+        if (incidenciaIndex !== -1) {
+            this.incidencias[incidenciaIndex].canalizacionesSucursales = nuevasCanalizaciones;
+            this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
         }
 
-        const totalCanalizaciones = Object.keys(this.canalizaciones).length;
-        if (totalCanalizaciones > 1) {
-            this.esMultiCanalizada = true;
-        }
+        return {
+            success: true,
+            canalizacionId,
+            sucursalId,
+            sucursalNombre
+        };
 
-        return canalizacionId;
+    } catch (error) {
+        console.error('Error agregando canalización a sucursal:', error);
+        throw error;
     }
+}
 
     agregarMultiplesCanalizaciones(areas, usuarioId, usuarioNombre) {
         if (!areas || areas.length === 0) return [];
@@ -1334,6 +1392,89 @@ class IncidenciaManager {
 
     limpiarCache() {
         this.incidencias = [];
+    }
+
+        async agregarCanalizacionSucursal(incidenciaId, sucursalId, sucursalNombre, usuarioId, usuarioNombre, motivo = '', organizacionCamelCase = null) {
+        try {
+            if (!incidenciaId || !sucursalId) {
+                throw new Error('Faltan datos para agregar canalización a sucursal');
+            }
+
+            let organizacion = organizacionCamelCase;
+            if (!organizacion) {
+                const incidenciaTemp = await this.getIncidenciaById(incidenciaId, this.organizacionCache);
+                if (incidenciaTemp) {
+                    organizacion = incidenciaTemp.organizacionCamelCase;
+                }
+            }
+
+            if (!organizacion) {
+                throw new Error('No se pudo determinar la organización');
+            }
+
+            const collectionName = this._getCollectionName(organizacion);
+
+            const canalizacionId = `CANSUC${Date.now()}_${sucursalId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+            const incidenciaRef = doc(db, collectionName, incidenciaId);
+            await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
+            const incidenciaSnap = await getDoc(incidenciaRef);
+
+            if (!incidenciaSnap.exists()) {
+                throw new Error('Incidencia no encontrada');
+            }
+
+            const incidenciaData = incidenciaSnap.data();
+            const canalizacionesActuales = incidenciaData.canalizacionesSucursales || {};
+
+            const yaExiste = Object.values(canalizacionesActuales).some(c => c.sucursalId === sucursalId);
+            if (yaExiste) {
+                return { success: false, message: 'Ya está canalizada a esta sucursal' };
+            }
+
+            const nuevaCanalizacion = {
+                sucursalId,
+                sucursalNombre,
+                canalizadoPor: usuarioId,
+                canalizadoPorNombre: usuarioNombre,
+                motivo: motivo || 'Atención requerida',
+                fechaCanalizacion: new Date(),
+                estado: 'pendiente',
+                seguimientos: []
+            };
+
+            const nuevasCanalizaciones = {
+                ...canalizacionesActuales,
+                [canalizacionId]: nuevaCanalizacion
+            };
+
+            const esMultiCanalizada = Object.keys(nuevasCanalizaciones).length > 1;
+
+            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+            await updateDoc(incidenciaRef, {
+                canalizacionesSucursales: nuevasCanalizaciones,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioId,
+                actualizadoPorNombre: usuarioNombre
+            });
+
+            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+            if (incidenciaIndex !== -1) {
+                this.incidencias[incidenciaIndex].canalizacionesSucursales = nuevasCanalizaciones;
+                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+            }
+
+            return {
+                success: true,
+                canalizacionId,
+                sucursalId,
+                sucursalNombre
+            };
+
+        } catch (error) {
+            console.error('Error agregando canalización a sucursal:', error);
+            throw error;
+        }
     }
 }
 
