@@ -66,6 +66,25 @@
                     </div>
                 </div>
 
+                <!-- Barra de acciones para selección múltiple -->
+                <div class="actions-bar" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <button id="btnSelectAll" class="action-btn" style="background: rgba(0, 255, 255, 0.15); border: 1px solid #00ffff; color: #00ffff;">
+                        <i class="fas fa-check-double"></i> SELECCIONAR TODOS
+                    </button>
+                    <button id="btnDeselectAll" class="action-btn" style="background: rgba(255, 100, 100, 0.15); border: 1px solid #ff6666; color: #ff6666;">
+                        <i class="fas fa-times"></i> DESELECCIONAR TODOS
+                    </button>
+                    <button id="btnMonitorSelected" class="action-btn" style="background: linear-gradient(135deg, #00aa44, #006633); color: white; display: none;">
+                        <i class="fas fa-play-circle"></i> MONITOREAR SELECCIONADOS
+                    </button>
+                </div>
+
+                <!-- También agrega este contador donde quieras mostrar los seleccionados -->
+                <div class="info-row">
+                    <span class="info-label">Paneles seleccionados:</span>
+                    <span class="info-value" id="selectedCount">0</span>
+                </div>
+
                 <!-- Lista de paneles -->
                 <div class="paneles-section">
                     <div class="section-header">

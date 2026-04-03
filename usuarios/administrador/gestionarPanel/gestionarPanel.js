@@ -462,15 +462,21 @@ function mostrarNotificacionEvento(evento) {
         case 'ARM':
             titulo = '🔒 Panel Armado';
             cuerpo = `El panel ha sido armado${evento.appointment ? ` por ${evento.appointment}` : ''}`;
+            // Detener audio si estaba sonando al armar
+            detenerAudioIntrusion();
             break;
         case 'DISARM':
             titulo = '🔓 Panel Desarmado';
             cuerpo = `El panel ha sido desarmado${evento.appointment ? ` por ${evento.appointment}` : ''}`;
+            // Detener audio si estaba sonando al desarmar
+            detenerAudioIntrusion();
             break;
         case 'BURGLER':
             titulo = '🚨 ALARMA DE INTRUSIÓN';
             cuerpo = `¡Alarma activada!${evento.zone ? ` Zona ${evento.zone}` : ''}`;
             esImportante = true;
+            // REPRODUCIR AUDIO DE INTRUSIÓN
+            reproducirAudioIntrusion();
             break;
         case 'FIRE':
             titulo = '🔥 ALARMA DE INCENDIO';
@@ -496,6 +502,7 @@ function mostrarNotificacionEvento(evento) {
             cuerpo = evento.description;
     }
     
+    // Mostrar alerta con SweetAlert2
     if (esImportante) {
         Swal.fire({
             icon: 'error',
@@ -507,7 +514,14 @@ function mostrarNotificacionEvento(evento) {
             color: '#fff',
             iconColor: '#fff',
             timer: 10000,
-            timerProgressBar: true
+            timerProgressBar: true,
+            didOpen: () => {
+                // Si es intrusión, asegurar que el audio suene incluso con la alerta
+                if (evento.label === 'BURGLER') {
+                    // Reproducir nuevamente al abrir la alerta por si acaso
+                    setTimeout(() => reproducirAudioIntrusion(), 100);
+                }
+            }
         });
     } else {
         Swal.fire({
@@ -522,6 +536,7 @@ function mostrarNotificacionEvento(evento) {
         });
     }
     
+    // Notificación del sistema
     if ('Notification' in window && Notification.permission === 'granted') {
         const notification = new Notification(titulo, {
             body: cuerpo,
@@ -788,4 +803,43 @@ function escapeHTML(text) {
         if (m === '>') return '&gt;';
         return m;
     });
+}
+
+// ==================== REPRODUCCIÓN DE AUDIO ====================
+let audioIntrusion = null;
+
+function reproducirAudioIntrusion() {
+    try {
+        // Crear el elemento de audio si no existe
+        if (!audioIntrusion) {
+            audioIntrusion = new Audio('./intrusion.wav');
+            // Precargar el audio
+            audioIntrusion.preload = 'auto';
+        }
+        
+        // Reiniciar el audio si ya se estaba reproduciendo
+        audioIntrusion.currentTime = 0;
+        
+        // Reproducir el audio
+        const playPromise = audioIntrusion.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.error('Error reproduciendo audio:', error);
+                // Si el error es por interacción del usuario, intentar con un elemento de audio silencioso primero
+                if (error.name === 'NotAllowedError') {
+                    console.log('⚠️ El navegador requiere interacción del usuario para reproducir audio');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error al reproducir audio de intrusión:', error);
+    }
+}
+
+function detenerAudioIntrusion() {
+    if (audioIntrusion) {
+        audioIntrusion.pause();
+        audioIntrusion.currentTime = 0;
+    }
 }
