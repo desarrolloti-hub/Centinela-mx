@@ -19,7 +19,11 @@ const ACTIONS = {
     LISTAR_EVENTOS: 'listarEventos',
     LISTAR_DISPOSITIVOS: 'listarDispositivos',
     SET_ESTADO_PANEL: 'setEstadoPanel',
-    VERIFICAR_SESION: 'verificarSesion'
+    VERIFICAR_SESION: 'verificarSesion',
+    RESPONDER_EVENTO: 'responderEvento',
+    RECONOCER_ALARMA: 'reconocerAlarma',
+    ENVIAR_COMANDO: 'enviarComando',
+    SILENCIAR_ALARMA: 'silenciarAlarma'
 };
 
 // Exportar configuración

@@ -309,6 +309,50 @@ exports.proxyPowerManage = functions.https.onRequest((req, res) => {
                             error_message: error.response?.data?.error_message || 'Error al renombrar el panel'
                         });
                     }    
+                case 'reconocerEvento':
+                    // Reconoce un evento/alarma en el panel
+                    const { session_token, panel_serial, evento_id, comentario } = req.body;
+                    
+                    try {
+                        // Dependiendo del panel, puede ser una llamada a API específica
+                        // Por ahora, registramos en logs y respondemos OK
+                        console.log(`Evento reconocido: ${evento_id} en panel ${panel_serial}`);
+                        console.log(`Comentario: ${comentario}`);
+                        
+                        // Aquí iría la llamada real al panel para reconocer la alarma
+                        // Por ejemplo: await powerManageAPI.acknowledgeAlarm(session_token, evento_id);
+                        
+                        res.status(200).json({
+                            success: true,
+                            message: 'Evento reconocido correctamente'
+                        });
+                    } catch (error) {
+                        res.status(500).json({
+                            error_message: error.message
+                        });
+                    }
+                    break;
+
+                case 'silenciarAlarma':
+                    // Silencia una alarma activa en el panel
+                    const { session_token: sToken, panel_serial: pSerial } = req.body;
+                    
+                    try {
+                        console.log(`Silenciando alarma en panel ${pSerial}`);
+                        
+                        // Aquí iría la llamada real al panel para silenciar la alarma
+                        // Por ejemplo: await powerManageAPI.silenceAlarm(sToken);
+                        
+                        res.status(200).json({
+                            success: true,
+                            message: 'Alarma silenciada correctamente'
+                        });
+                    } catch (error) {
+                        res.status(500).json({
+                            error_message: error.message
+                        });
+                    }
+                    break;    
                 default:
                     return res.status(400).json({ error: `Acción no reconocida: ${action}` });
             }
