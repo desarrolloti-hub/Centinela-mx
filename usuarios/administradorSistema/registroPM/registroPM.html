@@ -112,6 +112,40 @@
                         </button>
                     </div>
                     
+                    <!-- PASO 4: Código de paneles -->
+                    <div id="step4" style="display:none;">
+                        <div class="message-container info">
+                            <i class="fas fa-shield-alt"></i>
+                            Establece el código numérico para los paneles de monitoreo
+                        </div>
+                        
+                        <div class="form-field-group">
+                            <label class="field-label" for="panelCode">
+                                <i class="fas fa-lock"></i> CÓDIGO DE PANELES (4 DÍGITOS NUMÉRICOS)
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="password" id="panelCode" 
+                                    placeholder="Ej: 1234" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" required>
+                            </div>
+                            <small style="color: var(--color-text-secondary); font-size: 0.7rem;">
+                                Este código de 4 dígitos será utilizado por todos los paneles asociados a esta cuenta
+                            </small>
+                        </div>
+                        
+                        <div class="form-field-group">
+                            <label class="field-label" for="confirmPanelCode">
+                                <i class="fas fa-check-double"></i> CONFIRMAR CÓDIGO DE PANELES
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="password" id="confirmPanelCode" 
+                                    placeholder="Repite los 4 dígitos" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" required>
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="action-btn save-btn" id="btnSetPanelCode">
+                            <i class="fas fa-save"></i> FINALIZAR REGISTRO
+                        </button>
+                    </div>
                 </form>
 
                 <footer class="back-btn-container" style="margin-top: 1.5rem;">
