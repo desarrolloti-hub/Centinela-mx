@@ -199,7 +199,7 @@ class CrearMercanciaPerdidaController {
 
     async _inicializarManager() {
         try {
-            const { MercanciaPerdidaManager } = await import('/clases/mercanciaPerdida.js');
+            const { MercanciaPerdidaManager } = await import('/clases/incidenciaRecuperacion.js');
             this.mercanciaManager = new MercanciaPerdidaManager();
         } catch (error) {
             console.error('Error cargando MercanciaPerdidaManager:', error);
