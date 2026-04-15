@@ -377,6 +377,7 @@ class PDFEstadisticasUnificadoGenerator extends PDFBaseGenerator {
         yPos += 8;
 
         // Tabla Resumen por sucursal
+       // Tabla Resumen por sucursal
         if (this.sucursalesRecuperacion.length > 0) {
             yPos = this._dibujarTablaResumenSucursales(pdf, this.sucursalesRecuperacion, yPos);
         } else {
@@ -394,15 +395,15 @@ class PDFEstadisticasUnificadoGenerator extends PDFBaseGenerator {
         pdf.setTextColor(0, 0, 0);
         pdf.text('5. DESEMPEÑO', GRID_CONFIG.MARGEN_PAGINA, yPos);
         yPos += 6;
-        
+
         pdf.setDrawColor(201, 160, 61);
         pdf.setLineWidth(0.5);
         pdf.line(GRID_CONFIG.MARGEN_PAGINA, yPos - 2, GRID_CONFIG.MARGEN_PAGINA + 45, yPos - 2);
         yPos += 8;
 
-        // Tabla de categorías
+        // Tabla de categorías - DINÁMICA
         if (this.datosIncidencias?.categoriasData?.length > 0) {
-            this._dibujarTablaCategorias(pdf, this.datosIncidencias.categoriasData, yPos);
+            yPos = this._dibujarTablaCategorias(pdf, this.datosIncidencias.categoriasData, yPos);
         }
 
         // =============================================
@@ -1148,68 +1149,153 @@ class PDFEstadisticasUnificadoGenerator extends PDFBaseGenerator {
         }
     }
 
-    // =============================================
-    // TABLA DE CATEGORÍAS
-    // =============================================
-    _dibujarTablaCategorias(pdf, categorias, yPos) {
-        const margen = GRID_CONFIG.MARGEN_PAGINA;
-        const anchoPagina = pdf.internal.pageSize.getWidth();
-        const anchoTotal = anchoPagina - (margen * 2);
+ // =============================================
+// TABLA DE CATEGORÍAS - VERSIÓN DINÁMICA CON TEXTO NEGRO
+// =============================================
+_dibujarTablaCategorias(pdf, categorias, yPos) {
+    const margen = GRID_CONFIG.MARGEN_PAGINA;
+    const anchoPagina = pdf.internal.pageSize.getWidth();
+    const anchoTotal = anchoPagina - (margen * 2);
+    const altoPagina = pdf.internal.pageSize.getHeight();
 
-        if (!categorias || categorias.length === 0) return;
+    if (!categorias || categorias.length === 0) return yPos;
 
+    let yActual = yPos;
+
+    // ESPACIO REQUERIDO PARA LA TABLA DE CATEGORÍAS
+    const espacioMinimoRequerido = 45;
+    
+    // Calcular espacio disponible en la página ACTUAL
+    const espacioDisponible = altoPagina - yActual - 30;
+    
+    // Verificar si NO hay suficiente espacio en la página actual
+    if (espacioDisponible < espacioMinimoRequerido) {
+        pdf.addPage();
+        this.paginaActualReal++;
+        this.dibujarEncabezadoBase(pdf, 'REPORTE ESTADÍSTICO UNIFICADO', 'DESEMPEÑO - CATEGORÍAS');
+        
+        yActual = this.alturaEncabezado + 8;
+        
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.small);
         pdf.setTextColor(0, 0, 0);
-        pdf.text('Incidencias por Categoría', margen, yPos);
-        yPos += 6;
+        pdf.text('Incidencias por Categoría', margen, yActual);
+        yActual += 6;
         
         pdf.setDrawColor(201, 160, 61);
         pdf.setLineWidth(0.5);
-        pdf.line(margen, yPos - 1, margen + 70, yPos - 1);
-        yPos += 6;
+        pdf.line(margen, yActual - 1, margen + 70, yActual - 1);
+        yActual += 6;
+    } else {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(this.fonts.small);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('5. INCIDENCIAS POR CATEGORÍA', margen, yActual);
+        yActual += 6;
+        
+        pdf.setDrawColor(201, 160, 61);
+        pdf.setLineWidth(0.5);
+        pdf.line(margen, yActual - 1, margen + 70, yActual - 1);
+        yActual += 6;
+    }
 
-        const colAnchos = {
-            categoria: anchoTotal - 50,
-            cantidad: 50
-        };
+    // Configuración de la tabla
+    const colAnchos = {
+        categoria: anchoTotal - 50,
+        cantidad: 50
+    };
 
-        const xInicio = margen;
-        const altoFila = 7;
+    const xInicio = margen;
+    const altoFila = 7;
+    const espacioFinPagina = 30;
 
-        // Cabecera
+    // Dibujar cabecera (texto BLANCO sobre fondo AZUL)
+    const dibujarCabecera = (y) => {
         pdf.setFillColor(26, 59, 93);
-        pdf.rect(xInicio, yPos - 3, anchoTotal, altoFila + 2, 'F');
+        pdf.rect(xInicio, y - 3, anchoTotal, altoFila + 2, 'F');
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.micro);
-        pdf.setTextColor(255, 255, 255);
-        pdf.text('Categoría', xInicio + 5, yPos);
-        pdf.text('Cantidad', xInicio + colAnchos.categoria + 5, yPos);
+        pdf.setTextColor(255, 255, 255); // Blanco para la cabecera
+        pdf.text('Categoría', xInicio + 5, y);
+        pdf.text('Cantidad', xInicio + colAnchos.categoria + 5, y);
+        return y + altoFila + 2;
+    };
 
-        yPos += altoFila + 2;
+    // Dibujar una fila (texto NEGRO para que se vea en fondo blanco/grís)
+    const dibujarFila = (categoria, y, esPar) => {
+        if (esPar) {
+            pdf.setFillColor(248, 248, 252);
+            pdf.rect(xInicio, y - 2.5, anchoTotal, altoFila + 1.5, 'F');
+        }
 
-        // Cuerpo
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.micro);
+        // 👇 IMPORTANTE: Color NEGRO para el texto de las filas
         pdf.setTextColor(0, 0, 0);
+        
+        let nombre = categoria.nombre || 'N/A';
+        if (nombre.length > 35) nombre = nombre.substring(0, 33) + '...';
+        pdf.text(nombre, xInicio + 5, y);
+        pdf.text(categoria.cantidad.toString(), xInicio + colAnchos.categoria + 5, y);
 
-        for (let i = 0; i < Math.min(categorias.length, 15); i++) {
-            const cat = categorias[i];
+        return y + altoFila + 1.5;
+    };
+
+    // Calcular cuántas filas caben en una página
+    const calcularFilasPorPagina = (yInicio) => {
+        const disponible = altoPagina - yInicio - espacioFinPagina;
+        return Math.floor(disponible / (altoFila + 1.5));
+    };
+
+    // Paginación de la tabla de categorías
+    let indiceActual = 0;
+    let primeraPagina = true;
+    let cabeceraDibujada = false;
+    let yInicioPagina = yActual;
+
+    while (indiceActual < categorias.length) {
+        if (!primeraPagina) {
+            pdf.addPage();
+            this.paginaActualReal++;
+            this.dibujarEncabezadoBase(pdf, 'REPORTE ESTADÍSTICO UNIFICADO', 'DESEMPEÑO - CATEGORÍAS (CONTINUACIÓN)');
             
-            if (i % 2 === 0) {
-                pdf.setFillColor(248, 248, 252);
-                pdf.rect(xInicio, yPos - 2.5, anchoTotal, altoFila + 1.5, 'F');
-            }
-
-            let nombre = cat.nombre || 'N/A';
-            if (nombre.length > 35) nombre = nombre.substring(0, 33) + '...';
-            pdf.text(nombre, xInicio + 5, yPos);
-            pdf.text(cat.cantidad.toString(), xInicio + colAnchos.categoria + 5, yPos);
-
-            yPos += altoFila + 1.5;
+            yInicioPagina = this.alturaEncabezado + 8;
+            
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(this.fonts.small);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text('Incidencias por Categoría (continuación)', margen, yInicioPagina);
+            yInicioPagina += 6;
+            
+            pdf.setDrawColor(201, 160, 61);
+            pdf.setLineWidth(0.5);
+            pdf.line(margen, yInicioPagina - 1, margen + 70, yInicioPagina - 1);
+            yInicioPagina += 6;
+            
+            cabeceraDibujada = false;
+        }
+        
+        if (!cabeceraDibujada) {
+            yInicioPagina = dibujarCabecera(yInicioPagina);
+            cabeceraDibujada = true;
+        }
+        
+        const filasPorPagina = calcularFilasPorPagina(yInicioPagina);
+        const filasAAgregar = Math.min(filasPorPagina, categorias.length - indiceActual);
+        
+        for (let i = 0; i < filasAAgregar; i++) {
+            const esPar = (indiceActual + i) % 2 === 0;
+            yInicioPagina = dibujarFila(categorias[indiceActual + i], yInicioPagina, esPar);
+        }
+        
+        indiceActual += filasAAgregar;
+        primeraPagina = false;
+        
+        if (indiceActual < categorias.length) {
+            this.dibujarPiePagina(pdf);
         }
     }
 
+    return yInicioPagina + 10;
+}
     // =============================================
     // TABLA RESUMEN SUCURSALES
     // =============================================

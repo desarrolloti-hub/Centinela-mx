@@ -1,9 +1,9 @@
 /**
  * GENERADOR PDF BITÁCORA - Sistema Centinela
- * VERSIÓN: FINAL - CON FILTRO Y COLORES CORRECTOS
+ * VERSIÓN: FINAL - CON COLORES DINÁMICOS
  */
 
-import { PDFBaseGenerator, coloresBase } from './pdf-base-generator.js';
+import { PDFBaseGenerator, coloresBase, getSystemColors } from './pdf-base-generator.js';
 
 export const coloresBitacora = {
     ...coloresBase,
@@ -19,6 +19,14 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
         this.organizacionNombre = '';
         this.baseUrl = window.location.origin;
         this.pdfUrlsCache = new Map();
+        
+        // ✅ Inicializar colores dinámicos
+        this.colores = getSystemColors();
+    }
+
+    // ✅ Método para actualizar colores (igual que en PDFBaseGenerator)
+    actualizarColores() {
+        this.colores = getSystemColors();
     }
 
     configurar(config) {
@@ -104,22 +112,25 @@ class GeneradorPDFBitacora extends PDFBaseGenerator {
         return false;
     }
 
-    async generarBitacoraPDF(actividades, fecha, opciones = {}) {
-        const startTime = performance.now();
-        const { mostrarAlerta = true } = opciones;
+async generarBitacoraPDF(actividades, fecha, opciones = {}) {
+    const startTime = performance.now();
+    const { mostrarAlerta = true } = opciones;
 
-        try {
-            if (mostrarAlerta) {
-                Swal.fire({
-                    title: 'Generando PDF...',
-                    text: 'Procesando información...',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
-                });
-            }
+    try {
+        if (mostrarAlerta) {
+            Swal.fire({
+                title: 'Generando PDF...',
+                text: 'Procesando información...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
 
-            const organizacion = this.usuarioActual?.organizacionCamelCase || this.organizacionActual?.camelCase;
-            
+        // ✅ ACTUALIZAR COLORES DINÁMICOS antes de generar
+        this.actualizarColores();
+
+        const organizacion = this.usuarioActual?.organizacionCamelCase || this.organizacionActual?.camelCase;
+
             const actividadesFiltradas = actividades.filter(act => !this._debeExcluirActividad(act));
             
             const registrosIds = new Set();
@@ -211,8 +222,12 @@ async generarBitacoraPDFBlob(actividades, fecha, opciones = {}) {
             });
         }
 
+        // ✅ ACTUALIZAR COLORES DINÁMICOS antes de generar
+        this.actualizarColores();
+
         const organizacion = this.usuarioActual?.organizacionCamelCase || this.organizacionActual?.camelCase;
-        
+
+
         const actividadesFiltradas = actividades.filter(act => !this._debeExcluirActividad(act));
         
         const registrosIds = new Set();
@@ -395,105 +410,115 @@ async generarBitacoraPDFBlob(actividades, fecha, opciones = {}) {
         }
     }
 
-    _dibujarTablaActividades(pdf, actividades, margen, yInicio, anchoContenido) {
-        const headers = [['Hora', 'Módulo', 'Tipo', 'Descripción']];
+  _dibujarTablaActividades(pdf, actividades, margen, yInicio, anchoContenido) {
+    const headers = [['Hora', 'Módulo', 'Tipo', 'Descripción']];
+    
+    const anchoHora = 20;
+    const anchoModulo = 32;
+    const anchoTipo = 24;
+    const anchoDescripcion = anchoContenido - (anchoHora + anchoModulo + anchoTipo);
+
+    const actividadesOrdenadas = [...actividades].sort((a, b) => {
+        const fechaA = a.fecha ? (a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha)) : new Date(0);
+        const fechaB = b.fecha ? (b.fecha.toDate ? b.fecha.toDate() : new Date(b.fecha)) : new Date(0);
+        return fechaA - fechaB;
+    });
+
+    const bodyData = [];
+    const linkPorFila = [];
+    
+    for (const act of actividadesOrdenadas) {
+        const uiData = act.toUI ? act.toUI() : this._extraerUIData(act);
         
-        const anchoHora = 20;
-        const anchoModulo = 32;
-        const anchoTipo = 24;
-        const anchoDescripcion = anchoContenido - (anchoHora + anchoModulo + anchoTipo);
-
-        const actividadesOrdenadas = [...actividades].sort((a, b) => {
-            const fechaA = a.fecha ? (a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha)) : new Date(0);
-            const fechaB = b.fecha ? (b.fecha.toDate ? b.fecha.toDate() : new Date(b.fecha)) : new Date(0);
-            return fechaA - fechaB;
-        });
-
-        const bodyData = [];
-        const linkPorFila = [];
+        let descripcion = act.descripcionLimpia || uiData.descripcion || 'Sin descripción';
+        descripcion = this._limpiarDescripcion(descripcion);
         
-        for (const act of actividadesOrdenadas) {
-            const uiData = act.toUI ? act.toUI() : this._extraerUIData(act);
-            
-            let descripcion = act.descripcionLimpia || uiData.descripcion || 'Sin descripción';
-            descripcion = this._limpiarDescripcion(descripcion);
-            
-            const registroId = this._extraerIdRegistro(descripcion);
-            const pdfUrl = registroId ? this.pdfUrlsCache.get(registroId) : null;
-            const tieneLink = !!pdfUrl;
-            
-            let modulo = (uiData.modulo || 'N/A').replace(/_/g, ' ').trim();
-            
-            // Determinar color: AZUL si tiene link, NEGRO si no
-            const colorTexto = tieneLink ? [41, 98, 255] : [40, 40, 40];
-            
-            bodyData.push([
-                uiData.hora || '--:--',
-                modulo,
-                uiData.tipo || 'N/A',
-                { content: descripcion, styles: { textColor: colorTexto } }
-            ]);
-            
-            linkPorFila.push({
-                tieneLink: tieneLink,
-                pdfUrl: pdfUrl
-            });
-        }
-
-        pdf.autoTable({
-            startY: yInicio,
-            head: headers,
-            body: bodyData,
-            theme: 'grid',
-            styles: {
-                font: 'helvetica',
-                fontSize: 8,
-                cellPadding: 4,
-                lineColor: [200, 200, 200],
-                lineWidth: 0.1,
-                minCellHeight: 10,
-                valign: 'middle',
-                halign: 'left'
-            },
-            headStyles: {
-                fillColor: [41, 98, 255],
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-                fontSize: 8,
-                halign: 'center',
-                valign: 'middle'
-            },
-            columnStyles: {
-                0: { cellWidth: anchoHora, halign: 'center' },
-                1: { cellWidth: anchoModulo, halign: 'left' },
-                2: { cellWidth: anchoTipo, halign: 'center' },
-                3: { cellWidth: anchoDescripcion, halign: 'left' }
-            },
-            alternateRowStyles: {
-                fillColor: [245, 245, 245]
-            },
-            margin: { left: margen, right: margen },
-            didDrawCell: (data) => {
-                if (data.column.index === 3) {
-                    const linkInfo = linkPorFila[data.row.index];
-                    if (linkInfo && linkInfo.tieneLink && linkInfo.pdfUrl) {
-                        try {
-                            pdf.link(
-                                data.cell.x, 
-                                data.cell.y, 
-                                data.cell.width, 
-                                data.cell.height, 
-                                { url: linkInfo.pdfUrl }
-                            );
-                        } catch (e) {}
-                    }
-                }
-            },
-            didDrawPage: (data) => {
-                this.paginaActualReal = data.pageNumber;
-            }
+        const registroId = this._extraerIdRegistro(descripcion);
+        const pdfUrl = registroId ? this.pdfUrlsCache.get(registroId) : null;
+        const tieneLink = !!pdfUrl;
+        
+        let modulo = (uiData.modulo || 'N/A').replace(/_/g, ' ').trim();
+        
+        // ✅ Color AZUL para links (mantenemos azul para destacar enlaces)
+        const colorTexto = tieneLink ? [41, 98, 255] : [40, 40, 40];
+        
+        bodyData.push([
+            uiData.hora || '--:--',
+            modulo,
+            uiData.tipo || 'N/A',
+            { content: descripcion, styles: { textColor: colorTexto } }
+        ]);
+        
+        linkPorFila.push({
+            tieneLink: tieneLink,
+            pdfUrl: pdfUrl
         });
     }
+
+    // ✅ OBTENER COLORES DINÁMICOS para el encabezado de la tabla
+    const primarioRGB = this.colores.primarioRGB;
+    const secundarioRGB = this.colores.secundarioRGB;
+    
+    // ✅ El color del encabezado usa el color PRIMARIO del sistema
+    // ✅ El texto del encabezado usa BLANCO o el color SECUNDARIO si es necesario
+    const headerBgColor = [primarioRGB.r, primarioRGB.g, primarioRGB.b];
+    const headerTextColor = [255, 255, 255]; // Siempre blanco para contraste
+
+    pdf.autoTable({
+        startY: yInicio,
+        head: headers,
+        body: bodyData,
+        theme: 'grid',
+        styles: {
+            font: 'helvetica',
+            fontSize: 8,
+            cellPadding: 4,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.1,
+            minCellHeight: 10,
+            valign: 'middle',
+            halign: 'left'
+        },
+        // ✅ HEADER CON COLOR DINÁMICO DEL SISTEMA
+        headStyles: {
+            fillColor: headerBgColor,
+            textColor: headerTextColor,
+            fontStyle: 'bold',
+            fontSize: 8,
+            halign: 'center',
+            valign: 'middle'
+        },
+        columnStyles: {
+            0: { cellWidth: anchoHora, halign: 'center' },
+            1: { cellWidth: anchoModulo, halign: 'left' },
+            2: { cellWidth: anchoTipo, halign: 'center' },
+            3: { cellWidth: anchoDescripcion, halign: 'left' }
+        },
+        alternateRowStyles: {
+            fillColor: [245, 245, 245]
+        },
+        margin: { left: margen, right: margen },
+        didDrawCell: (data) => {
+            if (data.column.index === 3) {
+                const linkInfo = linkPorFila[data.row.index];
+                if (linkInfo && linkInfo.tieneLink && linkInfo.pdfUrl) {
+                    try {
+                        pdf.link(
+                            data.cell.x, 
+                            data.cell.y, 
+                            data.cell.width, 
+                            data.cell.height, 
+                            { url: linkInfo.pdfUrl }
+                        );
+                    } catch (e) {}
+                }
+            }
+        },
+        didDrawPage: (data) => {
+            this.paginaActualReal = data.pageNumber;
+        }
+    });
+}
 
     _extraerUIData(act) {
         return {
