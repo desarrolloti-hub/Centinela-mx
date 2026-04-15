@@ -1,22 +1,146 @@
 /**
  * PDF BASE GENERATOR - Sistema Centinela
- * VERSIÓN: 2.0 - Corregida para manejo directo de imágenes
+ * VERSIÓN: 2.1 - Con colores dinámicos del sistema (compatible con jsPDF)
  */
 
 // =============================================
-// CONFIGURACIÓN DE COLORES BASE
+// CONFIGURACIÓN DE COLORES BASE - DINÁMICA
 // =============================================
-export const coloresBase = {
-    primario: '#0033A0',
-    secundario: '#FF6600',
-    texto: '#333333',
-    textoClaro: '#666666',
-    fondo: '#ffffff',
-    borde: '#dddddd',
-    exito: '#27ae60',
-    advertencia: '#f39c12',
-    peligro: '#c0392b'
-};
+
+/**
+ * Convierte cualquier formato de color a RGB string (compatible con jsPDF)
+ * jsPDF acepta: "#RRGGBB" o "rgb(r,g,b)" o [r,g,b]
+ * NO acepta RGBA con transparencia
+ */
+function normalizarColorParaJSPDF(color) {
+    if (!color) return '#c0c0c0';
+    
+    const colorStr = String(color).trim();
+    
+    // Si ya es HEX, devolverlo tal cual
+    if (colorStr.startsWith('#')) {
+        return colorStr;
+    }
+    
+    // Si es rgb(...) sin alpha, devolverlo tal cual
+    if (colorStr.startsWith('rgb(')) {
+        return colorStr;
+    }
+    
+    // Si es rgba(...), extraer solo los valores RGB
+    if (colorStr.startsWith('rgba(')) {
+        const match = colorStr.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
+        if (match) {
+            return `rgb(${match[1]}, ${match[2]}, ${match[3]})`;
+        }
+    }
+    
+    // Si es un nombre de color básico
+    const coloresBasicos = {
+        'black': '#000000',
+        'white': '#ffffff',
+        'red': '#ff0000',
+        'green': '#00ff00',
+        'blue': '#0000ff'
+    };
+    
+    if (coloresBasicos[colorStr.toLowerCase()]) {
+        return coloresBasicos[colorStr.toLowerCase()];
+    }
+    
+    return '#c0c0c0';
+}
+
+/**
+ * Convierte un color HEX o RGB a objeto RGB {r,g,b} para jsPDF
+ */
+function colorToRGB(color) {
+    const normalized = normalizarColorParaJSPDF(color);
+    
+    if (normalized.startsWith('#')) {
+        return {
+            r: parseInt(normalized.slice(1, 3), 16),
+            g: parseInt(normalized.slice(3, 5), 16),
+            b: parseInt(normalized.slice(5, 7), 16)
+        };
+    }
+    
+    if (normalized.startsWith('rgb(')) {
+        const match = normalized.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (match) {
+            return {
+                r: parseInt(match[1]),
+                g: parseInt(match[2]),
+                b: parseInt(match[3])
+            };
+        }
+    }
+    
+    return { r: 192, g: 192, b: 192 };
+}
+
+/**
+ * Obtiene los colores actuales del sistema desde CSS variables
+ */
+export function getSystemColors() {
+    const rootStyles = getComputedStyle(document.documentElement);
+    
+    // Obtener colores del sistema
+    let primarioRaw = rootStyles.getPropertyValue('--color-accent-primary').trim();
+    let secundarioRaw = rootStyles.getPropertyValue('--color-accent-secondary').trim();
+    let textoRaw = rootStyles.getPropertyValue('--color-text-primary').trim() || '#ffffff';
+    let textoClaroRaw = rootStyles.getPropertyValue('--color-text-secondary').trim() || '#aaaaaa';
+    
+    // Si no se encuentran, usar valores por defecto
+    if (!primarioRaw || primarioRaw === '') primarioRaw = '#c0c0c0';
+    if (!secundarioRaw || secundarioRaw === '') secundarioRaw = '#ffffff';
+    
+    // Normalizar a formato compatible con jsPDF
+    const primario = normalizarColorParaJSPDF(primarioRaw);
+    const secundario = normalizarColorParaJSPDF(secundarioRaw);
+    const texto = normalizarColorParaJSPDF(textoRaw);
+    const textoClaro = normalizarColorParaJSPDF(textoClaroRaw);
+    const fondo = normalizarColorParaJSPDF(rootStyles.getPropertyValue('--color-bg-primary').trim() || '#000000');
+    const borde = normalizarColorParaJSPDF(rootStyles.getPropertyValue('--color-border-light').trim() || '#dddddd');
+    
+    // Para los casos donde secundario es blanco, generar un color complementario
+    let secundarioFinal = secundario;
+    if (secundario === '#ffffff' || secundario === 'rgb(255, 255, 255)') {
+        const rgb = colorToRGB(primario);
+        // Generar un color más claro pero no blanco
+        const r = Math.min(255, rgb.r + 60);
+        const g = Math.min(255, rgb.g + 60);
+        const b = Math.min(255, rgb.b + 60);
+        secundarioFinal = `rgb(${r}, ${g}, ${b})`;
+    }
+    
+    return {
+        primario: primario,
+        primarioRGB: colorToRGB(primario),
+        secundario: secundarioFinal,
+        secundarioRGB: colorToRGB(secundarioFinal),
+        texto: texto,
+        textoRGB: colorToRGB(texto),
+        textoClaro: textoClaro,
+        textoClaroRGB: colorToRGB(textoClaro),
+        fondo: fondo,
+        fondoRGB: colorToRGB(fondo),
+        borde: borde,
+        bordeRGB: colorToRGB(borde),
+        exito: '#27ae60',
+        advertencia: '#f39c12',
+        peligro: '#c0392b'
+    };
+}
+
+// Variable global actualizable
+export let coloresBase = getSystemColors();
+
+// Función para actualizar colores
+export function actualizarColoresBase() {
+    coloresBase = getSystemColors();
+    return coloresBase;
+}
 
 // =============================================
 // CLASE BASE PDF GENERATOR
@@ -52,6 +176,16 @@ export class PDFBaseGenerator {
         };
 
         this.alturaEncabezado = 42;
+        
+        // ✅ INICIALIZAR COLORES DINÁMICOS
+        this.colores = getSystemColors();
+    }
+
+    /**
+     * Actualiza los colores (llamar antes de generar PDF si el tema cambió)
+     */
+    actualizarColores() {
+        this.colores = getSystemColors();
     }
 
     // =============================================
@@ -84,22 +218,16 @@ export class PDFBaseGenerator {
     // =============================================
     // CONVERSIÓN DE IMÁGENES A BASE64 (DIRECTA)
     // =============================================
-    
-    /**
-     * Convierte un objeto imagen (File o objeto con datos) a base64
-     */
+
     async convertirImagenABase64(imagen) {
         try {
-            // Si ya es un string base64, retornarlo
             if (typeof imagen === 'string') {
                 if (imagen.startsWith('data:image') || imagen.startsWith('blob:')) {
                     return imagen;
                 }
-                // Podría ser una URL de Firebase, pero usamos la imagen directa
                 return imagen;
             }
 
-            // Si es un objeto File o Blob
             if (imagen instanceof File || imagen instanceof Blob) {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -109,7 +237,6 @@ export class PDFBaseGenerator {
                 });
             }
 
-            // Si es un objeto con propiedad file
             if (imagen.file instanceof File || imagen.file instanceof Blob) {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -119,12 +246,10 @@ export class PDFBaseGenerator {
                 });
             }
 
-            // Si es un objeto con propiedad preview (URL de objeto)
             if (imagen.preview && typeof imagen.preview === 'string') {
                 return await this.fetchearImagenDesdeURL(imagen.preview);
             }
 
-            // Si tiene una URL directa
             if (imagen.url && typeof imagen.url === 'string') {
                 return await this.fetchearImagenDesdeURL(imagen.url);
             }
@@ -137,9 +262,6 @@ export class PDFBaseGenerator {
         }
     }
 
-    /**
-     * Obtiene una imagen desde una URL (para previews de blob)
-     */
     async fetchearImagenDesdeURL(url) {
         try {
             const response = await fetch(url);
@@ -156,36 +278,22 @@ export class PDFBaseGenerator {
         }
     }
 
-    /**
-     * Extrae la imagen del objeto de incidencia
-     */
     extraerImagenDeObjeto(imagenObj) {
-        // Si es directamente un File
         if (imagenObj instanceof File || imagenObj instanceof Blob) {
             return imagenObj;
         }
-
-        // Si tiene propiedad file
         if (imagenObj.file instanceof File || imagenObj.file instanceof Blob) {
             return imagenObj.file;
         }
-
-        // Si tiene preview
         if (imagenObj.preview) {
             return imagenObj.preview;
         }
-
-        // Si tiene url
         if (imagenObj.url) {
             return imagenObj.url;
         }
-
         return null;
     }
 
-    /**
-     * Obtiene el comentario de una imagen
-     */
     obtenerComentarioImagen(imagenObj) {
         if (!imagenObj) return '';
         if (typeof imagenObj === 'object' && imagenObj.comentario) {
@@ -371,7 +479,7 @@ export class PDFBaseGenerator {
         const textoStr = String(texto);
         const parrafos = textoStr.split('\n');
         const todasLasLineas = [];
-        
+
         for (const parrafo of parrafos) {
             if (parrafo.trim() === '') {
                 todasLasLineas.push('');
@@ -394,62 +502,73 @@ export class PDFBaseGenerator {
     }
 
     // =============================================
-    // ELEMENTOS COMUNES DEL PDF
+    // ELEMENTOS COMUNES DEL PDF - CON COLORES DINÁMICOS
     // =============================================
-    dibujarEncabezadoBase(pdf, titulo, subtitulo) {
-        const margen = 15;
-        const anchoPagina = pdf.internal.pageSize.getWidth();
-        const dimensiones = this.dimensionesLogo;
-        const radio = dimensiones.diametro / 2;
+  dibujarEncabezadoBase(pdf, titulo, subtitulo) {
+    const margen = 15;
+    const anchoPagina = pdf.internal.pageSize.getWidth();
+    const dimensiones = this.dimensionesLogo;
+    const radio = dimensiones.diametro / 2;
 
-        pdf.saveGraphicsState();
+    // ✅ OBTENER COLORES DINÁMICOS (ya normalizados para jsPDF)
+    const primarioRGB = this.colores.primarioRGB;
+    const secundarioRGB = this.colores.secundarioRGB;
 
-        pdf.setFillColor(255, 255, 255);
-        pdf.rect(0, 0, anchoPagina, this.alturaEncabezado, 'F');
+    pdf.saveGraphicsState();
 
-        pdf.setDrawColor(coloresBase.primario);
-        pdf.setFillColor(coloresBase.primario);
-        pdf.rect(0, 0, anchoPagina, 4, 'F');
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 0, anchoPagina, this.alturaEncabezado, 'F');
 
-        const yLogo = 20;
-        const xLogoDerecha = anchoPagina - margen - (dimensiones.diametro * 2) - dimensiones.separacion;
-        const xCentinela = xLogoDerecha;
-        const xOrganizacion = xCentinela + dimensiones.diametro + dimensiones.separacion;
+    // ✅ LÍNEA SUPERIOR - Color PRIMARIO del sistema
+    pdf.setDrawColor(primarioRGB.r, primarioRGB.g, primarioRGB.b);
+    pdf.setFillColor(primarioRGB.r, primarioRGB.g, primarioRGB.b);
+    pdf.rect(0, 0, anchoPagina, 4, 'F');
 
-        this._dibujarLogos(pdf, xCentinela, xOrganizacion, yLogo, radio);
+    const yLogo = 20;
+    const xLogoDerecha = anchoPagina - margen - (dimensiones.diametro * 2) - dimensiones.separacion;
+    const xCentinela = xLogoDerecha;
+    const xOrganizacion = xCentinela + dimensiones.diametro + dimensiones.separacion;
 
-        pdf.setTextColor(coloresBase.primario);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(this.fonts.titulo);
-        pdf.text(titulo, anchoPagina / 2, 18, { align: 'center' });
+    this._dibujarLogos(pdf, xCentinela, xOrganizacion, yLogo, radio);
 
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.small);
-        pdf.setTextColor(coloresBase.textoClaro);
-        pdf.text(subtitulo, anchoPagina / 2, 26, { align: 'center' });
+    // Título con color primario
+    pdf.setTextColor(primarioRGB.r, primarioRGB.g, primarioRGB.b);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(this.fonts.titulo);
+    pdf.text(titulo, anchoPagina / 2, 18, { align: 'center' });
 
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.small);
-        pdf.setTextColor(coloresBase.textoClaro);
-        pdf.text(`Generado: ${this.formatearFecha(new Date())}`, margen, 22);
+    // Subtítulo con color secundario
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(this.fonts.small);
+    pdf.setTextColor(secundarioRGB.r, secundarioRGB.g, secundarioRGB.b);
+    pdf.text(subtitulo, anchoPagina / 2, 26, { align: 'center' });
 
-        pdf.setDrawColor(coloresBase.secundario);
-        pdf.setLineWidth(0.8);
-        pdf.line(margen, this.alturaEncabezado - 2, anchoPagina - margen, this.alturaEncabezado - 2);
+    // ✅ Fecha en color NEGRO
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(this.fonts.small);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`Generado: ${this.formatearFecha(new Date())}`, margen, 22);
 
-        pdf.restoreGraphicsState();
-    }
+    // ✅ LÍNEA SEPARADORA - Color SECUNDARIO del sistema
+    pdf.setDrawColor(secundarioRGB.r, secundarioRGB.g, secundarioRGB.b);
+    pdf.setLineWidth(0.8);
+    pdf.line(margen, this.alturaEncabezado - 2, anchoPagina - margen, this.alturaEncabezado - 2);
+
+    pdf.restoreGraphicsState();
+}
 
     _dibujarLogos(pdf, xCentinela, xOrganizacion, yLogo, radio) {
+        const bordeRGB = this.colores.bordeRGB;
+        
         if (this.logoCentinelaCircular) {
             try {
                 pdf.setFillColor(255, 255, 255);
-                pdf.setDrawColor(coloresBase.borde);
+                pdf.setDrawColor(bordeRGB.r, bordeRGB.g, bordeRGB.b);
                 pdf.circle(xCentinela + radio, yLogo, radio, 'FD');
                 pdf.addImage(this.logoCentinelaCircular, 'PNG',
                     xCentinela, yLogo - radio,
                     this.dimensionesLogo.diametro, this.dimensionesLogo.diametro);
-                pdf.setDrawColor(coloresBase.borde);
+                pdf.setDrawColor(bordeRGB.r, bordeRGB.g, bordeRGB.b);
                 pdf.setLineWidth(1);
                 pdf.circle(xCentinela + radio, yLogo, radio, 'S');
             } catch (e) {
@@ -462,12 +581,12 @@ export class PDFBaseGenerator {
         if (this.logoOrganizacionCircular) {
             try {
                 pdf.setFillColor(255, 255, 255);
-                pdf.setDrawColor(coloresBase.borde);
+                pdf.setDrawColor(bordeRGB.r, bordeRGB.g, bordeRGB.b);
                 pdf.circle(xOrganizacion + radio, yLogo, radio, 'FD');
                 pdf.addImage(this.logoOrganizacionCircular, 'PNG',
                     xOrganizacion, yLogo - radio,
                     this.dimensionesLogo.diametro, this.dimensionesLogo.diametro);
-                pdf.setDrawColor(coloresBase.borde);
+                pdf.setDrawColor(bordeRGB.r, bordeRGB.g, bordeRGB.b);
                 pdf.setLineWidth(1);
                 pdf.circle(xOrganizacion + radio, yLogo, radio, 'S');
             } catch (e) {
@@ -479,64 +598,92 @@ export class PDFBaseGenerator {
 
         if (this.logoCentinelaCircular || this.logoOrganizacionCircular) {
             const xLineaVertical = xCentinela + this.dimensionesLogo.diametro + (this.dimensionesLogo.separacion / 2);
-            pdf.setDrawColor(coloresBase.borde);
+            pdf.setDrawColor(bordeRGB.r, bordeRGB.g, bordeRGB.b);
             pdf.setLineWidth(0.5);
             pdf.line(xLineaVertical, yLogo - radio - 2, xLineaVertical, yLogo + radio + 2);
         }
     }
 
     _dibujarPlaceholderCircular(pdf, x, y, radio, texto) {
+        const primarioRGB = this.colores.primarioRGB;
+        const textoRGB = this.colores.textoRGB;
+        
         pdf.setFillColor(245, 245, 245);
         pdf.setGState(new pdf.GState({ opacity: 0.3 }));
         pdf.circle(x, y, radio, 'F');
         pdf.setGState(new pdf.GState({ opacity: 1 }));
         pdf.setFillColor(240, 240, 240);
-        pdf.setDrawColor(coloresBase.borde);
+        pdf.setDrawColor(primarioRGB.r, primarioRGB.g, primarioRGB.b);
         pdf.circle(x, y, radio, 'FD');
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(this.fonts.mini);
-        pdf.setTextColor(coloresBase.texto);
+        pdf.setTextColor(textoRGB.r, textoRGB.g, textoRGB.b);
         pdf.text(texto, x, y, { align: 'center' });
     }
 
-    dibujarPiePagina(pdf) {
-        const margen = 15;
-        const anchoPagina = pdf.internal.pageSize.getWidth();
-        const altoPagina = pdf.internal.pageSize.getHeight();
-        const alturaPie = 15;
-        const yPos = altoPagina - alturaPie - 2;
+ dibujarPiePagina(pdf) {
+    const margen = 15;
+    const anchoPagina = pdf.internal.pageSize.getWidth();
+    const altoPagina = pdf.internal.pageSize.getHeight();
+    const alturaPie = 15;
+    const yPos = altoPagina - alturaPie - 2;
 
-        pdf.saveGraphicsState();
-        pdf.setFillColor(255, 255, 255);
-        pdf.rect(0, yPos - 2, anchoPagina, alturaPie + 4, 'F');
-        pdf.setDrawColor(coloresBase.secundario);
-        pdf.setLineWidth(0.5);
-        pdf.line(margen, yPos, anchoPagina - margen, yPos);
-        pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(this.fonts.micro);
-        pdf.setTextColor(coloresBase.textoClaro);
-        pdf.text('Reporte Generado con Sistema Centinela', margen, yPos + 5);
+    // ✅ OBTENER COLORES DINÁMICOS
+    const primarioRGB = this.colores.primarioRGB;
+    const secundarioRGB = this.colores.secundarioRGB;
 
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(this.fonts.micro);
-        pdf.setTextColor(coloresBase.textoClaro);
-        pdf.text(`Página ${this.paginaActualReal} de ${this.totalPaginas}`, anchoPagina - margen, yPos + 5, { align: 'right' });
-        pdf.setDrawColor(coloresBase.primario);
-        pdf.setFillColor(coloresBase.primario);
-        pdf.rect(0, altoPagina - 3, anchoPagina, 3, 'F');
-        pdf.restoreGraphicsState();
+    const totalPaginasReales = pdf.internal.getNumberOfPages();
+    
+    let paginaActual = this.paginaActualReal;
+    
+    if (!paginaActual || paginaActual < 1) {
+        paginaActual = pdf.internal.getCurrentPageInfo().pageNumber;
     }
+
+    pdf.saveGraphicsState();
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, yPos - 2, anchoPagina, alturaPie + 4, 'F');
+    
+    // ✅ Línea con color secundario
+    pdf.setDrawColor(secundarioRGB.r, secundarioRGB.g, secundarioRGB.b);
+    pdf.setLineWidth(0.5);
+    pdf.line(margen, yPos, anchoPagina - margen, yPos);
+    
+    // ✅ Texto izquierdo en NEGRO
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(this.fonts.micro);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Reporte Generado con Sistema Centinela', margen, yPos + 5);
+
+    // ✅ Texto derecho (paginación) en NEGRO
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(this.fonts.micro);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`Página ${paginaActual} de ${totalPaginasReales}`, anchoPagina - margen, yPos + 5, { align: 'right' });
+    
+    // ✅ Barra inferior con color primario
+    pdf.setDrawColor(primarioRGB.r, primarioRGB.g, primarioRGB.b);
+    pdf.setFillColor(primarioRGB.r, primarioRGB.g, primarioRGB.b);
+    pdf.rect(0, altoPagina - 3, anchoPagina, 3, 'F');
+    
+    pdf.restoreGraphicsState();
+}
 
     verificarEspacio(pdf, yPos, espacioNecesario) {
         const altoPagina = pdf.internal.pageSize.getHeight();
         const espacioDisponible = altoPagina - yPos - 30;
-        return espacioDisponible >= espacioNecesario;
+        
+        if (espacioDisponible < espacioNecesario) {
+            this.totalPaginas = pdf.internal.getNumberOfPages();
+            return false;
+        }
+        return true;
     }
 
     async mostrarOpcionesDescarga(pdf, nombreArchivo) {
         const result = await Swal.fire({
             title: 'Reporte Generado',
-            html: `<div style="text-align: center;"><i class="fas fa-file-pdf" style="font-size: 48px; color: #c0392b; margin-bottom: 16px;"></i><p style="color: #333; margin: 10px 0;">El reporte se ha generado correctamente.</p></div>`,
+            html: `<div style="text-align: center;"><i class="fas fa-file-pdf" style="font-size: 48px; color: #c0392b; margin-bottom: 16px;"></i></div>`,
             icon: 'success',
             showCancelButton: true,
             confirmButtonText: 'DESCARGAR',
@@ -544,7 +691,7 @@ export class PDFBaseGenerator {
             showDenyButton: true,
             denyButtonText: 'VISUALIZAR',
             confirmButtonColor: '#1a3b5d',
-            denyButtonColor: '#c9a03d',
+            denyButtonColor: '#d70000',
             cancelButtonColor: '#666'
         });
         if (result.isConfirmed) {
