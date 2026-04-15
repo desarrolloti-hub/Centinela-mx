@@ -99,7 +99,7 @@
         }
 
         _obtenerUrlRedireccion() {
-            if (this.userRole === 'administrador' || this.userRole === 'master') {
+            if (this.userRole === 'administrador') {
                 return '/usuarios/administrador/panelControl/panelControl.html';
             }
             return '/usuarios/colaboradores/panelControl/panelControl.html';
