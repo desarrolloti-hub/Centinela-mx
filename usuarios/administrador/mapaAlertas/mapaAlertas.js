@@ -86,6 +86,280 @@ let subcategoriasCache = [];
 let usuariosCache = [];
 let authToken = null;
 
+// Variables para capa de estados (agregar después de authToken)
+let capaEstados = null;
+let estadoActualResaltado = null;
+let contornoActivo = null;
+let capaEstadosCargada = false;
+let tileLayerOriginal = null;  // Esta ya la tienes, asegúrate que esté
+
+
+
+// =============================================
+// FUNCIONES PARA CAPA DE ESTADOS Y MAPA OSCURO
+// =============================================
+
+// Cargar capa de límites de estados de México
+async function cargarCapaEstados() {
+    if (capaEstadosCargada) return;
+    
+    try {
+        console.log('Cargando límites estatales de México...');
+        
+        // Usar GeoJSON de México desde un CDN confiable
+        const url = 'https://raw.githubusercontent.com/angelnmara/geojson/master/mexicoHigh.json';
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        capaEstados = L.geoJSON(data, {
+            style: {
+                color: '#00cfff',      // Color del borde azul cian
+                weight: 1.5,           // Grosor del borde
+                opacity: 0.6,          // Opacidad del borde
+                fillOpacity: 0,        // Sin relleno
+                className: 'estado-border'
+            },
+            onEachFeature: function(feature, layer) {
+                const nombreEstado = feature.properties?.name || 
+                                    feature.properties?.NOM_ENT || 
+                                    feature.properties?.nombre ||
+                                    'Desconocido';
+                layer.bindTooltip(nombreEstado, {
+                    sticky: true,
+                    className: 'estado-tooltip'
+                });
+            }
+        });
+        
+        capaEstadosCargada = true;
+        console.log('✅ Límites estatales cargados correctamente');
+        
+    } catch (error) {
+        console.error('Error cargando GeoJSON de estados:', error);
+        // Fallback con otra fuente
+        cargarCapaEstadosFallback();
+    }
+}
+
+// Fallback con otra fuente de datos
+async function cargarCapaEstadosFallback() {
+    try {
+        const url = 'https://cdn.jsdelivr.net/npm/@mexico/geojson@1.0.0/estados.json';
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        capaEstados = L.geoJSON(data, {
+            style: {
+                color: '#00cfff',
+                weight: 1.5,
+                opacity: 0.6,
+                fillOpacity: 0
+            },
+            onEachFeature: function(feature, layer) {
+                const nombreEstado = feature.properties?.nombre || 
+                                    feature.properties?.NOM_ENT || 
+                                    'Estado';
+                layer.bindTooltip(nombreEstado, { sticky: true });
+            }
+        });
+        
+        capaEstadosCargada = true;
+        console.log('✅ Límites estatales cargados (fallback)');
+    } catch (error) {
+        console.error('❌ Error también en fallback:', error);
+    }
+}
+
+// Resaltar estado por coordenadas
+async function resaltarEstadoPorCoordenadas(lat, lng) {
+    if (!capaEstadosCargada || !capaEstados) {
+        await cargarCapaEstados();
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    if (!capaEstados) return null;
+    
+    if (contornoActivo) {
+        capaEstados.resetStyle(contornoActivo);
+        contornoActivo = null;
+    }
+    
+    let estadoEncontrado = null;
+    
+    capaEstados.eachLayer(layer => {
+        if (layer.getBounds && layer.getBounds().contains([lat, lng])) {
+            estadoEncontrado = layer;
+        }
+    });
+    
+    if (estadoEncontrado) {
+        estadoEncontrado.setStyle({
+            color: '#ff4444',
+            weight: 4,
+            opacity: 1,
+            fillOpacity: 0.05,
+            fillColor: '#ff4444'
+        });
+        
+        if (estadoEncontrado.bringToFront) {
+            estadoEncontrado.bringToFront();
+        }
+        
+        contornoActivo = estadoEncontrado;
+        return estadoEncontrado;
+    }
+    
+    return null;
+}
+
+// Resaltar estados con actividad (para heatmap)
+async function resaltarEstadosConActividad() {
+    if (!capaEstados || puntosHeatmap.length === 0) return;
+    
+    const actividadPorEstado = new Map();
+    
+    for (const punto of puntosHeatmap) {
+        let estadoEncontrado = null;
+        capaEstados.eachLayer(layer => {
+            if (layer.getBounds && layer.getBounds().contains([punto.lat, punto.lng])) {
+                estadoEncontrado = layer;
+            }
+        });
+        
+        if (estadoEncontrado) {
+            const key = estadoEncontrado;
+            actividadPorEstado.set(key, (actividadPorEstado.get(key) || 0) + punto.intensity);
+        }
+    }
+    
+    const maxActividad = Math.max(...Array.from(actividadPorEstado.values()), 1);
+    
+    actividadPorEstado.forEach((actividad, layer) => {
+        const intensidad = 0.3 + (actividad / maxActividad) * 0.7;
+        const rojo = 255;
+        const verde = Math.floor(68 + (1 - intensidad) * 187);
+        const azul = Math.floor(68 + (1 - intensidad) * 187);
+        
+        layer.setStyle({
+            color: `rgb(${rojo}, ${verde}, ${azul})`,
+            weight: 2 + intensidad * 3,
+            opacity: 0.7 + intensidad * 0.3,
+            fillOpacity: intensidad * 0.15,
+            fillColor: `rgb(${rojo}, ${verde}, ${azul})`
+        });
+    });
+}
+
+// Limpiar resaltado de estado
+function limpiarResaltadoEstado() {
+    if (contornoActivo && capaEstados) {
+        capaEstados.resetStyle(contornoActivo);
+        contornoActivo = null;
+    }
+}
+
+// Aplicar mapa oscuro CON LETRAS BLANCAS
+function aplicarMapaOscuro() {
+    if (!tileLayerOriginal) {
+        mapa.eachLayer(layer => {
+            if (layer instanceof L.TileLayer) {
+                tileLayerOriginal = layer;
+            }
+        });
+    }
+    
+    mapa.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+            mapa.removeLayer(layer);
+        }
+    });
+    
+    // Mapa oscuro con letras blancas
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" style="color:#fff;">OSM</a> &copy; <a href="https://carto.com/attributions" style="color:#fff;">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19,
+        minZoom: CONFIG.zoomMin
+    }).addTo(mapa);
+    
+    // CSS para forzar letras blancas
+    const styleId = 'map-dark-text-style';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .leaflet-tooltip {
+                background: rgba(0, 0, 0, 0.85) !important;
+                color: #ffffff !important;
+                border: 1px solid #00cfff !important;
+                font-weight: bold !important;
+                font-family: 'Orbitron', monospace !important;
+            }
+            .leaflet-control-attribution {
+                background: rgba(0, 0, 0, 0.7) !important;
+                color: #ffffff !important;
+            }
+            .leaflet-control-attribution a {
+                color: #00cfff !important;
+            }
+            .estado-tooltip {
+                background: rgba(0, 0, 0, 0.85) !important;
+                color: #ffffff !important;
+                font-weight: bold !important;
+                border: 1px solid #ff4444 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Restaurar mapa normal
+function restaurarMapaNormal() {
+    mapa.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+            mapa.removeLayer(layer);
+        }
+    });
+    
+    if (tileLayerOriginal) {
+        tileLayerOriginal.addTo(mapa);
+    } else {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap | Centinela-MX'
+        }).addTo(mapa);
+    }
+    
+    const styleElem = document.getElementById('map-dark-text-style');
+    if (styleElem) styleElem.remove();
+}
+
+// Ocultar todos los marcadores
+function ocultarTodosLosMarcadores() {
+    Object.keys(marcadores.sucursales).forEach(id => {
+        if (marcadores.sucursales[id] && mapa.hasLayer(marcadores.sucursales[id])) {
+            mapa.removeLayer(marcadores.sucursales[id]);
+        }
+    });
+}
+
+// Mostrar todos los marcadores
+function mostrarTodosLosMarcadores() {
+    Object.keys(marcadores.sucursales).forEach(id => {
+        const marcador = marcadores.sucursales[id];
+        if (marcador && !mapa.hasLayer(marcador)) {
+            if (filtros.regionId) {
+                const sucursal = sucursales.find(s => s.id === id);
+                if (sucursal && sucursal.regionId === filtros.regionId) {
+                    marcador.addTo(mapa);
+                }
+            } else {
+                marcador.addTo(mapa);
+            }
+        }
+    });
+}
+
 // =============================================
 // INICIALIZACIÓN
 // =============================================
@@ -417,6 +691,12 @@ function actualizarHeatmap() {
     }, 300);
 }
 
+// =============================================
+// TOGGLE HEATMAP - CON OCULTAR SUCURSALES Y MAPA OSCURO
+// =============================================
+// =============================================
+// TOGGLE HEATMAP - VERSIÓN COMPLETA CON ESTADOS
+// =============================================
 async function toggleHeatmap() {
     const btn = document.getElementById('btnHeatmap');
     if (!btn) return;
@@ -434,18 +714,30 @@ async function toggleHeatmap() {
                 toast: true,
                 position: 'top-end',
                 showConfirmButton: false,
-                timer: 3000,
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)'
+                timer: 3000
             });
             return;
         }
 
         try {
-            const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Cargando...</span>';
             btn.disabled = true;
             
+            // Cargar capa de estados
+            await cargarCapaEstados();
+            
+            // Ocultar sucursales
+            ocultarTodosLosMarcadores();
+            
+            // Cambiar a mapa oscuro con letras blancas
+            aplicarMapaOscuro();
+            
+            // Agregar capa de estados
+            if (capaEstados && !mapa.hasLayer(capaEstados)) {
+                capaEstados.addTo(mapa);
+            }
+            
+            // Crear y mostrar heatmap
             heatmapLayer = await crearHeatmapLayer();
             
             if (heatmapLayer && mapa) {
@@ -454,6 +746,9 @@ async function toggleHeatmap() {
                 btn.style.background = 'linear-gradient(135deg, #ff8844, #ff4444)';
                 btn.style.boxShadow = '0 0 15px rgba(255, 68, 68, 0.5)';
                 btn.innerHTML = '<i class="fas fa-fire"></i><span>Ocultar Calor</span>';
+                
+                // Resaltar estados con actividad
+                await resaltarEstadosConActividad();
                 
                 await registrarActivacionHeatmap(true, puntosHeatmap);
                 
@@ -464,13 +759,13 @@ async function toggleHeatmap() {
                     toast: true,
                     position: 'top-end',
                     showConfirmButton: false,
-                    timer: 2000,
-                    background: 'var(--color-bg-secondary)',
-                    color: 'var(--color-text-primary)'
+                    timer: 2000
                 });
             }
         } catch (error) {
             console.error('Error activando heatmap:', error);
+            mostrarTodosLosMarcadores();
+            restaurarMapaNormal();
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -483,6 +778,7 @@ async function toggleHeatmap() {
         }
 
     } else {
+        // Desactivar heatmap
         if (heatmapLayer && mapa && mapa.hasLayer(heatmapLayer)) {
             mapa.removeLayer(heatmapLayer);
         }
@@ -490,6 +786,15 @@ async function toggleHeatmap() {
         btn.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
         btn.style.boxShadow = 'none';
         btn.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
+        
+        // Quitar capa de estados
+        if (capaEstados && mapa.hasLayer(capaEstados)) {
+            mapa.removeLayer(capaEstados);
+        }
+        
+        limpiarResaltadoEstado();
+        mostrarTodosLosMarcadores();
+        restaurarMapaNormal();
 
         await registrarActivacionHeatmap(false, []);
 
@@ -499,12 +804,12 @@ async function toggleHeatmap() {
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
-            timer: 1500,
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)'
+            timer: 1500
         });
     }
 }
+
+
 
 // =============================================
 // FULLSCREEN
@@ -1556,13 +1861,46 @@ function cerrarDropdown() {
 // =============================================
 // CENTRAR MAPA
 // =============================================
+// =============================================
+// CENTRAR MAPA (modificado para heatmap)
+// =============================================
 function centrarMapa() {
     if (!mapa) return;
-    const todos = Object.values(marcadores.sucursales);
-    if (todos.length) {
-        mapa.fitBounds(L.featureGroup(todos).getBounds().pad(0.1));
+    
+    // Si el heatmap está activo, centrar en los puntos de calor
+    if (heatmapVisible && puntosHeatmap.length > 0) {
+        // Calcular el centro de los puntos de calor
+        let sumLat = 0, sumLng = 0;
+        puntosHeatmap.forEach(p => {
+            sumLat += p.lat;
+            sumLng += p.lng;
+        });
+        const centroLat = sumLat / puntosHeatmap.length;
+        const centroLng = sumLng / puntosHeatmap.length;
+        
+        // Encontrar los bounds de los puntos
+        let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+        puntosHeatmap.forEach(p => {
+            minLat = Math.min(minLat, p.lat);
+            maxLat = Math.max(maxLat, p.lat);
+            minLng = Math.min(minLng, p.lng);
+            maxLng = Math.max(maxLng, p.lng);
+        });
+        
+        if (isFinite(minLat) && isFinite(maxLat)) {
+            const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng]);
+            mapa.fitBounds(bounds.pad(0.2));
+        } else {
+            mapa.setView([centroLat, centroLng], CONFIG.zoom);
+        }
     } else {
-        mapa.setView(CONFIG.centro, CONFIG.zoom);
+        // Comportamiento normal: centrar en sucursales
+        const todos = Object.values(marcadores.sucursales);
+        if (todos.length) {
+            mapa.fitBounds(L.featureGroup(todos).getBounds().pad(0.1));
+        } else {
+            mapa.setView(CONFIG.centro, CONFIG.zoom);
+        }
     }
 }
 

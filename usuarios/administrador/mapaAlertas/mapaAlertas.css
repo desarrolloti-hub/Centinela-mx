@@ -1381,3 +1381,47 @@ body {
     bottom: 20px;
     z-index: 10000;
 }
+/* =============================================
+   ESTILOS PARA CONTORNOS DE ESTADOS
+   ============================================= */
+
+.estado-tooltip {
+    font-family: 'Orbitron', monospace !important;
+    font-size: 10px !important;
+    font-weight: bold !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    color: #ffffff !important;
+    border: 1px solid #00cfff !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    letter-spacing: 1px !important;
+}
+
+.estado-border {
+    transition: all 0.3s ease;
+}
+
+.estado-border:hover {
+    stroke-width: 3px !important;
+    stroke: #ff4444 !important;
+    cursor: pointer !important;
+}
+
+/* Asegurar texto blanco en popups del mapa */
+.leaflet-popup-content-wrapper {
+    background: rgba(0, 0, 0, 0.9) !important;
+    color: #ffffff !important;
+    border: 1px solid #00cfff !important;
+}
+
+.leaflet-popup-tip {
+    background: rgba(0, 0, 0, 0.9) !important;
+}
+
+.leaflet-popup-content {
+    color: #ffffff !important;
+}
+
+.leaflet-popup-content a {
+    color: #00cfff !important;
+}
