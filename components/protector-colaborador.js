@@ -18,6 +18,7 @@
         regiones: { nombreAmigable: 'Regiones', requierePermiso: true },
         incidencias: { nombreAmigable: 'Incidencias', requierePermiso: true },
         monitoreo: { nombreAmigable: 'Mapa de Alertas', requierePermiso: true },
+        loginMonitoreo: { nombreAmigable: 'Login Monitoreo', requierePermiso: true },
         usuarios: { nombreAmigable: 'Usuarios', requierePermiso: true },
         estadisticas: { nombreAmigable: 'Estadísticas', requierePermiso: true },
         tareas: { nombreAmigable: 'Tareas', requierePermiso: true },
@@ -293,6 +294,7 @@
                                 regiones: permiso.puedeAcceder('regiones') || false,
                                 incidencias: permiso.puedeAcceder('incidencias') || false,
                                 monitoreo: permiso.puedeAcceder('monitoreo') || false,
+                                loginMonitoreo: permiso.puedeAcceder('loginMonitoreo') || false,
                                 usuarios: permiso.puedeAcceder('usuarios') || false,
                                 estadisticas: permiso.puedeAcceder('estadisticas') || false,
                                 tareas: permiso.puedeAcceder('tareas') || false,
@@ -322,6 +324,7 @@
                 regiones: false,
                 incidencias: false,
                 monitoreo: false,
+                loginMonitoreo: false,
                 usuarios: false,
                 estadisticas: false,
                 tareas: false,
@@ -341,6 +344,7 @@
                 case 'regiones': return this.permisos.regiones === true;
                 case 'incidencias': return this.permisos.incidencias === true;
                 case 'monitoreo': return this.permisos.monitoreo === true;
+                case 'loginMonitoreo': return this.permisos.loginMonitoreo === true;
                 case 'usuarios': return this.permisos.usuarios === true;
                 case 'estadisticas': return this.permisos.estadisticas === true;
                 case 'tareas': return this.permisos.tareas === true;
