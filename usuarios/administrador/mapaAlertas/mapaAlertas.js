@@ -1,13 +1,13 @@
-// mapaAlertas.js - VERSIÓN COMPLETA CON MODAL FULLSCREEN, VISOR DE PDF, ID EN NOTIFICACIONES, PANEL CERRADO Y HEATMAP
-// CON REGISTRO DE BITÁCORA
+// mapaAlertas.js - VERSIÓN COMPLETA OPTIMIZADA
+// Con heatmap mejorado, fullscreen, canvas icons y rendimiento optimizado
 
 import { SucursalManager } from '/clases/sucursal.js';
 import { RegionManager } from '/clases/region.js';
 import { IncidenciaManager } from '/clases/incidencia.js';
 import { generadorIPH } from '/components/iph-generator.js';
 
-let historialManager = null; // ✅ NUEVO: Para registrar actividades
-let accesoVistaRegistrado = false; // ✅ NUEVO: Para evitar registros duplicados
+let historialManager = null;
+let accesoVistaRegistrado = false;
 
 // =============================================
 // CONFIGURACIÓN DEL MAPA
@@ -36,10 +36,10 @@ const CONFIG = {
         'bajo': { color: '#00C851', icono: 'fa-info-circle', texto: 'BAJO', peso: 1 }
     },
     heatmapConfig: {
-        radius: 25,
-        blur: 15,
+        radius: 20,
+        blur: 12,
         maxZoom: 17,
-        minOpacity: 0.3,
+        minOpacity: 0.4,
         gradient: {
             0.0: '#00C851',
             0.33: '#ffbb33',
@@ -71,10 +71,12 @@ let usuarioActual = null;
 let unsubscribeIncidencias = null;
 let isFirstSnapshot = true;
 
-// Variables para Heatmap
+// Variables para Heatmap (mejoradas)
 let heatmapLayer = null;
 let heatmapVisible = false;
 let puntosHeatmap = [];
+let heatmapCache = null;
+let heatmapDebounceTimer = null;
 
 // Cache de datos para el generador IPH
 let organizacionActual = null;
@@ -84,59 +86,81 @@ let subcategoriasCache = [];
 let usuariosCache = [];
 let authToken = null;
 
-// Variable para el modal de PDF
-let pdfModal = null;
-
 // =============================================
 // INICIALIZACIÓN
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Iniciando mapa con listener real, PDF y Heatmap...');
-
     try {
-        // ✅ NUEVO: Inicializar historialManager
         await inicializarHistorial();
-        
+
         if (!inicializarMapa()) return;
         await cargarUsuario();
         sucursalManager = new SucursalManager();
         regionManager = new RegionManager();
         incidenciaManager = new IncidenciaManager();
-        crearModalPDF();
+
         await cargarRegiones();
         await cargarSucursales();
         await cargarDatosParaPDF();
         await cargarRegionesEnSelector();
         await cargarRegionesEnLista();
         await iniciarListenerIncidenciasReales();
-        configurarEventos();
         configurarPaneles();
         configurarSelectorRegion();
-        agregarBotonHeatmap();
-        
-        // ✅ NUEVO: Registrar acceso al mapa de alertas
+        inicializarBotonesPanel();
+
         await registrarAccesoMapaAlertas();
-        
-        console.log('✅ Todo listo!');
 
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('Error:', error);
         mostrarError(error.message);
     }
 });
 
-// ✅ NUEVO: Inicializar historialManager
+// =============================================
+// INICIALIZAR BOTONES DEL PANEL (UNIFICADO)
+// =============================================
+function inicializarBotonesPanel() {
+    const controlPanel = document.querySelector('.control-panel');
+    if (!controlPanel) return;
+
+    // Limpiar botones existentes para evitar duplicados
+    const existingBtns = controlPanel.querySelectorAll('.control-btn');
+    existingBtns.forEach(btn => btn.remove());
+
+    // Crear botones en orden
+    const botones = [
+        { id: 'btnCentrarMapa', icon: 'fa-crosshairs', text: 'Centrar', onClick: centrarMapa },
+        { id: 'btnRefrescarRegiones', icon: 'fa-sync-alt', text: 'Actualizar', onClick: refrescarRegiones },
+        { id: 'btnHeatmap', icon: 'fa-fire', text: 'Mapa de Calor', onClick: toggleHeatmap, special: true },
+        { id: 'btnFullscreen', icon: 'fa-expand', text: 'Pantalla Completa', onClick: toggleFullscreen }
+    ];
+
+    botones.forEach(btn => {
+        const button = document.createElement('button');
+        button.id = btn.id;
+        button.className = 'control-btn';
+        button.innerHTML = `<i class="fas ${btn.icon}"></i><span>${btn.text}</span>`;
+        
+        if (btn.special) {
+            button.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
+            button.style.border = 'none';
+        }
+        
+        button.addEventListener('click', btn.onClick);
+        controlPanel.appendChild(button);
+    });
+}
+
 async function inicializarHistorial() {
     try {
         const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
         historialManager = new HistorialUsuarioManager();
-        console.log('📋 HistorialManager inicializado para mapa de alertas');
     } catch (error) {
-        console.error('Error inicializando historialManager:', error);
+        // Error silencioso
     }
 }
 
-// ✅ NUEVO: Obtener usuario actual
 function obtenerUsuarioActual() {
     try {
         const adminInfo = localStorage.getItem('adminInfo');
@@ -171,15 +195,14 @@ function obtenerUsuarioActual() {
     }
 }
 
-// ✅ NUEVO: Registrar acceso al mapa de alertas
 async function registrarAccesoMapaAlertas() {
     if (!historialManager) return;
     if (accesoVistaRegistrado) return;
-    
+
     try {
         const usuario = obtenerUsuarioActual();
         if (!usuario) return;
-        
+
         await historialManager.registrarActividad({
             usuario: usuario,
             tipo: 'leer',
@@ -194,22 +217,20 @@ async function registrarAccesoMapaAlertas() {
             }
         });
         accesoVistaRegistrado = true;
-        console.log('✅ Acceso al mapa de alertas registrado en bitácora');
     } catch (error) {
         console.error('Error registrando acceso al mapa:', error);
     }
 }
 
-// ✅ NUEVO: Registrar visualización de incidencia en mapa
 async function registrarVisualizacionIncidencia(incidencia, sucursal) {
     if (!historialManager) return;
-    
+
     try {
         const usuario = obtenerUsuarioActual();
         if (!usuario) return;
-        
+
         const nivel = CONFIG.nivelesRiesgo[incidencia.nivelRiesgo] || CONFIG.nivelesRiesgo.bajo;
-        
+
         await historialManager.registrarActividad({
             usuario: usuario,
             tipo: 'leer',
@@ -227,20 +248,18 @@ async function registrarVisualizacionIncidencia(incidencia, sucursal) {
                 fecha: incidencia.fecha
             }
         });
-        console.log(`✅ Visualización de incidencia "${incidencia.id}" en mapa registrada en bitácora`);
     } catch (error) {
         console.error('Error registrando visualización de incidencia:', error);
     }
 }
 
-// ✅ NUEVO: Registrar generación de PDF desde mapa
 async function registrarGeneracionPDF(incidenciaId, tipo, incidencia) {
     if (!historialManager) return;
-    
+
     try {
         const usuario = obtenerUsuarioActual();
         if (!usuario) return;
-        
+
         await historialManager.registrarActividad({
             usuario: usuario,
             tipo: 'leer',
@@ -255,20 +274,18 @@ async function registrarGeneracionPDF(incidenciaId, tipo, incidencia) {
                 fecha: new Date().toISOString()
             }
         });
-        console.log(`✅ Generación de PDF para incidencia "${incidenciaId}" registrada en bitácora`);
     } catch (error) {
         console.error('Error registrando generación de PDF:', error);
     }
 }
 
-// ✅ NUEVO: Registrar activación de heatmap
 async function registrarActivacionHeatmap(activado, puntos) {
     if (!historialManager) return;
-    
+
     try {
         const usuario = obtenerUsuarioActual();
         if (!usuario) return;
-        
+
         await historialManager.registrarActividad({
             usuario: usuario,
             tipo: 'leer',
@@ -280,20 +297,18 @@ async function registrarActivacionHeatmap(activado, puntos) {
                 fecha: new Date().toISOString()
             }
         });
-        console.log(`✅ ${activado ? 'Activación' : 'Desactivación'} de heatmap registrada en bitácora`);
     } catch (error) {
         console.error('Error registrando heatmap:', error);
     }
 }
 
-// ✅ NUEVO: Registrar filtro por región
 async function registrarFiltroRegion(regionId, regionNombre, sucursalesMostradas) {
     if (!historialManager) return;
-    
+
     try {
         const usuario = obtenerUsuarioActual();
         if (!usuario) return;
-        
+
         await historialManager.registrarActividad({
             usuario: usuario,
             tipo: 'leer',
@@ -306,104 +321,111 @@ async function registrarFiltroRegion(regionId, regionNombre, sucursalesMostradas
                 fechaFiltro: new Date().toISOString()
             }
         });
-        console.log(`✅ Filtro por región "${regionNombre}" registrado en bitácora`);
     } catch (error) {
         console.error('Error registrando filtro por región:', error);
     }
 }
 
 // =============================================
-// AGREGAR BOTÓN DE HEATMAP AL PANEL DE CONTROL
+// HEATMAP MEJORADO - GENERAR PUNTOS CON CACHÉ
 // =============================================
-function agregarBotonHeatmap() {
-    const controlPanel = document.querySelector('.control-panel');
-    if (!controlPanel) return;
-    
-    // Verificar si ya existe
-    if (document.getElementById('btnHeatmap')) return;
-    
-    const btnHeatmap = document.createElement('button');
-    btnHeatmap.id = 'btnHeatmap';
-    btnHeatmap.className = 'control-btn';
-    btnHeatmap.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
-    btnHeatmap.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
-    btnHeatmap.style.border = 'none';
-    btnHeatmap.onclick = toggleHeatmap;
-    
-    controlPanel.appendChild(btnHeatmap);
-    console.log('✅ Botón de Heatmap agregado');
-}
+function generarPuntosHeatmap(forceUpdate = false) {
+    if (heatmapCache && !forceUpdate && heatmapVisible) {
+        puntosHeatmap = heatmapCache;
+        return;
+    }
 
-// =============================================
-// GENERAR PUNTOS PARA HEATMAP
-// =============================================
-function generarPuntosHeatmap() {
-    puntosHeatmap = [];
+    const nuevosPuntos = [];
+    const ahora = new Date();
     
     incidencias.forEach(inc => {
         const sucursal = sucursalesMap.get(inc.sucursalId);
         if (sucursal && sucursal.latitud && sucursal.longitud) {
-            const peso = CONFIG.nivelesRiesgo[inc.nivelRiesgo]?.peso || 1;
-            // Aumentar peso para incidencias recientes (últimas 24h)
-            let pesoFinal = peso;
+            const nivel = CONFIG.nivelesRiesgo[inc.nivelRiesgo];
+            let intensidad = nivel?.peso || 1;
+            
             const fechaInc = new Date(inc.fecha);
-            const ahora = new Date();
             const horasDiff = (ahora - fechaInc) / (1000 * 60 * 60);
-            if (horasDiff < 24) {
-                pesoFinal = peso * 1.5; // Incidencias recientes tienen más peso
+            
+            if (horasDiff < 1) {
+                intensidad *= 2.0;
+            } else if (horasDiff < 6) {
+                intensidad *= 1.5;
+            } else if (horasDiff < 24) {
+                intensidad *= 1.2;
+            } else if (horasDiff > 72) {
+                intensidad *= 0.7;
             }
             
-            puntosHeatmap.push({
+            if (inc.estado === 'pendiente') {
+                intensidad *= 1.3;
+            }
+            
+            nuevosPuntos.push({
                 lat: parseFloat(sucursal.latitud),
                 lng: parseFloat(sucursal.longitud),
-                intensity: pesoFinal
+                intensity: Math.min(intensidad, 5)
             });
         }
     });
     
-    console.log(`🔥 Generados ${puntosHeatmap.length} puntos para heatmap`);
+    puntosHeatmap = nuevosPuntos;
+    heatmapCache = [...nuevosPuntos];
 }
 
-// =============================================
-// CREAR CAPA DE HEATMAP
-// =============================================
 function crearHeatmapLayer() {
-    if (typeof L.heatLayer === 'undefined') {
-        console.warn('⚠️ Leaflet.heat no está cargado, cargando...');
-        // Cargar la librería Leaflet.heat dinámicamente
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js';
-            script.onload = () => {
-                console.log('✅ Leaflet.heat cargado');
-                const layer = L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
-                resolve(layer);
-            };
-            script.onerror = () => {
-                console.error('❌ Error cargando Leaflet.heat');
-                reject();
-            };
-            document.head.appendChild(script);
-        });
-    }
-    
-    return L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
-}
-
-// =============================================
-// ALTERNAR VISIBILIDAD DEL HEATMAP
-// =============================================
-async function toggleHeatmap() {
-    const btn = document.getElementById('btnHeatmap');
-    
-    if (!heatmapVisible) {
-        // Activar heatmap
-        console.log('🔥 Activando mapa de calor...');
-        
-        if (puntosHeatmap.length === 0) {
-            generarPuntosHeatmap();
+    return new Promise((resolve, reject) => {
+        if (typeof L.heatLayer !== 'undefined') {
+            resolve(L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig));
+            return;
         }
         
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js';
+        script.onload = () => {
+            resolve(L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig));
+        };
+        script.onerror = () => {
+            reject(new Error('No se pudo cargar la librería de heatmap'));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+function actualizarHeatmap() {
+    if (!heatmapVisible) return;
+    
+    if (heatmapDebounceTimer) clearTimeout(heatmapDebounceTimer);
+    
+    heatmapDebounceTimer = setTimeout(async () => {
+        generarPuntosHeatmap(true);
+        
+        if (heatmapLayer && mapa && mapa.hasLayer(heatmapLayer)) {
+            mapa.removeLayer(heatmapLayer);
+        }
+        
+        try {
+            heatmapLayer = await crearHeatmapLayer();
+            if (heatmapLayer && mapa && heatmapVisible) {
+                heatmapLayer.addTo(mapa);
+            }
+        } catch (error) {
+            console.error('Error actualizando heatmap:', error);
+        }
+        
+        heatmapDebounceTimer = null;
+    }, 300);
+}
+
+async function toggleHeatmap() {
+    const btn = document.getElementById('btnHeatmap');
+    if (!btn) return;
+
+    if (!heatmapVisible) {
+        if (puntosHeatmap.length === 0) {
+            generarPuntosHeatmap(true);
+        }
+
         if (puntosHeatmap.length === 0) {
             Swal.fire({
                 icon: 'info',
@@ -418,26 +440,27 @@ async function toggleHeatmap() {
             });
             return;
         }
-        
+
         try {
-            if (!heatmapLayer) {
-                heatmapLayer = await crearHeatmapLayer();
-            }
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Cargando...</span>';
+            btn.disabled = true;
             
-            if (heatmapLayer) {
+            heatmapLayer = await crearHeatmapLayer();
+            
+            if (heatmapLayer && mapa) {
                 heatmapLayer.addTo(mapa);
                 heatmapVisible = true;
                 btn.style.background = 'linear-gradient(135deg, #ff8844, #ff4444)';
                 btn.style.boxShadow = '0 0 15px rgba(255, 68, 68, 0.5)';
                 btn.innerHTML = '<i class="fas fa-fire"></i><span>Ocultar Calor</span>';
                 
-                // ✅ NUEVO: Registrar activación de heatmap
                 await registrarActivacionHeatmap(true, puntosHeatmap);
                 
                 Swal.fire({
                     icon: 'success',
                     title: 'Mapa de Calor Activado',
-                    text: `Mostrando ${puntosHeatmap.length} zonas de calor`,
+                    text: `Mostrando ${puntosHeatmap.length} zonas con intensidad`,
                     toast: true,
                     position: 'top-end',
                     showConfirmButton: false,
@@ -455,21 +478,21 @@ async function toggleHeatmap() {
                 background: 'var(--color-bg-secondary)',
                 color: 'var(--color-text-primary)'
             });
+        } finally {
+            btn.disabled = false;
         }
-        
+
     } else {
-        // Desactivar heatmap
-        if (heatmapLayer && mapa.hasLayer(heatmapLayer)) {
+        if (heatmapLayer && mapa && mapa.hasLayer(heatmapLayer)) {
             mapa.removeLayer(heatmapLayer);
         }
         heatmapVisible = false;
         btn.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
         btn.style.boxShadow = 'none';
         btn.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
-        
-        // ✅ NUEVO: Registrar desactivación de heatmap
+
         await registrarActivacionHeatmap(false, []);
-        
+
         Swal.fire({
             icon: 'info',
             title: 'Mapa de Calor Oculto',
@@ -484,201 +507,116 @@ async function toggleHeatmap() {
 }
 
 // =============================================
-// ACTUALIZAR HEATMAP CUANDO CAMBIAN INCIDENCIAS
+// FULLSCREEN
 // =============================================
-function actualizarHeatmap() {
-    if (!heatmapVisible) return;
+async function toggleFullscreen() {
+    const mapContainer = document.querySelector('.map-fullscreen');
+    const btn = document.getElementById('btnFullscreen');
+    const icon = btn?.querySelector('i');
+    const span = btn?.querySelector('span');
     
-    console.log('🔄 Actualizando heatmap...');
-    generarPuntosHeatmap();
+    if (!mapContainer) return;
     
-    if (heatmapLayer && mapa.hasLayer(heatmapLayer)) {
-        mapa.removeLayer(heatmapLayer);
-        // Recrear layer con nuevos puntos
-        if (typeof L.heatLayer !== 'undefined') {
-            heatmapLayer = L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig);
-            heatmapLayer.addTo(mapa);
-        }
-    }
-}
-
-// =============================================
-// CREAR MODAL PARA VISUALIZAR PDF CON ID
-// =============================================
-function crearModalPDF() {
-    const existingModal = document.getElementById('pdfFullscreenModal');
-    if (existingModal) existingModal.remove();
-    
-    pdfModal = document.createElement('div');
-    pdfModal.id = 'pdfFullscreenModal';
-    pdfModal.className = 'pdf-fullscreen-modal';
-    pdfModal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.95);
-        z-index: 9999;
-        display: none;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        backdrop-filter: blur(5px);
-    `;
-    
-    pdfModal.innerHTML = `
-        <div class="pdf-modal-header" style="
-            width: 100%;
-            background: linear-gradient(135deg, #1a1a2e, #0f0f1a);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(0, 207, 255, 0.3);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        ">
-            <div class="pdf-modal-title" style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-file-pdf" style="color: #c0392b; font-size: 24px;"></i>
-                <span style="color: white; font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: bold;" id="pdfModalTitle">Visor de PDF</span>
-            </div>
-            <div class="pdf-modal-actions" style="display: flex; gap: 15px;">
-                <button id="btnDescargarPDF" style="
-                    background: linear-gradient(135deg, #2c3e50, #1a2632);
-                    border: 1px solid #00cfff;
-                    color: white;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-family: 'Rajdhani', sans-serif;
-                    font-weight: bold;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                    <i class="fas fa-download"></i> Descargar
-                </button>
-                <button id="btnCerrarPDF" style="
-                    background: linear-gradient(135deg, #c0392b, #a93226);
-                    border: none;
-                    color: white;
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    cursor: pointer;
-                    font-size: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-        <div class="pdf-modal-content" style="
-            flex: 1;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: auto;
-            padding: 20px;
-        ">
-            <iframe id="pdfViewer" style="
-                width: 100%;
-                height: 100%;
-                border: none;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            "></iframe>
-        </div>
-    `;
-    
-    document.body.appendChild(pdfModal);
-    
-    const btnCerrar = document.getElementById('btnCerrarPDF');
-    const btnDescargar = document.getElementById('btnDescargarPDF');
-    
-    if (btnCerrar) {
-        btnCerrar.addEventListener('click', cerrarModalPDF);
-    }
-    
-    if (btnDescargar) {
-        btnDescargar.addEventListener('click', () => {
-            const iframe = document.getElementById('pdfViewer');
-            const pdfUrl = iframe.src;
-            if (pdfUrl && pdfUrl !== 'about:blank') {
-                const a = document.createElement('a');
-                a.href = pdfUrl;
-                a.download = `INFORME_INCIDENCIA_${window.currentIncidenciaId || Date.now()}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+    try {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            const requestFullscreen = mapContainer.requestFullscreen || 
+                                     mapContainer.webkitRequestFullscreen || 
+                                     mapContainer.mozRequestFullScreen || 
+                                     mapContainer.msRequestFullscreen;
+            
+            if (requestFullscreen) {
+                await requestFullscreen.call(mapContainer);
                 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Descarga iniciada',
-                    text: 'El PDF se está descargando',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2000,
-                    background: 'var(--color-bg-secondary)',
-                    color: 'var(--color-text-primary)'
-                });
+                if (icon) icon.className = 'fas fa-compress';
+                if (span) span.textContent = 'Salir Pantalla';
+                
+                setTimeout(() => {
+                    if (mapa) mapa.invalidateSize();
+                }, 100);
+                
+                if (historialManager) {
+                    const usuario = obtenerUsuarioActual();
+                    if (usuario) {
+                        await historialManager.registrarActividad({
+                            usuario: usuario,
+                            tipo: 'leer',
+                            modulo: 'mapa',
+                            descripcion: 'Activó pantalla completa en el mapa',
+                            detalles: { accion: 'fullscreen_activado' }
+                        });
+                    }
+                }
             }
+        } else {
+            const exitFullscreen = document.exitFullscreen || 
+                                  document.webkitExitFullscreen || 
+                                  document.mozCancelFullScreen || 
+                                  document.msExitFullscreen;
+            
+            if (exitFullscreen) {
+                await exitFullscreen.call(document);
+                
+                if (icon) icon.className = 'fas fa-expand';
+                if (span) span.textContent = 'Pantalla Completa';
+                
+                setTimeout(() => {
+                    if (mapa) mapa.invalidateSize();
+                }, 100);
+                
+                if (historialManager) {
+                    const usuario = obtenerUsuarioActual();
+                    if (usuario) {
+                        await historialManager.registrarActividad({
+                            usuario: usuario,
+                            tipo: 'leer',
+                            modulo: 'mapa',
+                            descripcion: 'Desactivó pantalla completa en el mapa',
+                            detalles: { accion: 'fullscreen_desactivado' }
+                        });
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error al cambiar pantalla completa:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo cambiar a pantalla completa',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            background: 'var(--color-bg-secondary)',
+            color: 'var(--color-text-primary)'
         });
     }
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && pdfModal && pdfModal.style.display === 'flex') {
-            cerrarModalPDF();
-        }
-    });
 }
 
-// =============================================
-// ABRIR MODAL PDF CON ID VISIBLE
-// =============================================
-function abrirModalPDF(pdfUrl, incidenciaId = null, titulo = 'Visor de PDF') {
-    if (!pdfModal) {
-        crearModalPDF();
-    }
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+
+function updateFullscreenButton() {
+    const btn = document.getElementById('btnFullscreen');
+    const icon = btn?.querySelector('i');
+    const span = btn?.querySelector('span');
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
     
-    const iframe = document.getElementById('pdfViewer');
-    const titleSpan = document.getElementById('pdfModalTitle');
-    
-    if (iframe) {
-        iframe.src = pdfUrl;
-    }
-    
-    window.currentIncidenciaId = incidenciaId;
-    
-    if (titleSpan) {
-        if (incidenciaId) {
-            titleSpan.innerHTML = `<i class="fas fa-file-pdf" style="color: #c0392b;"></i> INFORME INCIDENCIA - ID: ${incidenciaId}`;
+    if (btn) {
+        if (isFullscreen) {
+            if (icon) icon.className = 'fas fa-compress';
+            if (span) span.textContent = 'Salir Pantalla';
         } else {
-            titleSpan.innerHTML = `<i class="fas fa-file-pdf" style="color: #c0392b;"></i> ${titulo}`;
+            if (icon) icon.className = 'fas fa-expand';
+            if (span) span.textContent = 'Pantalla Completa';
         }
     }
     
-    pdfModal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-
-function cerrarModalPDF() {
-    if (pdfModal) {
-        pdfModal.style.display = 'none';
-        const iframe = document.getElementById('pdfViewer');
-        if (iframe) {
-            iframe.src = 'about:blank';
-        }
-        document.body.style.overflow = '';
-        window.currentIncidenciaId = null;
-    }
+    setTimeout(() => {
+        if (mapa) mapa.invalidateSize();
+    }, 100);
 }
 
 // =============================================
@@ -687,13 +625,13 @@ function cerrarModalPDF() {
 function inicializarMapa() {
     try {
         if (typeof L === 'undefined') {
-            console.error('❌ Leaflet no cargado');
+            console.error('Leaflet no cargado');
             return false;
         }
 
         const mapaElement = document.getElementById('mapa');
         if (!mapaElement) {
-            console.error('❌ Elemento #mapa no encontrado');
+            console.error('Elemento #mapa no encontrado');
             return false;
         }
 
@@ -713,11 +651,10 @@ function inicializarMapa() {
             attribution: '© OpenStreetMap | Centinela-MX'
         }).addTo(mapa);
 
-        console.log('✅ Mapa inicializado');
         return true;
 
     } catch (error) {
-        console.error('❌ Error mapa:', error);
+        console.error('Error mapa:', error);
         return false;
     }
 }
@@ -758,9 +695,8 @@ async function cargarUsuario() {
                 organizacionActual = { nombre: 'Mi Empresa', camelCase: 'pollosRay' };
             }
         }
-        console.log('👤 Usuario:', usuarioActual.organizacionCamelCase);
         await obtenerTokenAuth();
-        
+
     } catch (error) {
         console.error('Error cargando usuario:', error);
         usuarioActual = { organizacionCamelCase: 'pollosRay' };
@@ -785,7 +721,6 @@ async function obtenerTokenAuth() {
             }
         }
     } catch (error) {
-        console.warn('Error obteniendo token:', error);
         authToken = null;
     }
 }
@@ -799,30 +734,17 @@ async function cargarDatosParaPDF() {
         if (data?.length) {
             sucursalesCache = data;
         }
-        
+
         try {
             const { CategoriaManager } = await import('/clases/categoria.js');
             const categoriaManager = new CategoriaManager();
             categoriasCache = await categoriaManager.obtenerTodasCategorias();
         } catch (error) {
-            console.warn('Error cargando categorías:', error);
             categoriasCache = [];
         }
-        
-        try {
-            const modulo = await import('/clases/subcategoria.js').catch(() => null);
-            if (modulo) {
-                const SubcategoriaManager = modulo.SubcategoriaManager || modulo.default;
-                if (SubcategoriaManager) {
-                    const subcategoriaManager = new SubcategoriaManager();
-                    subcategoriasCache = await subcategoriaManager.obtenerSubcategoriasPorOrganizacion?.(usuarioActual.organizacionCamelCase) || [];
-                }
-            }
-        } catch (error) {
-            console.warn('Error cargando subcategorías:', error);
-            subcategoriasCache = [];
-        }
-        
+
+        subcategoriasCache = [];
+
         if (generadorIPH && typeof generadorIPH.configurar === 'function') {
             generadorIPH.configurar({
                 organizacionActual,
@@ -833,8 +755,7 @@ async function cargarDatosParaPDF() {
                 authToken
             });
         }
-        
-        console.log('✅ Datos para PDF cargados');
+
     } catch (error) {
         console.error('Error cargando datos para PDF:', error);
     }
@@ -849,9 +770,8 @@ async function cargarRegiones() {
             usuarioActual.organizacionCamelCase,
             usuarioActual
         );
-        console.log(`✅ Cargadas ${regiones.length} regiones`);
     } catch (error) {
-        console.error('❌ Error cargando regiones:', error);
+        console.error('Error cargando regiones:', error);
         regiones = [];
     }
 }
@@ -883,16 +803,65 @@ async function cargarSucursales() {
                     }
                 }
             }
-            console.log(`✅ Cargadas ${sucursales.length} sucursales`);
-        } else {
-            console.warn('⚠️ No hay sucursales en Firebase');
         }
 
         actualizarStats();
 
     } catch (error) {
-        console.error('❌ Error cargando sucursales:', error);
+        console.error('Error cargando sucursales:', error);
     }
+}
+
+// =============================================
+// ÍCONO CANVAS TECNOLÓGICO (HEXÁGONO)
+// =============================================
+function crearIconoChip(color, tamanio = 28) {
+    const canvas = document.createElement('canvas');
+    canvas.width = tamanio;
+    canvas.height = tamanio;
+    const ctx = canvas.getContext('2d');
+    
+    const centerX = tamanio / 2;
+    const centerY = tamanio / 2;
+    const radius = tamanio / 2 - 2;
+    
+    ctx.clearRect(0, 0, tamanio, tamanio);
+    
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
+    
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+        const angle = (i * 60 - 30) * Math.PI / 180;
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(centerX - 6, centerY);
+    ctx.lineTo(centerX + 6, centerY);
+    ctx.moveTo(centerX, centerY - 6);
+    ctx.lineTo(centerX, centerY + 6);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    const iconUrl = canvas.toDataURL();
+    return L.icon({
+        iconUrl: iconUrl,
+        iconSize: [tamanio, tamanio],
+        iconAnchor: [tamanio / 2, tamanio / 2],
+        popupAnchor: [0, -tamanio / 2]
+    });
 }
 
 // =============================================
@@ -909,13 +878,7 @@ function agregarSucursalAlMapa(sucursal, region) {
     sucursal.regionNombre = nombreRegion;
     sucursal.regionColor = colorRegion;
 
-    const icono = L.divIcon({
-        className: 'marcador-sucursal',
-        html: `<i class="fas fa-store" style="color: ${colorRegion}; font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32]
-    });
+    const iconoCanvas = crearIconoChip(colorRegion, 28);
 
     const direccion = [sucursal.direccion, sucursal.ciudad, sucursal.estado].filter(Boolean).join(', ') || 'Dirección no disponible';
     const telefono = sucursal.contacto ? sucursal.contacto.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3') : 'No disponible';
@@ -935,7 +898,7 @@ function agregarSucursalAlMapa(sucursal, region) {
         </div>
     `;
 
-    const marcador = L.marker([sucursal.latitud, sucursal.longitud], { icon: icono })
+    const marcador = L.marker([sucursal.latitud, sucursal.longitud], { icon: iconoCanvas })
         .bindPopup(popupContent)
         .addTo(mapa);
 
@@ -946,31 +909,21 @@ function agregarSucursalAlMapa(sucursal, region) {
 // INICIAR LISTENER DE INCIDENCIAS REALES
 // =============================================
 async function iniciarListenerIncidenciasReales() {
-    console.log('📡 Iniciando listener de incidencias REAL con onSnapshot...');
-
     try {
         const { collection, query, orderBy, limit, onSnapshot } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
         const { db } = await import('/config/firebase-config.js');
 
         const collectionName = `incidencias_${usuarioActual.organizacionCamelCase}`;
-        console.log(`📁 Escuchando colección: ${collectionName}`);
-
         const incidenciasRef = collection(db, collectionName);
-        const q = query(
-            incidenciasRef,
-            orderBy("fechaCreacion", "desc"),
-            limit(20)
-        );
+        const q = query(incidenciasRef, orderBy("fechaCreacion", "desc"), limit(50));
 
         unsubscribeIncidencias = onSnapshot(q, async (snapshot) => {
-            console.log(`📊 Cambio detectado: ${snapshot.docChanges().length} cambios`);
-
             const nuevasIncidencias = [];
-            
+
             snapshot.forEach(doc => {
                 const data = doc.data();
                 const fecha = data.fechaCreacion?.toDate?.() || new Date(data.fechaCreacion) || new Date();
-                
+
                 nuevasIncidencias.push({
                     id: doc.id,
                     sucursalId: data.sucursalId,
@@ -990,72 +943,60 @@ async function iniciarListenerIncidenciasReales() {
             const incidenciasAnteriores = [...incidencias];
             incidencias = nuevasIncidencias;
 
-            // Actualizar heatmap si está activo
             if (heatmapVisible) {
                 actualizarHeatmap();
+            } else {
+                generarPuntosHeatmap(true);
             }
 
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
-                    const data = change.doc.data();
-                    const fecha = data.fechaCreacion?.toDate?.() || new Date(data.fechaCreacion) || new Date();
-                    
-                    const nuevaIncidencia = {
-                        id: change.doc.id,
-                        sucursalId: data.sucursalId,
-                        titulo: data.detalles?.substring(0, 60) || 'Incidencia sin título',
-                        descripcion: data.detalles || '',
-                        nivelRiesgo: data.nivelRiesgo || 'bajo',
-                        estado: data.estado || 'pendiente',
-                        fecha: fecha
-                    };
-                    
                     const yaExiste = incidenciasAnteriores.some(inc => inc.id === change.doc.id);
-                    
                     if (!yaExiste && !isFirstSnapshot) {
-                        console.log('🔔 NUEVA INCIDENCIA DETECTADA:', nuevaIncidencia.id);
-                        
+                        const data = change.doc.data();
+                        const nuevaIncidencia = {
+                            id: change.doc.id,
+                            sucursalId: data.sucursalId,
+                            titulo: data.detalles?.substring(0, 60) || 'Incidencia sin título',
+                            descripcion: data.detalles || '',
+                            nivelRiesgo: data.nivelRiesgo || 'bajo',
+                            estado: data.estado || 'pendiente',
+                            fecha: data.fechaCreacion?.toDate?.() || new Date(data.fechaCreacion) || new Date()
+                        };
                         const sucursal = sucursalesMap.get(nuevaIncidencia.sucursalId);
                         if (sucursal) {
                             mostrarNotificacionIncidencia(nuevaIncidencia, sucursal);
-                            centrarEnSucursal(sucursal.id);
                         }
                     }
                 }
             });
-            
+
             if (isFirstSnapshot) {
                 isFirstSnapshot = false;
-                console.log('✅ Primera carga completada, listener activo');
-                // Generar puntos de heatmap iniciales
-                generarPuntosHeatmap();
+                generarPuntosHeatmap(true);
             }
-            
+
             actualizarListaUltimasIncidencias();
             actualizarStats();
-            
-            console.log(`✅ Total incidencias cargadas: ${incidencias.length}`);
-            
+
         }, (error) => {
-            console.error('❌ Error en listener de incidencias:', error);
+            console.error('Error en listener de incidencias:', error);
         });
-        
-        console.log('✅ Listener de incidencias REAL activo');
-        
+
     } catch (error) {
-        console.error('❌ Error iniciando listener:', error);
+        console.error('Error iniciando listener:', error);
     }
 }
 
 // =============================================
-// ACTUALIZAR LISTA DE ÚLTIMAS 5 INCIDENCIAS
+// ACTUALIZAR LISTA DE ÚLTIMAS INCIDENCIAS
 // =============================================
 function actualizarListaUltimasIncidencias() {
     const container = document.getElementById('listaIncidencias');
     if (!container) return;
-    
+
     const ultimasIncidencias = incidencias.slice(0, 5);
-    
+
     if (!ultimasIncidencias.length) {
         container.innerHTML = `
             <div class="no-incidencias">
@@ -1066,17 +1007,17 @@ function actualizarListaUltimasIncidencias() {
         if (badge) badge.textContent = '0';
         return;
     }
-    
+
     const badge = document.getElementById('incidenciasBadge');
     if (badge) badge.textContent = ultimasIncidencias.length;
-    
+
     container.innerHTML = ultimasIncidencias.map(inc => {
         const nivel = CONFIG.nivelesRiesgo[inc.nivelRiesgo] || CONFIG.nivelesRiesgo.bajo;
         const sucursal = sucursalesMap.get(inc.sucursalId);
         const sucursalNombre = sucursal?.nombre || 'Sucursal desconocida';
         const estadoTexto = inc.estado === 'finalizada' ? 'Finalizada' : 'Pendiente';
         const estadoClass = inc.estado === 'finalizada' ? 'finalizada' : 'pendiente';
-        
+
         return `
             <div class="incidencia-item ${inc.nivelRiesgo}">
                 <div class="incidencia-header">
@@ -1128,14 +1069,12 @@ function actualizarListaUltimasIncidencias() {
 }
 
 // =============================================
-// FUNCIÓN PARA VER PDF EN MODAL CON ID
+// FUNCIÓN PARA VER PDF
 // =============================================
-window.verPDFIncidencia = async function(incidenciaId) {
-    console.log('📄 Abriendo PDF para incidencia:', incidenciaId);
-    
+window.verPDFIncidencia = async function (incidenciaId) {
     try {
         const incidencia = incidencias.find(i => i.id === incidenciaId);
-        
+
         if (!incidencia) {
             Swal.fire({
                 icon: 'error',
@@ -1146,7 +1085,7 @@ window.verPDFIncidencia = async function(incidenciaId) {
             });
             return;
         }
-        
+
         Swal.fire({
             title: 'Generando PDF...',
             html: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div><p style="margin-top: 12px;">Por favor espere</p>',
@@ -1155,7 +1094,7 @@ window.verPDFIncidencia = async function(incidenciaId) {
             background: 'var(--color-bg-secondary)',
             color: 'var(--color-text-primary)'
         });
-        
+
         const incidenciaCompleta = {
             id: incidencia.id,
             sucursalId: incidencia.sucursalId,
@@ -1168,21 +1107,21 @@ window.verPDFIncidencia = async function(incidenciaId) {
             subcategoriaId: incidencia.subcategoriaId,
             imagenes: incidencia.imagenes || [],
             pdfUrl: incidencia.pdfUrl,
-            getNivelRiesgoTexto: function() {
+            getNivelRiesgoTexto: function () {
                 const niveles = { 'bajo': 'Bajo', 'medio': 'Medio', 'alto': 'Alto', 'critico': 'Crítico' };
                 return niveles[this.nivelRiesgo] || 'Bajo';
             },
-            getEstadoTexto: function() {
+            getEstadoTexto: function () {
                 const estados = { 'pendiente': 'Pendiente', 'finalizada': 'Finalizada' };
                 return estados[this.estado] || 'Pendiente';
             },
-            getSeguimientosArray: function() {
+            getSeguimientosArray: function () {
                 return [];
             }
         };
-        
+
         let pdfBlob = null;
-        
+
         if (incidencia.pdfUrl) {
             Swal.close();
             const result = await Swal.fire({
@@ -1190,56 +1129,58 @@ window.verPDFIncidencia = async function(incidenciaId) {
                 text: 'Esta incidencia ya tiene un PDF generado. ¿Qué deseas hacer?',
                 icon: 'question',
                 confirmButtonText: 'Ver PDF existente',
+                cancelButtonText: 'Generar nuevo',
+                showCancelButton: true,
                 background: 'var(--color-bg-secondary)',
                 color: 'var(--color-text-primary)'
             });
-            
+
             if (result.isConfirmed) {
-                // ✅ NUEVO: Registrar visualización de PDF existente
                 await registrarGeneracionPDF(incidenciaId, 'existente', incidencia);
-                abrirModalPDF(incidencia.pdfUrl, incidencia.id, `Incidencia ${incidencia.id}`);
+                window.open(incidencia.pdfUrl, '_blank');
                 return;
             }
         }
+
         try {
             pdfBlob = await generadorIPH.generarIPH(incidenciaCompleta, {
                 mostrarAlerta: false,
                 returnBlob: true
             });
-            
+
             if (pdfBlob) {
                 const url = URL.createObjectURL(pdfBlob);
-                // ✅ NUEVO: Registrar generación de PDF
                 await registrarGeneracionPDF(incidenciaId, 'nuevo', incidencia);
-                abrirModalPDF(url, incidencia.id, `Incidencia ${incidencia.id}`);
-                window.currentPDFBlob = pdfBlob;
-                window.currentPDFUrl = url;
+                window.open(url, '_blank');
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 60000);
                 Swal.close();
             } else {
                 throw new Error('No se pudo generar el PDF');
             }
-            
+
         } catch (genError) {
             console.error('Error generando PDF con IPH:', genError);
-            
+
             Swal.update({
                 html: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Generando PDF simple...</span></div><p style="margin-top: 12px;">Generando PDF básico...</p>'
             });
-            
+
             const pdfSimpleBlob = await generarPDFSimple(incidencia);
             if (pdfSimpleBlob) {
                 const url = URL.createObjectURL(pdfSimpleBlob);
-                // ✅ NUEVO: Registrar generación de PDF simple
                 await registrarGeneracionPDF(incidenciaId, 'simple', incidencia);
-                abrirModalPDF(url, incidencia.id, `Incidencia ${incidencia.id} (Básico)`);
-                window.currentPDFBlob = pdfSimpleBlob;
-                window.currentPDFUrl = url;
+                window.open(url, '_blank');
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 60000);
                 Swal.close();
             } else {
                 throw new Error('No se pudo generar el PDF');
             }
         }
-        
+
     } catch (error) {
         console.error('Error generando PDF:', error);
         Swal.close();
@@ -1253,21 +1194,18 @@ window.verPDFIncidencia = async function(incidenciaId) {
     }
 };
 
-// =============================================
-// GENERAR PDF SIMPLE (FALLBACK)
-// =============================================
 async function generarPDFSimple(incidencia) {
     try {
         const { jsPDF } = window.jspdf || await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
         const doc = new jsPDF();
-        
+
         const sucursal = sucursalesMap.get(incidencia.sucursalId);
         const nivel = CONFIG.nivelesRiesgo[incidencia.nivelRiesgo] || CONFIG.nivelesRiesgo.bajo;
-        
+
         doc.setFontSize(18);
         doc.setTextColor(0, 82, 155);
         doc.text('INFORME DE INCIDENCIA', 105, 20, { align: 'center' });
-        
+
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
         doc.text(`ID: ${incidencia.id}`, 20, 35);
@@ -1275,16 +1213,16 @@ async function generarPDFSimple(incidencia) {
         doc.text(`Nivel de Riesgo: ${nivel.texto}`, 20, 55);
         doc.text(`Estado: ${incidencia.estado === 'finalizada' ? 'Finalizada' : 'Pendiente'}`, 20, 65);
         doc.text(`Fecha: ${formatearFecha(incidencia.fecha)}`, 20, 75);
-        
+
         doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
         doc.text('Descripción:', 20, 95);
         doc.setFont(undefined, 'normal');
         const descripcionLines = doc.splitTextToSize(incidencia.descripcion || 'Sin descripción', 170);
         doc.text(descripcionLines, 20, 103);
-        
+
         return doc.output('blob');
-        
+
     } catch (error) {
         console.error('Error en PDF simple:', error);
         return null;
@@ -1292,20 +1230,16 @@ async function generarPDFSimple(incidencia) {
 }
 
 // =============================================
-// MOSTRAR NOTIFICACIÓN DE NUEVA INCIDENCIA CON ID
+// MOSTRAR NOTIFICACIÓN DE NUEVA INCIDENCIA
 // =============================================
 function mostrarNotificacionIncidencia(incidencia, sucursal) {
     const nivel = CONFIG.nivelesRiesgo[incidencia.nivelRiesgo] || CONFIG.nivelesRiesgo.bajo;
-    
-    console.log('🔔 Mostrando notificación para incidencia:', incidencia.id);
-    
+
     try {
         const audio = new Audio('/assets/sounds/notificacion.mp3');
-        audio.play().catch(e => console.log('Sonido no disponible'));
-    } catch (e) {
-        console.log('Error reproduciendo sonido');
-    }
-    
+        audio.play().catch(e => { });
+    } catch (e) { }
+
     Swal.fire({
         title: '🚨 NUEVA INCIDENCIA',
         html: `
@@ -1350,13 +1284,12 @@ function mostrarNotificacionIncidencia(incidencia, sucursal) {
     }).then(async (result) => {
         if (result.isConfirmed && sucursal) {
             centrarEnSucursal(sucursal.id);
-            // ✅ NUEVO: Registrar visualización de incidencia desde notificación
             await registrarVisualizacionIncidencia(incidencia, sucursal);
         } else if (result.dismiss === Swal.DismissReason.cancel) {
             window.verPDFIncidencia(incidencia.id);
         }
     });
-    
+
     Swal.fire({
         title: `${nivel.texto} - Nueva incidencia`,
         html: `<strong style="font-family: monospace; color: #00cfff;">📎 ID: ${incidencia.id}</strong><br>${incidencia.titulo}<br><small>📍 ${sucursal?.nombre || 'sucursal desconocida'}</small>`,
@@ -1379,31 +1312,10 @@ function centrarEnSucursal(sucursalId) {
     if (sucursal && marcadores.sucursales[sucursalId]) {
         mapa.setView([sucursal.latitud, sucursal.longitud], 16);
         marcadores.sucursales[sucursalId].openPopup();
-        
-        const marker = marcadores.sucursales[sucursalId];
-        const originalIcon = marker.getIcon();
-        
-        const highlightIcon = L.divIcon({
-            className: 'marcador-sucursal highlight',
-            html: `<i class="fas fa-store" style="color: ${sucursal.regionColor}; font-size: 2.5rem; filter: drop-shadow(0 0 15px ${sucursal.regionColor});"></i>`,
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-            popupAnchor: [0, -32]
-        });
-        
-        marker.setIcon(highlightIcon);
-        setTimeout(() => {
-            marker.setIcon(originalIcon);
-        }, 2000);
-        
-        console.log(`📍 Centrado en sucursal: ${sucursal.nombre}`);
-    } else {
-        console.warn(`⚠️ No se encontró la sucursal con ID: ${sucursalId}`);
     }
 }
 
 window.centrarEnSucursal = centrarEnSucursal;
-window.verPDFIncidencia = window.verPDFIncidencia;
 
 // =============================================
 // ACTUALIZAR ESTADÍSTICAS
@@ -1413,14 +1325,14 @@ function actualizarStats() {
     const altas = incidencias.filter(i => i.nivelRiesgo === 'alto').length;
     const medias = incidencias.filter(i => i.nivelRiesgo === 'medio').length;
     const bajas = incidencias.filter(i => i.nivelRiesgo === 'bajo').length;
-    
+
     const totalAltas = criticas + altas;
-    
+
     const altasMini = document.getElementById('statAltasMini');
     const mediasMini = document.getElementById('statMediasMini');
     const bajasMini = document.getElementById('statBajasMini');
     const sucursalesMini = document.getElementById('statSucursalesMini');
-    
+
     if (altasMini) altasMini.textContent = totalAltas;
     if (mediasMini) mediasMini.textContent = medias;
     if (bajasMini) bajasMini.textContent = bajas;
@@ -1433,19 +1345,19 @@ function actualizarStats() {
 async function cargarRegionesEnSelector() {
     const container = document.getElementById('regionList');
     if (!container) return;
-    
+
     if (!regiones.length) {
         container.innerHTML = '<div class="loading-regions">No hay regiones disponibles</div>';
         return;
     }
-    
+
     const sucursalesPorRegion = {};
     sucursales.forEach(s => {
         if (s.regionId) {
             sucursalesPorRegion[s.regionId] = (sucursalesPorRegion[s.regionId] || 0) + 1;
         }
     });
-    
+
     container.innerHTML = regiones.map(region => {
         const count = sucursalesPorRegion[region.id] || 0;
         return `
@@ -1456,7 +1368,7 @@ async function cargarRegionesEnSelector() {
             </div>
         `;
     }).join('');
-    
+
     document.querySelectorAll('.region-option').forEach(opt => {
         opt.addEventListener('click', () => {
             const regionId = opt.dataset.regionId;
@@ -1468,25 +1380,22 @@ async function cargarRegionesEnSelector() {
     });
 }
 
-// =============================================
-// CARGAR REGIONES EN LISTA LATERAL
-// =============================================
 async function cargarRegionesEnLista() {
     const container = document.getElementById('regionesList');
     if (!container) return;
-    
+
     if (!regiones.length) {
         container.innerHTML = '<div class="no-incidencias" style="padding: 15px;">No hay regiones</div>';
         return;
     }
-    
+
     const sucursalesPorRegion = {};
     sucursales.forEach(s => {
         if (s.regionId) {
             sucursalesPorRegion[s.regionId] = (sucursalesPorRegion[s.regionId] || 0) + 1;
         }
     });
-    
+
     container.innerHTML = regiones.map(region => {
         const count = sucursalesPorRegion[region.id] || 0;
         return `
@@ -1505,7 +1414,7 @@ async function cargarRegionesEnLista() {
 async function filtrarPorRegion(regionId, regionName, regionColor) {
     filtros.regionId = regionId;
     filtros.regionNombre = regionName;
-    
+
     const btn = document.getElementById('btnSeleccionarRegion');
     if (btn) {
         btn.innerHTML = `
@@ -1516,9 +1425,9 @@ async function filtrarPorRegion(regionId, regionName, regionColor) {
             <i class="fas fa-chevron-down"></i>
         `;
     }
-    
+
     mostrarBadgeRegionActiva(regionName, regionColor);
-    
+
     let sucursalesMostradas = 0;
     Object.keys(marcadores.sucursales).forEach(id => {
         const s = sucursales.find(x => x.id === id);
@@ -1535,15 +1444,14 @@ async function filtrarPorRegion(regionId, regionName, regionColor) {
             }
         }
     });
-    
-    // ✅ NUEVO: Registrar filtro por región
+
     await registrarFiltroRegion(regionId, regionName, sucursalesMostradas);
-    
+
     const sucursalesRegion = Object.values(marcadores.sucursales).filter((m, idx) => {
         const s = sucursales.find(x => x.id === Object.keys(marcadores.sucursales)[idx]);
         return s && s.regionId === regionId;
     });
-    
+
     if (sucursalesRegion.length > 0) {
         const grupo = L.featureGroup(sucursalesRegion);
         mapa.fitBounds(grupo.getBounds().pad(0.2));
@@ -1553,7 +1461,7 @@ async function filtrarPorRegion(regionId, regionName, regionColor) {
 function mostrarTodasLasSucursales() {
     filtros.regionId = null;
     filtros.regionNombre = null;
-    
+
     const btn = document.getElementById('btnSeleccionarRegion');
     if (btn) {
         btn.innerHTML = `
@@ -1562,15 +1470,15 @@ function mostrarTodasLasSucursales() {
             <i class="fas fa-chevron-down"></i>
         `;
     }
-    
+
     ocultarBadgeRegionActiva();
-    
+
     Object.keys(marcadores.sucursales).forEach(id => {
         if (!mapa.hasLayer(marcadores.sucursales[id])) {
             marcadores.sucursales[id].addTo(mapa);
         }
     });
-    
+
     const todos = Object.values(marcadores.sucursales);
     if (todos.length > 0) {
         const grupo = L.featureGroup(todos);
@@ -1597,7 +1505,7 @@ function mostrarBadgeRegionActiva(nombre, color) {
         </button>
     `;
     badge.style.display = 'flex';
-    
+
     const btnQuitar = document.getElementById('btnQuitarFiltroRegion');
     if (btnQuitar) {
         btnQuitar.addEventListener('click', mostrarTodasLasSucursales);
@@ -1609,14 +1517,11 @@ function ocultarBadgeRegionActiva() {
     if (badge) badge.style.display = 'none';
 }
 
-// =============================================
-// CONFIGURAR SELECTOR DE REGIÓN
-// =============================================
 function configurarSelectorRegion() {
     const btn = document.getElementById('btnSeleccionarRegion');
     const dropdown = document.getElementById('regionDropdown');
     const limpiarBtn = document.getElementById('limpiarFiltroRegion');
-    
+
     if (btn && dropdown) {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1624,7 +1529,7 @@ function configurarSelectorRegion() {
             btn.classList.toggle('active');
         });
     }
-    
+
     if (limpiarBtn) {
         limpiarBtn.addEventListener('click', () => {
             mostrarTodasLasSucursales();
@@ -1632,7 +1537,7 @@ function configurarSelectorRegion() {
             if (btn) btn.classList.remove('active');
         });
     }
-    
+
     document.addEventListener('click', (e) => {
         if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) {
             dropdown.classList.remove('show');
@@ -1653,7 +1558,7 @@ function cerrarDropdown() {
 // =============================================
 function centrarMapa() {
     if (!mapa) return;
-    const todos = [...Object.values(marcadores.sucursales)];
+    const todos = Object.values(marcadores.sucursales);
     if (todos.length) {
         mapa.fitBounds(L.featureGroup(todos).getBounds().pad(0.1));
     } else {
@@ -1672,20 +1577,20 @@ async function refrescarRegiones() {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Cargando...</span>';
             btn.disabled = true;
         }
-        
+
         regiones = await regionManager.getRegionesByOrganizacion(
             usuarioActual.organizacionCamelCase,
             usuarioActual
         );
-        
+
         await cargarRegionesEnLista();
         await cargarRegionesEnSelector();
-        
+
         if (btn) {
             btn.innerHTML = '<i class="fas fa-sync-alt"></i><span>Actualizar</span>';
             btn.disabled = false;
         }
-        
+
         Swal.fire({
             icon: 'success',
             title: 'Actualizado',
@@ -1695,7 +1600,7 @@ async function refrescarRegiones() {
             showConfirmButton: false,
             timer: 2000
         });
-        
+
     } catch (error) {
         console.error('Error:', error);
         const btn = document.getElementById('btnRefrescarRegiones');
@@ -1707,14 +1612,13 @@ async function refrescarRegiones() {
 }
 
 // =============================================
-// CONFIGURAR PANELES (PANEL DE INCIDENCIAS INICIA CERRADO)
+// CONFIGURAR PANELES
 // =============================================
 function configurarPaneles() {
-    // Panel de incidencias - INICIA CERRADO
     const incidenciasHeader = document.getElementById('toggleIncidencias');
     const incidenciasList = document.querySelector('.incidencias-list');
     const incidenciasChevron = document.getElementById('incidenciasChevron');
-    
+
     if (incidenciasHeader && incidenciasList && incidenciasChevron) {
         let incidenciasOpen = false;
         incidenciasHeader.addEventListener('click', () => {
@@ -1725,35 +1629,6 @@ function configurarPaneles() {
         incidenciasList.style.display = 'none';
         incidenciasChevron.className = 'fas fa-chevron-up';
     }
-    
-    // Panel de regiones - INICIA CERRADO
-    const regionsHeader = document.getElementById('toggleRegions');
-    const regionsPanel = document.getElementById('regionsPanel');
-    const regionsList = document.querySelector('.regions-list');
-    const regionsChevron = document.getElementById('regionsChevron');
-    
-    if (regionsHeader && regionsPanel && regionsList && regionsChevron) {
-        let regionsOpen = false;
-        regionsHeader.addEventListener('click', () => {
-            regionsOpen = !regionsOpen;
-            regionsList.style.display = regionsOpen ? 'block' : 'none';
-            regionsChevron.className = regionsOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
-            regionsPanel.style.transform = regionsOpen ? 'translateY(0)' : 'translateY(calc(100% - 45px))';
-        });
-        regionsList.style.display = 'none';
-        regionsPanel.style.transform = 'translateY(calc(100% - 45px))';
-    }
-}
-
-// =============================================
-// CONFIGURAR EVENTOS
-// =============================================
-function configurarEventos() {
-    const btnCentrar = document.getElementById('btnCentrarMapa');
-    if (btnCentrar) btnCentrar.addEventListener('click', centrarMapa);
-    
-    const btnRefrescar = document.getElementById('btnRefrescarRegiones');
-    if (btnRefrescar) btnRefrescar.addEventListener('click', refrescarRegiones);
 }
 
 // =============================================

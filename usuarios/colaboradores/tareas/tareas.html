@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Notas | Centinela</title>
+    <title>Tareas | Centinela-C5</title>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
@@ -18,23 +18,64 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- SEO Básico -->
-    <meta name="description" content="Gestión de notas - Sistema Centinela">
-    <meta name="author" content="Centinela-MX">
-    <link rel="canonical" href="https://centinela-mx.web.app/" />
+    <meta name="description"
+        content="Centinela es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords"
+        content="centinela, centinela, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="author" content="Centinela">
+    <link rel="canonical" href="https://centinela-c5.web.app/" />
 
-    <!-- Open Graph -->
+    <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://centinela-mx.web.app">
-    <meta property="og:title" content="Centinela-MX | Mis Notas">
-    <meta property="og:description" content="Gestiona tus notas y checklists">
-    <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
-    <meta property="og:site_name" content="Centinela-MX">
+    <meta property="og:url" content="https://centinela-c5.web.app">
+    <meta property="og:title" content="Centinela-C5 | Sistema Inteligente de Seguridad y Predicción">
+    <meta property="og:description"
+        content="Centinela-C5 es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:image" content="https://centinela-c5.web.app/assets/images/logo.png">
+    <meta property="og:image:width" content="500">
+    <meta property="og:image:height" content="500">
+    <meta property="og:image:alt" content="Vista previa oficial de Centinela-C5">
+    <meta property="og:image" content="https://centinela-c5.web.app/assets/images/logo.png">
+    <meta property="og:image:width" content="500">
+    <meta property="og:image:height" content="500">
+    <meta property="og:image:alt" content="Logo oficial de Centinela">
+    <meta property="og:site_name" content="Centinela">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Centinela-MX | Notas">
-    <meta name="twitter:description" content="Sistema de gestión de notas">
-    <meta name="twitter:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+    <meta name="twitter:url" content="https://centinela-c5.web.app">
+    <meta name="twitter:title" content="Centinela-C5 | Seguridad Inteligente">
+    <meta name="twitter:description"
+        content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
+    <meta name="twitter:image" content="https://centinela-c5.web.app/assets/images/logo.png">
+    <meta name="twitter:creator" content="">
+
+    <!-- Schema.org / JSON-LD -->
+    <script type="application/ld+json">
+    {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Centinela",
+    "operatingSystem": "Web",
+    "applicationCategory": "SecurityApplication",
+    "description": "Centinela es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
+    "url": "https://centinela-c5.web.app",
+    "image": "https://centinela-c5.web.app/assets/images/logo.png",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Centinela",
+        "logo": {
+        "@type": "ImageObject",
+        "url": "https://centinela-c5.web.app/assets/images/logo.png"
+        }
+    },
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "MXN"
+    }
+    }
+    </script>
 </head>
 
 <body>
@@ -47,12 +88,10 @@
             <div class="header-content">
                 <h1 class="main-title">
                     <i class="fas fa-sticky-note"></i>
-                    Mis Notas
+                    Tareas
                 </h1>
                 <div class="header-description-text">
-                    <i class="fas fa-quote-left"></i>
-                    Gestiona tus checklists y notas pendientes
-                    <i class="fas fa-quote-right"></i>
+                    Gestiona tus tareas pendientes
                 </div>
             </div>
         </div>
@@ -62,12 +101,12 @@
             <div class="action-buttons-group">
                 <button class="btn-action" id="btnCrearNota">
                     <i class="fas fa-plus"></i>
-                    Crear Nota
+                    Crear Tarea
                 </button>
             </div>
             <div class="search-box">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Buscar notas...">
+                <input type="text" id="searchInput" placeholder="Buscar tareas...">
             </div>
         </div>
 
@@ -85,7 +124,7 @@
         <!-- FORMULARIO INLINE DE CREACIÓN (se muestra al hacer clic en Crear Nota) -->
         <div class="formulario-creacion" id="formularioCreacion" style="display: none;">
             <div class="formulario-header">
-                <h3 id="formularioTitulo">Nueva Nota Personal</h3>
+                <h3 id="formularioTitulo">Nueva Tarea Personal</h3>
                 <button class="btn-cerrar-form" id="cerrarFormulario">
                     <i class="fas fa-times"></i>
                 </button>
@@ -94,7 +133,7 @@
             <div class="formulario-body">
                 <!-- SELECTOR DE TIPO DE NOTA (arriba del título) -->
                 <div class="tipo-selector-container">
-                    <label class="form-label">Tipo de nota</label>
+                    <label class="form-label">Tipo de tarea</label>
                     <div class="tipo-options">
                         <div class="tipo-option" data-tipo="general">
                             <i class="fas fa-globe"></i>
@@ -170,7 +209,7 @@
                     Cancelar
                 </button>
                 <button type="button" class="btn btn-success" id="guardarNota">
-                    <i class="fas fa-check"></i> Guardar Nota
+                    <i class="fas fa-check"></i> Guardar Tarea
                 </button>
             </div>
         </div>
@@ -181,15 +220,12 @@
             <div class="loading-state">
                 <div class="loading-content">
                     <div class="loading-spinner"></div>
-                    <h3>Cargando notas...</h3>
-                    <p>Obteniendo datos de Firebase</p>
+                    <h3>Cargando Tareas...</h3>
                 </div>
             </div>
         </div>
     </div>
-
     <br>
-
     <!-- Scripts -->
     <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
@@ -197,10 +233,7 @@
     <script src="/components/navbarColaborador.js"></script>
     <script src="/components/footerColaborador.js"></script>
     <script type="module" src="/usuarios/administrador/tareas/tareas.js"></script>
-
-    <!-- Protector de pagina -->
-    <!-- /usuarios/administrador/cualquier-pagina.html -->
-    <script src="/components/protector-colaborador.js" data-modulo="tareas"> </script>
+    <script src="/components/protector-colaborador.js" data-modulo="tareas"></script>
 </body>
 </body>
 

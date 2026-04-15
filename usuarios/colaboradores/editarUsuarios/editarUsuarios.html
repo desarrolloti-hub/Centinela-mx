@@ -22,7 +22,6 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
     <!-- SEO Básico -->
     <meta name="description"
         content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
@@ -91,10 +90,10 @@
     <br>
     <div class="page-header">
         <h1>
-            <i class="fas fa-users"></i> Crear Nuevo Colaborador
+            <i class="fas fa-users"></i> Editar Colaborador
         </h1>
         <div class="header-description">
-            Crea colaboradores de tu organización.
+            Actualiza la información del colaborador de tu organización.
         </div>
     </div>
 
@@ -184,22 +183,12 @@
                                 <div class="timestamp" id="lastUpdateTime">--:-- --</div>
                             </div>
                         </div>
-
-                        <div class="info-item">
-                            <div class="info-label">
-                                <i class="fas fa-sign-in-alt"></i> Último Login
-                            </div>
-                            <div class="info-value">
-                                <div id="lastLoginDate">--/--/----</div>
-                                <div class="timestamp" id="lastLoginTime">--:-- --</div>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
                 <!-- Botón volver -->
                 <footer class="back-btn-container">
-                    <a href="../usuarios/usuarios.html" class="back-btn">
+                    <a href="/usuarios/administrador/usuarios/usuarios.html" class="back-btn">
                         <i class="fas fa-arrow-left"></i> VOLVER A GESTIÓN
                     </a>
                 </footer>
@@ -225,6 +214,20 @@
                                     placeholder="Ingresa el nombre completo" required>
                             </div>
                         </div>
+                        
+                        <!-- CÓDIGO DEL COLABORADOR (EDITABLE) -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="codigoColaborador">
+                                <i class="fas fa-hashtag"></i> CÓDIGO DEL COLABORADOR <span style="font-weight: normal; font-size: 0.8rem;">(opcional)</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="text" id="codigoColaborador"
+                                    placeholder="Código de 3 dígitos (001-999) - Opcional" maxlength="3" pattern="[0-9]{3}">
+                            </div>
+                            <div class="field-hint">
+                                <i class="fas fa-info-circle"></i> Código único de 3 dígitos (001-999). Déjalo vacío si no quieres asignar código.
+                            </div>
+                        </div>
 
                         <!-- Correo electrónico (SOLO LECTURA) -->
                         <div class="form-field-group">
@@ -239,6 +242,20 @@
                                 </span>
                             </div>
                             <p class="field-info">No se puede modificar el correo</p>
+                        </div>
+
+                        <!-- ✅ TELÉFONO (EDITABLE) - CAMPO NUEVO FUERZA APARECER -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="telefono">
+                                <i class="fas fa-phone-alt"></i> TELÉFONO
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="tel" id="telefono" 
+                                    placeholder="Ej: 5512345678" inputmode="numeric" pattern="[0-9]+" maxlength="15">
+                            </div>
+                            <div class="field-hint">
+                                <i class="fas fa-info-circle"></i> Solo números, sin espacios ni guiones
+                            </div>
                         </div>
 
                         <!-- Organización (SOLO LECTURA) -->
@@ -256,7 +273,7 @@
                             <p class="field-info">Contacta al administrador principal</p>
                         </div>
 
-                        <!-- NUEVO: ÁREA (EDITABLE) -->
+                        <!-- ÁREA (EDITABLE) -->
                         <div class="form-field-group">
                             <label class="field-label" for="areaSelect">
                                 <i class="fas fa-building"></i> ÁREA / DEPARTAMENTO
@@ -268,7 +285,7 @@
                             </div>
                         </div>
 
-                        <!-- NUEVO: CARGO EN EL ÁREA (EDITABLE) -->
+                        <!-- CARGO EN EL ÁREA (EDITABLE) -->
                         <div class="form-field-group">
                             <label class="field-label" for="cargoEnAreaSelect">
                                 <i class="fas fa-user-tie"></i> CARGO EN EL ÁREA
@@ -277,6 +294,21 @@
                                 <select class="form-input-field" id="cargoEnAreaSelect" required>
                                     <option value="">Primero selecciona un área</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- SUCURSAL (SOLO SI EL ÁREA ES "SUCURSALES") -->
+                        <div class="form-field-group" id="sucursalContainer" style="display: none;">
+                            <label class="field-label" for="sucursalSelect">
+                                <i class="fas fa-store"></i> SUCURSAL
+                            </label>
+                            <div class="input-wrapper">
+                                <select class="form-input-field" id="sucursalSelect">
+                                    <option value="">Selecciona una sucursal (opcional)</option>
+                                </select>
+                            </div>
+                            <div class="field-hint" id="sucursalHint">
+                                <i class="fas fa-info-circle"></i> Opcional. Selecciona la sucursal a la que pertenecerá
                             </div>
                         </div>
 
@@ -299,50 +331,6 @@
                         </div>
                     </div>
 
-                    <!-- Permisos del sistema -->
-                    <section class="permissions-section">
-                        <h2 class="section-title">
-                            <i class="fas fa-shield-alt"></i> PERMISOS DEL SISTEMA
-                        </h2>
-
-                        <div class="permissions-grid">
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="dashboard">
-                                <span class="permission-label">Ver Dashboard</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="reports">
-                                <span class="permission-label">Generar Reportes</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="users">
-                                <span class="permission-label">Gestionar Usuarios</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="settings">
-                                <span class="permission-label">Configuración</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="analytics">
-                                <span class="permission-label">Analíticas</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="notifications">
-                                <span class="permission-label">Enviar Notificaciones</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="export">
-                                <span class="permission-label">Exportar Datos</span>
-                            </label>
-                            <label class="permission-checkbox">
-                                <input type="checkbox" name="permissions" value="admin">
-                                <span class="permission-label">Acceso Admin</span>
-                            </label>
-                        </div>
-                    </section>
-
-
-
                     <!-- Sección para cambiar contraseña -->
                     <div class="password-change-section">
                         <button type="button" class="btn-change-password" id="changePasswordBtn">
@@ -353,23 +341,21 @@
                         </p>
                     </div>
 
-
                     <!-- Acciones del formulario -->
                     <div class="form-actions">
                         <button type="button" class="action-btn save-btn" id="saveChangesBtn">
-                            <i class="fas fa-save"></i> GUARDAR CAMBIOS
+                            <i class="fas fa-save"></i> Guardar Cambios
                         </button>
                         <button type="button" class="action-btn cancel-btn" id="cancelBtn">
-                            <i class="fas fa-times"></i> CANCELAR
+                            <i class="fas fa-times"></i> Cancelar
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-
-    <!-- Scripts externos -->
-    <script type="module" src="/components/autenticador.js"></script>
+    <br>
+        <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script src="/components/navbarColaborador.js"></script>
     <script src="/components/footerColaborador.js"></script>
@@ -377,11 +363,7 @@
 
     <!-- Script principal - MÓDULO ES6 -->
     <script type="module" src="/usuarios/administrador/editarUsuarios/editarUsuarios.js"></script>
-
-    <!-- Protector de pagina -->
-    <!-- /usuarios/colaborador/incidencias/mis-incidencias.html -->
-    <script src="/components/protector-colaborador.js" data-modulo="usuarios">
-    </script>
+    <script src="/components/protector-colaborador.js" data-modulo="usuarios"></script>
 </body>
 
 </html>

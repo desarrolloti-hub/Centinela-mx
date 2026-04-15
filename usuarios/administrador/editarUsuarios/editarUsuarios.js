@@ -1,10 +1,13 @@
-// editUser.js - Editor de colaboradores (VERSIÓN DEPURACIÓN - CON SUCURSAL VISIBLE)
-// CON REGISTRO DE BITÁCORA
+// editUser.js - Editor de colaboradores (VERSIÓN CORREGIDA - SIN CAMPOS DE SUCURSAL)
+// El código de colaborador almacena el ID de la sucursal si el área es "sucursales"
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
 
 let historialManager = null;
 let sucursalManager = null;
+
+// ==================== VARIABLES GLOBALES ====================
+let pendingPhotoBase64 = null;
 
 document.addEventListener('DOMContentLoaded', async function () {
     try {
@@ -20,16 +23,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 async function inicializarManagers() {
     try {
         const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
-        historialManager = new HistorialUsuarioManager();
-        console.log('📋 HistorialManager inicializado para editar usuarios');
+        historialManager = new HistorialUsuarioManager();        
     } catch (error) {
         console.error('Error inicializando historialManager:', error);
     }
 
     try {
         const { SucursalManager } = await import('/clases/sucursal.js');
-        sucursalManager = new SucursalManager();
-        console.log('🏢 SucursalManager inicializado para editar usuarios');
+        sucursalManager = new SucursalManager();        
     } catch (error) {
         console.error('Error inicializando sucursalManager:', error);
     }
@@ -52,62 +53,57 @@ async function registrarEdicionColaborador(colaboradorOriginal, datosActualizado
                 cambios: cambios,
                 fechaEdicion: new Date().toISOString()
             }
-        });
-        console.log(`✅ Edición de colaborador "${colaboradorOriginal.nombreCompleto}" registrada en bitácora`);
+        });        
     } catch (error) {
         console.error('Error registrando edición de colaborador:', error);
     }
 }
 
-// Registrar cambio de estado
-async function registrarCambioEstadoColaborador(colaborador, nuevoEstado, estadoAnterior, usuarioActual) {
+// Registrar cambio de código
+async function registrarCambioCodigo(colaborador, codigoAnterior, codigoNuevo, usuarioActual) {
     if (!historialManager) return;
 
     try {
-        const nuevoEstadoTexto = nuevoEstado ? 'activo' : 'inactivo';
-        const estadoAnteriorTexto = estadoAnterior ? 'activo' : 'inactivo';
-
         await historialManager.registrarActividad({
             usuario: usuarioActual,
             tipo: 'editar',
             modulo: 'usuarios',
-            descripcion: `${nuevoEstado ? 'Habilitó' : 'Inhabilitó'} colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            descripcion: `Cambió código de colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
             detalles: {
                 colaboradorId: colaborador.id,
                 colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
                 colaboradorEmail: colaborador.correoElectronico,
-                estadoAnterior: estadoAnteriorTexto,
-                estadoNuevo: nuevoEstadoTexto,
+                codigoAnterior: codigoAnterior || 'Sin código',
+                codigoNuevo: codigoNuevo || 'Sin código',
                 fechaCambio: new Date().toISOString()
             }
-        });
-        console.log(`✅ Cambio de estado de colaborador "${colaborador.nombreCompleto}" registrado en bitácora`);
+        });    
     } catch (error) {
-        console.error('Error registrando cambio de estado de colaborador:', error);
+        console.error('Error registrando cambio de código:', error);
     }
 }
 
-// Registrar inhabilitación
-async function registrarInhabilitacionColaborador(colaborador, usuarioActual) {
+// Registrar cambio de teléfono
+async function registrarCambioTelefono(colaborador, telefonoAnterior, telefonoNuevo, usuarioActual) {
     if (!historialManager) return;
 
     try {
         await historialManager.registrarActividad({
             usuario: usuarioActual,
-            tipo: 'eliminar',
+            tipo: 'editar',
             modulo: 'usuarios',
-            descripcion: `Inhabilitó colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            descripcion: `Cambió teléfono de colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
             detalles: {
                 colaboradorId: colaborador.id,
                 colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
                 colaboradorEmail: colaborador.correoElectronico,
-                fechaInhabilitacion: new Date().toISOString(),
-                razon: 'Inhabilitado desde el panel de edición'
+                telefonoAnterior: telefonoAnterior || 'No registrado',
+                telefonoNuevo: telefonoNuevo || 'No registrado',
+                fechaCambio: new Date().toISOString()
             }
-        });
-        console.log(`✅ Inhabilitación de colaborador "${colaborador.nombreCompleto}" registrada en bitácora`);
+        });        
     } catch (error) {
-        console.error('Error registrando inhabilitación de colaborador:', error);
+        console.error('Error registrando cambio de teléfono:', error);
     }
 }
 
@@ -127,50 +123,44 @@ async function registrarCambioFotoPerfil(colaborador, usuarioActual) {
                 colaboradorEmail: colaborador.correoElectronico,
                 fechaCambio: new Date().toISOString()
             }
-        });
-        console.log(`✅ Cambio de foto de perfil de colaborador "${colaborador.nombreCompleto}" registrado en bitácora`);
+        });        
     } catch (error) {
         console.error('Error registrando cambio de foto de perfil:', error);
     }
 }
 
-// Registrar cambio de sucursal
-async function registrarCambioSucursal(colaborador, sucursalAnterior, sucursalNueva, usuarioActual) {
+// Registrar inhabilitación
+async function registrarInhabilitacionColaborador(colaborador, usuarioActual) {
     if (!historialManager) return;
 
     try {
         await historialManager.registrarActividad({
             usuario: usuarioActual,
-            tipo: 'editar',
+            tipo: 'eliminar',
             modulo: 'usuarios',
-            descripcion: `Cambió sucursal de colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
+            descripcion: `Inhabilitó colaborador: ${colaborador.nombreCompleto || colaborador.nombre}`,
             detalles: {
                 colaboradorId: colaborador.id,
                 colaboradorNombre: colaborador.nombreCompleto || colaborador.nombre,
                 colaboradorEmail: colaborador.correoElectronico,
-                sucursalAnterior: sucursalAnterior || 'No asignada',
-                sucursalNueva: sucursalNueva || 'No asignada',
-                fechaCambio: new Date().toISOString()
+                fechaInhabilitacion: new Date().toISOString()
             }
-        });
-        console.log(`✅ Cambio de sucursal de colaborador "${colaborador.nombreCompleto}" registrado en bitácora`);
+        });        
     } catch (error) {
-        console.error('Error registrando cambio de sucursal:', error);
+        console.error('Error registrando inhabilitación de colaborador:', error);
     }
 }
 
-// Verificar límite de sucursal (máximo 2 colaboradores)
+// Verificar límite de sucursal (máximo 2 colaboradores por sucursal)
 async function verificarLimiteSucursal(sucursalId, organizacionCamelCase, colaboradorIdActual) {
     if (!sucursalId || !sucursalManager) return true;
 
     try {
-        const { UserManager } = await import('/clases/user.js');
         const userManager = new UserManager();
-
         const colaboradores = await userManager.getColaboradoresByOrganizacion(organizacionCamelCase, true);
 
         const colaboradoresEnSucursal = colaboradores.filter(colab =>
-            colab.sucursalAsignadaId === sucursalId && colab.id !== colaboradorIdActual
+            colab.codigoColaborador === sucursalId && colab.id !== colaboradorIdActual
         );
 
         if (colaboradoresEnSucursal.length >= 2) {
@@ -185,10 +175,106 @@ async function verificarLimiteSucursal(sucursalId, organizacionCamelCase, colabo
     }
 }
 
-// ==================== VARIABLES GLOBALES ====================
-let selectedFile = null;
-let currentPhotoType = '';
-let currentPhotoElements = null;
+// ========== FUNCIONES PARA CÓDIGO DE COLABORADOR ==========
+
+async function validarCodigoColaboradorEdicion(codigo, organizacionCamelCase, colaboradorIdActual) {
+    if (!codigo || codigo.trim() === '') {
+        return { valido: true, mensaje: '' };
+    }
+    
+    if (!/^\d{3}$/.test(codigo)) {
+        return { valido: false, mensaje: 'El código debe tener exactamente 3 dígitos (001-999)' };
+    }
+    
+    const numero = parseInt(codigo, 10);
+    if (numero < 1 || numero > 999) {
+        return { valido: false, mensaje: 'El código debe estar entre 001 y 999' };
+    }
+    
+    try {
+        const userManager = new UserManager();
+        const colaboradores = await userManager.getColaboradoresByOrganizacion(organizacionCamelCase, true);
+        
+        const existe = colaboradores.some(col => 
+            col.codigoColaborador === codigo && col.id !== colaboradorIdActual
+        );
+        
+        if (existe) {
+            return { valido: false, mensaje: `El código ${codigo} ya está en uso por otro colaborador` };
+        }
+        
+        return { valido: true, mensaje: '' };
+        
+    } catch (error) {
+        console.error('Error validando código:', error);
+        return { valido: true, mensaje: '' };
+    }
+}
+
+function configurarValidacionCodigo(elements, organizacionCamelCase, colaboradorId) {
+    if (!elements.codigoColaborador) return;
+    
+    const esCampoVisible = () => {
+        const container = elements.codigoNormalContainer;
+        return container && container.style.display !== 'none';
+    };
+    
+    elements.codigoColaborador.addEventListener('input', async function(e) {
+        if (!esCampoVisible()) return;
+        
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);
+        
+        if (this.value.length === 0) {
+            this.style.borderColor = '';
+            const hint = this.closest('.form-field-group')?.querySelector('.field-hint');
+            if (hint) {
+                hint.style.color = '';
+                hint.innerHTML = `<i class="fas fa-info-circle"></i> Código único de 3 dígitos (001-999). Déjalo vacío si no quieres asignar código.`;
+            }
+            return;
+        }
+        
+        if (this.value.length === 3) {
+            const validacion = await validarCodigoColaboradorEdicion(this.value, organizacionCamelCase, colaboradorId);
+            if (!validacion.valido) {
+                this.style.borderColor = 'var(--color-danger, #dc3545)';
+                const hint = this.closest('.form-field-group')?.querySelector('.field-hint');
+                if (hint) {
+                    hint.style.color = 'var(--color-danger, #dc3545)';
+                    hint.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${validacion.mensaje}`;
+                }
+            } else {
+                this.style.borderColor = 'var(--color-success, #28a745)';
+                const hint = this.closest('.form-field-group')?.querySelector('.field-hint');
+                if (hint) {
+                    hint.style.color = '';
+                    hint.innerHTML = `<i class="fas fa-check-circle"></i> Código válido y disponible`;
+                }
+            }
+        } else {
+            this.style.borderColor = 'var(--color-warning, #ff9800)';
+            const hint = this.closest('.form-field-group')?.querySelector('.field-hint');
+            if (hint) {
+                hint.style.color = 'var(--color-warning, #ff9800)';
+                hint.innerHTML = `<i class="fas fa-info-circle"></i> El código debe tener exactamente 3 dígitos`;
+            }
+        }
+    });
+    
+    elements.codigoColaborador.addEventListener('blur', function() {
+        if (!esCampoVisible()) return;
+        
+        if (this.value.length > 0 && this.value.length !== 3) {
+            this.value = '';
+            this.style.borderColor = '';
+            const hint = this.closest('.form-field-group')?.querySelector('.field-hint');
+            if (hint) {
+                hint.style.color = '';
+                hint.innerHTML = `<i class="fas fa-info-circle"></i> Código único de 3 dígitos (001-999). Déjalo vacío si no quieres asignar código.`;
+            }
+        }
+    });
+}
 
 // ==================== FUNCIONES PRINCIPALES ====================
 
@@ -197,13 +283,11 @@ async function iniciarEditor(userManager) {
     if (!collaboratorId) return;
 
     const elements = obtenerElementosDOM();
-    currentPhotoElements = elements;
 
     try {
-        const usuarioActual = obtenerUsuarioActual();
+        let usuarioActual = obtenerUsuarioActual();
 
         if (!usuarioActual) {
-            console.warn('No hay información de usuario, usando valores por defecto');
             usuarioActual = {
                 id: `usuario_${Date.now()}`,
                 uid: `usuario_${Date.now()}`,
@@ -218,14 +302,15 @@ async function iniciarEditor(userManager) {
 
         await cargarDatosColaborador(userManager, collaboratorId, elements);
         configurarHandlersBasicos(elements);
-        configurarFotoPerfil(elements, userManager);
+        configurarFotoPerfil(elements);
         configurarGuardado(elements, userManager);
-        configurarCambioPassword(elements, userManager);
+        configurarCambioPassword(elements);
         configurarEliminacion(elements, userManager);
         configurarSelectorStatus(elements);
         configurarFiltroNumerico(elements);
+        
+        configurarValidacionCodigo(elements, usuarioActual.organizacionCamelCase, collaboratorId);
 
-        // Cargar áreas (esto también cargará sucursales si el área es sucursales)
         await cargarAreas(elements);
 
     } catch (error) {
@@ -235,38 +320,14 @@ async function iniciarEditor(userManager) {
     }
 }
 
-// Filtro solo números para teléfono
 function configurarFiltroNumerico(elements) {
     if (elements.telefono) {
-        elements.telefono.addEventListener('input', function (e) {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length > 15) {
-                this.value = this.value.slice(0, 15);
-            }
-        });
-
-        elements.telefono.addEventListener('paste', function (e) {
-            e.preventDefault();
-            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-            const numericOnly = pastedText.replace(/[^0-9]/g, '');
-            if (numericOnly) {
-                this.value = numericOnly.slice(0, 15);
-                const inputEvent = new Event('input', { bubbles: true });
-                this.dispatchEvent(inputEvent);
-            }
-        });
-
-        elements.telefono.addEventListener('keypress', function (e) {
-            if (e.ctrlKey || e.altKey || e.metaKey) return;
-            if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Tab' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') return;
-            if (!/^[0-9]$/.test(e.key)) {
-                e.preventDefault();
-            }
+        elements.telefono.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 15);
         });
     }
 }
 
-// Obtener usuario actual
 function obtenerUsuarioActual() {
     try {
         const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
@@ -311,7 +372,6 @@ function generarCamelCase(texto) {
         .replace(/[^a-zA-Z0-9]/g, '');
 }
 
-// Funciones de utilidad
 function obtenerIdDesdeURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const collaboratorId = urlParams.get('id');
@@ -344,6 +404,8 @@ function obtenerElementosDOM() {
         orgPlaceholder: document.getElementById('orgPlaceholder'),
 
         fullName: document.getElementById('fullName'),
+        codigoColaborador: document.getElementById('codigoColaborador'),
+        codigoNormalContainer: document.getElementById('codigoNormalContainer'),
         email: document.getElementById('email'),
         telefono: document.getElementById('telefono'),
         organizationName: document.getElementById('organizationName'),
@@ -358,8 +420,6 @@ function obtenerElementosDOM() {
         creationTime: document.getElementById('creationTime'),
         lastUpdateDate: document.getElementById('lastUpdateDate'),
         lastUpdateTime: document.getElementById('lastUpdateTime'),
-        lastLoginDate: document.getElementById('lastLoginDate'),
-        lastLoginTime: document.getElementById('lastLoginTime'),
 
         saveChangesBtn: document.getElementById('saveChangesBtn'),
         cancelBtn: document.getElementById('cancelBtn'),
@@ -379,12 +439,6 @@ function mostrarErrorConfiguracion(error) {
             <div>
                 <p><strong>No se pudo cargar los módulos necesarios</strong></p>
                 <p>Error: ${error.message}</p>
-                <p>Verifica que los archivos existan en las rutas correctas:</p>
-                <ul>
-                    <li><code>/clases/user.js</code></li>
-                    <li><code>/clases/area.js</code></li>
-                    <li><code>/clases/sucursal.js</code></li>
-                </ul>
             </div>
         `,
         confirmButtonText: 'Entendido',
@@ -407,17 +461,11 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
         if (!collaborator) {
             Swal.close();
             throw new Error('Colaborador no encontrado');
-        }
-
-        // 🔴 LOG IMPORTANTE - Verificar datos de sucursal
-        console.log('🔴🔴🔴 DATOS DEL COLABORADOR DESDE USERMANAGER:');
-        console.log('   - sucursalAsignadaId:', collaborator.sucursalAsignadaId);
-        console.log('   - sucursalAsignadaNombre:', collaborator.sucursalAsignadaNombre);
-        console.log('   - sucursalAsignadaCiudad:', collaborator.sucursalAsignadaCiudad);
-        console.log('   - areaAsignadaId:', collaborator.areaAsignadaId);
+        }  
 
         window.currentCollaborator = collaborator;
         window.colaboradorOriginal = JSON.parse(JSON.stringify(collaborator));
+        pendingPhotoBase64 = null;
 
         actualizarInterfaz(elements, collaborator);
         deshabilitarLogoOrganizacion(elements);
@@ -456,26 +504,23 @@ function actualizarInterfaz(elements, collaborator) {
         elements.fullName.value = collaborator.nombreCompleto;
     }
 
+    if (elements.codigoColaborador) {
+        elements.codigoColaborador.value = collaborator.codigoColaborador || '';        
+    }
+
     if (elements.email && collaborator.correoElectronico) {
         elements.email.value = collaborator.correoElectronico;
     }
 
-    if (elements.telefono && collaborator.telefono) {
-        elements.telefono.value = collaborator.telefono;
+    if (elements.telefono) {
+        elements.telefono.value = collaborator.telefono || '';        
     }
 
     if (elements.organizationName && collaborator.organizacion) {
         elements.organizationName.value = collaborator.organizacion;
     }
 
-    let statusValue = 'active';
-    if (collaborator.eliminado) {
-        statusValue = 'inactive';
-    } else if (collaborator.status === 'pending') {
-        statusValue = 'pending';
-    } else if (!collaborator.status) {
-        statusValue = 'inactive';
-    }
+    let statusValue = collaborator.status === true || collaborator.status === 'active' ? 'active' : 'inactive';
 
     if (elements.statusInput) {
         elements.statusInput.value = statusValue;
@@ -490,42 +535,30 @@ function actualizarInterfaz(elements, collaborator) {
         });
     }
 
-    // Foto de perfil
     if (collaborator.fotoUsuario) {
         const profileUrl = collaborator.getFotoUrl();
         if (elements.profileImage) {
             elements.profileImage.src = profileUrl;
             elements.profileImage.style.display = 'block';
-
             elements.profileImage.onerror = function () {
                 this.style.display = 'none';
-                if (elements.profilePlaceholder) {
-                    elements.profilePlaceholder.style.display = 'flex';
-                }
+                if (elements.profilePlaceholder) elements.profilePlaceholder.style.display = 'flex';
             };
         }
-        if (elements.profilePlaceholder) {
-            elements.profilePlaceholder.style.display = 'none';
-        }
+        if (elements.profilePlaceholder) elements.profilePlaceholder.style.display = 'none';
     }
 
-    // Logo de organización
     if (collaborator.fotoOrganizacion) {
         const orgUrl = collaborator.fotoOrganizacion;
         if (elements.orgImage) {
             elements.orgImage.src = orgUrl;
             elements.orgImage.style.display = 'block';
-
             elements.orgImage.onerror = function () {
                 this.style.display = 'none';
-                if (elements.orgPlaceholder) {
-                    elements.orgPlaceholder.style.display = 'flex';
-                }
+                if (elements.orgPlaceholder) elements.orgPlaceholder.style.display = 'flex';
             };
         }
-        if (elements.orgPlaceholder) {
-            elements.orgPlaceholder.style.display = 'none';
-        }
+        if (elements.orgPlaceholder) elements.orgPlaceholder.style.display = 'none';
     }
 
     const formatDate = (date) => {
@@ -544,10 +577,6 @@ function actualizarInterfaz(elements, collaborator) {
     const updateDate = formatDate(collaborator.fechaActualizacion);
     if (elements.lastUpdateDate) elements.lastUpdateDate.textContent = updateDate.date;
     if (elements.lastUpdateTime) elements.lastUpdateTime.textContent = updateDate.time;
-
-    const loginDate = formatDate(collaborator.ultimoLogin);
-    if (elements.lastLoginDate) elements.lastLoginDate.textContent = loginDate.date;
-    if (elements.lastLoginTime) elements.lastLoginTime.textContent = loginDate.time;
 }
 
 function mostrarMensaje(element, type, text) {
@@ -597,67 +626,35 @@ async function cargarAreas(elements) {
         elements.cargoEnAreaSelect.disabled = true;
 
         const areas = await areaManager.getAreasByOrganizacion(organizacionCamelCase);
+        const areasActivas = areas.filter(area => area.estado === 'activa');
 
-        elements.areaSelect._areasData = areas;
+        elements.areaSelect._areasData = areasActivas;
 
-        if (areas.length === 0) {
+        if (areasActivas.length === 0) {
             elements.areaSelect.innerHTML = '<option value="">No hay áreas disponibles</option>';
             elements.areaSelect.disabled = false;
             return;
         }
 
         let options = '<option value="">Selecciona un área</option>';
-        areas.forEach(area => {
+        areasActivas.forEach(area => {
             options += `<option value="${area.id}" data-nombre="${area.nombreArea}">${area.nombreArea}</option>`;
         });
         elements.areaSelect.innerHTML = options;
         elements.areaSelect.disabled = false;
 
         if (collaborator.areaAsignadaId) {
-            const areaExiste = areas.some(a => a.id === collaborator.areaAsignadaId);
-
+            const areaExiste = areasActivas.some(a => a.id === collaborator.areaAsignadaId);
             if (areaExiste) {
                 elements.areaSelect.value = collaborator.areaAsignadaId;
-
-                // Disparar evento change para cargar cargos
                 const event = new Event('change', { bubbles: true });
                 elements.areaSelect.dispatchEvent(event);
 
-                // ✅ VERIFICAR SI ES ÁREA SUCURSALES Y FORZAR CARGA DE SUCURSAL
-                const areaNombre = elements.areaSelect.options[elements.areaSelect.selectedIndex]?.getAttribute('data-nombre') || '';
-                const esAreaSucursales = areaNombre.toLowerCase() === 'sucursales' || areaNombre.toLowerCase() === 'sucursal';
-
-                console.log('🔴 Área seleccionada:', areaNombre, 'esAreaSucursales:', esAreaSucursales);
-                console.log('🔴 Sucursal asignada del colaborador:', collaborator.sucursalAsignadaId, collaborator.sucursalAsignadaNombre);
-
-                if (esAreaSucursales && collaborator.sucursalAsignadaId) {
-                    console.log('🏢 Área sucursales detectada, forzando carga de sucursal asignada:', collaborator.sucursalAsignadaId);
-                    setTimeout(() => {
-                        cargarSucursales(elements);
-                    }, 300);
-                }
-
-                // Seleccionar cargo
                 const seleccionarCargo = () => {
                     if (collaborator.cargo && collaborator.cargo.id) {
-                        const cargoSelect = elements.cargoEnAreaSelect;
-                        if (cargoSelect) {
-                            const option = Array.from(cargoSelect.options).find(opt => opt.value === collaborator.cargo.id);
-                            if (option) {
-                                cargoSelect.value = option.value;
-                                console.log('✅ Cargo seleccionado por ID:', collaborator.cargo.id);
-                                return true;
-                            }
-                        }
-                    }
-
-                    if (collaborator.cargo && collaborator.cargo.nombre) {
-                        const optionPorNombre = Array.from(elements.cargoEnAreaSelect.options).find(
-                            opt => opt.text === collaborator.cargo.nombre
-                        );
-                        if (optionPorNombre) {
-                            elements.cargoEnAreaSelect.value = optionPorNombre.value;
-                            console.log('✅ Cargo seleccionado por nombre:', collaborator.cargo.nombre);
+                        const option = Array.from(elements.cargoEnAreaSelect.options).find(opt => opt.value === collaborator.cargo.id);
+                        if (option) {
+                            elements.cargoEnAreaSelect.value = option.value;
                             return true;
                         }
                     }
@@ -674,13 +671,6 @@ async function cargarAreas(elements) {
         console.error('❌ Error cargando áreas:', error);
         elements.areaSelect.innerHTML = '<option value="">Error al cargar áreas</option>';
         elements.areaSelect.disabled = false;
-
-        Swal.fire({
-            icon: 'warning',
-            title: 'Error al cargar áreas',
-            text: 'No se pudieron cargar las áreas. Puedes continuar editando pero no podrás cambiar el área.',
-            confirmButtonText: 'ENTENDIDO'
-        });
     }
 }
 
@@ -694,9 +684,11 @@ function cargarCargosPorArea(elements) {
     elements.cargoEnAreaSelect.innerHTML = '';
     elements.cargoEnAreaSelect.disabled = true;
 
-    // Ocultar campo de sucursal por defecto
     if (elements.sucursalContainer) {
         elements.sucursalContainer.style.display = 'none';
+    }
+    if (elements.codigoNormalContainer) {
+        elements.codigoNormalContainer.style.display = 'block';
     }
 
     if (!areaId) {
@@ -711,13 +703,15 @@ function cargarCargosPorArea(elements) {
         return;
     }
 
-    const cargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
+    const todosLosCargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
+    const cargosActivos = todosLosCargos.filter(cargo => cargo.estado === 'activo');
 
-    if (cargos.length === 0) {
-        elements.cargoEnAreaSelect.innerHTML = '<option value="">Esta área no tiene cargos</option>';
+    if (cargosActivos.length === 0) {
+        elements.cargoEnAreaSelect.innerHTML = '<option value="">Esta área no tiene cargos activos</option>';
     } else {
         let options = '<option value="">Selecciona un cargo</option>';
-        cargos.forEach((cargo, index) => {
+        
+        cargosActivos.forEach((cargo, index) => {
             const cargoId = cargo.id || `cargo_${index}`;
             options += `<option value="${cargoId}">${cargo.nombre || 'Cargo sin nombre'}</option>`;
 
@@ -726,17 +720,29 @@ function cargarCargosPorArea(elements) {
             }
             elements.cargoEnAreaSelect._cargosData[cargoId] = cargo;
         });
+        
         elements.cargoEnAreaSelect.innerHTML = options;
     }
 
     elements.cargoEnAreaSelect.disabled = false;
 
-    // Verificar si el área seleccionada es "sucursales" para mostrar el campo de sucursal
     const esAreaSucursales = areaNombre.toLowerCase() === 'sucursales' || areaNombre.toLowerCase() === 'sucursal';
 
     if (esAreaSucursales) {
-        console.log('🏢 Área "sucursales" seleccionada, cargando sucursales...');
-        cargarSucursales(elements);
+        if (elements.codigoNormalContainer) {
+            elements.codigoNormalContainer.style.display = 'none';
+        }
+        if (elements.sucursalContainer) {
+            elements.sucursalContainer.style.display = 'block';
+            cargarSucursales(elements);
+        }
+    } else {
+        if (elements.codigoNormalContainer) {
+            elements.codigoNormalContainer.style.display = 'block';
+        }
+        if (elements.sucursalContainer) {
+            elements.sucursalContainer.style.display = 'none';
+        }
     }
 }
 
@@ -747,49 +753,29 @@ async function cargarSucursales(elements) {
         const usuarioActual = window.usuarioActual;
         const collaborator = window.currentCollaborator;
 
-        if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
-            console.warn('No se pudo cargar sucursales: organización no disponible');
-            return;
-        }
+        if (!usuarioActual || !usuarioActual.organizacionCamelCase) return;
 
-        // Guardar el ID de la sucursal asignada ANTES de cargar
-        const sucursalAsignadaId = collaborator.sucursalAsignadaId;
-        const sucursalAsignadaNombre = collaborator.sucursalAsignadaNombre;
-
-        console.log('🔴🔴🔴 CARGANDO SUCURSALES - DATOS DEL COLABORADOR:');
-        console.log('   - sucursalAsignadaId:', sucursalAsignadaId);
-        console.log('   - sucursalAsignadaNombre:', sucursalAsignadaNombre);
+        // El código actual ES el ID de la sucursal si el área es sucursales
+        const codigoActual = collaborator.codigoColaborador || null;
 
         elements.sucursalSelect.innerHTML = '<option value="">Cargando sucursales...</option>';
         elements.sucursalSelect.disabled = true;
 
         const sucursales = await sucursalManager.getSucursalesByOrganizacion(usuarioActual.organizacionCamelCase);
 
-        console.log('🔴 SUCURSALES DISPONIBLES EN LA BASE DE DATOS:');
-        sucursales.forEach(s => {
-            console.log(`   - ID: ${s.id}, Nombre: ${s.nombre}`);
-        });
-
         if (sucursales.length === 0) {
             elements.sucursalSelect.innerHTML = '<option value="">No hay sucursales disponibles</option>';
             if (elements.sucursalHint) {
-                elements.sucursalHint.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No hay sucursales registradas. Crea una sucursal primero.';
+                elements.sucursalHint.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No hay sucursales registradas.';
             }
             elements.sucursalSelect.disabled = true;
         } else {
-            // Construir opciones
-            let options = '<option value="">Selecciona una sucursal (opcional)</option>';
+            let options = '<option value="">Selecciona una sucursal</option>';
             let sucursalEncontrada = false;
-            let valorSeleccionado = '';
 
             sucursales.forEach(sucursal => {
-                // Comparar por ID para seleccionar
-                const isSelected = (sucursalAsignadaId === sucursal.id);
-                if (isSelected) {
-                    sucursalEncontrada = true;
-                    valorSeleccionado = sucursal.id;
-                    console.log(`✅✅✅ SUCURSAL ENCONTRADA PARA SELECCIONAR: ${sucursal.nombre} (${sucursal.id})`);
-                }
+                const isSelected = (codigoActual === sucursal.id);
+                if (isSelected) sucursalEncontrada = true;
                 const selectedAttr = isSelected ? 'selected' : '';
                 options += `<option value="${sucursal.id}" data-nombre="${sucursal.nombre}" data-ciudad="${sucursal.ciudad}" ${selectedAttr}>${sucursal.nombre} - ${sucursal.ciudad || 'Sin ciudad'}</option>`;
             });
@@ -797,47 +783,33 @@ async function cargarSucursales(elements) {
             elements.sucursalSelect.innerHTML = options;
             elements.sucursalSelect.disabled = false;
 
-            // Forzar la selección programáticamente si es necesario
-            if (sucursalAsignadaId && sucursalEncontrada) {
-                elements.sucursalSelect.value = valorSeleccionado;
-                console.log('✅ Sucursal forzada en el select, valor actual:', elements.sucursalSelect.value);
-                console.log('✅ Texto seleccionado:', elements.sucursalSelect.options[elements.sucursalSelect.selectedIndex]?.text);
-            }
-
-            // Verificar que la selección se aplicó correctamente
-            if (sucursalAsignadaId) {
-                if (sucursalEncontrada) {
-                    console.log('✅ Sucursal seleccionada en el select:', elements.sucursalSelect.value);
-                    if (elements.sucursalHint) {
-                        elements.sucursalHint.innerHTML = '<i class="fas fa-check-circle" style="color: #28a745;"></i> Sucursal asignada: ' + sucursalAsignadaNombre;
+            if (codigoActual && sucursalEncontrada) {
+                if (elements.sucursalHint) {
+                    const sucursalSeleccionada = sucursales.find(s => s.id === codigoActual);
+                    if (sucursalSeleccionada) {
+                        elements.sucursalHint.innerHTML = `<i class="fas fa-check-circle" style="color: #28a745;"></i> Sucursal asignada: ${sucursalSeleccionada.nombre}`;
                     }
-                } else {
-                    console.warn('⚠️ Sucursal asignada NO ENCONTRADA en la lista:', sucursalAsignadaId);
-                    if (elements.sucursalHint) {
-                        elements.sucursalHint.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #ff9800;"></i> La sucursal asignada "' + sucursalAsignadaNombre + '" ya no existe. Selecciona una nueva.';
-                    }
+                }
+            } else if (codigoActual) {
+                if (elements.sucursalHint) {
+                    elements.sucursalHint.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #ff9800;"></i> La sucursal asignada ya no existe.';
                 }
             } else {
                 if (elements.sucursalHint) {
-                    elements.sucursalHint.innerHTML = '<i class="fas fa-info-circle"></i> Opcional. Selecciona la sucursal a la que pertenecerá (máximo 2 colaboradores por sucursal)';
+                    elements.sucursalHint.innerHTML = '<i class="fas fa-info-circle"></i> Selecciona la sucursal para asignar como código del colaborador';
                 }
             }
         }
 
-        // Mostrar el contenedor de sucursal
         if (elements.sucursalContainer) {
             elements.sucursalContainer.style.display = 'block';
         }
 
-        // Guardar lista de sucursales para validaciones posteriores
         elements.sucursalSelect._sucursalesData = sucursales;
 
     } catch (error) {
         console.error('❌ Error cargando sucursales:', error);
         elements.sucursalSelect.innerHTML = '<option value="">Error al cargar sucursales</option>';
-        if (elements.sucursalHint) {
-            elements.sucursalHint.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error al cargar sucursales';
-        }
         elements.sucursalSelect.disabled = true;
     }
 }
@@ -850,7 +822,6 @@ function configurarSelectoresAreaCargo(elements) {
     });
 }
 
-// Handlers básicos
 function configurarHandlersBasicos(elements) {
     if (elements.cancelBtn) {
         elements.cancelBtn.addEventListener('click', () => {
@@ -863,7 +834,7 @@ function configurarHandlersBasicos(elements) {
                 cancelButtonText: 'CANCELAR'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = '../usuarios/usuarios.html';
+                    window.history.back();
                 }
             });
         });
@@ -879,14 +850,12 @@ function configurarSelectorStatus(elements) {
         option.addEventListener('click', function () {
             elements.statusOptions.forEach(opt => opt.classList.remove('selected'));
             this.classList.add('selected');
-            const statusValue = this.getAttribute('data-status');
-            elements.statusInput.value = statusValue;
+            elements.statusInput.value = this.getAttribute('data-status');
         });
     });
 }
 
-// Configurar foto de perfil
-function configurarFotoPerfil(elements, userManager) {
+function configurarFotoPerfil(elements) {
     if (!elements.profileCircle) return;
 
     elements.profileCircle.addEventListener('click', () => {
@@ -903,13 +872,13 @@ function configurarFotoPerfil(elements, userManager) {
     if (elements.profileInput) {
         elements.profileInput.addEventListener('change', function (e) {
             const file = e.target.files[0];
-            if (file) mostrarModalFotoConSwal(file, elements, userManager);
+            if (file) previsualizarFoto(file, elements);
             this.value = '';
         });
     }
 }
 
-function mostrarModalFotoConSwal(file, elements, userManager) {
+function previsualizarFoto(file, elements) {
     const maxSize = 5;
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
 
@@ -929,21 +898,30 @@ function mostrarModalFotoConSwal(file, elements, userManager) {
         const imageBase64 = e.target.result;
 
         Swal.fire({
-            title: 'Cambiar foto de perfil',
+            title: '¿Usar esta foto?',
             html: `
                 <div style="text-align: center;">
                     <img src="${imageBase64}" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent-primary); margin-bottom: 15px;">
-                    <p>Tamaño: ${(file.size / (1024 * 1024)).toFixed(2)} MB</p>
-                    <p>¿Deseas usar esta imagen?</p>
+                    <p>La foto se guardará cuando confirmes los cambios.</p>
                 </div>
             `,
             showCancelButton: true,
-            confirmButtonText: 'CONFIRMAR',
-            cancelButtonText: 'CANCELAR',
-            reverseButtons: false
+            confirmButtonText: 'APLICAR',
+            cancelButtonText: 'CANCELAR'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                await guardarFotoPerfil(imageBase64, elements, userManager);
+                pendingPhotoBase64 = imageBase64;
+                
+                if (elements.profileImage) {
+                    elements.profileImage.src = imageBase64;
+                    elements.profileImage.style.display = 'block';
+                }
+                if (elements.profilePlaceholder) {
+                    elements.profilePlaceholder.style.display = 'none';
+                }
+                
+                mostrarMensaje(elements.mainMessage, 'success', 
+                    'Foto seleccionada. Recuerda guardar los cambios.');
             }
         });
     };
@@ -951,66 +929,14 @@ function mostrarModalFotoConSwal(file, elements, userManager) {
     reader.readAsDataURL(file);
 }
 
-async function guardarFotoPerfil(imageBase64, elements, userManager) {
-    if (!window.currentCollaborator) return;
+// ========== FUNCIÓN PRINCIPAL DE GUARDADO ==========
 
-    Swal.fire({
-        title: 'Guardando foto...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
-
-    try {
-        const collaborator = window.currentCollaborator;
-        const usuarioActual = window.usuarioActual;
-
-        const success = await userManager.updateUser(
-            collaborator.id,
-            { fotoUsuario: imageBase64 },
-            'colaborador',
-            collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase
-        );
-
-        if (success) {
-            if (elements.profileImage) {
-                elements.profileImage.src = imageBase64;
-                elements.profileImage.style.display = 'block';
-            }
-            if (elements.profilePlaceholder) {
-                elements.profilePlaceholder.style.display = 'none';
-            }
-
-            collaborator.fotoUsuario = imageBase64;
-
-            await registrarCambioFotoPerfil(collaborator, usuarioActual);
-
-            Swal.close();
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: 'Foto actualizada correctamente',
-                timer: 3000,
-                showConfirmButton: false
-            });
-        }
-    } catch (error) {
-        Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudo guardar la imagen: ' + error.message
-        });
-    }
-}
-
-// Guardar cambios
 function configurarGuardado(elements, userManager) {
     if (!elements.saveChangesBtn || !window.currentCollaborator) return;
 
     elements.saveChangesBtn.addEventListener('click', async () => {
         if (!elements.fullName || !elements.fullName.value.trim()) {
             mostrarMensaje(elements.mainMessage, 'error', 'El nombre completo es obligatorio');
-            if (elements.fullName) elements.fullName.focus();
             return;
         }
 
@@ -1018,158 +944,126 @@ function configurarGuardado(elements, userManager) {
         const colaboradorOriginal = window.colaboradorOriginal;
         const usuarioActual = window.usuarioActual;
 
-        let areaNombre = 'No asignada';
-        let cargoNombre = 'No asignado';
-        let cargoDescripcion = '';
-        let cargoObjeto = null;
-
-        const areas = elements.areaSelect._areasData || [];
-        const areaSeleccionada = areas.find(a => a.id === elements.areaSelect?.value);
-        if (areaSeleccionada) {
-            areaNombre = areaSeleccionada.nombreArea;
-        }
-
-        const cargosData = elements.cargoEnAreaSelect._cargosData || {};
-        const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect?.value];
-        if (cargoSeleccionado) {
-            cargoNombre = cargoSeleccionado.nombre || 'Cargo sin nombre';
-            cargoDescripcion = cargoSeleccionado.descripcion || '';
-            cargoObjeto = {
-                id: cargoSeleccionado.id || elements.cargoEnAreaSelect.value,
-                nombre: cargoNombre,
-                descripcion: cargoDescripcion
-            };
-        }
-
-        let sucursalId = null;
-        let sucursalNombre = null;
-        let sucursalCiudad = null;
-        let esAreaSucursales = false;
+        const nuevoNombre = elements.fullName.value.trim();
+        const nuevoTelefono = elements.telefono?.value.trim() || '';
+        const nuevoEstado = elements.statusInput.value === 'active';
 
         const areaSeleccionadaElement = elements.areaSelect.options[elements.areaSelect.selectedIndex];
         const areaSeleccionadaNombre = areaSeleccionadaElement?.getAttribute('data-nombre') || '';
-        esAreaSucursales = areaSeleccionadaNombre.toLowerCase() === 'sucursales' || areaSeleccionadaNombre.toLowerCase() === 'sucursal';
+        const esAreaSucursales = areaSeleccionadaNombre.toLowerCase() === 'sucursales' || areaSeleccionadaNombre.toLowerCase() === 'sucursal';
 
-        if (esAreaSucursales && elements.sucursalSelect && elements.sucursalSelect.value) {
-            sucursalId = elements.sucursalSelect.value;
+        let nuevoCodigo = '';
 
-            const sucursalesData = elements.sucursalSelect._sucursalesData || [];
-            const sucursalSeleccionada = sucursalesData.find(s => s.id === sucursalId);
-            if (sucursalSeleccionada) {
-                sucursalNombre = sucursalSeleccionada.nombre;
-                sucursalCiudad = sucursalSeleccionada.ciudad;
+        if (esAreaSucursales) {
+            if (elements.sucursalSelect && elements.sucursalSelect.value) {
+                nuevoCodigo = elements.sucursalSelect.value;
+            } else {
+                nuevoCodigo = '';
             }
+        } else {
+            nuevoCodigo = elements.codigoColaborador?.value.trim() || '';
+        }
 
-            if (sucursalId && usuarioActual.organizacionCamelCase) {
-                const limiteOk = await verificarLimiteSucursal(sucursalId, usuarioActual.organizacionCamelCase, collaborator.id);
-                if (!limiteOk) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Límite de colaboradores alcanzado',
-                        html: `La sucursal seleccionada ya tiene 2 colaboradores asignados.<br>
-                               No se pueden asignar más colaboradores a esta sucursal.`,
-                        confirmButtonText: 'ENTENDIDO'
-                    });
-                    return;
-                }
+        // Validar código solo si NO es área sucursales
+        if (!esAreaSucursales && nuevoCodigo) {
+            if (!/^\d{3}$/.test(nuevoCodigo)) {
+                Swal.fire({ icon: 'error', title: 'Código inválido', text: 'El código debe tener exactamente 3 dígitos (001-999)' });
+                return;
+            }
+            
+            const numero = parseInt(nuevoCodigo, 10);
+            if (numero < 1 || numero > 999) {
+                Swal.fire({ icon: 'error', title: 'Código inválido', text: 'El código debe estar entre 001 y 999' });
+                return;
+            }
+            
+            const codigoValidacion = await validarCodigoColaboradorEdicion(
+                nuevoCodigo,
+                collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase,
+                collaborator.id
+            );
+            
+            if (!codigoValidacion.valido) {
+                Swal.fire({ icon: 'error', title: 'Código inválido', text: codigoValidacion.mensaje });
+                return;
             }
         }
 
+        // Verificar límite de sucursal si es área sucursales y se seleccionó una
+        if (esAreaSucursales && nuevoCodigo && usuarioActual.organizacionCamelCase) {
+            const limiteOk = await verificarLimiteSucursal(nuevoCodigo, usuarioActual.organizacionCamelCase, collaborator.id);
+            if (!limiteOk) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Límite alcanzado',
+                    text: 'Esta sucursal ya tiene 2 colaboradores asignados. No se pueden asignar más.'
+                });
+                return;
+            }
+        }
+
+        // Obtener área y cargo
+        let areaId = null;
+        const areas = elements.areaSelect._areasData || [];
+        const areaSeleccionada = areas.find(a => a.id === elements.areaSelect?.value);
+        if (areaSeleccionada) {
+            areaId = areaSeleccionada.id;
+        }
+
+        let cargoObjeto = null;
+        const cargosData = elements.cargoEnAreaSelect._cargosData || {};
+        const cargoSeleccionado = cargosData[elements.cargoEnAreaSelect?.value];
+        if (cargoSeleccionado) {
+            cargoObjeto = {
+                id: cargoSeleccionado.id || elements.cargoEnAreaSelect.value,
+                nombre: cargoSeleccionado.nombre || 'Cargo sin nombre',
+                descripcion: cargoSeleccionado.descripcion || ''
+            };
+        }
+
+        // Detectar cambios
         const cambios = [];
-        const nuevosDatos = {
-            nombreCompleto: elements.fullName.value.trim(),
-            telefono: elements.telefono?.value.trim() || '',
-            status: elements.statusInput.value === 'active',
-            areaAsignadaId: elements.areaSelect?.value || null,
-            cargo: cargoObjeto,
-            sucursalAsignadaId: sucursalId,
-            sucursalAsignadaNombre: sucursalNombre,
-            sucursalAsignadaCiudad: sucursalCiudad
-        };
+        const codigoOriginal = colaboradorOriginal.codigoColaborador || '';
 
-        if (colaboradorOriginal.nombreCompleto !== nuevosDatos.nombreCompleto) {
-            cambios.push({
-                campo: 'nombre',
-                anterior: colaboradorOriginal.nombreCompleto,
-                nuevo: nuevosDatos.nombreCompleto
-            });
+        if (colaboradorOriginal.nombreCompleto !== nuevoNombre) {
+            cambios.push({ campo: 'nombre', anterior: colaboradorOriginal.nombreCompleto, nuevo: nuevoNombre });
         }
-
-        const telefonoOriginal = colaboradorOriginal.telefono || '';
-        if (telefonoOriginal !== nuevosDatos.telefono) {
-            cambios.push({
-                campo: 'teléfono',
-                anterior: telefonoOriginal || 'No registrado',
-                nuevo: nuevosDatos.telefono || 'No registrado'
-            });
+        if ((colaboradorOriginal.telefono || '') !== nuevoTelefono) {
+            cambios.push({ campo: 'teléfono', anterior: colaboradorOriginal.telefono || 'No registrado', nuevo: nuevoTelefono || 'No registrado' });
         }
-
-        const estadoOriginal = colaboradorOriginal.status === true || colaboradorOriginal.status === 'active';
-        if (estadoOriginal !== nuevosDatos.status) {
-            cambios.push({
-                campo: 'estado',
-                anterior: estadoOriginal ? 'activo' : 'inactivo',
-                nuevo: nuevosDatos.status ? 'activo' : 'inactivo'
-            });
+        if (codigoOriginal !== nuevoCodigo) {
+            cambios.push({ campo: 'código', anterior: codigoOriginal || 'Sin código', nuevo: nuevoCodigo || 'Sin código' });
         }
-
-        if (colaboradorOriginal.areaAsignadaId !== nuevosDatos.areaAsignadaId) {
-            cambios.push({
-                campo: 'área',
-                anterior: colaboradorOriginal.areaAsignadaNombre || 'No asignada',
-                nuevo: areaNombre
-            });
+        if ((colaboradorOriginal.status === true) !== nuevoEstado) {
+            cambios.push({ campo: 'estado', anterior: colaboradorOriginal.status ? 'activo' : 'inactivo', nuevo: nuevoEstado ? 'activo' : 'inactivo' });
         }
-
-        const cargoOriginalNombre = colaboradorOriginal.cargo?.nombre || 'No asignado';
-        if (cargoOriginalNombre !== cargoNombre) {
-            cambios.push({
-                campo: 'cargo',
-                anterior: cargoOriginalNombre,
-                nuevo: cargoNombre
-            });
+        if ((colaboradorOriginal.areaAsignadaId || null) !== areaId) {
+            cambios.push({ campo: 'área', anterior: colaboradorOriginal.areaAsignadaNombre || 'No asignada', nuevo: areaSeleccionada?.nombreArea || 'No asignada' });
         }
-
-        const sucursalOriginalNombre = colaboradorOriginal.sucursalAsignadaNombre || 'No asignada';
-        if (sucursalOriginalNombre !== (sucursalNombre || 'No asignada')) {
-            cambios.push({
-                campo: 'sucursal',
-                anterior: sucursalOriginalNombre,
-                nuevo: sucursalNombre || 'No asignada'
-            });
+        if ((colaboradorOriginal.cargo?.nombre || 'No asignado') !== (cargoObjeto?.nombre || 'No asignado')) {
+            cambios.push({ campo: 'cargo', anterior: colaboradorOriginal.cargo?.nombre || 'No asignado', nuevo: cargoObjeto?.nombre || 'No asignado' });
+        }
+        if (pendingPhotoBase64 !== null) {
+            cambios.push({ campo: 'foto de perfil', anterior: 'Anterior', nuevo: 'Nueva foto' });
         }
 
         if (cambios.length === 0) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Sin cambios',
-                text: 'No se detectaron cambios en los datos del colaborador',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            Swal.fire({ icon: 'info', title: 'Sin cambios', text: 'No se detectaron cambios', timer: 2000, showConfirmButton: false });
             return;
         }
 
-        let confirmHtml = `
-            <div>
-                <p><strong>Nombre:</strong> ${elements.fullName.value}</p>
-                <p><strong>Teléfono:</strong> ${elements.telefono?.value.trim() || 'No especificado'}</p>
-                <p><strong>Área asignada:</strong> ${areaNombre}</p>
-                <p><strong>Cargo en el área:</strong> ${cargoNombre}</p>
-        `;
-
-        if (esAreaSucursales) {
-            confirmHtml += `<p><strong>Sucursal asignada:</strong> ${sucursalNombre ? `${sucursalNombre}${sucursalCiudad ? ` (${sucursalCiudad})` : ''}` : 'No asignada'}</p>`;
+        // Confirmar
+        let confirmHtml = `<div style="text-align: left;"><p><strong>Nombre:</strong> ${nuevoNombre}</p>`;
+        confirmHtml += `<p><strong>Código:</strong> ${nuevoCodigo || 'Sin código'}</p>`;
+        confirmHtml += `<p><strong>Teléfono:</strong> ${nuevoTelefono || 'No especificado'}</p>`;
+        confirmHtml += `<p><strong>Área:</strong> ${areaSeleccionada?.nombreArea || 'No asignada'}</p>`;
+        confirmHtml += `<p><strong>Cargo:</strong> ${cargoObjeto?.nombre || 'No asignado'}</p>`;
+        if (esAreaSucursales && nuevoCodigo) {
+            const sucursalInfo = elements.sucursalSelect?._sucursalesData?.find(s => s.id === nuevoCodigo);
+            confirmHtml += `<p><strong>Sucursal:</strong> ${sucursalInfo?.nombre || nuevoCodigo}</p>`;
         }
-
-        confirmHtml += `
-                <p><strong>Status:</strong> ${elements.statusInput.value === 'active' ? 'Activo' : 'Inactivo'}</p>
-                <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; text-align: left;">
-                    <strong>Cambios detectados:</strong>
-                    ${cambios.map(c => `<p style="margin: 5px 0; font-size: 0.9rem;">• ${c.campo}: ${c.anterior} → ${c.nuevo}</p>`).join('')}
-                </div>
-            </div>
-        `;
+        confirmHtml += `<p><strong>Status:</strong> ${nuevoEstado ? 'Activo' : 'Inactivo'}</p>`;
+        confirmHtml += `<div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;"><strong>Cambios:</strong> ${cambios.map(c => `<p>• ${c.campo}: ${c.anterior} → ${c.nuevo}</p>`).join('')}</div></div>`;
 
         const result = await Swal.fire({
             title: '¿Guardar cambios?',
@@ -1182,31 +1076,20 @@ function configurarGuardado(elements, userManager) {
 
         if (!result.isConfirmed) return;
 
-        Swal.fire({
-            title: 'Guardando cambios...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+        Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         try {
             const updateData = {
-                nombreCompleto: elements.fullName.value.trim(),
-                telefono: elements.telefono?.value.trim() || '',
-                status: elements.statusInput.value === 'active',
+                nombreCompleto: nuevoNombre,
+                telefono: nuevoTelefono,
+                codigoColaborador: nuevoCodigo,
+                status: nuevoEstado,
                 cargo: cargoObjeto,
-                areaAsignadaId: elements.areaSelect?.value || null
+                areaAsignadaId: areaId
             };
 
-            if (esAreaSucursales) {
-                updateData.sucursalAsignadaId = sucursalId;
-                updateData.sucursalAsignadaNombre = sucursalNombre;
-                updateData.sucursalAsignadaCiudad = sucursalCiudad;
-                console.log('💾 Guardando sucursal:', { sucursalId, sucursalNombre, sucursalCiudad });
-            } else {
-                updateData.sucursalAsignadaId = null;
-                updateData.sucursalAsignadaNombre = null;
-                updateData.sucursalAsignadaCiudad = null;
-                console.log('🗑️ Limpiando sucursal (área no es sucursales)');
+            if (pendingPhotoBase64) {
+                updateData.fotoUsuario = pendingPhotoBase64;
             }
 
             await userManager.updateUser(
@@ -1216,58 +1099,39 @@ function configurarGuardado(elements, userManager) {
                 collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase
             );
 
-            await registrarEdicionColaborador(colaboradorOriginal, nuevosDatos, cambios, usuarioActual);
+            await registrarEdicionColaborador(colaboradorOriginal, updateData, cambios, usuarioActual);
 
-            const sucursalCambio = cambios.find(c => c.campo === 'sucursal');
-            if (sucursalCambio) {
-                await registrarCambioSucursal(colaboradorOriginal, sucursalCambio.anterior, sucursalCambio.nuevo, usuarioActual);
+            const cambioCodigo = cambios.find(c => c.campo === 'código');
+            if (cambioCodigo) {
+                await registrarCambioCodigo(colaboradorOriginal, cambioCodigo.anterior, cambioCodigo.nuevo, usuarioActual);
             }
 
-            Object.assign(collaborator, updateData);
-            if (cargoObjeto) {
-                collaborator.cargo = cargoObjeto;
-            }
-            collaborator.areaAsignadaNombre = areaNombre;
-
-            const now = new Date();
-            if (elements.lastUpdateDate) {
-                elements.lastUpdateDate.textContent = now.toLocaleDateString('es-MX');
-            }
-            if (elements.lastUpdateTime) {
-                elements.lastUpdateTime.textContent = now.toLocaleTimeString('es-MX', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+            const cambioTelefono = cambios.find(c => c.campo === 'teléfono');
+            if (cambioTelefono) {
+                await registrarCambioTelefono(colaboradorOriginal, cambioTelefono.anterior, cambioTelefono.nuevo, usuarioActual);
             }
 
-            window.colaboradorOriginal = JSON.parse(JSON.stringify(collaborator));
+            if (pendingPhotoBase64) {
+                await registrarCambioFotoPerfil(colaboradorOriginal, usuarioActual);
+            }
+
+            pendingPhotoBase64 = null;
+            window.colaboradorOriginal = JSON.parse(JSON.stringify({ ...collaborator, ...updateData }));
 
             Swal.close();
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: 'Datos actualizados correctamente',
-                timer: 3000,
-                showConfirmButton: false
-            });
-
-            mostrarMensaje(elements.mainMessage, 'success', 'Cambios guardados exitosamente');
+            await Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Datos actualizados correctamente', timer: 2000, showConfirmButton: false });
+            window.history.back();
 
         } catch (error) {
-            console.error('❌ Error guardando cambios:', error);
+            console.error('❌ Error guardando:', error);
             Swal.close();
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron guardar los cambios: ' + error.message
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron guardar los cambios: ' + error.message });
         }
     });
 }
 
 // Cambiar contraseña
-function configurarCambioPassword(elements, userManager) {
+function configurarCambioPassword(elements) {
     if (!elements.changePasswordBtn) return;
 
     elements.changePasswordBtn.addEventListener('click', async () => {
@@ -1280,94 +1144,38 @@ function configurarCambioPassword(elements, userManager) {
         const userEmail = collaborator.correoElectronico;
 
         if (!userEmail) {
-            mostrarMensaje(elements.mainMessage, 'error', 'No se encontró el correo del colaborador');
+            mostrarMensaje(elements.mainMessage, 'error', 'No se encontró el correo');
             return;
         }
 
         const result = await Swal.fire({
-            title: '¿Enviar enlace para cambiar contraseña?',
-            html: `
-                <div>
-                    <p><strong>Correo del colaborador:</strong> ${userEmail}</p>
-                    <p><i class="fas fa-info-circle"></i> El enlace expirará en 1 hora.</p>
-                </div>
-            `,
+            title: '¿Enviar enlace?',
+            html: `<p>Correo: <strong>${userEmail}</strong></p><p>El enlace expirará en 1 hora.</p>`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'ENVIAR ENLACE',
-            cancelButtonText: 'CANCELAR',
-            allowOutsideClick: false
+            confirmButtonText: 'ENVIAR',
+            cancelButtonText: 'CANCELAR'
         });
 
         if (!result.isConfirmed) return;
 
-        Swal.fire({
-            title: 'Enviando enlace...',
-            text: 'Por favor espera mientras procesamos tu solicitud.',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: () => Swal.showLoading()
-        });
+        Swal.fire({ title: 'Enviando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         try {
             const firebaseModule = await import('/config/firebase-config.js');
             const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js");
 
-            const actionCodeSettings = {
+            await sendPasswordResetEmail(firebaseModule.auth, userEmail, {
                 url: window.location.origin + '/verifyEmail.html',
                 handleCodeInApp: false
-            };
-
-            await sendPasswordResetEmail(firebaseModule.auth, userEmail, actionCodeSettings);
+            });
 
             Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Enlace enviado exitosamente!',
-                html: `
-                    <div>
-                        <p><strong>Destinatario:</strong> ${userEmail}</p>
-                        <p><strong>Válido por:</strong> 1 hora</p>
-                        <p>El colaborador recibirá instrucciones para restablecer su contraseña.</p>
-                    </div>
-                `,
-                confirmButtonText: 'ENTENDIDO',
-                allowOutsideClick: false,
-                showCloseButton: true
-            });
+            await Swal.fire({ icon: 'success', title: 'Enviado', text: `Se envió un enlace a ${userEmail}` });
 
         } catch (error) {
             Swal.close();
-
-            console.error('❌ Error enviando correo:', error);
-
-            let errorMessage = 'Ocurrió un error al enviar el correo';
-
-            switch (error.code) {
-                case 'auth/user-not-found':
-                    errorMessage = 'Usuario no encontrado';
-                    break;
-                case 'auth/invalid-email':
-                    errorMessage = 'Correo inválido';
-                    break;
-                case 'auth/too-many-requests':
-                    errorMessage = 'Demasiados intentos';
-                    break;
-                case 'auth/network-request-failed':
-                    errorMessage = 'Error de conexión';
-                    break;
-                default:
-                    errorMessage = 'Error del sistema';
-            }
-
-            Swal.fire({
-                icon: 'error',
-                title: errorMessage,
-                text: 'Por favor, intenta nuevamente más tarde.',
-                confirmButtonText: 'ENTENDIDO'
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo enviar el correo' });
         }
     });
 }
@@ -1388,54 +1196,16 @@ function configurarEliminacion(elements, userManager) {
 
         const result = await Swal.fire({
             title: '¿Inhabilitar colaborador?',
-            html: `
-                <div>
-                    <p><strong>${fullName}</strong></p>
-                    <p>${collaborator.correoElectronico}</p>
-                    <p>¿Estás seguro de inhabilitar este colaborador?</p>
-                    <p><i class="fas fa-exclamation-triangle"></i> Consecuencias:</p>
-                    <ul>
-                        <li>No podrá iniciar sesión</li>
-                        <li>La información se conserva</li>
-                        <li>Puede reactivarse después</li>
-                    </ul>
-                </div>
-            `,
+            html: `<p><strong>${fullName}</strong></p><p>${collaborator.correoElectronico}</p><p>No podrá iniciar sesión.</p>`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'INHABILITAR',
-            cancelButtonText: 'CANCELAR',
-            showDenyButton: true,
-            denyButtonText: 'SOLO DESACTIVAR'
+            cancelButtonText: 'CANCELAR'
         });
-
-        if (result.isDenied) {
-            elements.statusInput.value = 'inactive';
-            elements.statusOptions.forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.getAttribute('data-status') === 'inactive') {
-                    opt.classList.add('selected');
-                }
-            });
-
-            Swal.fire({
-                icon: 'info',
-                title: 'Status cambiado',
-                text: 'El colaborador ha sido marcado como inactivo. Recuerda guardar los cambios.',
-                timer: 3000,
-                showConfirmButton: false
-            });
-
-            return;
-        }
 
         if (!result.isConfirmed) return;
 
-        Swal.fire({
-            title: 'Inhabilitando colaborador...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+        Swal.fire({ title: 'Inhabilitando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         try {
             await userManager.inactivarUsuario(
@@ -1446,40 +1216,13 @@ function configurarEliminacion(elements, userManager) {
 
             await registrarInhabilitacionColaborador(collaborator, usuarioActual);
 
-            elements.statusInput.value = 'inactive';
-            elements.statusOptions.forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.getAttribute('data-status') === 'inactive') {
-                    opt.classList.add('selected');
-                }
-            });
-
-            collaborator.status = false;
-
             Swal.close();
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Colaborador inhabilitado',
-                text: `${fullName} ha sido inhabilitado del sistema`,
-                confirmButtonText: 'ENTENDIDO',
-                timer: 3000
-            });
-
-            setTimeout(() => {
-                window.location.href = '../usuarios/usuarios.html';
-            }, 3000);
+            await Swal.fire({ icon: 'success', title: 'Inhabilitado', text: `${fullName} ha sido inhabilitado`, timer: 2000 });
+            window.location.href = '../usuarios/usuarios.html';
 
         } catch (error) {
             Swal.close();
-            console.error('❌ Error inhabilitando colaborador:', error);
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudo inhabilitar el colaborador: ' + error.message,
-                confirmButtonText: 'ENTENDIDO'
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo inhabilitar' });
         }
     });
 }

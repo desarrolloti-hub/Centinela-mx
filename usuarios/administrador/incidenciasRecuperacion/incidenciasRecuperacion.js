@@ -102,12 +102,12 @@ async function cargarRegistrosPagina(pagina) {
 
         cursoresPaginacion.ultimoDocumento = resultado.ultimoDocumento;
         cursoresPaginacion.primerDocumento = resultado.primerDocumento;
-        
+
         registrosActuales = resultado.registros;
         totalRegistros = resultado.total;
         totalPaginas = resultado.totalPaginas;
         paginaActual = resultado.paginaActual;
-        
+
         if (registrosActuales.length === 0 && pagina === 1) {
             tbody.innerHTML = `
                 <tr>
@@ -125,9 +125,9 @@ async function cargarRegistrosPagina(pagina) {
             `;
             return;
         }
-        
+
         renderizarRegistros();
-        
+
     } catch (error) {
         console.error('Error cargando registros:', error);
         mostrarError('Error al cargar registros: ' + error.message);
@@ -136,7 +136,7 @@ async function cargarRegistrosPagina(pagina) {
 
 window.irPagina = async function (pagina) {
     if (pagina < 1 || pagina > totalPaginas || pagina === paginaActual) return;
-    
+
     try {
         const tbody = document.getElementById('tablaRegistrosBody');
         if (tbody) {
@@ -151,9 +151,9 @@ window.irPagina = async function (pagina) {
                 </tr>
             `;
         }
-        
+
         let resultado;
-        
+
         if (pagina > paginaActual) {
             resultado = await mercanciaManager.getRegistrosPaginados(
                 organizacionActual.camelCase,
@@ -176,16 +176,16 @@ window.irPagina = async function (pagina) {
                 null
             );
         }
-        
+
         cursoresPaginacion.ultimoDocumento = resultado.ultimoDocumento;
         cursoresPaginacion.primerDocumento = resultado.primerDocumento;
         registrosActuales = resultado.registros;
         totalRegistros = resultado.total;
         totalPaginas = resultado.totalPaginas;
         paginaActual = pagina;
-        
+
         renderizarRegistros();
-        
+
     } catch (error) {
         console.error('Error navegando a página:', error);
         mostrarError('Error al cambiar de página: ' + error.message);
@@ -200,7 +200,7 @@ function renderizarRegistros() {
     if (paginationInfo) {
         const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA + 1;
         const fin = Math.min(inicio + registrosActuales.length - 1, totalRegistros);
-        
+
         if (totalRegistros > 0) {
             paginationInfo.textContent = `Mostrando ${inicio}-${fin} de ${totalRegistros} registros`;
         } else {
@@ -227,7 +227,7 @@ function renderizarPaginacion() {
     }
 
     let html = '';
-    
+
     html += `
         <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
             <button class="page-link" onclick="irPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
@@ -235,15 +235,15 @@ function renderizarPaginacion() {
             </button>
         </li>
     `;
-    
+
     const maxPagesToShow = 5;
     let startPage = Math.max(1, paginaActual - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPaginas, startPage + maxPagesToShow - 1);
-    
+
     if (endPage - startPage + 1 < maxPagesToShow) {
         startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-    
+
     if (startPage > 1) {
         html += `
             <li class="page-item">
@@ -252,7 +252,7 @@ function renderizarPaginacion() {
             ${startPage > 2 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
         `;
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
         html += `
             <li class="page-item ${i === paginaActual ? 'active' : ''}">
@@ -260,7 +260,7 @@ function renderizarPaginacion() {
             </li>
         `;
     }
-    
+
     if (endPage < totalPaginas) {
         html += `
             ${endPage < totalPaginas - 1 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
@@ -269,7 +269,7 @@ function renderizarPaginacion() {
             </li>
         `;
     }
-    
+
     html += `
         <li class="page-item ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}">
             <button class="page-link" onclick="irPagina(${paginaActual + 1})" ${paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : ''}>
@@ -277,7 +277,7 @@ function renderizarPaginacion() {
             </button>
         </li>
     `;
-    
+
     pagination.innerHTML = html;
 }
 
@@ -285,10 +285,10 @@ function aplicarFiltros() {
     filtrosActivos.estado = document.getElementById('filtroEstado')?.value || 'todos';
     filtrosActivos.tipoEvento = document.getElementById('filtroTipoEvento')?.value || 'todos';
     filtrosActivos.nombreEmpresaCC = document.getElementById('filtroEmpresa')?.value || 'todos';
-    
+
     paginaActual = 1;
     cursoresPaginacion = { ultimoDocumento: null, primerDocumento: null };
-    
+
     cargarRegistrosPagina(1);
 }
 
@@ -306,28 +306,41 @@ function limpiarFiltros() {
         tipoEvento: 'todos',
         nombreEmpresaCC: 'todos'
     };
-    
+
     paginaActual = 1;
     cursoresPaginacion = { ultimoDocumento: null, primerDocumento: null };
-    
+
     cargarRegistrosPagina(1);
 }
 
+
 // =============================================
-// VER PDF (muestra si ya está generado o informa estado)
+// VER PDF (abre en nueva pestaña con visor nativo)
 // =============================================
 window.verPDF = async function (registroId, event) {
     event?.stopPropagation();
-    
+
     try {
         const registro = registrosActuales.find(r => r.id === registroId);
-        
+
         if (!registro) {
             throw new Error('Registro no encontrado');
         }
-        
-        if (registro.pdfUrl) {
-            window.visualizadorPDF.abrir(registro.pdfUrl, `Reporte ${registro.id}`);
+
+        if (registro.pdfUrl && registro.pdfUrl.trim() !== '') {
+            // Abrir PDF en nueva pestaña con el visor nativo del navegador
+            window.open(registro.pdfUrl, '_blank');
+
+            // Notificación opcional
+            Swal.fire({
+                icon: 'success',
+                title: 'Abriendo PDF',
+                text: 'El PDF se abrirá en el visor del navegador',
+                timer: 1500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
         } else if (registro.estadoGeneracion === 'generando') {
             Swal.fire({
                 icon: 'info',
@@ -366,6 +379,170 @@ window.verPDF = async function (registroId, event) {
         });
     }
 };
+// =============================================
+// COMPARTIR REGISTRO (IGUAL QUE INCIDENCIAS.JS)
+// =============================================
+window.compartirRegistro = async function (registroId, event) {
+    event?.stopPropagation();
+    
+    try {
+        const registro = registrosActuales.find(r => r.id === registroId);
+        
+        if (!registro) {
+            throw new Error('Registro no encontrado');
+        }
+        
+        if (!registro.pdfUrl || registro.pdfUrl.trim() === '') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'PDF no disponible',
+                text: 'Este registro aún no tiene un PDF asociado para compartir.',
+                confirmButtonText: 'Entendido'
+            });
+            return;
+        }
+        
+        const uiData = registro.toUI ? registro.toUI() : registro;
+        const tituloRegistro = `MERCANCÍA: ${uiData.nombreEmpresaCC} - ${uiData.tipoEventoTexto || uiData.tipoEvento}`;
+        const perdidoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(uiData.montoPerdido);
+        const recuperadoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(uiData.montoRecuperado);
+        const fechaEvento = uiData.fecha || registro.getFechaFormateada?.() || 'Fecha no disponible';
+        const pdfUrl = registro.pdfUrl;
+        
+        const mensajeWhatsApp = `📦 *${tituloRegistro}*\n\n` +
+            `🏢 *Empresa/CC:* ${uiData.nombreEmpresaCC}\n` +
+            `💰 *Monto Perdido:* ${perdidoFormateado}\n` +
+            `✅ *Monto Recuperado:* ${recuperadoFormateado}\n` +
+            `📅 *Fecha:* ${fechaEvento}\n` +
+            `📄 *Informe PDF:* ${pdfUrl}`;
+        
+        await Swal.fire({
+            title: '📤 Compartir registro',
+            html: `
+                <div style="text-align: center;">
+                    <i class="fas fa-file-pdf" style="font-size: 48px; color: #e74c3c; margin-bottom: 15px; display: inline-block;"></i>
+                    <p style="margin-bottom: 20px;">Comparte el informe PDF de este registro</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+                        <button id="shareWhatsAppBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid #25D366; border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fab fa-whatsapp" style="color: #25D366; font-size: 18px;"></i> WhatsApp
+                        </button>
+                        <button id="shareEmailBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid #0077B5; border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fas fa-envelope" style="color: #0077B5; font-size: 18px;"></i> Correo Electrónico
+                        </button>
+                        <button id="shareLinkBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid var(--color-accent-primary); border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fas fa-link" style="color: var(--color-accent-primary); font-size: 18px;"></i> Copiar Enlace
+                        </button>
+                        <button id="shareCancelBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid var(--color-border-light); border-radius: 8px; padding: 12px; color: #aaa; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 5px; transition: all 0.3s ease;">
+                            <i class="fas fa-times" style="color: #aaa; font-size: 18px;"></i> Cerrar
+                        </button>
+                    </div>
+                </div>
+            `,
+            icon: 'info',
+            showConfirmButton: false,
+            showCancelButton: false,
+            didOpen: () => {
+                // WhatsApp
+                document.getElementById('shareWhatsAppBtn').onclick = () => {
+                    Swal.close();
+                    const urlWhatsapp = `https://wa.me/?text=${encodeURIComponent(mensajeWhatsApp)}`;
+                    window.open(urlWhatsapp, '_blank');
+                    Swal.fire({
+                        icon: 'success',
+                        title: '💚 WhatsApp abierto',
+                        text: 'Se abrirá WhatsApp con el enlace del PDF.',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                };
+                
+                // Email con selector de servicio (IGUAL QUE INCIDENCIAS)
+                document.getElementById('shareEmailBtn').onclick = async () => {
+                    Swal.close();
+                    
+                    const { value: servicio } = await Swal.fire({
+                        title: '📧 Enviar por correo',
+                        text: 'Selecciona tu servicio de correo',
+                        icon: 'question',
+                        input: 'select',
+                        inputOptions: {
+                            'gmail': 'Gmail',
+                            'outlook': 'Outlook / Hotmail'
+                        },
+                        inputPlaceholder: 'Selecciona un servicio',
+                        showCancelButton: true,
+                        confirmButtonText: 'Abrir Correo',
+                        cancelButtonText: 'Cancelar'
+                    });
+                    
+                    if (!servicio) return;
+                    
+                    const cuerpoTexto = 
+                        `${tituloRegistro}\n\n` +
+                        `Empresa/CC: ${uiData.nombreEmpresaCC}\n` +
+                        `Tipo: ${uiData.tipoEventoTexto || uiData.tipoEvento}\n` +
+                        `Monto Perdido: ${perdidoFormateado}\n` +
+                        `Monto Recuperado: ${recuperadoFormateado}\n` +
+                        `Fecha: ${fechaEvento}\n\n` +
+                        `📄 PDF del registro:\n${pdfUrl}\n\n` +
+                        `--\nEste informe ha sido generado automáticamente por el sistema Centinela.`;
+                    
+                    const asunto = encodeURIComponent(tituloRegistro);
+                    const cuerpoCodificado = encodeURIComponent(cuerpoTexto);
+                    
+                    if (servicio === 'gmail') {
+                        window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${asunto}&body=${cuerpoCodificado}`, '_blank');
+                    } else {
+                        window.open(`https://outlook.live.com/mail/0/deeplink/compose?subject=${asunto}&body=${cuerpoCodificado}`, '_blank');
+                    }
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: '📧 Correo abierto',
+                        text: 'Se abrió tu correo con el enlace del PDF.',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                };
+                
+                // Copiar enlace
+                document.getElementById('shareLinkBtn').onclick = async () => {
+                    Swal.close();
+                    try {
+                        await navigator.clipboard.writeText(pdfUrl);
+                        Swal.fire({
+                            icon: 'success',
+                            title: '🔗 Enlace copiado',
+                            text: 'El enlace del PDF ha sido copiado al portapapeles',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } catch (err) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Enlace del PDF',
+                            html: `<input type="text" value="${pdfUrl}" style="width:100%; padding:8px; margin-top:10px; border-radius:5px;" readonly onclick="this.select()">`,
+                            confirmButtonText: 'Cerrar'
+                        });
+                    }
+                };
+                
+                // Cancelar
+                document.getElementById('shareCancelBtn').onclick = () => {
+                    Swal.close();
+                };
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error al compartir:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo compartir el registro: ' + error.message
+        });
+    }
+};
 
 window.verDetallesRegistro = function (registroId, event) {
     event?.stopPropagation();
@@ -386,15 +563,15 @@ window.registrarRecuperacion = function (registroId, event) {
 function mostrarModalDetalles(registro) {
     const modal = document.getElementById('modalDetalles');
     const body = document.getElementById('modalDetallesBody');
-    
+
     if (!modal || !body) return;
-    
+
     const uiData = registro.toUI ? registro.toUI() : registro;
-    
+
     const perdidoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(uiData.montoPerdido);
     const recuperadoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(uiData.montoRecuperado);
     const netoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(uiData.montoNeto || (uiData.montoPerdido - uiData.montoRecuperado));
-    
+
     let evidenciasHtml = '';
     if (uiData.evidencias && uiData.evidencias.length > 0) {
         evidenciasHtml = `
@@ -411,7 +588,7 @@ function mostrarModalDetalles(registro) {
             </div>
         `;
     }
-    
+
     let recuperacionesHtml = '';
     if (registro.historialRecuperaciones && registro.historialRecuperaciones.length > 0) {
         recuperacionesHtml = `
@@ -423,11 +600,11 @@ function mostrarModalDetalles(registro) {
             </div>
         `;
     }
-    
+
     const estadoPDF = uiData.estadoGeneracion || 'pendiente';
     const estadoPDFTexto = uiData.estadoGeneracionTexto || 'Pendiente';
     const estadoPDFColor = uiData.estadoGeneracionColor || '#ffc107';
-    
+
     body.innerHTML = `
         <div class="detalles-grid">
             <div class="detalle-card">
@@ -515,11 +692,11 @@ function mostrarModalDetalles(registro) {
         </div>
         ` : ''}
     `;
-    
+
     modal.classList.add('show');
 }
 
-window.verImagenGrande = function(url) {
+window.verImagenGrande = function (url) {
     const viewer = document.createElement('div');
     viewer.className = 'modal-image-viewer';
     viewer.innerHTML = `
@@ -532,7 +709,7 @@ window.verImagenGrande = function(url) {
     document.body.appendChild(viewer);
 };
 
-window.cerrarModalDetalles = function() {
+window.cerrarModalDetalles = function () {
     const modal = document.getElementById('modalDetalles');
     if (modal) modal.classList.remove('show');
 };
@@ -557,7 +734,7 @@ async function mostrarModalRecuperacion(registro) {
             }
         }
     });
-    
+
     if (monto) {
         const { value: comentario } = await Swal.fire({
             title: 'Comentario',
@@ -568,7 +745,7 @@ async function mostrarModalRecuperacion(registro) {
             confirmButtonText: 'Guardar',
             cancelButtonText: 'Cancelar'
         });
-        
+
         try {
             Swal.fire({
                 title: 'Procesando...',
@@ -576,9 +753,9 @@ async function mostrarModalRecuperacion(registro) {
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
-            
+
             const usuario = obtenerUsuarioActual();
-            
+
             await mercanciaManager.registrarRecuperacion(
                 registro.id,
                 parseFloat(monto),
@@ -588,16 +765,16 @@ async function mostrarModalRecuperacion(registro) {
                 organizacionActual.camelCase,
                 usuario
             );
-            
+
             Swal.close();
             Swal.fire({
                 icon: 'success',
                 title: 'Recuperación registrada',
                 text: `Se ha registrado la recuperación de $${parseFloat(monto).toLocaleString()}`
             });
-            
+
             await cargarRegistrosPagina(paginaActual);
-            
+
         } catch (error) {
             console.error('Error registrando recuperación:', error);
             Swal.fire({
@@ -613,17 +790,17 @@ function crearFilaRegistro(registro, tbody) {
     const tr = document.createElement('tr');
     tr.className = 'registro-row';
     tr.dataset.id = registro.id;
-    
+
     const uiData = registro.toUI ? registro.toUI() : registro;
-    
+
     const perdidoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(uiData.montoPerdido);
     const recuperadoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(uiData.montoRecuperado);
     const fechaFormateada = uiData.fecha || registro.getFechaFormateada?.() || 'N/A';
-    
+
     const tienePDF = uiData.tienePDF || (uiData.pdfGenerado === true && uiData.pdfUrl);
     const pdfIcono = tienePDF ? '<i class="fas fa-file-pdf" style="color: #c0392b;"></i>' : '<i class="fas fa-file-pdf" style="color: #6c757d;"></i>';
     const pdfTitle = tienePDF ? 'Ver PDF' : (uiData.estadoGeneracion === 'generando' ? 'Generando PDF...' : 'PDF pendiente');
-    
+
     tr.innerHTML = `
         <td data-label="ID / Folio">
             <span class="registro-id" title="${registro.id}">${escapeHTML(registro.id)}</span>
@@ -651,44 +828,37 @@ function crearFilaRegistro(registro, tbody) {
         <td data-label="Fecha">
             ${fechaFormateada}
         </td>
-        <td data-label="Acciones">
-            <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
-                <button type="button" class="btn" data-action="ver" data-id="${registro.id}" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button type="button" class="btn" data-action="pdf" data-id="${registro.id}" title="${pdfTitle}">
-                    ${pdfIcono}
-                </button>
-                ${uiData.estado !== 'recuperado' && uiData.estado !== 'cerrado' && uiData.montoRecuperado < uiData.montoPerdido ? `
-                <button type="button" class="btn" data-action="recuperar" data-id="${registro.id}" title="Registrar recuperación">
-                    <i class="fas fa-undo-alt" style="color: #28a745;"></i>
-                </button>
-                ` : ''}
-            </div>
-        </td>
+       <td data-label="Acciones">
+    <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <button type="button" class="btn" data-action="ver" data-id="${registro.id}" title="Ver detalles">
+            <i class="fas fa-eye"></i>
+        </button>
+        <button type="button" class="btn" data-action="pdf" data-id="${registro.id}" title="${pdfTitle}">
+            ${pdfIcono}
+        </button>
+        <button type="button" class="btn" data-action="compartir" data-id="${registro.id}" title="Compartir">
+            <i class="fas fa-share-alt" style="color: #00cfff;"></i>
+        </button>
+    </div>
+</td>
     `;
-    
+
     tbody.appendChild(tr);
-    
-    setTimeout(() => {
-        tr.querySelectorAll('[data-action]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const action = btn.dataset.action;
-                const id = btn.dataset.id;
-                if (action === 'ver') window.verDetallesRegistro(id, e);
-                else if (action === 'pdf') window.verPDF(id, e);
-                else if (action === 'recuperar') window.registrarRecuperacion(id, e);
+
+        setTimeout(() => {
+            tr.querySelectorAll('[data-action]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    const id = btn.dataset.id;
+                    if (action === 'ver') window.verDetallesRegistro(id, e);
+                    else if (action === 'pdf') window.verPDF(id, e);
+                    else if (action === 'compartir') window.compartirRegistro(id, e);
+                });
             });
-        });
-        
-        tr.addEventListener('click', (e) => {
-            if (!e.target.closest('[data-action]')) {
-                window.verDetallesRegistro(registro.id, e);
-            }
-        });
-    }, 50);
-}
+            // ...
+        }, 50);
+        }
 
 async function cargarEmpresas() {
     try {
@@ -696,7 +866,7 @@ async function cargarEmpresas() {
             const registros = await mercanciaManager.getRegistrosByOrganizacion(organizacionActual.camelCase);
             const empresasUnicas = [...new Set(registros.map(r => r.nombreEmpresaCC).filter(Boolean))];
             empresasCache = empresasUnicas;
-            
+
             const filtroEmpresa = document.getElementById('filtroEmpresa');
             if (filtroEmpresa) {
                 filtroEmpresa.innerHTML = '<option value="todos">Todas las empresas</option>';
@@ -717,11 +887,11 @@ async function cargarEmpresas() {
 function configurarEventListeners() {
     const btnFiltrar = document.getElementById('btnFiltrar');
     const btnLimpiar = document.getElementById('btnLimpiarFiltros');
-    
+
     if (btnFiltrar) {
         btnFiltrar.addEventListener('click', aplicarFiltros);
     }
-    
+
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', limpiarFiltros);
     }
@@ -761,14 +931,13 @@ async function obtenerDatosOrganizacion() {
             organizacionActual = {
                 nombre: usuario.organizacion || 'Mi Empresa',
                 camelCase: usuario.organizacionCamelCase || ''
-            };
-            console.log('📌 Organización:', organizacionActual);
+            };            
             return;
         }
-        
+
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
-        
+
         organizacionActual = {
             nombre: userData.organizacion || adminInfo.organizacion || 'Mi Empresa',
             camelCase: userData.organizacionCamelCase || adminInfo.organizacionCamelCase || ''
@@ -781,14 +950,14 @@ async function obtenerDatosOrganizacion() {
 async function inicializarMercanciaManager() {
     try {
         await obtenerDatosOrganizacion();
-        
+
         mercanciaManager = new MercanciaPerdidaManager();
-        
+
         configurarEventListeners();
-        
+
         await cargarRegistrosPagina(1);
         await cargarEmpresas();
-        
+
         return true;
     } catch (error) {
         console.error('Error al inicializar mercancía perdida:', error);

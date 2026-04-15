@@ -259,7 +259,7 @@
                                                 data-modulo="monitoreo">
                                         </div>
 
-                                        <!-- NUEVO Módulo: Usuarios -->
+                                        <!-- Módulo: Usuarios -->
                                         <div class="permiso-card" id="permisoUsuariosCard">
                                             <div class="permiso-icon">
                                                 <i class="fas fa-users"></i>
@@ -271,7 +271,7 @@
                                             <input type="checkbox" class="permiso-checkbox" id="permisoUsuarios">
                                         </div>
 
-                                        <!-- NUEVO Módulo: Estadísticas -->
+                                        <!-- Módulo: Estadísticas -->
                                         <div class="permiso-card" id="permisoEstadisticasCard">
                                             <div class="permiso-icon">
                                                 <i class="fas fa-chart-line"></i>
@@ -284,7 +284,7 @@
                                             <input type="checkbox" class="permiso-checkbox" id="permisoEstadisticas">
                                         </div>
 
-                                        <!-- NUEVO Módulo: Tareas -->
+                                        <!-- Módulo: Tareas -->
                                         <div class="permiso-card" id="permisoTareasCard">
                                             <div class="permiso-icon">
                                                 <i class="fas fa-tasks"></i>
@@ -294,6 +294,30 @@
                                                 <span class="permiso-descripcion">Gestionar tareas asignadas</span>
                                             </div>
                                             <input type="checkbox" class="permiso-checkbox" id="permisoTareas">
+                                        </div>
+
+                                        <!-- NUEVO Módulo: Permisos -->
+                                        <div class="permiso-card" id="permisoPermisosCard">
+                                            <div class="permiso-icon">
+                                                <i class="fas fa-user-shield"></i>
+                                            </div>
+                                            <div class="permiso-contenido">
+                                                <span class="permiso-nombre">Permisos</span>
+                                                <span class="permiso-descripcion">Gestionar roles y permisos del sistema</span>
+                                            </div>
+                                            <input type="checkbox" class="permiso-checkbox" id="permisoPermisos">
+                                        </div>
+
+                                        <!-- NUEVO Módulo: Login/Monitoreo -->
+                                        <div class="permiso-card" id="permisoLoginMonitoreoCard">
+                                            <div class="permiso-icon">
+                                                <i class="fas fa-chart-simple"></i>
+                                            </div>
+                                            <div class="permiso-contenido">
+                                                <span class="permiso-nombre">LoginMonitoreo</span>
+                                                <span class="permiso-descripcion">Acceso a login y monitoreo del sistema</span>
+                                            </div>
+                                            <input type="checkbox" class="permiso-checkbox" id="permisoLoginMonitoreo">
                                         </div>
                                     </div>
                                 </div>
@@ -331,11 +355,7 @@
     <script type="module" src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="editarPermisos.js"></script>
-
-    <!-- Protector de pagina -->
-    <!-- /usuarios/administrador/cualquier-pagina.html -->
-    <script src="/components/protector-admin.js" data-modulo="generales"> </script>
-</body>
+    <script src="/components/protector-admin.js"> </script>
 </body>
 
 </html>

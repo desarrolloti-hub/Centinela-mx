@@ -22,7 +22,6 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
     <!-- SEO Básico -->
     <meta name="description"
         content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
@@ -202,6 +201,20 @@
                             <p class="field-info">No se puede modificar el correo</p>
                         </div>
 
+                        <!-- ✅ TELÉFONO (EDITABLE) - CAMPO NUEVO -->
+                        <div class="form-field-group">
+                            <label class="field-label" for="telefono">
+                                <i class="fas fa-phone-alt"></i> TELÉFONO
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="tel" id="telefono" 
+                                    placeholder="Ej: 5512345678" inputmode="numeric" pattern="[0-9]+" maxlength="15">
+                            </div>
+                            <div class="field-hint">
+                                <i class="fas fa-info-circle"></i> Solo números, sin espacios ni guiones
+                            </div>
+                        </div>
+
                         <!-- Nombre de empresa (SOLO LECTURA) -->
                         <div class="form-field-group">
                             <label class="field-label" for="organizationName">
@@ -217,7 +230,7 @@
                             <p class="field-info">Contacta al administrador principal</p>
                         </div>
 
-                        <!-- ===== NUEVO: ÁREA / DEPARTAMENTO (EDITABLE) ===== -->
+                        <!-- ÁREA / DEPARTAMENTO (EDITABLE) -->
                         <div class="form-field-group">
                             <label class="field-label" for="areaSelect">
                                 <i class="fas fa-building"></i> ÁREA / DEPARTAMENTO
@@ -229,7 +242,7 @@
                             </div>
                         </div>
 
-                        <!-- ===== NUEVO: CARGO EN EL ÁREA (EDITABLE) ===== -->
+                        <!-- CARGO EN EL ÁREA (EDITABLE) -->
                         <div class="form-field-group">
                             <label class="field-label" for="cargoEnAreaSelect">
                                 <i class="fas fa-user-tie"></i> CARGO EN EL ÁREA
@@ -287,14 +300,8 @@
     <script type="module" src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-
-    <!-- Script principal - MÓDULO ES6 -->
     <script type="module" src="editarAdministrador.js"></script>
-
-    <!-- Protector de pagina -->
-    <!-- /usuarios/administrador/cualquier-pagina.html -->
-    <script src="/components/protector-admin.js" data-modulo="generales"> </script>
-</body>
+    <script src="/components/protector-admin.js"> </script>
 </body>
 
 </html>

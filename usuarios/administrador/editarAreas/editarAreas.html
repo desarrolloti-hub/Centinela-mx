@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editar Área | Centinela</title>
+    <title>Editar Área | Centinela C5</title>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
@@ -25,35 +25,35 @@
 
     <!-- SEO Básico -->
     <meta name="description"
-        content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+        content="Centinela es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
     <meta name="keywords"
-        content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
-    <meta name="author" content="Centinela-MX">
-    <link rel="canonical" href="https://centinela-mx.web.app/" />
+        content="centinela, centinela, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="author" content="Centinela">
+    <link rel="canonical" href="https://centinela-c5.web.app/" />
 
     <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://centinela-mx.web.app">
-    <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
+    <meta property="og:url" content="https://centinela-c5.web.app">
+    <meta property="og:title" content="Centinela-C5 | Sistema Inteligente de Seguridad y Predicción">
     <meta property="og:description"
-        content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
-    <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+        content="Centinela-C5 es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:image" content="https://centinela-c5.web.app/assets/images/logo.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
-    <meta property="og:image:alt" content="Vista previa oficial de Centinela-MX">
-    <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+    <meta property="og:image:alt" content="Vista previa oficial de Centinela-C5">
+    <meta property="og:image" content="https://centinela-c5.web.app/assets/images/logo.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
-    <meta property="og:image:alt" content="Logo oficial de Centinela-MX">
-    <meta property="og:site_name" content="Centinela-MX">
+    <meta property="og:image:alt" content="Logo oficial de Centinela">
+    <meta property="og:site_name" content="Centinela">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://centinela-mx.web.app">
-    <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
+    <meta name="twitter:url" content="https://centinela-c5.web.app">
+    <meta name="twitter:title" content="Centinela-C5 | Seguridad Inteligente">
     <meta name="twitter:description"
         content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
-    <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+    <meta name="twitter:image" content="https://centinela-c5.web.app/assets/images/logo.png">
     <meta name="twitter:creator" content="">
 
     <!-- Schema.org / JSON-LD -->
@@ -61,18 +61,18 @@
     {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    "name": "Centinela-MX",
+    "name": "Centinela",
     "operatingSystem": "Web",
     "applicationCategory": "SecurityApplication",
-    "description": "Centinela-MX es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
-    "url": "https://centinela-mx.web.app",
-    "image": "https://centinela-mx.web.app/assets/images/logo.png",
+    "description": "Centinela es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
+    "url": "https://centinela-c5.web.app",
+    "image": "https://centinela-c5.web.app/assets/images/logo.png",
     "publisher": {
         "@type": "Organization",
-        "name": "Centinela-MX",
+        "name": "Centinela",
         "logo": {
         "@type": "ImageObject",
-        "url": "https://centinela-mx.web.app/assets/images/logo.png"
+        "url": "https://centinela-c5.web.app/assets/images/logo.png"
         }
     },
     "offers": {
@@ -149,21 +149,23 @@
                                 </div>
 
                                 <div class="col-md-6 mb-3">
-                                    <label for="responsable" class="form-label">
+                                    <label for="responsableInput" class="form-label">
                                         <i class="fas fa-user me-1"></i>Responsable del Área
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fas fa-user-tie"></i></span>
-                                        <select class="form-select" id="responsable">
-                                            <option value="">Seleccionar responsable...</option>
-                                        </select>
+                                        <input type="text" class="form-control" id="responsableInput"
+                                            placeholder="Escriba para buscar un usuario..." autocomplete="off">
                                     </div>
+                                    <div id="sugerenciasList" class="sugerencias-container" style="display: none;">
+                                    </div>
+                                    <input type="hidden" id="responsableId" value="">
+                                    <input type="hidden" id="responsableNombre" value="">
                                     <div class="form-text mt-1">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Persona encargada del área (opcional)
+                                        Busque y seleccione el responsable del área
                                     </div>
                                 </div>
-
                                 <div class="col-md-12 mb-3">
                                     <label for="descripcionArea" class="form-label">
                                         <i class="fas fa-align-left me-1"></i>Descripción del Área <span
@@ -216,8 +218,7 @@
                             <!-- Mensaje informativo -->
                             <div class="alert alert-info mt-3">
                                 <i class="fas fa-info-circle me-2"></i>
-                                Los cargos que modifique aquí estarán disponibles para asignar a los empleados de esta
-                                área.
+                                Edite los datos del área, gestione sus cargos y guarde sus cambios
                             </div>
 
                             <div class="d-flex justify-content-start gap-3 mt-4">
@@ -242,11 +243,8 @@
     <script type="module" src="/components/particulas.js"></script>
     <script type="module" src="/components/navbarAdministrador.js"></script>
     <script src="/components/footerAdministrador.js"></script>
-    <script type="module" src="editarAreas.js"></script>
-
-    <!-- Protector de pagina -->
-    <!-- /usuarios/administrador/cualquier-pagina.html -->
-    <script src="/components/protector-admin.js" data-modulo="generales"> </script>
+    <script type="module" src="editarAreas.js"></script>    
+    <script src="/components/protector-admin.js"> </script>
 </body>
 </body>
 

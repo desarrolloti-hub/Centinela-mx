@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Colaborador | Centinela</title>
+    <title>Crear Colaborador | Centinela C5</title>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
@@ -18,42 +18,42 @@
     <!-- Archivo para PWA -->
     <link rel="manifest" href="/manifest.json">
     <!-- Estilos modulo -->
-    <link rel="stylesheet" href="crearUsuarios.css">
+    <link rel="stylesheet" href="./crearUsuarios.css">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 
     <!-- SEO Básico -->
     <meta name="description"
-        content="Centinela-MX es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+        content="Centinela es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
     <meta name="keywords"
-        content="centinela, centinela-mx, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
-    <meta name="author" content="Centinela-MX">
-    <link rel="canonical" href="https://centinela-mx.web.app" />
+        content="centinela, centinela, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="author" content="Centinela">
+    <link rel="canonical" href="https://centinela-c5.web.app/" />
 
     <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://centinela-mx.web.app">
-    <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
+    <meta property="og:url" content="https://centinela-c5.web.app">
+    <meta property="og:title" content="Centinela-C5 | Sistema Inteligente de Seguridad y Predicción">
     <meta property="og:description"
-        content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
-    <meta property="og:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+        content="Centinela-C5 es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
+    <meta property="og:image" content="https://centinela-c5.web.app/assets/images/logo.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
-    <meta property="og:image:alt" content="Vista previa oficial de Centinela-MX">
-    <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+    <meta property="og:image:alt" content="Vista previa oficial de Centinela-C5">
+    <meta property="og:image" content="https://centinela-c5.web.app/assets/images/logo.png">
     <meta property="og:image:width" content="500">
     <meta property="og:image:height" content="500">
-    <meta property="og:image:alt" content="Logo oficial de Centinela-MX">
-    <meta property="og:site_name" content="Centinela-MX">
+    <meta property="og:image:alt" content="Logo oficial de Centinela">
+    <meta property="og:site_name" content="Centinela">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://centinela-mx.web.app">
-    <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
+    <meta name="twitter:url" content="https://centinela-c5.web.app">
+    <meta name="twitter:title" content="Centinela-C5 | Seguridad Inteligente">
     <meta name="twitter:description"
         content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
-    <meta name="twitter:image" content="https://centinela-mx.web.app/img/centinela-mx-og.png">
+    <meta name="twitter:image" content="https://centinela-c5.web.app/assets/images/logo.png">
     <meta name="twitter:creator" content="">
 
     <!-- Schema.org / JSON-LD -->
@@ -61,18 +61,18 @@
     {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    "name": "Centinela-MX",
+    "name": "Centinela",
     "operatingSystem": "Web",
     "applicationCategory": "SecurityApplication",
-    "description": "Centinela-MX es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
-    "url": "https://centinela-mx.web.app",
-    "image": "https://centinela-mx.web.app/assets/images/logo.png",
+    "description": "Centinela es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
+    "url": "https://centinela-c5.web.app",
+    "image": "https://centinela-c5.web.app/assets/images/logo.png",
     "publisher": {
         "@type": "Organization",
-        "name": "Centinela-MX",
+        "name": "Centinela",
         "logo": {
         "@type": "ImageObject",
-        "url": "https://centinela-mx.web.app/assets/images/logo.png"
+        "url": "https://centinela-c5.web.app/assets/images/logo.png"
         }
     },
     "offers": {
@@ -154,6 +154,13 @@
                     </div>
 
                     <p class="photo-info" id="orgInfoText">Logo heredado del administrador</p>
+                    
+                </section>
+                <section>
+                    <h2 class="section-title">
+                        <i class="fas fa-info-circle fa-beat-fade"></i> Creando Colaborador
+                    </h2>
+                    <div class="message-container" id="mainMessage"></div>
                 </section>
 
                 <!-- Botón volver -->
@@ -243,21 +250,34 @@
                             </select>
                         </div>
                     </div>
+                                        <!-- CÓDIGO DEL COLABORADOR (NORMAL - PARA ÁREAS QUE NO SON SUCURSALES) -->
+<div class="form-field-group" id="codigoNormalContainer">
+    <label class="field-label" for="codigoColaborador">
+        <i class="fas fa-hashtag"></i> CÓDIGO DEL COLABORADOR <span style="font-weight: normal; font-size: 0.8rem;">(opcional)</span>
+    </label>
+    <div class="input-wrapper">
+        <input class="form-input-field" type="text" id="codigoColaborador"
+            placeholder="Autogenerado (001, 002, ...) - Opcional" maxlength="3" pattern="[0-9]{3}">
+    </div>
+    <div class="field-hint">
+        <i class="fas fa-info-circle"></i> Código de 3 dígitos (001-999). Se genera automáticamente, puedes modificarlo o dejarlo vacío.
+    </div>
+</div>
 
-                    <!-- SUCURSAL (SOLO SI EL ÁREA ES "SUCURSALES") -->
-                    <div class="form-field-group" id="sucursalContainer" style="display: none;">
-                        <label class="field-label" for="sucursalSelect">
-                            <i class="fas fa-store"></i> SUCURSAL
-                        </label>
-                        <div class="input-wrapper">
-                            <select class="form-input-field" id="sucursalSelect">
-                                <option value="">Selecciona una sucursal</option>
-                            </select>
-                        </div>
-                        <div class="field-hint" id="sucursalHint">
-                            <i class="fas fa-info-circle"></i> Opcional. Selecciona la sucursal a la que pertenecerá
-                        </div>
-                    </div>
+                    <!-- SUCURSAL (SOLO SI EL ÁREA ES "SUCURSALES") - El ID de la sucursal será el código -->
+<div class="form-field-group" id="sucursalContainer" style="display: none;">
+    <label class="field-label" for="sucursalSelect">
+        <i class="fas fa-store"></i> SUCURSAL (CÓDIGO DEL COLABORADOR)
+    </label>
+    <div class="input-wrapper">
+        <select class="form-input-field" id="sucursalSelect">
+            <option value="">Selecciona una sucursal</option>
+        </select>
+    </div>
+    <div class="field-hint" id="sucursalHint">
+        <i class="fas fa-info-circle"></i> El ID de la sucursal se usará como código del colaborador
+    </div>
+</div>
 
                     <div class="divider"></div>
 
@@ -300,23 +320,22 @@
                         </ul>
                     </div>
 
-                    <!-- Mensajes -->
-                    <div class="message-container" id="mainMessage"></div>
+                    
 
                     <!-- Acciones -->
                     <div class="action-buttons">
                         <button type="submit" class="action-btn save-btn" id="registerBtn">
-                            <i class="fas fa-user-plus"></i>CREAR COLABORADOR
+                            <i class="fas fa-user-plus"></i>Crear colaborador
                         </button>
                         <button type="button" class="action-btn cancel-btn" id="cancelBtn">
-                            <i class="fas fa-times"></i>CANCELAR
+                            <i class="fas fa-times"></i>Cancelar
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-
+    <br>
     <!-- Scripts -->
     <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
@@ -324,10 +343,7 @@
     <script src="/components/footerAdministrador.js"></script>
     <script type="module" src="/components/particulas.js"></script>
     <script type="module" src="crearUsuarios.js"></script>
-
-    <!-- Protector de pagina -->
-    <!-- /usuarios/administrador/cualquier-pagina.html -->
-    <script src="/components/protector-admin.js" data-modulo="generales"> </script>
+    <script src="/components/protector-admin.js"></script>
 </body>
 
 </html>
