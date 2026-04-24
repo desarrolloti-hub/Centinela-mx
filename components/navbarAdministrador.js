@@ -17,11 +17,16 @@ class NavbarComplete {
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
         this.intervalNotificaciones = null;
+        
+        // Sistema de sonidos
         this.sonidoNotificacion = null;
         this.soundEnabled = true;
         this.soundVolume = 0.7;
-        this.lastNotificationCount = 0;
         this.availableSounds = [];
+        
+        // Flag para saber si ya se mostró el permiso de notificaciones
+        this._permisoNotificacionesPedido = false;
+        
         this.init();
     }
 
@@ -54,11 +59,23 @@ class NavbarComplete {
 
             await this._initSonidoNotificacion();
 
-            await this._cargarNotificaciones();
+            await this._cargarNotificaciones(false, false);
             this._iniciarListenerNotificaciones();
+
+            // Solicitar permiso para notificaciones del sistema
+            this._solicitarPermisoNotificaciones();
 
         } catch (error) {
             // Error silencioso
+        }
+    }
+
+    _solicitarPermisoNotificaciones() {
+        if (this._permisoNotificacionesPedido) return;
+        this._permisoNotificacionesPedido = true;
+        
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
         }
     }
 
@@ -110,53 +127,27 @@ class NavbarComplete {
     }
 
     _determinarSonidoPorNotificacion(notificacion) {
-        if (notificacion.nivelRiesgo === 'critico') {
-            if (this.availableSounds.some(s => s.id === 'alarma-robo')) {
-                return 'alarma-robo';
-            }
+        if (this.sonidoNotificacion) {
+            return this.sonidoNotificacion.determinarSonidoParaNotificacion(notificacion);
         }
 
-        if (notificacion.tipo === 'incidencia') {
-            if (this.availableSounds.some(s => s.id === 'incidencia')) {
-                return 'incidencia';
-            }
+        // Fallback
+        if (notificacion.esMedicalAlarm || notificacion.typeId === 584) return 'alarma-medica';
+        if (notificacion.esAlarma || notificacion.tipo === 'alarma') return 'alarma-intrusion';
+        if (notificacion.nivelRiesgo === 'critico') return 'alarma-intrusion';
+        if (notificacion.tipo === 'incidencia' || notificacion.tipo === 'canalizacion') return 'nueva-incidencia';
+        if (notificacion.tipo === 'seguimiento' || notificacion.tipo === 'actualizacion' || notificacion.tipo === 'comentario') {
+            return 'nuevo-seguimiento';
         }
 
-        if (notificacion.tipo === 'seguimiento' || notificacion.tipo === 'actualizacion') {
-            if (this.availableSounds.some(s => s.id === 'actualizacion')) {
-                return 'actualizacion';
-            }
-        }
-
-        if (notificacion.tipo === 'canalizacion') {
-            if (this.availableSounds.some(s => s.id === 'canalizacion')) {
-                return 'canalizacion';
-            }
-        }
-
-        if (notificacion.tipo === 'comentario') {
-            if (this.availableSounds.some(s => s.id === 'comentario')) {
-                return 'comentario';
-            }
-        }
-
-        if (this.availableSounds.length > 0) {
-            return this.availableSounds[0].id;
-        }
-
-        return null;
+        return 'notificacion-general';
     }
 
     async _reproducirSonido(notificacion) {
         if (!this.soundEnabled || !this.sonidoNotificacion) return;
 
-        const sonidoId = this._determinarSonidoPorNotificacion(notificacion);
-        if (!sonidoId) {
-            return;
-        }
-
         try {
-            await this.sonidoNotificacion.play(sonidoId, this.soundVolume);
+            await this.sonidoNotificacion.playForNotificacion(notificacion, this.soundVolume);
         } catch (error) {
             // Error silencioso
         }
@@ -171,42 +162,48 @@ class NavbarComplete {
             const primeraNotificacion = nuevasNoLeidas[0];
             await this._reproducirSonido(primeraNotificacion);
 
-            if (Notification.permission === 'granted' && nuevasNoLeidas.length === 1) {
-                const primera = nuevasNoLeidas[0];
-                const notifUI = primera.toUI ? primera.toUI() : {
-                    titulo: primera.titulo,
-                    mensaje: primera.mensaje
-                };
+            this._mostrarNotificacionSistema(nuevasNoLeidas);
+        }
+    }
 
-                const systemNotif = new Notification(notifUI.titulo, {
-                    body: notifUI.mensaje,
-                    icon: '/assets/images/logo.png',
-                    badge: '/assets/images/logo.png',
-                    silent: false,
-                    vibrate: [200, 100, 200]
-                });
+    _mostrarNotificacionSistema(nuevasNoLeidas) {
+        if (Notification.permission !== 'granted') return;
 
-                systemNotif.onclick = () => {
-                    window.focus();
-                    if (primera.urlDestino) {
-                        window.location.href = primera.urlDestino;
-                    }
-                    systemNotif.close();
-                };
-            } else if (Notification.permission === 'granted' && nuevasNoLeidas.length > 1) {
-                const systemNotif = new Notification(`📬 ${nuevasNoLeidas.length} nuevas notificaciones`, {
-                    body: `Tienes ${nuevasNoLeidas.length} notificaciones sin leer`,
-                    icon: '/assets/images/logo.png',
-                    badge: '/assets/images/logo.png',
-                    silent: false
-                });
+        if (nuevasNoLeidas.length === 1) {
+            const primera = nuevasNoLeidas[0];
+            const notifUI = primera.toUI ? primera.toUI() : {
+                titulo: primera.titulo,
+                mensaje: primera.mensaje
+            };
 
-                systemNotif.onclick = () => {
-                    window.focus();
-                    this._mostrarModalNotificaciones();
-                    systemNotif.close();
-                };
-            }
+            const systemNotif = new Notification(notifUI.titulo, {
+                body: notifUI.mensaje,
+                icon: '/assets/images/logo.png',
+                badge: '/assets/images/logo.png',
+                silent: true,
+                vibrate: [200, 100, 200]
+            });
+
+            systemNotif.onclick = () => {
+                window.focus();
+                if (primera.urlDestino) {
+                    window.location.href = primera.urlDestino;
+                }
+                systemNotif.close();
+            };
+        } else if (nuevasNoLeidas.length > 1) {
+            const systemNotif = new Notification(`📬 ${nuevasNoLeidas.length} nuevas notificaciones`, {
+                body: `Tienes ${nuevasNoLeidas.length} notificaciones sin leer`,
+                icon: '/assets/images/logo.png',
+                badge: '/assets/images/logo.png',
+                silent: true
+            });
+
+            systemNotif.onclick = () => {
+                window.focus();
+                this._mostrarModalNotificaciones();
+                systemNotif.close();
+            };
         }
     }
 
@@ -324,27 +321,92 @@ class NavbarComplete {
         }
     }
 
-    async _cargarNotificaciones() {
+    async _cargarNotificaciones(forzarSonido = false, forzarRecarga = false) {
         if (!this.notificacionManager || !this.currentAdmin?.id || !this.currentAdmin?.organizacionCamelCase) {
             return;
         }
 
         try {
-            const todasNotificaciones = await this.notificacionManager.obtenerNotificaciones(
+            const CACHE_KEY = `notificaciones_admin_cache_${this.currentAdmin.id}`;
+            const CACHE_PENDIENTES_KEY = `notificaciones_admin_pendientes_${this.currentAdmin.id}`;
+            const CACHE_VERSION = 'v4_admin';
+
+            let todasNotificaciones;
+            let desdeCache = false;
+
+            // Obtener conteo real de pendientes desde Firestore
+            const conteoRealPendientes = await this.notificacionManager.obtenerConteoNoLeidas(
                 this.currentAdmin.id,
-                this.currentAdmin.organizacionCamelCase,
-                false,
-                50
+                this.currentAdmin.organizacionCamelCase
             );
 
-            const nuevasNoLeidas = todasNotificaciones.filter(n => !n.leida);
-            const nuevas = nuevasNoLeidas.filter(n => {
-                const existe = this.notificaciones.some(old => old.id === n.id);
-                return !existe;
-            });
+            // Verificar si hay discrepancia con el cache
+            const cachePendientes = localStorage.getItem(CACHE_PENDIENTES_KEY);
+            const hayDiscrepancia = !cachePendientes || parseInt(cachePendientes) !== conteoRealPendientes;
 
-            if (nuevas.length > 0) {
-                await this._detectarYReproducirSonido(nuevas);
+            if (forzarRecarga || hayDiscrepancia) {
+                desdeCache = false;
+            } else {
+                // Intentar cargar desde cache
+                const cacheGuardado = localStorage.getItem(CACHE_KEY);
+                const cacheVersion = localStorage.getItem(`${CACHE_KEY}_version`);
+
+                if (cacheGuardado && cacheVersion === CACHE_VERSION) {
+                    try {
+                        const cachedData = JSON.parse(cacheGuardado);
+                        const { NotificacionArea } = await import('/clases/notificacionArea.js');
+                        todasNotificaciones = cachedData.map(data => new NotificacionArea(data.id, data));
+                        desdeCache = true;
+                    } catch (e) {
+                        desdeCache = false;
+                    }
+                }
+            }
+
+            if (!desdeCache) {
+                // Cargar TODAS las notificaciones desde Firestore (SIN LÍMITE)
+                // El administrador ve todas las notificaciones de su organización
+                todasNotificaciones = await this.notificacionManager.obtenerNotificaciones(
+                    this.currentAdmin.id,
+                    this.currentAdmin.organizacionCamelCase,
+                    false,
+                    null // NULL = SIN LÍMITE, TRAE TODAS
+                );
+
+                // Guardar en cache
+                const cacheData = todasNotificaciones.map(n => ({
+                    id: n.id, titulo: n.titulo, mensaje: n.mensaje, tipo: n.tipo,
+                    fecha: n.fecha?.toISOString?.() || n.fecha,
+                    organizacionCamelCase: n.organizacionCamelCase,
+                    remitenteId: n.remitenteId, remitenteNombre: n.remitenteNombre,
+                    incidenciaId: n.incidenciaId, incidenciaTitulo: n.incidenciaTitulo,
+                    sucursalId: n.sucursalId, sucursalNombre: n.sucursalNombre,
+                    nivelRiesgo: n.nivelRiesgo, areasIds: n.areasIds, areasDestino: n.areasDestino,
+                    totalUsuarios: n.totalUsuarios, leidas: n.leidas, urlDestino: n.urlDestino,
+                    detalles: n.detalles, prioridad: n.prioridad, icono: n.icono, color: n.color,
+                    leida: n.leida, eventId: n.eventId, panelSerial: n.panelSerial,
+                    panelAlias: n.panelAlias, eventDescription: n.eventDescription,
+                    typeId: n.typeId, esAlarma: n.esAlarma, esMedicalAlarm: n.esMedicalAlarm
+                }));
+
+                localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+                localStorage.setItem(`${CACHE_KEY}_version`, CACHE_VERSION);
+                localStorage.setItem(CACHE_PENDIENTES_KEY, conteoRealPendientes.toString());
+            }
+
+            // Identificar notificaciones NUEVAS (no leídas Y no conocidas antes)
+            const notificacionesExistentesIds = new Set(this.notificaciones.map(n => n.id));
+            const nuevasNoLeidas = todasNotificaciones.filter(n => 
+                !n.leida && !notificacionesExistentesIds.has(n.id)
+            );
+
+            // Reproducir sonido SOLO para notificaciones realmente NUEVAS
+            if (nuevasNoLeidas.length > 0 && forzarSonido === true) {
+                for (const notif of nuevasNoLeidas) {
+                    await this._reproducirSonido(notif);
+                    await new Promise(r => setTimeout(r, 300));
+                }
+                this._mostrarNotificacionSistema(nuevasNoLeidas);
             }
 
             this.notificaciones = todasNotificaciones;
@@ -367,9 +429,24 @@ class NavbarComplete {
             clearInterval(this.intervalNotificaciones);
         }
 
-        this.intervalNotificaciones = setInterval(() => {
-            this._cargarNotificaciones();
-        }, 30000);
+        // Escuchar cambios en tiempo real
+        this.intervalNotificaciones = setInterval(async () => {
+            const nuevoConteo = await this.notificacionManager.obtenerConteoNoLeidas(
+                this.currentAdmin.id,
+                this.currentAdmin.organizacionCamelCase
+            );
+
+            if (nuevoConteo !== this.notificacionesNoLeidas) {
+                await this._cargarNotificaciones(true, true);
+            }
+        }, 10000);
+    }
+
+    _invalidarCacheNotificaciones() {
+        if (!this.currentAdmin?.id) return;
+        const CACHE_KEY = `notificaciones_admin_cache_${this.currentAdmin.id}`;
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(`${CACHE_KEY}_version`);
     }
 
     _actualizarBadgeNotificaciones() {
@@ -409,25 +486,33 @@ class NavbarComplete {
                 nivelRiesgo: notif.nivelRiesgo,
                 tiempoRelativo: notif.getTiempoRelativo ? notif.getTiempoRelativo() : '',
                 urlDestino: notif.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
-                leida: notif.leida || false
+                leida: notif.leida || false,
+                esEvento: notif.tipo === 'evento_monitoreo' || notif.tipo === 'alarma' || notif.tipo === 'monitoreo'
             };
 
             const areasTexto = notif.areasDestino && notif.areasDestino.length > 0
                 ? notif.areasDestino.map(a => a.nombre).join(', ')
                 : '';
 
+            const eventoClass = notifUI.esEvento ? 'notificacion-evento' : '';
+            const eventoIconoAdicional = notifUI.esEvento ? 
+                (notif.esMedicalAlarm ? '🚨' : (notif.esAlarma ? '🔔' : '📋')) : '';
+
             html += `
-                <div class="notificacion-item" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
+                <div class="notificacion-item ${eventoClass}" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
                     <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
                         <i class="fas ${notifUI.icono}"></i>
                     </div>
                     <div class="notificacion-contenido">
-                        <div class="notificacion-titulo">${this._escapeHTML(notifUI.titulo)}</div>
+                        <div class="notificacion-titulo">
+                            ${eventoIconoAdicional} ${this._escapeHTML(notifUI.titulo)}
+                        </div>
                         <div class="notificacion-mensaje">${this._escapeHTML(notifUI.mensaje)}</div>
                         <div class="notificacion-detalles">
                             ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${this._escapeHTML(notifUI.sucursalNombre)}</span>` : ''}
                             ${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}
                             ${areasTexto ? `<span><i class="fas fa-users"></i> ${this._escapeHTML(areasTexto)}</span>` : ''}
+                            ${notif.panelAlias ? `<span><i class="fas fa-microchip"></i> ${this._escapeHTML(notif.panelAlias)}</span>` : ''}
                         </div>
                         <div class="notificacion-tiempo">${this._escapeHTML(notifUI.tiempoRelativo)}</div>
                     </div>
@@ -474,7 +559,7 @@ class NavbarComplete {
                     }
                 }
 
-                if (url) {
+                if (url && url !== '#') {
                     window.location.href = url;
                 }
             });
@@ -502,12 +587,16 @@ class NavbarComplete {
                     color: notif.getColor ? notif.getColor() : '#007bff',
                     tiempoRelativo: notif.getTiempoRelativo ? notif.getTiempoRelativo() : '',
                     urlDestino: notif.urlDestino || `/usuarios/administrador/verIncidencias/verIncidencias.html?id=${notif.incidenciaId}`,
-                    leida: notif.leida || false
+                    leida: notif.leida || false,
+                    esEvento: notif.tipo === 'evento_monitoreo' || notif.tipo === 'alarma' || notif.tipo === 'monitoreo'
                 };
 
                 const areasTexto = notif.areasDestino && notif.areasDestino.length > 0
                     ? notif.areasDestino.map(a => a.nombre).join(', ')
                     : '';
+
+                const eventoIcono = notifUI.esEvento ? 
+                    (notif.esMedicalAlarm ? '🚨' : (notif.esAlarma ? '🔔' : '📋')) : '';
 
                 notificacionesHtml += `
                     <div class="notificacion-item-modal" data-id="${notif.id}" data-url="${notifUI.urlDestino}" style="
@@ -523,7 +612,7 @@ class NavbarComplete {
                             <i class="fas ${notifUI.icono}"></i>
                         </div>
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; margin-bottom: 4px;">${this._escapeHTML(notifUI.titulo)}</div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">${eventoIcono} ${this._escapeHTML(notifUI.titulo)}</div>
                             <div style="font-size: 13px; color: #aaa; margin-bottom: 4px;">${this._escapeHTML(notifUI.mensaje)}</div>
                             ${areasTexto ? `<div style="font-size: 11px; color: #888; margin-bottom: 4px;"><i class="fas fa-users"></i> ${this._escapeHTML(areasTexto)}</div>` : ''}
                             <div style="font-size: 11px; color: #666;">${this._escapeHTML(notifUI.tiempoRelativo)}</div>
@@ -567,7 +656,7 @@ class NavbarComplete {
                                 this._renderizarNotificaciones();
                             }
 
-                            if (url) {
+                            if (url && url !== '#') {
                                 window.location.href = url;
                             }
 
@@ -604,6 +693,7 @@ class NavbarComplete {
 
             this.notificacionesNoLeidas = 0;
             this.notificaciones.forEach(n => n.leida = true);
+            this._invalidarCacheNotificaciones();
             this._actualizarBadgeNotificaciones();
             this._renderizarNotificaciones();
 
@@ -634,8 +724,8 @@ class NavbarComplete {
             this.dropdownNotificacionesAbierto = !this.dropdownNotificacionesAbierto;
             notificacionesDropdown.classList.toggle('active', this.dropdownNotificacionesAbierto);
 
-            if (this.dropdownNotificacionesAbierto) {
-                this._cargarNotificaciones();
+            if (this.dropdownNotificacionesAbierto && this.notificacionesNoLeidas > 0) {
+                this._cargarNotificaciones(false, false);
             }
         });
 
@@ -907,6 +997,10 @@ class NavbarComplete {
                 transition: all 0.3s ease;
                 border: 1px solid transparent;
                 margin-bottom: 5px;
+            }
+            
+            .notificacion-item.notificacion-evento {
+                border-left: 3px solid #e74c3c;
             }
             
             .notificacion-item:hover {
@@ -1789,7 +1883,6 @@ class NavbarComplete {
                             <i class="fa-solid fa-plus-circle"></i>
                             <span>Crear Extravio</span>
                         </a>
-                     
                     </div>
                 </div>
 
@@ -2450,8 +2543,11 @@ class NavbarComplete {
                     text: '¿Estás seguro de que deseas salir del sistema?',
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonText: 'CONFIRMAR',
-                    cancelButtonText: 'CANCELAR'
+                    confirmButtonText: 'Sí, cerrar sesión',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    reverseButtons: true
                 }).then((result) => {
                     resolve(result.isConfirmed);
                 });
@@ -2467,6 +2563,12 @@ class NavbarComplete {
             if (this.intervalNotificaciones) {
                 clearInterval(this.intervalNotificaciones);
                 this.intervalNotificaciones = null;
+            }
+
+            if (this.currentAdmin?.id) {
+                const CACHE_KEY = `notificaciones_admin_cache_${this.currentAdmin.id}`;
+                localStorage.removeItem(CACHE_KEY);
+                localStorage.removeItem(`${CACHE_KEY}_version`);
             }
 
             if (this.userManager && typeof this.userManager.logout === 'function') {
@@ -2648,6 +2750,11 @@ class NavbarComplete {
             orbitronLink.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap';
             document.head.appendChild(orbitronLink);
         }
+    }
+
+    async recargarNotificacionesManual() {
+        this._invalidarCacheNotificaciones();
+        await this._cargarNotificaciones(false, true);
     }
 }
 
