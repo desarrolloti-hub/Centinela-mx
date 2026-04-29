@@ -4,12 +4,12 @@
 import { Evento } from '/clases/evento.js';
 import { CuentaPM } from '/clases/cuentaPM.js';
 import { db } from '/config/firebase-config.js';
-import { 
-    collection, 
-    query, 
-    where, 
-    orderBy, 
-    limit, 
+import {
+    collection,
+    query,
+    where,
+    orderBy,
+    limit,
     startAfter,
     getCountFromServer,
     onSnapshot,
@@ -37,28 +37,28 @@ let primerDocumento = null;          // Para referencia
 let cargandoPagina = false;
 
 // ========== INICIALIZACIÓN ==========
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     try {
         console.log('🚀 Iniciando Monitoreo de Eventos (Tiempo Real + Paginación)...');
-        
+
         usuarioActual = obtenerUsuarioActual();
         if (!usuarioActual) throw new Error('No se encontró información del usuario');
-        
+
         console.log('👤 Usuario:', usuarioActual.nombreCompleto);
-        
+
         actualizarInfoUsuario();
-        
+
         await cargarEmailsAsociados();
         await cargarPanelesInfo();
-        
+
         // Cargar primera página
         await cargarPagina(1);
-        
+
         // Iniciar escucha SOLO para nuevos eventos
         iniciarEscuchaNuevosEventos();
-        
+
         configurarEventosUI();
-        
+
     } catch (error) {
         console.error('❌ Error:', error);
         mostrarError(error.message);
@@ -94,9 +94,9 @@ function actualizarInfoUsuario() {
 async function cargarEmailsAsociados() {
     try {
         if (!usuarioActual?.organizacionCamelCase) return;
-        
+
         const cuentasPM = await CuentaPM.obtenerPorOrganizacion(usuarioActual.organizacionCamelCase);
-        
+
         if (cuentasPM && cuentasPM.length > 0) {
             emailsAsociados = cuentasPM.map(c => c.email).filter(email => email);
             console.log('📧 Emails asociados:', emailsAsociados.length);
@@ -114,13 +114,13 @@ async function cargarPanelesInfo() {
             actualizarInfoPanelesUI([]);
             return;
         }
-        
+
         const panelesRef = collection(db, "paneles_info");
         const q = query(panelesRef, where("email_asociado", "in", emailsAsociados.slice(0, 10)));
-        
+
         const snapshot = await getDocs(q);
         panelesInfo = [];
-        
+
         snapshot.forEach(doc => {
             const data = doc.data();
             panelesInfo.push({
@@ -130,10 +130,10 @@ async function cargarPanelesInfo() {
                 email_asociado: data.email_asociado || ''
             });
         });
-        
+
         console.log(`✅ Paneles encontrados: ${panelesInfo.length}`);
         actualizarInfoPanelesUI(panelesInfo);
-        
+
     } catch (error) {
         console.error('❌ Error cargando paneles_info:', error);
         actualizarInfoPanelesUI([]);
@@ -143,12 +143,12 @@ async function cargarPanelesInfo() {
 function actualizarInfoPanelesUI(paneles) {
     const cuentaInfo = document.getElementById('cuentaInfo');
     if (!cuentaInfo) return;
-    
+
     if (!paneles || paneles.length === 0) {
         cuentaInfo.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #f39c12;"></i> No se encontraron paneles';
         return;
     }
-    
+
     const panelesPorEmail = {};
     paneles.forEach(panel => {
         if (!panelesPorEmail[panel.email_asociado]) {
@@ -156,15 +156,15 @@ function actualizarInfoPanelesUI(paneles) {
         }
         panelesPorEmail[panel.email_asociado].push(panel);
     });
-    
+
     let totalPaneles = paneles.length;
     let uniqueId = Date.now();
-    
+
     let panelesHtml = '<div style="width: 100%;">';
-    
+
     for (const [email, panelesEmail] of Object.entries(panelesPorEmail)) {
         const accordionId = 'accordion-' + uniqueId + '-' + email.replace(/[^a-zA-Z0-9]/g, '');
-        
+
         panelesHtml += `
             <div style="margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;">
                 <div style="background: rgba(0,0,0,0.3); padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 12px;" onclick="toggleAccordion('${accordionId}')">
@@ -189,7 +189,7 @@ function actualizarInfoPanelesUI(paneles) {
             </div>
         `;
     }
-    
+
     panelesHtml += `
         <div style="margin-top: 8px; color: #2ecc71; font-size: 11px; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-circle" style="font-size: 8px;"></i> 
@@ -197,14 +197,14 @@ function actualizarInfoPanelesUI(paneles) {
             <span style="margin-left: auto; font-size: 10px;">Total: ${totalPaneles} paneles</span>
         </div>
     </div>`;
-    
+
     cuentaInfo.innerHTML = panelesHtml;
 }
 
-window.toggleAccordion = function(accordionId) {
+window.toggleAccordion = function (accordionId) {
     const element = document.getElementById(accordionId);
     const icon = document.getElementById(accordionId + '-icon');
-    
+
     if (element) {
         if (element.style.display === 'none' || element.style.display === '') {
             element.style.display = 'block';
@@ -224,14 +224,14 @@ function obtenerAliasPanel(serial) {
 // ========== CONSTRUIR CONSTRAINTS PARA FILTROS ==========
 function construirConstraints(emailsParaQuery) {
     const constraints = [];
-    
+
     constraints.push(where("email_asociado", "in", emailsParaQuery));
-    
+
     // Filtro por fecha (últimos 7 días)
     const fechaLimite = new Date();
     fechaLimite.setDate(fechaLimite.getDate() - 7);
     constraints.push(where("createdAt", ">=", fechaLimite));
-    
+
     // Filtro por estado
     if (filtroActivo === 'pendiente') {
         constraints.push(where("estadoEvento", "==", "pendiente"));
@@ -242,9 +242,9 @@ function construirConstraints(emailsParaQuery) {
     } else if (filtroActivo === 'alarma') {
         constraints.push(where("type_id", "in", [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 130, 131, 132, 133, 134, 135, 584]));
     }
-    
+
     constraints.push(orderBy("createdAt", "desc"));
-    
+
     return constraints;
 }
 
@@ -252,29 +252,29 @@ function construirConstraints(emailsParaQuery) {
 async function cargarPagina(pagina) {
     if (!usuarioActual?.organizacionCamelCase || !emailsAsociados.length) return;
     if (cargandoPagina) return;
-    
+
     cargandoPagina = true;
-    
+
     try {
         if (pagina === 1) {
             mostrarLoading();
         }
-        
+
         const eventosRef = collection(db, "eventos");
         const emailsParaQuery = emailsAsociados.slice(0, 10);
         const constraints = construirConstraints(emailsParaQuery);
-        
+
         // ========== OBTENER TOTAL REAL ==========
         const countQuery = query(eventosRef, ...constraints);
         const countSnapshot = await getCountFromServer(countQuery);
         totalEventosReal = countSnapshot.data().count;
         totalPaginas = Math.ceil(totalEventosReal / ITEMS_POR_PAGINA);
-        
+
         console.log(`📊 Total real de eventos: ${totalEventosReal} | Página ${pagina}/${totalPaginas}`);
-        
+
         // ========== OBTENER DOCUMENTOS DE LA PÁGINA ==========
         let paginatedQuery;
-        
+
         if (pagina === 1) {
             paginatedQuery = query(eventosRef, ...constraints, limit(ITEMS_POR_PAGINA));
         } else {
@@ -284,15 +284,15 @@ async function cargarPagina(pagina) {
             }
             paginatedQuery = query(eventosRef, ...constraints, startAfter(ultimoDocumento), limit(ITEMS_POR_PAGINA));
         }
-        
+
         const snapshot = await getDocs(paginatedQuery);
-        
+
         // Actualizar cursores
         if (!snapshot.empty) {
             ultimoDocumento = snapshot.docs[snapshot.docs.length - 1];
             primerDocumento = snapshot.docs[0];
         }
-        
+
         // Convertir a eventos
         const eventosPagina = [];
         snapshot.forEach(doc => {
@@ -301,15 +301,18 @@ async function cargarPagina(pagina) {
             if (alias && !data.panel_alias) data.panel_alias = alias;
             eventosPagina.push(new Evento(doc.id, { ...data, id: doc.id }));
         });
-        
+
+        // 👇 Asegurar el orden descendente explícitamente
+        eventosPagina.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
         todosLosEventos = eventosPagina;
         paginaActual = pagina;
         primerCargaCompletada = true;
-        
+
         // Actualizar UI
         actualizarEstadisticas();
         aplicarFiltros();
-        
+
     } catch (error) {
         console.error('❌ Error cargando página:', error);
         mostrarError(error.message);
@@ -319,12 +322,12 @@ async function cargarPagina(pagina) {
 }
 
 // ========== NAVEGACIÓN ENTRE PÁGINAS ==========
-window.irPagina = async function(pagina) {
+window.irPagina = async function (pagina) {
     if (pagina < 1 || pagina > totalPaginas || pagina === paginaActual || cargandoPagina) return;
     await cargarPagina(pagina);
 };
 
-window.paginaAnterior = async function() {
+window.paginaAnterior = async function () {
     if (paginaActual > 1) {
         // Para ir hacia atrás necesitamos recargar desde la página 1
         // (Firestore no tiene cursor para ir hacia atrás fácilmente)
@@ -341,64 +344,76 @@ window.paginaAnterior = async function() {
 // ========== ESCUCHAR NUEVOS EVENTOS (SOLO PENDIENTES) ==========
 function iniciarEscuchaNuevosEventos() {
     if (!usuarioActual?.organizacionCamelCase || !emailsAsociados.length) return;
-    
+
     if (unsubscribeNuevos) unsubscribeNuevos();
-    
-    const eventosRef = collection(db, "eventos");
-    const emailsParaQuery = emailsAsociados.slice(0, 10);
-    
-    const q = query(
-        eventosRef,
-        where("email_asociado", "in", emailsParaQuery),
-        where("estadoEvento", "==", "pendiente"),
-        orderBy("createdAt", "desc"),
-        limit(20)
-    );
-    
-    unsubscribeNuevos = onSnapshot(q, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === "added" && primerCargaCompletada) {
-                const doc = change.doc;
-                const data = doc.data();
-                
-                if (!emailsAsociados.includes(data.email_asociado)) return;
-                
-                // Verificar si ya existe en la página actual
-                const existe = todosLosEventos.find(e => e.id === doc.id);
-                if (existe) return;
-                
-                const evento = new Evento(doc.id, { ...data, id: doc.id });
-                if (evento.estadoEvento !== 'pendiente') return;
-                
-                const alias = obtenerAliasPanel(evento.panel_serial);
-                if (alias) evento.panel_alias = alias;
-                
-                console.log('🆕 Nuevo evento en tiempo real:', evento.id);
-                
-                // Insertar al inicio de la página actual
-                todosLosEventos.unshift(evento);
-                totalEventosReal++;
-                totalPaginas = Math.ceil(totalEventosReal / ITEMS_POR_PAGINA);
-                
-                // Mantener solo ITEMS_POR_PAGINA eventos
-                if (todosLosEventos.length > ITEMS_POR_PAGINA) {
-                    todosLosEventos.pop();
-                }
-                
-                if (Notification.permission === "granted") {
-                    mostrarNotificacion(evento);
-                }
-                
-                actualizarEstadisticas();
-                aplicarFiltros();
-                marcarNuevoEvento(evento.id);
+
+    // Capturar el momento en que se inicia la escucha para evitar eventos antiguos
+    const ahora = new Date();
+
+    const escucha = Evento.escucharEventosEnTiempoReal(
+        usuarioActual.organizacionCamelCase,
+        async (evento) => {
+            // Este callback se ejecuta para cada nuevo evento en tiempo real (solo los creados después de 'ahora')
+            if (!primerCargaCompletada) return;
+
+            // Evitar duplicados
+            const existe = todosLosEventos.find(e => e.id === evento.id);
+            if (existe) return;
+
+            if (evento.estadoEvento !== 'pendiente') return;
+
+            const alias = obtenerAliasPanel(evento.panel_serial);
+            if (alias) evento.panel_alias = alias;
+
+            console.log('🆕 Nuevo evento en tiempo real:', evento.id);
+
+            todosLosEventos.push(evento);
+            totalEventosReal++;
+            totalPaginas = Math.ceil(totalEventosReal / ITEMS_POR_PAGINA);
+
+            // Mantener el tamaño de la página actual (quitar el más antiguo si excede)
+            if (todosLosEventos.length > ITEMS_POR_PAGINA) {
+                todosLosEventos.shift();
             }
-        });
-    }, (error) => {
-        console.error('❌ Error en escucha:', error);
+
+            if (Notification.permission === "granted") {
+                mostrarNotificacion(evento);
+            }
+
+            todosLosEventos.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            actualizarEstadisticas();
+            aplicarFiltros();
+            marcarNuevoEvento(evento.id);
+        },
+        (error) => console.error('❌ Error en escucha de eventos:', error),
+        ahora   // <-- solo eventos posteriores a este momento
+    );
+
+    escucha.subscribe().then(unsub => {
+        unsubscribeNuevos = unsub;
+        console.log('🎧 Escucha de eventos en tiempo real activada');
     });
-    
-    console.log('🎧 Escucha de nuevos eventos activada');
+
+    // ========== Escuchar actualizaciones que vienen del navbar (atender/ignorar desde notificaciones) ==========
+    window.addEventListener('eventoActualizado', (e) => {
+        const { eventoId, estadoEvento, nombreUsuarioAtencion, mensajeRespuesta } = e.detail;
+        // Buscar el evento en la página actual
+        let evento = todosLosEventos.find(ev => ev.id === eventoId);
+        if (!evento) {
+            // Si no está en la página, recargar la página actual para traerlo
+            paginaActual = 1;
+            ultimoDocumento = null;
+            cargarPagina(1);
+            return;
+        }
+
+        evento.estadoEvento = estadoEvento;
+        evento.atendido = estadoEvento === 'atendido';
+        if (nombreUsuarioAtencion) evento.nombreUsuarioAtencion = nombreUsuarioAtencion;
+        if (mensajeRespuesta) evento.mensajeRespuesta = mensajeRespuesta;
+        actualizarEstadisticas();
+        aplicarFiltros();
+    });
 }
 
 // ========== ACTUALIZAR ESTADÍSTICAS (USA TOTAL REAL) ==========
@@ -407,10 +422,10 @@ function actualizarEstadisticas() {
     const statPendientes = document.getElementById('statPendientes');
     const statAlarmas = document.getElementById('statAlarmas');
     const statAtendidos = document.getElementById('statAtendidos');
-    
+
     // El total mostrado es el TOTAL REAL de eventos (no solo los de la página)
     if (statTotal) statTotal.textContent = totalEventosReal;
-    
+
     // Para los demás, usamos el total real que tenemos (aproximado)
     if (statPendientes) statPendientes.textContent = todosLosEventos.filter(e => e.estadoEvento === 'pendiente').length;
     if (statAlarmas) statAlarmas.textContent = todosLosEventos.filter(e => e.esAlarma).length;
@@ -419,18 +434,21 @@ function actualizarEstadisticas() {
 
 // ========== APLICAR FILTROS (BÚSQUEDA LOCAL) ==========
 function aplicarFiltros() {
+    // Aseguramos que todosLosEventos esté ordenado de más nuevo a más antiguo
+    todosLosEventos.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
     let filtrados = [...todosLosEventos];
-    
+
     // Búsqueda por texto
     if (terminoBusqueda) {
         const termino = terminoBusqueda.toLowerCase();
-        filtrados = filtrados.filter(e => 
+        filtrados = filtrados.filter(e =>
             (e.description && e.description.toLowerCase().includes(termino)) ||
             (e.panel_serial && e.panel_serial.toLowerCase().includes(termino)) ||
             (e.panel_alias && e.panel_alias.toLowerCase().includes(termino))
         );
     }
-    
+
     eventosFiltrados = filtrados;
     renderizarEventos();
 }
@@ -444,9 +462,9 @@ function refreshManual() {
 }
 
 function mostrarNotificacion(evento) {
-    const titulo = evento.type_id === 584 ? '🚨 ALARMA MÉDICA' : 
-                   evento.esAlarma ? '🔔 NUEVA ALARMA' : '📋 Nuevo Evento';
-    
+    const titulo = evento.type_id === 584 ? '🚨 ALARMA MÉDICA' :
+        evento.esAlarma ? '🔔 NUEVA ALARMA' : '📋 Nuevo Evento';
+
     if (Notification.permission === "granted") {
         const notificacion = new Notification(titulo, {
             body: evento.description + '\nPanel: ' + (evento.panel_alias || evento.panel_serial),
@@ -480,21 +498,21 @@ function marcarNuevoEvento(eventoId) {
 function renderizarEventos() {
     const timeline = document.getElementById('eventsTimeline');
     const eventCount = document.getElementById('eventCount');
-    
+
     if (eventCount) {
         eventCount.textContent = eventosFiltrados.length + ' evento' + (eventosFiltrados.length !== 1 ? 's' : '');
     }
-    
+
     if (eventosFiltrados.length === 0) {
         timeline.innerHTML = '<div class="empty-state"><i class="fas fa-shield-alt" style="font-size: 48px; margin-bottom: 20px;"></i><h3>No hay eventos para mostrar</h3><p>' + (terminoBusqueda ? 'No se encontraron resultados' : 'Esperando eventos...') + '</p></div>';
         document.getElementById('paginationContainer').style.display = 'none';
         return;
     }
-    
+
     let html = '';
     eventosFiltrados.forEach(evento => { html += renderizarEventoCard(evento); });
     timeline.innerHTML = html;
-    
+
     renderizarPaginacion();
     configurarBotonesAccion();
 }
@@ -504,7 +522,7 @@ function renderizarEventoCard(evento) {
     const iconoClass = esMedicalAlarm ? 'alarm' : (evento.esAlarma ? 'alarm' : 'system');
     const icono = esMedicalAlarm ? 'fa-heartbeat' : (evento.esAlarma ? 'fa-bell' : 'fa-cog');
     const nombrePanel = evento.panel_alias || evento.panel_serial;
-    
+
     let html = '<div class="event-card ' + evento.prioridad + ' ' + evento.estadoEvento + '" data-event-id="' + evento.id + '">';
     html += '<div class="event-icon ' + iconoClass + '"><i class="fas ' + icono + '"></i></div>';
     html += '<div class="event-content">';
@@ -517,13 +535,25 @@ function renderizarEventoCard(evento) {
     html += '<div class="event-detail"><i class="fas fa-clock"></i><span>' + (evento.fechaFormateada || 'Fecha no disponible') + '</span></div>';
     html += '<div class="event-detail"><i class="fas fa-envelope"></i><span>' + escapeHTML(evento.email_asociado || 'N/A') + '</span></div>';
     html += '</div>';
-    
+
     if (evento.atendido) {
         html += '<div style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;"><i class="fas fa-user-check" style="color: #2ecc71;"></i> Atendido por: ' + escapeHTML(evento.nombreUsuarioAtencion);
         if (evento.mensajeRespuesta) html += '<br><i class="fas fa-comment"></i> "' + escapeHTML(evento.mensajeRespuesta) + '"';
         html += '</div>';
     }
-    
+
+    if (evento.estadoEvento === 'ignorado') {
+        html += '<div style="margin-top: 12px; padding: 10px; background: rgba(149, 165, 166, 0.1); border-radius: 8px;">';
+        html += '<i class="fas fa-ban" style="color: #95a5a6;"></i> Ignorado';
+        if (evento.nombreUsuarioAtencion) {
+            html += ' por: ' + escapeHTML(evento.nombreUsuarioAtencion);
+        }
+        if (evento.mensajeRespuesta) {
+            html += '<br><i class="fas fa-comment"></i> "' + escapeHTML(evento.mensajeRespuesta) + '"';
+        }
+        html += '</div>';
+    }
+
     html += '</div>';
     html += '<div class="event-actions">';
     if (evento.estadoEvento === 'pendiente') {
@@ -534,7 +564,7 @@ function renderizarEventoCard(evento) {
         html += '<button class="event-btn warning btn-ignorar" data-id="' + evento.id + '" title="Ignorar"><i class="fas fa-ban"></i></button>';
     }
     html += '</div></div>';
-    
+
     return html;
 }
 
@@ -542,63 +572,63 @@ function renderizarPaginacion() {
     const container = document.getElementById('paginationContainer');
     const paginationInfo = document.getElementById('paginationInfo');
     const pagination = document.getElementById('pagination');
-    
+
     if (!container || !pagination) return;
-    
+
     if (totalPaginas <= 1 && terminoBusqueda === '') {
         container.style.display = 'none';
         return;
     }
-    
+
     container.style.display = 'flex';
-    
+
     const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA + 1;
     const fin = Math.min(paginaActual * ITEMS_POR_PAGINA, totalEventosReal);
-    
+
     if (paginationInfo) {
         paginationInfo.textContent = 'Mostrando ' + inicio + '-' + fin + ' de ' + totalEventosReal + ' eventos';
     }
-    
+
     let html = '';
-    
+
     // Botón Anterior
     html += '<li class="page-item ' + (paginaActual === 1 ? 'disabled' : '') + '">';
     html += '<button class="page-link" onclick="irPagina(' + (paginaActual - 1) + ')" ' + (paginaActual === 1 ? 'disabled' : '') + '>';
     html += '<i class="fas fa-chevron-left"></i></button></li>';
-    
+
     // Páginas
     const maxPagesToShow = 5;
     let startPage = Math.max(1, paginaActual - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPaginas, startPage + maxPagesToShow - 1);
-    
+
     if (endPage - startPage + 1 < maxPagesToShow) {
         startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-    
+
     if (startPage > 1) {
         html += '<li class="page-item"><button class="page-link" onclick="irPagina(1)">1</button></li>';
         if (startPage > 2) {
             html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
         }
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
         html += '<li class="page-item ' + (i === paginaActual ? 'active' : '') + '">';
         html += '<button class="page-link" onclick="irPagina(' + i + ')">' + i + '</button></li>';
     }
-    
+
     if (endPage < totalPaginas) {
         if (endPage < totalPaginas - 1) {
             html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
         }
         html += '<li class="page-item"><button class="page-link" onclick="irPagina(' + totalPaginas + ')">' + totalPaginas + '</button></li>';
     }
-    
+
     // Botón Siguiente
     html += '<li class="page-item ' + (paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : '') + '">';
     html += '<button class="page-link" onclick="irPagina(' + (paginaActual + 1) + ')" ' + (paginaActual === totalPaginas || totalPaginas === 0 ? 'disabled' : '') + '>';
     html += '<i class="fas fa-chevron-right"></i></button></li>';
-    
+
     pagination.innerHTML = html;
 }
 
@@ -612,7 +642,7 @@ function configurarBotonesAccion() {
 async function mostrarModalAtender(eventoId) {
     const evento = eventosFiltrados.find(e => e.id === eventoId);
     if (!evento) return;
-    
+
     const result = await Swal.fire({
         title: evento.type_id === 584 ? '🚨 Atender Alarma Médica' : 'Atender Evento',
         html: '<div style="text-align: left;"><div style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;"><strong>' + escapeHTML(evento.description) + '</strong><br><span>Panel: ' + escapeHTML(evento.panel_alias || evento.panel_serial) + '</span></div><textarea id="mensajeRespuesta" rows="3" style="width:100%; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--color-border-light); border-radius:8px; color:white;" placeholder="Mensaje de respuesta (opcional)"></textarea></div>',
@@ -621,11 +651,11 @@ async function mostrarModalAtender(eventoId) {
         confirmButtonColor: '#2ecc71',
         preConfirm: () => document.getElementById('mensajeRespuesta')?.value || ''
     });
-    
+
     if (result.isConfirmed) {
         try {
             await evento.marcarComoAtendido(usuarioActual.id, usuarioActual.nombreCompleto, result.value);
-            
+
             const index = todosLosEventos.findIndex(e => e.id === eventoId);
             if (index !== -1) {
                 todosLosEventos[index].estadoEvento = 'atendido';
@@ -633,10 +663,10 @@ async function mostrarModalAtender(eventoId) {
                 todosLosEventos[index].nombreUsuarioAtencion = usuarioActual.nombreCompleto;
                 todosLosEventos[index].mensajeRespuesta = result.value;
             }
-            
+
             actualizarEstadisticas();
             aplicarFiltros();
-            
+
             Swal.fire({ icon: 'success', title: '¡Evento atendido!', timer: 1500, showConfirmButton: false });
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'Error', text: error.message });
@@ -647,7 +677,7 @@ async function mostrarModalAtender(eventoId) {
 async function mostrarDetallesEvento(eventoId) {
     const evento = eventosFiltrados.find(e => e.id === eventoId);
     if (!evento) return;
-    
+
     let html = '<div style="text-align:left">';
     html += '<div style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;"><strong>' + escapeHTML(evento.description) + '</strong></div>';
     html += '<table style="width:100%; text-align:left;">';
@@ -658,12 +688,12 @@ async function mostrarDetallesEvento(eventoId) {
     html += '<tr><td><strong>Estado:</strong></td><td>' + evento.estadoEvento + '</td></tr>';
     html += '<tr><td><strong>Tipo ID:</strong></td><td>' + evento.type_id + '</td></tr>';
     html += '</table>';
-    
+
     if (evento.atendido) {
         html += '<div style="margin-top:15px; padding:10px; background:rgba(46,204,113,0.1); border-radius:8px;"><strong>Atendido por:</strong> ' + escapeHTML(evento.nombreUsuarioAtencion) + '<br><strong>Mensaje:</strong> ' + escapeHTML(evento.mensajeRespuesta || 'Sin mensaje') + '</div>';
     }
     html += '</div>';
-    
+
     Swal.fire({
         title: 'Detalles del Evento',
         html: html,
@@ -676,7 +706,7 @@ async function mostrarDetallesEvento(eventoId) {
 async function mostrarModalIgnorar(eventoId) {
     const evento = eventosFiltrados.find(e => e.id === eventoId);
     if (!evento) return;
-    
+
     const result = await Swal.fire({
         title: 'Ignorar Evento',
         html: '<p>¿Ignorar este evento?</p><p style="font-size:14px;">' + escapeHTML(evento.description) + '</p>',
@@ -687,21 +717,21 @@ async function mostrarModalIgnorar(eventoId) {
         confirmButtonText: 'Ignorar',
         confirmButtonColor: '#95a5a6'
     });
-    
+
     if (result.isConfirmed) {
         try {
             await evento.marcarComoIgnorado(usuarioActual.id, usuarioActual.nombreCompleto, result.value || 'Evento ignorado');
-            
+
             const index = todosLosEventos.findIndex(e => e.id === eventoId);
             if (index !== -1) {
                 todosLosEventos[index].estadoEvento = 'ignorado';
                 todosLosEventos[index].nombreUsuarioAtencion = usuarioActual.nombreCompleto;
                 todosLosEventos[index].mensajeRespuesta = result.value || 'Evento ignorado';
             }
-            
+
             actualizarEstadisticas();
             aplicarFiltros();
-            
+
             Swal.fire({ icon: 'success', title: 'Evento ignorado', timer: 1500, showConfirmButton: false });
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'Error', text: error.message });
@@ -720,7 +750,7 @@ function configurarEventosUI() {
             cargarPagina(1);
         });
     });
-    
+
     document.querySelectorAll('.stat-card').forEach(card => {
         card.addEventListener('click', () => {
             const filter = card.dataset.filter;
@@ -730,7 +760,7 @@ function configurarEventosUI() {
             }
         });
     });
-    
+
     const btnBuscar = document.getElementById('btnBuscarEvento');
     if (btnBuscar) {
         btnBuscar.addEventListener('click', () => {
@@ -738,7 +768,7 @@ function configurarEventosUI() {
             aplicarFiltros();
         });
     }
-    
+
     const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', () => {
@@ -747,7 +777,7 @@ function configurarEventosUI() {
             aplicarFiltros();
         });
     }
-    
+
     const buscarInput = document.getElementById('buscarEvento');
     if (buscarInput) {
         buscarInput.addEventListener('keypress', (e) => {
@@ -757,7 +787,7 @@ function configurarEventosUI() {
             }
         });
     }
-    
+
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => refreshManual());

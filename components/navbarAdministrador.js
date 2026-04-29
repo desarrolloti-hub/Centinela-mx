@@ -17,16 +17,16 @@ class NavbarComplete {
         this.notificaciones = [];
         this.dropdownNotificacionesAbierto = false;
         this.intervalNotificaciones = null;
-        
+
         // Sistema de sonidos
         this.sonidoNotificacion = null;
         this.soundEnabled = true;
         this.soundVolume = 0.7;
         this.availableSounds = [];
-        
+
         // Flag para saber si ya se mostró el permiso de notificaciones
         this._permisoNotificacionesPedido = false;
-        
+
         this.init();
     }
 
@@ -73,7 +73,7 @@ class NavbarComplete {
     _solicitarPermisoNotificaciones() {
         if (this._permisoNotificacionesPedido) return;
         this._permisoNotificacionesPedido = true;
-        
+
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
         }
@@ -396,7 +396,7 @@ class NavbarComplete {
 
             // Identificar notificaciones NUEVAS (no leídas Y no conocidas antes)
             const notificacionesExistentesIds = new Set(this.notificaciones.map(n => n.id));
-            const nuevasNoLeidas = todasNotificaciones.filter(n => 
+            const nuevasNoLeidas = todasNotificaciones.filter(n =>
                 !n.leida && !notificacionesExistentesIds.has(n.id)
             );
 
@@ -467,11 +467,11 @@ class NavbarComplete {
 
         if (this.notificaciones.length === 0) {
             container.innerHTML = `
-                <div class="notificaciones-vacia">
-                    <i class="fas fa-bell-slash"></i>
-                    <p>No hay notificaciones</p>
-                </div>
-            `;
+            <div class="notificaciones-vacia">
+                <i class="fas fa-bell-slash"></i>
+                <p>No hay notificaciones</p>
+            </div>
+        `;
             return;
         }
 
@@ -495,48 +495,60 @@ class NavbarComplete {
                 : '';
 
             const eventoClass = notifUI.esEvento ? 'notificacion-evento' : '';
-            const eventoIconoAdicional = notifUI.esEvento ? 
-                (notif.esMedicalAlarm ? '🚨' : (notif.esAlarma ? '🔔' : '📋')) : '';
+            const eventoIconoAdicional = notifUI.esEvento ?
+                (notif.esMedicalAlarm ? '' : (notif.esAlarma ? '' : '')) : '';
 
             html += `
-                <div class="notificacion-item ${eventoClass}" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
-                    <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
-                        <i class="fas ${notifUI.icono}"></i>
-                    </div>
-                    <div class="notificacion-contenido">
-                        <div class="notificacion-titulo">
-                            ${eventoIconoAdicional} ${this._escapeHTML(notifUI.titulo)}
-                        </div>
-                        <div class="notificacion-mensaje">${this._escapeHTML(notifUI.mensaje)}</div>
-                        <div class="notificacion-detalles">
-                            ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${this._escapeHTML(notifUI.sucursalNombre)}</span>` : ''}
-                            ${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}
-                            ${areasTexto ? `<span><i class="fas fa-users"></i> ${this._escapeHTML(areasTexto)}</span>` : ''}
-                            ${notif.panelAlias ? `<span><i class="fas fa-microchip"></i> ${this._escapeHTML(notif.panelAlias)}</span>` : ''}
-                        </div>
-                        <div class="notificacion-tiempo">${this._escapeHTML(notifUI.tiempoRelativo)}</div>
-                    </div>
-                    <div class="notificacion-estado ${notifUI.leida ? 'leida' : 'no-leida'}"></div>
+            <div class="notificacion-item ${eventoClass}" data-id="${notif.id}" data-url="${notifUI.urlDestino}">
+                <div class="notificacion-icono" style="background-color: ${notifUI.color}20; color: ${notifUI.color}">
+                    <i class="fas ${notifUI.icono}"></i>
                 </div>
-            `;
+                <div class="notificacion-contenido">
+                    <div class="notificacion-titulo">
+                        ${eventoIconoAdicional} ${this._escapeHTML(notifUI.titulo)}
+                    </div>
+                    <div class="notificacion-mensaje">${this._escapeHTML(notifUI.mensaje)}</div>
+                    <div class="notificacion-detalles">
+                        ${notifUI.sucursalNombre ? `<span><i class="fas fa-store"></i> ${this._escapeHTML(notifUI.sucursalNombre)}</span>` : ''}
+                        ${notifUI.nivelRiesgo ? `<span class="riesgo-${notifUI.nivelRiesgo}"><i class="fas fa-exclamation-triangle"></i> ${notifUI.nivelRiesgo}</span>` : ''}
+                        ${areasTexto ? `<span><i class="fas fa-users"></i> ${this._escapeHTML(areasTexto)}</span>` : ''}
+                        ${notif.panelAlias ? `<span><i class="fas fa-microchip"></i> ${this._escapeHTML(notif.panelAlias)}</span>` : ''}
+                    </div>
+                    <div class="notificacion-tiempo">${this._escapeHTML(notifUI.tiempoRelativo)}</div>
+                </div>
+                <div class="notificacion-estado ${notifUI.leida ? 'leida' : 'no-leida'}"></div>
+            </div>
+        `;
         });
 
         if (this.notificaciones.length > 5) {
             html += `
-                <div class="notificaciones-ver-mas">
-                    <a href="#" class="ver-todas-notificaciones">Ver ${this.notificaciones.length - 5} más</a>
-                </div>
-            `;
+            <div class="notificaciones-ver-mas">
+                <a href="#" class="ver-todas-notificaciones">Ver ${this.notificaciones.length - 5} más</a>
+            </div>
+        `;
         }
 
         container.innerHTML = html;
 
+        // Configurar evento de clic para cada notificación
         container.querySelectorAll('.notificacion-item').forEach(item => {
             item.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const id = item.dataset.id;
                 const url = item.dataset.url;
 
+                const notif = this.notificaciones.find(n => n.id === id);
+                if (!notif) return;
+
+                // Si es una notificación de evento, manejarlo con detalles (solo lectura)
+                if (this._esNotificacionEvento(notif)) {
+                    e.preventDefault();
+                    await this._manejarClicNotificacionEventoAdmin(notif, item);
+                    return;
+                }
+
+                // Resto del código existente para incidencias/canalizaciones
                 if (this.notificacionManager && id) {
                     await this.notificacionManager.marcarComoLeida(
                         this.currentAdmin.id,
@@ -565,6 +577,7 @@ class NavbarComplete {
             });
         });
 
+        // Configurar enlace "Ver todas"
         const verTodasLink = container.querySelector('.ver-todas-notificaciones');
         if (verTodasLink) {
             verTodasLink.addEventListener('click', (e) => {
@@ -574,7 +587,6 @@ class NavbarComplete {
             });
         }
     }
-
     _mostrarModalNotificaciones() {
         if (typeof Swal !== 'undefined') {
             let notificacionesHtml = '<div style="max-height: 400px; overflow-y: auto;">';
@@ -595,7 +607,7 @@ class NavbarComplete {
                     ? notif.areasDestino.map(a => a.nombre).join(', ')
                     : '';
 
-                const eventoIcono = notifUI.esEvento ? 
+                const eventoIcono = notifUI.esEvento ?
                     (notif.esMedicalAlarm ? '🚨' : (notif.esAlarma ? '🔔' : '📋')) : '';
 
                 notificacionesHtml += `
@@ -670,6 +682,53 @@ class NavbarComplete {
         }
     }
 
+    async _mostrarInfoEventoSoloLectura(notificacion) {
+        try {
+            const { Evento } = await import("/clases/evento.js");
+
+            const eventId = notificacion.eventId || notificacion.detalles?.eventId;
+            if (!eventId) throw new Error("No se encontró el ID del evento");
+
+            Swal.showLoading();
+            const evento = await Evento.obtenerPorId(eventId);
+            if (!evento) throw new Error("No se pudo cargar la información del evento");
+
+            const estadoColor = evento.estadoEvento === "pendiente" ? "#f39c12" :
+                (evento.estadoEvento === "atendido" ? "#2ecc71" : "#95a5a6");
+
+            Swal.fire({
+                title: "Información del Evento",
+                html: `
+                <div style="text-align: left;">
+                    <div style="padding: 15px; background: ${estadoColor}20; border-left: 4px solid ${estadoColor}; border-radius: 8px; margin-bottom: 15px;">
+                        <strong>${this._escapeHTML(evento.description || "Evento sin descripción")}</strong>
+                    </div>
+                    <table style="width: 100%; text-align: left;">
+                        <tr><td><strong>Panel:</strong></td><td>${this._escapeHTML(evento.panel_alias || evento.panel_serial)}</td></tr>
+                        <tr><td><strong>Email:</strong></td><td>${this._escapeHTML(evento.email_asociado || "N/A")}</td></tr>
+                        <tr><td><strong>Fecha:</strong></td><td>${evento.fechaFormateada}</td></tr>
+                        <tr><td><strong>Estado:</strong></td><td><span style="color: ${estadoColor};">${evento.estadoEvento === "pendiente" ? "⏳ Pendiente" : (evento.estadoEvento === "atendido" ? "Atendido" : "Ignorado")}</span></td></tr>
+                    </table>
+                    ${evento.atendido ? `<div style="margin-top: 15px; padding: 10px; background: rgba(46,204,113,0.1); border-radius: 8px;"><strong>Atendido por:</strong> ${this._escapeHTML(evento.nombreUsuarioAtencion || "Sistema")}${evento.mensajeRespuesta ? `<br><strong>Mensaje:</strong> "${this._escapeHTML(evento.mensajeRespuesta)}"` : ""}</div>` : ""}
+                    ${evento.estadoEvento === "ignorado" ? `<div style="margin-top: 15px; padding: 10px; background: rgba(149,165,166,0.1); border-radius: 8px;"><strong>Ignorado por:</strong> ${this._escapeHTML(evento.nombreUsuarioAtencion || "Sistema")}${evento.mensajeRespuesta ? `<br><strong>Motivo:</strong> "${this._escapeHTML(evento.mensajeRespuesta)}"` : ""}</div>` : ""}
+                    <div style="margin-top: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; text-align: center; color: #888;">
+                        <i class="fas fa-info-circle"></i> Visualización de eventos de la organización
+                    </div>
+                </div>
+            `,
+                width: "500px",
+                background: "#1a1a2e",
+                color: "#ffffff",
+                confirmButtonText: "Cerrar",
+                confirmButtonColor: "#6c757d",
+                showCancelButton: false
+            });
+        } catch (error) {
+            console.error("❌ Error mostrando info de evento:", error);
+            Swal.fire({ icon: "error", title: "Error", text: "No se pudo cargar la información del evento", background: "#1a1a2e", color: "#ffffff" });
+        }
+    }
+
     _escapeHTML(text) {
         if (!text) return '';
         return String(text)
@@ -678,6 +737,58 @@ class NavbarComplete {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    _esNotificacionEvento(notificacion) {
+        if (!notificacion) return false;
+        if (notificacion.tipo === "evento_monitoreo" || notificacion.tipo === "alarma" || notificacion.tipo === "monitoreo") {
+            return true;
+        }
+        const detalles = notificacion.detalles || {};
+        if (detalles.eventId || detalles.panel_serial || detalles.type_id) {
+            return true;
+        }
+        if (notificacion.eventId || notificacion.panelSerial || notificacion.typeId) {
+            return true;
+        }
+        return false;
+    }
+
+    async _manejarClicNotificacionEventoAdmin(notificacion, elementoHTML) {
+        if (!notificacion) return;
+
+        // Marcar como leída
+        if (this.notificacionManager && notificacion.id) {
+            await this.notificacionManager.marcarComoLeida(
+                this.currentAdmin.id,
+                notificacion.id,
+                this.currentAdmin.organizacionCamelCase
+            );
+        }
+
+        // Eliminar de la lista local y actualizar badge
+        const index = this.notificaciones.findIndex(n => n.id === notificacion.id);
+        if (index !== -1) this.notificaciones.splice(index, 1);
+        this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
+        this._actualizarBadgeNotificaciones();
+        this._renderizarNotificaciones();
+
+        // Emitir evento para que el monitoreo se actualice (por si el estado cambió)
+        window.dispatchEvent(new CustomEvent('eventoActualizado', {
+            detail: {
+                eventoId: notificacion.eventId || notificacion.detalles?.eventId,
+                estadoEvento: notificacion.estadoEvento || 'pendiente',
+                nombreUsuarioAtencion: notificacion.nombreUsuarioAtencion || '',
+                mensajeRespuesta: notificacion.mensajeRespuesta || ''
+            }
+        }));
+
+        // Cerrar dropdown
+        this.dropdownNotificacionesAbierto = false;
+        document.getElementById("notificacionesDropdown")?.classList.remove("active");
+
+        // Mostrar información detallada del evento (solo lectura)
+        await this._mostrarInfoEventoSoloLectura(notificacion);
     }
 
     async _marcarTodasLeidas() {

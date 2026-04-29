@@ -233,15 +233,12 @@ class EscuchaEventosManager {
     async _crearNotificacionEvento(evento) {
         try {
             if (!this.notificacionManager) return null;
-
             const resultado = await this.notificacionManager.notificarEventoMonitoreo({
                 evento: evento,
                 organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
                 enviarPush: true
             });
-
             return resultado;
-
         } catch (error) {
             console.error('❌ Error creando notificación:', error);
             return null;

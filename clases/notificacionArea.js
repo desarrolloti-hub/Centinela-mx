@@ -20,6 +20,7 @@ import {
   writeBatch,
   deleteDoc,
   arrayRemove,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from "/config/firebase-config.js";
@@ -490,129 +491,148 @@ class NotificacionAreaManager {
       if (!organizacionCamelCase) {
         return { success: false, error: "organizacionCamelCase requerido" };
       }
-
       if (!evento || !evento.id) {
         return { success: false, error: "Evento inválido" };
       }
-
       if (evento.estadoEvento !== "pendiente") {
-        return {
-          success: true,
-          notificacionCreada: false,
-          mensaje: "Evento ya no está pendiente"
-        };
+        return { success: true, notificacionCreada: false, mensaje: "Evento ya no está pendiente" };
       }
 
-      // Consultas en paralelo
+      const notificacionId = `event_${evento.id}`;               // ID determinista
+      const collectionName = this._getCollectionName(organizacionCamelCase);
+      const notificacionRef = doc(db, collectionName, notificacionId);
+
+      // ========== Transacción atómica: solo crea si no existe ==========
+      const creada = await runTransaction(db, async (transaction) => {
+        const docSnap = await transaction.get(notificacionRef);
+        if (docSnap.exists()) {
+          return false;           // ya existe, no hacer nada
+        }
+
+        // Construir datos de la notificación
+        const titulo = this._generarTituloEvento(evento);
+        const mensaje = this._generarMensajeEvento(evento);
+        const areaSeguridadId = "seguridad"; // se usará más tarde el real, pero aquí temporal
+
+        const notificacionData = {
+          id: notificacionId,
+          titulo: titulo,
+          mensaje: mensaje,
+          tipo: evento.esAlarma ? "alarma" : "evento_monitoreo",
+          fecha: serverTimestamp(),
+          organizacionCamelCase: organizacionCamelCase,
+          remitenteId: "sistema_monitoreo",
+          remitenteNombre: "Sistema de Monitoreo",
+          prioridad: evento.prioridad === "alta" ? "alta" : "normal",
+          incidenciaId: null,
+          incidenciaTitulo: null,
+          sucursalId: null,
+          sucursalNombre: null,
+          categoriaId: null,
+          categoriaNombre: null,
+          nivelRiesgo: evento.prioridad,
+          areasDestino: [{ id: areaSeguridadId, nombre: "Seguridad" }],
+          areasIds: [areaSeguridadId],
+          totalUsuarios: 0,
+          totalAdministradores: 0,
+          leidas: 0,
+          usuariosIds: [],
+          detalles: {
+            eventId: evento.id,
+            panel_serial: evento.panel_serial,
+            panel_alias: evento.panel_alias,
+            description: evento.description,
+            type_id: evento.type_id,
+            esAlarma: evento.esAlarma,
+            esMedicalAlarm: evento.type_id === 584,
+            email_asociado: evento.email_asociado,
+            zone: evento.zone,
+            zone_name: evento.zone_name,
+            partitions: evento.partitions,
+            fechaEvento: evento.createdAt || new Date(),
+            createdAt: evento.createdAt
+          },
+          eventId: evento.id,
+          panelSerial: evento.panel_serial,
+          panelAlias: evento.panel_alias,
+          eventDescription: evento.description,
+          typeId: evento.type_id,
+          esAlarma: evento.esAlarma,
+          esMedicalAlarm: evento.type_id === 584,
+          icono: evento.esAlarma ? "fa-exclamation-triangle" : "fa-shield-alt",
+          color: evento.prioridadColor || "#3498db",
+          urlDestino: "#",
+          fechaCreacion: serverTimestamp(),
+          atendido: false,
+          idUsuarioAtencion: null,
+          nombreUsuarioAtencion: null,
+          fechaAtencion: null,
+          mensajeRespuesta: null,
+          estadoEvento: 'pendiente'
+        };
+
+        transaction.set(notificacionRef, notificacionData);
+        return true;
+      });
+
+      if (!creada) {
+        console.log(`⏭️ Notificación para evento ${evento.id} ya existe, omitiendo`);
+        return { success: true, notificacionCreada: false, mensaje: "Ya existía" };
+      }
+
+      // ========== Obtener usuarios destinatarios (ahora seguro tras creación) ==========
       const [usuariosSeguridad, administradores] = await Promise.all([
         this._getUsuariosSeguridadRapido(organizacionCamelCase),
         this._getAdministradoresCache(organizacionCamelCase)
       ]);
-
       const todosDestinatarios = [...usuariosSeguridad, ...administradores];
       const idsUnicos = new Set();
-      const destinatariosUnicos = [];
+      const destUnicos = [];
       const usuariosIds = [];
-
-      for (const destinatario of todosDestinatarios) {
-        if (!idsUnicos.has(destinatario.id)) {
-          idsUnicos.add(destinatario.id);
-          destinatariosUnicos.push(destinatario);
-          usuariosIds.push(destinatario.id);
+      for (const d of todosDestinatarios) {
+        if (!idsUnicos.has(d.id)) {
+          idsUnicos.add(d.id);
+          destUnicos.push(d);
+          usuariosIds.push(d.id);
         }
       }
 
-      const titulo = this._generarTituloEvento(evento);
-      const mensaje = this._generarMensajeEvento(evento);
-
-      const notificacionId = this._generarNotificacionId();
-      const collectionName = this._getCollectionName(organizacionCamelCase);
-      const notificacionRef = doc(db, collectionName, notificacionId);
-
-      const areaSeguridadId = usuariosSeguridad.length > 0 ? usuariosSeguridad[0].areaAsignadaId : "seguridad";
-
-      const areasDestino = [{ id: areaSeguridadId, nombre: "Seguridad" }];
-
-      const notificacionData = {
-        id: notificacionId,
-        titulo: titulo,
-        mensaje: mensaje,
-        tipo: evento.esAlarma ? "alarma" : "evento_monitoreo",
-        fecha: serverTimestamp(),
-        organizacionCamelCase: organizacionCamelCase,
-        remitenteId: "sistema_monitoreo",
-        remitenteNombre: "Sistema de Monitoreo",
-        prioridad: evento.prioridad === "alta" ? "alta" : "normal",
-
-        incidenciaId: null,
-        incidenciaTitulo: null,
-        sucursalId: null,
-        sucursalNombre: null,
-        categoriaId: null,
-        categoriaNombre: null,
-        nivelRiesgo: evento.prioridad,
-
-        areasDestino: areasDestino,
-        areasIds: [areaSeguridadId],
-
+      // ========== Actualizar la notificación con usuarios reales (merge) ==========
+      const areaSeguridadReal = usuariosSeguridad.length > 0 ? usuariosSeguridad[0].areaAsignadaId : "seguridad";
+      await updateDoc(notificacionRef, {
+        usuariosIds: usuariosIds,
         totalUsuarios: usuariosSeguridad.length,
         totalAdministradores: administradores.length,
-        leidas: 0,
+        areasIds: [areaSeguridadReal],
+        areasDestino: [{ id: areaSeguridadReal, nombre: "Seguridad" }]
+      });
 
-        usuariosIds: usuariosIds,
-
-        detalles: {
-          eventId: evento.id,
-          panel_serial: evento.panel_serial,
-          panel_alias: evento.panel_alias,
-          description: evento.description,
-          type_id: evento.type_id,
-          esAlarma: evento.esAlarma,
-          esMedicalAlarm: evento.type_id === 584,
-          email_asociado: evento.email_asociado,
-          zone: evento.zone,
-          zone_name: evento.zone_name,
-          partitions: evento.partitions,
-          fechaEvento: evento.createdAt || new Date(),
-          createdAt: evento.createdAt
-        },
-
-        eventId: evento.id,
-        panelSerial: evento.panel_serial,
-        panelAlias: evento.panel_alias,
-        eventDescription: evento.description,
-        typeId: evento.type_id,
-        esAlarma: evento.esAlarma,
-        esMedicalAlarm: evento.type_id === 584,
-
-        icono: evento.esAlarma ? "fa-exclamation-triangle" : "fa-shield-alt",
-        color: evento.prioridadColor || "#3498db",
-
-        urlDestino: "#",
-
-        fechaCreacion: serverTimestamp(),
-
-        // ========== NUEVOS CAMPOS PARA ATENCIÓN ==========
-        atendido: false,
-        idUsuarioAtencion: null,
-        nombreUsuarioAtencion: null,
-        fechaAtencion: null,
-        mensajeRespuesta: null,
-        estadoEvento: 'pendiente'
-      };
-
-      await consumo.registrarFirestoreEscritura(collectionName, notificacionId);
-      await setDoc(notificacionRef, notificacionData);
-
-      // Crear índices en background
-      if (destinatariosUnicos.length > 0) {
-        this._crearIndicesUsuariosRapido(notificacionId, destinatariosUnicos, organizacionCamelCase)
+      // ========== Crear índices de usuario en paralelo ==========
+      if (destUnicos.length > 0) {
+        this._crearIndicesUsuariosRapido(notificacionId, destUnicos, organizacionCamelCase)
           .catch(e => console.warn('⚠️ Error creando índices:', e));
       }
 
-      // Enviar push en background
-      if (enviarPush && destinatariosUnicos.length > 0) {
-        this._enviarNotificacionesPush(destinatariosUnicos, notificacionData)
+      // ========== Enviar push (reconstruimos el objeto de datos) ==========
+      if (enviarPush && destUnicos.length > 0) {
+        const pushData = {
+          id: notificacionId,
+          titulo: this._generarTituloEvento(evento),
+          mensaje: this._generarMensajeEvento(evento),
+          tipo: evento.esAlarma ? "alarma" : "evento_monitoreo",
+          organizacionCamelCase: organizacionCamelCase,
+          remitenteId: "sistema_monitoreo",
+          remitenteNombre: "Sistema de Monitoreo",
+          prioridad: evento.prioridad,
+          urlDestino: "#",
+          eventId: evento.id,
+          panelSerial: evento.panel_serial,
+          esAlarma: evento.esAlarma,
+          areasIds: [areaSeguridadReal],
+          incidenciaId: null,
+          nivelRiesgo: evento.prioridad
+        };
+        this._enviarNotificacionesPush(destUnicos, pushData)
           .catch(e => console.warn('⚠️ Error enviando push:', e));
       }
 
@@ -621,8 +641,8 @@ class NotificacionAreaManager {
 
       return {
         success: true,
-        notificacionId: notificacionId,
-        totalDestinatarios: destinatariosUnicos.length,
+        notificacionId,
+        totalDestinatarios: destUnicos.length,
         totalSeguridad: usuariosSeguridad.length,
         totalAdministradores: administradores.length,
         tiempoMs: tiempoFin - tiempoInicio

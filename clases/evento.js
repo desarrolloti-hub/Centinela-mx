@@ -506,25 +506,22 @@ class Evento {
             if (!this.email_asociado) return null;
 
             // Buscar en CuentaPM
-            const cuentasRef = collection(db, "cuentas_pm");
+            const cuentasRef = collection(db, "cuentas_tecnicas_pm"); // ← CORRECCIÓN AQUÍ
             const q = query(cuentasRef, where("email", "==", this.email_asociado), limit(1));
             const snapshot = await getDocs(q);
 
             if (!snapshot.empty) {
                 const data = snapshot.docs[0].data();
-                // Intentar obtener organización de diferentes campos posibles
                 return data.organizacionCamelCase || data.organizacion || data.empresa || null;
             }
 
-            // Si no se encuentra en cuentas_pm, intentar obtener del usuario actual
+            // Si no se encuentra, intentar obtener del usuario actual
             try {
                 const userData = JSON.parse(localStorage.getItem('userData') || '{}');
                 if (userData && userData.organizacionCamelCase) {
                     return userData.organizacionCamelCase;
                 }
-            } catch (e) {
-                // Error silencioso
-            }
+            } catch (e) { /* silencioso */ }
 
             return null;
         } catch (error) {

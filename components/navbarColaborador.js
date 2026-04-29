@@ -399,7 +399,7 @@ class NavbarComplete {
 
             const eventoClass = notifUI.esEvento ? "notificacion-evento" : "";
             const eventoIconoAdicional = notifUI.esEvento ?
-                (notif.esMedicalAlarm ? "🚨" : (notif.esAlarma ? "🔔" : "📋")) : "";
+                (notif.esMedicalAlarm ? "" : (notif.esAlarma ? "" : "")) : "";
 
             // Badge de estado
             let estadoBadge = '';
@@ -595,6 +595,14 @@ class NavbarComplete {
                 this._actualizarBadgeNotificaciones();
                 this._renderizarNotificaciones();   // <-- ACTUALIZA INMEDIATAMENTE
 
+                // Emitir evento para que monitoreo actualice (solo si está resuelto)
+                window.dispatchEvent(new CustomEvent('eventoActualizado', {
+                    detail: {
+                        eventoId: notificacion.eventId || notificacion.detalles?.eventId,
+                        estadoEvento: estado
+                    }
+                }));
+
                 this.dropdownNotificacionesAbierto = false;
                 document.getElementById("notificacionesDropdown")?.classList.remove("active");
                 return;
@@ -626,6 +634,14 @@ class NavbarComplete {
                     this._actualizarBadgeNotificaciones();
                     this._renderizarNotificaciones();   // <-- actualiza
 
+                    // Emitir evento para que monitoreo se actualice
+                    window.dispatchEvent(new CustomEvent('eventoActualizado', {
+                        detail: {
+                            eventoId: notificacion.eventId || notificacion.detalles?.eventId,
+                            estadoEvento: resultado.accion // 'atendido' o 'ignorado'
+                        }
+                    }));
+
                     this.dropdownNotificacionesAbierto = false;
                     document.getElementById("notificacionesDropdown")?.classList.remove("active");
                 }
@@ -653,6 +669,14 @@ class NavbarComplete {
                 this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
                 this._actualizarBadgeNotificaciones();
                 this._renderizarNotificaciones();   // <-- actualiza
+
+                // Emitir evento para mantener sincronizado el monitoreo
+                window.dispatchEvent(new CustomEvent('eventoActualizado', {
+                    detail: {
+                        eventoId: notificacion.eventId || notificacion.detalles?.eventId,
+                        estadoEvento: notificacion.estadoEvento || 'pendiente'
+                    }
+                }));
 
                 this.dropdownNotificacionesAbierto = false;
                 document.getElementById("notificacionesDropdown")?.classList.remove("active");
@@ -682,7 +706,7 @@ class NavbarComplete {
                 (evento.estadoEvento === "atendido" ? "#2ecc71" : "#95a5a6");
 
             Swal.fire({
-                title: "📋 Información del Evento",
+                title: "Información del Evento",
                 html: `
                 <div style="text-align: left;">
                     <div style="padding: 15px; background: ${estadoColor}20; border-left: 4px solid ${estadoColor}; border-radius: 8px; margin-bottom: 15px;">
@@ -692,7 +716,7 @@ class NavbarComplete {
                         <tr><td><strong>Panel:</strong></td><td>${this._escapeHTML(evento.panel_alias || evento.panel_serial)}</td></tr>
                         <tr><td><strong>Email:</strong></td><td>${this._escapeHTML(evento.email_asociado || "N/A")}</td></tr>
                         <tr><td><strong>Fecha:</strong></td><td>${evento.fechaFormateada}</td></tr>
-                        <tr><td><strong>Estado:</strong></td><td><span style="color: ${estadoColor};">${evento.estadoEvento === "pendiente" ? "⏳ Pendiente" : (evento.estadoEvento === "atendido" ? "✅ Atendido" : "🚫 Ignorado")}</span></td></tr>
+                        <tr><td><strong>Estado:</strong></td><td><span style="color: ${estadoColor};">${evento.estadoEvento === "pendiente" ? "⏳ Pendiente" : (evento.estadoEvento === "atendido" ? "Atendido" : "Ignorado")}</span></td></tr>
                     </table>
                     ${evento.atendido ? `<div style="margin-top: 15px; padding: 10px; background: rgba(46,204,113,0.1); border-radius: 8px;"><strong>Atendido por:</strong> ${this._escapeHTML(evento.nombreUsuarioAtencion || "Sistema")}${evento.mensajeRespuesta ? `<br><strong>Mensaje:</strong> "${this._escapeHTML(evento.mensajeRespuesta)}"` : ""}</div>` : ""}
                     ${evento.estadoEvento === "ignorado" ? `<div style="margin-top: 15px; padding: 10px; background: rgba(149,165,166,0.1); border-radius: 8px;"><strong>Ignorado por:</strong> ${this._escapeHTML(evento.nombreUsuarioAtencion || "Sistema")}${evento.mensajeRespuesta ? `<br><strong>Motivo:</strong> "${this._escapeHTML(evento.mensajeRespuesta)}"` : ""}</div>` : ""}
@@ -738,20 +762,20 @@ class NavbarComplete {
         const generarOpcionesFiltroSecundario = (tipo, filtros) => {
             if (tipo === 'evento') {
                 return `
-                <option value="todos" ${filtros.subtipoEvento === "todos" ? "selected" : ""}>🎯 Todos los eventos</option>
-                <option value="medical" ${filtros.subtipoEvento === "medical" ? "selected" : ""}>🚨 Alarmas Médicas</option>
-                <option value="alarma" ${filtros.subtipoEvento === "alarma" ? "selected" : ""}>🔔 Alarmas de Intrusión</option>
-                <option value="incendio" ${filtros.subtipoEvento === "incendio" ? "selected" : ""}>🔥 Alarmas de Incendio</option>
-                <option value="panico" ${filtros.subtipoEvento === "panico" ? "selected" : ""}>🆘 Pánico</option>
-                <option value="evento" ${filtros.subtipoEvento === "evento" ? "selected" : ""}>📋 Eventos Normales</option>
+                <option value="todos" ${filtros.subtipoEvento === "todos" ? "selected" : ""}>Todos los eventos</option>
+                <option value="medical" ${filtros.subtipoEvento === "medical" ? "selected" : ""}>Alarmas Médicas</option>
+                <option value="alarma" ${filtros.subtipoEvento === "alarma" ? "selected" : ""}>Alarmas de Intrusión</option>
+                <option value="incendio" ${filtros.subtipoEvento === "incendio" ? "selected" : ""}>Alarmas de Incendio</option>
+                <option value="panico" ${filtros.subtipoEvento === "panico" ? "selected" : ""}>Pánico</option>
+                <option value="evento" ${filtros.subtipoEvento === "evento" ? "selected" : ""}>Eventos Normales</option>
             `;
             } else {
                 return `
-                <option value="todos" ${filtros.nivelRiesgo === "todos" ? "selected" : ""}>⚠️ Todos los riesgos</option>
-                <option value="bajo" ${filtros.nivelRiesgo === "bajo" ? "selected" : ""}>🟢 Bajo</option>
-                <option value="medio" ${filtros.nivelRiesgo === "medio" ? "selected" : ""}>🟡 Medio</option>
-                <option value="alto" ${filtros.nivelRiesgo === "alto" ? "selected" : ""}>🟠 Alto</option>
-                <option value="critico" ${filtros.nivelRiesgo === "critico" ? "selected" : ""}>🔴 Crítico</option>
+                <option value="todos" ${filtros.nivelRiesgo === "todos" ? "selected" : ""}>Todos los riesgos</option>
+                <option value="bajo" ${filtros.nivelRiesgo === "bajo" ? "selected" : ""}>Bajo</option>
+                <option value="medio" ${filtros.nivelRiesgo === "medio" ? "selected" : ""}>Medio</option>
+                <option value="alto" ${filtros.nivelRiesgo === "alto" ? "selected" : ""}>Alto</option>
+                <option value="critico" ${filtros.nivelRiesgo === "critico" ? "selected" : ""}>Crítico</option>
             `;
             }
         };
@@ -778,9 +802,9 @@ class NavbarComplete {
                 const filtrosHtml = `
                 <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center;">
                     <select id="filtroTipoModal" style="padding: 8px 12px; border-radius: 6px; background: #2a2a4a; color: white; border: 1px solid #444; font-size: 13px;">
-                        <option value="todos" ${state.filtros.tipo === "todos" ? "selected" : ""}>📋 Todas</option>
-                        <option value="canalizacion" ${state.filtros.tipo === "canalizacion" ? "selected" : ""}>📢 Canalizadas</option>
-                        <option value="evento" ${state.filtros.tipo === "evento" ? "selected" : ""}>🔔 Eventos</option>
+                        <option value="todos" ${state.filtros.tipo === "todos" ? "selected" : ""}>Todas</option>
+                        <option value="canalizacion" ${state.filtros.tipo === "canalizacion" ? "selected" : ""}>Canalizadas</option>
+                        <option value="evento" ${state.filtros.tipo === "evento" ? "selected" : ""}>Eventos</option>
                     </select>
                     <select id="filtroSecundarioModal" style="padding: 8px 12px; border-radius: 6px; background: #2a2a4a; color: white; border: 1px solid #444; font-size: 13px;">
                         ${generarOpcionesFiltroSecundario(state.filtros.tipo, state.filtros)}
@@ -811,7 +835,7 @@ class NavbarComplete {
                             esEvento: self._esNotificacionEvento(notif),
                         };
 
-                        const eventoIcono = notifUI.esEvento ? (notif.esMedicalAlarm ? "🚨" : (notif.esAlarma ? "🔔" : "📋")) : "";
+                        const eventoIcono = notifUI.esEvento ? (notif.esMedicalAlarm ? "" : (notif.esAlarma ? "" : "")) : "";
                         const estadoEvento = notif.estadoEvento || (notif.detalles?.estadoEvento) || 'pendiente';
                         const esEventoPendiente = notifUI.esEvento && estadoEvento === 'pendiente';
 
@@ -865,7 +889,7 @@ class NavbarComplete {
 
         renderizarContenidoModal(this.modalNotificacionesState).then(({ filtrosHtml, notificacionesHtml, paginacionHtml }) => {
             Swal.fire({
-                title: "📬 Todas las Notificaciones",
+                title: "Todas las Notificaciones",
                 html: `<div id="modalNotificacionesContainer">${filtrosHtml}<div id="modalNotificacionesLista">${notificacionesHtml}</div><div id="modalNotificacionesPaginacion">${paginacionHtml}</div></div>`,
                 width: "650px", background: "#1a1a1a", color: "#fff", showConfirmButton: false, showCloseButton: true,
                 didOpen: async () => {
