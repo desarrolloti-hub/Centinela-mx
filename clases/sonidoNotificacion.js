@@ -167,7 +167,7 @@ export class SonidoNotificacion {
         return "alarma-medica";
       }
 
-      // Incendio (100-111)
+      // Incendio (type_id 100-111 o palabra clave "fire")
       if (
         (typeId >= 100 && typeId <= 111) ||
         description.includes("incendio") ||
@@ -184,19 +184,35 @@ export class SonidoNotificacion {
           : "alarma-intrusion";
       }
 
-      // Problema Sistema (300-399)
-      if (typeId >= 300 && typeId <= 399) {
-        return "problema-sistema";
-      }
-
-      // Apertura/Cierre (400-499)
-      if (typeId >= 400 && typeId <= 499) {
+      // Apertura (también por descripción ampliada)
+      if (
+        (typeId >= 400 && typeId <= 499) ||
+        description.includes("open") ||
+        description.includes("apertura")
+      ) {
         const esCierre =
           description.includes("close") ||
+          description.includes("clos") ||      // ← detecta "closings"
           description.includes("cierre") ||
           description.includes("restore") ||
           description.includes("restauración");
         return esCierre ? "cierre" : "apertura";
+      }
+
+      // Cierre (por descripción fuera del rango 400-499)
+      if (
+        description.includes("close") ||
+        description.includes("clos") ||           // ← detecta "closings"
+        description.includes("cierre") ||
+        description.includes("restore") ||
+        description.includes("restauración")
+      ) {
+        return "cierre";
+      }
+
+      // Problema Sistema (300-399)
+      if (typeId >= 300 && typeId <= 399) {
+        return "problema-sistema";
       }
 
       // Prueba (600-699)
@@ -229,7 +245,7 @@ export class SonidoNotificacion {
       return "nueva-incidencia";
     }
 
-    // 3. Seguimientos - CORREGIDO: usar nuevo-seguimiento
+    // 3. Seguimientos
     if (
       notificacion.tipo === "seguimiento" ||
       notificacion.tipo === "actualizacion" ||
@@ -352,7 +368,7 @@ export class SonidoNotificacion {
       try {
         this.currentAudio.pause();
         this.currentAudio.currentTime = 0;
-      } catch (e) {}
+      } catch (e) { }
       this.currentAudio = null;
     }
     this.isPlaying = false;

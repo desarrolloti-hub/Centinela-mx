@@ -1421,29 +1421,13 @@ class NotificacionAreaManager {
     try {
       if (!organizacionCamelCase || !usuarioId) return 0;
 
-      const userNotifCollectionName = this._getUserNotificacionesCollectionName(organizacionCamelCase);
-      const userNotifRef = doc(db, userNotifCollectionName, usuarioId);
-      const userNotifSnap = await getDoc(userNotifRef);
-
-      if (!userNotifSnap.exists()) return 0;
-
-      const userData = userNotifSnap.data();
-      const notificacionesMap = userData.notificaciones || {};
-
-      // Contar las que realmente no están leídas
-      let noLeidas = 0;
-      for (const entrada of Object.values(notificacionesMap)) {
-        if (!entrada.leida) noLeidas++;
-      }
-
-      // Sincronizar el campo totalPendientes con la realidad (opcional)
-      if (userData.totalPendientes !== noLeidas) {
-        try {
-          await updateDoc(userNotifRef, { totalPendientes: noLeidas });
-        } catch (e) { /* no crítico */ }
-      }
-
-      return noLeidas;
+      const collectionName = this._getCollectionName(organizacionCamelCase);
+      const q = query(
+        collection(db, collectionName),
+        where("usuariosIds", "array-contains", usuarioId)
+      );
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count;
     } catch (error) {
       return 0;
     }
