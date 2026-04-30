@@ -179,11 +179,9 @@ class NavbarComplete {
             this.atencionEventosManager.esNotificacionEvento = (notif) => {
                 // Usar el mismo detector que ya funciona en el navbar
                 const esEvento = this._esNotificacionEvento(notif);
-                console.log('🔍 Admin esNotificacionEvento:', esEvento, '| notif:', notif?.id, notif?.tipo);
                 return esEvento;
             };
 
-            console.log('✅ AtencionEventosManager inicializado para admin. Forzado esAreaSeguridad=true y esNotificacionEvento personalizado');
         } catch (error) {
             console.warn("⚠️ Navbar Admin: No se pudo cargar AtencionEventosManager:", error);
             this.atencionEventosManager = null;
@@ -519,48 +517,25 @@ class NavbarComplete {
     }
 
     async _manejarClicNotificacionEvento(notificacion, elementoHTML) {
-    try {
-        // OBTENER ESTADO REAL DEL EVENTO DESDE FIRESTORE
-        let estadoReal = notificacion.estadoEvento || (notificacion.detalles?.estadoEvento) || 'pendiente';
-        
         try {
-            const { Evento } = await import('/clases/evento.js');
-            const eventId = notificacion.eventId || notificacion.detalles?.eventId;
-            if (eventId) {
-                const eventoReal = await Evento.obtenerPorId(eventId);
-                if (eventoReal && eventoReal.estadoEvento) {
-                    estadoReal = eventoReal.estadoEvento;
+            // OBTENER ESTADO REAL DEL EVENTO DESDE FIRESTORE
+            let estadoReal = notificacion.estadoEvento || (notificacion.detalles?.estadoEvento) || 'pendiente';
+
+            try {
+                const { Evento } = await import('/clases/evento.js');
+                const eventId = notificacion.eventId || notificacion.detalles?.eventId;
+                if (eventId) {
+                    const eventoReal = await Evento.obtenerPorId(eventId);
+                    if (eventoReal && eventoReal.estadoEvento) {
+                        estadoReal = eventoReal.estadoEvento;
+                    }
                 }
-            }
-        } catch (e) {
-            console.warn('No se pudo obtener evento real:', e);
-        }
-
-        // SI EL EVENTO YA FUE ATENDIDO/IGNORADO → ELIMINAR NOTIFICACIÓN DIRECTAMENTE
-        if (estadoReal !== 'pendiente') {
-            await this.notificacionManager?.marcarComoLeida(
-                this.currentAdmin.id,
-                notificacion.id,
-                this.currentAdmin.organizacionCamelCase
-            );
-            const index = this.notificaciones.findIndex(n => n.id === notificacion.id);
-            if (index !== -1) this.notificaciones.splice(index, 1);
-            this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
-            this._actualizarBadgeNotificaciones();
-            this._renderizarNotificaciones();
-            return;
-        }
-
-        // SI EL EVENTO ESTÁ PENDIENTE → MOSTRAR MODAL DE ATENCIÓN
-        if (this.atencionEventosManager) {
-            if (elementoHTML) {
-                elementoHTML.style.opacity = "0.7";
-                elementoHTML.style.pointerEvents = "none";
+            } catch (e) {
+                console.warn('No se pudo obtener evento real:', e);
             }
 
-            const resultado = await this.atencionEventosManager.procesarNotificacionEvento(notificacion);
-
-            if (resultado) {
+            // SI EL EVENTO YA FUE ATENDIDO/IGNORADO → ELIMINAR NOTIFICACIÓN DIRECTAMENTE
+            if (estadoReal !== 'pendiente') {
                 await this.notificacionManager?.marcarComoLeida(
                     this.currentAdmin.id,
                     notificacion.id,
@@ -571,34 +546,57 @@ class NavbarComplete {
                 this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
                 this._actualizarBadgeNotificaciones();
                 this._renderizarNotificaciones();
+                return;
             }
+
+            // SI EL EVENTO ESTÁ PENDIENTE → MOSTRAR MODAL DE ATENCIÓN
+            if (this.atencionEventosManager) {
+                if (elementoHTML) {
+                    elementoHTML.style.opacity = "0.7";
+                    elementoHTML.style.pointerEvents = "none";
+                }
+
+                const resultado = await this.atencionEventosManager.procesarNotificacionEvento(notificacion);
+
+                if (resultado) {
+                    await this.notificacionManager?.marcarComoLeida(
+                        this.currentAdmin.id,
+                        notificacion.id,
+                        this.currentAdmin.organizacionCamelCase
+                    );
+                    const index = this.notificaciones.findIndex(n => n.id === notificacion.id);
+                    if (index !== -1) this.notificaciones.splice(index, 1);
+                    this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
+                    this._actualizarBadgeNotificaciones();
+                    this._renderizarNotificaciones();
+                }
+
+                if (elementoHTML) {
+                    elementoHTML.style.opacity = "1";
+                    elementoHTML.style.pointerEvents = "auto";
+                }
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            try {
+                await this.notificacionManager?.marcarComoLeida(
+                    this.currentAdmin.id,
+                    notificacion?.id,
+                    this.currentAdmin.organizacionCamelCase
+                );
+                const index = this.notificaciones.findIndex(n => n.id === notificacion?.id);
+                if (index !== -1) this.notificaciones.splice(index, 1);
+                this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
+                this._actualizarBadgeNotificaciones();
+                this._renderizarNotificaciones();
+            } catch (e) { }
 
             if (elementoHTML) {
                 elementoHTML.style.opacity = "1";
                 elementoHTML.style.pointerEvents = "auto";
             }
         }
-    } catch (error) {
-        console.error("Error:", error);
-        try {
-            await this.notificacionManager?.marcarComoLeida(
-                this.currentAdmin.id,
-                notificacion?.id,
-                this.currentAdmin.organizacionCamelCase
-            );
-            const index = this.notificaciones.findIndex(n => n.id === notificacion?.id);
-            if (index !== -1) this.notificaciones.splice(index, 1);
-            this.notificacionesNoLeidas = this.notificaciones.filter(n => !n.leida).length;
-            this._actualizarBadgeNotificaciones();
-            this._renderizarNotificaciones();
-        } catch (e) {}
-        
-        if (elementoHTML) {
-            elementoHTML.style.opacity = "1";
-            elementoHTML.style.pointerEvents = "auto";
-        }
     }
-}
 
     async _mostrarInfoEventoSoloLectura(notificacion) {
         try {

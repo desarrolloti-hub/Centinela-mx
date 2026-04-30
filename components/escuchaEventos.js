@@ -120,11 +120,8 @@ class EscuchaEventosManager {
             );
 
             if (eventosPendientes.length === 0) {
-                console.log('✅ No hay eventos pendientes recientes');
                 return;
             }
-
-            console.log(`📋 Procesando ${eventosPendientes.length} eventos pendientes (últimos 7 días)...`);
 
             let notificacionesCreadas = 0;
             let yaExistentes = 0;
@@ -167,8 +164,6 @@ class EscuchaEventosManager {
 
                 await new Promise(r => setTimeout(r, 100));
             }
-
-            console.log(`✅ Carga inicial: ${notificacionesCreadas} creadas, ${yaExistentes} ya existían`);
 
         } catch (error) {
             console.error('❌ Error cargando eventos pendientes:', error);
@@ -224,7 +219,6 @@ class EscuchaEventosManager {
             );
 
             this.unsubscribe = await escucha.subscribe();
-            console.log('🎧 Escucha de eventos en tiempo real activada');
         } catch (error) {
             console.error('❌ Error iniciando escucha:', error);
         }
@@ -255,7 +249,6 @@ class EscuchaEventosManager {
         if (this.unsubscribe) {
             this.unsubscribe();
             this.unsubscribe = null;
-            console.log('🔌 Escucha de eventos desconectada');
         }
     }
 

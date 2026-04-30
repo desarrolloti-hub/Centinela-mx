@@ -3073,7 +3073,6 @@ class NavbarComplete {
                     const data = JSON.parse(cached);
                     // Cache válido por 30 minutos
                     if (data.timestamp && (Date.now() - data.timestamp) < 30 * 60 * 1000) {
-                        console.log('⚡ Usando cache para área/cargo');
                         return { areaNombre: data.areaNombre, cargoNombre: data.cargoNombre };
                     }
                 } catch (e) {

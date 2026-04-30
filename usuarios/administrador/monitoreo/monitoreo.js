@@ -17,8 +17,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 // ========== VARIABLES GLOBALES ==========
-let todosLosEventos = [];           // Eventos de la página actual
-let eventosFiltrados = [];          // Eventos filtrados (para búsqueda local)
+let todosLosEventos = [];           
+let eventosFiltrados = [];         
 let usuarioActual = null;
 let filtroActivo = 'todos';
 let terminoBusqueda = '';
@@ -39,12 +39,9 @@ let cargandoPagina = false;
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
     try {
-        console.log('🚀 Iniciando Monitoreo de Eventos (Tiempo Real + Paginación)...');
 
         usuarioActual = obtenerUsuarioActual();
         if (!usuarioActual) throw new Error('No se encontró información del usuario');
-
-        console.log('👤 Usuario:', usuarioActual.nombreCompleto);
 
         actualizarInfoUsuario();
 
@@ -99,7 +96,6 @@ async function cargarEmailsAsociados() {
 
         if (cuentasPM && cuentasPM.length > 0) {
             emailsAsociados = cuentasPM.map(c => c.email).filter(email => email);
-            console.log('📧 Emails asociados:', emailsAsociados.length);
         } else {
             console.warn('⚠️ No se encontraron cuentas PM');
         }
@@ -131,7 +127,6 @@ async function cargarPanelesInfo() {
             });
         });
 
-        console.log(`✅ Paneles encontrados: ${panelesInfo.length}`);
         actualizarInfoPanelesUI(panelesInfo);
 
     } catch (error) {
@@ -270,8 +265,6 @@ async function cargarPagina(pagina) {
         totalEventosReal = countSnapshot.data().count;
         totalPaginas = Math.ceil(totalEventosReal / ITEMS_POR_PAGINA);
 
-        console.log(`📊 Total real de eventos: ${totalEventosReal} | Página ${pagina}/${totalPaginas}`);
-
         // ========== OBTENER DOCUMENTOS DE LA PÁGINA ==========
         let paginatedQuery;
 
@@ -365,8 +358,6 @@ function iniciarEscuchaNuevosEventos() {
             const alias = obtenerAliasPanel(evento.panel_serial);
             if (alias) evento.panel_alias = alias;
 
-            console.log('🆕 Nuevo evento en tiempo real:', evento.id);
-
             todosLosEventos.push(evento);
             totalEventosReal++;
             totalPaginas = Math.ceil(totalEventosReal / ITEMS_POR_PAGINA);
@@ -391,7 +382,6 @@ function iniciarEscuchaNuevosEventos() {
 
     escucha.subscribe().then(unsub => {
         unsubscribeNuevos = unsub;
-        console.log('🎧 Escucha de eventos en tiempo real activada');
     });
 
     // ========== Escuchar actualizaciones que vienen del navbar (atender/ignorar desde notificaciones) ==========
@@ -454,7 +444,6 @@ function aplicarFiltros() {
 }
 
 function refreshManual() {
-    console.log('🔄 Refresh manual');
     paginaActual = 1;
     ultimoDocumento = null;
     cargarPagina(1);
@@ -479,7 +468,6 @@ function mostrarNotificacion(evento) {
 function solicitarPermisoNotificaciones() {
     if (!("Notification" in window)) return;
     if (Notification.permission === "granted") {
-        console.log('🔔 Notificaciones permitidas');
     } else if (Notification.permission !== "denied") {
         Notification.requestPermission();
     }
@@ -816,6 +804,5 @@ function escapeHTML(text) {
 window.addEventListener('beforeunload', () => {
     if (unsubscribeNuevos) {
         unsubscribeNuevos();
-        console.log('🔌 Escucha desconectada');
     }
 });
